@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_H
 
-#include "inv_trigf_utils.h"
+#include "atan_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -239,9 +239,9 @@ LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
 // 0x1.aec6f...p-100
 // which is about rounding errors of double-double (2^-104).
 
-LIBC_INLINE constexpr float atan2f(float y, float x) {
+LIBC_INLINE float atan2f(float y, float x) {
   using namespace atan2f_internal;
-  using namespace inv_trigf_utils_internal;
+  using namespace atan_internal;
   using FPBits = typename fputil::FPBits<float>;
   constexpr double IS_NEG[2] = {1.0, -1.0};
   constexpr double PI = 0x1.921fb54442d18p1;

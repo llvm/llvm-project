@@ -420,3 +420,22 @@ define <4 x float> @promote_low_v4f32_2(<8 x half> %x) {
   %a = shufflevector <8 x float> %v, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %a
 }
+
+define <8 x half> @demote_v4f32(<4 x float> %x) {
+; CHECK-LABEL: demote_v4f32:
+; CHECK:         .functype demote_v4f32 (v128) -> (v128)
+; CHECK-NEXT:    f16x8.demote_f32x4_zero $push0=, $0
+; CHECK-NEXT:    return $pop0
+  %v = fptrunc <4 x float> %x to <4 x half>
+  %a = shufflevector <4 x half> %v, <4 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %a
+}
+
+define <4 x half> @demote_v4f32_no_padding(<4 x float> %x) {
+; CHECK-LABEL: demote_v4f32_no_padding:
+; CHECK:         .functype demote_v4f32_no_padding (v128) -> (v128)
+; CHECK-NEXT:    f16x8.demote_f32x4_zero $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT:    return $pop[[R]]
+  %v = fptrunc <4 x float> %x to <4 x half>
+  ret <4 x half> %v
+}

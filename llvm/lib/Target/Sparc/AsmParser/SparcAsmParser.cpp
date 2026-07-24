@@ -141,8 +141,8 @@ class SparcAsmParser : public MCTargetAsmParser {
 
 public:
   SparcAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII), Parser(parser),
+                 const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII), Parser(parser),
         MRI(*Parser.getContext().getRegisterInfo()) {
     Parser.addAliasForDirective(".half", ".2byte");
     Parser.addAliasForDirective(".uahalf", ".2byte");

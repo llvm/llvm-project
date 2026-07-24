@@ -13,11 +13,11 @@ define void @test({ <2 x float>, float } %0, <2 x float> %1, i1 %2) {
 ; CHECK-NEXT:    br label %[[BB9]]
 ; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP7]], [[TMP3:%.*]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP6]], [[TMP3]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP5]], [[TMP3]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = fpext float [[TMP12]] to double
+; CHECK-NEXT:    [[TMP15:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP6]], [[TMP3]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP5]], [[TMP3]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fpext float [[TMP11]] to double
-; CHECK-NEXT:    [[TMP15:%.*]] = tail call i32 (ptr, ptr, ...) @fprintf(ptr null, ptr null, double [[TMP13]], double [[TMP14]], double 0.000000e+00)
+; CHECK-NEXT:    [[TMP12:%.*]] = fpext float [[TMP15]] to double
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call i32 (ptr, ptr, ...) @fprintf(ptr null, ptr null, double [[TMP14]], double [[TMP12]], double 0.000000e+00)
 ; CHECK-NEXT:    [[TMP16:%.*]] = fpext float [[TMP10]] to double
 ; CHECK-NEXT:    [[TMP17:%.*]] = tail call i32 (ptr, ptr, ...) @fprintf(ptr null, ptr null, double 0.000000e+00, double [[TMP16]], double 0.000000e+00)
 ; CHECK-NEXT:    ret void

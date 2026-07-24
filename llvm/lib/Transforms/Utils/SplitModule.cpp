@@ -162,6 +162,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   llvm::for_each(M.functions(), recordGVSet);
   llvm::for_each(M.globals(), recordGVSet);
   llvm::for_each(M.aliases(), recordGVSet);
+  llvm::for_each(M.ifuncs(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
@@ -303,7 +304,7 @@ void llvm::SplitModule(
             return isInPartition(GV, I, N);
         }));
     if (I != 0)
-      MPart->setModuleInlineAsm("");
+      MPart->removeModuleInlineAsm();
     ModuleCallback(std::move(MPart));
   }
 }

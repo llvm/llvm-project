@@ -778,6 +778,18 @@ public:
   }
 };
 
+/// This trait marks operations that are allowed to produce builtin token
+/// values.
+template <typename ConcreteType>
+class TokenProducerTrait : public TraitBase<ConcreteType, TokenProducerTrait> {
+};
+
+/// This trait marks operations that are allowed to consume builtin token
+/// values.
+template <typename ConcreteType>
+class TokenConsumerTrait : public TraitBase<ConcreteType, TokenConsumerTrait> {
+};
+
 /// This class provides verification for ops that are known to have zero
 /// successors.
 template <typename ConcreteType>
@@ -1320,6 +1332,32 @@ struct HasParent {
     getParentOp() {
       Operation *parent = this->getOperation()->getParentOp();
       return llvm::cast<ParentOpType>(parent);
+    }
+  };
+};
+
+/// This class provides a verifier for ops that are expecting an ancestor
+/// (anywhere up the parent chain) to be one of the given op types.
+template <typename... AncestorOpTypes>
+struct HasAncestor {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      if (op->getParentOfType<AncestorOpTypes...>())
+        return success();
+
+      return op->emitOpError()
+             << "expects ancestor op "
+             << (sizeof...(AncestorOpTypes) != 1 ? "to be one of '" : "'")
+             << llvm::ArrayRef({AncestorOpTypes::getOperationName()...}) << "'";
+    }
+
+    template <typename AncestorOpType =
+                  std::tuple_element_t<0, std::tuple<AncestorOpTypes...>>>
+    std::enable_if_t<sizeof...(AncestorOpTypes) == 1, AncestorOpType>
+    getAncestorOp() {
+      return this->getOperation()->template getParentOfType<AncestorOpType>();
     }
   };
 };
@@ -2138,14 +2176,6 @@ template <typename T>
 struct DenseMapInfo<T,
                     std::enable_if_t<std::is_base_of<mlir::OpState, T>::value &&
                                      !mlir::detail::IsInterface<T>::value>> {
-  static inline T getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static inline T getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(T val) {
     return hash_value(val.getAsOpaquePointer());
   }

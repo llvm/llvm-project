@@ -42,7 +42,6 @@ public:
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
-  virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }
 
   // If lazy binding is supported, the first entry of the PLT has code
   // to call the dynamic linker to resolve PLT entries the first time
@@ -91,13 +90,14 @@ public:
                              uint64_t dst) const;
 
   // Function for scanning relocation. Typically overridden by targets that
-  // require special type or addend adjustment.
-  virtual void scanSection(InputSectionBase &);
+  // require special type or addend adjustment. `shard` selects the `relocsVec`
+  // shard that discovered dynamic relocations are appended to.
+  virtual void scanSection(InputSectionBase &, unsigned shard);
   // Called by scanSection as a default implementation for specific ELF
   // relocation types.
-  template <class ELFT> void scanSection1(InputSectionBase &);
+  template <class ELFT> void scanSection1(InputSectionBase &, unsigned shard);
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
 
   // Called after parallel relocation scanning is complete but before
   // postScanRelocations processes symbol flags. Targets may override this to
@@ -115,6 +115,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Relax CFI jump tables if implemented by target.
+  virtual void relaxCFIJumpTables() const {}
   virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
     return false;
   }

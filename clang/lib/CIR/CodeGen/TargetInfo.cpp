@@ -6,6 +6,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -55,6 +56,8 @@ class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+
+  bool supportsLibCall() const override { return false; }
 
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
@@ -119,28 +122,9 @@ public:
 };
 } // namespace
 
-namespace {
-
-class NVPTXABIInfo : public ABIInfo {
-public:
-  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
-};
-
-class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
-public:
-  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
-      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
-};
-} // namespace
-
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
-}
-
-std::unique_ptr<TargetCIRGenInfo>
-clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
-  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
 }
 
 std::unique_ptr<TargetCIRGenInfo>

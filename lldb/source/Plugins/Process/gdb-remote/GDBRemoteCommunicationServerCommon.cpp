@@ -118,6 +118,9 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon()
       StringExtractorGDBRemote::eServerPacketType_QSetSTDOUT,
       &GDBRemoteCommunicationServerCommon::Handle_QSetSTDOUT);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QSetSTDIOWindowSize,
+      &GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qSpeedTest,
       &GDBRemoteCommunicationServerCommon::Handle_qSpeedTest);
   RegisterMemberFunctionHandler(
@@ -362,32 +365,32 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
           return SendErrorResponse(2);
       } else if (key == "pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (value.getAsInteger(0, pid))
+        if (value.getAsInteger(BASE_10, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetProcessID(pid);
       } else if (key == "parent_pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (value.getAsInteger(0, pid))
+        if (value.getAsInteger(BASE_10, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetParentProcessID(pid);
       } else if (key == "uid") {
         uint32_t uid = UINT32_MAX;
-        if (value.getAsInteger(0, uid))
+        if (value.getAsInteger(BASE_10, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetUserID(uid);
       } else if (key == "gid") {
         uint32_t gid = UINT32_MAX;
-        if (value.getAsInteger(0, gid))
+        if (value.getAsInteger(BASE_10, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetGroupID(gid);
       } else if (key == "euid") {
         uint32_t uid = UINT32_MAX;
-        if (value.getAsInteger(0, uid))
+        if (value.getAsInteger(BASE_10, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveUserID(uid);
       } else if (key == "egid") {
         uint32_t gid = UINT32_MAX;
-        if (value.getAsInteger(0, gid))
+        if (value.getAsInteger(BASE_10, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveGroupID(gid);
       } else if (key == "all_users") {
@@ -477,7 +480,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest(
   bool success = packet.GetNameColonValue(key, value);
   if (success && key == "response_size") {
     uint32_t response_size = 0;
-    if (!value.getAsInteger(0, response_size)) {
+    if (!value.getAsInteger(BASE_16, response_size)) {
       if (response_size == 0)
         return SendOKResponse();
       StreamString response;
@@ -961,6 +964,42 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDERR(
     return SendOKResponse();
   }
   return SendErrorResponse(17);
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
+    StringExtractorGDBRemote &packet) {
+  // Format: "QSetSTDIOWindowSize:cols=N;rows=N"
+  packet.SetFilePos(::strlen("QSetSTDIOWindowSize:"));
+  llvm::StringRef body = packet.GetStringRef().substr(packet.GetFilePos());
+
+  uint16_t cols = 0;
+  uint16_t rows = 0;
+  llvm::SmallVector<llvm::StringRef, 2> fields;
+  body.split(fields, ';');
+  for (llvm::StringRef field : fields) {
+    auto [key, value] = field.split('=');
+    uint16_t *dest;
+    if (key == "cols")
+      dest = &cols;
+    else if (key == "rows")
+      dest = &rows;
+    else
+      continue;
+    unsigned parsed = 0;
+    if (value.empty() || value.getAsInteger(BASE_10, parsed) ||
+        parsed > UINT16_MAX)
+      continue;
+    *dest = static_cast<uint16_t>(parsed);
+  }
+  // 0x0 is a valid request: it signals "no terminal" and a redirection
+  // backend that supports an alternative path (anonymous pipes on Windows
+  // ConPTY) can switch on it. Reject only the malformed cases.
+  if ((cols == 0) != (rows == 0))
+    return SendErrorResponse(28);
+
+  m_process_launch_info.SetSTDIOWindowSize(cols, rows);
+  return SendOKResponse();
 }
 
 GDBRemoteCommunication::PacketResult

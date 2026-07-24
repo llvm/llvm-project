@@ -263,11 +263,7 @@ Value *InstrProfIncrementInst::getStep() const {
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
-Value *InstrProfCallsite::getCallee() const {
-  if (isa<InstrProfCallsite>(this))
-    return getArgOperand(4);
-  return nullptr;
-}
+Value *InstrProfCallsite::getCallee() const { return getArgOperand(4); }
 
 void InstrProfCallsite::setCallee(Value *Callee) {
   assert(isa<InstrProfCallsite>(this));
@@ -871,10 +867,16 @@ Value *GCRelocateInst::getBasePtr() const {
   auto Statepoint = getStatepoint();
   if (isa<UndefValue>(Statepoint))
     return UndefValue::get(Statepoint->getType());
-
+  // Handle too few (bundle) arguments to avoid crashes when printing invalid
+  // IR, e.g. in the verifier.
   auto *GCInst = cast<GCStatepointInst>(Statepoint);
-  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (getBasePtrIndex() > Opt->Inputs.size())
+      return nullptr;
     return *(Opt->Inputs.begin() + getBasePtrIndex());
+  }
+  if (getBasePtrIndex() > GCInst->arg_size())
+    return nullptr;
   return *(GCInst->arg_begin() + getBasePtrIndex());
 }
 
@@ -883,9 +885,16 @@ Value *GCRelocateInst::getDerivedPtr() const {
   if (isa<UndefValue>(Statepoint))
     return UndefValue::get(Statepoint->getType());
 
+  // Handle too few (bundle) arguments to avoid crashes when printing invalid
+  // IR, e.g. in the verifier.
   auto *GCInst = cast<GCStatepointInst>(Statepoint);
-  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (getDerivedPtrIndex() > Opt->Inputs.size())
+      return nullptr;
     return *(Opt->Inputs.begin() + getDerivedPtrIndex());
+  }
+  if (getDerivedPtrIndex() > GCInst->arg_size())
+    return nullptr;
   return *(GCInst->arg_begin() + getDerivedPtrIndex());
 }
 

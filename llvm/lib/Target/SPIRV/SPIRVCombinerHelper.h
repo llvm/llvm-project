@@ -48,10 +48,10 @@ private:
                                        uint32_t NumCols,
                                        SPIRVTypeInst SpvRowType,
                                        SPIRVGlobalRegistry *GR) const;
-  SmallVector<Register, 16>
-  computeDotProducts(const SmallVector<Register, 4> &RowsA,
-                     const SmallVector<Register, 4> &ColsB,
-                     SPIRVTypeInst SpvVecType, SPIRVGlobalRegistry *GR) const;
+  SmallVector<Register, 16> computeDotProducts(ArrayRef<Register> RowsA,
+                                               ArrayRef<Register> ColsB,
+                                               SPIRVTypeInst SpvVecType,
+                                               SPIRVGlobalRegistry *GR) const;
   Register computeDotProduct(Register RowA, Register ColB,
                              SPIRVTypeInst SpvVecType,
                              SPIRVGlobalRegistry *GR) const;

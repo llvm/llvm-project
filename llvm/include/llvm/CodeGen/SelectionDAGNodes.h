@@ -234,26 +234,19 @@ public:
   /// Return true if there are no nodes using value ResNo of Node.
   inline bool use_empty() const;
 
-  /// Return true if there is exactly one node using value ResNo of Node.
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// exactly one operand.
   inline bool hasOneUse() const;
+
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// potentially multiple operands.
+  inline bool hasOneUser() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
-  static inline SDValue getEmptyKey() {
-    SDValue V;
-    V.ResNo = -1U;
-    return V;
-  }
-
-  static inline SDValue getTombstoneKey() {
-    SDValue V;
-    V.ResNo = -2U;
-    return V;
-  }
-
+template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
-    return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
-            (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
+    return DenseMapInfo<const void *>::getHashValue(Val.getNode()) +
+           Val.getResNo();
   }
 
   static bool isEqual(const SDValue &LHS, const SDValue &RHS) {
@@ -1232,7 +1225,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
   }
@@ -1329,6 +1321,13 @@ inline bool SDValue::use_empty() const {
 
 inline bool SDValue::hasOneUse() const {
   return Node->hasNUsesOfValue(1, ResNo);
+}
+
+inline bool SDValue::hasOneUser() const {
+  auto Uses = make_filter_range(Node->uses(),
+                                [this](SDUse &U) { return U.get() == *this; });
+  auto Users = map_range(Uses, [](SDUse &U) { return U.getUser(); });
+  return all_equal(Users);
 }
 
 inline const DebugLoc &SDValue::getDebugLoc() const {
@@ -1893,6 +1892,12 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Value->isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Value->isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Value->isNegZero(); }
+
   /// Return true if the value is a NaN.
   bool isNaN() const { return Value->isNaN(); }
 
@@ -1901,6 +1906,12 @@ public:
 
   /// Return true if the value is negative.
   bool isNegative() const { return Value->isNegative(); }
+
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Value->isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Value->isMinusOne(); }
 
   /// We don't rely on operator== working on double values, as
   /// it returns true for things that are clearly not equal, like -0.0 and 0.0.
@@ -1949,12 +1960,6 @@ LLVM_ABI bool isOneConstant(SDValue V);
 /// Returns true if \p V is a constant min signed integer value.
 LLVM_ABI bool isMinSignedConstant(SDValue V);
 
-/// Returns true if \p V is a neutral element of Opc with Flags.
-/// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
-/// checks that V is a right identity.
-LLVM_ABI bool isNeutralConstant(unsigned Opc, SDNodeFlags Flags, SDValue V,
-                                unsigned OperandNo);
-
 /// Return the non-bitcasted source operand of \p V if it exists.
 /// If \p V is not a bitcasted value, it is returned as-is.
 LLVM_ABI SDValue peekThroughBitcasts(SDValue V);
@@ -1976,6 +1981,22 @@ LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
+
+/// Return the non-frozen source operand of \p V if it exists.
+/// If \p V is not a freeze, it is returned as-is.
+inline SDValue peekThroughFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE)
+    return V.getOperand(0);
+  return V;
+}
+
+/// Return the non-frozen source operand of \p V if it exists and \p V has
+/// a single use. If \p V is not a single-use freeze, it is returned as-is.
+inline SDValue peekThroughOneUseFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse())
+    return V.getOperand(0);
+  return V;
+}
 
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.

@@ -400,10 +400,6 @@ bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
   return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
 }
 
-unsigned ARMSubtarget::getMispredictionPenalty() const {
-  return SchedModel.MispredictPenalty;
-}
-
 bool ARMSubtarget::enableMachineScheduler() const {
   // The MachineScheduler can increase register usage, so we use more high
   // registers and end up with more T2 instructions that cannot be converted to
@@ -543,7 +539,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // This stack unwinding cannot be expressed with SEH unwind opcodes when done
   // with a single push, making it necessary to split the push into r4-r10, and
   // another containing r11+lr.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
       F.needsUnwindTableEntry() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;

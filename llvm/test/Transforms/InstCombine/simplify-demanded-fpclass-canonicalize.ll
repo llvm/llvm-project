@@ -498,7 +498,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_sub_dynamic() 
 define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_ninf__dynamic(i1 %cond, float nofpclass(sub norm zero pinf) %must.be.ninf.or.nan) #1 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_ninf__dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(pinf zero sub norm) [[MUST_BE_NINF_OR_NAN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %canon = call float @llvm.canonicalize.f32(float %must.be.ninf.or.nan)
   ret float %canon
@@ -507,7 +507,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_ninf__dynamic(
 define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_pinf__dynamic(i1 %cond, float nofpclass(sub norm zero pinf) %must.be.pinf.or.nan) #1 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_pinf__dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(pinf zero sub norm) [[MUST_BE_PINF_OR_NAN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %canon = call float @llvm.canonicalize.f32(float %must.be.pinf.or.nan)
   ret float %canon
@@ -561,7 +561,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_zero__dynamic(
 define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_zero__dapz(i1 %cond, float nofpclass(sub norm inf) %must.be.zero.or.nan) #2 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_zero__dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(inf sub norm) [[MUST_BE_ZERO_OR_NAN:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float [[MUST_BE_ZERO_OR_NAN]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %must.be.zero.or.nan)
   ret float %canon

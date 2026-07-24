@@ -15,8 +15,8 @@
 
 using namespace llvm;
 
-SPIRVMCAsmInfo::SPIRVMCAsmInfo(const Triple &TT,
-                               const MCTargetOptions &Options) {
+SPIRVMCAsmInfo::SPIRVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   IsLittleEndian = true;
 
   HasSingleParameterDotFile = false;

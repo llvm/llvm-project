@@ -66,22 +66,136 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 
 // -----
-
-func.func @binary_add(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
-    %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.add
-    ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
-    outs(%Out : tensor<?x?xf32>) -> tensor<?x?xf32>
-  return %0 : tensor<?x?xf32>
+              
+func.func @binary_ops_int(%A: memref<10xi32>, %B: memref<10xi32>,
+                          %Out: memref<10xi32>) {
+  linalg.add ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.sub ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.mul ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.div ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.div_unsigned ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.max ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  linalg.min ins(%A, %B : memref<10xi32>, memref<10xi32>) outs(%Out : memref<10xi32>)
+  return
 }
 
-// CHECK-LABEL: binary_add
-// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>,
-// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
+// CHECK-LABEL: binary_ops_int
+// CHECK-SAME: %[[A:.+]]: memref<10xi32>, %[[B:.+]]: memref<10xi32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi32>)
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.add
-// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.sub
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.mul
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.div
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.div_unsigned
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.max
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+// CHECK: linalg.min
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi32>, memref<10xi32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi32>)
+
+// -----
+              
+func.func @binary_ops_float(%A: memref<10xf32>, %B: memref<10xf32>,
+                            %Out: memref<10xf32>) {
+  linalg.add ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.sub ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.mul ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.div ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.max ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.min ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  linalg.powf ins(%A, %B : memref<10xf32>, memref<10xf32>) outs(%Out : memref<10xf32>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_float
+// CHECK-SAME: %[[A:.+]]: memref<10xf32>, %[[B:.+]]: memref<10xf32>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.add
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.sub
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.mul
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.div
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.max
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.min
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+// CHECK: linalg.powf
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xf32>, memref<10xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xf32>)
+
+// -----
+              
+func.func @binary_ops_complex(%A: memref<10xcomplex<f32>>, %B: memref<10xcomplex<f32>>,
+                              %Out: memref<10xcomplex<f32>>) {
+  linalg.add ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+             outs(%Out : memref<10xcomplex<f32>>)
+  linalg.sub ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+             outs(%Out : memref<10xcomplex<f32>>)
+  linalg.mul ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+             outs(%Out : memref<10xcomplex<f32>>)
+  linalg.div ins(%A, %B : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+             outs(%Out : memref<10xcomplex<f32>>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_complex
+// CHECK-SAME: %[[A:.+]]: memref<10xcomplex<f32>>, %[[B:.+]]: memref<10xcomplex<f32>>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xcomplex<f32>>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.add
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.sub
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.mul
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+// CHECK: linalg.div
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xcomplex<f32>>, memref<10xcomplex<f32>>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xcomplex<f32>>)
+
+// -----
+              
+func.func @binary_ops_bool(%A: memref<10xi1>, %B: memref<10xi1>,
+                           %Out: memref<10xi1>) {
+  linalg.add ins(%A, %B : memref<10xi1>, memref<10xi1>) outs(%Out : memref<10xi1>)
+  linalg.mul ins(%A, %B : memref<10xi1>, memref<10xi1>) outs(%Out : memref<10xi1>)
+  return
+}
+
+// CHECK-LABEL: binary_ops_bool
+// CHECK-SAME: %[[A:.+]]: memref<10xi1>, %[[B:.+]]: memref<10xi1>,
+// CHECK-SAME: %[[OUT:.+]]: memref<10xi1>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.add
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi1>, memref<10xi1>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi1>)
+// CHECK: linalg.mul
+// CHECK-SAME: ins(%[[A]], %[[B]] : memref<10xi1>, memref<10xi1>)
+// CHECK-SAME: outs(%[[OUT]] : memref<10xi1>)
 
 // -----
 
@@ -105,6 +219,24 @@ func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK: linalg.matmul
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
+
+func.func @matmul_bool(%A: tensor<?x?xi1>, %B: tensor<?x?xi1>,
+    %Out: tensor<?x?xi1>) -> tensor<?x?xi1> {
+  %0 = linalg.matmul
+    ins(%A, %B : tensor<?x?xi1>, tensor<?x?xi1>)
+    outs(%Out : tensor<?x?xi1>) -> tensor<?x?xi1>
+  return %0 : tensor<?x?xi1>
+}
+
+// CHECK-LABEL: @matmul_bool
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xi1>, %[[B:.+]]: tensor<?x?xi1>,
+// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xi1>) -> tensor<?x?xi1>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.matmul
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xi1>, tensor<?x?xi1>)
+// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi1>) -> tensor<?x?xi1>
 
 // -----
 

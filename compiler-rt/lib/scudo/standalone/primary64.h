@@ -89,9 +89,8 @@ public:
   static bool conditionVariableEnabled() {
     return Config::hasConditionVariableT();
   }
-  static uptr getRegionInfoArraySize() { return sizeof(RegionInfoArray); }
-  static BlockInfo findNearestBlock(const char *RegionInfoData,
-                                    uptr Ptr) NO_THREAD_SAFETY_ANALYSIS;
+
+  BlockInfo findNearestBlock(uptr Ptr);
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 
@@ -123,17 +122,15 @@ public:
   uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType);
   uptr releaseToOS(ReleaseToOS ReleaseType);
 
-  const char *getRegionInfoArrayAddress() const {
-    return reinterpret_cast<const char *>(RegionInfoArray);
-  }
-
   uptr getCompactPtrBaseByClassId(uptr ClassId) {
     return getRegionInfo(ClassId)->RegionBeg;
   }
+
   CompactPtrT compactPtr(uptr ClassId, uptr Ptr) {
     DCHECK_LE(ClassId, SizeClassMap::LargestClassId);
     return compactPtrInternal(getCompactPtrBaseByClassId(ClassId), Ptr);
   }
+
   void *decompactPtr(uptr ClassId, CompactPtrT CompactPtr) {
     DCHECK_LE(ClassId, SizeClassMap::LargestClassId);
     return reinterpret_cast<void *>(
@@ -800,21 +797,24 @@ void SizeClassAllocator64<Config>::pushBlocks(
 
   // TODO(chiahungduan): Consider not doing grouping if the group size is not
   // greater than the block size with a certain scale.
-
   bool SameGroup = true;
-  if (GroupSizeLog < RegionSizeLog) {
-    // Sort the blocks so that blocks belonging to the same group can be
-    // pushed together.
+  if (GroupSizeLog < RegionSizeLog && Size > 1) {
+    // Sort the blocks such that blocks belonging to the same group are
+    // ordered together.
+    uptr FirstPtrGroup = compactPtrGroup(Array[0]);
     for (u32 I = 1; I < Size; ++I) {
-      if (compactPtrGroup(Array[I - 1]) != compactPtrGroup(Array[I]))
-        SameGroup = false;
       CompactPtrT Cur = Array[I];
-      u32 J = I;
-      while (J > 0 && compactPtrGroup(Cur) < compactPtrGroup(Array[J - 1])) {
-        Array[J] = Array[J - 1];
-        --J;
+      uptr CurPtrGroup = compactPtrGroup(Cur);
+      SameGroup = SameGroup && CurPtrGroup == FirstPtrGroup;
+      if (!SameGroup) {
+        // Sorting only necessary if there are different groups.
+        u32 J = I;
+        while (J > 0 && CurPtrGroup < compactPtrGroup(Array[J - 1])) {
+          Array[J] = Array[J - 1];
+          --J;
+        }
+        Array[J] = Cur;
       }
-      Array[J] = Cur;
     }
   }
 
@@ -1102,6 +1102,8 @@ void SizeClassAllocator64<Config>::iterateOverBlocks(F Callback) {
 template <typename Config>
 void SizeClassAllocator64<Config>::getStats(ScopedString *Str) {
   // TODO(kostyak): get the RSS per region.
+  Str->append("\nConfig Stats Primary64: ");
+  Config::getConfigValues(Str);
   uptr TotalMapped = 0;
   uptr PoppedBlocks = 0;
   uptr PushedBlocks = 0;
@@ -1349,23 +1351,16 @@ uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
 }
 
 template <typename Config>
-/* static */ BlockInfo SizeClassAllocator64<Config>::findNearestBlock(
-    const char *RegionInfoData, uptr Ptr) NO_THREAD_SAFETY_ANALYSIS {
-  const RegionInfo *RegionInfoArray =
-      reinterpret_cast<const RegionInfo *>(RegionInfoData);
-
+BlockInfo SizeClassAllocator64<Config>::findNearestBlock(uptr Ptr)
+    NO_THREAD_SAFETY_ANALYSIS {
   uptr ClassId;
   uptr MinDistance = -1UL;
   for (uptr I = 0; I != NumClasses; ++I) {
     if (I == SizeClassMap::BatchClassId)
       continue;
+
+    ScopedLock ML(RegionInfoArray[I].MMLock);
     uptr Begin = RegionInfoArray[I].RegionBeg;
-    // TODO(chiahungduan): In fact, We need to lock the RegionInfo::MMLock.
-    // However, the RegionInfoData is passed with const qualifier and lock the
-    // mutex requires modifying RegionInfoData, which means we need to remove
-    // the const qualifier. This may lead to another undefined behavior (The
-    // first one is accessing `AllocatedUser` without locking. It's better to
-    // pass `RegionInfoData` as `void *` then we can lock the mutex properly.
     uptr End = Begin + RegionInfoArray[I].MemMapInfo.AllocatedUser;
     if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
       continue;
@@ -1382,22 +1377,27 @@ template <typename Config>
     if (RegionDistance < MinDistance) {
       MinDistance = RegionDistance;
       ClassId = I;
+      if (RegionDistance == 0)
+        break;
     }
   }
 
-  BlockInfo B = {};
-  if (MinDistance <= 8192) {
-    B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
-    B.RegionEnd =
-        B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
-    B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
-    B.BlockBegin = B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) /
-                                        sptr(B.BlockSize) * sptr(B.BlockSize));
-    while (B.BlockBegin < B.RegionBegin)
-      B.BlockBegin += B.BlockSize;
-    while (B.RegionEnd < B.BlockBegin + B.BlockSize)
-      B.BlockBegin -= B.BlockSize;
+  if (MinDistance > 8192) {
+    return {};
   }
+
+  ScopedLock ML(RegionInfoArray[ClassId].MMLock);
+  BlockInfo B = {};
+  B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
+  B.RegionEnd =
+      B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
+  B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
+  B.BlockBegin = B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) /
+                                      sptr(B.BlockSize) * sptr(B.BlockSize));
+  while (B.BlockBegin < B.RegionBegin)
+    B.BlockBegin += B.BlockSize;
+  while (B.RegionEnd < B.BlockBegin + B.BlockSize)
+    B.BlockBegin -= B.BlockSize;
   return B;
 }
 

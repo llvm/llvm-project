@@ -156,6 +156,8 @@ public:
   bool IsGCSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskGCS); }
   bool IsPOEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPOE); }
 
+  bool IsGPR(unsigned reg) const;
+  bool IsFPR(unsigned reg) const;
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
   bool IsSVEPReg(unsigned reg) const;

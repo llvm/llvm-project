@@ -1,8 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; The backend seems to be generating invalid code. Fails with:
-;   OpConstantComposite Constituent <id> '18[%18]' type does not match the Result Type <id> '14[%struct_ident_t]'s member type
-; Issue https://github.com/llvm/llvm-project/issues/185412
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; This test verifies that indirect calls with functions lacking return statements
 ; are don't cause an error.

@@ -739,7 +739,7 @@ define i32 @orr_not_bfxil_test2_i32(i32 %0) {
 define i16 @implicit_trunc_of_imm(ptr %p, i16 %a, i16 %b) {
 ; CHECK-LABEL: implicit_trunc_of_imm:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w1, #0xffffe000
+; CHECK-NEXT:    and w8, w1, #0xe000
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:    mov w10, w8
 ; CHECK-NEXT:    mov w0, w8

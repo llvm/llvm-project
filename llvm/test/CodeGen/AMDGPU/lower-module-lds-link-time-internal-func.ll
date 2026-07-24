@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-lower-module-lds -amdgpu-enable-object-linking < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-lower-module-lds -amdgpu-enable-object-linking < %s | FileCheck %s
 
 ; An internal (static) device function uses an internal LDS variable.
 ; The per-function struct must get a module-unique hash suffix to avoid
@@ -22,8 +22,6 @@ declare void @extern_func()
 
 ; CHECK: !amdgpu.lds.uses = !{{{![0-9]+}}}
 ; CHECK-DAG: !{ptr @helper, ptr addrspace(3) @[[STRUCT]]}
-
-; CHECK: !{i32 1, !"amdgpu-link-time-lds", i32 1}
 
 define internal void @helper() {
   %gep = getelementptr [32 x i32], ptr addrspace(3) @lds_priv, i32 0, i32 0

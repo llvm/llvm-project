@@ -16,6 +16,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
+#include "flang/Optimizer/Dialect/FIRBoxUtils.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -40,6 +41,8 @@ class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
 
+/// Default alignment (in bytes) applied to array globals.
+constexpr unsigned defaultArrayGlobalAlignment = 64;
 /// Get the integer type with a pointer size.
 inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   // TODO: Delay the need of such type until codegen or find a way to use
@@ -333,13 +336,15 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -488,7 +493,8 @@ public:
   /// Array entities are boxed with a shape and possibly a shift. Character
   /// entities are boxed with a LEN parameter.
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
-                        bool isPolymorphic = false, bool isAssumedType = false);
+                        bool isPolymorphic = false, bool isAssumedType = false,
+                        unsigned corank = 0);
 
   mlir::Value createBox(mlir::Location loc, mlir::Type boxType,
                         mlir::Value addr, mlir::Value shape, mlir::Value slice,
@@ -732,6 +738,8 @@ private:
 
 namespace fir::factory {
 
+using fir::genDimInfoFromBox;
+
 //===----------------------------------------------------------------------===//
 // ExtendedValue inquiry helpers
 //===----------------------------------------------------------------------===//
@@ -772,12 +780,6 @@ fir::ExtendedValue readBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &exv);
-
-/// Return LEN parameters associated to \p exv that are not deferred (that are
-/// available without having to read any fir.box values). Empty if \p exv has no
-/// LEN parameters or if they are all deferred.
-llvm::SmallVector<mlir::Value>
-getNonDeferredLenParams(const fir::ExtendedValue &exv);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers
@@ -859,20 +861,6 @@ void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
 /// flang/include/flang/Runtime/ragged.h.
 mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
 
-/// Generate the, possibly dynamic, LEN of a CHARACTER. \p arrLoad determines
-/// the base array. After applying \p path, the result must be a reference to a
-/// `!fir.char` type object. \p substring must have 0, 1, or 2 members. The
-/// first member is the starting offset. The second is the ending offset.
-mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
-                              fir::ArrayLoadOp arrLoad,
-                              llvm::ArrayRef<mlir::Value> path,
-                              llvm::ArrayRef<mlir::Value> substring);
-mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
-                              fir::SequenceType seqTy, mlir::Value memref,
-                              llvm::ArrayRef<mlir::Value> typeParams,
-                              llvm::ArrayRef<mlir::Value> path,
-                              llvm::ArrayRef<mlir::Value> substring);
-
 /// Create the zero value of a given the numerical or logical \p type (`false`
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -882,10 +870,6 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Type type);
-
-/// Get the integer constants of triplet and compute the extent.
-std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
-                                                 mlir::Value stride);
 
 /// Compute the extent value given the lower bound \lb and upper bound \ub.
 /// All inputs must have the same SSA integer type.
@@ -901,16 +885,9 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value, mlir::Value zero);
 
-/// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
-/// component of integer 64, and the component is the C address. Get the C
-/// address.
+/// Get the C address from a type(C_PTR/C_FUNPTR/C_DEVPTR) entity.
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
-
-/// The type(C_DEVPTR) is defined as the derived type with only one
-/// component of C_PTR type. Get the C address from the C_PTR component.
-mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value cDevPtr, mlir::Type ty);
 
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
@@ -919,7 +896,8 @@ mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 /// Create a fir.box from a fir::ExtendedValue and wrap it in a fir::BoxValue
 /// to keep all the lower bound and explicit parameter information.
 fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                             const fir::ExtendedValue &exv);
+                             const fir::ExtendedValue &exv,
+                             unsigned corank = 0);
 
 /// Generate Null BoxProc for procedure pointer null initialization.
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -968,16 +946,6 @@ uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
 
-/// Given \p box of type fir::BaseBoxType representing an array,
-/// the function generates code to fetch the lower bounds,
-/// the extents and the strides from the box. The values are returned via
-/// \p lbounds, \p extents and \p strides.
-void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value box,
-                       llvm::SmallVectorImpl<mlir::Value> *lbounds,
-                       llvm::SmallVectorImpl<mlir::Value> *extents,
-                       llvm::SmallVectorImpl<mlir::Value> *strides);
-
 /// Generate an LLVM dialect lifetime start marker at the current insertion
 /// point given an fir.alloca. Returns the value to be passed to the lifetime
 /// end marker.
@@ -997,6 +965,16 @@ void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
 mlir::Value getDescriptorWithNewBaseAddress(fir::FirOpBuilder &builder,
                                             mlir::Location loc, mlir::Value box,
                                             mlir::Value newAddr);
+
+/// Generate a index-based disjointness check.
+std::optional<mlir::Value>
+genIndexBasedDisjointnessCheck(mlir::Location loc, fir::FirOpBuilder &builder,
+                               mlir::Value lhsRef, mlir::Value rhsRef);
+
+/// Generate a address-based disjointness check.
+std::optional<mlir::Value>
+genAddressBasedDisjointnessCheck(mlir::Location loc, fir::FirOpBuilder &builder,
+                                 mlir::Value lhsRef, mlir::Value rhsRef);
 
 } // namespace fir::factory
 

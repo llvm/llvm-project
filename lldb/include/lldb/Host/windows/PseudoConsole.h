@@ -34,22 +34,23 @@ public:
   PseudoConsole &operator=(const PseudoConsole &) = delete;
   PseudoConsole &operator=(PseudoConsole &&) = delete;
 
-  /// Creates a named pipe pair for overlapped I/O. The read end is set to
-  /// non-blocking (PIPE_NOWAIT).
+  /// Creates a named pipe pair for overlapped I/O.
   /// On failure any handles that were successfully opened are closed and an
   /// error is returned.
   llvm::Error CreateOverlappedPipePair(HANDLE &out_read, HANDLE &out_write,
                                        bool inheritable);
 
   /// Creates and opens a new ConPTY instance with a default console size of
-  /// 80x25. Also sets up the associated STDIN/STDOUT pipes and drains any
-  /// initialization sequences emitted by Windows.
+  /// 80x25. Also sets up the associated STDIN/STDOUT pipes and responds to
+  /// the cursor-position query that ConPTY emits at startup.
+  ///
+  /// \param req_cols, req_rows Optional terminal dimensions.
   ///
   /// \return
   ///     An llvm::Error if the ConPTY could not be created, or if ConPTY is
   ///     not available on this version of Windows, llvm::Error::success()
   ///     otherwise.
-  llvm::Error OpenPseudoConsole();
+  llvm::Error OpenPseudoConsole(uint16_t req_cols = 0, uint16_t req_rows = 0);
 
   /// Creates a pair of anonymous pipes to use for stdio instead of a ConPTY.
   ///
@@ -69,6 +70,10 @@ public:
   /// end) that were passed to CreateProcessW. Must be called after a successful
   /// CreateProcessW to avoid keeping the pipes alive indefinitely.
   void CloseAnonymousPipes();
+
+  /// Closes any open ConPTY/pipe handles and resets internal state to a
+  /// freshly-constructed PseudoConsole.
+  void Reset();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
   bool IsConnected() const;
@@ -108,16 +113,6 @@ public:
 
   Mode GetMode() const { return m_mode; };
 
-  /// Drains initialization sequences from the ConPTY output pipe.
-  ///
-  /// When a process first attaches to a ConPTY, Windows emits VT100/ANSI escape
-  /// sequences (ESC[2J for clear screen, ESC[H for cursor home and more) as
-  /// part of the PseudoConsole initialization. To prevent these sequences from
-  /// appearing in the debugger output (and flushing lldb's shell for instance)
-  /// we launch a short-lived dummy process that triggers the initialization,
-  /// then drain all output before launching the actual debuggee.
-  llvm::Error DrainInitSequences();
-
   /// Returns a reference to the mutex used to synchronize access to the
   /// ConPTY state.
   std::mutex &GetMutex() { return m_mutex; };
@@ -139,12 +134,14 @@ public:
   void SetStopping(bool value) { m_stopping = value; };
 
 protected:
-  HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_output = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  HANDLE m_conpty_handle = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_output = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_input = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   // Pipe mode: child-side handles passed to CreateProcessW, closed after launch
-  HANDLE m_pipe_child_stdin = ((HANDLE)(long long)-1);
-  HANDLE m_pipe_child_stdout = ((HANDLE)(long long)-1);
+  HANDLE m_pipe_child_stdin =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_pipe_child_stdout =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   Mode m_mode = Mode::None;
   std::mutex m_mutex{};
   std::condition_variable m_cv{};

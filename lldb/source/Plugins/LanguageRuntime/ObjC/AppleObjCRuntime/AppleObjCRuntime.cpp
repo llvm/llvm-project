@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCRuntime.h"
-#include "AppleObjCRuntimeV1.h"
 #include "AppleObjCRuntimeV2.h"
 #include "AppleObjCTrampolineHandler.h"
 #include "Plugins/Language/ObjC/NSString.h"
@@ -58,15 +57,9 @@ AppleObjCRuntime::AppleObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
-void AppleObjCRuntime::Initialize() {
-  AppleObjCRuntimeV2::Initialize();
-  AppleObjCRuntimeV1::Initialize();
-}
+void AppleObjCRuntime::Initialize() { AppleObjCRuntimeV2::Initialize(); }
 
-void AppleObjCRuntime::Terminate() {
-  AppleObjCRuntimeV2::Terminate();
-  AppleObjCRuntimeV1::Terminate();
-}
+void AppleObjCRuntime::Terminate() { AppleObjCRuntimeV2::Terminate(); }
 
 llvm::Error AppleObjCRuntime::GetObjectDescription(Stream &str,
                                                    ValueObject &valobj) {
@@ -332,8 +325,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
       if (!module_sp)
         continue;
-      if (strcmp(module_sp->GetFileSpec().GetFilename().AsCString(""),
-                 "Foundation") == 0) {
+      if (module_sp->GetFileSpec().GetFilename() == "Foundation") {
         m_Foundation_major = module_sp->GetVersion().getMajor();
         return *m_Foundation_major;
       }
@@ -402,9 +394,11 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
       SectionList *sections = module_sp->GetSectionList();
       if (!sections)
         return ObjCRuntimeVersions::eObjC_VersionUnknown;
-      SectionSP v1_telltale_section_sp =
-          sections->FindSectionByName(ConstString("__OBJC"));
+      SectionSP v1_telltale_section_sp = sections->FindSectionByName("__OBJC");
       if (v1_telltale_section_sp) {
+        LLDB_LOG(GetLog(LLDBLog::Language),
+                 "GetObjCVersion returning eAppleObjC_V1, which is no longer "
+                 "supported");
         return ObjCRuntimeVersions::eAppleObjC_V1;
       }
       return ObjCRuntimeVersions::eAppleObjC_V2;
@@ -459,31 +453,21 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
   if (!m_process)
     return false;
 
-  Target &target = m_process->GetTarget();
-
   static ConstString s_method_signature(
       "-[NSDictionary objectForKeyedSubscript:]");
-  static ConstString s_arclite_method_signature(
-      "__arclite_objectForKeyedSubscript");
   // NSDictionary is toll-free bridged with CFDictionary, so the
   // implementation lives in CoreFoundation, not Foundation.
   static ModuleSpec corefoundation_module_spec(FileSpec("CoreFoundation"));
 
+  Target &target = m_process->GetTarget();
   if (ModuleSP corefoundation_module_sp =
           target.GetImages().FindFirstModule(corefoundation_module_spec)) {
-    const Symbol *method_symbol =
-        corefoundation_module_sp->FindFirstSymbolWithNameAndType(
-            s_method_signature, eSymbolTypeCode);
-    if (method_symbol)
+    if (corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+            s_method_signature, eSymbolTypeCode))
       return true;
   }
 
-  // The arclite variant is a static library linked into the main executable,
-  // not part of CoreFoundation, so search all images.
-  SymbolContextList sc_list;
-  target.GetImages().FindSymbolsWithNameAndType(s_arclite_method_signature,
-                                                eSymbolTypeCode, sc_list);
-  return !sc_list.IsEmpty();
+  return false;
 }
 
 lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {

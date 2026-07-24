@@ -271,10 +271,10 @@ void ARMTargetAsmStreamer::emitCode16() { OS << "\t.code\t16\n"; }
 void ARMTargetAsmStreamer::emitCode32() { OS << "\t.code\t32\n"; }
 
 void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+  const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
   OS << "\t.thumb_func";
   // Only Mach-O hasSubsectionsViaSymbols()
-  if (MAI->hasSubsectionsViaSymbols()) {
+  if (MAI.hasSubsectionsViaSymbols()) {
     OS << '\t';
     Symbol->print(OS, MAI);
   }
@@ -282,12 +282,12 @@ void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
 }
 
 void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
-  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+  const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
 
   OS << "\t.thumb_set\t";
   Symbol->print(OS, MAI);
   OS << ", ";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -531,7 +531,7 @@ public:
   void emitInst(uint32_t Inst, char Suffix) {
     unsigned Size;
     char Buffer[4];
-    const bool LittleEndian = getContext().getAsmInfo()->isLittleEndian();
+    const bool LittleEndian = getContext().getAsmInfo().isLittleEndian();
 
     switch (Suffix) {
     case '\0':

@@ -30,9 +30,10 @@ add_entrypoint_object(
     inet_aton.h
   DEPENDS
     libc.include.arpa_inet
-    libc.include.llvm-libc-types.in_addr
+    libc.hdr.types.struct_in_addr
     libc.src.__support.common
-    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.optional
+    libc.src.__support.net.address
 )
 
 add_entrypoint_object(
@@ -43,11 +44,48 @@ add_entrypoint_object(
     inet_addr.h
   DEPENDS
     libc.include.arpa_inet
-    libc.include.llvm-libc-macros.netinet_in_macros
-    libc.include.llvm-libc-types.in_addr
-    libc.include.llvm-libc-types.in_addr_t
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.in_addr_t
     libc.src.__support.common
-    libc.src.arpa.inet.inet_aton
+    libc.src.__support.CPP.optional
+    libc.src.__support.net.address
+)
+
+add_entrypoint_object(
+  inet_ntoa
+  SRCS
+    inet_ntoa.cpp
+  HDRS
+    inet_ntoa.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.hdr.inet_address_macros
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.common
+    libc.src.__support.CPP.span
+    libc.src.__support.macros.config
+    libc.src.__support.net.address
+)
+
+add_entrypoint_object(
+  inet_ntop
+  SRCS
+    inet_ntop.cpp
+  HDRS
+    inet_ntop.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.hdr.errno_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_in_addr
+    libc.hdr.types.struct_in6_addr
+    libc.hdr.types.socklen_t
+    libc.src.__support.common
+    libc.src.__support.CPP.span
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.net.address
 )
 
 add_entrypoint_object(

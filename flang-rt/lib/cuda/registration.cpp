@@ -27,6 +27,8 @@ extern void __cudaRegisterVar(void **fatCubinHandle, char *hostVar,
 extern void __cudaRegisterManagedVar(void **fatCubinHandle,
     void **hostVarPtrAddress, char *deviceAddress, const char *deviceName,
     int ext, size_t size, int constant, int global);
+extern void __cudaRegisterHostVar(
+    void **fatCubinHandle, const char *deviceName, char *hostVar, size_t size);
 extern char __cudaInitModule(void **fatCubinHandle);
 
 void *RTDECL(CUFRegisterModule)(void *data) {

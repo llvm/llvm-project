@@ -40,6 +40,9 @@
 #  if SANITIZER_GO
 #    define SANITIZER_INTERFACE_ATTRIBUTE
 #    define SANITIZER_WEAK_ATTRIBUTE
+#  elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("hidden")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
 #  else
 #    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
 #    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))

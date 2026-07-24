@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
@@ -12,7 +12,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
-load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
+load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":targets.bzl", "llvm_targets")
 
@@ -26,6 +26,20 @@ package(
 
 licenses(["notice"])
 
+# Enable checks that alter LLVM's C++ ABI. Usage:
+#   bazel build --@llvm-project//llvm:enable_abi_breaking_checks=true @llvm-project//llvm:llvm
+bool_flag(
+    name = "enable_abi_breaking_checks",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "abi_breaking_checks_enabled",
+    flag_values = {
+        ":enable_abi_breaking_checks": "true",
+    },
+)
+
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
@@ -37,10 +51,63 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
-    "utils/lit/lit.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
+
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "darwin_x86_64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_aarch64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_ppc64le",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:ppc",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_riscv64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:riscv64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_s390x",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:s390x",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 # It may be tempting to add compiler flags here, but that should be avoided.
 # The necessary warnings and other compile flags should be provided by the
@@ -151,12 +218,16 @@ expand_template(
     name = "abi_breaking_h_gen",
     out = "include/llvm/Config/abi-breaking.h",
     substitutions = {
-        # Define to enable checks that alter the LLVM C++ ABI
-        "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
-
         # Define to enable reverse iteration of unordered llvm containers
         "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
-    },
+    } | select({
+        ":abi_breaking_checks_enabled": {
+            "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
+        },
+    }),
     template = "include/llvm/Config/abi-breaking.h.cmake",
 )
 
@@ -403,6 +474,7 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
+        "//libc:shared_math_headers_for_apfloat",
     ],
 )
 
@@ -582,16 +654,20 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TransformUtils",
     ],
 )
 
@@ -748,13 +824,13 @@ cc_library(
 )
 
 # Command line flag to control which tools get included in the llvm driver binary.
-# The macro also generates config_setting targets used by select_driver_tools().
-generate_driver_selects(name = "driver-tools")
+# The macro also returns the selected tool dependencies.
+driver_tool_deps = generate_driver_selects(name = "driver-tools")
 
 generate_driver_tools_def(
     name = "gen_llvm_driver_tools_def",
     out = "LLVMDriverTools.def",
-    driver_tools = select_driver_tools(":driver-tools"),
+    driver_tools = ":driver-tools",
 )
 
 # Workaround inability to put `.def` files into `srcs` with a library
@@ -770,27 +846,23 @@ cc_binary(
     deps = [
         ":Support",
         ":llvm_driver_tools_def_lib",
-    ] + select_driver_tools(":driver-tools"),
+    ] + driver_tool_deps,
 )
 
 cc_binary(
     name = "llvm-min-tblgen",
-    srcs = [
+    srcs = glob(["utils/TableGen/Basic/*.h"]) + [
         "utils/TableGen/Basic/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
-        "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
-        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
-        "utils/TableGen/Basic/SDNodeProperties.h",
-        "utils/TableGen/Basic/SequenceToOffsetTable.h",
         "utils/TableGen/Basic/TableGen.cpp",
-        "utils/TableGen/Basic/TableGen.h",
         "utils/TableGen/Basic/VTEmitter.cpp",
         "utils/TableGen/llvm-min-tblgen.cpp",
     ],
@@ -841,8 +913,8 @@ cc_binary(
             "utils/TableGen/Basic/*.h",
             "utils/TableGen/Common/*.cpp",
             "utils/TableGen/Common/*.h",
-            "utils/TableGen/Common/GlobalISel/*.cpp",
-            "utils/TableGen/Common/GlobalISel/*.h",
+            "utils/TableGen/Common/GlobalISel/**/*.cpp",
+            "utils/TableGen/Common/GlobalISel/**/*.h",
 
             # Some tablegen sources include headers from MC, so these have to be
             # listed here. MC uses headers produced by tablegen, so it cannot be a
@@ -927,6 +999,10 @@ llvm_target_intrinsics_list = [
     {
         "name": "ARM",
         "intrinsic_prefix": "arm",
+    },
+    {
+        "name": "AVR",
+        "intrinsic_prefix": "avr",
     },
     {
         "name": "BPF",
@@ -1254,6 +1330,9 @@ cc_library(
         "include/llvm-c/Object.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = glob([
+        "include/llvm/Object/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":BitReader",
@@ -1330,7 +1409,10 @@ cc_library(
 cc_library(
     name = "ABI",
     srcs = glob(
-        ["lib/ABI/*.cpp"],
+        [
+            "lib/ABI/*.cpp",
+            "lib/ABI/Targets/*.cpp",
+        ],
     ),
     hdrs = glob(
         ["include/llvm/ABI/*.h"],
@@ -1362,6 +1444,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":FrontendHLSL",
+        ":MC",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -1593,6 +1676,8 @@ cc_library(
     hdrs = glob(["include/llvm/DWP/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":BinaryFormatELF",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -1683,6 +1768,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Demangle",
+        ":FrontendOffloading",
         ":MC",
         ":ProfileData",
         ":Scalar",
@@ -1720,7 +1806,10 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
+    textual_hdrs = glob([
+        "include/llvm/SandboxIR/*.def",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -1761,9 +1850,9 @@ cc_library(
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
-    textual_hdrs = [
-        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
-    ],
+    textual_hdrs = glob([
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -1809,7 +1898,9 @@ cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
-    ]),
+    ]) + [
+        "include/llvm/Transforms/Utils/ModuleUtils.h",
+    ],
     hdrs = glob([
         "include/llvm/Frontend/HLSL/*.h",
     ]),
@@ -2037,6 +2128,13 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "instrumentor_variables_gen",
+    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
+    outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
+    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
@@ -2048,6 +2146,9 @@ cc_library(
         "include/llvm/Transforms/IPO.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = [
+        "include/llvm/Transforms/IPO/InstrumentorVariables.inc",
+    ],
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
@@ -2137,6 +2238,7 @@ cc_library(
         ":InstCombine",
         ":Instrumentation",
         ":ObjCARC",
+        ":Plugins",
         ":Scalar",
         ":Vectorize",
     ],
@@ -3599,18 +3701,24 @@ gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = {
-        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPreLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPostLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPURegBankCombiner",
+            "-gisel-extended-llt",
         ],
     },
     tblgen = ":llvm-tblgen",
@@ -3702,7 +3810,10 @@ gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
-        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=WebAssemblyPreLegalizerCombiner",
@@ -3842,6 +3953,20 @@ gentbl_cc_library(
             allow_empty = True,
         ),
         hdrs = ["lib/Target/" + target["name"] + "/" + target["short_name"] + ".h"],
+        # The TargetMachine files use this pattern:
+        #
+        # // In FooTargetMachine.cpp
+        # #define GET_PASS_REGISTRY "FooPassRegistry.def"
+        # #include "llvm/Passes/TargetPassRegistry.inc"
+        #
+        # // In TargetPassRegistry.inc
+        # #include GET_PASS_REGISTRY
+        #
+        # This breaks when using include scanning, so include them explicitly here.
+        additional_compiler_inputs = glob(
+            ["lib/Target/" + target["name"] + "/*.def"],
+            allow_empty = True,
+        ),
         copts = llvm_copts,
         features = [
             "-layering_check",
@@ -4046,6 +4171,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Plugins",
         ":Scalar",
         ":Support",
         ":Target",
@@ -4070,7 +4196,7 @@ cc_library(
 
 cc_library(
     name = "DTLTO",
-    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    srcs = glob(["lib/DTLTO/*.cpp"]),
     hdrs = ["include/llvm/DTLTO/DTLTO.h"],
     copts = llvm_copts,
     deps = [
@@ -4253,9 +4379,9 @@ cc_library(
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],
-        "@platforms//os:windows": [],
         "@platforms//os:freebsd": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": ["-lrt"],
     }),
     deps = [
@@ -4343,9 +4469,9 @@ cc_library(
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],
-        "@platforms//os:windows": [],
         "@platforms//os:freebsd": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-lrt",
         ],
@@ -4610,6 +4736,16 @@ config_setting(
 )
 
 cc_library(
+    name = "libpfm_system",
+    linkopts = ["-lpfm"],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
     name = "maybe_pfm",
     # We want dependencies of this library to have -DHAVE_LIBPFM conditionally
     # defined, so we set `defines` instead of `copts`.
@@ -4619,8 +4755,8 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = select({
-        ":pfm_external": ["@pfm//:pfm_external"],
-        ":pfm_system": ["@pfm//:pfm_system"],
+        ":pfm_external": ["@pfm"],
+        ":pfm_system": [":libpfm_system"],
         "//conditions:default": [],
     }),
 )
@@ -4679,6 +4815,13 @@ cc_library(
     srcs = glob(["lib/HTTP/*.cpp"]),
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [":Support"],
 )
 
@@ -4780,8 +4923,8 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -4830,9 +4973,11 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Analysis",
+        ":AsmParser",
         ":Core",
         ":IRReader",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -5222,6 +5367,7 @@ cc_library(
         ":DWP",
         ":DwpOptionsTableGen",
         ":MC",
+        ":Object",
         ":Option",
         ":Support",
     ],
@@ -5352,8 +5498,8 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -5507,6 +5653,9 @@ cc_binary(
         "tools/llvm-lto2/*.cpp",
     ]),
     copts = llvm_copts,
+    defines = [
+        "LLVM_BUILD_STATIC",  # Provided by add_llvm_tool
+    ],
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
@@ -5514,6 +5663,7 @@ cc_binary(
         ":BitReader",
         ":CodeGen",
         ":Core",
+        ":DTLTO",
         ":LTO",
         ":Passes",
         ":Plugins",
@@ -5749,6 +5899,17 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "llvm-extract-bundle-entry-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
+    tbl_outs = {"tools/llvm-objcopy/ExtractBundleEntryOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-objcopy/ExtractBundleEntryOpts.td",
+    deps = [
+        ":OptParserTdFiles",
+    ],
+)
+
 cc_library(
     name = "llvm-objcopy-lib",
     srcs = glob([
@@ -5767,6 +5928,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":llvm-bitcode-strip-opts",
+        ":llvm-extract-bundle-entry-opts",
         ":llvm-installnametool-opts",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
@@ -5791,6 +5953,11 @@ binary_alias(
 
 binary_alias(
     name = "llvm-install-name-tool",
+    binary = ":llvm-objcopy",
+)
+
+binary_alias(
+    name = "llvm-extract-bundle-entry",
     binary = ":llvm-objcopy",
 )
 
@@ -6289,8 +6456,8 @@ cc_library(
     ]),
     copts = llvm_copts,
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
     deps = [
@@ -6424,11 +6591,13 @@ cc_library(
     ],
 )
 
-py_binary(
+# Compatibility alias: the lit sources have moved to //llvm/utils/lit:lit
+# (a py_library, matching where the upstream tool actually lives). Kept
+# here so downstream callers of `//llvm:lit` don't break.
+alias(
     name = "lit",
     testonly = True,
-    srcs = ["utils/lit/lit.py"] + glob(["utils/lit/lit/**/*.py"]),
-    imports = ["utils/lit"],
+    actual = "//llvm/utils/lit:lit_bin",
 )
 
 py_binary(
@@ -6546,8 +6715,8 @@ cc_binary(
     # isn't even used in the main binary, so we also need to force it
     # to be included.
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-rdynamic",
             "-u_ZTIi",
@@ -6707,15 +6876,13 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
-cc_binary(
-    name = "llvm-readtapi",
-    testonly = True,
+cc_library(
+    name = "llvm-readtapi-lib",
     srcs = glob([
         "tools/llvm-readtapi/*.cpp",
         "tools/llvm-readtapi/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BinaryFormat",
         ":Object",
@@ -6725,6 +6892,13 @@ cc_binary(
         ":TextAPI",
         ":TextAPIBinaryReader",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-readtapi",
+    testonly = True,
+    stamp = 0,
+    deps = [":llvm-readtapi-lib"],
 )
 
 gentbl_cc_library(
@@ -6787,7 +6961,7 @@ cc_binary(
     srcs = glob(
         [
             "tools/llvm-ir2vec/**/*.cpp",
-            "tools/llvm-ir2vec/lib/*.h",
+            "tools/llvm-ir2vec/**/*.h",
         ],
         exclude = ["tools/llvm-ir2vec/Bindings/*.cpp"],
     ),
@@ -6840,6 +7014,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":MC",
         ":Object",
         ":ObjectYAML",
         ":Support",

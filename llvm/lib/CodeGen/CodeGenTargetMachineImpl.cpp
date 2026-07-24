@@ -169,9 +169,9 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
                                            raw_pwrite_stream *DwoOut,
                                            CodeGenFileType FileType,
                                            MCContext &Context) {
-  const MCSubtargetInfo &STI = *getMCSubtargetInfo();
-  const MCAsmInfo &MAI = *getMCAsmInfo();
-  const MCRegisterInfo &MRI = *getMCRegisterInfo();
+  const MCSubtargetInfo &STI = getMCSubtargetInfo();
+  const MCAsmInfo &MAI = getMCAsmInfo();
+  const MCRegisterInfo &MRI = getMCRegisterInfo();
   const MCInstrInfo &MII = *getMCInstrInfo();
 
   std::unique_ptr<MCStreamer> AsmStreamer;
@@ -279,8 +279,8 @@ bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
 
   // Create the code emitter for the target if it exists.  If not, .o file
   // emission fails.
-  const MCSubtargetInfo &STI = *getMCSubtargetInfo();
-  const MCRegisterInfo &MRI = *getMCRegisterInfo();
+  const MCSubtargetInfo &STI = getMCSubtargetInfo();
+  const MCRegisterInfo &MRI = getMCRegisterInfo();
   std::unique_ptr<MCCodeEmitter> MCE(
       getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
   if (!MCE)

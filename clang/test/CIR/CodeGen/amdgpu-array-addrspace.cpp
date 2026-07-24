@@ -35,7 +35,7 @@ void pass_global_array() {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18index_global_arrayi
 // CIR:         %[[ARR:.*]] = cir.get_global @globalArr : !cir.ptr<!cir.array<!s32i x 10>, target_address_space(1)>
-// CIR-NEXT:    %[[ELEM:.*]] = cir.get_element %[[ARR]][%{{.*}} : !s32i] : !cir.ptr<!cir.array<!s32i x 10>, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(1)>
+// CIR-NEXT:    %[[ELEM:.*]] = cir.get_element %[[ARR]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 10>, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(1)>
 // CIR-NEXT:    %{{.*}} = cir.load align(4) %[[ELEM]] : !cir.ptr<!s32i, target_address_space(1)>, !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @_Z18index_global_arrayi

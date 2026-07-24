@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
-#include <cmath>
 #include <map>
 #include <string>
 #include <utility>
@@ -620,6 +618,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
         OperandUnsigned},
     {"iand", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"iargc", {}, TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"ibclr", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}}, SameIntOrUnsigned},
     {"ibits", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}, {"len", AnyInt}},
         SameIntOrUnsigned},
@@ -1030,6 +1030,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"timef", {}, TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -1185,6 +1187,7 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"unsigned", "uint"}, // Sun vs gfortran names
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
+    {IntrinsicProcTable::BuiltinIntName, "int"},
 };
 
 // The following table contains the intrinsic functions listed in
@@ -1661,6 +1664,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"getarg",
+        {{"pos", AnyInt, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"value", DefaultChar, Rank::scalar, Optionality::required,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"getcwd",
         {{"c", DefaultChar, Rank::scalar, Optionality::required,
@@ -2788,7 +2797,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+      if (const Expr<SomeType> *expr{arg->GetArgExpr()}) {
         std::string kw{d.keyword};
         if (arg->keyword()) {
           kw = arg->keyword()->ToString();
@@ -2865,6 +2874,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   if (elementalRank > 0) {
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
+  // TODO: Mark intrinsic procedures that are SIMPLE per F2023
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
         intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {
@@ -3498,11 +3508,27 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
     CHECK(arguments.size() == 1);
     CheckForCoindexedObject(context.messages(), arguments[0], "c_loc", "x");
     const auto *expr{arguments[0].value().UnwrapExpr()};
+    SpecificCall specificCall{
+        SpecificIntrinsic{"__builtin_c_loc"s,
+            characteristics::Procedure{
+                characteristics::FunctionResult{DynamicType{
+                    GetBuiltinDerivedType(builtinsScope_, "__builtin_c_ptr")}},
+                characteristics::DummyArguments{},
+                characteristics::Procedure::Attrs{
+                    characteristics::Procedure::Attr::Pure}}},
+        {/*arguments*/}};
     if (expr &&
         !(IsObjectPointer(*expr) ||
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "C_LOC() argument must be a data pointer or target"_err_en_US);
+      if (context.languageFeatures().IsEnabled(
+              common::LanguageFeature::RelaxedCLocChecks)) {
+        context.Warn(common::LanguageFeature::RelaxedCLocChecks,
+            arguments[0]->sourceLocation(),
+            "C_LOC() argument should be a data pointer or target"_warn_en_US);
+      } else {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_LOC() argument must be a data pointer or target"_err_en_US);
+      }
     }
     if (auto typeAndShape{characteristics::TypeAndShape::Characterize(
             arguments[0], context)}) {
@@ -3539,20 +3565,28 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
               "C_LOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
         }
       }
-
       characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
       ddo.intent = common::Intent::In;
-      return SpecificCall{
-          SpecificIntrinsic{"__builtin_c_loc"s,
-              characteristics::Procedure{
-                  characteristics::FunctionResult{
-                      DynamicType{GetBuiltinDerivedType(
-                          builtinsScope_, "__builtin_c_ptr")}},
-                  characteristics::DummyArguments{
-                      characteristics::DummyArgument{"x"s, std::move(ddo)}},
-                  characteristics::Procedure::Attrs{
-                      characteristics::Procedure::Attr::Pure}}},
-          std::move(arguments)};
+      specificCall.specificIntrinsic.characteristics.value()
+          .dummyArguments.emplace_back(
+              characteristics::DummyArgument{"x", std::move(ddo)});
+      specificCall.arguments.emplace_back(std::move(arguments[0]));
+      return specificCall;
+    } else if (context.languageFeatures().IsEnabled(
+                   common::LanguageFeature::RelaxedCLocChecks)) {
+      if (!expr || !IsProcedurePointer(*expr)) {
+        // There are more specific errors as to why the expression doesn't exist
+        // or isn't characterizable as a data object or procedure.
+      } else if (auto proc{characteristics::Procedure::Characterize(
+                     *expr, context)}) {
+        characteristics::DummyProcedure dProc{std::move(*proc)};
+        dProc.intent = common::Intent::In;
+        specificCall.specificIntrinsic.characteristics.value()
+            .dummyArguments.emplace_back(
+                characteristics::DummyArgument{"x", std::move(dProc)});
+        specificCall.arguments.emplace_back(std::move(arguments[0]));
+        return specificCall;
+      }
     }
   }
   return std::nullopt;

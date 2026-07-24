@@ -9,12 +9,18 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/StringMap.h"
 
 #include <atomic>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
+
+namespace llvm {
+class MemoryBuffer;
+} // namespace llvm
 
 namespace clang {
 namespace dependencies {
@@ -26,15 +32,30 @@ struct ModuleCacheEntry {
   unsigned Generation = 0;
 
   std::atomic<std::time_t> Timestamp = 0;
+
+  enum {
+    S_Unknown,
+    S_Read,
+    S_Written,
+  } State = S_Unknown;
+  /// The buffer we've read from disk, if any.
+  std::unique_ptr<llvm::MemoryBuffer> ReadBuffer;
+  /// The buffer we've written to module cache, if any.
+  std::unique_ptr<llvm::MemoryBuffer> WrittenBuffer;
+  /// The modification time of the entry.
+  time_t ModTime = 0;
 };
 
 struct ModuleCacheEntries {
   std::mutex Mutex;
   llvm::StringMap<std::unique_ptr<ModuleCacheEntry>> Map;
+
+  /// Flushes all PCMs built in-process to disk.
+  void flush();
 };
 
 std::shared_ptr<ModuleCache>
-makeInProcessModuleCache(ModuleCacheEntries &Entries);
+makeInProcessModuleCache(ModuleCacheEntries &Entries, AtomicLineLogger &Logger);
 
 } // namespace dependencies
 } // namespace clang

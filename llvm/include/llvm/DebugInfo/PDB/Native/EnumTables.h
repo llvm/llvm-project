@@ -12,9 +12,9 @@
 #include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {
-template <typename T> struct EnumEntry;
+template <typename, unsigned> class EnumStrings;
 namespace pdb {
-ArrayRef<EnumEntry<uint16_t>> getOMFSegMapDescFlagNames();
+LLVM_ABI EnumStrings<uint16_t, 1> getOMFSegMapDescFlagNames();
 }
 }
 

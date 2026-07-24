@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterBankInfo.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -379,6 +380,13 @@ static bool preferGPRForFPImm(const MachineInstr &MI,
   const APFloat Imm = MI.getOperand(1).getFPImm()->getValueAPF();
   const APInt ImmBits = Imm.bitcastToAPInt();
 
+  // If all the uses are stores use a gpr constant
+  if (all_of(MRI.use_nodbg_instructions(Dst), [&](const MachineInstr &UseMI) {
+        return UseMI.getOpcode() == TargetOpcode::G_STORE &&
+               UseMI.getOperand(0).getReg() == Dst;
+      }))
+    return true;
+
   // Check if we can encode this as a movi. Note, we only have one pattern so
   // far for movis, hence the one check.
   if (Size == 32) {
@@ -512,19 +520,6 @@ void AArch64RegisterBankInfo::applyMappingImpl(
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
-  case TargetOpcode::G_INSERT_VECTOR_ELT: {
-    if (foldTruncOfI32Constant(MI, 2, MRI, *this))
-      return applyDefaultMapping(OpdMapper);
-
-    // Extend smaller gpr operands to 32 bit.
-    Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-    LLT OperandType = MRI.getType(MI.getOperand(2).getReg());
-    auto Ext = Builder.buildAnyExt(OperandType.changeElementSize(32),
-                                   MI.getOperand(2).getReg());
-    MRI.setRegBank(Ext.getReg(0), getRegBank(AArch64::GPRRegBankID));
-    MI.getOperand(2).setReg(Ext.getReg(0));
-    return applyDefaultMapping(OpdMapper);
-  }
   case AArch64::G_DUP: {
     if (foldTruncOfI32Constant(MI, 1, MRI, *this))
       return applyDefaultMapping(OpdMapper);
@@ -627,6 +622,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_uqsub:
   case Intrinsic::aarch64_neon_sqsub:
+  case Intrinsic::aarch64_neon_sqdmulh:
   case Intrinsic::aarch64_neon_sqdmulls_scalar:
   case Intrinsic::aarch64_neon_srshl:
   case Intrinsic::aarch64_neon_urshl:
@@ -642,6 +638,11 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqrshrun:
   case Intrinsic::aarch64_neon_uqshrn:
   case Intrinsic::aarch64_neon_uqrshrn:
+  case Intrinsic::aarch64_neon_sqneg:
+  case Intrinsic::aarch64_neon_sqabs:
+  case Intrinsic::aarch64_neon_scalar_uqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtun:
   case Intrinsic::aarch64_crypto_sha1h:
   case Intrinsic::aarch64_crypto_sha1c:
   case Intrinsic::aarch64_crypto_sha1p:
@@ -730,9 +731,11 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_CLMUL:
   case AArch64::G_PMULL:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
+  case AArch64::G_FPTRUNC_ODD:
     return true;
   case TargetOpcode::G_INTRINSIC:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -773,6 +776,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
   case AArch64::G_SLI:
   case AArch64::G_SRI:
+  case AArch64::G_FPTRUNC_ODD:
     return true;
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -958,6 +962,26 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
         // We only care about the mapping of the destination for COPY.
         /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
+  }
+  case TargetOpcode::G_CONSTANT: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    TypeSize Size = DstTy.getSizeInBits();
+    if (!DstTy.isPointer() && (!DstTy.isScalar() || Size < 32 || Size > 64))
+      break;
+    // Scalar constants materialize in GPRs.
+    [[fallthrough]];
+  }
+  case TargetOpcode::G_BRCOND:
+  case TargetOpcode::G_FRAME_INDEX: {
+    // Operand 0 is the only banked operand and is mapped to GPR.
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping(
+            {getValueMapping(
+                 PMI_FirstGPR,
+                 MRI.getType(MI.getOperand(0).getReg()).getSizeInBits()),
+             nullptr}),
+        /*NumOperands=*/2);
   }
   default:
     break;
@@ -1293,13 +1317,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (getRegBank(MI.getOperand(2).getReg(), MRI, TRI) == &AArch64::FPRRegBank)
       OpRegBankIdx[2] = PMI_FirstFPR;
     else {
-      // If the type is i8/i16, and the regbank will be GPR, then we change the
-      // type to i32 in applyMappingImpl.
-      LLT Ty = MRI.getType(MI.getOperand(2).getReg());
-      if (Ty.getSizeInBits() == 8 || Ty.getSizeInBits() == 16) {
-        // Calls applyMappingImpl()
-        MappingID = CustomMappingID;
-      }
       OpRegBankIdx[2] = PMI_FirstGPR;
     }
 

@@ -247,9 +247,14 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::Update() {
   CompilerType begin_ty = begin_sp->GetCompilerType().GetPointeeType();
   if (!begin_ty.IsValid())
     return lldb::ChildCacheState::eRefetch;
-  llvm::Expected<uint64_t> element_bit_size = begin_ty.GetBitSize(nullptr);
-  if (!element_bit_size)
+  llvm::Expected<uint64_t> element_bit_size_or_err =
+      begin_ty.GetBitSize(nullptr);
+  if (!element_bit_size_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   element_bit_size_or_err.takeError(),
+                   "failed to get vector<bool> element bit size: {0}");
     return lldb::ChildCacheState::eRefetch;
+  }
 
   uint64_t base_data_address = begin_sp->GetValueAsUnsigned(0);
   if (!base_data_address)
@@ -257,7 +262,7 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::Update() {
 
   m_exe_ctx_ref = exe_ctx_ref;
   m_count = count;
-  m_element_bit_size = *element_bit_size;
+  m_element_bit_size = *element_bit_size_or_err;
   m_base_data_address = base_data_address;
   return lldb::ChildCacheState::eRefetch;
 }

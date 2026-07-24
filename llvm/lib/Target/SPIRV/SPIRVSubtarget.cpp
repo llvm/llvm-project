@@ -193,6 +193,8 @@ void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
 }
 
 void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  *GR = SPIRVGlobalRegistry(M.getDataLayout());
+
   if (Env != Unknown) {
     assert(!(isKernel() && any_of(M,
                                   [](const Function &F) {
@@ -202,13 +204,8 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     return;
   }
 
-  bool HasShaderAttr = false;
-  for (const Function &F : M) {
-    if (F.hasFnAttribute("hlsl.shader")) {
-      HasShaderAttr = true;
-      break;
-    }
-  }
+  bool HasShaderAttr = any_of(
+      M, [](const Function &F) { return F.hasFnAttribute("hlsl.shader"); });
 
   if (!HasShaderAttr) {
     if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {

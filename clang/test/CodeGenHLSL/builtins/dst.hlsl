@@ -22,7 +22,7 @@ float4 dstWithFloat(float4 p1, float4 p2)
 // CHECK: [[VECEXT:%.*]] = extractelement <4 x half> [[PADDR:%.*]], i32 1
 // CHECK: [[VECEXT1:%.*]] = extractelement <4 x half> [[QADDR:%.*]], i32 1
 // CHECK: [[MULRES:%.*]] = fmul {{[A-Za-z ]*}} half [[VECEXT]], [[VECEXT1]]
-// CHECK: [[VECINIT:%.*]] = insertelement <4 x half> <half 0xH3C00, half poison, half poison, half poison>, half [[MULRES]], i32 1
+// CHECK: [[VECINIT:%.*]] = insertelement <4 x half> <half 1.000000e+00, half poison, half poison, half poison>, half [[MULRES]], i32 1
 // CHECK: [[VECINIT2:%.*]] = extractelement <4 x half> [[PADDR2:%.*]], i32 2
 // CHECK: [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT]], half [[VECINIT2]], i32 2
 // CHECK: [[VECINIT4:%.*]] = extractelement <4 x half> [[QADDR3:%.*]], i32 3

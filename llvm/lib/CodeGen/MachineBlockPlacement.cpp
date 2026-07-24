@@ -44,6 +44,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TailDuplicator.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -669,6 +670,7 @@ public:
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -1679,12 +1681,13 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
   // applicable.
   auto FoundEdge = ComputedEdges.find(BB);
   if (FoundEdge != ComputedEdges.end()) {
-    MachineBasicBlock *Succ = FoundEdge->second.BB;
+    BlockAndTailDupResult Result = FoundEdge->second;
     ComputedEdges.erase(FoundEdge);
-    BlockChain *SuccChain = BlockToChain[Succ];
-    if (BB->isSuccessor(Succ) && (!BlockFilter || BlockFilter->count(Succ)) &&
-        SuccChain != &Chain && Succ == *SuccChain->begin())
-      return FoundEdge->second;
+    BlockChain *SuccChain = BlockToChain[Result.BB];
+    if (BB->isSuccessor(Result.BB) &&
+        (!BlockFilter || BlockFilter->count(Result.BB)) &&
+        SuccChain != &Chain && Result.BB == *SuccChain->begin())
+      return Result;
   }
 
   // if BB is part of a trellis, Use the trellis to determine the optimal

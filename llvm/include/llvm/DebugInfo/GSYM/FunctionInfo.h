@@ -217,7 +217,8 @@ struct FunctionInfo {
 
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return LHS.Range == RHS.Range && LHS.Name == RHS.Name &&
-         LHS.OptLineTable == RHS.OptLineTable && LHS.Inline == RHS.Inline;
+         LHS.OptLineTable == RHS.OptLineTable && LHS.Inline == RHS.Inline &&
+         LHS.CallSites == RHS.CallSites;
 }
 inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return !(LHS == RHS);
@@ -233,13 +234,17 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 /// inline information with the most entries will appeear last. If the inline
 /// information match, either by both function infos not having any or both
 /// being exactly the same, we will then compare line tables. Comparing line
-/// tables allows the entry with the most line entries to appear last. This
-/// ensures we are able to save the FunctionInfo with the most debug info into
-/// the GSYM file.
+/// tables allows the entry with the most line entries to appear last. As a
+/// final tiebreaker, an entry that has call site information sorts after one
+/// that does not, so that within a single address range the entry with the
+/// most debug info always appears last. This ensures we are able to save the
+/// FunctionInfo with the most debug info into the GSYM file.
 inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   // First sort by address range
-  return std::tie(LHS.Range, LHS.Inline, LHS.OptLineTable) <
-         std::tie(RHS.Range, RHS.Inline, RHS.OptLineTable);
+  const bool LHSHasCallSites = LHS.CallSites.has_value();
+  const bool RHSHasCallSites = RHS.CallSites.has_value();
+  return std::tie(LHS.Range, LHS.Inline, LHS.OptLineTable, LHSHasCallSites) <
+         std::tie(RHS.Range, RHS.Inline, RHS.OptLineTable, RHSHasCallSites);
 }
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);

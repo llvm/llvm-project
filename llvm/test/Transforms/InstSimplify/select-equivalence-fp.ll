@@ -195,7 +195,7 @@ define <4 x float> @select_fcmp_shufflevector_select(<4 x float> %x) {
 ; The hexfloat constant is PI / 2.
 define float @select_fcmp_sin_nonrefinement(float %x) {
 ; CHECK-LABEL: @select_fcmp_sin_nonrefinement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 0x3FF921FB60000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], f0x3FC90FDB
 ; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.sin.f32(float [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float 1.000000e+00, float [[SIN]]
 ; CHECK-NEXT:    ret float [[SEL]]
@@ -220,7 +220,7 @@ define float @select_fcmp_sin(float %x) {
 ; The hexfloat constant is PI.
 define float @select_fcmp_cos_nonrefinement(float %x) {
 ; CHECK-LABEL: @select_fcmp_cos_nonrefinement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 0x400921FB60000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], f0x40490FDB
 ; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float -1.000000e+00, float [[COS]]
 ; CHECK-NEXT:    ret float [[SEL]]

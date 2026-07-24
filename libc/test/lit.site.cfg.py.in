@@ -40,3 +40,8 @@ if hasattr(config, "llvm_tools_dir") and config.llvm_tools_dir:
         [config.llvm_tools_dir, config.environment.get("PATH", "")]
     )
 
+# Limit concurrent GPU tests to avoid overloading the GPU driver.
+libc_gpu_test_jobs = "@LIBC_GPU_TEST_JOBS@"
+if libc_gpu_test_jobs:
+    lit_config.parallelism_groups["libc-gpu"] = int(libc_gpu_test_jobs)
+    config.parallelism_group = "libc-gpu"

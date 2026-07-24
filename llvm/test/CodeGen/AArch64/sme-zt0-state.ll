@@ -131,57 +131,32 @@ define void @zt0_in_caller_zt0_new_callee(ptr %callee) "aarch64_in_zt0" nounwind
 
 ; New-ZT0 Callee
 
-; Expect commit of lazy-save if ZA is dormant
-; Expect smstart ZA & clear ZT0
-; Expect spill & fill of ZT0 around call
-; Before return, expect smstop ZA
+; Expect ZA state setup to be elided (no instructions in this function require
+; ZA state).
 define void @zt0_new_caller_zt0_new_callee(ptr %callee) "aarch64_new_zt0" nounwind {
 ; CHECK-LABEL: zt0_new_caller_zt0_new_callee:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbz x8, .LBB6_2
-; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    zero { zt0 }
-; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str zt0, [x8]
-; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    blr x0
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
-; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void %callee() "aarch64_new_zt0";
   ret void;
 }
 
-; Expect commit of lazy-save if ZA is dormant
-; Expect smstart ZA & clear ZT0
-; No spill & fill of ZT0 around __arm_tpidr2_save
 ; Expect spill & fill of ZT0 around __arm_sme_state call
-; Before return, expect smstop ZA
-define i64 @zt0_new_caller_abi_routine_callee() "aarch64_new_zt0" nounwind {
+define i64 @zt0_new_caller_abi_routine_callee() "aarch64_inout_zt0" nounwind {
 ; CHECK-LABEL: zt0_new_caller_abi_routine_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbz x8, .LBB7_2
-; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    zero { zt0 }
-; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str zt0, [x8]
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:    str zt0, [x19]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   %res = call {i64, i64} @__arm_sme_state()

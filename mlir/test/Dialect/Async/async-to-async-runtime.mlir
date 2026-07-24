@@ -498,3 +498,36 @@ async.func @execute_in_async_func(%arg0: f32, %arg1: memref<1xf32>)
 // CHECK-SAME:  ) -> !async.token
 // CHECK:         %[[CST:.*]] = arith.constant 0 : index
 // CHECK:         memref.store %[[VALUE]], %[[MEMREF]][%[[CST]]]
+
+// -----
+
+// An async.func with no suspension points must not leave behind an
+// unreachable `cleanupForDestroy` block. The block is created lazily and is
+// only needed as the destroy successor of an `async.coro.suspend`, so an
+// empty body that never suspends should only have a single cleanup block.
+
+// CHECK-LABEL: @async_func_empty
+async.func @async_func_empty() -> !async.token {
+  return
+}
+// CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
+// CHECK: %[[ID:.*]] = async.coro.id
+// CHECK: %[[HDL:.*]] = async.coro.begin
+// CHECK: cf.br ^[[ORIGIN_ENTRY:.*]]
+
+// CHECK: ^[[ORIGIN_ENTRY]]:
+// CHECK-NEXT: async.runtime.set_available %[[TOKEN]]
+// CHECK-NEXT: cf.br ^[[CLEANUP:.*]]
+
+// CHECK: ^[[CLEANUP]]:
+// CHECK-NEXT: async.coro.free %[[ID]], %[[HDL]]
+// CHECK-NEXT: cf.br ^[[SUSPEND:.*]]
+
+// CHECK: ^[[SUSPEND]]:
+// CHECK-NEXT: async.coro.end %[[HDL]]
+// CHECK-NEXT: return %[[TOKEN]]
+
+// There must be exactly one async.coro.free op in the lowered function:
+// the destroy-cleanup block (which would contain a second one) should not
+// have been emitted.
+// CHECK-NOT: async.coro.free

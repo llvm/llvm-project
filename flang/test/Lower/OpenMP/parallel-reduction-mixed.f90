@@ -2,7 +2,7 @@
 !! to LLVM-IR code.
 
 ! RUN: %flang_fc1 -emit-llvm -fopenmp -o - %s 2>&1 \
-! RUN: | FileCheck %s
+! RUN: | FileCheck %s --check-prefixes=CHECK,%if system-windows %{WINDOWS%} %else %{%if system-darwin %{DARWIN%} %else %{POSIX%}%}
 
 subroutine proc
   implicit none
@@ -36,7 +36,9 @@ end subroutine proc
 
 !CHECK: [[MALLOC_BB]]:
 !CHECK-NOT: omp.par.{{.*}}:
-!CHECK: call ptr @malloc(i{{(32)|(64)}} 80)
+!POSIX: call ptr @aligned_alloc(i{{(32)|(64)}} 64, i{{(32)|(64)}} 128)
+!WINDOWS: call ptr @malloc(i{{(32)|(64)}} 80)
+!DARWIN: call i32 @posix_memalign(ptr %{{.*}}, i{{(32)|(64)}} 64, i{{(32)|(64)}} 80)
 
 !CHECK: %[[RED_ARR_0:.*]] = getelementptr inbounds [2 x ptr], ptr %red.array, i64 0, i64 0
 !CHECK: store ptr %[[F_priv]], ptr %[[RED_ARR_0:.*]]

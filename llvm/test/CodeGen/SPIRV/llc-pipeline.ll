@@ -49,7 +49,7 @@
 ; SPIRV-O0-NEXT:    SPIRV push constant Access
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
-; SPIRV-O0-NEXT:      SPIRV legalize bitcast pass
+; SPIRV-O0-NEXT:      SPIRV legalize pointer cast pass
 ; SPIRV-O0-NEXT:      Prepare inline asm insts
 ; SPIRV-O0-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-O0-NEXT:      Insert stack protectors
@@ -64,8 +64,9 @@
 ; SPIRV-O0-NEXT:      SPIRV post legalizer
 ; SPIRV-O0-NEXT:      Analysis for ComputingKnownBits
 ; SPIRV-O0-NEXT:      Dominator Tree Construction
-; SPIRV-O0-NEXT:      Natural Loop Information
+; SPIRV-O0-NEXT:      Cycle Info Analysis
 ; SPIRV-O0-NEXT:      Lazy Branch Probability Analysis
+; SPIRV-O0-NEXT:      Natural Loop Information
 ; SPIRV-O0-NEXT:      Lazy Block Frequency Analysis
 ; SPIRV-O0-NEXT:      InstructionSelect
 ; SPIRV-O0-NEXT:      ResetMachineFunction
@@ -125,9 +126,10 @@
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
-; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
+; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Constant Hoisting
 ; SPIRV-Opt-NEXT:      Replace intrinsics with calls to vector library
@@ -147,6 +149,7 @@
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Block Frequency Analysis
@@ -163,13 +166,13 @@
 ; SPIRV-Opt-NEXT:    SPIRV push constant Access
 ; SPIRV-Opt-NEXT:    SPIRV emit intrinsics
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
-; SPIRV-Opt-NEXT:      SPIRV legalize bitcast pass
+; SPIRV-Opt-NEXT:      SPIRV legalize pointer cast pass
 ; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
-; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -184,6 +187,7 @@
 ; SPIRV-Opt-NEXT:      SPIRV post legalizer
 ; SPIRV-Opt-NEXT:      Analysis for ComputingKnownBits
 ; SPIRV-Opt-NEXT:      Lazy Branch Probability Analysis
+; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Lazy Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      InstructionSelect
 ; SPIRV-Opt-NEXT:      ResetMachineFunction
@@ -204,6 +208,7 @@
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination
 ; SPIRV-Opt-NEXT:      MachinePostDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
+; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Machine code sinking
 ; SPIRV-Opt-NEXT:      Peephole Optimizations
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions

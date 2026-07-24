@@ -367,6 +367,26 @@ void GCNIterativeScheduler::scheduleBest(Region &R) {
   R.BestSchedule.reset();
 }
 
+void GCNIterativeScheduler::restoreLivenessFlags(MachineInstr &MI) {
+  assert(!MI.isDebugInstr());
+
+  for (MachineOperand &Op : MI.all_defs())
+    Op.setIsUndef(false);
+
+  RegisterOperands RegOpers;
+  RegOpers.collect(MI, *TRI, MRI, /*ShouldTrackLaneMasks=*/true,
+                   /*IgnoreDead=*/false);
+  SlotIndex SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+  RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, &MI);
+}
+
+void GCNIterativeScheduler::restoreRegionLivenessFlags(const Region &R) {
+  for (MachineBasicBlock::iterator I = R.Begin; I != R.End; ++I) {
+    if (!I->isDebugInstr())
+      restoreLivenessFlags(*I);
+  }
+}
+
 // minimal required region scheduler, works for ranges of SUnits*,
 // SUnits or MachineIntrs*
 template <typename Range>
@@ -391,18 +411,8 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
       if (NonDebugReordered)
         LIS->handleMove(*MI, true);
     }
-    if (!MI->isDebugInstr()) {
-      // Reset read - undef flags and update them later.
-      for (auto &Op : MI->all_defs())
-        Op.setIsUndef(false);
-
-      RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, /*ShouldTrackLaneMasks*/true,
-                                       /*IgnoreDead*/false);
-      // Adjust liveness and add missing dead+read-undef flags.
-      auto SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
-    }
+    if (!MI->isDebugInstr())
+      restoreLivenessFlags(*MI);
     Top = std::next(MI->getIterator());
   }
   RegionBegin = getMachineInstr(Schedule.front());
@@ -622,6 +632,8 @@ void GCNIterativeScheduler::scheduleILP(
                                        ST, DynamicVGPRBlockSize) >= TgtOcc) {
         LLVM_DEBUG(dbgs() << ", scheduling minimal register\n");
         scheduleBest(*R);
+      } else {
+        restoreRegionLivenessFlags(*R);
       }
     } else {
       scheduleRegion(*R, ILPSchedule, RP);

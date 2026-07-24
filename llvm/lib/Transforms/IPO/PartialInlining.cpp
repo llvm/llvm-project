@@ -29,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -348,8 +349,10 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   BasicBlock *EntryBlock = &F.front();
 
   DominatorTree DT(F);
+  CycleInfo CI;
+  CI.compute(F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(F, LI);
+  BranchProbabilityInfo BPI(F, CI);
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;
   if (!GetBFI) {
@@ -903,8 +906,10 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
       // For the old pass manager:
       if (!GetBFI) {
         DominatorTree DT(*Caller);
+        CycleInfo CI;
+        CI.compute(*Caller);
         LoopInfo LI(DT);
-        BranchProbabilityInfo BPI(*Caller, LI);
+        BranchProbabilityInfo BPI(*Caller, CI);
         TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
         CurrentCallerBFI = TempBFI.get();
       } else {
@@ -1088,8 +1093,10 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   DT.recalculate(*ClonedFunc);
 
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  CycleInfo CI;
+  CI.compute(*ClonedFunc);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
+  BranchProbabilityInfo BPI(*ClonedFunc, CI);
   ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
 
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
@@ -1105,8 +1112,8 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
                      ClonedFuncBFI.get(), &BPI,
                      LookupAC(*RegionInfo.EntryBlock->getParent()),
                      /* AllowVarargs */ false, /* AllowAlloca */ false,
-                     /* AllocaBlock */ nullptr, /* Suffix */ "",
-                     /* ArgsInZeroAddressSpace */ false,
+                     /* AllocaBlock */ nullptr, /* DeallocationBlocks */ {},
+                     /* Suffix */ "", /* ArgsInZeroAddressSpace */ false,
                      /* VoidReturnWithSingleOutput */ false);
 
     CE.findInputsOutputs(Inputs, Outputs, Sinks);
@@ -1163,8 +1170,10 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   DT.recalculate(*ClonedFunc);
 
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  CycleInfo CI;
+  CI.compute(*ClonedFunc);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
+  BranchProbabilityInfo BPI(*ClonedFunc, CI);
   ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
 
   // Gather up the blocks that we're going to extract.
@@ -1189,8 +1198,8 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
       CodeExtractor(ToExtract, &DT, /*AggregateArgs*/ false,
                     ClonedFuncBFI.get(), &BPI, LookupAC(*ClonedFunc),
                     /* AllowVarargs */ true, /* AllowAlloca */ false,
-                    /* AllocaBlock */ nullptr, /* Suffix */ "",
-                    /* ArgsInZeroAddressSpace */ false,
+                    /* AllocaBlock */ nullptr, /* DeallocationBlocks */ {},
+                    /* Suffix */ "", /* ArgsInZeroAddressSpace */ false,
                     /* VoidReturnWithSingleOutput */ false)
           .extractCodeRegion(CEAC);
 
@@ -1355,8 +1364,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (CalleeEntryCount)
     computeCallsiteToProfCountMap(Cloner.ClonedFunc, CallSiteToProfCountMap);
 
-  uint64_t CalleeEntryCountV =
-      (CalleeEntryCount ? CalleeEntryCount->getCount() : 0);
+  uint64_t CalleeEntryCountV = (CalleeEntryCount ? *CalleeEntryCount : 0);
 
   bool AnyInline = false;
   for (User *User : Users) {
@@ -1408,8 +1416,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (AnyInline) {
     Cloner.IsFunctionInlined = true;
     if (CalleeEntryCount)
-      Cloner.OrigFunc->setEntryCount(Function::ProfileCount(
-          CalleeEntryCountV, CalleeEntryCount->getType()));
+      Cloner.OrigFunc->setEntryCount(CalleeEntryCountV);
     OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);
     OrigFuncORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", Cloner.OrigFunc)

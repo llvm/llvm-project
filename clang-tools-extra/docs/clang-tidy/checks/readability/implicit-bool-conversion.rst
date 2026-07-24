@@ -123,6 +123,9 @@ Some additional accommodations are made for C:
 - ``bool`` (or ``_Bool``) operands in logical operators (``&&``, ``||``) are
   ignored.
 
+- ``bool`` (or ``_Bool``) conditions in conditional operators (``?:``) are
+  ignored.
+
 Occurrences of implicit conversions inside macros and template instantiations
 are deliberately ignored, as it is not clear how to deal with such cases.
 

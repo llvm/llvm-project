@@ -100,6 +100,8 @@ public:
   unsigned NumReadfirstlanes = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
+  // Marks entries lowered to VALU for bulk removal from V2SCopies.
+  bool Erased = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
   unsigned ID;
 
@@ -181,6 +183,12 @@ public:
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  // Waterfall expansion may introduce Phi nodes and -verify-machineinstrs will
+  // fail.
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -382,6 +390,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B32;
     break;
+  case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_MOV_B64_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B64_IMM_PSEUDO;
     break;
@@ -884,7 +893,8 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
   const TargetRegisterClass *SrcRC =
       MRI->getRegClass(MaybeVGPRConstMO.getReg());
   unsigned MoveSize = TRI->getRegSizeInBits(*SrcRC);
-  unsigned MoveOp = MoveSize == 64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
+  unsigned MoveOp =
+      MoveSize == 64 ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::S_MOV_B32;
   BuildMI(*BlockToInsertTo, PointToInsertTo, DL, TII->get(MoveOp), DstReg)
       .add(*SrcConst);
   if (MRI->hasOneUse(MaybeVGPRConstMO.getReg()))
@@ -1007,7 +1017,8 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
-      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
+      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) &&
+          !TII->isVALU(*Inst, /*AllowLDSDMA=*/true)) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
       }
@@ -1076,12 +1087,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto *CurInfoIt = V2SCopies.find(CurID);
-    if (CurInfoIt != V2SCopies.end()) {
-      const V2SCopyInfo &C = CurInfoIt->second;
+    if (CurInfoIt != V2SCopies.end() && !CurInfoIt->second.Erased) {
+      V2SCopyInfo &C = CurInfoIt->second;
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
         auto *SibInfoIt = V2SCopies.find(S);
-        if (SibInfoIt != V2SCopies.end()) {
+        if (SibInfoIt != V2SCopies.end() && !SibInfoIt->second.Erased) {
           V2SCopyInfo &SI = SibInfoIt->second;
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());
           if (!SI.NeedToBeConvertedToVALU) {
@@ -1095,11 +1106,10 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
       Copies.insert(C.Copy);
-      // TODO: MapVector::erase is inefficient. Do bulk removal with remove_if
-      // instead.
-      V2SCopies.erase(C.ID);
+      C.Erased = true;
     }
   }
+  V2SCopies.remove_if([](const auto &P) { return P.second.Erased; });
 
   TII->moveToVALU(Copies, MDT);
   Copies.clear();

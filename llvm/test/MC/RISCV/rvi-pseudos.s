@@ -229,3 +229,9 @@ lla a5, (0xFF + a_symbol) - 4
 # CHECK: auipc a5, %pcrel_hi(a_symbol-4)
 # CHECK: addi  a5, a5, %pcrel_lo(.Lpcrel_hi37)
 lla a5, a_symbol - 4
+
+## Check that subtraction associativity is respected
+# CHECK-LABEL: .Lpcrel_hi38:
+# CHECK-NEXT: auipc sp, %pcrel_hi(top-256-16)
+# CHECK-NEXT: addi  sp, sp, %pcrel_lo(.Lpcrel_hi38)
+lla sp, top - 0x100 - 0x10

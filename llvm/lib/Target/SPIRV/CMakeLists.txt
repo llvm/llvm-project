@@ -46,12 +46,14 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
+  SPIRVFinalizeShaderLinkage.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
   SPIRVTypeInst.cpp
   SPIRVUtils.cpp
   SPIRVNonSemanticDebugHandler.cpp
+  SPIRVAuxDataHandler.cpp
   SPIRVCBufferAccess.cpp
   SPIRVPushConstantAccess.cpp
 

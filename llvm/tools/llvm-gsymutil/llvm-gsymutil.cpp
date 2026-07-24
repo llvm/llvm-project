@@ -92,11 +92,14 @@ public:
 static bool Verbose;
 static std::vector<std::string> InputFilenames;
 static std::string ConvertFilename;
+static std::string SymtabFilename;
 static std::vector<std::string> ArchFilters;
 static std::string OutputFilename;
 static std::string JsonSummaryFile;
 static bool Verify;
 static bool BenchmarkReader;
+static uint32_t BenchmarkStart;
+static uint32_t BenchmarkStride;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
 static bool Quiet;
@@ -147,6 +150,9 @@ static void parseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_convert_EQ))
     ConvertFilename = A->getValue();
 
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_symtab_file_EQ))
+    SymtabFilename = A->getValue();
+
   for (const llvm::opt::Arg *A : Args.filtered(OPT_arch_EQ))
     ArchFilters.emplace_back(A->getValue());
 
@@ -157,7 +163,36 @@ static void parseArgs(int argc, char **argv) {
     JsonSummaryFile = A->getValue();
 
   Verify = Args.hasArg(OPT_verify);
-  BenchmarkReader = Args.hasArg(OPT_benchmark_reader);
+  BenchmarkStart = 0;
+  BenchmarkStride = 1;
+  if (Args.hasArg(OPT_benchmark_reader_all)) {
+    BenchmarkReader = true;
+  } else if (const llvm::opt::Arg *A = Args.getLastArg(OPT_benchmark_reader)) {
+    BenchmarkReader = true;
+    StringRef S{A->getValue()};
+    if (!S.empty()) {
+      auto [StartStr, StrideStr] = S.split(',');
+      if (!llvm::to_integer(StartStr, BenchmarkStart, 0)) {
+        llvm::errs() << ToolName
+                     << ": for the --benchmark-reader option: invalid start '"
+                     << StartStr << "'\n";
+        std::exit(1);
+      }
+      if (!StrideStr.empty() &&
+          !llvm::to_integer(StrideStr, BenchmarkStride, 0)) {
+        llvm::errs() << ToolName
+                     << ": for the --benchmark-reader option: invalid stride '"
+                     << StrideStr << "'\n";
+        std::exit(1);
+      }
+      if (BenchmarkStride == 0) {
+        llvm::errs() << ToolName
+                     << ": for the --benchmark-reader option: stride must be "
+                        "positive\n";
+        std::exit(1);
+      }
+    }
+  }
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
     StringRef S{A->getValue()};
@@ -266,6 +301,16 @@ static uint32_t getCPUType(MachOObjectFile &MachO) {
     return MachO.getHeader().cputype;
 }
 
+static std::string getArchitectureName(const ObjectFile &Obj) {
+  if (const auto *MachO = dyn_cast<object::MachOObjectFile>(&Obj)) {
+    Triple ObjTriple(MachO->getArchTriple());
+    return ObjTriple.getArchName().str();
+  }
+
+  Triple ObjTriple(Obj.makeTriple());
+  return ObjTriple.getArchName().str();
+}
+
 /// Return true if the object file has not been filtered by an --arch option.
 static bool filterArch(MachOObjectFile &Obj) {
   if (ArchFilters.empty())
@@ -363,7 +408,47 @@ static std::optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
   return std::nullopt;
 }
 
-static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
+static Expected<ObjectFile *>
+resolveSymtabObject(StringRef ArchName, Binary *SymtabBinary,
+                    StringRef SymtabPath,
+                    std::unique_ptr<ObjectFile> &OwnedSymtabObj) {
+  if (!SymtabBinary)
+    return nullptr;
+
+  if (auto *SymtabObj = dyn_cast<ObjectFile>(SymtabBinary)) {
+    std::string SymtabArchName = getArchitectureName(*SymtabObj);
+    if (SymtabArchName != ArchName)
+      return createStringError(std::errc::invalid_argument,
+                               "architecture mismatch: input file is %s but "
+                               "symbol table file '%s' is %s",
+                               ArchName.str().c_str(), SymtabPath.str().c_str(),
+                               SymtabArchName.c_str());
+
+    return SymtabObj;
+  }
+
+  if (auto *SymtabFat = dyn_cast<MachOUniversalBinary>(SymtabBinary)) {
+    auto SymtabObjOrErr = SymtabFat->getMachOObjectForArch(ArchName);
+    if (!SymtabObjOrErr) {
+      consumeError(SymtabObjOrErr.takeError());
+      return createStringError(
+          std::errc::invalid_argument,
+          "symbol table file '%s' does not contain architecture '%s'",
+          SymtabPath.str().c_str(), ArchName.str().c_str());
+    }
+
+    OwnedSymtabObj = std::move(*SymtabObjOrErr);
+    return OwnedSymtabObj.get();
+  }
+
+  return createStringError(std::errc::invalid_argument,
+                           "symbol table file '%s' is not a valid object file",
+                           SymtabPath.str().c_str());
+}
+
+static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
+                                    StringRef SymtabPath,
+                                    const std::string &OutFile,
                                     OutputAggregator &Out) {
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
@@ -436,8 +521,13 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
     Gsym.prepareMergedFunctions(Out);
 
   // Get the UUID and convert symbol table to GSYM.
-  if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
+  if (SymtabObj) {
+    Out << "Using symbol table file: " << SymtabPath << "\n";
+    if (auto Err = ObjectFileTransformer::convert(*SymtabObj, Out, Gsym))
+      return Err;
+  } else if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym)) {
     return Err;
+  }
 
   // If any call site YAML files were specified, load them now.
   if (!CallSiteYamlPath.empty())
@@ -472,16 +562,23 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
 }
 
 static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
+                                Binary *SymtabBinary, StringRef SymtabPath,
                                 const std::string &OutFile,
                                 OutputAggregator &Out) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
   error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get())) {
-    Triple ObjTriple(Obj->makeTriple());
-    auto ArchName = ObjTriple.getArchName();
+    std::string ArchName = getArchitectureName(*Obj);
+    std::unique_ptr<ObjectFile> OwnedSymtabObj;
+    auto SymtabObjOrErr =
+        resolveSymtabObject(ArchName, SymtabBinary, SymtabPath, OwnedSymtabObj);
+    if (!SymtabObjOrErr)
+      return SymtabObjOrErr.takeError();
+
     outs() << "Output file (" << ArchName << "): " << OutFile << "\n";
-    if (auto Err = handleObjectFile(*Obj, OutFile, Out))
+    if (auto Err =
+            handleObjectFile(*Obj, *SymtabObjOrErr, SymtabPath, OutFile, Out))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
     // Iterate over all contained architectures and filter out any that were
@@ -489,33 +586,51 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     // not specified on the command line, we will process all architectures.
     std::vector<std::unique_ptr<MachOObjectFile>> FilterObjs;
     for (auto &ObjForArch : Fat->objects()) {
-      if (auto MachOOrErr = ObjForArch.getAsObjectFile()) {
-        auto &Obj = **MachOOrErr;
-        if (filterArch(Obj))
-          FilterObjs.emplace_back(MachOOrErr->release());
-      } else {
+      auto MachOOrErr = ObjForArch.getAsObjectFile();
+      if (!MachOOrErr) {
         error(Filename, MachOOrErr.takeError());
+        continue;
       }
+
+      std::unique_ptr<MachOObjectFile> Obj = std::move(*MachOOrErr);
+      if (filterArch(*Obj))
+        FilterObjs.emplace_back(std::move(Obj));
     }
     if (FilterObjs.empty())
       error(Filename, createStringError(std::errc::invalid_argument,
                                         "no matching architectures found"));
 
     // Now handle each architecture we need to convert.
+    bool MultipleArchitecturesSelected = FilterObjs.size() > 1;
+    if (MultipleArchitecturesSelected && SymtabBinary &&
+        isa<ObjectFile>(SymtabBinary))
+      return createStringError(
+          std::errc::invalid_argument,
+          "symbol table file '%s' is not a universal binary, but the input "
+          "contains multiple architectures; use --arch to select a single "
+          "architecture",
+          SymtabPath.str().c_str());
+
     for (auto &Obj : FilterObjs) {
-      Triple ObjTriple(Obj->getArchTriple());
-      auto ArchName = ObjTriple.getArchName();
+      std::string ArchName = getArchitectureName(*Obj);
+      std::unique_ptr<ObjectFile> OwnedSymtabObj;
+      auto SymtabObjOrErr = resolveSymtabObject(ArchName, SymtabBinary,
+                                                SymtabPath, OwnedSymtabObj);
+      if (!SymtabObjOrErr)
+        return SymtabObjOrErr.takeError();
+
       std::string ArchOutFile(OutFile);
       // If we are only handling a single architecture, then we will use the
       // normal output file. If we are handling multiple architectures append
       // the architecture name to the end of the out file path so that we
       // don't overwrite the previous architecture's gsym file.
-      if (FilterObjs.size() > 1) {
+      if (MultipleArchitecturesSelected) {
         ArchOutFile.append(1, '.');
-        ArchOutFile.append(ArchName.str());
+        ArchOutFile.append(ArchName);
       }
       outs() << "Output file (" << ArchName << "): " << ArchOutFile << "\n";
-      if (auto Err = handleObjectFile(*Obj, ArchOutFile, Out))
+      if (auto Err = handleObjectFile(*Obj, *SymtabObjOrErr, SymtabPath,
+                                      ArchOutFile, Out))
         return Err;
     }
   }
@@ -526,10 +641,29 @@ static llvm::Error handleFileConversionToGSYM(StringRef Filename,
                                               const std::string &OutFile,
                                               OutputAggregator &Out) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
-  return handleBuffer(Filename, *Buffer, OutFile, Out);
+
+  std::unique_ptr<MemoryBuffer> SymtabBuffer;
+  std::unique_ptr<Binary> SymtabBinary;
+  if (!SymtabFilename.empty()) {
+    auto SymtabBufOrErr =
+        MemoryBuffer::getFile(SymtabFilename, /*IsText=*/true);
+    if (!SymtabBufOrErr)
+      return createStringError(SymtabBufOrErr.getError(),
+                               "failed to open symbol table file '%s'",
+                               SymtabFilename.c_str());
+
+    SymtabBuffer = std::move(*SymtabBufOrErr);
+    auto SymtabBinOrErr = object::createBinary(*SymtabBuffer);
+    if (!SymtabBinOrErr)
+      return SymtabBinOrErr.takeError();
+    SymtabBinary = std::move(*SymtabBinOrErr);
+  }
+
+  return handleBuffer(Filename, *Buffer, SymtabBinary.get(), SymtabFilename,
+                      OutFile, Out);
 }
 
 static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
@@ -629,12 +763,14 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   }
 }
 
-static llvm::Error benchmarkReader(StringRef GSYMPath) {
+static llvm::Error benchmarkReader(StringRef GSYMPath, uint32_t Start,
+                                   uint32_t Stride) {
   auto Gsym = GsymReader::openFile(GSYMPath);
   if (!Gsym)
     return Gsym.takeError();
-  auto NumAddrs = (*Gsym)->getNumAddresses();
-  for (uint32_t I = 0; I < NumAddrs; ++I) {
+  uint32_t N = (*Gsym)->getNumAddresses();
+  uint32_t NumLookups = 0;
+  for (uint32_t I = Start; I < N; I += Stride) {
     auto Addr = (*Gsym)->getAddress(I);
     if (!Addr)
       return createStringError(std::errc::invalid_argument,
@@ -642,9 +778,10 @@ static llvm::Error benchmarkReader(StringRef GSYMPath) {
     auto LR = (*Gsym)->lookup(*Addr);
     if (!LR)
       return LR.takeError();
+    ++NumLookups;
   }
-  outs() << "Benchmarked " << NumAddrs << " lookups in \"" << GSYMPath
-         << "\"\n";
+  outs() << "Benchmarked " << NumLookups << " lookups (out of " << N
+         << " addresses) in \"" << GSYMPath << "\"\n";
   return Error::success();
 }
 
@@ -662,7 +799,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (BenchmarkReader) {
     for (const auto &GSYMPath : InputFilenames)
-      if (auto Err = benchmarkReader(GSYMPath))
+      if (auto Err = benchmarkReader(GSYMPath, BenchmarkStart, BenchmarkStride))
         error("Benchmark failed: ", std::move(Err));
     return EXIT_SUCCESS;
   }

@@ -4,9 +4,9 @@ readability-identifier-length
 =============================
 
 This check finds variables and function parameters whose length are too short.
-The desired name length is configurable.
-
-Special cases are supported for loop counters and for exception variable names.
+The desired name length is configurable. Special short names which should be
+ignored can be specified. Local variables with short names can also be ignored
+if they are short-lived.
 
 Options
 -------
@@ -14,6 +14,7 @@ Options
 The following options are described below:
 
  - :option:`MinimumVariableNameLength`, :option:`IgnoredVariableNames`
+ - :option:`MinimumBindingNameLength`, :option:`IgnoredBindingNames`
  - :option:`MinimumParameterNameLength`, :option:`IgnoredParameterNames`
  - :option:`MinimumLoopCounterNameLength`, :option:`IgnoredLoopCounterNames`
  - :option:`MinimumExceptionNameLength`,
@@ -27,18 +28,30 @@ The following options are described below:
     `MinimumVariableNameLength` (default is `3`). Setting it to `0` or `1`
     disables the check entirely.
 
-
     .. code-block:: c++
 
       int i = 42;    // warns that 'i' is too short
-
-    This check does not have any fix suggestions in the general case since
-    variable names have semantic value.
 
 .. option:: IgnoredVariableNames
 
     Specifies a regular expression for variable names that are
     to be ignored. The default value is empty, thus no names are ignored.
+
+.. option:: MinimumBindingNameLength
+
+    All variables introduced by structured bindings are expected to have at
+    least a length of `MinimumBindingNameLength` (default is `2`). Setting it
+    to `0` or `1` disables the check entirely.
+
+    .. code-block:: c++
+
+      auto [a] = get_result();    // warns that 'a' is too short
+
+.. option:: IgnoredBindingNames
+
+    Specifies a regular expression for variable names introduced by structured
+    bindings that are to be ignored. The default value is `^[_]$`, to allow the
+    use of the `_` idiom to specify that the value is discarded on purpose.
 
 .. option:: MinimumParameterNameLength
 
@@ -46,16 +59,12 @@ The following options are described below:
     `MinimumParameterNameLength` (default is `3`). Setting it to `0` or `1`
     disables the check entirely.
 
-
     .. code-block:: c++
 
          int doubler(int x)   // warns that x is too short
          {
             return 2 * x;
          }
-
-    This check does not have any fix suggestions in the general case since
-    variable names have semantic value.
 
 .. option:: IgnoredParameterNames
 
@@ -67,7 +76,6 @@ The following options are described below:
     Loop counter variables are expected to have a length of at least
     `MinimumLoopCounterNameLength` characters (default is `2`). Setting it to
     `0` or `1` disables the check entirely.
-
 
     .. code-block:: c++
 
@@ -83,7 +91,6 @@ The following options are described below:
     reasons and the last one since it is frequently used as a "don't care"
     value, specifically in tools such as Google Benchmark.
 
-
     .. code-block:: c++
 
       // This does not warn by default, for historical reasons.
@@ -96,7 +103,6 @@ The following options are described below:
     Exception clause variables are expected to have a length of at least
     `MinimumExceptionNameLength` (default is `2`). Setting it to `0` or `1`
     disables the check entirely.
-
 
     .. code-block:: c++
 

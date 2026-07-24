@@ -59,7 +59,7 @@ namespace {
 
 struct PreISelIntrinsicLowering {
   const TargetMachine *TM;
-  const LibcallLoweringModuleAnalysisResult &ModuleLibcalls;
+  const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -70,7 +70,7 @@ struct PreISelIntrinsicLowering {
 
   explicit PreISelIntrinsicLowering(
       const TargetMachine *TM_,
-      const LibcallLoweringModuleAnalysisResult &ModuleLibcalls_,
+      const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
@@ -241,9 +241,9 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool
-canEmitLibcall(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-               const TargetMachine *TM, Function *F, RTLIB::Libcall LC) {
+static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
+                           const TargetMachine *TM, Function *F,
+                           RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
@@ -252,9 +252,8 @@ canEmitLibcall(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
-static bool
-canEmitMemcpy(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-              const TargetMachine *TM, Function *F) {
+static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
+                          const TargetMachine *TM, Function *F) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
@@ -785,7 +784,6 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::acos:
     case Intrinsic::asin:
     case Intrinsic::atan:
-    case Intrinsic::canonicalize:
     case Intrinsic::cos:
     case Intrinsic::cosh:
     case Intrinsic::exp:
@@ -808,22 +806,6 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
-      });
-      break;
-    case Intrinsic::atan2:
-    case Intrinsic::ldexp:
-    case Intrinsic::pow:
-    case Intrinsic::powi:
-      Changed |= forEachCall(F, [&](CallInst *CI) {
-        Type *Ty = CI->getArgOperand(0)->getType();
-        if (!TM || !isa<ScalableVectorType>(Ty))
-          return false;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
-        unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
-        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
-        if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
-          return false;
-        return lowerBinaryVectorIntrinsicAsLoop(M, CI);
       });
       break;
     case Intrinsic::ptrauth_sign:
@@ -864,7 +846,7 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    const LibcallLoweringModuleAnalysisResult &ModuleLibcalls =
+    const ModuleLibcallLoweringInfo &ModuleLibcalls =
         getAnalysis<LibcallLoweringInfoWrapper>().getResult(M);
 
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
@@ -902,7 +884,7 @@ ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
 
 PreservedAnalyses
 PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  const LibcallLoweringModuleAnalysisResult &LibcallLowering =
+  const ModuleLibcallLoweringInfo &LibcallLowering =
       MAM.getResult<LibcallLoweringModuleAnalysis>(M);
 
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

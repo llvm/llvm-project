@@ -258,6 +258,32 @@ TemplateArgument::CreatePackCopy(ASTContext &Context,
   return TemplateArgument(Args.copy(Context));
 }
 
+StringRef TemplateArgument::getKindName() const {
+  switch (getKind()) {
+  case TemplateArgument::Null:
+    return "null";
+  case TemplateArgument::Type:
+    return "type";
+  case TemplateArgument::Declaration:
+    return "decl";
+  case TemplateArgument::NullPtr:
+    return "nullptr";
+  case TemplateArgument::Integral:
+    return "integral";
+  case TemplateArgument::Template:
+    return "template";
+  case TemplateArgument::TemplateExpansion:
+    return "template expansion";
+  case TemplateArgument::Expression:
+    return "expression";
+  case TemplateArgument::Pack:
+    return "pack";
+  case TemplateArgument::StructuralValue:
+    return "structural value";
+  }
+  llvm_unreachable("unhandled ArgKind");
+}
+
 TemplateArgumentDependence TemplateArgument::getDependence() const {
   auto Deps = TemplateArgumentDependence::None;
   switch (getKind()) {

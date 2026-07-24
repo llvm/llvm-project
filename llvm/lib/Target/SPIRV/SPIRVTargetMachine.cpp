@@ -11,13 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTargetMachine.h"
+#include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
+#include "SPIRVCtorDtorLowering.h"
 #include "SPIRVEmitIntrinsics.h"
+#include "SPIRVFinalizeShaderLinkage.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeImplicitBinding.h"
+#include "SPIRVLegalizePointerCast.h"
 #include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVMergeRegionExitTargets.h"
+#include "SPIRVPrepareFunctions.h"
+#include "SPIRVPrepareGlobals.h"
 #include "SPIRVPushConstantAccess.h"
+#include "SPIRVRegularizer.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
@@ -56,16 +65,18 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVCBufferAccessLegacyPass(PR);
   initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
-  initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
-  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
-  initializeSPIRVMergeRegionExitTargetsPass(PR);
-  initializeSPIRVEmitIntrinsicsPass(PR);
-  initializeSPIRVPrepareFunctionsPass(PR);
-  initializeSPIRVPrepareGlobalsPass(PR);
+  initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
+  initializeSPIRVEmitIntrinsicsLegacyPass(PR);
+  initializeSPIRVPrepareFunctionsLegacyPass(PR);
+  initializeSPIRVPrepareGlobalsLegacyPass(PR);
+  initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
+  initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -177,10 +188,13 @@ void SPIRVPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
-  // Variadic function calls aren't supported in shader code.
-  // This needs to come before SPIRVPrepareFunctions because this
-  // may introduce intrinsic calls.
-  if (!TM.getSubtargetImpl()->isShader()) {
+  if (TM.getSubtargetImpl()->isShader()) {
+    if (getOptLevel() != CodeGenOptLevel::None)
+      addPass(createSPIRVFinalizeShaderLinkagePass(TM));
+  } else {
+    // Variadic function calls aren't supported in shader code.
+    // This needs to come before SPIRVPrepareFunctions because this
+    // may introduce intrinsic calls.
     addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   }
 

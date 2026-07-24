@@ -17,6 +17,11 @@
 // 20f56d140909a01c74e9981835373eaab6021af9.
 // UNSUPPORTED: using-built-library-before-llvm-21
 
+// This test exercises support for stripping the __alloc_token_ prefix
+// (fb6f1bde00c4) and for pack indexing type/expression mangling
+// (68e8dd698dc6), both introduced in the LLVM 23 release.
+// XFAIL: using-built-library-before-llvm-23
+
 // XFAIL: win32-broken-printf-a-precision
 
 #include "support/timer.h"

@@ -15,7 +15,7 @@ local:
 ```
 
 The semantic analysis pass determines if a syntactically correct Fortran
-program is is legal by enforcing the constraints of the language.
+program is legal by enforcing the constraints of the language.
 
 The input is a parse tree with a `Program` node at the root;
 and a "cooked" character stream, a contiguous stream of characters

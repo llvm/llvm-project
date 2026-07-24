@@ -11,9 +11,10 @@ define i8 @PR34687(i1 %c, i32 %x, i32 %n, i32 %divisor) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[C:%.*]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[X1:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -30,7 +31,7 @@ define i8 @PR34687(i1 %c, i32 %x, i32 %n, i32 %divisor) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP6:%.*]] = sdiv <4 x i32> [[VEC_IND]], [[TMP9]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.masked.sdiv.v4i32(<4 x i32> [[VEC_IND]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i1> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select i1 [[C]], <4 x i32> [[TMP6]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP3]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
@@ -98,8 +99,9 @@ define i8 @PR34687_no_undef(i1 %c, i32 %x, i32 %n) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C:%.*]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> splat (i32 99), [[TMP0]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i1> poison, i1 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT2]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.sdiv.v4i32(<4 x i32> splat (i32 99), <4 x i32> [[BROADCAST_SPLAT2]], <4 x i1> [[BROADCAST_SPLAT3]])
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -170,13 +172,13 @@ define i32 @PR35734(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR35734(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 78)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SMAX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[X]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[X]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP8]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP8]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[X]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[Y:%.*]], i32 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -193,7 +195,7 @@ define i32 @PR35734(i32 %x, i32 %y) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i1 [[TMP9]] to i32
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[X]], [[ENTRY:%.*]] ]

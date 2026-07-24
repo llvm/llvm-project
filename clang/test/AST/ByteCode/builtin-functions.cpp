@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
-// RUN: %clang_cc1 -Wno-string-plus-int                                         -triple x86_64 %s -verify=ref,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread                                         -triple x86_64 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
-// RUN: %clang_cc1 -Wno-string-plus-int                                         -triple i686 %s -verify=ref,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread                                         -triple i686 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int                                         -triple x86_64 %s -verify=ref,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread                                         -triple x86_64 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int                                         -triple i686 %s -verify=ref,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread                                         -triple i686 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int                                            -verify=ref,both %s
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -Wno-stringop-overread                                            -verify=ref,both %s
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define LITTLE_END 1
@@ -856,6 +856,8 @@ namespace ctz {
   char ctz53[__builtin_ctzg((unsigned __int128)0x10, 42) == 4 ? 1 : -1];
   char ctz54[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1)) == BITSIZE(__int128) - 1 ? 1 : -1];
   char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+
+  static_assert(__builtin_elementwise_ctzg((__int128)42) == 1, "");
 #endif
 #ifndef __AVR__
   int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
@@ -1383,6 +1385,63 @@ namespace ElementwisePopcount {
 #if __INT_WIDTH__ == 32
   static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
 #endif
+}
+
+namespace ElementwiseClmul {
+  static_assert(__builtin_elementwise_clmul(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_clmul(1U, 1U) == 1U);
+  static_assert(__builtin_elementwise_clmul(3U, 3U) == 5U);
+  static_assert(__builtin_elementwise_clmul(0xBU, 0xDU) == 0x7FU);
+  static_assert(__builtin_elementwise_clmul(0xFU, 0xFU) == 0x55U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_clmul((unsigned _BitInt(31))3,
+                                            (unsigned _BitInt(31))3) ==
+                (unsigned _BitInt(31))5);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_clmul(
+                    (vector4uint){0U, 1U, 3U, 7U},
+                    (vector4uint){0U, 1U, 3U, 7U})) == 27U);
+}
+
+namespace ElementwisePext {
+  static_assert(__builtin_elementwise_pext(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_pext(0xFFU, 0xFFU) == 0xFFU);
+  static_assert(__builtin_elementwise_pext(0xFFU, 0x0FU) == 0x0FU);
+  static_assert(__builtin_elementwise_pext(0xFFU, 0xF0U) == 0x0FU);
+  static_assert(__builtin_elementwise_pext(0b1010'1010U, 0b1100'1100U) ==
+                0b0000'1010U);
+  static_assert(__builtin_elementwise_pext(0b1111'1111U, 0b1010'1010U) ==
+                0b0000'1111U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_pext((unsigned _BitInt(31))0xFF,
+                                           (unsigned _BitInt(31))0x0F) ==
+                (unsigned _BitInt(31))0x0F);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_pext(
+                    (vector4uint){0xAAU, 0xFFU, 0x55U, 0x00U},
+                    (vector4uint){0xCCU, 0xAAU, 0x0FU, 0x00U})) == 0x1EU);
+}
+
+namespace ElementwisePdep {
+  static_assert(__builtin_elementwise_pdep(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_pdep(0xFFU, 0xFFU) == 0xFFU);
+  static_assert(__builtin_elementwise_pdep(0x0FU, 0xFFU) == 0x0FU);
+  static_assert(__builtin_elementwise_pdep(0x0FU, 0xF0U) == 0xF0U);
+  static_assert(__builtin_elementwise_pdep(0b0000'1010U, 0b1100'1100U) ==
+                0b1000'1000U);
+  static_assert(__builtin_elementwise_pdep(0b0000'1111U, 0b1010'1010U) ==
+                0b1010'1010U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_pdep((unsigned _BitInt(31))0x0F,
+                                           (unsigned _BitInt(31))0xFF) ==
+                (unsigned _BitInt(31))0x0F);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_pdep(
+                    (vector4uint){0x0AU, 0x0FU, 0x05U, 0x00U},
+                    (vector4uint){0xCCU, 0xAAU, 0x0FU, 0x00U})) == 0x137U);
 }
 
 namespace BuiltinMemcpy {
@@ -1949,6 +2008,16 @@ namespace WithinLifetime {
   static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
                                      // both-note {{in call to}}
+
+
+  void LocalGlobal() {
+    constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{reference to temporary is not a constant expression}} \
+                                   // both-note {{temporary created here}} \
+                                   // ref-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
+                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+  }
 }
 
 #ifdef __SIZEOF_INT128__
@@ -2037,4 +2106,19 @@ namespace WcslenInvalidArg {
                                                               // both-note {{cast that performs the conversions of a reinterpret_cast}}
   static_assert(__builtin_wcslen(L"x") == 1);
 
+}
+
+namespace SubCb {
+  constexpr unsigned char subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+    return __builtin_subcb(lhs, rhs, carry, &rhs);
+  }
+  static_assert(subcb(10, 15, 1) == 250);
+
+  using u8 = unsigned char;
+  constexpr int subcb2() {
+    u8 a = 0, b = 0, c = 0;
+    __builtin_subcb(a, b, c, &c);
+    return 0;
+  }
+  static_assert(subcb2() == 0);
 }

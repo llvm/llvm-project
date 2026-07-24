@@ -26,12 +26,9 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Compute the indices of the slice `index` for a transfer op.
-static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
-                                               ArrayRef<Value> indices,
-                                               AffineMap permutationMap,
-                                               Location loc,
-                                               OpBuilder &builder) {
+SmallVector<Value> mlir::vector::sliceTransferIndices(
+    ArrayRef<int64_t> elementOffsets, ArrayRef<Value> indices,
+    AffineMap permutationMap, Location loc, OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   auto isBroadcast = [](AffineExpr expr) {
     if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
@@ -41,11 +38,12 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
   SmallVector<Value> slicedIndices(indices);
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
-    if (isBroadcast(dim.value()))
+    int64_t elementOffset = elementOffsets[dim.index()];
+    if (isBroadcast(dim.value()) || elementOffset == 0)
       continue;
     unsigned pos = cast<AffineDimExpr>(dim.value()).getPosition();
     auto expr = getAffineDimExpr(0, builder.getContext()) +
-                getAffineConstantExpr(elementOffsets[dim.index()], ctx);
+                getAffineConstantExpr(elementOffset, ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
     slicedIndices[pos] =
         affine::AffineApplyOp::create(builder, loc, map, indices[pos]);
@@ -263,10 +261,6 @@ private:
 };
 
 struct OffsetMapInfo {
-  static SmallVector<int64_t> getEmptyKey() { return {int64_t(-1)}; }
-
-  static SmallVector<int64_t> getTombstoneKey() { return {int64_t(-2)}; }
-
   static unsigned getHashValue(const SmallVector<int64_t> &v) {
     return static_cast<unsigned>(llvm::hash_combine_range(v));
   }
@@ -1291,20 +1285,68 @@ calculateSourceOffsets(ArrayRef<int64_t> resultOffsets,
   return delinearize(linearIndex, computeStrides(sourceShape));
 }
 
+/// A maximal aligned range of source dims [srcBegin, srcEnd) and result dims
+/// [resBegin, resEnd) of a `vector.shape_cast` that hold equal element counts.
+struct ShapeCastReassociationGroup {
+  int64_t srcBegin, srcEnd;
+  int64_t resBegin, resEnd;
+};
+
+/// Splits a shape_cast from `sourceShape` to `resultShape` into reassociation
+/// groups (trailing unit dims absorbed). Returns nullopt if shapes misalign.
+/// E.g. [8, 32, 32] -> [256, 32] ==> {[0,2)->[0,1)}, {[2,3)->[1,2)}
+static std::optional<SmallVector<ShapeCastReassociationGroup>>
+computeShapeCastGroups(ArrayRef<int64_t> sourceShape,
+                       ArrayRef<int64_t> resultShape) {
+  SmallVector<ShapeCastReassociationGroup> groups;
+  int64_t si = 0, ri = 0;
+  int64_t srcRank = sourceShape.size(), resRank = resultShape.size();
+  while (si < srcRank && ri < resRank) {
+    int64_t srcBegin = si, resBegin = ri;
+    int64_t srcProd = sourceShape[si++];
+    int64_t resProd = resultShape[ri++];
+    // Grow the smaller side until both groups span the same element count.
+    while (srcProd != resProd) {
+      if (srcProd < resProd) {
+        if (si >= srcRank)
+          return std::nullopt;
+        srcProd *= sourceShape[si++];
+      } else {
+        if (ri >= resRank)
+          return std::nullopt;
+        resProd *= resultShape[ri++];
+      }
+    }
+    // Absorb trailing unit dimensions into the current group.
+    while (si < srcRank && sourceShape[si] == 1)
+      ++si;
+    while (ri < resRank && resultShape[ri] == 1)
+      ++ri;
+    groups.push_back({srcBegin, si, resBegin, ri});
+  }
+  if (si != srcRank || ri != resRank)
+    return std::nullopt;
+  return groups;
+}
+
 /// This pattern unrolls `vector.shape_cast` operations according to the
 /// provided target unroll shape. It unrolls a large shape cast into smaller
 /// shape casts by extracting contiguous slices from the source vector, casting
 /// each slice to the target shape, and assembling the result by inserting each
 /// computed segment into the appropriate offset of the result vector.
 ///
-/// This pattern only applies when contiguous slices can be extracted from the
-/// source vector and inserted into the result vector such that each slice
-/// remains a valid vector (and not decompose to scalars). In these cases, the
-/// unrolling proceeds as:
+/// The target tile need only be contiguous within each reassociation group of
+/// the cast (not in the whole result vector), so that each extracted slice
+/// remains a valid vector. The unrolling proceeds as:
 /// vector.extract_strided_slice -> vector.shape_cast (on the slice) ->
 /// vector.insert_strided_slice.
 ///
-/// Example:
+/// NOTE: This replaces a NOP `vector.shape_cast` with strided slices. Per-group
+/// contiguity keeps those slices contiguous, so they are expected to lower to a
+/// NOP too. Targets where strided slices do not lower to a NOP should not use
+/// this pattern, or should pick a tile that avoids introducing such slices.
+///
+/// Example (single group):
 ///   Given a shape cast operation:
 ///     %0 = vector.shape_cast %src : vector<8x2xf32> to vector<4x4xf32>
 ///
@@ -1321,6 +1363,18 @@ calculateSourceOffsets(ArrayRef<int64_t> resultOffsets,
 ///     %sc1 = vector.shape_cast %s1 : vector<4x2xf32> to vector<2x4xf32>
 ///     %i1 = vector.insert_strided_slice %sc1, %i0 [2, 0], [1, 1]
 ///       : vector<2x4xf32> into vector<4x4xf32>
+///
+/// Example (multiple groups): with target tile <8x1x4>, the tile is strided in
+/// the result <8x1x32> but contiguous per group (8|32 -> 8x1|32), so the
+/// matching strided box <8x4> is extracted from the source:
+///     %0 = vector.shape_cast %src : vector<8x32xf32> to vector<8x1x32xf32>
+///
+///     %s0 = vector.extract_strided_slice %src [0, 0], [8, 4], [1, 1]
+///       : vector<8x32xf32> to vector<8x4xf32>
+///     %sc0 = vector.shape_cast %s0 : vector<8x4xf32> to vector<8x1x4xf32>
+///     %i0 = vector.insert_strided_slice %sc0, %zero [0, 0, 0], [1, 1, 1]
+///       : vector<8x1x4xf32> into vector<8x1x32xf32>
+///     // ... repeat for the remaining slices.
 ///
 struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
   UnrollShapeCastPattern(MLIRContext *context,
@@ -1341,20 +1395,44 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
     ArrayRef<int64_t> resultShape = resultType.getShape();
 
-    if (!isContiguous(*targetShape, resultShape))
+    // The cast factors into reassociation groups; the target tile only needs to
+    // be contiguous within each group, not in the whole result vector.
+    std::optional<SmallVector<ShapeCastReassociationGroup>> groups =
+        computeShapeCastGroups(sourceShape, resultShape);
+    if (!groups)
       return rewriter.notifyMatchFailure(
-          shapeCastOp, "Only supports cases where target shape is "
-                       "contiguous in result vector shape");
+          shapeCastOp, "cannot align source and result reassociation groups");
 
-    int64_t targetElements = ShapedType::getNumElements(*targetShape);
+    // The tile is right-aligned against the result; left-pad with 1s so it can
+    // be indexed per group.
+    SmallVector<int64_t> paddedTarget(resultShape.size(), 1);
+    llvm::copy(*targetShape,
+               paddedTarget.end() - static_cast<int64_t>(targetShape->size()));
 
-    // Calculate the shape to extract from source.
-    std::optional<SmallVector<int64_t>> extractShape =
-        calculateSourceExtractShape(sourceShape, targetElements);
-    if (!extractShape)
-      return rewriter.notifyMatchFailure(
-          shapeCastOp,
-          "cannot extract target number of elements contiguously from source");
+    // Validate per-group contiguity and build the source extract shape.
+    SmallVector<int64_t> extractShapeStorage;
+    for (const ShapeCastReassociationGroup &g : *groups) {
+      ArrayRef<int64_t> resSub =
+          resultShape.slice(g.resBegin, g.resEnd - g.resBegin);
+      ArrayRef<int64_t> tgtSub = ArrayRef<int64_t>(paddedTarget)
+                                     .slice(g.resBegin, g.resEnd - g.resBegin);
+      if (!isContiguous(tgtSub, resSub))
+        return rewriter.notifyMatchFailure(
+            shapeCastOp, "target shape is not contiguous within a "
+                         "reassociation group of the result vector shape");
+
+      ArrayRef<int64_t> srcSub =
+          sourceShape.slice(g.srcBegin, g.srcEnd - g.srcBegin);
+      int64_t groupTargetElements = ShapedType::getNumElements(tgtSub);
+      std::optional<SmallVector<int64_t>> groupExtract =
+          calculateSourceExtractShape(srcSub, groupTargetElements);
+      if (!groupExtract)
+        return rewriter.notifyMatchFailure(
+            shapeCastOp, "cannot extract the target number of elements "
+                         "contiguously from a source reassociation group");
+      extractShapeStorage.append(groupExtract->begin(), groupExtract->end());
+    }
+    ArrayRef<int64_t> extractShape = extractShapeStorage;
 
     Location loc = shapeCastOp.getLoc();
 
@@ -1365,7 +1443,7 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     VectorType targetType =
         VectorType::get(*targetShape, sourceType.getElementType());
 
-    SmallVector<int64_t> extractStrides(extractShape->size(), 1);
+    SmallVector<int64_t> extractStrides(extractShape.size(), 1);
     SmallVector<int64_t> insertStrides(targetShape->size(), 1);
 
     for (SmallVector<int64_t> resultOffsets :
@@ -1373,7 +1451,7 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
       SmallVector<int64_t> sourceOffsets =
           calculateSourceOffsets(resultOffsets, sourceShape, resultShape);
       Value sourceChunk = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-          loc, shapeCastOp.getSource(), sourceOffsets, *extractShape,
+          loc, shapeCastOp.getSource(), sourceOffsets, extractShape,
           extractStrides);
       Value targetChunk = rewriter.createOrFold<vector::ShapeCastOp>(
           loc, targetType, sourceChunk);
@@ -1382,6 +1460,242 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     }
 
     rewriter.replaceOp(shapeCastOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+// Unroll vector::BitCastOp into smaller slice-based bitcast operations.
+// Decomposes the result vector into target shape chunks and bitcasts
+// corresponding source slices, accounting for element bitwidth ratios.
+/// Example:
+///   Given a bitcast Op:
+///
+///     vector.bitcast %src : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %slice_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x4xf32>
+///     %slice_0 = vector.bitcast %slice_0 : vector<2x4xf32>
+///     %result = vector.insert_strided_slice %slice_0, %init[0, 0]
+///     // ... repeat for remaining slices
+struct UnrollBitCastPattern : public OpRewritePattern<vector::BitCastOp> {
+  UnrollBitCastPattern(MLIRContext *context,
+                       const vector::UnrollVectorOptions &options,
+                       PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::BitCastOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, bitCastOp);
+    if (!targetShape)
+      return rewriter.notifyMatchFailure(bitCastOp,
+                                         "failed to get target shape");
+
+    VectorType sourceType = bitCastOp.getSourceVectorType();
+    VectorType resultType = bitCastOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = bitCastOp.getLoc();
+
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          bitCastOp, "target shape rank must match result rank");
+
+    unsigned sourceElementBits = sourceType.getElementTypeBitWidth();
+    unsigned resultElementBits = resultType.getElementTypeBitWidth();
+
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+
+    sourceSliceShape[lastDim] =
+        ((*targetShape)[lastDim] * resultElementBits) / sourceElementBits;
+
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
+
+    VectorType targetType =
+        VectorType::get(*targetShape, resultType.getElementType());
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] =
+          (resultOffsets[lastDim] * resultElementBits) / sourceElementBits;
+
+      Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, bitCastOp.getSource(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+      Value bitcastSlice = rewriter.createOrFold<vector::BitCastOp>(
+          loc, targetType, sourceSlice);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, bitcastSlice, result, resultOffsets, resultStrides);
+    }
+
+    rewriter.replaceOp(bitCastOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+/// Pattern to unroll vector.interleave into smaller slice-sized operations.
+/// Decomposes a large interleave into slices by extracting slices from both
+/// input vectors, interleaving them, and inserting back into the result.
+///
+/// Example:
+///   Given an interleave Op:
+///
+///     vector.interleave %lhs, %rhs : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %slice_lhs_0 = vector.extract_strided_slice %lhs[0, 0] : vector<2x2xf32>
+///     %slice_rhs_0 = vector.extract_strided_slice %rhs[0, 0] : vector<2x2xf32>
+///     %slice_0 = vector.interleave %slice_lhs_0, %slice_rhs_0
+///       : vector<2x4xf32>
+///     %result = vector.insert_strided_slice %slice_0, %init[0, 0]
+///     // ... repeat for remaining slices
+struct UnrollInterleavePattern : public OpRewritePattern<vector::InterleaveOp> {
+  UnrollInterleavePattern(MLIRContext *context,
+                          const vector::UnrollVectorOptions &options,
+                          PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::InterleaveOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, interleaveOp);
+    if (!targetShape)
+      return rewriter.notifyMatchFailure(interleaveOp,
+                                         "failed to get target shape");
+
+    VectorType resultType = interleaveOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = interleaveOp.getLoc();
+
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          interleaveOp, "target shape rank must match result rank");
+
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+    sourceSliceShape[lastDim] = (*targetShape)[lastDim] / 2;
+
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
+
+    VectorType targetType =
+        VectorType::get(*targetShape, resultType.getElementType());
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] = resultOffsets[lastDim] / 2;
+
+      Value lhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, interleaveOp.getLhs(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+      Value rhsSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, interleaveOp.getRhs(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+      Value interleaveSlice = rewriter.createOrFold<vector::InterleaveOp>(
+          loc, targetType, lhsSlice, rhsSlice);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, interleaveSlice, result, resultOffsets, resultStrides);
+    }
+
+    rewriter.replaceOp(interleaveOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+/// Pattern to unroll vector.deinterleave into smaller slice-sized operations.
+/// Decomposes a large deinterleave (which splits a vector into even/odd halves)
+/// by extracting source slices, deinterleaving them, and inserting into two
+/// result vectors.
+///
+/// Example:
+///   Given a deinterleave Op:
+///
+///     vector.deinterleave %src : vector<4x8xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///   %slice_0 = vector.extract_strided_slice %src[0, 0] : vector<2x4xf32>
+///   %slice_lhs_0, %slice_rhs_0 = vector.deinterleave %slice_0 :
+///   vector<2x4xf32> %result1 = vector.insert_strided_slice %slice_lhs_0,
+///   %init1[0, 0] %result2 = vector.insert_strided_slice %slice_rhs_0,
+///   %init2[0, 0]
+///   // ... repeat for remaining slices
+struct UnrollDeinterleavePattern
+    : public OpRewritePattern<vector::DeinterleaveOp> {
+  UnrollDeinterleavePattern(MLIRContext *context,
+                            const vector::UnrollVectorOptions &options,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::DeinterleaveOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::DeinterleaveOp deinterleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, deinterleaveOp);
+    if (!targetShape)
+      return rewriter.notifyMatchFailure(deinterleaveOp,
+                                         "failed to get target shape");
+
+    VectorType resultType = deinterleaveOp.getResultVectorType();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    Location loc = deinterleaveOp.getLoc();
+
+    if (targetShape->size() != resultShape.size())
+      return rewriter.notifyMatchFailure(
+          deinterleaveOp, "target shape rank must match result rank");
+
+    SmallVector<int64_t> sourceSliceShape(targetShape->begin(),
+                                          targetShape->end());
+    int64_t lastDim = sourceSliceShape.size() - 1;
+    sourceSliceShape[lastDim] = (*targetShape)[lastDim] * 2;
+
+    Value resultOdd = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
+    Value resultEven = arith::ConstantOp::create(
+        rewriter, loc, resultType, rewriter.getZeroAttr(resultType));
+    SmallVector<int64_t> resultStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides(sourceSliceShape.size(), 1);
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets = resultOffsets;
+      sourceOffsets[lastDim] = resultOffsets[lastDim] * 2;
+
+      Value sourceSlice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, deinterleaveOp.getSource(), sourceOffsets, sourceSliceShape,
+          sourceStrides);
+
+      auto deinterleaveSlice =
+          vector::DeinterleaveOp::create(rewriter, loc, sourceSlice);
+
+      resultOdd = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes1(), resultOdd, resultOffsets,
+          resultStrides);
+      resultEven = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, deinterleaveSlice.getRes2(), resultEven, resultOffsets,
+          resultStrides);
+    }
+
+    rewriter.replaceOp(deinterleaveOp, ValueRange{resultOdd, resultEven});
     return success();
   }
 
@@ -1400,8 +1714,10 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
                UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
                UnrollToElements, UnrollStepPattern, UnrollShapeCastPattern,
-               UnrollCreateMaskPattern, UnrollConstantMaskPattern>(
-      patterns.getContext(), options, benefit);
+               UnrollCreateMaskPattern, UnrollConstantMaskPattern,
+               UnrollBitCastPattern, UnrollInterleavePattern,
+               UnrollDeinterleavePattern>(patterns.getContext(), options,
+                                          benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

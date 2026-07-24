@@ -88,7 +88,7 @@ enum : unsigned {
   // RMW/CMPXCHG operations have 2 orderings but they must currently match.
   WASM_MEM_ORDER_RMW_ACQ_REL = 0x11,
 };
-const unsigned WASM_MEMARG_HAS_MEM_ORDER = 0x20;
+const unsigned WASM_MEMARG_HAS_MEM_ORDER = 0x10;
 
 // Kinds of externals (for imports and exports).
 enum : unsigned {
@@ -519,8 +519,8 @@ struct WasmSignature {
   // but does not actually model them. Instead a placeholder signature is
   // created in the Object's signature list.
   enum { Function, Tag, Placeholder } Kind = Function;
-  // Support empty and tombstone instances, needed by DenseMap.
-  enum { Plain, Empty, Tombstone } State = Plain;
+  // Support empty instances, needed by DenseMap.
+  enum { Plain, Empty } State = Plain;
 
   WasmSignature(SmallVector<ValType, 1> &&InReturns,
                 SmallVector<ValType, 4> &&InParams)

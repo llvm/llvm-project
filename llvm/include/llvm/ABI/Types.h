@@ -17,10 +17,9 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -82,6 +81,7 @@ public:
   bool isRecord() const { return Kind == TypeKind::Record; }
   bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
   bool isComplex() const { return Kind == TypeKind::Complex; }
+  bool isZeroSize() const { return getSizeInBits().getFixedValue() == 0; }
 };
 
 class VoidType : public Type {
@@ -244,6 +244,8 @@ struct FieldInfo {
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
         IsUnnamedBitfield(IsUnnamedBitField) {}
+
+  LLVM_ABI bool isEmpty() const;
 };
 
 enum class StructPacking { Default, Packed, ExplicitPacking };
@@ -305,6 +307,18 @@ public:
   ArrayRef<FieldInfo> getBaseClasses() const { return BaseClasses; }
   ArrayRef<FieldInfo> getVirtualBaseClasses() const {
     return VirtualBaseClasses;
+  }
+
+  LLVM_ABI bool isEmpty() const;
+
+  /// Returns the field, base, or virtual base whose extent contains
+  /// \p OffsetInBits, or nullptr if no such element exists. Empty bases and
+  /// unnamed bitfields are skipped.
+  LLVM_ABI const FieldInfo *
+  getElementContainingOffset(unsigned OffsetInBits) const;
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Record;
   }
 };
 

@@ -82,3 +82,35 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "",
 // CHECK: llvm.mlir.global linkonce constant @linkonce_str()
 // CHECK-NOT: dso_local
 // CHECK-SAME: : !llvm.array<5 x i8>
+
+// -----
+
+// Static relocation model, ELF, CUDA constant variable: no dso_local
+// CUDA device/constant/managed variables need GOT indirection because the
+// CUDA runtime interposes on these symbols via cudaRegisterVar.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "",
+    fir.relocation_model = 0 : i32,
+    llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @cuda_constant {data_attr = #cuf.cuda<constant>} : i32 {
+    %0 = arith.constant 4 : i32
+    fir.has_value %0 : i32
+  }
+}
+// CHECK: llvm.mlir.global external @cuda_constant()
+// CHECK-NOT: dso_local
+// CHECK-SAME: : i32
+
+// -----
+
+// Static relocation model, ELF, CUDA device variable: no dso_local
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "",
+    fir.relocation_model = 0 : i32,
+    llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+  fir.global @cuda_device {data_attr = #cuf.cuda<device>} : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
+  }
+}
+// CHECK: llvm.mlir.global external @cuda_device()
+// CHECK-NOT: dso_local
+// CHECK-SAME: : i32

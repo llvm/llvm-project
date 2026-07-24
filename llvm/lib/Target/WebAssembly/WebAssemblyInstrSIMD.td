@@ -1344,29 +1344,16 @@ defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
-def pmin : PatFrags<(ops node:$lhs, node:$rhs), [
-                    (vselect (setolt $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setole $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setogt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setoge $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setlt $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setle $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setgt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setge $lhs, $rhs), $rhs, $lhs)
-]>;
+// The operand order is swapped relative to the generic opcode.
+def pmin : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(pseudo_fmin node:$rhs, node:$lhs)]>;
 defm PMIN : SIMDBinaryFP<pmin, "pmin", 234>;
 
+
 // Pseudo-maximum: pmax
-def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
-                    (vselect (setogt $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setoge $rhs, $lhs), $rhs, $lhs),
-                    (vselect (setolt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setole $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setgt $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setge $lhs, $rhs), $lhs, $rhs),
-                    (vselect (setlt $lhs, $rhs), $rhs, $lhs),
-                    (vselect (setle $lhs, $rhs), $rhs, $lhs)
-]>;
+// The operand order is swapped relative to the generic opcode.
+def pmax : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(pseudo_fmax node:$rhs, node:$lhs)]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
 multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
@@ -1531,12 +1518,26 @@ multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
 defm : SignedSaturatingTruncate<v8i16, v16i8, NARROW_S_I8x16, -128, 127, 0xFF>;
 defm : SignedSaturatingTruncate<v4i32, v8i16, NARROW_S_I16x8, -32768, 32767, 0xFFFF>;
 
+// NOTE: the saturating is actually signed, the truncation is unsigned, see
+// https://www.w3.org/TR/wasm-core-2/#-hrefop-narrowmathrmnarrowmathsfu_m-n-i
 multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
-                                    Instruction narrow, int maxval> {
+                                      Instruction narrow, int maxval> {
   def : Pat<
     (output (wasm_narrow_u
-      (umin (input V128:$a), (splat_vector (i32 maxval))),
-      (umin (input V128:$b), (splat_vector (i32 maxval)))
+      (smin (smax (input V128:$a), (splat_vector (i32 0))),
+            (splat_vector (i32 maxval))),
+      (smin (smax (input V128:$b), (splat_vector (i32 0))),
+            (splat_vector (i32 maxval)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_u
+      (smax (smin (input V128:$a), (splat_vector (i32 maxval))),
+            (splat_vector (i32 0))),
+      (smax (smin (input V128:$b), (splat_vector (i32 maxval))),
+            (splat_vector (i32 0)))
     )),
     (narrow V128:$a, V128:$b)
   >;
@@ -1649,11 +1650,12 @@ defm : ExtAddPairwiseShuffleExtend<v16i8, v8i16, "I16x8",
                                    18, 19, 22, 23,
                                    26, 27, 30, 31>;
 
-// f64x2 <-> f32x4 conversions
+// f64x2 <-> f32x4 and f32x4 <-> f16x8 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
 defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
                       "demote_f64x2_zero", 0x5e>;
+defm "" : HalfPrecisionConvert<F16x8, F32x4, demote_zero, "demote_f32x4_zero", 0x149>;
 
 def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
@@ -1861,21 +1863,21 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(0)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)));
 }]>;
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
+          ((CurDAG->isKnownNeverNaN(N->getOperand(0))) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(0)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {

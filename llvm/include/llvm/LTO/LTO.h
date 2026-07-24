@@ -134,11 +134,12 @@ private:
 
   MemoryBufferRef MbRef;
   bool IsFatLTOObject = false;
-  // For distributed compilation, each input must exist as an individual bitcode
-  // file on disk and be identified by its ModuleID. Archive members and FatLTO
-  // objects violate this. So, in these cases we flag that the bitcode must be
-  // written out to a new standalone file.
-  bool SerializeForDistribution = false;
+  // For distributed compilation, each input must exist as an individual
+  // bitcode file on disk identified by its ModuleID. For archive members and
+  // FatLTO objects, the input bitcode is a sub-section of a larger file. In
+  // these cases we flag that the bitcode must be written to a temporary
+  // standalone file. Effectively, extracted from its container.
+  bool ExtractForDistribution = false;
   bool IsThinLTO = false;
   StringRef ArchivePath;
   StringRef MemberName;
@@ -179,7 +180,8 @@ public:
     // may emit references to. Such symbols must be considered external, as
     // removing them or modifying their interfaces would invalidate the code
     // generator's knowledge about them.
-    bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
+    LLVM_ABI bool isLibcall(const TargetLibraryInfo &TLI,
+                            const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
@@ -211,12 +213,12 @@ public:
   LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
-  // Returns true if this input should be serialized to disk for distribution.
-  // See the comment on SerializeForDistribution for details.
-  bool getSerializeForDistribution() const { return SerializeForDistribution; }
-  // Mark whether this input should be serialized to disk for distribution.
-  // See the comment on SerializeForDistribution for details.
-  void setSerializeForDistribution(bool SFD) { SerializeForDistribution = SFD; }
+  // Returns true if this input should be extracted to disk for distribution.
+  // See the comment on ExtractForDistribution for details.
+  bool getExtractForDistribution() const { return ExtractForDistribution; }
+  // Mark whether this input should be extracted to disk for distribution.
+  // See the comment on ExtractForDistribution for details.
+  void setExtractForDistribution(bool EFD) { ExtractForDistribution = EFD; }
   // Returns true if this bitcode came from a FatLTO object.
   bool isFatLTOObject() const { return IsFatLTOObject; }
   // Mark this bitcode as coming from a FatLTO object.
@@ -287,16 +289,15 @@ public:
 
   // Write sharded indices and (optionally) imports to disk
   LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
-                           StringRef ModulePath,
+                           unsigned Task, StringRef ModulePath,
                            const std::string &NewModulePath) const;
 
   // Write sharded indices to SummaryPath, (optionally) imports to disk, and
-  // (optionally) record imports in ImportsFiles.
-  LLVM_ABI Error emitFiles(
-      const FunctionImporter::ImportMapTy &ImportList, StringRef ModulePath,
-      const std::string &NewModulePath, StringRef SummaryPath,
-      std::optional<std::reference_wrapper<ImportsFilesContainer>> ImportsFiles)
-      const;
+  // (optionally) record imports in ImportsFilesList.
+  LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                           unsigned Task, StringRef ModulePath,
+                           const std::string &NewModulePath,
+                           StringRef SummaryPath) const;
 };
 
 /// This callable defines the behavior of a ThinLTO backend after the thin-link
@@ -308,7 +309,8 @@ public:
 using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-    AddStreamFn AddStream, FileCache Cache)>;
+    AddStreamFn AddStream, FileCache Cache,
+    ArrayRef<StringRef> BitcodeLibFuncs)>;
 
 /// This type defines the behavior following the thin-link phase during ThinLTO.
 /// It encapsulates a backend function and a strategy for thread pool
@@ -323,10 +325,11 @@ struct ThinBackend {
   std::unique_ptr<ThinBackendProc> operator()(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, FileCache Cache) {
+      AddStreamFn AddStream, FileCache Cache,
+      ArrayRef<StringRef> BitcodeLibFuncs) {
     assert(isValid() && "Invalid backend function");
     return Func(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                std::move(AddStream), std::move(Cache));
+                std::move(AddStream), std::move(Cache), BitcodeLibFuncs);
   }
   ThreadPoolStrategy getParallelism() const { return Parallelism; }
   bool isValid() const { return static_cast<bool>(Func); }
@@ -347,35 +350,6 @@ private:
 LLVM_ABI ThinBackend createInProcessThinBackend(
     ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite = nullptr,
     bool ShouldEmitIndexFiles = false, bool ShouldEmitImportsFiles = false);
-
-/// This ThinBackend generates the index shards and then runs the individual
-/// backend jobs via an external process. It takes the same parameters as the
-/// InProcessThinBackend; however, these parameters only control the behavior
-/// when generating the index files for the modules. Additionally:
-/// LinkerOutputFile is a string that should identify this LTO invocation in
-/// the context of a wider build. It's used for naming to aid the user in
-/// identifying activity related to a specific LTO invocation.
-/// Distributor specifies the path to a process to invoke to manage the backend
-/// job execution.
-/// DistributorArgs specifies a list of arguments to be applied to the
-/// distributor.
-/// RemoteCompiler specifies the path to a Clang executable to be invoked for
-/// the backend jobs.
-/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
-/// applied to the backend compilations.
-/// RemoteCompilerArgs specifies a list of arguments to be applied to the
-/// backend compilations.
-/// SaveTemps is a debugging tool that prevents temporary files created by this
-/// backend from being cleaned up.
-/// AddBuffer is used to add a pre-existing native object buffer to the link.
-LLVM_ABI ThinBackend createOutOfProcessThinBackend(
-    ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
-    bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef Distributor,
-    ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
-    ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
-    AddBufferFn AddBuffer);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -414,7 +388,7 @@ LLVM_ABI ThinBackend createWriteIndexesThinBackend(
 /// - Call the run() function. This function will use the supplied AddStream
 ///   and Cache functions to add up to getMaxTasks() native object files to
 ///   the link.
-class LTO {
+class LLVM_ABI LTO {
   friend InputFile;
 
 public:
@@ -435,21 +409,25 @@ public:
   /// this constructor.
   /// FIXME: We do currently require the DiagHandler field to be set in Conf.
   /// Until that is fixed, a Config argument is required.
-  LLVM_ABI LTO(Config Conf, ThinBackend Backend = {},
-               unsigned ParallelCodeGenParallelismLevel = 1,
-               LTOKind LTOMode = LTOK_Default);
-  LLVM_ABI virtual ~LTO();
+  LTO(Config Conf, ThinBackend Backend = {},
+      unsigned ParallelCodeGenParallelismLevel = 1,
+      LTOKind LTOMode = LTOK_Default);
+  virtual ~LTO();
 
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by
   /// InputFile::symbols().
-  LLVM_ABI Error add(std::unique_ptr<InputFile> Obj,
-                     ArrayRef<SymbolResolution> Res);
+  Error add(std::unique_ptr<InputFile> Obj, ArrayRef<SymbolResolution> Res);
+
+  /// Set the list of functions implemented in bitcode that were not extracted
+  /// from an archive. Such functions may not be referenced, as they have
+  /// lost their opportunity to be defined.
+  void setBitcodeLibFuncs(ArrayRef<StringRef> BitcodeLibFuncs);
 
   /// Returns an upper bound on the number of tasks that the client may expect.
   /// This may only be called after all IR object files have been added. For a
   /// full description of tasks see LTOBackend.h.
-  LLVM_ABI unsigned getMaxTasks() const;
+  unsigned getMaxTasks() const;
 
   /// Runs the LTO pipeline. This function calls the supplied AddStream
   /// function to add native object files to the link.
@@ -459,21 +437,32 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  LLVM_ABI Error run(AddStreamFn AddStream, FileCache Cache = {});
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {});
+
+  /// Wait for cleanup work started by run() to finish.
+  ///
+  /// A client may delay this call to overlap asynchronous cleanup with later
+  /// linking work, but must call it before finalizing time trace data because
+  /// cleanup may emit time trace events. Most LTO implementations have no
+  /// asynchronous cleanup.
+  virtual void waitForCleanup() {}
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
-  LLVM_ABI static SmallVector<const char *>
-  getRuntimeLibcallSymbols(const Triple &TT);
+  static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);
+
+  /// Static method that returns a list of library function symbols that can be
+  /// generated by LTO but might not be visible from bitcode symbol table.
+  /// Unlike the runtime libcalls, the linker can report to the code generator
+  /// which of these are actually available in the link, and the code generator
+  /// can then only reference that set of symbols.
+  static SmallVector<StringRef> getLibFuncSymbols(const Triple &TT,
+                                                  llvm::StringSaver &Saver);
 
 protected:
-  // Called at the start of run().
-  virtual Error serializeInputsForDistribution() { return Error::success(); }
-
   // Called before returning from run().
   virtual void cleanup();
 
-private:
   Config Conf;
 
   struct RegularLTOState {
@@ -531,6 +520,7 @@ private:
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
+private:
   // The global resolution for a particular (mangled) symbol name. This is in
   // particular necessary to track whether each symbol can be internalized.
   // Because any input file may introduce a new cross-partition reference, we
@@ -538,6 +528,8 @@ private:
   // been added and the client has called run(). During run() we apply
   // internalization decisions either directly to the module (for regular LTO)
   // or to the combined index (for ThinLTO).
+  // FIXME: Make this GlobalResolution a class, it has been becoming more than
+  // just a data bag.
   struct GlobalResolution {
     /// The unmangled name of the global.
     std::string IRName;
@@ -573,6 +565,24 @@ private:
     /// Any partitioning of the combined LTO object is done internally by the
     /// LTO backend.
     unsigned Partition = Unknown;
+
+  private:
+    GlobalValue::GUID GUID = 0;
+
+  public:
+    void setGUID(GlobalValue::GUID G) {
+      assert(G);
+      assert(!GUID || GUID == G);
+      GUID = G;
+    }
+
+    GlobalValue::GUID getGUID() const {
+      return GUID ? GUID
+                  : GlobalValue::getGUIDAssumingExternalLinkage(
+                        GlobalValue::getGlobalIdentifier(
+                            IRName, GlobalValue::LinkageTypes::ExternalLinkage,
+                            ""));
+    }
 
     /// Special partition numbers.
     enum : unsigned {
@@ -632,9 +642,11 @@ private:
 
   mutable bool CalledGetMaxTasks = false;
 
+protected:
   // LTO mode when using Unified LTO.
   LTOKind LTOMode;
 
+private:
   // Use Optional to distinguish false from not yet initialized.
   std::optional<bool> EnableSplitLTOUnit;
 
@@ -656,6 +668,11 @@ private:
 
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
+
+  // LibFuncs that were implemented in bitcode but were not extracted
+  // from their libraries. Such functions cannot safely be called, since
+  // they have lost their opportunity to be defined.
+  SmallVector<StringRef> BitcodeLibFuncs;
 
 public:
   /// Helper to emit an optimization remark during the LTO link when outside of

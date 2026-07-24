@@ -228,7 +228,10 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
 
     if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
-      if (Opts.CPlusPlus26)
+      if (Opts.CPlusPlus29)
+        // TODO update to the proper value.
+        Builder.defineMacro("_MSVC_LANG", "202700L");
+      else if (Opts.CPlusPlus26)
         // TODO update to the proper value.
         Builder.defineMacro("_MSVC_LANG", "202400L");
       else if (Opts.CPlusPlus23)
@@ -292,6 +295,36 @@ void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
   else if (Triple.isKnownWindowsMSVCEnvironment() ||
            (Triple.isWindowsItaniumEnvironment() && Opts.MSVCCompat))
     addVisualCDefines(Opts, Builder);
+}
+
+void getFuchsiaDefines(MacroBuilder &Builder, const LangOptions &Opts,
+                       const llvm::Triple &Triple) {
+  Builder.defineMacro("__Fuchsia__");
+  if (Opts.POSIXThreads)
+    Builder.defineMacro("_REENTRANT");
+  // Required by the libc++ locale support.
+  if (Opts.CPlusPlus)
+    Builder.defineMacro("_GNU_SOURCE");
+  Builder.defineMacro("__Fuchsia_API_level__", Twine(Opts.FuchsiaAPILevel));
+
+  // __Fuchsia_Compiler_ABI__ gives the version of the Fuchsia Compiler ABI
+  // supported by the compiler.  This is a single small integer that increases
+  // monotonically for any kinds of ABI change, across any of the supported
+  // machines, and including language-specific ABI aspects such as the Fuchsia
+  // variant of the Itanium C++ ABI.  Changes affecting just one machine and/or
+  // just one language will cause this single number to advance regardless.
+  //
+  // * Version 0 is the original Fuchsia Compiler ABI.
+  //   - Custom SafeStack ABI on every machine
+  //   - ShadowCallStack ABI on aarch64, riscv64
+  //   - Itanium C++ ABI as modified: ctor/dtor return value; relative vtables
+  //
+  // * Version 1 is first iteration formalizing the version number scheme.
+  //   - SafeStack ABI no longer supported on aarch64, riscv64 (x86 only)
+  //
+  // The predefine can be checked by code relying on the Fuchsia Compiler ABI
+  // to ensure that a compiler new enough for the required version is in use.
+  Builder.defineMacro("__Fuchsia_Compiler_ABI__", Twine(1));
 }
 
 } // namespace targets

@@ -29,7 +29,7 @@ Using Clang as a Compiler
    ThreadSafetyAnalysis
    LifetimeSafety
    SafeBuffers
-   ScalableStaticAnalysisFramework/index
+   ScalableStaticAnalysis/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
@@ -68,6 +68,7 @@ Using Clang as a Compiler
    APINotes
    DebuggingCoroutines
    AMDGPUSupport
+   RISCVSupport
    CXXTypeAwareAllocators
    CIR/index
    CommandGuide/index

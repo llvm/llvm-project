@@ -20,20 +20,8 @@ def get_path_from_clang(args, allow_failure):
         f"--target={config.target_triple}",
         *args,
     ]
-    path = None
-    try:
-        result = subprocess.run(
-            clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
-        path = result.stdout.decode().strip()
-    except subprocess.CalledProcessError as e:
-        msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
-        if allow_failure:
-            lit_config.warning(msg)
-        else:
-            lit_config.fatal(msg)
-    return path, clang_cmd
-
+    path = lit_config.run_command_cached(clang_cmd, allow_failure, text=True)
+    return path.strip(), clang_cmd
 
 def find_compiler_libdir():
     """
@@ -119,19 +107,11 @@ def push_dynamic_library_lookup_path(config, new_path):
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# Choose between lit's internal shell pipeline runner and a real shell.  If
-# LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-execute_external = use_lit_shell == "0"
-
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
 
 # Setup test format.
-config.test_format = lit.formats.ShTest(execute_external)
+config.test_format = lit.formats.ShTest()
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
@@ -592,10 +572,12 @@ if config.target_os == "Darwin":
         # There is no simulator-specific sw_vers/sysctl, so we use the host OS version
         os_detection_prefix = []
 
-    darwin_os_version = subprocess.check_output(
-        os_detection_prefix + ["sw_vers", "-productVersion"], universal_newlines=True
+    darwin_os_version = lit_config.run_command_cached(
+        os_detection_prefix + ["sw_vers", "-productVersion"],
+        universal_newlines=True,
+        text=True,
     )
-    darwin_os_version = tuple(int(x) for x in darwin_os_version.split("."))
+    darwin_os_version = tuple(int(x) for x in darwin_os_version.strip().split("."))
 
     if len(darwin_os_version) == 2:
         darwin_os_version = (darwin_os_version[0], darwin_os_version[1], 0)
@@ -604,21 +586,21 @@ if config.target_os == "Darwin":
         config.available_features.add("osx-ld64-live_support")
     if darwin_os_version >= (13, 1):
         config.available_features.add("jit-compatible-osx-swift-runtime")
+    if darwin_os_version >= (26, 4) and darwin_os_version < (27, 0):
+        config.available_features.add("osx-broken-scalbn-rounding")
 
     config.darwin_os_version = darwin_os_version
 
     # Detect x86_64h
-    try:
-        output = subprocess.check_output(
-            os_detection_prefix + ["sysctl", "hw.cpusubtype"]
-        )
+    output = lit_config.run_command_cached(
+        os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True
+    )
+    if output:
         output_re = re.match("^hw.cpusubtype: ([0-9]+)$", output)
         if output_re:
             cpu_subtype = int(output_re.group(1))
             if cpu_subtype == 8:  # x86_64h
                 config.available_features.add("x86_64h")
-    except:
-        pass
 
     # 32-bit iOS simulator is deprecated and removed in latest Xcode.
     if config.apple_platform == "iossim":
@@ -955,18 +937,11 @@ if config.target_os == "Darwin":
     if lit.util.which("log"):
         # Querying the log can only done by a privileged user so
         # so check if we can query the log.
-        exit_code = -1
-        with open("/dev/null", "r") as f:
-            # Run a `log show` command the should finish fairly quickly and produce very little output.
-            exit_code = subprocess.call(
-                ["log", "show", "--last", "1m", "--predicate", "1 == 0"],
-                stdout=f,
-                stderr=f,
-            )
-        if exit_code == 0:
+        res = lit_config.run_command_cached(
+            ["log", "show", "--last", "1m", "--predicate", "1 == 0"], allow_failure=True
+        )
+        if res is not None:
             config.available_features.add("darwin_log_cmd")
-        else:
-            lit_config.warning("log command found but cannot queried")
     else:
         lit_config.warning("log command not found. Some tests will be skipped.")
 elif config.android:
@@ -993,9 +968,14 @@ else:
 def target_page_size():
     if config.target_arch in ("amdgcn", "nvptx64"):
         return 4096
+    if emulator:
+        # FIXME: Some emulators may support querying the target page size.
+        # For now, avoid advertising page-size features under emulation; only
+        # a few obscure tests depend on this.
+        return None
     try:
         proc = subprocess.Popen(
-            f"{emulator or ''} python3",
+            shlex.quote(config.python_executable),
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -1017,7 +997,9 @@ except ImportError:
         return 4096
 
 
-config.available_features.add(f"page-size-{target_page_size()}")
+page_size = target_page_size()
+if page_size is not None:
+    config.available_features.add(f"page-size-{page_size}")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")

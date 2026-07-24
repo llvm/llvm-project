@@ -13,16 +13,14 @@
 namespace Fortran::common::openmp {
 mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
     mlir::Region &region) {
-  assert(args.isValid() && "invalid args");
   assert(region.empty() && "non-empty region");
 
   llvm::SmallVector<mlir::Type> types;
   llvm::SmallVector<mlir::Location> locs;
-  unsigned numVars = args.hasDeviceAddr.vars.size() + args.hostEvalVars.size() +
-      args.inReduction.vars.size() + args.map.vars.size() +
-      args.priv.vars.size() + args.reduction.vars.size() +
-      args.taskReduction.vars.size() + args.useDeviceAddr.vars.size() +
-      args.useDevicePtr.vars.size();
+  unsigned numVars = args.hasDeviceAddrVars.size() + args.hostEvalVars.size() +
+      args.inReductionVars.size() + args.mapVars.size() + args.privVars.size() +
+      args.reductionVars.size() + args.taskReductionVars.size() +
+      args.useDeviceAddrVars.size() + args.useDevicePtrVars.size();
   types.reserve(numVars);
   locs.reserve(numVars);
 
@@ -35,15 +33,15 @@ mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
 
   // Populate block arguments in clause name alphabetical order to match
   // expected order by the BlockArgOpenMPOpInterface.
-  extractTypeLoc(args.hasDeviceAddr.vars);
+  extractTypeLoc(args.hasDeviceAddrVars);
   extractTypeLoc(args.hostEvalVars);
-  extractTypeLoc(args.inReduction.vars);
-  extractTypeLoc(args.map.vars);
-  extractTypeLoc(args.priv.vars);
-  extractTypeLoc(args.reduction.vars);
-  extractTypeLoc(args.taskReduction.vars);
-  extractTypeLoc(args.useDeviceAddr.vars);
-  extractTypeLoc(args.useDevicePtr.vars);
+  extractTypeLoc(args.inReductionVars);
+  extractTypeLoc(args.mapVars);
+  extractTypeLoc(args.privVars);
+  extractTypeLoc(args.reductionVars);
+  extractTypeLoc(args.taskReductionVars);
+  extractTypeLoc(args.useDeviceAddrVars);
+  extractTypeLoc(args.useDevicePtrVars);
 
   return builder.createBlock(&region, {}, types, locs);
 }

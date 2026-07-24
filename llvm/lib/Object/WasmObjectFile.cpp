@@ -600,7 +600,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
-          if (Index > DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
           nameType = wasm::NameType::DATA_SEGMENT;
@@ -833,7 +833,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         auto Offset = readVaruint64(Ctx);
         auto Size = readVaruint64(Ctx);
         if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (static_cast<size_t>(Index) >= DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>(
                 "invalid data segment index: " + Twine(Index),
                 object_error::parse_failed);
@@ -1116,6 +1116,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
+    case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
       if (!isValidDataSymbol(Reloc.Index))
         return badReloc("invalid data relocation");
       Reloc.Addend = readVarint64(Ctx);
@@ -1159,7 +1160,8 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
       Size = 4;
     if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||
         Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64 ||
-        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I64)
+        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I64 ||
+        Reloc.Type == wasm::R_WASM_MEMORY_ADDR_LOCREL_I64)
       Size = 8;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("invalid relocation offset",

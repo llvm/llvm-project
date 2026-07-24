@@ -174,6 +174,56 @@ int SANITIZER_CDECL __asan_get_report_access_type(void);
 /// \returns Access size in bytes.
 size_t SANITIZER_CDECL __asan_get_report_access_size(void);
 
+/// Gets the source address or address range involved in the current error
+/// (e.g., memcpy source, or the address being read from).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_src_address(const void **out_addr,
+                                                  size_t *out_size);
+
+/// Gets the destination address or address range involved in the current error
+/// (e.g., memcpy dest, or the address being written to).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_dest_address(const void **out_addr,
+                                                   size_t *out_size);
+
+/// Gets the address or address range being deallocated in the current error
+/// (lifetime is terminated).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_dealloc_address(const void **out_addr,
+                                                      size_t *out_size);
+
+/// Gets the first non-dereferenced operand address involved in the current
+/// error (e.g., pointer comparison or ODR violation).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size. Zero may be reported.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_first_address(const void **out_addr,
+                                                    size_t *out_size);
+
+/// Gets the second non-dereferenced operand address involved in the current
+/// error (e.g., pointer comparison or ODR violation).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size. Zero may be reported.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_second_address(const void **out_addr,
+                                                     size_t *out_size);
+
 /// Gets the bug description of an ASan error (useful for calling from a
 /// debugger).
 ///

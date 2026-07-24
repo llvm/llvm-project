@@ -37,30 +37,22 @@ llvm::convertStrToRoundingMode(StringRef RoundingArg) {
 
 std::optional<StringRef>
 llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
-  std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
-    RoundingStr = "round.dynamic";
-    break;
+    return "round.dynamic";
   case RoundingMode::NearestTiesToEven:
-    RoundingStr = "round.tonearest";
-    break;
+    return "round.tonearest";
   case RoundingMode::NearestTiesToAway:
-    RoundingStr = "round.tonearestaway";
-    break;
+    return "round.tonearestaway";
   case RoundingMode::TowardNegative:
-    RoundingStr = "round.downward";
-    break;
+    return "round.downward";
   case RoundingMode::TowardPositive:
-    RoundingStr = "round.upward";
-    break;
+    return "round.upward";
   case RoundingMode::TowardZero:
-    RoundingStr = "round.towardzero";
-    break;
+    return "round.towardzero";
   default:
-    break;
+    return std::nullopt;
   }
-  return RoundingStr;
 }
 
 std::optional<fp::ExceptionBehavior>
@@ -74,19 +66,15 @@ llvm::convertStrToExceptionBehavior(StringRef ExceptionArg) {
 
 std::optional<StringRef>
 llvm::convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
-  std::optional<StringRef> ExceptStr;
   switch (UseExcept) {
   case fp::ebStrict:
-    ExceptStr = "fpexcept.strict";
-    break;
+    return "fpexcept.strict";
   case fp::ebIgnore:
-    ExceptStr = "fpexcept.ignore";
-    break;
+    return "fpexcept.ignore";
   case fp::ebMayTrap:
-    ExceptStr = "fpexcept.maytrap";
-    break;
+    return "fpexcept.maytrap";
   }
-  return ExceptStr;
+  return std::nullopt;
 }
 
 Intrinsic::ID llvm::getConstrainedIntrinsicID(const Instruction &Instr) {

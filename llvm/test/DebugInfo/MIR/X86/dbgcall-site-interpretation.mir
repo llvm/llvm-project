@@ -95,7 +95,7 @@
   !1 = !DIFile(filename: "dbgcall-site-interpretation.c", directory: "/dir")
   !2 = !{}
   !3 = !{!4}
-  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, type: !10, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !5 = !{i32 2, !"Dwarf Version", i32 4}
   !6 = !{i32 2, !"Debug Info Version", i32 3}
   !7 = !{i32 1, !"wchar_size", i32 4}

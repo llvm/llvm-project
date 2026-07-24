@@ -10,14 +10,18 @@ import io
 import json
 import os
 import re
+import shutil
+import socket
 import sys
 import subprocess
+import time
 from typing import Dict, Tuple
 
 # LLDB modules
 import lldb
 from . import lldbtest_config
 from . import configuration
+from lldbsuite.test.gdbclientutils import escape_binary
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -54,6 +58,113 @@ def mkdir_p(path):
             raise
     if not os.path.isdir(path):
         raise OSError(errno.ENOTDIR, "%s is not a directory" % path)
+
+
+def get_extended_windows_path(path):
+    r"""Return ``path`` in the Windows extended-length ``\\?\`` form so it can be
+    handed to the Win32 API (and therefore to ``os``/``shutil``) even when it is
+    longer than MAX_PATH (260 characters). On non-Windows platforms ``path`` is
+    returned unchanged.
+
+    The ``\\?\`` prefix disables all path normalization normally performed by
+    Win32, so the path must be fully qualified, use backslash separators and
+    contain no ``.``/``..`` components. ``os.path.abspath`` guarantees all three.
+    """
+    if sys.platform != "win32":
+        return path
+    if path.startswith("\\\\?\\"):
+        return path
+    assert os.path.isabs(path), (
+        "cannot form a \\\\?\\ extended-length path from relative path: %s" % path
+    )
+    abs_path = os.path.abspath(path)
+    # UNC shares (\\server\share) use the \\?\UNC\ spelling.
+    if abs_path.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + abs_path[2:]
+    return "\\\\?\\" + abs_path
+
+
+def remove_tree(path):
+    """Recursively delete the directory tree rooted at ``path``.
+
+    On Windows this drives the shell ``SHFileOperationW`` API directly rather
+    than ``shutil.rmtree``. It deletes the whole tree in a single native call,
+    which also clears read-only files.
+
+    This mirrors lit's builtin ``rm`` (see
+    ``llvm/utils/lit/lit/InprocBuiltins.py``).
+
+    On non-Windows platforms this is ``shutil.rmtree`` with a handler that
+    tolerates entries vanishing mid-walk (``FileNotFoundError``). clang's
+    implicit-module ``*.pcm.lock`` files, whose lifetime is tied to a concurrent
+    or just-exited clang process.
+    """
+    if sys.platform != "win32":
+
+        def _ignore_missing(func, failed_path, exc):
+            # `shutil.rmtree` passes the error as an instance on the `onexc` API
+            # (3.12+) or a `sys.exc_info()` tuple on the legacy `onerror` API.
+            if isinstance(exc, tuple):
+                exc = exc[1]
+            if isinstance(exc, FileNotFoundError):
+                return
+            raise exc
+
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(path, onexc=_ignore_missing)
+        else:
+            shutil.rmtree(path, onerror=_ignore_missing)
+        return
+
+    # NOTE: use ctypes to access `SHFileOperationW` on Windows so we can delete
+    # trees using the wide-character Win32 API, which reaches long file paths
+    # that cannot be removed otherwise.
+    from ctypes import (
+        POINTER,
+        Structure,
+        WinError,
+        addressof,
+        byref,
+        c_void_p,
+        create_unicode_buffer,
+        windll,
+    )
+    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+
+    class SHFILEOPSTRUCTW(Structure):
+        _fields_ = [
+            ("hWnd", HWND),
+            ("wFunc", UINT),
+            ("pFrom", LPCWSTR),
+            ("pTo", LPCWSTR),
+            ("fFlags", WORD),
+            ("fAnyOperationsAborted", BOOL),
+            ("hNameMappings", c_void_p),
+            ("lpszProgressTitle", LPCWSTR),
+        ]
+
+    FO_DELETE = 3
+
+    FOF_SILENT = 4
+    FOF_NOCONFIRMATION = 16
+    FOF_NOCONFIRMMKDIR = 512
+    FOF_NOERRORUI = 1024
+    FOF_NO_UI = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR
+
+    SHFileOperationW = windll.shell32.SHFileOperationW
+    SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
+
+    path = os.path.abspath(path)
+    pFrom = create_unicode_buffer(path, len(path) + 2)
+    pFrom[len(path)] = pFrom[len(path) + 1] = "\0"
+    operation = SHFILEOPSTRUCTW(
+        wFunc=UINT(FO_DELETE),
+        pFrom=LPCWSTR(addressof(pFrom)),
+        fFlags=FOF_NO_UI,
+    )
+    result = SHFileOperationW(byref(operation))
+    if result:
+        raise WinError(result)
 
 
 # ============================
@@ -1689,24 +1800,20 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
-def wait_for_file_on_target(testcase, file_path):
-    import time
+def wait_for_file_on_target(testcase, file_path: str):
+    timeout_seconds = 600 if "ASAN_OPTIONS" in os.environ else 120
+    sleep_interval_seconds = 0.5
+    deadline_seconds = time.monotonic() + timeout_seconds
 
-    MAX_ATTEMPTS = 60
-    timeout_seconds = 20 if "ASAN_OPTIONS" in os.environ else 2
-    for i in range(MAX_ATTEMPTS):
+    while time.monotonic() < deadline_seconds:
         command = f"ls {file_path}"
-        err, retcode, msg = testcase.run_platform_command(command)
+        err, retcode, _ = testcase.run_platform_command(command)
         if err.Success() and retcode == 0:
-            break
+            return read_file_on_target(testcase, file_path)
 
-        time.sleep(timeout_seconds)
-    else:
-        testcase.fail(
-            "File %s not found even after %d attempts." % (file_path, max_attempts)
-        )
+        time.sleep(sleep_interval_seconds)
 
-    return read_file_on_target(testcase, file_path)
+    testcase.fail(f"File {file_path} not found after {timeout_seconds} seconds.")
 
 
 def packetlog_get_process_info(log):
@@ -1825,6 +1932,7 @@ def get_latest_apple_simulator(platform_name, log=None):
 
 
 def launch_exe_in_apple_simulator(
+    test,
     device_uuid,
     exe_path,
     exe_args=[],
@@ -1832,17 +1940,20 @@ def launch_exe_in_apple_simulator(
     log=None,
 ):
     exe_path = os.path.realpath(exe_path)
-    cmd = [
-        "xcrun",
-        "simctl",
+    # Resolve the path to simctl so we can launch it directly via spawnSubprocess.
+    simctl_path = (
+        subprocess.check_output(["xcrun", "-f", "simctl"]).decode("utf-8").strip()
+    )
+    args = [
         "spawn",
         "-s",
         device_uuid,
         exe_path,
     ] + exe_args
     if log:
-        log(" ".join(cmd))
-    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        log(simctl_path + " " + " ".join(args))
+    # simctl itself gets terminated when the test finishes.
+    sim_launcher = test.spawnSubprocess(simctl_path, args, stderr=subprocess.PIPE)
 
     # Read stderr to try to find matches.
     # Each pattern will return the value of group[1] of the first match in the stderr.
@@ -1869,3 +1980,45 @@ def launch_exe_in_apple_simulator(
                 break
 
     return exe_path, matched_strings
+
+
+# Binary escapes `packet_str`, sends it to the remote and returns the reply.
+def send_packet_get_reply(test, packet_str):
+    packet_str = escape_binary(packet_str)
+    test.runCmd(f"proc plugin packet send '{packet_str}'", check=False)
+    # The output is of the form:
+    #  packet: <packet_str>
+    #  response: <response>
+    output = test.res.GetOutput()
+    reply = output.split("\n")
+    packet = reply[0].strip()
+    response = reply[1].strip()
+
+    test.assertTrue(packet.startswith("packet: "), output)
+    test.assertTrue(response.startswith("response: "), output)
+    return response[len("response: ") :].strip()
+
+
+def get_qsupported_capabilities(test):
+    reply = send_packet_get_reply(test, "qSupported")
+    return reply.strip().split(";")
+
+
+def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):
+    hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
+    port_file = testcase.getBuildArtifact("port")
+    commandline_args = [
+        "platform",
+        "--listen",
+        f"[{hostname}]:0",
+        "--socket-file",
+        port_file,
+    ] + extra_args
+    testcase.spawnSubprocess(platform_exe, commandline_args)
+
+    socket_id = wait_for_file_on_target(testcase, port_file)
+    new_platform = lldb.SBPlatform("remote-" + testcase.getPlatform())
+    testcase.dbg.SetSelectedPlatform(new_platform)
+    testcase.runCmd(f"platform connect connect://[{hostname}]:{socket_id}")
+
+    return new_platform

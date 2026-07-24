@@ -373,8 +373,8 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
       break;
     }
     }
-
-    LiveRegs.stepBackward(MI);
+    if (!MI.isDebugInstr())
+      LiveRegs.stepBackward(MI);
   }
 
   return Changed;

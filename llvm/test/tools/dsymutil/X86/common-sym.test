@@ -1,4 +1,4 @@
-RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+RUN: dsymutil --linker classic -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 RUN: dsymutil --linker parallel -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 

@@ -736,6 +736,28 @@ func.func @test_rebox_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
   return
 }
 
+// CHECK-LABEL: @test_rebox_optional(
+func.func @test_rebox_optional(%arg0: !fir.box<!fir.array<?xf32>>) {
+  %c0 = arith.constant 0 : index
+  %0 = fir.shift %c0 : (index) -> !fir.shift<1>
+  // CHECK: fir.rebox %{{.*}}(%{{.*}}) optional : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.rebox %arg0(%0) optional : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
+  // CHECK: fir.rebox %{{.*}} optional : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  %2 = fir.rebox %arg0 optional : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// CHECK-LABEL: @test_embox_optional(
+func.func @test_embox_optional(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !fir.ref<i32>) {
+  %c10 = arith.constant 10 : index
+  %0 = fir.shape %c10 : (index) -> !fir.shape<1>
+  // CHECK: fir.embox %{{.*}}(%{{.*}}) optional : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %1 = fir.embox %arg0(%0) optional : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  // CHECK: fir.embox %{{.*}} optional : (!fir.ref<i32>) -> !fir.box<i32>
+  %2 = fir.embox %arg1 optional : (!fir.ref<i32>) -> !fir.box<i32>
+  return
+}
+
 
 func.func private @array_func() -> !fir.array<?x!fir.char<1,?>>
 // CHECK-LABEL: @test_save_result(
@@ -781,6 +803,14 @@ func.func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.bo
   // CHECK-NEXT: fir.load %[[LLVMPTR]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
   %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<f32>>>>
   return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+}
+
+// CHECK-LABEL: func @load_invariant(
+// CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<i32>)
+func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
+  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] {invariant} : !fir.ref<i32>
+  %0 = fir.load %arg0 {invariant} : !fir.ref<i32>
+  return %0 : i32
 }
 
 func.func @array_access_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
@@ -912,6 +942,7 @@ func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
   %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   %2 = fir.rebox_assumed_rank %arg0 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   %3 = fir.rebox_assumed_rank %arg0 lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  %4 = fir.rebox_assumed_rank %arg0 lbs ones optional : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   return
 }
 // CHECK-LABEL: func.func @test_rebox_assumed_rank(
@@ -919,6 +950,7 @@ func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones optional : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
 
 func.func @test_is_assumed_size(%arg0: !fir.class<!fir.array<*:none>>, %arg1 : !fir.box<!fir.array<?xf32>>) {
   %1 = fir.is_assumed_size %arg0 : (!fir.class<!fir.array<*:none>>) -> i1
@@ -1104,6 +1136,27 @@ func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32
   %6 = fir.eqv %i1, %i2 : i32
 // CHECK: %{{.*}} = fir.neqv %[[I1]], %[[I2]] : i32
   %7 = fir.neqv %i1, %i2 : i32
+  return
+}
+
+// CHECK-LABEL: @test_create_box(
+func.func @test_create_box(%arg0: !fir.heap<!fir.array<?xcomplex<f32>>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_pointer(
+func.func @test_create_box_pointer(%arg0: !fir.ptr<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_2d(
+func.func @test_create_box_2d(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}, %{{.*}}) extents(%{{.*}}, %{{.*}}) strides(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
   return
 }
 

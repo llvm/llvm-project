@@ -489,7 +489,6 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
   if (NewParentL)
     assert(NewParentL->contains(OldParentL) &&
            "Can only hoist this loop up the nest!");
-
   // The preheader will need to move with the body of this loop. However,
   // because it isn't in this loop we also need to update the primary loop map.
   assert(OldParentL == LI.getLoopFor(&Preheader) &&
@@ -510,14 +509,9 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
   // no-longer-containing loops to reflect the nesting change.
   for (Loop *OldContainingL = OldParentL; OldContainingL != NewParentL;
        OldContainingL = OldContainingL->getParentLoop()) {
-    llvm::erase_if(OldContainingL->getBlocksVector(),
-                   [&](const BasicBlock *BB) {
-                     return BB == &Preheader || L.contains(BB);
-                   });
-
-    OldContainingL->getBlocksSet().erase(&Preheader);
-    for (BasicBlock *BB : L.blocks())
-      OldContainingL->getBlocksSet().erase(BB);
+    LI.removeBlocksIf(*OldContainingL, [&](const BasicBlock *BB) {
+      return BB == &Preheader || L.contains(BB);
+    });
 
     // Because we just hoisted a loop out of this one, we have essentially
     // created new exit paths from it. That means we need to form LCSSA PHI
@@ -553,8 +547,9 @@ static Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
 ///
 /// This routine should only be called when loop code leading to the branch has
 /// been validated as trivial (no side effects). This routine checks if the
-/// condition is invariant and one of the successors is a loop exit. This
-/// allows us to unswitch without duplicating the loop, making it trivial.
+/// condition is invariant and one of the successors is a loop exit or a loop
+/// latch with no side-effects. This allows us to unswitch without duplicating
+/// the loop, making it trivial.
 ///
 /// If this routine fails to unswitch the branch it returns false.
 ///
@@ -591,6 +586,53 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     }
   }
 
+  std::optional<int> LatchIdx = std::nullopt;
+  auto *LoopLatch = L.getLoopLatch();
+  auto *ULExit = LI.getUniqueLatchExitBlock(L);
+  if (SE && FullUnswitch && ULExit) {
+    if (BI.getSuccessor(0) == LoopLatch && L.contains(BI.getSuccessor(1)))
+      LatchIdx = 0;
+    else if (BI.getSuccessor(1) == LoopLatch && L.contains(BI.getSuccessor(0)))
+      LatchIdx = 1;
+  }
+
+  bool ModifiedBranch = false;
+  // Redirecting the latch edge to the exit block will cause us to skip latch
+  // instructions. This can only be done if the latch instructions don't have
+  // side effects and don't have any convergent instructions.
+  if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
+      !llvm::any_of(*LoopLatch, [](Instruction &I) {
+        if (const auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isConvergent())
+            return true;
+        return I.mayHaveSideEffects();
+      })) {
+
+    // We need to prove the loop is finite, otherwise this change will convert
+    // it to a finite loop. This conservative check is good enough as we are
+    // mostly interested in perfect countable loop nests that perform
+    // calculations on arrays.
+    const SCEV *MaxBECount = SE->getConstantMaxBackedgeTakenCount(&L);
+    if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
+      SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
+      Updates.push_back({cfg::UpdateKind::Delete, BI.getParent(),
+                         BI.getSuccessor(*LatchIdx)});
+      Updates.push_back({cfg::UpdateKind::Insert, BI.getParent(), ULExit});
+      LoopLatch->removePredecessor(BI.getParent());
+      BI.setSuccessor(*LatchIdx, ULExit);
+      for (PHINode &PN : ULExit->phis()) {
+        Value *V = PN.getIncomingValueForBlock(LoopLatch);
+        PN.addIncoming(V, BI.getParent());
+      }
+      if (MSSAU)
+        MSSAU->applyUpdates(Updates, DT, /*UpdateDTFirst=*/true);
+      else
+        DT.applyUpdates(Updates);
+
+      ModifiedBranch = true;
+    }
+  }
+
   // Check that one of the branch's successors exits, and which one.
   bool ExitDirection = true;
   int LoopExitSuccIdx = 0;
@@ -601,12 +643,14 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     LoopExitBB = BI.getSuccessor(1);
     if (L.contains(LoopExitBB)) {
       LLVM_DEBUG(dbgs() << "   Branch doesn't exit the loop!\n");
+      assert(!ModifiedBranch && "Modified the branch but didn't unswitch");
       return false;
     }
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
-  if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
+  if (!ModifiedBranch &&
+      !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
@@ -621,6 +665,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
                       : !match(Cond, m_LogicalAnd())) {
       LLVM_DEBUG(dbgs() << "   Branch condition is in improper form for "
                            "non-full unswitch!\n");
+      assert(!ModifiedBranch && "Modified the branch but didn't unswitch");
       return false;
     }
   }
@@ -1130,8 +1175,12 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
       if (auto *Defs = MSSAU->getMemorySSA()->getBlockDefs(CurrentBB))
         if (!isa<MemoryPhi>(*Defs->begin()) || (++Defs->begin() != Defs->end()))
           return Changed;
-    if (llvm::any_of(*CurrentBB,
-                     [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    if (llvm::any_of(*CurrentBB, [](Instruction &I) {
+          if (const auto *CB = dyn_cast<CallBase>(&I))
+            if (CB->isConvergent())
+              return true;
+          return I.mayHaveSideEffects();
+        }))
       return Changed;
 
     Instruction *CurrentTerm = CurrentBB->getTerminator();
@@ -1791,18 +1840,16 @@ static void deleteDeadBlocksFromLoop(Loop &L,
                  [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Walk from this loop up through its parents removing all of the dead blocks.
-  for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop()) {
-    for (auto *BB : DeadBlockSet)
-      ParentL->getBlocksSet().erase(BB);
-    llvm::erase_if(ParentL->getBlocksVector(),
-                   [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
-  }
+  LI.removeBlocksFromLoopAndAncestors(
+      &L, nullptr, [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
-  // Now delete the dead child loops. This raw delete will clear them
-  // recursively.
-  llvm::erase_if(L.getSubLoopsVector(), [&](Loop *ChildL) {
+  // Now delete the dead child loops. Run the per-child deletion callbacks
+  // first, while the loop forest is still fully consistent (markLoopAsDeleted
+  // checks the child's position in it), then detach the dead children and
+  // destroy them.
+  for (Loop *ChildL : L) {
     if (!DeadBlockSet.count(ChildL->getHeader()))
-      return false;
+      continue;
 
     assert(llvm::all_of(ChildL->blocks(),
                         [&](BasicBlock *ChildBB) {
@@ -1813,9 +1860,11 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     LoopUpdater.markLoopAsDeleted(*ChildL, ChildL->getName());
     if (SE)
       SE->forgetBlockAndLoopDispositions();
+  }
+  for (Loop *ChildL : LI.takeChildrenIf(&L, [&](Loop *ChildL) {
+         return DeadBlockSet.count(ChildL->getHeader());
+       }))
     LI.destroy(ChildL);
-    return true;
-  });
 
   // Remove the loop mappings for the dead blocks and drop all the references
   // from these blocks to others to handle cyclic references as we start
@@ -1990,15 +2039,9 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   // *up* the nest.
   if (!LoopBlockSet.empty() && L.getParentLoop() != ParentL) {
     // Remove this loop's (original) blocks from all of the intervening loops.
-    for (Loop *IL = L.getParentLoop(); IL != ParentL;
-         IL = IL->getParentLoop()) {
-      IL->getBlocksSet().erase(PH);
-      for (auto *BB : L.blocks())
-        IL->getBlocksSet().erase(BB);
-      llvm::erase_if(IL->getBlocksVector(), [&](BasicBlock *BB) {
-        return BB == PH || L.contains(BB);
-      });
-    }
+    LI.removeBlocksFromLoopAndAncestors(
+        L.getParentLoop(), ParentL,
+        [&](BasicBlock *BB) { return BB == PH || L.contains(BB); });
 
     LI.changeLoopFor(PH, ParentL);
     L.getParentLoop()->removeChildLoop(&L);
@@ -2008,24 +2051,17 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
       LI.addTopLevelLoop(&L);
   }
 
-  // Now we update all the blocks which are no longer within the loop.
-  auto &Blocks = L.getBlocksVector();
-  auto BlocksSplitI =
-      LoopBlockSet.empty()
-          ? Blocks.begin()
-          : std::stable_partition(
-                Blocks.begin(), Blocks.end(),
-                [&](BasicBlock *BB) { return LoopBlockSet.count(BB); });
-
-  // Before we erase the list of unlooped blocks, build a set of them.
-  SmallPtrSet<BasicBlock *, 16> UnloopedBlocks(BlocksSplitI, Blocks.end());
+  // Now we update all the blocks which are no longer within the loop, building
+  // the set of them as they are removed.
+  SmallPtrSet<BasicBlock *, 16> UnloopedBlocks;
+  LI.removeBlocksIf(L, [&](BasicBlock *BB) {
+    if (LoopBlockSet.count(BB))
+      return false;
+    UnloopedBlocks.insert(BB);
+    return true;
+  });
   if (LoopBlockSet.empty())
     UnloopedBlocks.insert(PH);
-
-  // Now erase these blocks from the loop.
-  for (auto *BB : make_range(BlocksSplitI, Blocks.end()))
-    L.getBlocksSet().erase(BB);
-  Blocks.erase(BlocksSplitI, Blocks.end());
 
   // Sort the exits in ascending loop depth, we'll work backwards across these
   // to process them inside out.
@@ -2037,14 +2073,7 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   SmallPtrSet<BasicBlock *, 16> NewExitLoopBlocks;
   Loop *PrevExitL = L.getParentLoop(); // The deepest possible exit loop.
 
-  auto RemoveUnloopedBlocksFromLoop =
-      [](Loop &L, SmallPtrSetImpl<BasicBlock *> &UnloopedBlocks) {
-        for (auto *BB : UnloopedBlocks)
-          L.getBlocksSet().erase(BB);
-        llvm::erase_if(L.getBlocksVector(), [&](BasicBlock *BB) {
-          return UnloopedBlocks.count(BB);
-        });
-      };
+  auto InUnlooped = [&](BasicBlock *BB) { return UnloopedBlocks.count(BB); };
 
   SmallVector<BasicBlock *, 16> Worklist;
   while (!UnloopedBlocks.empty() && !ExitsInLoops.empty()) {
@@ -2060,8 +2089,8 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
     // exit loop and this exit loop. This works because the ExitInLoops list is
     // sorted in increasing order of loop depth and thus we visit loops in
     // decreasing order of loop depth.
-    for (; PrevExitL != &ExitL; PrevExitL = PrevExitL->getParentLoop())
-      RemoveUnloopedBlocksFromLoop(*PrevExitL, UnloopedBlocks);
+    LI.removeBlocksFromLoopAndAncestors(PrevExitL, &ExitL, InUnlooped);
+    PrevExitL = &ExitL;
 
     // Walk the CFG back until we hit the cloned PH adding everything reachable
     // and in the unlooped set to this exit block's loop.
@@ -2109,27 +2138,18 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
 
   // Any remaining unlooped blocks are no longer part of any loop unless they
   // are part of some child loop.
-  for (; PrevExitL; PrevExitL = PrevExitL->getParentLoop())
-    RemoveUnloopedBlocksFromLoop(*PrevExitL, UnloopedBlocks);
+  LI.removeBlocksFromLoopAndAncestors(PrevExitL, nullptr, InUnlooped);
   for (auto *BB : UnloopedBlocks)
     if (Loop *BBL = LI.getLoopFor(BB))
       if (BBL == &L || !L.contains(BBL))
         LI.changeLoopFor(BB, nullptr);
 
   // Sink all the child loops whose headers are no longer in the loop set to
-  // the parent (or to be top level loops). We reach into the loop and directly
-  // update its subloop vector to make this batch update efficient.
-  auto &SubLoops = L.getSubLoopsVector();
-  auto SubLoopsSplitI =
-      LoopBlockSet.empty()
-          ? SubLoops.begin()
-          : std::stable_partition(
-                SubLoops.begin(), SubLoops.end(), [&](Loop *SubL) {
-                  return LoopBlockSet.count(SubL->getHeader());
-                });
-  for (auto *HoistedL : make_range(SubLoopsSplitI, SubLoops.end())) {
+  // the parent (or to be top level loops).
+  for (Loop *HoistedL : LI.takeChildrenIf(&L, [&](Loop *SubL) {
+         return !LoopBlockSet.count(SubL->getHeader());
+       })) {
     HoistedLoops.push_back(HoistedL);
-    HoistedL->setParentLoop(nullptr);
 
     // To compute the new parent of this hoisted loop we look at where we
     // placed the preheader above. We can't lookup the header itself because we
@@ -2144,11 +2164,10 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
     else
       LI.addTopLevelLoop(HoistedL);
   }
-  SubLoops.erase(SubLoopsSplitI, SubLoops.end());
 
   // Actually delete the loop if nothing remained within it.
-  if (Blocks.empty()) {
-    assert(SubLoops.empty() &&
+  if (L.getBlocks().empty()) {
+    assert(L.getSubLoops().empty() &&
            "Failed to remove all subloops from the original loop!");
     if (Loop *ParentL = L.getParentLoop())
       ParentL->removeChildLoop(llvm::find(*ParentL, &L));
@@ -2205,24 +2224,12 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
     if (PartiallyInvariant) {
       // Mark the new loop as partially unswitched, to avoid unswitching on
       // the same condition again.
-      auto &Context = L.getHeader()->getContext();
-      MDNode *DisableUnswitchMD = MDNode::get(
-          Context,
-          MDString::get(Context, "llvm.loop.unswitch.partial.disable"));
-      MDNode *NewLoopID = makePostTransformationMetadata(
-          Context, L.getLoopID(), {"llvm.loop.unswitch.partial"},
-          {DisableUnswitchMD});
-      L.setLoopID(NewLoopID);
+      L.addStringLoopAttribute("llvm.loop.unswitch.partial.disable",
+                               {"llvm.loop.unswitch.partial"});
     } else if (InjectedCondition) {
       // Do the same for injection of invariant conditions.
-      auto &Context = L.getHeader()->getContext();
-      MDNode *DisableUnswitchMD = MDNode::get(
-          Context,
-          MDString::get(Context, "llvm.loop.unswitch.injection.disable"));
-      MDNode *NewLoopID = makePostTransformationMetadata(
-          Context, L.getLoopID(), {"llvm.loop.unswitch.injection"},
-          {DisableUnswitchMD});
-      L.setLoopID(NewLoopID);
+      L.addStringLoopAttribute("llvm.loop.unswitch.injection.disable",
+                               {"llvm.loop.unswitch.injection"});
     } else
       U.revisitCurrentLoop();
   } else
@@ -2913,7 +2920,7 @@ static int CalculateUnswitchCostMultiplier(
         std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
 
   int SiblingsCount =
-      (ParentL ? ParentL->getSubLoopsVector().size() : llvm::size(LI));
+      (ParentL ? ParentL->getSubLoops().size() : llvm::size(LI));
   // Count amount of clones that all the candidates might cause during
   // unswitching. Branch/guard/select counts as 1, switch counts as log2 of its
   // cases.

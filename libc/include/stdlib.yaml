@@ -158,12 +158,25 @@ functions:
       - type: wchar_t *__restrict
       - type: const char *__restrict
       - type: size_t
+  - name: mblen
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: size_t
   - name: memalignment
     standards:
       - stdc
     return_type: size_t
     arguments:
       - type: const void *
+  - name: mkstemp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: posix_memalign
     standards:
       - posix
@@ -183,7 +196,7 @@ functions:
       - type: __qsortcompare_t
   - name: qsort_r
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: void *
@@ -203,12 +216,27 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: realpath
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: char *__restrict
   - name: srand
     standards:
       - stdc
     return_type: void
     arguments:
       - type: unsigned int
+  - name: setenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: int
   - name: strfromd
     standards:
       - stdc
@@ -352,6 +380,12 @@ functions:
   - name: system
     standards:
       - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+  - name: unsetenv
+    standards:
+      - posix
     return_type: int
     arguments:
       - type: const char *

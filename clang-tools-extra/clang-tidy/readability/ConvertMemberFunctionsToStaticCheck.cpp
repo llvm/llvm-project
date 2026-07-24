@@ -64,6 +64,14 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
       return false; // Stop traversal.
     }
 
+    bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *E) {
+      if (E->isImplicitAccess()) {
+        Used = true;
+        return false;
+      }
+      return true; // Continue traversal.
+    }
+
     // If we enter a class declaration, don't traverse into it as any usages of
     // `this` will correspond to the nested class.
     bool TraverseCXXRecordDecl(CXXRecordDecl *RD) { return true; }
@@ -125,7 +133,7 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
@@ -137,7 +145,7 @@ static StringRef getStringFromRange(SourceManager &SourceMgr,
 }
 
 static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
-                                      SourceManager &SourceMgr,
+                                      const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
   const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();

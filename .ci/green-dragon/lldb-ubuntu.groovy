@@ -40,6 +40,11 @@ pipeline {
                         checkout scm
                     }
                 }
+                timeout(10) {
+                    dir('llvm-zorg') {
+                        git url: 'https://github.com/llvm/llvm-zorg.git', branch: 'main'
+                    }
+                }
             }
         }
 
@@ -59,6 +64,8 @@ pipeline {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         writeFile file: 'build.sh', text: '''#!/usr/bin/env bash
 set -ex
+
+pip3 install --break-system-packages -r /workspace/llvm-zorg/zorg/jenkins/jobs/requirements.txt
 
 /usr/bin/cmake -G Ninja \
     -S /workspace/llvm-project/llvm \
@@ -94,6 +101,10 @@ ninja -C /workspace/llvm-build check-lldb
                                 --cap-add=SYS_PTRACE \\
                                 --security-opt seccomp=unconfined \\
                                 -e BUILD_TYPE=${params.BUILD_TYPE} \\
+                                -e http_proxy \\
+                                -e https_proxy \\
+                                -e HTTP_PROXY \\
+                                -e HTTPS_PROXY \\
                                 -v "\${WORKSPACE}:/workspace" \\
                                 ${env.DOCKER_IMAGE} \\
                                 bash /workspace/build.sh

@@ -84,7 +84,7 @@ std::string TypeFilterImpl::GetDescription() {
     sstr.Printf("    %s\n", GetExpressionPathAtIndex(i));
   }
 
-  sstr.Printf("}");
+  sstr.PutCString("}");
   return std::string(sstr.GetString());
 }
 
@@ -247,6 +247,16 @@ ConstString ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
   return m_interpreter->GetSyntheticTypeName(m_wrapper_sp);
 }
 
+void *ScriptedSyntheticChildren::FrontEnd::GetImplementation() {
+  if (!m_wrapper_sp || m_interpreter == nullptr)
+    return nullptr;
+
+  if (m_wrapper_sp->GetType() != eStructuredDataTypeGeneric)
+    return nullptr;
+
+  return m_wrapper_sp->GetAsGeneric()->GetValue();
+}
+
 std::string ScriptedSyntheticChildren::GetDescription() {
   StreamString sstr;
   sstr.Printf("%s%s%s Python class %s", Cascades() ? "" : " (not cascading)",
@@ -314,7 +324,7 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   } else {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "Bytecode formatter did not return a valid reuse response from "
-             "@update (type: `{1}`, name: `{2}`)",
+             "@update (type: `{}`, name: `{}`)",
              m_backend.GetDisplayTypeName(), m_backend.GetName());
   }
 

@@ -37,7 +37,7 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
   let canHaveIllegalCXXABIType = 0;
 }
 
-def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
+def CIR_CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
                                              "cu.externally_initialized"> {
   let summary = "The marked variable is externally initialized.";
   let description =
@@ -66,6 +66,34 @@ def CIR_CUDABinaryHandleAttr : CIR_Attr<
 
   let parameters = (ins "mlir::StringAttr":$name);
   let assemblyFormat = "`<` $name `>`";
+}
+
+// Enum for device variable kinds
+def CIR_CUDADeviceVarKind : I32EnumAttr<"CUDADeviceVarKind",
+    "CUDA device variable kind", [
+  I32EnumAttrCase<"Variable", 0>,
+  I32EnumAttrCase<"Surface", 1>,   // Future
+  I32EnumAttrCase<"Texture", 2>,   // Future
+]> {
+  let cppNamespace = "::cir";
+}
+
+// Attribute carrying device variable registration flags
+def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.var_registration"> {
+  let summary = "Device variable registration flags.";
+  let parameters = (ins
+    "std::string":$device_side_name,
+    "CUDADeviceVarKind":$kind,
+    // Note: isExtern is only exercisable once HIP managed variable support
+    // lands. The only path to isExtern=true requires an extern __managed__
+    // variable, which bypasses the external storage filter in
+    // handleVarRegistration via hasAttr<HIPManagedAttr>().
+    "bool":$isExtern,
+    "bool":$isConstant,
+    "bool":$isManaged
+  );
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

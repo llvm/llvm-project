@@ -50,6 +50,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -570,6 +571,9 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!PSI)
+    reportFatalUsageError("this pass requires the profile-summary module "
+                          "analysis to be available");
   BBSectionsProfileReader =
       AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
   DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
@@ -850,8 +854,10 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
   DominatorTree NewDT(F);
+  CycleInfo NewCI;
+  NewCI.compute(F);
   LoopInfo NewLI(NewDT);
-  BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
+  BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
   BlockFrequencyInfo NewBFI(F, NewBPI, NewLI);
   NewBFI.verifyMatch(*BFI);
 }
@@ -943,11 +949,12 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
 
   ResetLI = false;
   bool MadeChange = false;
+  SmallPtrSet<PHINode *, 32> KnownNonDeadPHIs;
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo, nullptr, &KnownNonDeadPHIs);
   }
 
   for (auto &Block : llvm::drop_begin(F)) {
@@ -1806,8 +1813,7 @@ bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
   const APInt *C;
 
   // (icmp (ctpop x), c)
-  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                         m_APIntAllowPoison(C))))
+  if (!match(Cmp, m_ICmp(Pred, m_Ctpop(m_Value(X)), m_APIntAllowPoison(C))))
     return false;
 
   // We're only interested in "is power of 2 [or zero]" patterns.
@@ -2105,24 +2111,15 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   Value *AddInst, *AddOffset;
   // Find out loop increment PHI.
-  auto *PN = dyn_cast<PHINode>(Incr);
+  PHINode *PN = dyn_cast<PHINode>(Incr);
   if (PN != nullptr) {
     AddInst = nullptr;
     AddOffset = nullptr;
   } else {
     // Search through a NUW add on top of the loop increment.
-    Value *V0, *V1;
-    if (!match(Incr, m_NUWAdd(m_Value(V0), m_Value(V1))))
+    if (!match(Incr, m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset))))
       return false;
-
     AddInst = Incr;
-    PN = dyn_cast<PHINode>(V0);
-    if (PN != nullptr) {
-      AddOffset = V1;
-    } else {
-      PN = dyn_cast<PHINode>(V1);
-      AddOffset = V0;
-    }
   }
 
   if (!PN)
@@ -7264,8 +7261,7 @@ bool CodeGenPrepare::performAddressTypePromotion(
   bool AllSeenFirst = true;
   for (auto *I : SpeculativelyMovedExts) {
     Value *HeadOfChain = I->getOperand(0);
-    DenseMap<Value *, Instruction *>::iterator AlreadySeen =
-        SeenChainsForSExt.find(HeadOfChain);
+    auto AlreadySeen = SeenChainsForSExt.find(HeadOfChain);
     // If there is an unhandled SExt which has the same header, try to promote
     // it as well.
     if (AlreadySeen != SeenChainsForSExt.end()) {
@@ -8588,8 +8584,8 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   if (!DL.typeSizeEqualsStoreSize(SplitStoreType))
     return false;
 
-  // Don't split the store if it is volatile.
-  if (SI.isVolatile())
+  // Don't split the store if it is volatile or atomic.
+  if (!SI.isSimple())
     return false;
 
   // Match the following patterns:
@@ -9283,14 +9279,6 @@ bool CodeGenPrepare::placePseudoProbes(Function &F) {
   return MadeChange;
 }
 
-/// Scale down both weights to fit into uint32_t.
-static void scaleWeights(uint64_t &NewTrue, uint64_t &NewFalse) {
-  uint64_t NewMax = (NewTrue > NewFalse) ? NewTrue : NewFalse;
-  uint32_t Scale = (NewMax / std::numeric_limits<uint32_t>::max()) + 1;
-  NewTrue = NewTrue / Scale;
-  NewFalse = NewFalse / Scale;
-}
-
 /// Some targets prefer to split a conditional branch like:
 /// \code
 ///   %0 = icmp ne i32 %a, 0
@@ -9443,18 +9431,13 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       if (extractBranchWeights(*Br1, TrueWeight, FalseWeight)) {
         uint64_t NewTrueWeight = TrueWeight;
         uint64_t NewFalseWeight = TrueWeight + 2 * FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight,
-                                                  hasBranchWeightOrigin(*Br1)));
+        setFittedBranchWeights(*Br1, {NewTrueWeight, NewFalseWeight},
+                               hasBranchWeightOrigin(*Br1));
 
         NewTrueWeight = TrueWeight;
         NewFalseWeight = 2 * FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br2, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
       }
     } else {
       // Codegen X & Y as:
@@ -9479,17 +9462,13 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       if (extractBranchWeights(*Br1, TrueWeight, FalseWeight)) {
         uint64_t NewTrueWeight = 2 * TrueWeight + FalseWeight;
         uint64_t NewFalseWeight = FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br1, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
 
         NewTrueWeight = 2 * TrueWeight;
         NewFalseWeight = FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br2, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
       }
     }
 

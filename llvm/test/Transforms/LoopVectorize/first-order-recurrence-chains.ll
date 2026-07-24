@@ -689,7 +689,7 @@ define double @test_chained_first_order_recurrence_sink_users_1(ptr %ptr, i64 %n
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 1.000000e+01>, %[[VECTOR_PH]] ], [ [[WIDE_LOAD:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 2.000000e+01>, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add i64 1, [[INDEX1]]
+; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add nuw i64 1, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP2]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -927,7 +927,7 @@ define ptr @test_first_order_recurrences_and_pointer_induction1(ptr %ptr, i64 %n
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -998,7 +998,7 @@ define ptr @test_first_order_recurrences_and_pointer_induction2(ptr %ptr, i64 %n
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

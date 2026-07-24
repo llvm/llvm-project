@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 %s --std=c++11 -triple x86_64-unknown-linux -emit-llvm -o - \
 // RUN:   -verify=expected,omp -verify-ignore-unexpected=note -fopenmp
 
+// RUN: %clang_cc1 %s --std=c++17 -triple x86_64-unknown-linux -emit-llvm -o - \
+// RUN:   -verify -verify-ignore-unexpected=note
+// RUN: %clang_cc1 %s --std=c++17 -triple x86_64-unknown-linux -emit-llvm -o - \
+// RUN:   -verify=expected,omp -verify-ignore-unexpected=note -fopenmp
+
 // Note: This test won't work with -fsyntax-only, because some of these errors
 // are emitted during codegen.
 
@@ -97,3 +102,18 @@ void host_func(void) { kernel<<<1, 1>>>(); }
 __device__ void f();
 template<void(*F)()> __global__ void t() { F(); }
 __host__ void g() { t<f><<<1,1>>>(); }
+
+#if __cplusplus >= 201703L
+namespace template_if_constexpr {
+  template<bool B>
+  __host__ __device__ void fn() {
+    if constexpr (B)
+      device_fn();
+  }
+
+  void call() {
+    fn<false>();
+    fn<true>(); // expected-error@-5 {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
+  }
+}
+#endif

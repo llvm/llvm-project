@@ -58,7 +58,7 @@ public:
   using FmaFunc = OutType (*)(InType, InType, InType);
 
   void test_subnormal_range(FmaFunc func) {
-    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType RAW_STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
     constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
@@ -76,7 +76,7 @@ public:
   }
 
   void test_normal_range(FmaFunc func) {
-    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType RAW_STEP =
         (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
     constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);

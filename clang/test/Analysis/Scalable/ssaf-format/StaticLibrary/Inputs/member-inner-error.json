@@ -1,0 +1,17 @@
+{
+  "members": [
+    {
+      "type": "TUSummary",
+      "target_triple": "arm64-apple-macosx",
+      "id_table": [],
+      "linkage_table": [],
+      "data": []
+    }
+  ],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libfoo"
+  },
+  "target_triple": "arm64-apple-macosx",
+  "type": "StaticLibrary"
+}

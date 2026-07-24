@@ -218,8 +218,7 @@ protected:
       // getAsInteger returns true on failure
       if (entry.ref().getAsInteger(0, tag_value)) {
         result.AppendErrorWithFormat(
-            "'%s' is not a valid unsigned decimal string value.",
-            entry.c_str());
+            "'%s' is not a valid unsigned decimal string value", entry.c_str());
         return;
       }
       tags.push_back(tag_value);

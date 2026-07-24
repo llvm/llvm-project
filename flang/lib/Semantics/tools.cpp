@@ -8,6 +8,7 @@
 
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -181,9 +182,18 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
           (cat0 != TypeCategory::Complex && cat1 != TypeCategory::Complex);
+    } else if (cat0 == TypeCategory::Character &&
+        cat1 == TypeCategory::Character) {
+      return true;
+    } else if (cat0 == TypeCategory::Derived && cat1 == TypeCategory::Derived) {
+      // Same enumeration type: all six relational operators are allowed
+      const auto *derived0{evaluate::GetDerivedTypeSpec(type0)};
+      const auto *derived1{evaluate::GetDerivedTypeSpec(type1)};
+      return derived0 && derived1 && derived0->IsEnumerationType() &&
+          derived1->IsEnumerationType() &&
+          &derived0->typeSymbol() == &derived1->typeSymbol();
     } else {
-      // not both numeric: only Character is ok
-      return cat0 == TypeCategory::Character && cat1 == TypeCategory::Character;
+      return false;
     }
   }
 }
@@ -262,7 +272,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
   return DoesScopeContain(maybeAncestor, symbol.owner());
 }
 
-static const Symbol &FollowHostAssoc(const Symbol &symbol) {
+const Symbol &FollowHostAssoc(const Symbol &symbol) {
   for (const Symbol *s{&symbol};;) {
     const auto *details{s->detailsIf<HostAssocDetails>()};
     if (!details) {
@@ -330,7 +340,13 @@ const Symbol *FindExternallyVisibleObject(
   // TODO: Storage association with any object for which this predicate holds,
   // once EQUIVALENCE is supported.
   const Symbol &ultimate{GetAssociationRoot(object)};
-  if (IsDummy(ultimate)) {
+  if (ultimate.owner().IsDerivedType()) {
+    return nullptr;
+  } else if (!IsDummy(ultimate) &&
+      (IsUseAssociated(object, scope) ||
+          IsHostAssociatedIntoSubprogram(object, scope))) {
+    return &object;
+  } else if (IsDummy(ultimate)) {
     if (IsIntentIn(ultimate)) {
       return &ultimate;
     }
@@ -338,12 +354,7 @@ const Symbol *FindExternallyVisibleObject(
         IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
-  } else if (ultimate.owner().IsDerivedType()) {
-    return nullptr;
-  } else if (&GetProgramUnitContaining(ultimate) !=
-      &GetProgramUnitContaining(scope)) {
-    return &object;
-  } else if (const Symbol * block{FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *block{FindCommonBlockContaining(ultimate)}) {
     return block;
   }
   return nullptr;
@@ -772,7 +783,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   if (elemental && (!withImpureFinalizer || !IsPureProcedure(*elemental))) {
     return elemental;
   }
-  // Check components (including ancestors)
+  // Check components (including ancestors via parent component recursion)
   std::set<const DerivedTypeSpec *> basis;
   if (inProgress) {
     if (inProgress->find(&derived) != inProgress->end()) {
@@ -783,10 +794,14 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   }
   auto iterator{inProgress->insert(&derived).first};
   const Symbol *result{nullptr};
-  for (const Symbol &component : PotentialComponentIterator{derived}) {
-    result = IsFinalizable(component, inProgress, withImpureFinalizer);
-    if (result) {
-      break;
+  // Iterate only the type's own scope to avoid exponential traversal
+  // when combined with recursion through derived-type components.
+  if (const Scope *scope{derived.GetScope()}) {
+    for (const auto &[_, symbolRef] : *scope) {
+      result = IsFinalizable(*symbolRef, inProgress, withImpureFinalizer);
+      if (result) {
+        break;
+      }
     }
   }
   inProgress->erase(iterator);
@@ -1070,6 +1085,19 @@ bool IsAssumedType(const Symbol &symbol) {
   return false;
 }
 
+bool IsEnumerationType(const Symbol &symbol) {
+  // Use the ultimate symbol for cases such as USE-associated enumeration types
+  if (const auto *details{
+          symbol.GetUltimate().detailsIf<DerivedTypeDetails>()}) {
+    return details->isEnumerationType();
+  }
+  return false;
+}
+
+bool IsEnumerationType(const DerivedTypeSpec &derived) {
+  return derived.IsEnumerationType();
+}
+
 bool IsPolymorphic(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->IsPolymorphic();
@@ -1120,6 +1148,15 @@ bool HasCUDAComponent(const Symbol &symbol) {
     }
   }
   return false;
+}
+
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           evaluate::characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              evaluate::characteristics::TypeAndShape::Attr::AssumedRank));
 }
 
 UltimateComponentIterator::const_iterator

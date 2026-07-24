@@ -83,6 +83,7 @@ on how to get in touch with us and to learn more about the current status.
    LabelResolution
    ModFiles
    OpenACC
+   OpenACC-extensions
    OpenACC-descriptor-management.md
    OpenMP-4.5-grammar.md
    OpenMP-declare-target
@@ -103,6 +104,15 @@ on how to get in touch with us and to learn more about the current status.
    Semantics
    f2018-grammar.md
    fstack-arrays
+```
+
+# Historical References
+
+```{eval-rst}
+.. toctree::
+   :titlesonly:
+
+   HLFIRTransition
 ```
 
 # Indices and tables

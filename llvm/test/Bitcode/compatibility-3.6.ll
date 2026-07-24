@@ -14,7 +14,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ;; Module-level assembly
 module asm "beep boop"
-; CHECK: module asm "beep boop"
+; CHECK: module asm
+; CHECK-NEXT: "beep boop"
 
 ;; Comdats
 $comdat.any = comdat any
@@ -56,7 +57,7 @@ $comdat2 = comdat any
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant i8* null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8 }

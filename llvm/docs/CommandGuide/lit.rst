@@ -166,6 +166,12 @@ EXECUTION OPTIONS
 
  Specify an additional ``PATH`` to use when searching for executables in tests.
 
+.. option:: --pass-env NAME
+
+ Pass the environment variable ``NAME`` through to the test environment, in
+ addition to the built-in allow-list of variables that are always passed
+ through. May be specified multiple times to pass through several variables.
+
 .. option:: --vg
 
  Run individual tests under valgrind (using the memcheck tool).  The
@@ -254,11 +260,15 @@ EXECUTION OPTIONS
 
  Do not track elapsed wall time for each test.
 
-.. option:: --time-tests
+.. option:: --time-tests[=N|all]
 
- Track the wall time individual tests take to execute and includes the results
+ Track the wall time individual tests take to execute and include the results
  in the summary output.  This is useful for determining which tests in a test
- suite take the most time to execute.
+ suite take the most time to execute.  When enabled, lit prints a slowest-test
+ list and a histogram over all timed tests.  The slowest-test list defaults to
+ the 20 slowest tests, but can be limited with ``=N`` or expanded to every
+ timed test with ``=all``.  The headings report how many tests are listed, for
+ example ``Slowest Tests (N of M):`` and ``Test Times (M):``.
 
 .. _selection-options:
 
@@ -365,6 +375,27 @@ The timing data is stored in the `test_exec_root` in a file named
   including an :option:`--xfail` appearing later on the command line.  The
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
+
+.. option:: --unsupported LIST
+
+  Treat those tests whose name is in the semicolon separated list ``LIST`` as
+  ``UNSUPPORTED``. This can be helpful when one does not want to modify the test
+  suite. The environment variable ``LIT_UNSUPPORTED`` can be also used in place
+  of this option, which is especially useful in environments where the call to
+  ``lit`` is issued indirectly.
+
+  The syntax for specifying test names is the same as for :option:`--xfail` and
+  ``LIT_XFAIL``. A test name can be specified as a file name relative to the
+  test suite directory or as the full test name reported in LIT output.
+
+.. option:: --unsupported-not LIST
+
+  Do not treat the specified tests as ``UNSUPPORTED``.  The environment variable
+  ``LIT_UNSUPPORTED_NOT`` can also be used in place of this option.  The syntax
+  is the same as for :option:`--unsupported` and ``LIT_UNSUPPORTED``.
+  :option:`--unsupported-not` and ``LIT_UNSUPPORTED_NOT`` always override all
+  other ``UNSUPPORTED`` specifications, including an :option:`--unsupported`
+  appearing later on the command line.
 
 .. option:: --exclude-xfail
 
@@ -646,6 +677,7 @@ TestRunner.py:
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
  %{s:basename}           The last path component of %s
+ %{s:stem}               The last path component of %s but with the last extension removed.
  %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives
