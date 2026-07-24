@@ -12726,10 +12726,7 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        ISD::CondCode CC,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
-  EVT TransformVT = VT;
-  while (TLI.getTypeAction(*DAG.getContext(), TransformVT) !=
-         TargetLoweringBase::TypeLegal)
-    TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), TransformVT);
+  EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT);
 
   // We have checked nnan and nsz as pre-conditions for the transform.
   SDNodeFlags Flags = SDNodeFlags::NoNaNs | SDNodeFlags::NoSignedZeros;
