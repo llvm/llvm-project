@@ -234,8 +234,8 @@ struct __destroy<__default_backend_tag, _ExecutionPolicy> {
 
 template <class _ExecutionPolicy>
 struct __destroy_n<__default_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class Size>
-  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, Size __n) const noexcept {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _Ref      = __iterator_reference<_ForwardIterator>;
     return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) {

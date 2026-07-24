@@ -332,9 +332,9 @@ struct __destroy;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __destroy_n;
-// template <class _Policy, class _ForwardIterator, class Size>
+// template <class _Policy, class _ForwardIterator, class _Size>
 // optional<__empty>
-// operator()(_Policy&& __policy, _ForwardIterator __first, Size __n) const noexcept;
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
