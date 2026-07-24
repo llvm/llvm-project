@@ -328,13 +328,13 @@ void AArch64PointerAuthImpl::authenticateLR(
   if (ArgumentStackToRestore > 0) {
     for (auto I = MBBI; I->getFlag(MachineInstr::FrameDestroy); --I) {
       if ((I->getOpcode() == AArch64::ADDXri ||
-          I->getOpcode() == AArch64::SUBXri) &&
+           I->getOpcode() == AArch64::SUBXri) &&
           I->getOperand(0).getReg() == AArch64::SP &&
           I->getOperand(1).getReg() == AArch64::SP) {
         SPMods.push_back(&*I);
         Offset += I->getOpcode() == AArch64::ADDXri
-            ? I->getOperand(2).getImm()
-            : -I->getOperand(2).getImm();
+                      ? I->getOperand(2).getImm()
+                      : -I->getOperand(2).getImm();
       }
     }
   }
@@ -345,12 +345,13 @@ void AArch64PointerAuthImpl::authenticateLR(
     // The AUTIASP instruction assembles to a hint instruction before v8.3a so
     // this instruction can safely used for any v8a architecture.
     // From v8.3a onwards there are optimised authenticate LR and return
-    // instructions, namely RETA{A,B}, that can be used instead. In this case the
-    // DW_CFA_AARCH64_negate_ra_state can't be emitted.
-    // Additionally, RET{A,B} requires the SP to match its incoming value on entry
-    // to the function.
-    bool TerminatorIsCombinable =
-        TI != MBB.end() && TI->getOpcode() == AArch64::RET && ArgumentStackToRestore == 0;
+    // instructions, namely RETA{A,B}, that can be used instead. In this case
+    // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
+    // RET{A,B} requires the SP to match its incoming value on entry to the
+    // function.
+    bool TerminatorIsCombinable = TI != MBB.end() &&
+                                  TI->getOpcode() == AArch64::RET &&
+                                  ArgumentStackToRestore == 0;
 
     if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
         !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
@@ -368,7 +369,8 @@ void AArch64PointerAuthImpl::authenticateLR(
           BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
               .setMIFlag(MachineInstr::FrameDestroy);
         }
-        BuildMI(MBB, TI, DL, TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
+        BuildMI(MBB, TI, DL,
+                TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
             .copyImplicitOps(*MBBI)
             .setMIFlag(MachineInstr::FrameDestroy);
       }
@@ -402,7 +404,7 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     if (NeedsWinCFI) {
       assert(UseBKey &&
-            "Windows SEH PAC unwind info only supports B-key signing");
+             "Windows SEH PAC unwind info only supports B-key signing");
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
           .setMIFlag(MachineInstr::FrameDestroy);
     }
@@ -435,8 +437,7 @@ void AArch64PointerAuthImpl::authenticateLR(
     emitMOV(AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
-    emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                    AArch64::X15);
+    emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
 
     unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
     BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
@@ -448,8 +449,7 @@ void AArch64PointerAuthImpl::authenticateLR(
     emitMOV(AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
-    emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                    AArch64::X15);
+    emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
 
     // The PACM hint-space instruction modifies the following AUTI[AB]1716
     // to optionally take x15 as an extra operand depending on the
@@ -466,8 +466,8 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     emitMOV(AArch64::LR, AArch64::X17);
   } else if (Subtarget->hasPAuth()) {
-    BuildMI(MBB, MBBI, DL,
-            TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA), AArch64::LR)
+    BuildMI(MBB, MBBI, DL, TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA),
+            AArch64::LR)
         .addUse(AArch64::LR)
         .addUse(AArch64::X16)
         .setMIFlag(MachineInstr::FrameDestroy);
