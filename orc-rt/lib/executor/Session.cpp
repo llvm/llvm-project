@@ -120,6 +120,7 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     CurrentState = State::Attached;
   }
 
+  // Fall through to disconnect from case (3) above.
   CA->disconnect();
 }
 
@@ -362,7 +363,6 @@ void Session::sendWrapperResult(uint64_t CallId,
                                 WrapperFunctionBuffer ResultBytes) {
   if (auto TmpCA = std::atomic_load(&CA))
     TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-  ManagedCodeTaskGroup->releaseToken();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

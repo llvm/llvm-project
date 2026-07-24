@@ -610,6 +610,12 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (unsigned n = 0; n != 8; ++n)
     Reserved.set(X86::ST0 + n);
 
+  // Without usable x87 (soft float or -mno-x87), reserve the allocatable FPn
+  // pseudos (FP0-FP6; FP7 is already non-allocatable) so they aren't scrubbed.
+  if (ST.useSoftFloat() || !ST.hasX87())
+    for (unsigned n = 0; n != 7; ++n)
+      Reserved.set(X86::FP0 + n);
+
   // Reserve the registers that only exist in 64-bit mode.
   if (!Is64Bit) {
     // These 8-bit registers are part of the x86-64 extension even though their

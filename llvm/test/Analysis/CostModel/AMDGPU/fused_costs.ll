@@ -10,8 +10,6 @@
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu10.30-unknown-amdhsa -denormal-fp-math-f32=preserve-sign -denormal-fp-math=preserve-sign -fp-contract=on < %s | FileCheck -check-prefixes=SLOWF64-SIZE,FUSED-SIZE,FASTF32-SIZE %s
 ; END.
 
-target triple = "amdgcn--"
-
 define void @fmul_fadd_f32() #0 {
 ; SLOWF32-LABEL: 'fmul_fadd_f32'
 ; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f32 = fmul float undef, undef

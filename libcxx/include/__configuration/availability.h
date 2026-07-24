@@ -239,6 +239,18 @@
 
 #endif
 
+// This determines whether we assume that the internal std::__bad_variant_access_with_msg class
+// (which carries a message describing the cause of the failure in bad_variant_access::what())
+// provides a key function in the dylib. This allows centralizing its vtable and typeinfo instead
+// of having all TUs provide a weak definition that then gets deduplicated. When it is not available
+// in the dylib, what() is defined inline instead, so the descriptive message is provided regardless.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_23
+// No attribute, since we've had bad_variant_access in the headers before
+
+// Controls whether the implementation for text_encoding::environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
+
 // This controls the availability of new implementation of std::atomic's
 // wait, notify_one and notify_all. The new implementation uses
 // the native atomic wait/notify operations on platforms that support them
@@ -255,14 +267,6 @@
 // See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
-
-// This determines whether we assume that the internal std::__bad_variant_access_with_msg class
-// (which carries a message describing the cause of the failure in bad_variant_access::what())
-// provides a key function in the dylib. This allows centralizing its vtable and typeinfo instead
-// of having all TUs provide a weak definition that then gets deduplicated. When it is not available
-// in the dylib, what() is defined inline instead, so the descriptive message is provided regardless.
-#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_23
-// No attribute, since we've had bad_variant_access in the headers before
 
 // This controls the availability of floating-point std::from_chars functions.
 // These overloads were added later than the integer overloads.
@@ -322,10 +326,6 @@
 #else
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
-
-// Controls whether the implementation for text_encoding::environment() is available
-#define _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
-#define _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8

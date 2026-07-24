@@ -534,10 +534,10 @@ define i64 @find_iv_reduction(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP8]], <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i64> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_MASKED_LOAD]], splat (i64 42)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_LOAD]], ptr align 8 [[TMP11]], <4 x i1> [[CLAMPED_HEADER_MASK]])
-; CHECK-NEXT:    [[TMP12]] = select <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i64> [[TMP10]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12]] = select <4 x i1> [[TMP17]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[NUM_ACTIVE_LANES]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

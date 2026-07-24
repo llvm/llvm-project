@@ -134,7 +134,7 @@ void *operator new[](size_t size) { return malloc(size); }
 
 void operator delete(void *ptr) { free(ptr); }
 
-void operator delete(void *ptr, [[maybe_unused]] size_t size) { free(ptr); }
+void operator delete(void *ptr, size_t) { free(ptr); }
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
