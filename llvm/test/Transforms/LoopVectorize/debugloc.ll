@@ -230,8 +230,8 @@ loop:
   %lb = load i32, ptr %gep.b, align 4
   %m0 = icmp sgt i32 %la, 0
   %m1 = icmp slt i32 %lb, 100
-  %inner = select i1 %m1, i32 %la, i32 %lb
-  %outer = select i1 %m0, i32 %inner, i32 %lb, !dbg !44
+  %inner = select i1 %m1, i32 %la, i32 %lb, !dbg !44
+  %outer = select i1 %m0, i32 %inner, i32 %lb, !dbg !45
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
   store i32 %outer, ptr %gep.dst, align 4
   %iv.next = add nuw nsw i64 %iv, 1
@@ -251,7 +251,7 @@ exit:
 ; CHECK: [[LOC6]] = !DILocation(line: 430
 ; CHECK: [[LOC7]] = !DILocation(line: 540
 ; CHECK: [[LOC8]] = !DILocation(line: 650
-; CHECK: [[LOC9]] = !DILocation(line: 760
+; CHECK: [[LOC9]] = !DILocation(line: 761
 
 
 
@@ -300,3 +300,4 @@ exit:
 !42 = distinct !DISubprogram(name: "test_select_chain_debugloc", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
 !43 = distinct !DILexicalBlock(scope: !42, file: !5, line: 137, column: 2)
 !44 = !DILocation(line: 760, column: 44, scope: !43)
+!45 = !DILocation(line: 761, column: 44, scope: !43)
