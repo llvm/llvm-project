@@ -17,6 +17,7 @@
 #include "AMDGPULegalizerInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -312,6 +313,12 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   }
 };
 
+struct KernArgPart {
+  CallLowering::ArgInfo Arg;
+  uint64_t Offset;
+  Align Alignment;
+};
+
 // Materialize a preloaded kernarg from its assigned SGPRs into DstReg.
 static void lowerPreloadedKernArg(MachineIRBuilder &B, Register DstReg,
                                   LLT DstTy, uint64_t Offset, Align Alignment,
@@ -377,93 +384,73 @@ static void lowerPreloadedKernArg(MachineIRBuilder &B, Register DstReg,
 
 // Assign SGPRs for the contiguous sequence of kernel argument parts marked for
 // kernarg preload.
-static void allocatePreloadKernArgSGPRs(
-    CCState &CCInfo, ArrayRef<CallLowering::ArgInfo> SplitArgs,
-    ArrayRef<uint64_t> SplitArgOffsets, ArrayRef<Align> SplitArgAlignments,
-    MachineFunction &MF, const GCNSubtarget &Subtarget,
-    const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) {
-  assert(SplitArgs.size() == SplitArgOffsets.size());
-  assert(SplitArgs.size() == SplitArgAlignments.size());
-
-  const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getDataLayout();
+static void allocatePreloadKernArgSGPRs(CCState &CCInfo,
+                                        ArrayRef<KernArgPart> KernArgParts,
+                                        MachineFunction &MF,
+                                        const GCNSubtarget &Subtarget,
+                                        const SIRegisterInfo &TRI,
+                                        SIMachineFunctionInfo &Info) {
+  const DataLayout &DL = MF.getFunction().getDataLayout();
   unsigned LastExplicitArgOffset = Subtarget.getExplicitKernelArgOffset();
   GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
-  bool InPreloadSequence = true;
-  unsigned InIdx = 0;
   bool AlignedForImplicitArgs = false;
   unsigned ImplicitArgOffset = 0;
 
-  for (const Argument &Arg : F.args()) {
-    // Preload assignment follows the original argument order. Each original
-    // argument may already have been split into one or more lowered parts.
-    const bool IsByRef = Arg.hasByRefAttr();
-    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    if (DL.getTypeAllocSize(ArgTy) == 0)
-      continue;
-
+  for (auto [KernArgIdx, Part] : enumerate(KernArgParts)) {
+    const Argument &Arg = *cast<Argument>(Part.Arg.OrigValue);
     // Hardware preloads a contiguous prefix of the kernarg segment. Once a
     // non-preloaded argument is reached, no later argument can be preloaded.
-    if (!InPreloadSequence || !Arg.hasInRegAttr())
+    if (!Arg.hasInRegAttr())
       break;
 
-    for (unsigned ArgIdx = Arg.getArgNo();
-         InIdx < SplitArgs.size() && SplitArgs[InIdx].OrigArgIndex == ArgIdx;
-         ++InIdx) {
-      unsigned ArgOffset = SplitArgOffsets[InIdx];
-      Align Alignment = SplitArgAlignments[InIdx];
-      unsigned NumAllocSGPRs =
-          alignTo(DL.getTypeAllocSize(SplitArgs[InIdx].Ty), 4) / 4;
+    unsigned ArgOffset = Part.Offset;
+    unsigned NumAllocSGPRs = alignTo(DL.getTypeAllocSize(Part.Arg.Ty), 4) / 4;
 
-      if (Arg.hasAttribute("amdgpu-hidden-argument")) {
-        // Hidden arguments are laid out after the explicit kernargs, aligned to
-        // the ABI-required implicit argument block boundary.
-        if (!AlignedForImplicitArgs) {
-          ImplicitArgOffset =
-              alignTo(LastExplicitArgOffset,
-                      Subtarget.getAlignmentForImplicitArgPtr()) -
-              LastExplicitArgOffset;
-          AlignedForImplicitArgs = true;
-        }
-        ArgOffset += ImplicitArgOffset;
+    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
+      // Hidden arguments are laid out after the explicit kernargs, aligned to
+      // the ABI-required implicit argument block boundary.
+      if (!AlignedForImplicitArgs) {
+        ImplicitArgOffset = alignTo(LastExplicitArgOffset,
+                                    Subtarget.getAlignmentForImplicitArgPtr()) -
+                            LastExplicitArgOffset;
+        AlignedForImplicitArgs = true;
       }
-
-      if (DL.getTypeStoreSize(SplitArgs[InIdx].Ty) < 4 && Alignment < 4) {
-        // Packed sub-dword values share the previous 32-bit SGPR. The extract
-        // happens later when materializing the argument value.
-        assert(InIdx >= 1 && "No previous SGPR");
-        Info.getArgInfo().PreloadKernArgs[InIdx].Regs.push_back(
-            Info.getArgInfo().PreloadKernArgs[InIdx - 1].Regs[0]);
-        continue;
-      }
-
-      // Padding between the last preloaded byte and this argument still
-      // consumes preload SGPR slots because the hardware preload sequence is
-      // contiguous.
-      unsigned Padding = ArgOffset - LastExplicitArgOffset;
-      unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
-      if (PaddingSGPRs + NumAllocSGPRs > SGPRInfo.getNumFreeUserSGPRs()) {
-        InPreloadSequence = false;
-        break;
-      }
-
-      const TargetRegisterClass *RC =
-          TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
-      SmallVectorImpl<MCRegister> *PreloadRegs =
-          Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, InIdx, PaddingSGPRs);
-
-      // Record each assigned physical SGPR as a live-in and reserve it from the
-      // calling convention allocator.
-      if (PreloadRegs->size() > 1)
-        RC = &AMDGPU::SGPR_32RegClass;
-      for (MCRegister Reg : *PreloadRegs) {
-        assert(Reg);
-        MF.addLiveIn(Reg, RC);
-        CCInfo.AllocateReg(Reg);
-      }
-
-      LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
+      ArgOffset += ImplicitArgOffset;
     }
+
+    if (DL.getTypeStoreSize(Part.Arg.Ty) < 4 && Part.Alignment < 4) {
+      // Packed sub-dword values share the previous 32-bit SGPR. The extract
+      // happens later when materializing the argument value.
+      assert(KernArgIdx >= 1 && "no previous SGPR");
+      Info.getArgInfo().PreloadKernArgs[KernArgIdx].Regs.push_back(
+          Info.getArgInfo().PreloadKernArgs[KernArgIdx - 1].Regs[0]);
+      continue;
+    }
+
+    // Padding between the last preloaded byte and this argument still consumes
+    // preload SGPR slots because the hardware preload sequence is contiguous.
+    unsigned Padding = ArgOffset - LastExplicitArgOffset;
+    unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+    // Kernarg preloads share the user-data SGPR budget with other ABI inputs.
+    if (PaddingSGPRs + NumAllocSGPRs > SGPRInfo.getNumFreeUserSGPRs())
+      break;
+
+    const TargetRegisterClass *RC =
+        TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
+    SmallVectorImpl<MCRegister> *PreloadRegs = Info.addPreloadedKernArg(
+        TRI, RC, NumAllocSGPRs, KernArgIdx, PaddingSGPRs);
+
+    // Record each assigned physical SGPR as a live-in and reserve it from the
+    // calling convention allocator.
+    if (PreloadRegs->size() > 1)
+      RC = &AMDGPU::SGPR_32RegClass;
+    for (MCRegister Reg : *PreloadRegs) {
+      assert(Reg);
+      MF.addLiveIn(Reg, RC);
+      CCInfo.AllocateReg(Reg);
+    }
+
+    LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
   }
 }
 } // anonymous namespace
@@ -745,9 +732,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   allocateHSAUserSGPRs(CCInfo, B, MF, *TRI, *Info);
 
-  SmallVector<ArgInfo, 16> SplitArgs;
-  SmallVector<uint64_t, 16> SplitArgOffsets;
-  SmallVector<Align, 16> SplitArgAlignments;
+  SmallVector<KernArgPart, 16> KernArgParts;
 
   unsigned VRegIdx = 0;
   const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset();
@@ -779,68 +764,44 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     for (unsigned SplitIdx = 0, NumSplitArgs = ArgSplitArgs.size();
          SplitIdx != NumSplitArgs; ++SplitIdx) {
       ArgSplitArgs[SplitIdx].OrigValue = &Arg;
-      SplitArgOffsets.push_back(ArgOffset +
-                                FieldOffsets[SplitIdx].getFixedValue());
-      SplitArgAlignments.push_back(
-          commonAlignment(ArgBaseAlign, FieldOffsets[SplitIdx]));
-      SplitArgs.push_back(ArgSplitArgs[SplitIdx]);
+      KernArgParts.push_back(
+          {ArgSplitArgs[SplitIdx],
+           ArgOffset + FieldOffsets[SplitIdx].getFixedValue(),
+           commonAlignment(ArgBaseAlign, FieldOffsets[SplitIdx])});
     }
 
     ++VRegIdx;
   }
 
-  if (Subtarget->hasKernargPreload())
-    allocatePreloadKernArgSGPRs(CCInfo, SplitArgs, SplitArgOffsets,
-                                SplitArgAlignments, MF, *Subtarget, *TRI,
+  if (Subtarget->hasKernargPreload()) {
+    allocatePreloadKernArgSGPRs(CCInfo, KernArgParts, MF, *Subtarget, *TRI,
                                 *Info);
-
-  unsigned i = 0;
-  unsigned InputArgIndex = 0;
+  }
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
-  for (auto &Arg : F.args()) {
-    const bool IsByRef = Arg.hasByRefAttr();
-    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
-    if (AllocSize == 0)
+  for (auto [KernArgIdx, Part] : enumerate(KernArgParts)) {
+    const Argument &Arg = *cast<Argument>(Part.Arg.OrigValue);
+    if (Arg.use_empty())
       continue;
 
-    unsigned FirstInputArgIndex = InputArgIndex;
-    while (InputArgIndex < SplitArgs.size() &&
-           SplitArgs[InputArgIndex].OrigArgIndex == Arg.getArgNo())
-      ++InputArgIndex;
-    unsigned NumInputParts = InputArgIndex - FirstInputArgIndex;
-
-    if (Arg.use_empty()) {
-      ++i;
-      continue;
-    }
-
-    if (IsByRef) {
+    if (Arg.hasByRefAttr()) {
       unsigned ByRefAS = cast<PointerType>(Arg.getType())->getAddressSpace();
 
-      assert(VRegs[i].size() == 1 &&
+      assert(Part.Arg.Regs.size() == 1 &&
              "expected only one register for byval pointers");
       if (ByRefAS == AMDGPUAS::CONSTANT_ADDRESS) {
-        lowerParameterPtr(VRegs[i][0], B, SplitArgOffsets[FirstInputArgIndex]);
+        lowerParameterPtr(Part.Arg.Regs[0], B, Part.Offset);
       } else {
         const LLT ConstPtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
         Register PtrReg = MRI.createGenericVirtualRegister(ConstPtrTy);
-        lowerParameterPtr(PtrReg, B, SplitArgOffsets[FirstInputArgIndex]);
+        lowerParameterPtr(PtrReg, B, Part.Offset);
 
-        B.buildAddrSpaceCast(VRegs[i][0], PtrReg);
+        B.buildAddrSpaceCast(Part.Arg.Regs[0], PtrReg);
       }
-    } else {
-      for (unsigned Part = 0; Part != NumInputParts; ++Part) {
-        unsigned InputArgIndex = FirstInputArgIndex + Part;
-        if (!lowerParameter(B, SplitArgs[InputArgIndex],
-                            SplitArgOffsets[InputArgIndex],
-                            SplitArgAlignments[InputArgIndex], InputArgIndex))
-          return false;
-      }
+    } else if (!lowerParameter(B, Part.Arg, Part.Offset, Part.Alignment,
+                               KernArgIdx)) {
+      return false;
     }
-
-    ++i;
   }
 
   if (Info->getNumKernargPreloadedSGPRs())
