@@ -583,3 +583,17 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// Regression test: the affine.for empty loop folder used to crash when fold
+// was attempted during dialect conversion, after the old entry block was
+// detached but the loop still yielded one of its arguments. The folder must
+// bail out instead of hitting the isDefinedOutsideOfLoop assertion.
+
+// CHECK-LABEL: @affine_for_fold_detached_block
+// CHECK: affine.for
+func.func @affine_for_fold_detached_block(%arg0: index) -> index {
+  %0 = affine.for %i = 0 to 10 iter_args(%acc = %arg0) -> (index) {
+    affine.yield %arg0 : index
+  }
+  return %0 : index
+}

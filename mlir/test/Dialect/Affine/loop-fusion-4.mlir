@@ -884,3 +884,38 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
   }
   return %alloc : memref<1024x8192xf32>
 }
+
+// -----
+
+// From https://github.com/llvm/llvm-project/issues/212041
+// The producer computes a recurrence: tmp[i] is computed from tmp[i - 1]. The
+// consumer reads only the even points, so a slice keyed off the producer stores
+// alone would retain only the even producer iterations and drop the odd
+// predecessors they are computed from. Leave the producer nest alone.
+
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @producer_recurrence_no_fusion
+// PRODUCER-CONSUMER-LABEL:         func @producer_recurrence_no_fusion
+// ALL-LABEL:                       func @producer_recurrence_no_fusion
+func.func @producer_recurrence_no_fusion(%in: memref<32xf64>, %out: memref<32xf64>) {
+  %tmp = memref.alloc() : memref<32xf64>
+  %seed = arith.constant 2.900000e+01 : f64
+  affine.store %seed, %tmp[0] : memref<32xf64>
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for %{{.*}} = 1 to 16
+  // PRODUCER-CONSUMER:         affine.for %{{.*}} = 1 to 16
+  // ALL:                       affine.for %{{.*}} = 1 to 16
+  affine.for %i = 1 to 16 {
+    %prev = affine.load %tmp[%i - 1] : memref<32xf64>
+    %src = affine.load %in[%i] : memref<32xf64>
+    %v = arith.addf %prev, %src : f64
+    affine.store %v, %tmp[%i] : memref<32xf64>
+  }
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for %{{.*}} = 1 to 8
+  // PRODUCER-CONSUMER:         affine.for %{{.*}} = 1 to 8
+  // ALL:                       affine.for %{{.*}} = 1 to 8
+  affine.for %j = 1 to 8 {
+    %dst = affine.load %tmp[2 * %j] : memref<32xf64>
+    %v = arith.addf %dst, %dst : f64
+    affine.store %v, %out[%j] : memref<32xf64>
+  }
+  return
+}

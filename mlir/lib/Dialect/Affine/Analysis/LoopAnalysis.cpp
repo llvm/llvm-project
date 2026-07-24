@@ -583,3 +583,29 @@ bool mlir::affine::hasCyclicDependence(AffineForOp root) {
   }
   return graph.hasCycle();
 }
+
+bool mlir::affine::hasLoopCarriedDependence(AffineForOp root) {
+  SmallVector<MemRefAccess> accesses;
+  root->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      accesses.emplace_back(op);
+  });
+
+  unsigned rootDepth = getNestingDepth(root);
+  for (const auto &accA : accesses) {
+    for (const auto &accB : accesses) {
+      if (accA.memref != accB.memref)
+        continue;
+      unsigned numCommonLoops =
+          getNumCommonSurroundingLoops(*accA.opInst, *accB.opInst);
+      // Only consider depths corresponding to a loop of the nest rooted at
+      // `root`. Depth `numCommonLoops + 1` is the loop-independent one and is
+      // deliberately excluded: it never prevents iteration-wise slicing.
+      for (unsigned d = rootDepth + 1; d <= numCommonLoops; ++d) {
+        if (!noDependence(checkMemrefAccessDependence(accA, accB, d)))
+          return true;
+      }
+    }
+  }
+  return false;
+}

@@ -128,6 +128,15 @@ bool isTilingValid(ArrayRef<AffineForOp> loops);
 /// for aliases.
 bool hasCyclicDependence(AffineForOp root);
 
+/// Returns true if any dependence in the affine nest rooted at `root` is
+/// carried by one of the loops of that nest (`root` inclusive). Such a nest
+/// can't be sliced by selecting an arbitrary subset of its iterations: the
+/// omitted iterations may be needed to produce the values computed by the
+/// retained ones. Dependences carried by loops outer to `root` and
+/// loop-independent dependences aren't relevant. This method doesn't
+/// consider/account for aliases.
+bool hasLoopCarriedDependence(AffineForOp root);
+
 } // namespace affine
 } // namespace mlir
 

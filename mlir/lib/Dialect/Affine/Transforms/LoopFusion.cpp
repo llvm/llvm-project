@@ -1015,8 +1015,10 @@ public:
         // redundant execution of the source happens (1:1 pointwise dep on the
         // producer-consumer memref access for example). Check this and allow
         // fusion accordingly.
-        if (hasCyclicDependence(srcAffineForOp)) {
-          LDBG() << "Source nest has a cyclic dependence.";
+        bool srcHasLoopCarriedDep = hasCyclicDependence(srcAffineForOp) ||
+                                    hasLoopCarriedDependence(srcAffineForOp);
+        if (srcHasLoopCarriedDep) {
+          LDBG() << "Source nest has a dependence carried by its own loops.";
           // Maximal fusion does not check for compute tolerance threshold; so
           // perform the maximal fusion only when the redundanation computation
           // is zero.
@@ -1067,6 +1069,26 @@ public:
         ComputationSliceState &bestSlice =
             depthSliceUnions[bestDstLoopDepth - 1];
         assert(!bestSlice.isEmpty() && "Missing slice union for depth");
+
+        // A dependence carried by a loop of the source nest additionally
+        // requires the slice to reproduce every source iteration: dropping any
+        // of them would leave the retained iterations reading values that are
+        // never computed. A slice that omits source iterations performs
+        // strictly less computation than the original source nest, which shows
+        // up as a negative additional compute fraction. The redundant
+        // computation side is already handled above.
+        if (srcHasLoopCarriedDep) {
+          int64_t sliceCost;
+          int64_t fusedLoopNestComputeCost;
+          auto fraction = getAdditionalComputeFraction(
+              srcAffineForOp, dstAffineForOp, bestDstLoopDepth,
+              depthSliceUnions, sliceCost, fusedLoopNestComputeCost);
+          if (!fraction || *fraction < 0.0) {
+            LDBG() << "Can't fuse: the slice omits source iterations needed by "
+                   << "a dependence carried by the source nest.";
+            continue;
+          }
+        }
 
         // Determine if 'srcId' can be removed after fusion, taking into
         // account remaining dependences, escaping memrefs and the fusion
