@@ -26653,7 +26653,6 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         BundleMember->incDependencies();
         if (!DepDest->isScheduled())
           BundleMember->incrementUnscheduledDeps(1);
-
         if (!DepDest->hasValidDependencies() ||
             (InsertInReadyList && DepDest->isReady()))
           WorkList.push_back(DepDest);
