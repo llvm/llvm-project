@@ -3640,9 +3640,10 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   if (Tmp.empty())
     return;
 
-  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
-  if (location.isUndef())
+  if (location.isUndef()) {
+    Dst.insert(Tmp);
     return;
+  }
 
   // Proceed with the load.
   for (const auto I : Tmp) {
@@ -3655,9 +3656,10 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
       V = state->getSVal(location.castAs<Loc>(), LoadTy);
     }
 
-    Bldr.generateNode(NodeEx, I,
-                      state->BindExpr(BoundEx, I->getStackFrame(), V), tag,
-                      ProgramPoint::PostLoadKind);
+    const auto *SF = I->getStackFrame();
+    const auto &Loc = ProgramPoint::getProgramPoint(
+        NodeEx, ProgramPoint::PostLoadKind, SF, tag);
+    Dst.insert(Engine.makeNode(Loc, state->BindExpr(BoundEx, SF, V), I));
   }
 }
 
