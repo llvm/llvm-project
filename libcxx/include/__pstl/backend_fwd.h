@@ -324,6 +324,18 @@ struct __adjacent_difference;
 // operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
 //                                _ForwardIterator2 __first2, _BinaryOperation &&__op) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __destroy;
+// template <class _Policy, class _ForwardIterator>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __destroy_n;
+// template <class _Policy, class _ForwardIterator, class Size>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, Size __n) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
