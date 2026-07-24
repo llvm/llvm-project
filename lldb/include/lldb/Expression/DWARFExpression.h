@@ -44,6 +44,7 @@ public:
 
     virtual uint16_t GetVersion() const = 0;
     virtual dw_addr_t GetBaseAddress() const = 0;
+    virtual llvm::dwarf::DwarfFormat GetDwarfFormat() const = 0;
     virtual uint8_t GetAddressByteSize() const = 0;
     virtual llvm::Expected<std::pair<uint64_t, bool>>
     GetDIEBitSizeAndSign(uint64_t relative_die_offset) const = 0;

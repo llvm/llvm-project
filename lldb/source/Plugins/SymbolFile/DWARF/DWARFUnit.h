@@ -122,6 +122,9 @@ public:
   const llvm::dwarf::FormParams &GetFormParams() const {
     return m_header.getFormParams();
   }
+  llvm::dwarf::DwarfFormat GetDwarfFormat() const override {
+    return m_header.getFormat();
+  }
   const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const override {
