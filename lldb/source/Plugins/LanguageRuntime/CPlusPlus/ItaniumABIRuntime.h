@@ -48,10 +48,8 @@ private:
                           const TypeAndOrName &type_info);
 
   using DynamicTypeCache = std::map<Address, TypeAndOrName>;
-  using VTableInfoCache = std::map<Address, LanguageRuntime::VTableInfo>;
 
   DynamicTypeCache m_dynamic_type_map;
-  VTableInfoCache m_vtable_info_map;
   std::mutex m_mutex;
 
   Process *m_process;
