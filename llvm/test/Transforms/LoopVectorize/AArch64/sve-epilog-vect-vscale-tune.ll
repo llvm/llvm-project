@@ -12,10 +12,10 @@ define void @foo(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i6
 ; CHECK-EPILOG:      vec.epilog.vector.body:
 ; CHECK-EPILOG:        load <8 x i16>
 
-; The epilogue loop gets vectorised vscale x 2 x i16 wide.
+; The epilogue loop gets vectorised 4 x i16 wide.
 ; CHECK-EPILOG-V2:      vec.epilog.ph:
 ; CHECK-EPILOG-V2:      vec.epilog.vector.body:
-; CHECK-EPILOG-V2:        load <vscale x 2 x i16>
+; CHECK-EPILOG-V2:        load <4 x i16>
 
 ; CHECK-NO-EPILOG-NOT:  vec.epilog.vector.ph:
 ; CHECK-NO-EPILOG-NOT:  vec.epilog.vector.body:
