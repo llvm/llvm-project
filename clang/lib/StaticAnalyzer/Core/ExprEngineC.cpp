@@ -226,7 +226,7 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
 ProgramStateRef
 ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                 const StackFrame *SF, QualType T, QualType ExTy,
-                                const CastExpr *CastE, NodeBuilder &Bldr,
+                                const CastExpr *CastE, ExplodedNodeSet &Dst,
                                 ExplodedNode *Pred) {
   if (T->isLValueReferenceType()) {
     assert(!CastE->getType()->isLValueReferenceType());
@@ -247,7 +247,7 @@ ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
   if (V.isUnknown() && !OrigV.isUnknown()) {
     state = escapeValues(state, OrigV, PSK_EscapeOther);
   }
-  Bldr.generateNode(CastE, Pred, state);
+  Dst.insert(Engine.makePostStmtNode(CastE, state, Pred));
 
   return state;
 }
@@ -279,7 +279,6 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
     }
     // Simulate the operation that actually casts the original value to a new
     // value of the destination type :
-    NodeBuilder Bldr(DstEvalLoc, Dst, *currBldrCtx);
 
     for (ExplodedNode *Node : DstEvalLoc) {
       ProgramStateRef State = Node->getState();
@@ -294,8 +293,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
                                        CastE->getType(), Ex->getType());
       }
-      State = State->BindExpr(CastE, SF, CastedV);
-      Bldr.generateNode(CastE, Node, State);
+      Dst.insert(Engine.makeNodeWithBinding(Node, CastE, CastedV));
     }
     return;
   }
@@ -307,7 +305,6 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
   if (const ExplicitCastExpr *ExCast=dyn_cast_or_null<ExplicitCastExpr>(CastE))
     T = ExCast->getTypeAsWritten();
 
-  NodeBuilder Bldr(DstPreStmt, Dst, *currBldrCtx);
   for (ExplodedNode *Pred : DstPreStmt) {
     ProgramStateRef state = Pred->getState();
     const StackFrame *SF = Pred->getStackFrame();
@@ -317,6 +314,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_LValueToRValueBitCast:
         llvm_unreachable("LValueToRValue casts handled earlier.");
       case CK_ToVoid:
+        Dst.insert(Pred);
         continue;
         // The analyzer doesn't do anything special with these casts,
         // since it understands retain/release semantics already.
@@ -341,8 +339,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         ProgramStateRef state = Pred->getState();
         const StackFrame *SF = Pred->getStackFrame();
         SVal V = state->getSVal(Ex, SF);
-        state = state->BindExpr(CastE, SF, V);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
         continue;
       }
       case CK_MemberPointerToBoolean:
@@ -352,12 +349,11 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         if (PTMSV)
           V = svalBuilder.makeTruthVal(!PTMSV->isNullMemberPointer(), ExTy);
         if (V.isUndef() || PTMSV) {
-          state = state->BindExpr(CastE, SF, V);
-          Bldr.generateNode(CastE, Pred, state);
+          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
           continue;
         }
         // Explicitly proceed with default handler for this case cascade.
-        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Bldr, Pred);
+        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
         continue;
       }
       case CK_Dependent:
@@ -369,12 +365,11 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_PointerToIntegral: {
         SVal V = state->getSVal(Ex, SF);
         if (isa<nonloc::PointerToMember>(V)) {
-          state = state->BindExpr(CastE, SF, UnknownVal());
-          Bldr.generateNode(CastE, Pred, state);
+          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
           continue;
         }
         // Explicitly proceed with default handler for this case cascade.
-        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Bldr, Pred);
+        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
         continue;
       }
       case CK_IntegralToBoolean:
@@ -405,7 +400,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_FixedPointToBoolean:
       case CK_FixedPointToIntegral:
       case CK_IntegralToFixedPoint: {
-        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Bldr, Pred);
+        state = handleLValueBitCast(state, Ex, SF, T, ExTy, CastE, Dst, Pred);
         continue;
       }
       case CK_IntegralCast: {
@@ -415,8 +410,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           V = svalBuilder.evalCast(V, T, ExTy);
         else
           V = svalBuilder.evalIntegralCast(state, V, T, ExTy);
-        state = state->BindExpr(CastE, SF, V);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
         continue;
       }
       case CK_DerivedToBase:
@@ -424,8 +418,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         // For DerivedToBase cast, delegate to the store manager.
         SVal val = state->getSVal(Ex, SF);
         val = getStoreManager().evalDerivedToBase(val, CastE);
-        state = state->BindExpr(CastE, SF, val);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, val));
         continue;
       }
       // Handle C++ dyn_cast.
@@ -451,7 +444,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           if (T->isReferenceType()) {
             // A bad_cast exception is thrown if input value is a reference.
             // Currently, we model this, by generating a sink.
-            Bldr.generateSink(CastE, Pred, state);
+            Dst.insert(Engine.makePostStmtNode(CastE, state, Pred,
+                                               /* MarkAsSink */ true));
             continue;
           } else {
             // If the cast fails on a pointer, bind to 0.
@@ -469,7 +463,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
             // Else, bind to the derived region value.
             state = state->BindExpr(CastE, SF, val);
         }
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makePostStmtNode(CastE, state, Pred));
         continue;
       }
       case CK_BaseToDerived: {
@@ -489,20 +483,17 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
               /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
               getNumVisitedCurrent());
         }
-        state = state->BindExpr(CastE, SF, val);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, val));
         continue;
       }
       case CK_NullToPointer: {
         SVal V = svalBuilder.makeNullWithType(CastE->getType());
-        state = state->BindExpr(CastE, SF, V);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
         continue;
       }
       case CK_NullToMemberPointer: {
         SVal V = svalBuilder.getMemberPointer(nullptr);
-        state = state->BindExpr(CastE, SF, V);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
         continue;
       }
       case CK_DerivedToBaseMemberPointer:
@@ -513,8 +504,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           SVal CastedPTMSV =
               svalBuilder.makePointerToMember(getBasicVals().accumCXXBase(
                   CastE->path(), *PTMSV, CastE->getCastKind()));
-          state = state->BindExpr(CastE, SF, CastedPTMSV);
-          Bldr.generateNode(CastE, Pred, state);
+          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, CastedPTMSV));
           continue;
         }
         // Explicitly proceed with default handler for this case cascade.
@@ -534,8 +524,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         SVal result = svalBuilder.conjureSymbolVal(
             /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
             getNumVisitedCurrent());
-        state = state->BindExpr(CastE, SF, result);
-        Bldr.generateNode(CastE, Pred, state);
+        Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, result));
         continue;
       }
     }
