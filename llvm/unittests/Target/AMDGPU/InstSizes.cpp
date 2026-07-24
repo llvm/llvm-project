@@ -18,7 +18,7 @@ namespace {
 
 class InstSizesTest : public AMDGPUCodeGenTestBase {
 public:
-  void SetUp() override { setUpImpl("amdgcn-amd-amdhsa", "gfx942", ""); }
+  void SetUp() override { setUpImpl("amdgpu9.42-amd-amdhsa", "", ""); }
 };
 
 // getInstSizeInBytes appends a 4-byte literal word for a VALU/SALU instruction
