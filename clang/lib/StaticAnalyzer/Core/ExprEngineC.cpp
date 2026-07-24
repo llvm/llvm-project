@@ -762,7 +762,6 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
                                   ExplodedNodeSet &Dst) {
   assert(L && R);
 
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
   const CFGBlock *SrcBlock = nullptr;
@@ -816,7 +815,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
                                      getNumVisitedCurrent());
 
   // Generate a new node with the binding from the appropriate path.
-  B.generateNode(Ex, Pred, state->BindExpr(Ex, SF, V, true));
+  Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, V));
 }
 
 void ExprEngine::
