@@ -18,6 +18,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -70,20 +71,19 @@ struct SIInstrWorklist {
 
   void insert(MachineInstr *MI);
 
-  MachineInstr *top() const {
-    const auto *iter = InstrList.begin();
-    return *iter;
-  }
+  MachineInstr *top() const { return InstrList[Front]; }
 
   void erase_top() {
-    const auto *iter = InstrList.begin();
-    InstrList.erase(iter);
+    InSet.erase(InstrList[Front]);
+    ++Front;
   }
 
-  bool empty() const { return InstrList.empty(); }
+  bool empty() const { return Front == InstrList.size(); }
 
   void clear() {
     InstrList.clear();
+    Front = 0;
+    InSet.clear();
     DeferredList.clear();
   }
 
@@ -93,7 +93,9 @@ struct SIInstrWorklist {
 
 private:
   /// InstrList contains the MachineInstrs.
-  SetVector<MachineInstr *> InstrList;
+  SmallVector<MachineInstr *> InstrList;
+  DenseSet<MachineInstr *> InSet;
+  unsigned Front = 0;
   /// Deferred instructions are specific MachineInstr
   /// that will be added by insert method.
   SetVector<MachineInstr *> DeferredList;
