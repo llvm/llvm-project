@@ -16,7 +16,7 @@ using LlvmLibcTgammaTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST_F(LlvmLibcTgammaTest, TinyInputs) {
+TEST_F(LlvmLibcTgammaTest, ExtremelySmallInputs) {
   constexpr double INPUTS[] = {
       0x1.fffffffffffffp-54, // largest magnitude in the branch (~2^-53)
       0x1.5555555555555p-54, // off-power-of-two
