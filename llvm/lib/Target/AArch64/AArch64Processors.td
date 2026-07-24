@@ -1276,12 +1276,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeatureETE];
 }
 
-// Define an alternative name for a given Processor.
-class ProcessorAlias<string n, string alias> {
-  string Name = n;
-  string Alias = alias;
-}
-
 // A note on scheduling models - we do not have exact models for each core and
 // attempt to use the "best equivalent" that we have for those that are
 // missing. -mcpu=generic uses a cortex-a510 model to get good scheduling
