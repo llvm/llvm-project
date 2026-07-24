@@ -12,12 +12,13 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(TestBase):
     @skipEmbeddedSwift
-    @skipUnlessFoundation
+    @skipUnlessFoundationEssentials
+    @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465
     @swiftTest
-    def test_swift_string_index_formatters(self):
-        """Test String.Index summary strings."""
+    def test_swift_string_index_formatters_native(self):
+        """Test String.Index summary strings for a native (non-bridged) String."""
         self.build()
-        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+        lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
@@ -74,6 +75,16 @@ class TestCase(TestBase):
                 "9[utf8]",
                 "10[utf8]",
             ],
+        )
+
+    @skipEmbeddedSwift
+    @skipUnlessFoundation
+    @swiftTest
+    def test_swift_string_index_formatters_bridged(self):
+        """Test String.Index summary strings for a bridged String."""
+        self.build()
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
         )
 
         #

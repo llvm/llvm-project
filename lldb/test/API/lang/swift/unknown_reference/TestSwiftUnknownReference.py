@@ -29,8 +29,9 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
 
     
     @skipEmbeddedSwift
+    @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465
+    @skipUnlessFoundationEssentials
     @swiftTest
-    @skipUnlessFoundation
     def test_unknown_objc_ref(self):
         """Test unknown references to Objective-C objects."""
         self.build()
