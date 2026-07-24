@@ -151,7 +151,7 @@ define <vscale x 4 x float> @fold_sel_into_masked_load_scalable_one_use_check(pt
 
 define <4 x i32> @fold_sel_into_masked_load_metadata(ptr %ptr, <4 x i1> %mask) {
 ; CHECK-LABEL: @fold_sel_into_masked_load_metadata(
-; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x i32> splat (i32 111))
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x i32> splat (i32 111)), !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x i32> poison), !tbaa !0, !alias.scope !3, !noalias !6
