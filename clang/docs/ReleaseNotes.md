@@ -355,6 +355,10 @@ features cannot lower the translation-unit ABI level;
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
+  parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
+  Clang now diagnoses the error instead of asserting. (#GH211207)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
