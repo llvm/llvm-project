@@ -1695,7 +1695,7 @@ LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
 
 LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
 
-LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
+LLVM_READONLY bool isWidePackedInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,

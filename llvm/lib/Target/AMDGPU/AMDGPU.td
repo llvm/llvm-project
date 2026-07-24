@@ -1160,6 +1160,11 @@ defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   /*GenPredicate=*/0
 >;
 
+defm SingleSGPRReadFromTuple : AMDGPUSubtargetFeature<"single-sgpr-read-from-tuple",
+  "Read a single sgpr from a tuple for wide packed instructions",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -2184,7 +2189,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
    FeatureFormattedMUBUFInsts,
-   FeatureDataCacheLineSize128
+   FeatureDataCacheLineSize128,
+   FeatureSingleSGPRReadFromTuple
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2272,6 +2278,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
+   FeatureSingleSGPRReadFromTuple
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2408,6 +2415,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
+   FeatureSingleSGPRReadFromTuple
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<

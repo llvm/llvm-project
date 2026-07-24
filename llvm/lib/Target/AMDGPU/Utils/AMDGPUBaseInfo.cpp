@@ -3766,7 +3766,8 @@ bool isPacked64BitInst(unsigned Opc) {
   }
 }
 
-bool isPackedFP32or64BitInst(unsigned Opc) {
+// Wide means operand size is equal to or larger than 64-bit
+bool isWidePackedInst(unsigned Opc) {
   return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
 }
 
