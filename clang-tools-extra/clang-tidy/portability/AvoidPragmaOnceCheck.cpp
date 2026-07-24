@@ -8,6 +8,7 @@
 
 #include "AvoidPragmaOnceCheck.h"
 
+#include "../utils/LexerUtils.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -23,14 +24,7 @@ public:
       : Check(Check), SM(SM) {}
   void PragmaDirective(SourceLocation Loc,
                        PragmaIntroducerKind Introducer) override {
-    auto Str = StringRef(SM.getCharacterData(Loc));
-    if (!Str.consume_front("#"))
-      return;
-    Str = Str.trim();
-    if (!Str.consume_front("pragma"))
-      return;
-    Str = Str.trim();
-    if (Str.starts_with("once"))
+    if (utils::lexer::isPragmaOnce(Loc, SM))
       Check->diag(Loc,
                   "avoid 'pragma once' directive; use include guards instead");
   }
