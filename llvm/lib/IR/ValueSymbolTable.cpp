@@ -71,7 +71,7 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
       continue;
     }
     // Try insert the vmap entry with this suffix.
-    auto IterBool = vmap.insert(std::make_pair(UniqueName.str(), V));
+    auto IterBool = vmap.try_emplace(UniqueName.str(), V);
     if (IterBool.second)
       return &*IterBool.first;
   }
@@ -114,7 +114,7 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
     Name = Name.substr(0, std::max(1u, (unsigned)MaxNameSize));
 
   // In the common case, the name is not already in the symbol table.
-  auto IterBool = vmap.insert(std::make_pair(Name, V));
+  auto IterBool = vmap.try_emplace(Name, V);
   if (IterBool.second) {
     // LLVM_DEBUG(dbgs() << " Inserted value: " << Entry.getKeyData() << ": "
     //           << *V << "\n");

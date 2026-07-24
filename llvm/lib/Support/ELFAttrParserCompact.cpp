@@ -35,7 +35,7 @@ Error ELFCompactAttrParser::integerAttribute(unsigned tag) {
   StringRef tagName =
       ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*hasTagPrefix=*/false);
   uint64_t value = de.getULEB128(cursor);
-  attributes.insert(std::make_pair(tag, value));
+  attributes.try_emplace(tag, value);
 
   if (sw) {
     DictScope scope(*sw, "Attribute");
@@ -65,7 +65,7 @@ Error ELFCompactAttrParser::stringAttribute(unsigned tag) {
 
 void ELFCompactAttrParser::printAttribute(unsigned tag, unsigned value,
                                           StringRef valueDesc) {
-  attributes.insert(std::make_pair(tag, value));
+  attributes.try_emplace(tag, value);
 
   if (sw) {
     StringRef tagName = ELFAttrs::attrTypeAsString(tag, tagToStringMap,
