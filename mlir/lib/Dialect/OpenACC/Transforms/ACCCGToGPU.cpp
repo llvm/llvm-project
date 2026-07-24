@@ -1241,9 +1241,7 @@ static bool hasUnsafeEffectsWhenBroadening(Operation *op) {
 }
 
 /// True when \p accumulator is the destination of a separate block-scoped
-/// acc.reduction_combine (an inner-level combine that fills its per-worker
-/// shared slot), so it holds one distinct partial per worker row rather than a
-/// worker-wide broadcast.
+/// combine, so it holds a distinct per-worker partial rather than a broadcast.
 static bool isFedByInnerBlockCombine(acc::PrivateLocalOp accumulator,
                                      Operation *selfCombine) {
   if (!accumulator)
@@ -1289,14 +1287,9 @@ static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
     return;
   }
 
-  // A block_y + thread_y accumulator that is itself fed by an inner
-  // block-scoped combine holds one distinct partial per worker row (each row's
-  // shared slot was filled by the inner combine). Reducing it into the
-  // destination must therefore run on every worker row; predicating it to
-  // ThreadY row zero would drop the other workers' partials. This differs from
-  // a plain worker accumulate, which lowers to a worker-wide all_reduce that
-  // already broadcasts the total, and so must stay row-zero to avoid
-  // multiplying by the worker count.
+  // A block_y+thread_y accumulator fed by an inner block-scoped combine holds
+  // a distinct partial per worker row, so its combine runs on every row; a
+  // plain worker accumulate broadcasts via all_reduce and stays row-zero.
   if (hasThreadY && hasBlock &&
       isThreadYPrivate(srcPrivate, /*allowBlock=*/true, computeRegion) &&
       isFedByInnerBlockCombine(srcPrivate, combineOp)) {
