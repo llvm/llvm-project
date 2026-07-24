@@ -3,7 +3,7 @@
 
 ; This loop hangs if digRecurrence doesn't keep track of previously visited
 ; instructions since most instructions have multiple uses.
-define float @dense_use_def_chain(float %src) {
+define float @dense_use_def_chain(float %a, float %b) {
 ; CHECK-LABEL: 'dense_use_def_chain'
 ; CHECK-NEXT:  Did not find a hash algorithm
 ; CHECK-NEXT:  Reason: Unable to find conditional recurrence
@@ -11,12 +11,12 @@ define float @dense_use_def_chain(float %src) {
 entry:
   ; %f must be the result of an instruction in order for digRecurrence to be
   ; called from matchConditionalRecurrence.
-  %f = fneg float %src
+  %f = fneg float %a
   br label %loop
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %ind = phi float [ 0.0, %entry ], [ %ind.next, %loop ]
+  %ind = phi float [ %b, %entry ], [ %ind.next, %loop ]
   %fcmp = fcmp une float %ind, 0.0
   %select = select i1 %fcmp, float %f, float %ind
   %fcmp3 = fcmp une float %select, 0.0
@@ -162,7 +162,7 @@ loop:
   %fcmp143 = fcmp une float %select142, 0.0
   %ind.next = select i1 %fcmp143, float %f, float %select142
   %iv.next = add nuw nsw i32 %iv, 1
-  %exit.cond = icmp eq i32 %iv.next, 3
+  %exit.cond = icmp eq i32 %iv.next, 8
   br i1 %exit.cond, label %exit, label %loop
 
 exit:
