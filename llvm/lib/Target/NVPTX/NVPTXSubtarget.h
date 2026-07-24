@@ -126,16 +126,6 @@ public:
     return SmVersion >= 61 && PTXVersion >= 50;
   }
   // Cache hint SM/PTX version requirements
-  //
-  // | Cache Hint      | SM Requirement | PTX Requirement |
-  // |-----------------|----------------|-----------------|
-  // | L1::evict_*     | SM 70+         | PTX 7.4+        |
-  // | L2::evict_*     | SM 100+        | PTX 8.8+        |
-  // | L2::64B         | SM 75+         | PTX 7.4+        |
-  // | L2::128B        | SM 75+         | PTX 7.4+        |
-  // | L2::256B        | SM 80+         | PTX 7.4+        |
-  // | L2::cache_hint  | SM 80+         | PTX 7.4+        |
-  //
   bool hasL1EvictionHint() const { return SmVersion >= 70 && PTXVersion >= 74; }
   bool hasL2EvictionHint() const {
     return SmVersion >= 100 && PTXVersion >= 88;
