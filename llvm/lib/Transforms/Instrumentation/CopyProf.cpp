@@ -32,8 +32,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <array>
@@ -98,19 +96,25 @@ static bool isCopyProfCandidate(const Function &F) {
       F.hasFnAttribute(Attribute::Naked))
     return false;
 
-  // Don't instrument a function at all if it's ending with a tail call.
+  if (!F.hasFnAttribute(CopyProfCtorAttr) &&
+      !F.hasFnAttribute(CopyProfCopyCtorAttr) &&
+      !F.hasFnAttribute(CopyProfCopyAssignAttr) &&
+      !F.hasFnAttribute(CopyProfDtorAttr))
+    return false;
+
+  // Don't instrument a function at all if it ends in a tail call.
   // Alternatively, the exit callback could be placed before the tail call, but
   // that would risk missing observable side-effects needed by CopyProf to infer
-  // memory ownership (potentially leading to flase positive reports).
-  // Skipping this function favors false negatives over false positives.
+  // memory ownership (potentially leading to false positive reports).
+  // For example, if the tail would deallocate memory then CopyProf would be
+  // unable to inspect that memory and the object could be misclassified as
+  // having been unnecessarily copied. Skipping functions ending in musttail
+  // calls therefore favors false negatives over false positives.
   for (const BasicBlock &BB : F)
     if (BB.getTerminatingMustTailCall())
       return false;
 
-  return F.hasFnAttribute(CopyProfCtorAttr) ||
-         F.hasFnAttribute(CopyProfCopyCtorAttr) ||
-         F.hasFnAttribute(CopyProfCopyAssignAttr) ||
-         F.hasFnAttribute(CopyProfDtorAttr);
+  return true;
 }
 
 static bool isCopyProfStoresCandidate(const Function &F) {
@@ -123,13 +127,11 @@ static bool isCopyProfStoresCandidate(const Function &F) {
 // attribute during parsing in the frontend.
 static size_t getAttrValueAsInt(const Function &F, StringRef Attr) {
   size_t IntValue = 0;
-  if (!to_integer<size_t>(F.getFnAttribute(Attr).getValueAsString(), IntValue,
-                          /*Base=*/10)) {
-    report_fatal_error(formatv("Unable to parse integer value from function "
-                               "attribute value in '{0}': {1}:{2}",
-                               F.getName(), Attr,
-                               F.getFnAttribute(Attr).getValueAsString()));
-  }
+  [[maybe_unused]] bool Success =
+      to_integer<size_t>(F.getFnAttribute(Attr).getValueAsString(), IntValue,
+                         /*Base=*/10);
+  assert(Success &&
+         "Unable to parse object size from CopyProf function attribute value.");
   return IntValue;
 }
 
@@ -145,7 +147,6 @@ private:
   void insertCallback(Function &F, size_t ObjSize, unsigned NumArgs,
                       FunctionCallee Callback, FunctionCallee ExitCallback);
 
-  LLVMContext *Ctx;
   Type *IntPtrTy;
   FunctionCallee CtorEnterCallback;
   FunctionCallee CtorExitCallback;
@@ -172,14 +173,14 @@ private:
 } // namespace
 
 CopyProf::CopyProf(Module &M) {
-  Ctx = &M.getContext();
-  IRBuilder<> IRB(*Ctx);
+  LLVMContext &Ctx = M.getContext();
+  IRBuilder<> IRB(Ctx);
   IntPtrTy = IRB.getIntPtrTy(M.getDataLayout());
   Type *PtrTy = IRB.getPtrTy();
   Type *VoidTy = IRB.getVoidTy();
   // CopyProf callbacks never throw exceptions.
   AttributeList Attr;
-  Attr = Attr.addFnAttribute(*Ctx, Attribute::NoUnwind);
+  Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
   CtorEnterCallback = M.getOrInsertFunction(CopyProfCtorEnterCallbackName, Attr,
                                             VoidTy, PtrTy, IntPtrTy);
   CtorExitCallback = M.getOrInsertFunction(CopyProfCtorExitCallbackName, Attr,
@@ -266,8 +267,10 @@ CopyProfStores::CopyProfStores(Module &M) {
 }
 
 bool CopyProfStores::instrumentFunction(Function &F) {
-  // TODO: handle all types of memory stores (memory intrinsics, masked store
+  // TODO: Handle all types of memory stores (memory intrinsics, masked store
   // intrinsics, AtomicRMW, and AtomicCmpXchg).
+  // TODO: Skip stores to alloca if only made of fundamental types, arrays
+  // thereof and (possibly) class types that are trivial and aggregate.
   const DataLayout &DL = F.getParent()->getDataLayout();
   SmallVector<StoreInst *, 16> ToInstrument;
   for (BasicBlock &BB : F) {
