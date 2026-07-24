@@ -8582,10 +8582,10 @@ void SIInstrInfo::moveToVALUImpl(
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
         unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
-        for (MachineOperand &Use :
+        for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(DstReg))) {
-          Use.setSubReg(RI.composeSubRegIndices(SrcSubReg, Use.getSubReg()));
-          Use.setReg(NewDstReg);
+          UseMO.setSubReg(RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
+          UseMO.setReg(NewDstReg);
         }
         MRI.clearKillFlags(NewDstReg);
 
