@@ -1439,6 +1439,64 @@ loop.end:
   ret i64 %retval
 }
 
+; TODO: The dereferenceable_or_null attribute alone is not enough to prove the accesses
+; are safe, but combined with the dereferenceable assumption on the same pointer
+; we can vectorize the early-exit loop.
+define i8 @early_exit_deref_or_null_arg_with_deref_assumption(ptr dereferenceable_or_null(16) %ptr) nofree nosync {
+; CHECK-LABEL: define i8 @early_exit_deref_or_null_arg_with_deref_assumption(
+; CHECK-SAME: ptr dereferenceable_or_null(16) [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LEN_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[LEN:%.*]] = load i64, ptr [[LEN_GEP]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR]], i64 [[LEN]]) ]
+; CHECK-NEXT:    [[NC:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[NC]], label %[[SCALAR_PH:.*]], label %[[DEOPT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ], [ 0, %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ELEMENT_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    [[ELEMENT:%.*]] = load i8, ptr [[ELEMENT_GEP]], align 1
+; CHECK-NEXT:    [[RC:%.*]] = icmp eq i8 [[ELEMENT]], 1
+; CHECK-NEXT:    br i1 [[RC]], label %[[EXIT:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[DEOPT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK:       [[DEOPT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[DEOPT]]
+; CHECK:       [[DEOPT]]:
+; CHECK-NEXT:    unreachable
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[ELEMENT_LCSSA:%.*]] = phi i8 [ [[ELEMENT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[ELEMENT_LCSSA]]
+;
+entry:
+  %len_gep = getelementptr inbounds nuw i8, ptr %ptr, i64 8
+  %len = load i64, ptr %len_gep, align 4
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 %len) ]
+  %nc = icmp ne i64 %len, 0
+  br i1 %nc, label %loop, label %deopt
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %element_gep = getelementptr inbounds nuw i8, ptr %ptr, i64 %iv
+  %element = load i8, ptr %element_gep, align 1
+  %rc = icmp eq i8 %element, 1
+  br i1 %rc, label %exit, label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %len
+  br i1 %ec, label %deopt, label %loop
+
+deopt:
+  unreachable
+
+exit:
+  ret i8 %element
+}
+
 ; Multiple deref assumes that are all too small must not allow vectorizing.
 define i64 @early_exit_deref_assumption_multiple_too_small(ptr noalias %p1, ptr noalias %p2) nofree nosync {
 ; CHECK-LABEL: define i64 @early_exit_deref_assumption_multiple_too_small(
