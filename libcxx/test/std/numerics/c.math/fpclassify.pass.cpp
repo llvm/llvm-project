@@ -75,6 +75,5 @@ int main(int, char**) {
 #if TEST_STD_VER >= 23
   static_assert(test());
 #endif
-
   return 0;
 }
