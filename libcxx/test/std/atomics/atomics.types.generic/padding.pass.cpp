@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
+// XFAIL: !has-64-bit-atomics
 // XFAIL: clang-21, apple-clang-21, clang-22
 
 // atomic<T>::compare_exchange_weak
