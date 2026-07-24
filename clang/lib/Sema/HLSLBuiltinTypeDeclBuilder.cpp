@@ -1661,7 +1661,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
                                           "__builtin_hlsl_interlocked_add");
     addByteAddressBufferInterlockedMethod("InterlockedOr64", AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_or");
-    addByteAddressBufferInterlockedMethod("InterlockedXor64", AST.UnsignedLongTy,
+    addByteAddressBufferInterlockedMethod("InterlockedXor64",
+                                          AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_xor");
   }
 
