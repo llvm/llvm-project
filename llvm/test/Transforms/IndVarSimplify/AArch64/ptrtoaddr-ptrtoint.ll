@@ -7,7 +7,7 @@ define i64 @count_then_convert(ptr %end) {
 ; CHECK-LABEL: define i64 @count_then_convert(
 ; CHECK-SAME: ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[ISEMPTY:%.*]] = icmp eq ptr [[END]], null
 ; CHECK-NEXT:    br i1 [[ISEMPTY]], label %[[EXIT:.*]], label %[[BODY_PH:.*]]
 ; CHECK:       [[BODY_PH]]:
@@ -51,8 +51,8 @@ define i64 @ptrtoint_sub_in_exit(ptr %start, ptr %bound) {
 ; CHECK-LABEL: define i64 @ptrtoint_sub_in_exit(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[BOUND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START3:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[BOUND2:%.*]] = ptrtoint ptr [[BOUND]] to i64
+; CHECK-NEXT:    [[START3:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[BOUND2:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[BOUND2]], [[START3]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[BODY:.*]]

@@ -1227,3 +1227,36 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.regmatch_t
 )
+
+add_proxy_header_library(
+  speed_t
+  HDRS
+    speed_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.speed_t
+)
+
+add_proxy_header_library(
+  struct_termios
+  HDRS
+    struct_termios.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_termios
+)
+
+add_proxy_header_library(
+  cc_t
+  HDRS
+    cc_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.cc_t
+)
+
+add_proxy_header_library(
+  tcflag_t
+  HDRS
+    tcflag_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.tcflag_t
+)
+

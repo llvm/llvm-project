@@ -418,13 +418,30 @@ public:
   }
 };
 
-class EagerSampleProfileNameTable final : public SampleProfileNameTable {
+class StringSampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
 
 public:
-  explicit EagerSampleProfileNameTable(std::vector<FunctionId> &&Vec)
+  explicit StringSampleProfileNameTable(std::vector<FunctionId> &&Vec)
       : Vec(std::move(Vec)) {}
-  explicit EagerSampleProfileNameTable(const std::vector<FunctionId> &Vec)
+  explicit StringSampleProfileNameTable(const std::vector<FunctionId> &Vec)
+      : Vec(Vec) {}
+
+  size_t size() const override { return Vec.size(); }
+
+  FunctionId operator[](size_t Idx) const override {
+    assert(Idx < Vec.size() && "Index out of bounds");
+    return Vec[Idx];
+  }
+};
+
+class MD5SampleProfileNameTable final : public SampleProfileNameTable {
+  std::vector<FunctionId> Vec;
+
+public:
+  explicit MD5SampleProfileNameTable(std::vector<FunctionId> &&Vec)
+      : Vec(std::move(Vec)) {}
+  explicit MD5SampleProfileNameTable(const std::vector<FunctionId> &Vec)
       : Vec(Vec) {}
 
   size_t size() const override { return Vec.size(); }

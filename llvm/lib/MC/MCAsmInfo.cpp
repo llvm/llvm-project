@@ -61,15 +61,19 @@ MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
   return getExprForFDESymbol(Sym, Encoding, Streamer);
 }
 
-const MCExpr *
-MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
-                               unsigned Encoding,
-                               MCStreamer &Streamer) const {
-  if (!(Encoding & dwarf::DW_EH_PE_pcrel))
-    return MCSymbolRefExpr::create(Sym, Streamer.getContext());
-
+const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
+                                             unsigned Encoding,
+                                             MCStreamer &Streamer) const {
   MCContext &Context = Streamer.getContext();
   const MCExpr *Res = MCSymbolRefExpr::create(Sym, Context);
+
+  if (!(Encoding & dwarf::DW_EH_PE_pcrel))
+    return Res;
+  if (DwarfFDERelSymbolSpec) {
+    assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
+    return MCSpecifierExpr::create(Res, DwarfFDERelSymbolSpec, Context);
+  }
+
   MCSymbol *PCSym = Context.createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
@@ -77,10 +81,23 @@ MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
 }
 
 bool MCAsmInfo::isAcceptableChar(char C) const {
+  // For AIX assembler, symbols may consist of numeric digits, underscores,
+  // periods, uppercase or lowercase letters, orany combination of these.
+  // QualName is allowed for a MCSymbolXCOFF, and QualName contains '[' and ']'.
+  //
+  // Others also allow '$'. HLASM (SystemZ) also allows '#'.
+
+  if (isAlnum(C) || C == '_' || C == '.')
+    return true;
+  if (C == '[' || C == ']')
+    return isAIX();
   if (C == '@')
     return doesAllowAtInName();
-
-  return isAlnum(C) || C == '_' || C == '$' || C == '.';
+  if (C == '$')
+    return !isAIX();
+  if (C == '#')
+    return isHLASM();
+  return false;
 }
 
 bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
@@ -94,7 +111,7 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
       return false;
   }
 
-  return true;
+  return !getReservedIdentifiers().contains(CachedHashStringRef(Name.lower()));
 }
 
 bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {

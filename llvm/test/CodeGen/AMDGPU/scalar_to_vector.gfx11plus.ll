@@ -19,15 +19,14 @@ define amdgpu_kernel void @scalar_to_vector_i32 (ptr addrspace(1) %a, ptr addrsp
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
   ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[S_LOAD_DWORDX2_IMM]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
-  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[GLOBAL_LOAD_DWORD_SADDR]].hi16
-  ; GFX11-REAL16-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 0, 0, implicit $exec
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY2]], %subreg.lo16, killed [[V_MOV_B16_t16_e64_]], %subreg.hi16
-  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE]].lo16
-  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
-  ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[COPY3]]
-  ; GFX11-REAL16-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY4]], killed [[COPY5]]
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[S_PACK_HL_B32_B16_]], %subreg.sub0, [[S_PACK_HL_B32_B16_]], %subreg.sub1
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE1]], killed [[S_LOAD_DWORDX2_IMM1]], 0, 0, implicit $exec :: (store (s64) into %ir.out.load, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX11-REAL16-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 killed [[S_MOV_B32_2]], [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[V_LSHRREV_B32_e64_]].lo16
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
+  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[COPY2]]
+  ; GFX11-REAL16-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY3]], killed [[COPY4]]
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[S_PACK_HL_B32_B16_]], %subreg.sub0, [[S_PACK_HL_B32_B16_]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], killed [[S_LOAD_DWORDX2_IMM1]], 0, 0, implicit $exec :: (store (s64) into %ir.out.load, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: scalar_to_vector_i32

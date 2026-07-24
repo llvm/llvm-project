@@ -2951,6 +2951,33 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   EXPECT_FALSE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx900:xnack+:"));
 
+  // A processor inconsistent with the triple's subarch is rejected.
+  EXPECT_TRUE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx900")
+          .has_value());
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx803"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx90a"));
+
+  // A major-family subarch accepts any processor it covers, but not one from a
+  // different family or one that is its own major subarch.
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu9-amd-amdhsa-unknown-gfx900")
+                  .has_value());
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9-amd-amdhsa-unknown-gfx908"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu11-amd-amdhsa-unknown-gfx1200"));
+
+  // A subarchless "amdgpu" or an unrecognized "amdgpu<x>" arch is rejected,
+  // even with an otherwise valid processor.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown"));
+
   // Constructing directly from a triple and processor+features string must
   // also be crash-safe on empty components.
   Triple AMDHSA("amdgcn-amd-amdhsa");

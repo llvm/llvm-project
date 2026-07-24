@@ -234,6 +234,14 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_wait_macros
 )
 
+add_proxy_header_library(
+  termios_macros
+  HDRS
+    termios_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.termios_macros
+)
+
 add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros

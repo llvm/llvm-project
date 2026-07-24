@@ -33,8 +33,7 @@ namespace {
 // Determine if a promotion alias should be created for a symbol name.
 static bool allowPromotionAlias(const std::string &Name) {
   // Promotion aliases are used only in inline assembly. It's safe to
-  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar()
-  // and MCAsmInfoXCOFF::isAcceptableChar().
+  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar().
   for (const char &C : Name) {
     if (isAlnum(C) || C == '_' || C == '.')
       continue;
