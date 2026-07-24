@@ -603,7 +603,6 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
   getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, DS, *this);
 
   ExplodedNodeSet dstEvaluated;
-  NodeBuilder B(dstPreVisit, dstEvaluated, *currBldrCtx);
   for (ExplodedNodeSet::iterator I = dstPreVisit.begin(), E = dstPreVisit.end();
        I!=E; ++I) {
     ExplodedNode *N = *I;
@@ -622,7 +621,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
         state = finishObjectConstruction(state, DS, SF);
         // We constructed the object directly in the variable.
         // No need to bind anything.
-        B.generateNode(DS, UpdatedN, state);
+		dstEvaluated.insert(Engine.makePostStmtNode(DS, state, UpdatedN));
       } else {
         // Recover some path-sensitivity if a scalar value evaluated to
         // UnknownVal.
@@ -637,19 +636,15 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
               getNumVisitedCurrent());
         }
 
-
-        B.takeNodes(UpdatedN);
-        ExplodedNodeSet Dst2;
-        evalBind(Dst2, DS, UpdatedN, state->getLValue(VD, SF), InitVal, true);
-        B.addNodes(Dst2);
+        evalBind(dstEvaluated, DS, UpdatedN, state->getLValue(VD, SF), InitVal, true);
       }
     }
     else {
-      B.generateNode(DS, N, state);
+	  dstEvaluated.insert(Engine.makePostStmtNode(DS, state, N));
     }
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, B.getResults(), DS, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, dstEvaluated, DS, *this);
 }
 
 void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
