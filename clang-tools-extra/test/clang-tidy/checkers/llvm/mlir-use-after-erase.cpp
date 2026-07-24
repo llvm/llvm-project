@@ -96,7 +96,7 @@ void useAfterDestroy() {
     mlir::Operation* op{};
     op->destroy();
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
 }
 
@@ -104,7 +104,7 @@ void useAfterErase() {
     mlir::Operation* op{};
     op->erase();
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
 }
 
@@ -113,7 +113,7 @@ void useAfterRewriterErase() {
     mlir::Operation* op{};
     rewriter.eraseOp(op);
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:14: note: operation erased here
 }
 
@@ -122,7 +122,7 @@ void useAfterRewriterEraseOpResults() {
     mlir::Operation* op{};
     rewriter.eraseOpResults(op, {});
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:14: note: operation erased here
 }
 
@@ -132,7 +132,7 @@ void useAfterRewriterReplaceOp() {
         mlir::Operation* op{};
         rewriter.replaceOp(op, {});
         op->dump();
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE-3]]:18: note: operation erased here
     }
     {
@@ -140,7 +140,7 @@ void useAfterRewriterReplaceOp() {
         mlir::Operation* op2{};
         rewriter.replaceOp(op, op2);
         op->dump();
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE-3]]:18: note: operation erased here
     }
 }
@@ -150,7 +150,7 @@ void useAfterRewriterReplaceOpWithNewOp() {
     mlir::Operation* op{};
     rewriter.replaceOpWithNewOp<mlir::Operation>(op);
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:14: note: operation erased here
 }
 
@@ -159,7 +159,7 @@ void useAfterPatternRewriterErase() {
     mlir::Operation* op{};
     rewriter.eraseOp(op);
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:14: note: operation erased here
 }
 
@@ -167,7 +167,7 @@ void useAfterDerivedArrowErase() {
     test::MyOp op{};
     op->erase();
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
 }
 
@@ -175,7 +175,7 @@ void useAfterDerivedGetOperationErase() {
     test::MyOp op{};
     op.getOperation()->erase();
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:24: note: operation erased here
 }
 
@@ -184,7 +184,7 @@ void useAfterRewriterEraseDerived() {
     test::MyOp op{};
     rewriter.eraseOp(op.getOperation());
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:14: note: operation erased here
 }
 
@@ -192,7 +192,7 @@ void onlyFlagOneUseAfterErase() {
     mlir::Operation* op{};
     op->erase();
     op->dump();  // A warning should only be emitted for one use-after-erase
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
     op->dump();
 }
@@ -201,7 +201,7 @@ void eraseAfterErase() {
     mlir::Operation* op{};
     op->erase();
     op->erase();  // Erase-after-erase also counts as a use
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
 }
 
@@ -209,14 +209,14 @@ void useInCall() {
     mlir::Operation* op{};
     op->erase();
     consume(op);
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
 }
 
 void useParameterAfterErase(mlir::Operation* op) {
     op->erase();
     op->dump();  // The erased operation may be a function parameter
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-3]]:9: note: operation erased here
 }
 
@@ -225,7 +225,7 @@ struct Container {
         mlir::Operation* op{};
         op->erase();
         op->dump();  // The check also works in member functions
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE-3]]:13: note: operation erased here
     }
 };
@@ -235,7 +235,7 @@ void useAfterEraseInLambda() {
         mlir::Operation* op{};
         op->erase();
         op->dump();  // The check also works in lambdas
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE-3]]:13: note: operation erased here
     }();
 }
@@ -268,7 +268,7 @@ void useAndEraseInLoop(int size) {
     mlir::Operation* op{};
     for (int i = 0; i < size; ++i) {
         op->dump();
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE+2]]:13: note: operation erased here
         // CHECK-MESSAGES: :[[@LINE-3]]:9: note: the use happens in a later loop iteration than the erase
         op->erase();
@@ -279,7 +279,7 @@ void derivedUseAndEraseInLoop(int size) {
     test::MyOp op{};
     for (int i = 0; i < size; ++i) {
         op->dump();
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE+2]]:13: note: operation erased here
         // CHECK-MESSAGES: :[[@LINE-3]]:9: note: the use happens in a later loop iteration than the erase
         op->erase();
@@ -331,7 +331,7 @@ void switchFallthrough(int i) {
         op->erase();
     case 2:  // A fallthrough in a switch statement causes a warning
         op->dump();
-        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: operation 'op' is used after it was erased
         // CHECK-MESSAGES: :[[@LINE-4]]:13: note: operation erased here
         break;
     }
@@ -372,7 +372,7 @@ void conditionalReassign(int i, mlir::Operation* other) {
         op = other;  // Reassignment is not guaranteed to happen before the use, so we still warn
     }
     op->dump();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-6]]:9: note: operation erased here
 }
 
@@ -385,7 +385,7 @@ void sequencingOfEraseAndUse() {
     mlir::RewriterBase rewriter{};
     mlir::Operation* op{};
     fn(op->getLoc(), rewriter.replaceOpWithNewOp<mlir::Operation>(op));
-    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: operation 'op' is used after it was erased [llvm-mlir-use-after-erase]
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: operation 'op' is used after it was erased
     // CHECK-MESSAGES: :[[@LINE-2]]:31: note: operation erased here
     // CHECK-MESSAGES: :[[@LINE-3]]:8: note: the use and erase are unsequenced, i.e. there is no guarantee about the order in which they are evaluated
 }
