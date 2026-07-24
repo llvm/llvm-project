@@ -864,9 +864,10 @@ def warn_redecl_library_builtin : Warning<
 def err_builtin_definition : Error<"definition of builtin function %0">;
 def err_builtin_redeclare : Error<"cannot redeclare builtin function %0">;
 def err_invalid_builtin_argument : Error<"invalid argument '%0' to %1">;
-def err_builtin_pointee_address_space_arg_not_pointer : Error<
-  "argument to '__builtin_pointee_address_space' must be a pointer or array "
-  "expression">;
+def err_addrspaceof_invalid_expression : Error<
+  "expression operand of '__addrspaceof' must be an lvalue">;
+def err_addrspaceof_invalid_entity : Error<
+  "entity operand of '__addrspaceof' must name a variable or data member">;
 
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_arm_invalid_coproc : Error<"coprocessor %0 must be configured as "

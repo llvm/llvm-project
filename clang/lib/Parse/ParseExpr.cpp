@@ -1216,6 +1216,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   // unary-expression: '__datasizeof' unary-expression
   // unary-expression: '__datasizeof' '(' type-name ')'
   case tok::kw___datasizeof:
+  case tok::kw___addrspaceof:
   case tok::kw_vec_step:   // unary-expression: OpenCL 'vec_step' expression
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
   case tok::kw___builtin_omp_required_simd_align:
@@ -2083,8 +2084,9 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                                            SourceRange &CastRange) {
 
   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual, tok::kw_sizeof,
-                       tok::kw___datasizeof, tok::kw___alignof, tok::kw_alignof,
-                       tok::kw__Alignof, tok::kw_vec_step,
+                       tok::kw___datasizeof, tok::kw___addrspaceof,
+                       tok::kw___alignof, tok::kw_alignof, tok::kw__Alignof,
+                       tok::kw_vec_step,
                        tok::kw___builtin_omp_required_simd_align,
                        tok::kw___builtin_vectorelements, tok::kw__Countof) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
@@ -2093,6 +2095,10 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
 
   // If the operand doesn't start with an '(', it must be an expression.
   if (Tok.isNot(tok::l_paren)) {
+    if (OpTok.is(tok::kw___addrspaceof))
+      return ExprError(Diag(Tok, diag::err_expected_lparen_after)
+                       << OpTok.getName());
+
     // If construct allows a form without parenthesis, user may forget to put
     // pathenthesis around type name.
     if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
@@ -2156,8 +2162,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // them looking like a compound literal, as in sizeof (int){}; where the
     // parens could be part of a parenthesized type name or for a cast
     // expression of some kind.
-    bool ParenKnownToBeNonCast =
-        OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual);
+    bool ParenKnownToBeNonCast = OpTok.isOneOf(
+        tok::kw_typeof, tok::kw_typeof_unqual, tok::kw___addrspaceof);
     ParenParseOption ExprType = ParenParseOption::CastExpr;
     SourceLocation LParenLoc = Tok.getLocation(), RParenLoc;
 
@@ -2175,14 +2181,22 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
       return ExprEmpty();
     }
 
-    if (getLangOpts().CPlusPlus ||
-        !OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual)) {
+    if (OpTok.isNot(tok::kw___addrspaceof) &&
+        (getLangOpts().CPlusPlus ||
+         !OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual))) {
       // GNU typeof in C requires the expression to be parenthesized. Not so for
       // sizeof/alignof or in C++. Therefore, the parenthesized expression is
       // the start of a unary-expression, but doesn't include any postfix
       // pieces. Parse these now if present.
       if (!Operand.isInvalid())
         Operand = ParsePostfixExpressionSuffix(Operand.get());
+    }
+
+    // The first parentheses belong to the operator and do not change an entity
+    // operand into an expression operand.
+    if (OpTok.is(tok::kw___addrspaceof) && !Operand.isInvalid()) {
+      if (auto *PE = dyn_cast<ParenExpr>(Operand.get()))
+        Operand = PE->getSubExpr();
     }
   }
 
@@ -2219,7 +2233,8 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
 
 ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                     tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
+                     tok::kw___addrspaceof, tok::kw_alignof, tok::kw__Alignof,
+                     tok::kw_vec_step,
                      tok::kw___builtin_omp_required_simd_align,
                      tok::kw___builtin_vectorelements, tok::kw__Countof) &&
          "Not a sizeof/alignof/vec_step expression!");
@@ -2310,6 +2325,9 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     break;
   case tok::kw___datasizeof:
     ExprKind = UETT_DataSizeOf;
+    break;
+  case tok::kw___addrspaceof:
+    ExprKind = UETT_AddrSpaceOf;
     break;
   case tok::kw___builtin_vectorelements:
     ExprKind = UETT_VectorElements;

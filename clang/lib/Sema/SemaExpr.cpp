@@ -4537,6 +4537,32 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   return false;
 }
 
+static bool CheckAddrSpaceOfExpr(Sema &S, Expr *E) {
+  if (E->isTypeDependent())
+    return false;
+
+  const ValueDecl *D = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    D = dyn_cast<ValueDecl>(DRE->getDecl());
+  else if (const auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+
+  if (D) {
+    if (isa<VarDecl, FieldDecl>(D))
+      return false;
+    S.Diag(E->getExprLoc(), diag::err_addrspaceof_invalid_entity)
+        << E->getSourceRange();
+    return true;
+  }
+
+  if (!E->isLValue()) {
+    S.Diag(E->getExprLoc(), diag::err_addrspaceof_invalid_expression)
+        << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
 static bool CheckAlignOfExpr(Sema &S, Expr *E, UnaryExprOrTypeTrait ExprKind) {
   // Cannot know anything else if the expression is dependent.
   if (E->isTypeDependent())
@@ -4839,7 +4865,7 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 
   QualType T = TInfo->getType();
 
-  if (!T->isDependentType() &&
+  if (ExprKind != UETT_AddrSpaceOf && !T->isDependentType() &&
       CheckUnaryExprOrTypeTraitOperand(T, OpLoc, R, ExprKind,
                                        getTraitSpelling(ExprKind)))
     return ExprError();
@@ -4856,14 +4882,15 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   if (!TInfo)
     return ExprError();
 
-  // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
-  return new (Context) UnaryExprOrTypeTraitExpr(
-      ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
+  QualType ResultType =
+      ExprKind == UETT_AddrSpaceOf ? Context.IntTy : Context.getSizeType();
+  return new (Context)
+      UnaryExprOrTypeTraitExpr(ExprKind, TInfo, ResultType, OpLoc, R.getEnd());
 }
 
-ExprResult
-Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
-                                     UnaryExprOrTypeTrait ExprKind) {
+ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
+                                                UnaryExprOrTypeTrait ExprKind,
+                                                SourceLocation RParenLoc) {
   ExprResult PE = CheckPlaceholderExpr(E);
   if (PE.isInvalid())
     return ExprError();
@@ -4874,6 +4901,8 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   bool isInvalid = false;
   if (E->isTypeDependent()) {
     // Delay type-checking for type-dependent expressions.
+  } else if (ExprKind == UETT_AddrSpaceOf) {
+    isInvalid = CheckAddrSpaceOfExpr(*this, E);
   } else if (ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf) {
     isInvalid = CheckAlignOfExpr(*this, E, ExprKind);
   } else if (ExprKind == UETT_VecStep) {
@@ -4899,9 +4928,12 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
     E = PE.get();
   }
 
-  // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
-  return new (Context) UnaryExprOrTypeTraitExpr(
-      ExprKind, E, Context.getSizeType(), OpLoc, E->getSourceRange().getEnd());
+  QualType ResultType =
+      ExprKind == UETT_AddrSpaceOf ? Context.IntTy : Context.getSizeType();
+  if (RParenLoc.isInvalid())
+    RParenLoc = E->getSourceRange().getEnd();
+  return new (Context)
+      UnaryExprOrTypeTraitExpr(ExprKind, E, ResultType, OpLoc, RParenLoc);
 }
 
 ExprResult
@@ -4918,8 +4950,9 @@ Sema::ActOnUnaryExprOrTypeTraitExpr(SourceLocation OpLoc,
   }
 
   Expr *ArgEx = (Expr *)TyOrEx;
-  ExprResult Result = CreateUnaryExprOrTypeTraitExpr(ArgEx, OpLoc, ExprKind);
-  return Result;
+  SourceLocation RParenLoc =
+      ExprKind == UETT_AddrSpaceOf ? ArgRange.getEnd() : SourceLocation();
+  return CreateUnaryExprOrTypeTraitExpr(ArgEx, OpLoc, ExprKind, RParenLoc);
 }
 
 bool Sema::CheckAlignasTypeArgument(StringRef KWName, TypeSourceInfo *TInfo,

@@ -27,6 +27,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeBase.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -1713,6 +1714,61 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
   UnaryExprOrTypeTraitExprBits.IsType = false;
   Argument.Ex = E;
   setDependence(computeDependence(this));
+}
+
+static const ValueDecl *getAddrSpaceOfEntity(const Expr *E) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<ValueDecl>(DRE->getDecl());
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl();
+  return nullptr;
+}
+
+static std::optional<LangAS> getCUDADeclAddressSpace(const ASTContext &Ctx,
+                                                     const ValueDecl *D) {
+  if (!Ctx.getLangOpts().CUDA)
+    return std::nullopt;
+
+  if (D->hasAttr<CUDAConstantAttr>())
+    return LangAS::cuda_constant;
+  if (D->hasAttr<CUDASharedAttr>())
+    return LangAS::cuda_shared;
+
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return std::nullopt;
+
+  // Host compilation does not attach the implicit CUDAConstantAttr that
+  // SemaCUDA adds in device compilation.
+  if (!Ctx.getLangOpts().CUDAIsDevice && VD->hasAttr<CUDADeviceAttr>() &&
+      (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
+      (VD->isConstexpr() || VD->getType().isConstQualified()))
+    return LangAS::cuda_constant;
+  if (VD->hasAttr<CUDADeviceAttr>())
+    return LangAS::cuda_device;
+  return std::nullopt;
+}
+
+unsigned UnaryExprOrTypeTraitExpr::getAddressSpaceQueryResult(
+    const ASTContext &Ctx) const {
+  assert(getKind() == UETT_AddrSpaceOf && "not an address-space query");
+
+  QualType T;
+  if (isArgumentType()) {
+    T = getArgumentType();
+  } else if (const ValueDecl *D = getAddrSpaceOfEntity(getArgumentExpr())) {
+    T = D->getType();
+    LangAS AS = T.getNonReferenceType().getAddressSpace();
+    if (AS != LangAS::Default)
+      return AddressSpaceQuery::encode(AS, Ctx.getLangOpts().HIP);
+    if (std::optional<LangAS> AS = getCUDADeclAddressSpace(Ctx, D))
+      return AddressSpaceQuery::encode(*AS, Ctx.getLangOpts().HIP);
+  } else {
+    T = getArgumentExpr()->getType();
+  }
+
+  return AddressSpaceQuery::encode(T.getNonReferenceType().getAddressSpace(),
+                                   Ctx.getLangOpts().HIP);
 }
 
 MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,

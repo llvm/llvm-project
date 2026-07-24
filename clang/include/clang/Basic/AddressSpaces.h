@@ -118,7 +118,7 @@ inline bool isPtrSizeAddressSpace(LangAS AS) {
           AS == LangAS::ptr64);
 }
 
-namespace PointeeAddressSpace {
+namespace AddressSpaceQuery {
 
 enum ID : unsigned {
   Default = 0,
@@ -215,7 +215,7 @@ inline unsigned encode(LangAS AS, bool IsHIP = false) {
   return Default;
 }
 
-} // namespace PointeeAddressSpace
+} // namespace AddressSpaceQuery
 
 } // namespace clang
 

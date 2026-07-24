@@ -15937,54 +15937,6 @@ bool ArrayExprEvaluator::VisitDesignatedInitUpdateExpr(
 //===----------------------------------------------------------------------===//
 
 namespace {
-
-static QualType getPointeeAddressSpaceType(ASTContext &Ctx, QualType ArgTy) {
-  return ArgTy->isArrayType() ? Ctx.getAsArrayType(ArgTy)->getElementType()
-                              : ArgTy->getPointeeType();
-}
-
-static std::optional<LangAS> getCUDAPointeeDeclAddressSpace(ASTContext &Ctx,
-                                                            const Expr *Arg) {
-  if (!Ctx.getLangOpts().CUDA)
-    return std::nullopt;
-
-  Arg = Arg->IgnoreParens();
-  if (isa<ExplicitCastExpr>(Arg))
-    return std::nullopt;
-
-  const VarDecl *VD = nullptr;
-  const Expr *NoImpCasts = Arg->IgnoreImpCasts()->IgnoreParens();
-  if (const auto *UO = dyn_cast<UnaryOperator>(NoImpCasts);
-      UO && UO->getOpcode() == UO_AddrOf) {
-    if (const auto *DRE =
-            dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenImpCasts())) {
-      const auto *CandidateVD = dyn_cast<VarDecl>(DRE->getDecl());
-      if (CandidateVD && !CandidateVD->getType()->isArrayType())
-        VD = CandidateVD;
-    }
-  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(NoImpCasts)) {
-    if (NoImpCasts->getType()->isArrayType())
-      VD = dyn_cast<VarDecl>(DRE->getDecl());
-  }
-
-  if (!VD)
-    return std::nullopt;
-  if (VD->hasAttr<CUDAConstantAttr>())
-    return LangAS::cuda_constant;
-  if (VD->hasAttr<CUDASharedAttr>())
-    return LangAS::cuda_shared;
-  // Host compilation does not attach the implicit CUDAConstantAttr that
-  // SemaCUDA adds in device compilation, but the device-side storage is still
-  // constant memory.
-  if (!Ctx.getLangOpts().CUDAIsDevice && VD->hasAttr<CUDADeviceAttr>() &&
-      (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
-      (VD->isConstexpr() || VD->getType().isConstQualified()))
-    return LangAS::cuda_constant;
-  if (VD->hasAttr<CUDADeviceAttr>())
-    return LangAS::cuda_device;
-  return std::nullopt;
-}
-
 class IntExprEvaluator
         : public ExprEvaluatorBase<IntExprEvaluator> {
   APValue &Result;
@@ -17049,16 +17001,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     llvm_unreachable("unexpected EvalMode");
-  }
-
-  case Builtin::BI__builtin_pointee_address_space: {
-    QualType ArgTy = E->getArg(0)->getType();
-    LangAS AS =
-        getCUDAPointeeDeclAddressSpace(Info.Ctx, E->getArg(0))
-            .value_or(
-                getPointeeAddressSpaceType(Info.Ctx, ArgTy).getAddressSpace());
-    return Success(PointeeAddressSpace::encode(AS, Info.Ctx.getLangOpts().HIP),
-                   E);
   }
 
   case Builtin::BI__builtin_os_log_format_buffer_size: {
@@ -19704,6 +19646,8 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
 bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
                                     const UnaryExprOrTypeTraitExpr *E) {
   switch(E->getKind()) {
+  case UETT_AddrSpaceOf:
+    return Success(E->getAddressSpaceQueryResult(Info.Ctx), E);
   case UETT_PreferredAlignOf:
   case UETT_AlignOf: {
     if (E->isArgumentType())

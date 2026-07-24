@@ -4261,10 +4261,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/false);
     return RValue::get(Result);
   }
-  case Builtin::BI__builtin_pointee_address_space: {
-    unsigned AS = E->EvaluateKnownConstInt(getContext()).getZExtValue();
-    return RValue::get(ConstantInt::get(ConvertType(E->getType()), AS));
-  }
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
