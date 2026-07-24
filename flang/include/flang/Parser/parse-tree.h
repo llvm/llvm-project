@@ -1363,9 +1363,7 @@ EMPTY_CLASS(AssumedRankSpec);
 //        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
 
-using ExplicitBoundsExpr = IntExpr;
-
-WRAPPER_CLASS(AssumedShapeBoundsSpec, ExplicitBoundsExpr);
+WRAPPER_CLASS(AssumedShapeBoundsSpec, IntExpr);
 
 struct ExplicitShapeBoundsSpec {
   TUPLE_CLASS_BOILERPLATE(ExplicitShapeBoundsSpec);

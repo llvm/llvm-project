@@ -275,8 +275,8 @@ static bool shouldRewriteShapeSpecListToExplicitBounds(
 
 static bool shouldRewriteAssumedShapeSpecListToAssumedBounds(
     SemanticsContext &context, const parser::ArraySpec &x) {
-  auto &assumedShapeSpecList{std::get<std::list<parser::AssumedShapeSpec>>(
-      const_cast<parser::ArraySpec &>(x).u)};
+  auto &assumedShapeSpecList{
+      std::get<std::list<parser::AssumedShapeSpec>>(x.u)};
 
   if (assumedShapeSpecList.size() != 1) {
     return false;
@@ -290,7 +290,7 @@ static bool shouldRewriteAssumedShapeSpecListToAssumedBounds(
   if (lowerBoundOpt) {
     const auto &lowerBound{*lowerBoundOpt};
     if (MaybeExpr analyzedExpr =
-            AnalyzeExpr(context, lowerBound.v.thing.thing.value());
+            AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(lowerBound));
         analyzedExpr && (analyzedExpr->Rank() > 0)) {
       foundArray = true;
     }

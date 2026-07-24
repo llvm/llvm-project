@@ -1,13 +1,13 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 
-program main  
-  implicit none 
-contains 
+! RUN: %python %S/test_errors.py %s %flang_fc1
+program main
+  implicit none
+contains
   subroutine good(x, y, z, dim_a, scalar1, scalar2)
     integer :: dim_a(1)
     !valid cases
     !simple rank-1 integer array reference
     ! ERROR: not yet implemented: Analyze overload for AssumedShapeBoundsSpec
-    integer :: x(dim_a:) 
+    integer :: x(dim_a:)
     !rank-1 integer array + scalar = rank-1 integer array
     ! ERROR: not yet implemented: Analyze overload for AssumedShapeBoundsSpec
     integer :: y(dim_a + 2:)
@@ -20,7 +20,7 @@ contains
     integer :: empty_arr(0) = [integer::]
     ! ERROR: not yet implemented: Analyze overload for AssumedShapeBoundsSpec
     integer :: scalar2(empty_arr:)
-  end subroutine 
+  end subroutine
 
   subroutine bad(x, y, z, dim1_assumed, dim2_assumed)
     integer :: dim3(3, 3, 3)
@@ -33,12 +33,11 @@ contains
     ! future_ERROR: Integer array used as lower bounds in DECLARATION must be rank-1 but is rank-3
     ! ERROR: not yet implemented: Analyze overload for AssumedShapeBoundsSpec
     integer :: y(dim3:)
-    ! Combining both errors in one declaration, plus integer-check from 
-    ! type wrapper 
+    ! Combining both errors in one declaration, plus integer-check from type wrapper
     ! future_ERROR: Integer array used as lower bounds in DECLARATION must be rank-1 but is rank-2
     ! future_ERROR: Rank-1 integer array used as lower bounds in DECLARATION must have constant size
     ! ERROR: not yet implemented: Analyze overload for AssumedShapeBoundsSpec
     ! ERROR: Must have INTEGER type, but is REAL(4)
     integer :: z(dim2_assumed + 3.7:)
-  end subroutine 
-end program 
+  end subroutine
+end program
