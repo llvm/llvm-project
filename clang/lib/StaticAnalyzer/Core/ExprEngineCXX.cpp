@@ -1119,8 +1119,6 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
 
 void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
                                     ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-
   // Get the this object region from StoreManager.
   const StackFrame *SF = Pred->getStackFrame();
   const MemRegion *R = svalBuilder.getRegionManager().getCXXThisRegion(
@@ -1128,7 +1126,7 @@ void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
 
   ProgramStateRef state = Pred->getState();
   SVal V = state->getSVal(loc::MemRegionVal(R));
-  Bldr.generateNode(TE, Pred, state->BindExpr(TE, SF, V));
+  Dst.insert(Engine.makeNodeWithBinding(Pred, TE, V));
 }
 
 void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
