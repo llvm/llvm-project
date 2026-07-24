@@ -82,11 +82,9 @@ private:
     capacity_ = new_capacity;
   }
 
-  // Returns the capacity this string should grow to for a given size.
-  LIBC_INLINE size_t capacity_needed_for_size(size_t new_size) {
-    size_t new_capacity = new_size + 1; // +1 for the terminating '\0'
-    if (new_capacity <= capacity_)
-      return capacity_;
+  // The size of the buffer that should be allocated for requested_capacity.
+  LIBC_INLINE static size_t amortized_capacity(size_t requested_capacity) {
+    size_t new_capacity = requested_capacity + 1; // +1 for the terminating '\0'
 
     // We extend the capacity to amortize buffer_ reallocations.
     // We choose to augment the value by 11 / 8, this is about +40% and division
@@ -96,16 +94,12 @@ private:
     return new_capacity;
   }
 
-  /**
-   * Replaces the current buffer with a new larger one.
-   *
-   * @param keep_prefix_size Prefix length from the current buffer to keep.
-   * @param new_data Data to append after the kept prefix.
-   */
+  // Replaces the current buffer with a new larger one containing the first
+  // keep_prefix_size bytes of the current buffer concatenated with new_data.
   LIBC_INLINE void grow_and_replace(size_t keep_prefix_size,
                                     cpp::string_view new_data) {
     size_t new_size = keep_prefix_size + new_data.size();
-    size_t new_capacity = capacity_needed_for_size(new_size);
+    size_t new_capacity = amortized_capacity(new_size);
     char *new_buffer = malloc_or_die(new_capacity);
 
     inline_memcpy(new_buffer, buffer_, keep_prefix_size);
@@ -143,7 +137,7 @@ public:
       return *this;
     }
 
-    if (capacity_ <= view.size()) {
+    if (capacity() < view.size()) {
       grow_and_replace(/* keep_prefix_size= */ 0, view);
       return *this;
     }
@@ -212,18 +206,12 @@ public:
   }
 
   LIBC_INLINE void reserve(size_t new_cap) {
-    size_t allocation_size = capacity_needed_for_size(new_cap); // +1 for terminating '\0'
-    if (allocation_size <= capacity_)
+    if (new_cap <= capacity())
       return;
-
-    // We extend the capacity to amortize buffer_ reallocations.
-    // We choose to augment the value by 11 / 8, this is about +40% and division
-    // by 8 is cheap. We guard the extension so the operation doesn't overflow.
-    if (allocation_size < SIZE_MAX / 11)
-      allocation_size = allocation_size * 11 / 8;
+    size_t allocation_size = amortized_capacity(new_cap);
 
     if (buffer_ == get_empty_string()) {
-      buffer_ = realloc_or_die(nullptr, allocation_size);
+      buffer_ = malloc_or_die(allocation_size);
       buffer_[0] = NULL_CHARACTER;
     } else {
       buffer_ = realloc_or_die(buffer_, allocation_size);
@@ -268,7 +256,7 @@ public:
     if (view.empty())
       return *this;
 
-    if (capacity_ - size_ <= view.size()) {
+    if (capacity() - size_ < view.size()) {
       grow_and_replace(/* keep_prefix_size= */ size_, view);
       return *this;
     }
