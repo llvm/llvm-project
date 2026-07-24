@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 
+#include <algorithm>
 #include <cstdint>
 
 using namespace clang::ast_matchers;
@@ -243,24 +244,7 @@ static bool getFloatingConstantExprValue(const ASTContext &Context,
   return true;
 }
 
-namespace {
-
-struct IntegerRange {
-  bool contains(const IntegerRange &From) const {
-    return llvm::APSInt::compareValues(Lower, From.Lower) <= 0 &&
-           llvm::APSInt::compareValues(Upper, From.Upper) >= 0;
-  }
-
-  bool contains(const llvm::APSInt &Value) const {
-    return llvm::APSInt::compareValues(Lower, Value) <= 0 &&
-           llvm::APSInt::compareValues(Upper, Value) >= 0;
-  }
-
-  llvm::APSInt Lower;
-  llvm::APSInt Upper;
-};
-
-bool hasTimeTTypedef(QualType QT) {
+static bool hasTimeTTypedef(QualType QT) {
   while (true) {
     const auto *T = QT.getTypePtrOrNull();
     if (!T)
@@ -283,8 +267,7 @@ bool hasTimeTTypedef(QualType QT) {
   return false;
 }
 
-bool exprMentionsTimeT(const Expr *E) {
-
+static bool exprMentionsTimeT(const Expr *E) {
   if (!E)
     return false;
 
@@ -293,14 +276,28 @@ bool exprMentionsTimeT(const Expr *E) {
   if (hasTimeTTypedef(E->getType()))
     return true;
 
-  for (const Stmt *Child : E->children()) {
-    if (const auto *ChildExpr = dyn_cast_or_null<Expr>(Child))
-      if (exprMentionsTimeT(ChildExpr))
-        return true;
+  return std::any_of(E->child_begin(), E->child_end(), [](const Stmt *Child) {
+    const auto *ChildExpr = dyn_cast_or_null<Expr>(Child);
+    return ChildExpr && exprMentionsTimeT(ChildExpr);
+  });
+}
+
+namespace {
+
+struct IntegerRange {
+  bool contains(const IntegerRange &From) const {
+    return llvm::APSInt::compareValues(Lower, From.Lower) <= 0 &&
+           llvm::APSInt::compareValues(Upper, From.Upper) >= 0;
   }
 
-  return false;
-}
+  bool contains(const llvm::APSInt &Value) const {
+    return llvm::APSInt::compareValues(Lower, Value) <= 0 &&
+           llvm::APSInt::compareValues(Upper, Value) >= 0;
+  }
+
+  llvm::APSInt Lower;
+  llvm::APSInt Upper;
+};
 
 } // namespace
 
