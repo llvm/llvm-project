@@ -462,6 +462,7 @@ void RocmInstallationDetector::detectHIPRuntime(
     // Probe for it and fallback to /rocm/lib if we cannot find it.
     StringRef LibAmdHip64 =
         HostTriple.isOSMSVCRT() ? "amdhip64.lib" : "libamdhip64.so";
+    LibPath.clear();
     for (StringRef LibPathSuffix : {"lib", "lib64"}) {
       SmallString<0> LibAmdHip64Location;
       llvm::sys::path::append(LibAmdHip64Location, InstallPath, LibPathSuffix,
