@@ -11,6 +11,7 @@
 
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
@@ -33,7 +34,7 @@ private:
   bool signaturesEmitted = false;
 
   // vec idx == local func_idx
-  SmallDenseMap<MCSymbol *, BranchHintRecord> BranchHints;
+  MapVector<const MCSymbol *, BranchHintRecord> BranchHints;
 
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,

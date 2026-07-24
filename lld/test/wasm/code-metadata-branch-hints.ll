@@ -251,16 +251,16 @@ test_func1:                             # @test_func1
 	.section	.text.test_func1,"",@
 	.section	.custom_section.metadata.code.branch_hint,"",@
 	.int8	2
-	.uleb128 test_func1@FUNCINDEX
-	.int8	1
-	.uleb128 .Ltmp1
-	.int8	1
-	.int8	1
 	.uleb128 _start@FUNCINDEX
 	.int8	1
 	.uleb128 .Ltmp0
 	.int8	1
 	.int8	0
+	.uleb128 test_func1@FUNCINDEX
+	.int8	1
+	.uleb128 .Ltmp1
+	.int8	1
+	.int8	1
 	.section	.text.test_func1,"",@
 
 #--- f2.S
@@ -369,17 +369,17 @@ test1:                                  # @test1
 	.section	.text.test1,"",@
 	.section	.custom_section.metadata.code.branch_hint,"",@
 	.int8	2
-	.uleb128 test1@FUNCINDEX
-	.int8	1
-	.uleb128 .Ltmp2
-	.int8	1
-	.int8	1
 	.uleb128 test0@FUNCINDEX
 	.int8	2
 	.uleb128 .Ltmp0
 	.int8	1
 	.int8	0
 	.uleb128 .Ltmp1
+	.int8	1
+	.int8	1
+	.uleb128 test1@FUNCINDEX
+	.int8	1
+	.uleb128 .Ltmp2
 	.int8	1
 	.int8	1
 	.section	.text.test1,"",@
