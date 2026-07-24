@@ -9,6 +9,7 @@ __device__ int device_array[4];
 __device__ int *device_ptr;
 __constant__ int constant_var;
 __device__ const int const_device_var = 1;
+extern __device__ const int extern_const_device_var;
 
 #if defined(__HIP__)
 #define EXPECTED_DEVICE_ADDRESS_SPACE __CLANG_ADDRESS_SPACE_HIP_DEVICE
@@ -27,6 +28,8 @@ static_assert(__addrspaceof((device_ptr)) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
 static_assert(__addrspaceof((device_var)) ==
               __CLANG_ADDRESS_SPACE_DEFAULT);
+static_assert(__addrspaceof(extern_const_device_var) ==
+              EXPECTED_DEVICE_ADDRESS_SPACE);
 
 #ifdef HOST_TEST
 
