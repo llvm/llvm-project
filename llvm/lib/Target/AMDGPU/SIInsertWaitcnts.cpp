@@ -1329,6 +1329,8 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
         return Acc | Context->getWaitEvents(T);
       });
   HWEvents PendingVmemEvents = PendingEvents & VmemEvents;
+  if (AsyncMarks.size())
+    PendingVmemEvents |= HWEvents::ASYNC_ACCESS;
   for (AMDGPU::InstCounterType T : VmemCounters) {
     unsigned CheckCount = CheckWait.get(T);
     if (UpdateWait.get(AMDGPU::VM_VSRC) >= CheckCount &&

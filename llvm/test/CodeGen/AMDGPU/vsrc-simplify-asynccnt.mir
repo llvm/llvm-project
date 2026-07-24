@@ -29,3 +29,94 @@ body:             |
     renamable $vgpr4_vgpr5_vgpr6_vgpr7 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
+
+---
+name:            test_vm_vsrc_implied
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_vm_vsrc_implied
+    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK-NEXT: V_NOP_e32 implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr5 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr6_vgpr7_vgpr8_vgpr9 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_WAIT_DSCNT 0
+    ; CHECK-NEXT: $vgpr4 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr2_vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+    renamable $vgpr6_vgpr7_vgpr8_vgpr9 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
+    S_WAIT_DSCNT 0
+    $vgpr4 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            test_vm_vsrc_asyncmark
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_vm_vsrc_asyncmark
+    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK-NEXT: V_NOP_e32 implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr5 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr6_vgpr7_vgpr8_vgpr9 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
+    ; CHECK-NEXT: ASYNCMARK
+    ; CHECK-NEXT: S_WAIT_DSCNT 0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
+    ; CHECK-NEXT: $vgpr4 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr2_vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+    renamable $vgpr6_vgpr7_vgpr8_vgpr9 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
+    ASYNCMARK
+    S_WAIT_DSCNT 0
+    $vgpr4 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            test_vm_vsrc_asyncmark_resolved
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_vm_vsrc_asyncmark_resolved
+    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK-NEXT: V_NOP_e32 implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr5 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr2_vgpr3 = IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr6_vgpr7_vgpr8_vgpr9 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
+    ; CHECK-NEXT: ASYNCMARK
+    ; CHECK-NEXT: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAIT_DSCNT 0
+    ; CHECK-NEXT: $vgpr4 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr2_vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+    renamable $vgpr6_vgpr7_vgpr8_vgpr9 = DS_LOAD_TR16_B128 killed renamable $vgpr4, 0, 0, implicit $exec
+    ASYNCMARK
+    WAIT_ASYNCMARK 0
+    S_WAIT_DSCNT 0
+    $vgpr4 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
