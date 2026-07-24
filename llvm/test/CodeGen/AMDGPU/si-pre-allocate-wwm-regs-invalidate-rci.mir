@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
 
 # INFO: Test that MachineRegisterClassInfo is not preserved in WWM preallocation
 
