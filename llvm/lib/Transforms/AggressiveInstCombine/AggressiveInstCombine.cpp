@@ -987,25 +987,26 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
+  bool DefinedForZero = ZeroTableElem->equalsInt(InputBits);
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
   Type *XType = X1->getType();
   auto Cttz = B.CreateIntrinsic(Intrinsic::cttz, {XType}, {X1, BoolConst});
-  Value *ZExtOrTrunc = nullptr;
+  Value *Res = B.CreateZExtOrTrunc(Cttz, AccessType);
 
-  if (DefinedForZero) {
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Cttz, AccessType);
-  } else {
+  if (!DefinedForZero) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
-    // produce the value from the table.
+    // produce the value from the table. Emit the select in AccessType with elem
+    // 0 unchanged, as the table's element type may be wider than the input
+    // type (and directly truncating ZeroTableElem into the input type could
+    // incorrectly drop bits).
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+    Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
     if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+      if (Instruction *SelectI = dyn_cast<Instruction>(Res))
         SelectI->setMetadata(
             LLVMContext::MD_prof,
             MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
@@ -1013,11 +1014,9 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
-
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
   }
 
-  LI->replaceAllUsesWith(ZExtOrTrunc);
+  LI->replaceAllUsesWith(Res);
 
   return true;
 }

@@ -125,6 +125,7 @@ private:
   bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitOpOfCastops(Instruction &I);
   bool foldBitOpOfCastConstant(Instruction &I);
+  bool foldBinopOfShuffles(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -2443,6 +2444,70 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   return true;
 }
 
+/// Fold binop(shuffle(V0, Mask), shuffle(V1, Mask))
+/// --> shuffle(binop(V0, V1), Mask)
+bool VectorCombine::foldBinopOfShuffles(Instruction &I) {
+  // It is not safe to transform things like div, urem, etc. because we may
+  // create undefined behavior when executing those on unknown vector elements.
+  if (!isSafeToSpeculativelyExecute(&I))
+    return false;
+
+  // If both arguments of the binary operation are shuffles that use the same
+  // mask and shuffle within a single vector, move the shuffle after the binop.
+  ArrayRef<int> Mask;
+  Value *LHS, *RHS, *V0, *V1;
+  if (!match(&I, m_BinOp(m_Value(LHS), m_Value(RHS))) ||
+      !match(LHS, m_Shuffle(m_Value(V0), m_Poison(), m_Mask(Mask))) ||
+      !match(RHS, m_Shuffle(m_Value(V1), m_Poison(), m_SpecificMask(Mask))))
+    return false;
+
+  if (V0->getType() != V1->getType())
+    return false;
+
+  auto *BO = cast<BinaryOperator>(&I);
+  auto *OpTy = cast<VectorType>(V0->getType());
+  auto *DstTy = cast<VectorType>(I.getType());
+  Instruction::BinaryOps Opcode = BO->getOpcode();
+
+  InstructionCost OldCost;
+  OldCost += TTI.getInstructionCost(&I, CostKind);
+  OldCost += TTI.getInstructionCost(cast<Instruction>(LHS), CostKind);
+  if (LHS != RHS)
+    OldCost += TTI.getInstructionCost(cast<Instruction>(RHS), CostKind);
+
+  InstructionCost NewCost;
+  NewCost += TTI.getArithmeticInstrCost(Opcode, OpTy, CostKind,
+                                        TTI::getOperandInfo(V0),
+                                        TTI::getOperandInfo(V1), {V0, V1});
+  NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DstTy,
+                                OpTy, Mask, CostKind);
+
+  // Add multiple use costs (assuming the multiple use isn't just the BinOp).
+  if (!(LHS == RHS && LHS->hasOneUser())) {
+    if (!LHS->hasOneUse())
+      NewCost += TTI.getInstructionCost(cast<Instruction>(LHS), CostKind);
+    if (LHS != RHS && !RHS->hasOneUse())
+      NewCost += TTI.getInstructionCost(cast<Instruction>(RHS), CostKind);
+  }
+
+  LLVM_DEBUG(dbgs() << "Found a binop of matching shuffles: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  // TODO: When to allow equal costs (as we reduce instruction count)?
+  if (!NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  Value *NewBO = Builder.CreateBinOp(Opcode, V0, V1);
+  Value *NewShuffle = Builder.CreateShuffleVector(NewBO, Mask);
+  if (auto *NewInst = dyn_cast<Instruction>(NewBO))
+    NewInst->copyIRFlags(BO);
+
+  Worklist.pushValue(NewBO);
+  replaceValue(I, *NewShuffle);
+  return true;
+}
+
 /// Try to convert "shuffle (binop (shuffle, shuffle)), undef"
 ///           -->  "binop (shuffle), (shuffle)".
 bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
@@ -3661,7 +3726,12 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     Ops[Idx] = generateNewInstTree(
         generateInstLaneVectorFromOperand(Item, Idx), &I->getOperandUse(Idx),
         IdentityLeafs, SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
-    WorkList.pushValue(Ops[Idx]);
+    // Don't re-queue the operand of a bitcast we just regenerated. Doing so
+    // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
+    // which foldShuffleToIdentity then re-matches as the same superfluous
+    // identity - an infinite loop between the two folds.
+    if (!isa<BitCastInst>(I))
+      WorkList.pushValue(Ops[Idx]);
   }
 
   SmallVector<Value *, 8> ValueList;
@@ -6559,12 +6629,16 @@ bool VectorCombine::run() {
           return true;
         if (foldBitOpOfCastConstant(I))
           return true;
+        if (foldBinopOfShuffles(I))
+          return true;
         break;
       case Instruction::PHI:
         if (shrinkPhiOfShuffles(I))
           return true;
         break;
       default:
+        if (foldBinopOfShuffles(I))
+          return true;
         if (shrinkType(I))
           return true;
         break;

@@ -14,15 +14,14 @@ define <8 x i32> @PR197910(<8 x i32> %arg) {
 ; CHECK-NEXT:    [[S6:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S7:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; CHECK-NEXT:    [[S8:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> [[B]], <8 x i32> <i32 8, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
-; CHECK-NEXT:    [[U1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[U6:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R12:%.*]] = add <8 x i32> [[S2]], [[S3]]
 ; CHECK-NEXT:    [[R34:%.*]] = add <8 x i32> [[S4]], [[S5]]
 ; CHECK-NEXT:    [[R56:%.*]] = add <8 x i32> [[S6]], [[S7]]
 ; CHECK-NEXT:    [[R1234:%.*]] = add <8 x i32> [[R12]], [[R34]]
 ; CHECK-NEXT:    [[R123456:%.*]] = add <8 x i32> [[R1234]], [[R56]]
 ; CHECK-NEXT:    [[R1234567:%.*]] = add <8 x i32> [[R123456]], [[S8]]
-; CHECK-NEXT:    [[RU:%.*]] = add <8 x i32> [[U1]], [[U6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[A]], [[A]]
+; CHECK-NEXT:    [[RU:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RET:%.*]] = add <8 x i32> [[R1234567]], [[RU]]
 ; CHECK-NEXT:    ret <8 x i32> [[RET]]
 ;

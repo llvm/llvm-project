@@ -100,6 +100,8 @@ public:
   unsigned NumReadfirstlanes = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
+  // Marks entries lowered to VALU for bulk removal from V2SCopies.
+  bool Erased = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
   unsigned ID;
 
@@ -1085,12 +1087,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto *CurInfoIt = V2SCopies.find(CurID);
-    if (CurInfoIt != V2SCopies.end()) {
-      const V2SCopyInfo &C = CurInfoIt->second;
+    if (CurInfoIt != V2SCopies.end() && !CurInfoIt->second.Erased) {
+      V2SCopyInfo &C = CurInfoIt->second;
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
         auto *SibInfoIt = V2SCopies.find(S);
-        if (SibInfoIt != V2SCopies.end()) {
+        if (SibInfoIt != V2SCopies.end() && !SibInfoIt->second.Erased) {
           V2SCopyInfo &SI = SibInfoIt->second;
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());
           if (!SI.NeedToBeConvertedToVALU) {
@@ -1104,11 +1106,10 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
       Copies.insert(C.Copy);
-      // TODO: MapVector::erase is inefficient. Do bulk removal with remove_if
-      // instead.
-      V2SCopies.erase(C.ID);
+      C.Erased = true;
     }
   }
+  V2SCopies.remove_if([](const auto &P) { return P.second.Erased; });
 
   TII->moveToVALU(Copies, MDT);
   Copies.clear();

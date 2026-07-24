@@ -63,6 +63,12 @@ static ReductionOpsSet reductionLogicalSet{
 
 namespace Fortran::semantics {
 
+template <>
+void IterateOverMembers(
+    const AccClauseSet &set, std::function<void(llvm::acc::Clause)> visitor) {
+  set.IterateOverMembers(visitor);
+}
+
 static constexpr inline AccClauseSet
     computeConstructOnlyAllowedAfterDeviceTypeClauses{
         llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait,

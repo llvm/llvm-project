@@ -131,6 +131,14 @@ writeAddressRanges(raw_svector_ostream &Stream,
   return AddressRanges.size() * 16 + 16;
 }
 
+/// Return the size of a DWARF v5 .debug_addr contribution header.
+static uint32_t getHeaderSize(dwarf::DwarfFormat Format) {
+  // The initial length is followed by version(2), address size(1),
+  // and segment size(1).
+  return dwarf::getUnitLengthFieldByteSize(Format) + sizeof(uint16_t) +
+         sizeof(uint8_t) + sizeof(uint8_t);
+}
+
 DebugRangesSectionWriter::DebugRangesSectionWriter() {
   RangesBuffer = std::make_unique<DebugBufferVector>();
   RangesStream = std::make_unique<raw_svector_ostream>(*RangesBuffer);
@@ -189,6 +197,7 @@ uint64_t DebugRangeListsSectionWriter::addRanges(
 }
 
 struct LocListsRangelistsHeader {
+  dwarf::DwarfFormat Format;
   UnitLengthType UnitLength; // Size of loclist entries section, not including
                              // size of header.
   VersionType Version;
@@ -206,11 +215,14 @@ getDWARF5Header(const LocListsRangelistsHeader &Header) {
 
   // 7.29 length of the set of entries for this compilation unit, not including
   // the length field itself
-  const uint32_t HeaderSize =
-      getDWARF5RngListLocListHeaderSize() - sizeof(UnitLengthType);
+  const uint32_t HeaderSize = getDWARF5RngListLocListHeaderSize(Header.Format) -
+                              dwarf::getUnitLengthFieldByteSize(Header.Format);
 
-  support::endian::write(*HeaderStream, Header.UnitLength + HeaderSize,
-                         llvm::endianness::little);
+  if (Header.Format == dwarf::DwarfFormat::DWARF64)
+    support::endian::write(*HeaderStream, dwarf::DW_LENGTH_DWARF64,
+                           llvm::endianness::little);
+  writeDWARFLengthOrOffset(*HeaderStream, Header.Format,
+                           Header.UnitLength + HeaderSize);
   support::endian::write(*HeaderStream, Header.Version,
                          llvm::endianness::little);
   support::endian::write(*HeaderStream, Header.AddressSize,
@@ -224,8 +236,8 @@ getDWARF5Header(const LocListsRangelistsHeader &Header) {
 
 struct OffsetEntry {
   uint32_t Index;
-  uint32_t StartOffset;
-  uint32_t EndOffset;
+  uint64_t StartOffset;
+  uint64_t EndOffset;
 };
 template <typename DebugVector, typename ListEntry, typename DebugAddressEntry>
 static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
@@ -245,8 +257,8 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
     // In case rnglists or loclists are not sorted.
     if (Base > Entry.LowPC)
       break;
-    uint32_t StartOffset = Entry.LowPC - Base;
-    uint32_t EndOffset = Entry.HighPC - Base;
+    uint64_t StartOffset = Entry.LowPC - Base;
+    uint64_t EndOffset = Entry.HighPC - Base;
     if (encodeULEB128(EndOffset, TempBuffer) > 2)
       break;
     Offsets.push_back({Index, StartOffset, EndOffset});
@@ -312,15 +324,16 @@ void DebugRangeListsSectionWriter::finalizeSection() {
       std::make_unique<DebugBufferVector>();
   std::unique_ptr<raw_svector_ostream> CUArrayStream =
       std::make_unique<raw_svector_ostream>(*CUArrayBuffer);
-  constexpr uint32_t SizeOfArrayEntry = 4;
-  const uint32_t SizeOfArraySection = RangeEntries.size() * SizeOfArrayEntry;
-  for (uint32_t Offset : RangeEntries)
-    support::endian::write(*CUArrayStream, Offset + SizeOfArraySection,
-                           llvm::endianness::little);
+  const dwarf::DwarfFormat Format = CU->getFormParams().Format;
+  const uint64_t SizeOfArraySection =
+      RangeEntries.size() * dwarf::getDwarfOffsetByteSize(Format);
+  for (uint64_t Offset : RangeEntries)
+    writeDWARFLengthOrOffset(*CUArrayStream, Format,
+                             Offset + SizeOfArraySection);
 
-  std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
-      {static_cast<uint32_t>(SizeOfArraySection + CUBodyBuffer->size()), 5, 8,
-       0, static_cast<uint32_t>(RangeEntries.size())});
+  std::unique_ptr<DebugBufferVector> Header =
+      getDWARF5Header({Format, SizeOfArraySection + CUBodyBuffer->size(), 5, 8,
+                       0, static_cast<uint32_t>(RangeEntries.size())});
   *RangesStream << *Header;
   *RangesStream << *CUArrayBuffer;
   *RangesStream << *CUBodyBuffer;
@@ -349,27 +362,36 @@ void DebugARangesSectionWriter::writeARangesSection(
     const uint64_t Offset = CUOffsetAddressRangesPair.first;
     const DebugAddressRangesVector &AddressRanges =
         CUOffsetAddressRangesPair.second;
+    assert(CUMap.count(Offset) && "Original CU offset is not found in CU Map");
+    const CUInfo &Info = CUMap.find(Offset)->second;
+    const dwarf::DwarfFormat Format = Info.Format;
+    const uint8_t DwarfOffsetByteSize = dwarf::getDwarfOffsetByteSize(Format);
 
     // Emit header.
 
-    // Size of this set: 8 (size of the header) + 4 (padding after header)
-    // + 2*sizeof(uint64_t) bytes for each of the ranges, plus an extra
-    // pair of uint64_t's for the terminating, zero-length range.
-    // Does not include size field itself.
-    uint32_t Size = 8 + 4 + 2 * sizeof(uint64_t) * (AddressRanges.size() + 1);
+    // Header size: version(2) + offset(4/8) + address size(1) + segment(1).
+    const uint64_t HeaderSize = sizeof(uint16_t) + DwarfOffsetByteSize +
+                                sizeof(uint8_t) + sizeof(uint8_t);
+
+    // Size of this set: header (8/12 bytes depending on the DWARF format) +
+    // padding after header (4/8 bytes) + 2 * sizeof(uint64_t) bytes for each
+    // of the ranges, plus an extra pair of uint64_t's for the terminating,
+    // zero-length range. Does not include size field itself.
+    const uint64_t Size = HeaderSize + DwarfOffsetByteSize +
+                          2 * sizeof(uint64_t) * (AddressRanges.size() + 1);
 
     // Header field #1: set size.
-    support::endian::write(RangesStream, Size, llvm::endianness::little);
+    if (Format == dwarf::DwarfFormat::DWARF64)
+      support::endian::write(RangesStream, dwarf::DW_LENGTH_DWARF64,
+                             llvm::endianness::little);
+    writeDWARFLengthOrOffset(RangesStream, Format, Size);
 
     // Header field #2: version number, 2 as per the specification.
     support::endian::write(RangesStream, static_cast<uint16_t>(2),
                            llvm::endianness::little);
 
-    assert(CUMap.count(Offset) && "Original CU offset is not found in CU Map");
     // Header field #3: debug info offset of the correspondent compile unit.
-    support::endian::write(
-        RangesStream, static_cast<uint32_t>(CUMap.find(Offset)->second.Offset),
-        llvm::endianness::little);
+    writeDWARFLengthOrOffset(RangesStream, Format, Info.Offset);
 
     // Header field #4: address size.
     // 8 since we only write ELF64 binaries for now.
@@ -378,9 +400,8 @@ void DebugARangesSectionWriter::writeARangesSection(
     // Header field #5: segment size of target architecture.
     RangesStream << char(0);
 
-    // Padding before address table - 4 bytes in the 64-bit-pointer case.
-    support::endian::write(RangesStream, static_cast<uint32_t>(0),
-                           llvm::endianness::little);
+    // Padding before address table - 4/8 bytes.
+    writeDWARFLengthOrOffset(RangesStream, Format, 0);
 
     writeAddressRanges(RangesStream, AddressRanges, true);
   }
@@ -482,8 +503,9 @@ std::optional<uint64_t> DebugAddrWriter::finalize(const size_t BufferSize) {
 
 void DebugAddrWriterDwarf5::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
                                            const uint64_t Offset) {
-  /// Header for DWARF5 has size 8, so we add it to the offset.
-  updateAddressBase(DIEBlder, *this, CU, Offset + HeaderSize);
+  /// Header for DWARF5 has size 8 bytes in DWARF32 or 16 bytes in DWARF64,
+  /// so we add it to the offset.
+  updateAddressBase(DIEBlder, *this, CU, Offset + getHeaderSize(Format));
 }
 
 DenseMap<uint64_t, uint64_t> DebugAddrWriter::UnmodifiedAddressOffsets;
@@ -506,8 +528,7 @@ DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
     if (!AddrOffsetSectionBase)
       return std::nullopt;
     // Address base offset is to the first entry.
-    // The size of header is 8 bytes.
-    uint64_t Offset = *AddrOffsetSectionBase - HeaderSize;
+    uint64_t Offset = *AddrOffsetSectionBase - getHeaderSize(Format);
     auto Iter = UnmodifiedAddressOffsets.find(Offset);
     if (Iter != UnmodifiedAddressOffsets.end())
       return Iter->second;
@@ -527,8 +548,10 @@ DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
   // Sorting address in increasing order of indices.
   llvm::sort(SortedMap, llvm::less_first());
   // Writing out Header
-  const uint32_t Length = SortedMap.size() * AddressByteSize + 4;
-  support::endian::write(*AddressStream, Length, Endian);
+  const uint64_t Length = SortedMap.size() * AddressByteSize + 4;
+  if (Format == dwarf::DwarfFormat::DWARF64)
+    support::endian::write(*AddressStream, dwarf::DW_LENGTH_DWARF64, Endian);
+  writeDWARFLengthOrOffset(*AddressStream, Format, Length, Endian);
   support::endian::write(*AddressStream, static_cast<uint16_t>(5), Endian);
   support::endian::write(*AddressStream, static_cast<uint8_t>(AddressByteSize),
                          Endian);
@@ -677,7 +700,7 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
                                DebugLocationsVector &LocList, DIE &Die,
                                DIEBuilder &DIEBldr, DebugAddrWriter &AddrWriter,
                                DebugBufferVector &LocBodyBuffer,
-                               std::vector<uint32_t> &RelativeLocListOffsets,
+                               std::vector<uint64_t> &RelativeLocListOffsets,
                                DWARFUnit &CU,
                                raw_svector_ostream &LocBodyStream) {
 
@@ -742,7 +765,8 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
     if (!isSplitDwarf() && LocListBaseAttrInfo.getType())
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_loclists_base,
                            LocListBaseAttrInfo.getForm(),
-                           DIEInteger(getDWARF5RngListLocListHeaderSize()));
+                           DIEInteger(getDWARF5RngListLocListHeaderSize(
+                               CU.getFormParams().Format)));
     return;
   }
 
@@ -751,23 +775,23 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
   std::unique_ptr<raw_svector_ostream> LocArrayStream =
       std::make_unique<raw_svector_ostream>(*LocArrayBuffer);
 
-  const uint32_t SizeOfArraySection = NumberOfEntries * sizeof(uint32_t);
+  const dwarf::DwarfFormat Format = CU.getFormParams().Format;
+  const uint64_t SizeOfArraySection =
+      NumberOfEntries * dwarf::getDwarfOffsetByteSize(Format);
   // Write out IndexArray
-  for (uint32_t RelativeOffset : RelativeLocListOffsets)
-    support::endian::write(
-        *LocArrayStream,
-        static_cast<uint32_t>(SizeOfArraySection + RelativeOffset),
-        llvm::endianness::little);
+  for (uint64_t RelativeOffset : RelativeLocListOffsets)
+    writeDWARFLengthOrOffset(*LocArrayStream, Format,
+                             SizeOfArraySection + RelativeOffset);
 
-  std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
-      {static_cast<uint32_t>(SizeOfArraySection + LocBodyBuffer->size()), 5, 8,
-       0, NumberOfEntries});
+  std::unique_ptr<DebugBufferVector> Header =
+      getDWARF5Header({Format, SizeOfArraySection + LocBodyBuffer->size(), 5, 8,
+                       0, NumberOfEntries});
   *LocStream << *Header;
   *LocStream << *LocArrayBuffer;
   *LocStream << *LocBodyBuffer;
 
   if (!isSplitDwarf()) {
-    const uint64_t LocalBase = getDWARF5RngListLocListHeaderSize();
+    const uint64_t LocalBase = getDWARF5RngListLocListHeaderSize(Format);
     DIEValue LocListBaseAttrInfo =
         Die.findAttribute(dwarf::DW_AT_loclists_base);
     if (LocListBaseAttrInfo.getType()) {
@@ -835,7 +859,7 @@ void SimpleBinaryPatcher::addLE32Patch(uint64_t Offset, uint32_t NewValue,
 std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
   std::string BinaryContentsStr = std::string(BinaryContents);
   for (const auto &Patch : Patches) {
-    uint32_t Offset = Patch.first;
+    uint64_t Offset = Patch.first;
     const std::string &ByteSequence = Patch.second;
     assert(Offset + ByteSequence.size() <= BinaryContents.size() &&
            "Applied patch runs over binary size.");
@@ -854,16 +878,22 @@ void DebugStrOffsetsWriter::initialize(DWARFUnit &Unit) {
       Unit.getStringOffsetsTableContribution();
   if (!Contr)
     return;
+  const dwarf::DwarfFormat Format = Unit.getFormParams().Format;
   const uint8_t DwarfOffsetByteSize = Contr->getDwarfOffsetByteSize();
-  assert(DwarfOffsetByteSize == 4 &&
-         "Dwarf String Offsets Byte Size is not supported.");
-  StrOffsets.reserve(Contr->Size);
-  for (uint64_t Offset = 0; Offset < Contr->Size; Offset += DwarfOffsetByteSize)
-    StrOffsets.push_back(support::endian::read32le(
-        StrOffsetsSection.Data.data() + Contr->Base + Offset));
+  StrOffsets.reserve(Contr->Size / DwarfOffsetByteSize);
+  for (uint64_t Offset = 0; Offset < Contr->Size;
+       Offset += DwarfOffsetByteSize) {
+    uint64_t Value =
+        Format == dwarf::DwarfFormat::DWARF32
+            ? support::endian::read32le(StrOffsetsSection.Data.data() +
+                                        Contr->Base + Offset)
+            : support::endian::read64le(StrOffsetsSection.Data.data() +
+                                        Contr->Base + Offset);
+    StrOffsets.push_back(Value);
+  }
 }
 
-void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address,
+void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint64_t Address,
                                              const DWARFUnit &Unit) {
   assert(DebugStrOffsetFinalized.count(Unit.getOffset()) == 0 &&
          "Cannot update address map since debug_str_offsets was already "
@@ -897,10 +927,15 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
     // Update String Offsets that were modified.
     for (const auto &Entry : IndexToAddressMap)
       StrOffsets[Entry.first] = Entry.second;
+    const dwarf::DwarfFormat Format = Unit.getFormParams().Format;
     // Writing out the header for each section.
-    support::endian::write(*StrOffsetsStream,
-                           static_cast<uint32_t>(StrOffsets.size() * 4 + 4),
-                           llvm::endianness::little);
+    if (Format == dwarf::DwarfFormat::DWARF64)
+      support::endian::write(*StrOffsetsStream, dwarf::DW_LENGTH_DWARF64,
+                             llvm::endianness::little);
+    writeDWARFLengthOrOffset(*StrOffsetsStream, Format,
+                             StrOffsets.size() *
+                                     dwarf::getDwarfOffsetByteSize(Format) +
+                                 sizeof(uint16_t) + sizeof(uint16_t));
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
                            llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),
@@ -912,9 +947,8 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
                            StrListBaseAttrInfo.getForm(),
                            DIEInteger(BaseOffset));
-    for (const uint32_t Offset : StrOffsets)
-      support::endian::write(*StrOffsetsStream, Offset,
-                             llvm::endianness::little);
+    for (const uint64_t Offset : StrOffsets)
+      writeDWARFLengthOrOffset(*StrOffsetsStream, Format, Offset);
   } else {
     DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
                          StrListBaseAttrInfo.getForm(),
@@ -1235,15 +1269,18 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   Streamer.switchSection(BC.MOFI->getDwarfLineSection());
 
   const uint16_t DwarfVersion = BC.Ctx->getDwarfVersion();
+  const dwarf::DwarfFormat Format = BC.Ctx->getDwarfFormat();
   // Handle the rest of the Compile Units.
   for (auto &CUIDTablePair : LineTables) {
     Streamer.getContext().setDwarfVersion(
         CUIDTablePair.second.getDwarfVersion());
+    Streamer.getContext().setDwarfFormat(CUIDTablePair.second.getFormat());
     CUIDTablePair.second.emitCU(&Streamer, Params, LineStr, BC);
   }
 
   // Resetting DWARF version for rest of the flow.
   BC.Ctx->setDwarfVersion(DwarfVersion);
+  BC.Ctx->setDwarfFormat(Format);
 
   // Still need to write the section out for the ExecutionEngine, and temp in
   // memory object we are constructing.

@@ -181,6 +181,8 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
   // XXX - only need to list legal operations.
   switch (Opc) {
+  case ISD::POISON:
+    return true;
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:

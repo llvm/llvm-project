@@ -251,7 +251,7 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP6]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 8, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i32 8, [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i16> [[VEC_IND]], [[BROADCAST_SPLAT6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <2 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i16> [[TMP8]] to <2 x i32>
@@ -425,7 +425,7 @@ define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 9

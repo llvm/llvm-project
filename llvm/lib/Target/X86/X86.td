@@ -1759,8 +1759,6 @@ def ProcessorFeatures {
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
 
   list<SubtargetFeature> ZN6RemoveTuning = [TuningSlowIndirectCall,
-                                            TuningCOMPRESSFalseDeps,
-                                            TuningEXPANDFalseDeps,
                                             TuningTZCNTFalseDeps,
                                             TuningBLSFalseDeps
                                             ];

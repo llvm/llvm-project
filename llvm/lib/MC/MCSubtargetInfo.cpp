@@ -124,7 +124,7 @@ static void Help(StringTable CPUNames, ArrayRef<SubtargetFeatureKV> FeatTable) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPUName : drop_begin(CPUNames)) {
+  for (auto &CPUName : CPUNames) {
     // Skip apple-latest, as that's only meant to be used in
     // disassemblers/debuggers, and we don't want normal code to be built with
     // it as an -mcpu=
@@ -159,7 +159,7 @@ static void cpuHelp(StringTable CPUNames) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : llvm::drop_begin(CPUNames)) {
+  for (auto &CPU : CPUNames) {
     // Skip apple-latest, as that's only meant to be used in
     // disassemblers/debuggers, and we don't want normal code to be built with
     // it as an -mcpu=

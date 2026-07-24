@@ -1497,6 +1497,18 @@ public:
   /// \param Loc The location where the flush directive was encountered
   LLVM_ABI void createFlush(const LocationDescription &Loc);
 
+  /// Generate a call to the runtime to emit the diagnostic of an OpenMP
+  /// `error` directive with `at(execution)`.
+  ///
+  /// \param Loc The location where the error directive was encountered; it is
+  ///        used to build the `ident_t` passed to the runtime.
+  /// \param IsFatal Selects `severity(fatal)` (true) or `severity(warning)`
+  ///        (false).
+  /// \param Message The message string (an `i8*`) to display, or null when no
+  ///        `message` clause is present.
+  LLVM_ABI void createError(const LocationDescription &Loc, bool IsFatal,
+                            Value *Message);
+
   /// Generator for '#omp taskyield'
   ///
   /// \param Loc The location where the taskyield directive was encountered.

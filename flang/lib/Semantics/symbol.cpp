@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/symbol.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Semantics/scope.h"
@@ -71,12 +72,12 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
 }
 
 void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
-    const OmpClauseSet &clauses, llvm::omp::Directive dir,
+    const llvm::omp::ClauseSet &clauses, llvm::omp::Directive dir,
     parser::CharBlock name) const {
   auto toLower = parser::ToLowerCaseLetters;
-
   size_t idx{0}, size{clauses.count()};
-  clauses.IterateOverMembers([&](llvm::omp::Clause c) {
+
+  for (llvm::omp::Clause c : clauses) {
     os << toLower(llvm::omp::getOpenMPClauseName(c, version_));
     switch (c) {
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
@@ -107,24 +108,22 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
     if (++idx < size) {
       os << ' ';
     }
-  });
+  }
 }
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
-
-  if (const OmpClauseSet &reqs{x.ompRequires()}; reqs.count()) {
+  if (const llvm::omp::ClauseSet &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
     x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
     os << ')';
   }
-  if (const OmpClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+  if (const llvm::omp::ClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
     os << " OmpDeclareTargetFlags:(";
     x.printClauseSet(os, dtgt, llvm::omp::Directive::OMPD_declare_target);
     os << ')';
   }
-  if (const OmpClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
+  if (const llvm::omp::ClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
     os << " OmpGroupprivateFlags:(";
     x.printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
     os << ')';

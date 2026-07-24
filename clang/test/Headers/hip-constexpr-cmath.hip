@@ -8,8 +8,8 @@
 // RUN:   -internal-isystem %t/stl/include \
 // RUN:   -internal-isystem %t/stl/2025/include \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -verify %t/main.hip -fcuda-is-device -o /dev/null
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -verify %t/main.hip -fcuda-is-device -o /dev/null
 //
 // Test with the 202604 stl
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
@@ -17,8 +17,8 @@
 // RUN:   -internal-isystem %t/stl/include \
 // RUN:   -internal-isystem %t/stl/2026/include \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -verify %t/main.hip -fcuda-is-device -o /dev/null
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -verify %t/main.hip -fcuda-is-device -o /dev/null
 
 #--- stl/include/stl_common
 _CLANG_BUILTIN2(isunordered)

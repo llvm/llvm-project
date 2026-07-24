@@ -9,7 +9,7 @@
 // RUN:   | FileCheck -check-prefixes=COMMON,OFF %s
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
 // RUN:   -target-feature +dx10-clamp-and-ieee-mode \
-// RUN:   -mno-amdgpu-ieee -cl-fast-relaxed-math \
+// RUN:   -mno-amdgpu-ieee -cl-fast-relaxed-math -menable-no-nans \
 // RUN:   | FileCheck -check-prefixes=COMMON,OFF %s
 
 // Check AMDGCN ISA generation.

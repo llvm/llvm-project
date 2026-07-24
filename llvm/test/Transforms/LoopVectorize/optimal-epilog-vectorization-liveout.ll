@@ -128,7 +128,7 @@ define i64 @test_non_unit_stride_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -158,7 +158,7 @@ define i64 @test_non_unit_stride_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = shl i64 [[INDEX4]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw i64 [[INDEX4]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP14]]

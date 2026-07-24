@@ -87,7 +87,10 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
                         /*default=*/"false",
                         "Allow converting a fir.do_loop with the `unordered` "
-                        "attribute to scf.parallel (experimental).">];
+                        "attribute to scf.parallel (experimental).">,
+                 Option<"setNSW", "set-nsw", "bool",
+                        /*default=*/"true",
+                        "Add nsw flag to loop variable increments.">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {

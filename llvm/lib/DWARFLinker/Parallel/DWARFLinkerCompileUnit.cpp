@@ -2006,7 +2006,8 @@ void CompileUnit::verifyDependencies() {
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {
   static dwarf::Attribute ODRAttributes[] = {
       dwarf::DW_AT_type, dwarf::DW_AT_specification,
-      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import};
+      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import,
+      dwarf::DW_AT_LLVM_alloc_type};
 
   return ODRAttributes;
 }

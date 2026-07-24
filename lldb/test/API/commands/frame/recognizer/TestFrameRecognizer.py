@@ -372,6 +372,7 @@ class FrameRecognizerTestCase(TestBase):
             substrs=["frame 0 is recognized by recognizer.MyFrameRecognizer"],
         )
 
+    @skipIfWasm  # $arg1/$arg2 need argument registers, unsupported on WebAssembly.
     def test_frame_recognizer_not_only_first_instruction(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

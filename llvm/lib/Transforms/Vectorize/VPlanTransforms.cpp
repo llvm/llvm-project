@@ -795,11 +795,17 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
+    VPIRFlags::WrapFlagsTy WrapFlags;
+    // We can preserve nuw when the step is non-negative.
+    const APInt *Step;
+    if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
+      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
+                   false};
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder);
+        WideIV->getDebugLoc(), Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -1010,8 +1016,44 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
   return nullptr;
 }
 
+static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
+                                               PredicatedScalarEvolution &PSE,
+                                               VPValue *ResumeTC,
+                                               const Loop *L) {
+  VPValue *Incoming;
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+    return nullptr;
+
+  const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
+  const SCEV *Start, *Step;
+  if (!match(IncomingSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                               m_SpecificLoop(L))))
+    return nullptr;
+
+  auto *ExtractR = cast<VPInstruction>(Op);
+  DebugLoc DL = ExtractR->getDebugLoc();
+  VPBuilder Builder(ExtractR);
+  VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
+  VPValue *StartVPV = Expander.tryToExpand(Start);
+  VPValue *StepVPV = Expander.tryToExpand(Step);
+  if (!StartVPV || !StepVPV)
+    return nullptr;
+
+  Type *StartTy = StartVPV->getScalarType();
+  assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
+  InductionDescriptor::InductionKind Kind =
+      StartTy->isPointerTy() ? InductionDescriptor::IK_PtrInduction
+                             : InductionDescriptor::IK_IntInduction;
+  Type *TCTy = ResumeTC->getScalarType();
+  VPValue *ExitCount = Builder.createOverflowingOp(
+      Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
+      {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
+  return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartVPV, ExitCount,
+                                 StepVPV);
+}
+
 void VPlanTransforms::optimizeInductionLiveOutUsers(
-    VPlan &Plan, PredicatedScalarEvolution &PSE) {
+    VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L) {
   // Compute end values for all inductions.
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
@@ -1047,12 +1089,16 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
-        if (PredVPBB == MiddleVPBB)
+        if (PredVPBB == MiddleVPBB) {
           Escape = optimizeLatchExitInductionUser(
               Plan, ExitIRI->getOperand(Idx), EndValues, PSE);
-        else
+          if (!Escape)
+            Escape = optimizeLatchExitIVUserViaSCEV(
+                Plan, ExitIRI->getOperand(Idx), PSE, ResumeTC, L);
+        } else {
           Escape = optimizeEarlyExitInductionUser(
               Plan, ExitIRI->getOperand(Idx), PSE);
+        }
         if (Escape)
           ExitIRI->setOperand(Idx, Escape);
       }
@@ -1205,6 +1251,20 @@ static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
       Y->getScalarType()->isIntegerTy(1)) {
     Def->replaceAllUsesWith(
         Builder.createOr(Y, Builder.createLogicalAnd(X, Z)));
+    return true;
+  }
+
+  // select %M0, (select %M1, %X, %Y), %Y -> select (%M0 && %M1), %X, %Y
+  VPValue *Mask0, *Mask1;
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_SelectLike(m_VPValue(Mask0),
+                         m_OneUse(m_SelectLike(m_VPValue(Mask1), m_VPValue(X),
+                                               m_VPValue(Y))),
+                         m_Deferred(Y)))) {
+    auto *Select = Builder.createSelect(Builder.createLogicalAnd(Mask0, Mask1),
+                                        X, Y, Def->getDebugLoc());
+    Def->replaceAllUsesWith(Select);
     return true;
   }
 

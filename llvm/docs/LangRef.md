@@ -1522,6 +1522,12 @@ Currently, only the following parameter attributes are defined:
     met. For further details, please see the discussion of the NoAlias response
     in {ref}`alias analysis <Must, May,  or No>`.
 
+    `noalias` also applies to accesses from other threads, unless they
+    happen-before function entry, or function exit happens-before them. This
+    means that conflicting concurrent accesses from other threads either need
+    to be based on the noalias pointer, or else be appropriately synchronized
+    *outside* the function.
+
     Note that this definition of `noalias` is intentionally similar
     to the definition of `restrict` in C99 for function arguments.
 
@@ -2794,7 +2800,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap.
+    not introduce any new floating-point instructions that may trap. All
+    function definitions that contain strictfp calls must be marked strictfp.
 
 (denormal_fpenv)=
 
@@ -7784,6 +7791,27 @@ sections that the user does not want removed after linking.
 
 ```text
 @object = private constant [1 x i8] c"\00", section ".foo" !exclude !0
+
+...
+!0 = !{}
+```
+
+#### '`metadata_section_kind`' Metadata
+
+`metadata_section_kind` metadata may be attached to a global variable to signify
+that its section should be treated as "metadata" by LLVM, meaning the section
+will be generic by default without any flags, unless the section has a special
+name (e.g., `"llvm.metadata"`). Incompatible with `!exclude`; in practice, one
+may be ignored by LLVM. This option is only valid for global variables with an
+explicit section targeting ELF or COFF. Additionally, this metadata is only
+used as a flag, so the associated node must be empty.
+
+By default this uses `SHT_PROGBITS` with no flags for ELF, and for COFF the
+section is not marked as readable or writable and it uses the section flag
+`IMAGE_SCN_MEM_DISCARDABLE`.
+
+```text
+@object = private constant [1 x i8] c"\00", section ".foo" !metadata_section_kind !0
 
 ...
 !0 = !{}
@@ -26625,9 +26653,6 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
-
-All function *definitions* that use constrained floating point intrinsics
-must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 

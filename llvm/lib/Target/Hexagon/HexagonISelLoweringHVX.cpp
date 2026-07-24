@@ -180,6 +180,16 @@ HexagonTargetLowering::initializeHVXLowering() {
     setPromoteTo(ISD::VECTOR_SHUFFLE,  MVT::v64f32, ByteW);
     setPromoteTo(ISD::VECTOR_SHUFFLE,  MVT::v32f32, ByteV);
 
+    // For HVX <v81 there is no hardware float-equality instruction; only
+    // float-GT (V6_vgtsf/V6_vgthf) is available.  The integer-equality
+    // fallback (V6_veqw/V6_veqh) silently treats NaN as equal to itself
+    // because the bit patterns match.  Mark SETCC as Custom for the
+    // single-vector float types so we can synthesise the correct
+    // ordered-equal predicate in LowerHvxFpSetoeq.
+    if (!Subtarget.useHVXV81Ops())
+      for (MVT T : FloatV)
+        setOperationAction(ISD::SETCC, T, Custom);
+
     if (Subtarget.useHVXV81Ops()) {
       setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v128bf16, ByteW);
       setPromoteTo(ISD::VECTOR_SHUFFLE, MVT::v64bf16, ByteV);
@@ -3820,7 +3830,13 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SMUL_LOHI:
     case ISD::UMUL_LOHI:               return LowerHvxMulLoHi(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
-    case ISD::SETCC:
+    case ISD::SETCC: {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      if (CC == ISD::SETOEQ &&
+          ty(Op.getOperand(0)).getScalarType().isFloatingPoint())
+        return LowerHvxFpSetoeq(Op, DAG);
+      return Op;
+    }
     case ISD::INTRINSIC_VOID:          return Op;
     case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
     case ISD::MLOAD:
@@ -4460,6 +4476,93 @@ HexagonTargetLowering::LowerHvxPartialReduceMLA(SDValue Op,
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, AccType, Subvectors);
+}
+
+// Lower fcmp oeq on HVX float vectors for architectures before v81, which
+// lack a dedicated floating-point equality instruction.
+//
+// Correct IEEE-754 semantics: oeq(a,b) is true iff a==b and neither is NaN.
+// We use the available float-GT instruction (V6_vgtsf/V6_vgthf) for the
+// inequality check and bit manipulation for NaN detection:
+//
+//   oeq(a, b) = NOT(ogt(a,b) OR ogt(b,a) OR isNaN(a) OR isNaN(b))
+//
+// where  isNaN(x) = ((int_bits(x) & AbsMask) > NaNThreshold)
+//   f32: AbsMask=0x7FFFFFFF, NaNThreshold=0x7F800000
+//   f16: AbsMask=0x7FFF,     NaNThreshold=0x7C00
+//
+// This handles +0/-0 correctly because float-GT treats them as equal, so
+// neither ogt(+0,-0) nor ogt(-0,+0) is ever true.
+//
+// Example f32 assembly (no NaNs case):
+// q0 = vcmp.eq(v0.w, v1.w) // bitwise comparison should just work
+//
+// Example f32 assembly (NaN-present case):
+//   q0  = vcmp.gt(v0.sf, v1.sf)    // ogt(a,b)
+//   q0 |= vcmp.gt(v1.sf, v0.sf)    // |= ogt(b,a)
+//   r0  = ##0x7FFFFFFF
+//   v2  = vsplat(r0)               // AbsMask broadcast
+//   r1  = ##0x7F800000
+//   v3  = vsplat(r1)               // NaNThresh broadcast
+//   v4  = vand(v0, v2)             // int_bits(a) & AbsMask
+//   v5  = vand(v1, v2)             // int_bits(b) & AbsMask
+//   q0 |= vcmp.gt(v4.w, v3.w)     // |= isNaN(a)
+//   q0 |= vcmp.gt(v5.w, v3.w)     // |= isNaN(b)
+//   // q0 now holds AnyFalse; result = XOR(q0, allones) = oeq
+SDValue HexagonTargetLowering::LowerHvxFpSetoeq(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  auto ResTy = ty(Op);
+  auto A = Op.getOperand(0), B = Op->getOperand(1);
+  MVT FloatTy = ty(A);
+  MVT ElemTy = FloatTy.getVectorElementType();
+  bool IsF32 = (ElemTy == MVT::f32);
+  if (!IsF32) {
+    assert((ElemTy == MVT::f16));
+  }
+  const SDLoc &DL(Op);
+  MVT IntElemTy = IsF32 ? MVT::i32 : MVT::i16;
+  MVT IntVecTy = tyVector(FloatTy, IntElemTy);
+
+  // Under nnan semantics NaN cannot appear, so integer equality is both
+  // correct and cheaper (one instruction vs the float-GT sequence).
+  bool NoNaN = Op->getFlags().hasNoNaNs();
+  if (NoNaN) {
+    SDValue IA = DAG.getNode(ISD::BITCAST, DL, IntVecTy, A);
+    SDValue IB = DAG.getNode(ISD::BITCAST, DL, IntVecTy, B);
+    return DAG.getSetCC(DL, ResTy, IA, IB, ISD::SETEQ);
+  }
+
+  // Float GT comparisons (IEEE-754: false whenever either operand is NaN).
+  SDValue QAgtB = DAG.getSetCC(DL, ResTy, A, B, ISD::SETOGT);
+  SDValue QBgtA = DAG.getSetCC(DL, ResTy, B, A, ISD::SETOGT);
+
+  // OR all "false" conditions together, then invert.
+  SDValue AnyFalse = DAG.getNode(ISD::OR, DL, ResTy, QAgtB, QBgtA);
+
+  // Detect NaN by checking whether the unbiased exponent/mantissa field
+  // exceeds the largest finite value.
+  //   f32: (bits & 0x7FFFFFFF) > 0x7F800000
+  //   f16: (bits & 0x7FFF)     > 0x7C00
+  uint64_t AbsMask = IsF32 ? 0x7FFFFFFFull : 0x7FFFull;
+  uint64_t NaNThresh = IsF32 ? 0x7F800000ull : 0x7C00ull;
+
+  SDValue IA = DAG.getNode(ISD::BITCAST, DL, IntVecTy, A);
+  SDValue IB = DAG.getNode(ISD::BITCAST, DL, IntVecTy, B);
+  SDValue MaskVec = DAG.getConstant(AbsMask, DL, IntVecTy);
+  SDValue ThreshVec = DAG.getConstant(NaNThresh, DL, IntVecTy);
+  SDValue QNanA =
+      DAG.getSetCC(DL, ResTy, DAG.getNode(ISD::AND, DL, IntVecTy, IA, MaskVec),
+                   ThreshVec, ISD::SETGT);
+  SDValue QNanB =
+      DAG.getSetCC(DL, ResTy, DAG.getNode(ISD::AND, DL, IntVecTy, IB, MaskVec),
+                   ThreshVec, ISD::SETGT);
+  AnyFalse = DAG.getNode(ISD::OR, DL, ResTy, AnyFalse, QNanA);
+  AnyFalse = DAG.getNode(ISD::OR, DL, ResTy, AnyFalse, QNanB);
+
+  // Result = NOT(<Is A gt B>, <IS B gt A>, <IS A NaN>, <IS B NaN>)
+  // Use XOR with ones to simulate logical not.
+  return DAG.getNode(ISD::XOR, DL, ResTy, AnyFalse,
+                     DAG.getConstant(1, DL, ResTy));
 }
 
 SDValue

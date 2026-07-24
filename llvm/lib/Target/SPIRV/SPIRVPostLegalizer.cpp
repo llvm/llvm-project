@@ -49,12 +49,7 @@ static SPIRVTypeInst deduceIntTypeFromResult(Register ResVReg,
                                              MachineIRBuilder &MIB,
                                              SPIRVGlobalRegistry *GR) {
   const LLT &Ty = MIB.getMRI()->getType(ResVReg);
-  SPIRVTypeInst ScalarType =
-      GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
-  if (Ty.isVector())
-    return GR->getOrCreateSPIRVVectorType(ScalarType, Ty.getNumElements(), MIB,
-                                          false);
-  return ScalarType;
+  return GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
 }
 
 static SPIRVTypeInst deduceTypeFromSingleOperand(MachineInstr *I,

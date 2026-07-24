@@ -1,0 +1,181 @@
+# REQUIRES: asserts
+
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mattr=+fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -mattr=-fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+
+# CHECK-LABEL: fuse_fmla
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S $za(tied-def 0), $w8, 0, $z0_z1, $z2
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S $za(tied-def 0), $w8, 7, $z0_z1, $z2
+---
+name:            fuse_fmla
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za, $w8, $z0_z1, $z2, $w2
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
+    $w3 = ORRWri $w2, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 7, $z0_z1, $z2
+    RET undef $lr
+...
+
+# CHECK-LABEL: fuse_za_write
+# CHECK: SU({{[0-9]+}}): ZERO_M 255, implicit-def $za
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S $za(tied-def 0), $w8, 0, $z0_z1, $z2
+---
+name:            fuse_za_write
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w8, $z0_z1, $z2, $w2
+    ZERO_M 255, implicit-def $za
+    $w3 = ORRWri $w2, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
+    RET undef $lr
+...
+
+# CHECK-LABEL: fuse_z_write
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z1, $z2
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $z4 = ADD_ZZZ_S $z0, $z3
+---
+name:            fuse_z_write
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $z1, $z2, $z3, $w2
+    $z0 = ADD_ZZZ_S $z1, $z2
+    $w3 = ORRWri $w2, 4096
+    $z4 = ADD_ZZZ_S $z0, $z3
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_load
+# CHECK: SU({{[0-9]+}}): $z2 = LDR_ZXI $x0, 0
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_load
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za, $w8, $z0_z1, $x0, $w2
+    $z2 = LDR_ZXI $x0, 0
+    $w3 = ORRWri $w2, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_store
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): STR_ZA
+---
+name:            no_fuse_store
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za, $w8, $z0_z1, $z2, $w12, $x0, $w2
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
+    $w3 = ORRWri $w2, 4096
+    STR_ZA $za, $w12, 0, $x0, 0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_write_p
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z1, $z2
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $p1 = FCMEQ_PPzZZ_S $p0, $z0, $z3
+---
+name:            no_fuse_write_p
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $p0, $z1, $z2, $z3, $w2
+    $z0 = ADD_ZZZ_S $z1, $z2
+    $w3 = ORRWri $w2, 4096
+    $p1 = FCMEQ_PPzZZ_S $p0, $z0, $z3
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_write_gpr32
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z1, $z2
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $w0 = LASTB_RPZ_S $p0, $z0
+---
+name:            no_fuse_write_gpr32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $p0, $z1, $z2, $w2
+    $z0 = ADD_ZZZ_S $z1, $z2
+    $w3 = ORRWri $w2, 4096
+    $w0 = LASTB_RPZ_S $p0, $z0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_write_gpr64
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z1, $z2
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $x0 = LASTB_RPZ_D $p0, $z0
+---
+name:            no_fuse_write_gpr64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $p0, $z1, $z2, $w2
+    $z0 = ADD_ZZZ_S $z1, $z2
+    $w3 = ORRWri $w2, 4096
+    $x0 = LASTB_RPZ_D $p0, $z0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_read_gpr32_not_za
+# CHECK: SU({{[0-9]+}}): $z2 = DUP_ZR_S $w0
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_read_gpr32_not_za
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za, $w8, $z0_z1, $w0, $w2
+    $z2 = DUP_ZR_S $w0
+    $w3 = ORRWri $w2, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_read_gpr64_not_za
+# CHECK: SU({{[0-9]+}}): $z2 = DUP_ZR_D $x0
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_read_gpr64_not_za
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za, $w8, $z0_z1, $x0, $w2
+    $z2 = DUP_ZR_D $x0
+    $w3 = ORRWri $w2, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
+    RET undef $lr
+...

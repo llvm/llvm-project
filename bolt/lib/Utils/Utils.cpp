@@ -97,6 +97,28 @@ std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
   return Reg;
 }
 
+void safePWrite(raw_fd_ostream &OS, const char *Src, size_t Size,
+                uint64_t Offset) {
+  if (Size == 0)
+    return;
+
+  const uint64_t SavedPos = OS.tell();
+  const uint64_t RequiredPos = Offset + Size;
+  const bool Extended = SavedPos < RequiredPos;
+
+  // raw_pwrite_stream::pwrite() expects the stream to be large enough
+  // to cover the write. If the target offset exceeds the current stream
+  // position, we must extend the stream by seeking to the required position
+  // first to avoid failures.
+  if (Extended)
+    OS.seek(RequiredPos);
+
+  OS.pwrite(Src, Size, Offset);
+
+  if (Extended)
+    OS.seek(SavedPos);
+}
+
 } // namespace bolt
 
 bool operator==(const llvm::MCCFIInstruction &L,

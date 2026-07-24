@@ -3416,7 +3416,8 @@ public:
 
     if (auto *PLE = dyn_cast<CXXParenListInitExpr>(Sub))
       return getSema().BuildCXXTypeConstructExpr(
-          TInfo, LParenLoc, PLE->getInitExprs(), RParenLoc, ListInitialization);
+          TInfo, LParenLoc, PLE->getUserSpecifiedInitExprs(), RParenLoc,
+          ListInitialization);
 
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,

@@ -30,15 +30,20 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
   using OpRewritePattern<fir::DoLoopOp>::OpRewritePattern;
 
   DoLoopConversion(mlir::MLIRContext *context,
-                   bool parallelUnorderedLoop = false,
+                   bool parallelUnorderedLoop = false, bool setNSW = true,
                    mlir::PatternBenefit benefit = 1)
       : OpRewritePattern<fir::DoLoopOp>(context, benefit),
-        parallelUnorderedLoop(parallelUnorderedLoop) {}
+        parallelUnorderedLoop(parallelUnorderedLoop), setNSW(setNSW) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DoLoopOp doLoopOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = doLoopOp.getLoc();
+    mlir::arith::IntegerOverflowFlags flags{};
+    if (setNSW)
+      flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+    auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
+        rewriter.getContext(), flags);
     bool hasFinalValue = doLoopOp.getFinalValue().has_value();
     bool isUnordered = doLoopOp.getUnordered().has_value();
 
@@ -111,7 +116,8 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 
     mlir::Value finalValue;
     if (hasTypedIV) {
-      finalValue = mlir::arith::AddIOp::create(rewriter, loc, iv, step);
+      finalValue =
+          mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr);
     } else if (hasFinalValue) {
       // Prefer re-using an existing `arith.addi` in the moved loop body if it
       // already computes the next `iv + step`.
@@ -124,7 +130,8 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
         }
       }
       if (!finalValue)
-        finalValue = mlir::arith::AddIOp::create(rewriter, loc, iv, step);
+        finalValue =
+            mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr);
     }
 
     if (hasTypedIV || hasFinalValue || !results.empty()) {
@@ -163,16 +170,24 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 
 private:
   bool parallelUnorderedLoop;
+  bool setNSW;
 };
 
 struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
-  using OpRewritePattern<fir::IterWhileOp>::OpRewritePattern;
+  IterWhileConversion(mlir::MLIRContext *context, bool setNSW = true,
+                      mlir::PatternBenefit benefit = 1)
+      : OpRewritePattern<fir::IterWhileOp>(context, benefit), setNSW(setNSW) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::IterWhileOp iterWhileOp,
                   mlir::PatternRewriter &rewriter) const override {
 
     mlir::Location loc = iterWhileOp.getLoc();
+    mlir::arith::IntegerOverflowFlags flags{};
+    if (setNSW)
+      flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+    auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
+        rewriter.getContext(), flags);
     mlir::Value lowerBound = iterWhileOp.getLowerBound();
     mlir::Value upperBound = iterWhileOp.getUpperBound();
     mlir::Value step = iterWhileOp.getStep();
@@ -235,7 +250,8 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
     mlir::Value iv = scfWhileOp.getAfterArguments()[0];
 
     rewriter.setInsertionPointToStart(afterBody);
-    results.push_back(mlir::arith::AddIOp::create(rewriter, loc, iv, step));
+    results.push_back(
+        mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr));
     llvm::append_range(results, hasFinalValue
                                     ? resultOp->getOperands().drop_front()
                                     : resultOp->getOperands());
@@ -249,6 +265,9 @@ struct IterWhileConversion : public mlir::OpRewritePattern<fir::IterWhileOp> {
                                      : scfWhileOp->getResults().drop_front());
     return mlir::success();
   }
+
+private:
+  bool setNSW;
 };
 
 void copyBlockAndTransformResult(mlir::PatternRewriter &rewriter,
@@ -294,13 +313,15 @@ struct IfConversion : public mlir::OpRewritePattern<fir::IfOp> {
 } // namespace
 
 void fir::populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
-                                   bool parallelUnordered) {
-  patterns.add<IterWhileConversion, IfConversion>(patterns.getContext());
-  patterns.add<DoLoopConversion>(patterns.getContext(), parallelUnordered);
+                                   bool parallelUnordered, bool setNSW) {
+  patterns.add<IfConversion>(patterns.getContext());
+  patterns.add<IterWhileConversion>(patterns.getContext(), setNSW);
+  patterns.add<DoLoopConversion>(patterns.getContext(), parallelUnordered,
+                                 setNSW);
 }
 
 void FIRToSCFPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
-  fir::populateFIRToSCFRewrites(patterns, parallelUnordered);
+  fir::populateFIRToSCFRewrites(patterns, parallelUnordered, setNSW);
   walkAndApplyPatterns(getOperation(), std::move(patterns));
 }

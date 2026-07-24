@@ -20,6 +20,22 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+static mlir::Value makeLdu(CIRGenFunction &cgf, const CallExpr *expr,
+                           llvm::StringRef intrinsicName) {
+  auto &builder = cgf.getBuilder();
+  Address ptr = cgf.emitPointerWithAlignment(expr->getArg(0));
+  QualType argType = expr->getArg(0)->getType();
+  mlir::Type elemTy = cgf.convertTypeForMem(argType->getPointeeType());
+  clang::CharUnits align = ptr.getAlignment();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Value alignVal =
+      builder.getConstantInt(loc, builder.getSInt32Ty(), align.getQuantity());
+  return cir::LLVMIntrinsicCallOp::create(
+             builder, loc, builder.getStringAttr(intrinsicName), elemTy,
+             {ptr.emitRawPointer(), alignVal})
+      .getResult();
+}
+
 /// Emit a CIR LLVMIntrinsicCallOp for a unary NVVM intrinsic.
 /// The result type is inferred from the single argument.
 static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
@@ -213,19 +229,13 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_ldu_ul2:
   case NVPTX::BI__nvvm_ldu_ull:
   case NVPTX::BI__nvvm_ldu_ull2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeLdu(*this, expr, "nvvm.ldu.global.i");
   case NVPTX::BI__nvvm_ldu_f:
   case NVPTX::BI__nvvm_ldu_f2:
   case NVPTX::BI__nvvm_ldu_f4:
   case NVPTX::BI__nvvm_ldu_d:
   case NVPTX::BI__nvvm_ldu_d2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeLdu(*this, expr, "nvvm.ldu.global.f");
   case NVPTX::BI__nvvm_atom_cta_add_gen_i:
   case NVPTX::BI__nvvm_atom_cta_add_gen_l:
   case NVPTX::BI__nvvm_atom_cta_add_gen_ll:
@@ -788,10 +798,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
     return mlir::Value{};
   case NVPTX::BI__nvvm_ldu_h:
   case NVPTX::BI__nvvm_ldu_h2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeLdu(*this, expr, "nvvm.ldu.global.f");
   case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented NVPTX builtin call: ") +

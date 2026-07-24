@@ -197,6 +197,8 @@ def sve_cntd_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -2>">;
 def NEONSplatOfSVELogicalImmPat : ComplexPattern<vAny, 1, "SelectNEONSplatOfSVELogicalImm", []>;
 def NEONSplatOfSVEAddSubImm : ComplexPattern<vAny, 2, "SelectNEONSplatOfSVEAddSubImm", []>;
 def NEONSplatOfSVEArithSImm: ComplexPattern<vAny, 1, "SelectNEONSplatOfSVEArithSImm", []>;
+def NEONSplatOfSImm8: ComplexPattern<vAny, 1, "SelectNEONSplatOfSImm8", []>;
+def NEONSplatOfUImm8: ComplexPattern<vAny, 1, "SelectNEONSplatOfUImm8", []>;
 
 def SDT_AArch64Reduce : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisVec<2>]>;
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3,
@@ -4734,24 +4736,37 @@ let Predicates = [HasSVE_or_SME] in {
     def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_D_PSEUDO>;
     def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_D_PSEUDO>;
     def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEAddSubImm, MUL_ZI_D_PSEUDO, i32>;
+    // NOTE: smax/smin/umax/umin are custom lowered to SVE predicated operations.
   }
 
   foreach VT = [v2i32, v4i32] in {
     def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_S_PSEUDO>;
     def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_S_PSEUDO>;
     def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smin,         VT, NEONSplatOfSImm8, SMIN_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smax,         VT, NEONSplatOfSImm8, SMAX_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umax,         VT, NEONSplatOfUImm8, UMAX_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umin,         VT, NEONSplatOfUImm8, UMIN_ZI_S_PSEUDO, i32>;
   }
 
   foreach VT = [v4i16, v8i16] in {
     def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_H_PSEUDO>;
     def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_H_PSEUDO>;
     def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smax,         VT, NEONSplatOfSImm8, SMAX_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smin,         VT, NEONSplatOfSImm8, SMIN_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umax,         VT, NEONSplatOfUImm8, UMAX_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umin,         VT, NEONSplatOfUImm8, UMIN_ZI_H_PSEUDO, i32>;
   }
 
   foreach VT = [v8i8, v16i8] in {
     def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_B_PSEUDO>;
     def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
     def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smax,         VT, NEONSplatOfSImm8, SMAX_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smin,         VT, NEONSplatOfSImm8, SMIN_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umax,         VT, NEONSplatOfUImm8, UMAX_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umin,         VT, NEONSplatOfUImm8, UMIN_ZI_B_PSEUDO, i32>;
   }
 }
 

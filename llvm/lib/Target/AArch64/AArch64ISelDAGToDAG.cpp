@@ -526,6 +526,8 @@ private:
   bool SelectNEONSplatOfSVELogicalImm(SDValue N, SDValue &Imm);
   bool SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm, SDValue &Shift);
   bool SelectNEONSplatOfSVEArithSImm(SDValue N, SDValue &Imm);
+  bool SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm);
+  bool SelectNEONSplatOfUImm8(SDValue N, SDValue &Imm);
 
   bool SelectSVESignedArithImm(SDLoc DL, APInt Value, SDValue &Imm);
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
@@ -654,6 +656,9 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
   if (N->getOpcode() == AArch64ISD::DUP)
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(SplatWidth);
+  APInt SplatVal;
+  if (ISD::isConstantSplatVector(N.getNode(), SplatVal))
+    return SplatVal.trunc(SplatWidth);
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
   // in AArch64ISelLowering.
   return std::nullopt;
@@ -701,6 +706,32 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEArithSImm(SDValue N,
   if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
     return SelectSVESignedArithImm(SDLoc(N), *ImmVal, Imm);
   return false;
+}
+
+bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  if (!ImmAPIntVal)
+    return false;
+
+  int64_t ImmVal = ImmAPIntVal->getSExtValue();
+  if (ImmVal < -128 || ImmVal > 127)
+    return false;
+
+  Imm = CurDAG->getSignedTargetConstant(ImmVal, SDLoc(N), MVT::i32);
+  return true;
+}
+
+bool AArch64DAGToDAGISel::SelectNEONSplatOfUImm8(SDValue N, SDValue &Imm) {
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  if (!ImmAPIntVal)
+    return false;
+
+  uint64_t ImmVal = ImmAPIntVal->getZExtValue();
+  if (ImmVal > 255)
+    return false;
+
+  Imm = CurDAG->getTargetConstant(ImmVal, SDLoc(N), MVT::i32);
+  return true;
 }
 
 bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(

@@ -1,6 +1,6 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgpu7.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 
 ; CHECK:      	.amdgpu_metadata
 ; CHECK:      amdhsa.kernels:  

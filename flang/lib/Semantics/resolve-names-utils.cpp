@@ -202,6 +202,7 @@ private:
     }
   }
   void Analyze(const parser::AssumedShapeSpec &);
+  void Analyze(const parser::AssumedShapeBoundsSpec &);
   void Analyze(const parser::ExplicitShapeSpec &);
   void Analyze(const parser::ExplicitShapeBoundsSpec &);
   void Analyze(const parser::AssumedImpliedSpec &);
@@ -272,6 +273,32 @@ static bool shouldRewriteShapeSpecListToExplicitBounds(
   return foundArray;
 }
 
+static bool shouldRewriteAssumedShapeSpecListToAssumedBounds(
+    SemanticsContext &context, const parser::ArraySpec &x) {
+  auto &assumedShapeSpecList{
+      std::get<std::list<parser::AssumedShapeSpec>>(x.u)};
+
+  if (assumedShapeSpecList.size() != 1) {
+    return false;
+  }
+
+  auto &assumedShapeSpec{assumedShapeSpecList.front()};
+  const auto &lowerBoundOpt{assumedShapeSpec.v};
+
+  bool foundArray{false};
+
+  if (lowerBoundOpt) {
+    const auto &lowerBound{*lowerBoundOpt};
+    if (MaybeExpr analyzedExpr =
+            AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(lowerBound));
+        analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+    }
+  }
+
+  return foundArray;
+}
+
 static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
   auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
       const_cast<parser::ArraySpec &>(x).u)};
@@ -292,6 +319,21 @@ static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
   mutableArraySpec.u = std::move(boundsSpec);
 }
 
+static void rewriteAssumedShapeSpecListToAssumedBounds(
+    const parser::ArraySpec &x) {
+  auto &assumedShapeSpecList{std::get<std::list<parser::AssumedShapeSpec>>(
+      const_cast<parser::ArraySpec &>(x).u)};
+  auto &mutableArraySpec{const_cast<parser::ArraySpec &>(x)};
+  auto &mutableAssumedShapeSpec{assumedShapeSpecList.front()};
+
+  auto &lowerBoundOpt{mutableAssumedShapeSpec.v};
+  CHECK(lowerBoundOpt.has_value());
+
+  parser::IntExpr lowerIntExpr{std::move(lowerBoundOpt->v.thing)};
+  parser::AssumedShapeBoundsSpec boundsSpec{std::move(lowerIntExpr)};
+  mutableArraySpec.u = std::move(boundsSpec);
+}
+
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
   // This node is rewritten manually here, as opposed to using RewriteParseTree,
   // because RewriteParseTree is called after ResolveNames in
@@ -300,6 +342,10 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
   if (std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) &&
       shouldRewriteShapeSpecListToExplicitBounds(context_, x)) {
     rewriteShapeSpecListToExplicitBounds(x);
+  }
+  if (std::get_if<std::list<parser::AssumedShapeSpec>>(&x.u) &&
+      shouldRewriteAssumedShapeSpecListToAssumedBounds(context_, x)) {
+    rewriteAssumedShapeSpecListToAssumedBounds(x);
   }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
@@ -333,6 +379,13 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::CoarraySpec &x) {
       x.u);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
+}
+
+void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeBoundsSpec &x) {
+  context_.Say("Analyze overload for AssumedShapeBoundsSpec"_todo_en_US);
+  // prevent CHECK abort in Analyze(ArraySpec), otherwise it'll abort before
+  // printing error message
+  arraySpec_.push_back(ShapeSpec::MakeAssumedShape(Bound{1}));
 }
 
 void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeSpec &x) {
