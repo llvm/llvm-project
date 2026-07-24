@@ -6610,6 +6610,14 @@ def print_libgcc_file_name : Flag<["-", "--"], "print-libgcc-file-name">,
   HelpText<"Print the library path for the currently used compiler runtime "
            "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">,
   Visibility<[ClangOption, CLOption]>;
+def print_cxx_stdlib : Flag<["-", "--"], "print-cxx-stdlib">,
+  HelpText<"Print the C++ standard library selected by the driver">,
+  Visibility<[ClangOption]>;
+def print_cxx_stdlib_include_dirs :
+    Flag<["-", "--"], "print-cxx-stdlib-include-dirs">,
+  HelpText<"Print the C++ standard library include directories selected by "
+           "the driver">,
+  Visibility<[ClangOption]>;
 def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_flags : Flag<["-", "--"], "print-multi-flags-experimental">,

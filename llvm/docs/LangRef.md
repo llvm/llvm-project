@@ -1522,6 +1522,12 @@ Currently, only the following parameter attributes are defined:
     met. For further details, please see the discussion of the NoAlias response
     in {ref}`alias analysis <Must, May,  or No>`.
 
+    `noalias` also applies to accesses from other threads, unless they
+    happen-before function entry, or function exit happens-before them. This
+    means that conflicting concurrent accesses from other threads either need
+    to be based on the noalias pointer, or else be appropriately synchronized
+    *outside* the function.
+
     Note that this definition of `noalias` is intentionally similar
     to the definition of `restrict` in C99 for function arguments.
 
