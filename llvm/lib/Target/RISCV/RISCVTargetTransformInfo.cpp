@@ -3012,6 +3012,10 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // taken cost of the backedge.
   if (Cost < 12)
     UP.Force = true;
+
+  // Set a lower runtime unrolling count for in-order models.
+  if (!ST->getSchedModel().isOutOfOrder())
+    UP.DefaultUnrollRuntimeCount = 4;
 }
 
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -3638,10 +3642,6 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  // TODO: Enable expansion when unaligned access is not supported after we fix
-  // issues in ExpandMemcmp.
-  if (!ST->enableUnalignedScalarMem())
-    return Options;
 
   if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;

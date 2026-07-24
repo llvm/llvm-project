@@ -1348,12 +1348,7 @@ public:
     OpsEnd = Intrinsic,
   };
 
-  /// Returns true if this VPInstruction generates scalar values for all lanes.
-  /// Most VPInstructions generate a single value per part, either vector or
-  /// scalar. VPReplicateRecipe takes care of generating multiple (scalar)
-  /// values per all lanes, stemming from an original ingredient. This method
-  /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
-  /// underlying ingredient.
+  /// Returns true if this recipe produces scalar values for all VF lanes.
   bool doesGeneratePerAllLanes() const;
 
   /// Return the number of operands determined by the opcode of the
@@ -1510,8 +1505,7 @@ public:
   /// e.g. by performing a reduction or extracting a lane.
   bool isVectorToScalar() const;
 
-  /// Returns true if this VPInstruction's operands are single scalars and the
-  /// result is also a single scalar.
+  /// Returns true if the recipe produces a single scalar value.
   bool isSingleScalar() const;
 
   /// Returns the symbolic name assigned to the VPInstruction.
@@ -2758,6 +2752,9 @@ public:
 
   ~VPWidenPHIRecipe() override = default;
 
+  /// This recipe generates a PHI.
+  unsigned getOpcode() const { return Instruction::PHI; }
+
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenPHISC)
 
   /// Generate the phi/select nodes.
@@ -3432,7 +3429,11 @@ public:
                                          bool IsSingleScalar, ElementCount VF,
                                          VPCostContext &Ctx);
 
+  /// Returns true if the recipe produces a single scalar value.
   bool isSingleScalar() const { return IsSingleScalar; }
+
+  /// Returns true if the recipe produces scalar values for all VF lanes.
+  bool doesGeneratePerAllLanes() const { return !IsSingleScalar; }
 
   bool isPredicated() const { return IsPredicated; }
 
@@ -3851,11 +3852,11 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   VPValue *getEVL() const { return getOperand(1); }
 
   /// Generate the wide load or gather.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenLoadEVLRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3867,13 +3868,13 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
 protected:
-  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
-  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3956,11 +3957,11 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   VPValue *getEVL() const { return getOperand(2); }
 
   /// Generate the wide store or scatter.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenStoreEVLRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3977,13 +3978,13 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   }
 
 protected:
-  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
-  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -4266,6 +4267,9 @@ public:
     else
       addOperand(StartIndex);
   }
+
+  /// Returns true if this recipe produces scalar values for all VF lanes.
+  bool doesGeneratePerAllLanes() const;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {

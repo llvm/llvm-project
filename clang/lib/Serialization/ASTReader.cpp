@@ -6669,6 +6669,7 @@ bool ASTReader::ParseLanguageOptions(const RecordData &Record,
                                      bool AllowCompatibleDifferences) {
   LangOptions LangOpts;
   unsigned Idx = 0;
+  LangOpts.LangStd = static_cast<LangStandard::Kind>(Record[Idx++]);
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   LangOpts.Name = Record[Idx++];
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -7708,6 +7709,11 @@ void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 
 void TypeLocReader::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
+}
+
+void TypeLocReader::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  llvm_unreachable(
+      "should be replaced with a concrete type before serialization");
 }
 
 void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -12623,6 +12629,9 @@ void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 }
 
 void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  C->setModifier(Record.readEnum<OpenMPThreadLimitClauseModifier>());
+  C->setModifierLoc(Record.readSourceLocation());
+  C->setModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();

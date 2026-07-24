@@ -48,8 +48,8 @@ inline Session *unwrap(orc_rt_SessionRef S) noexcept {
 /// Represents an ORC executor Session.
 class Session {
 private:
-  // Implementation helper for callManagedCodeSync (non-void version).
-  template <typename RetT> struct ManagedCodeSyncCaller {
+  // Implementation helper for callManagedCode (non-void version).
+  template <typename RetT> struct ManagedCodeCaller {
     template <typename FnT, typename... ArgTs>
     static std::optional<RetT> call(TaskGroup::Token Tok, FnT &&Fn,
                                     ArgTs &&...Args) {
@@ -59,45 +59,14 @@ private:
     }
   };
 
-  // Implementation helper for callManagedCodeSync (void version).
-  template <> struct ManagedCodeSyncCaller<void> {
+  // Implementation helper for callManagedCode (void version).
+  template <> struct ManagedCodeCaller<void> {
     template <typename FnT, typename... ArgTs>
     static bool call(TaskGroup::Token Tok, FnT &&Fn, ArgTs &&...Args) {
       if (!Tok)
         return false;
       std::forward<FnT>(Fn)(std::forward<ArgTs>(Args)...);
       return true;
-    }
-  };
-
-  template <typename ReturnArgTupleT> struct ManagedCodeAsyncCaller;
-
-  // Implementation helper for callManagedCodeAsync (non-void version).
-  template <typename T>
-  struct ManagedCodeAsyncCaller<std::tuple<std::optional<T>>> {
-    template <typename ReturnT, typename FnT, typename... ArgTs>
-    static void call(TaskGroup::Token Tok, ReturnT &&Return, FnT &&Fn,
-                     ArgTs &&...Args) {
-      if (!Tok)
-        return std::forward<ReturnT>(Return)(std::nullopt);
-
-      std::forward<FnT>(Fn)([Tok = std::move(Tok), R = std::move(Return)](
-                                T Value) { R(std::move(Value)); },
-                            std::forward<ArgTs>(Args)...);
-    }
-  };
-
-  // Implementation helper for callManagedCodeAsync (void version).
-  template <> struct ManagedCodeAsyncCaller<std::tuple<bool>> {
-    template <typename ReturnT, typename FnT, typename... ArgTs>
-    static void call(TaskGroup::Token Tok, ReturnT &&Return, FnT &&Fn,
-                     ArgTs &&...Args) {
-      if (!Tok)
-        return std::forward<ReturnT>(Return)(false);
-
-      std::forward<FnT>(Fn)(
-          [Tok = std::move(Tok), R = std::move(Return)]() { R(true); },
-          std::forward<ArgTs>(Args)...);
     }
   };
 
@@ -110,18 +79,20 @@ public:
   using OnControllerCallReturnFn =
       move_only_function<void(WrapperFunctionBuffer)>;
 
-  /// Callback used by the Session to run incoming wrapper-function calls.
-  ///
-  /// A ManagedCodeTaskGroup token is created for each call to this callback,
-  /// and implementations must eventually call either Fn (typically as
-  /// Fn(S, CallId, Return, ArgBytes.release())), or call Return directly to
-  /// bail out of the call (typically with
-  /// WrapperFunctionBuffer::createOutOfBandError(...)). Failing to do either
-  /// will block Session shutdown indefinitely.
-  using RunWrapperCall = move_only_function<void(
-      orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-      orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
+  /// A unit of work handed to the Session's DispatchFn for execution.
+  using Task = move_only_function<void()>;
 
+  /// Callback used by the Session to dispatch tasks for execution.
+  ///
+  /// The Session builds a Task for each unit of work it needs run -- an
+  /// incoming wrapper-function call, or a continuation for a result returned
+  /// by the controller -- and hands it to this callback, which is responsible
+  /// for arranging the task to be run inline, queued, or posted to a thread
+  /// pool.
+  using DispatchFn = move_only_function<void(Task)>;
+
+  /// Tag used to identify executor-callable functions in the controller.
+  /// See callController.
   using HandlerTag = void *;
 
   /// Provides access to the controller.
@@ -133,7 +104,44 @@ public:
 
   protected:
     using HandlerTag = Session::HandlerTag;
-    using OnControllerCallReturnFn = Session::OnControllerCallReturnFn;
+
+    /// Opaque wrapper for a controller-call result handler.
+    ///
+    /// ControllerAccess implementations hold these for pending calls but cannot
+    /// invoke them directly. Each must be completed exactly once, via one of
+    /// three Session-provided paths, so the handler runs in a context where it
+    /// may safely touch managed code:
+    ///
+    ///   - handleControllerCallResult(OnComplete, ResultBytes): the controller
+    ///     returned a result. Dispatches the handler under a fresh managed-code
+    ///     token.
+    ///
+    ///   - failPendingControllerCall(OnComplete): a call that was enqueued
+    ///     while connected is failed because the connection dropped before a
+    ///     result arrived (the disconnect drain). Dispatches the handler under
+    ///     a fresh token with a disconnect error.
+    ///
+    ///   - failControllerCallInline(OnComplete): a call made from within
+    ///     callController while already disconnecting, which can therefore
+    ///     never be enqueued. Runs the handler inline with a disconnect error,
+    ///     on the caller's stack, covered by the caller's token (see
+    ///     callController).
+    ///
+    /// Together these guarantee the handler always runs exactly once -- with a
+    /// result or a disconnect error.
+    class OnControllerCallReturn {
+      friend class Session;
+
+    public:
+      OnControllerCallReturn() = default;
+      explicit operator bool() const noexcept { return !!Wrapped; }
+
+    private:
+      OnControllerCallReturn(OnControllerCallReturnFn Wrapped)
+          : Wrapped(std::move(Wrapped)) {}
+
+      OnControllerCallReturnFn Wrapped;
+    };
 
     ControllerAccess(Session &S) : S(S) {}
 
@@ -175,14 +183,42 @@ public:
     /// to be a cheap operation (e.g. signaling a shutdown flag) with the
     /// actual disconnection and notifyDisconnected call happening on another
     /// thread.
+    ///
+    /// When disconnecting, a ControllerAccess must fail every still-pending
+    /// controller call via failPendingControllerCall(OnComplete). This drain
+    /// must complete before notifyDisconnected, while the managed-code group is
+    /// still open, so the completions are dispatched rather than dropped
+    /// (failPendingControllerCall dispatches under a token and asserts the
+    /// group is open). The drain must be serialized with the disconnecting
+    /// check in callController, so a call racing disconnection is either
+    /// drained here or failed inline there -- never left pending.
     virtual void disconnect() = 0;
 
     /// Report an error to the session.
     void reportError(Error Err) { S.reportError(std::move(Err)); }
 
     /// Call the handler in the controller associated with the given tag.
-    virtual void callController(OnControllerCallReturnFn OnComplete,
-                                HandlerTag T,
+    ///
+    /// OnComplete must be completed exactly once (see OnControllerCallReturn).
+    /// On entry, check whether this ControllerAccess has begun disconnecting --
+    /// its connection state is closing or closed, whether triggered locally by
+    /// disconnect() or by the remote:
+    ///
+    ///   - Still connected: enqueue the continuation. It is later completed via
+    ///     handleControllerCallResult when the controller returns a result, or
+    ///     via failPendingControllerCall if disconnection drains it first (see
+    ///     disconnect).
+    ///
+    ///   - Disconnecting: the call can never receive a result, so fail it
+    ///     immediately via failControllerCallInline, on the current thread.
+    ///
+    /// Because the disconnecting case completes the handler inline, the handler
+    /// may run before callController returns, on the calling thread; callers
+    /// must tolerate this. It is safe: the caller is still on the stack, so a
+    /// managed-code caller's token still covers the handler, and a non-managed
+    /// caller needs none (a handler that re-enters managed code must acquire
+    /// its own token and handle denial).
+    virtual void callController(OnControllerCallReturn OnComplete, HandlerTag T,
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
     /// Send the result of the given wrapper function call to the controller.
@@ -199,8 +235,8 @@ public:
     /// exactly-once semantics for this method, even when disconnect is called
     /// concurrently with controller-initiated disconnection.
     ///
-    /// No calls should be made to reportError or handleWrapperCall after this
-    /// method is called.
+    /// No calls should be made to reportError, handleWrapperCall, or
+    /// handleControllerCallResult after this method is called.
     void notifyDisconnected() { S.handleDisconnect(); }
 
     /// Ask the Session to run the given wrapper function.
@@ -209,6 +245,43 @@ public:
     void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
                            WrapperFunctionBuffer ArgBytes) {
       S.handleWrapperCall(CallId, Fn, std::move(ArgBytes));
+    }
+
+    /// Complete a controller call with a result the controller returned, by
+    /// dispatching its handler under a fresh managed-code token. Must be called
+    /// while the managed-code group is still open -- i.e. before
+    /// notifyDisconnected; the Session asserts this.
+    ///
+    /// To fail a pending call on disconnect, use failPendingControllerCall.
+    void handleControllerCallResult(OnControllerCallReturn OnComplete,
+                                    WrapperFunctionBuffer ResultBytes) {
+      S.handleControllerCallResult(std::move(OnComplete),
+                                   std::move(ResultBytes));
+    }
+
+    /// Fail a pending (already-enqueued) controller call because the connection
+    /// dropped before it received a result -- the disconnect drain.
+    ///
+    /// Equivalent to completing it with a disconnect error via
+    /// handleControllerCallResult (dispatched under a token, same open-group
+    /// requirement), but named for the drain and taking no result, so the
+    /// failure value can't be gotten wrong.
+    void failPendingControllerCall(OnControllerCallReturn OnComplete) {
+      S.failPendingControllerCall(std::move(OnComplete));
+    }
+
+    /// Fail a controller call by running its handler inline, on the current
+    /// thread, with a disconnect error -- without acquiring a managed-code
+    /// token.
+    ///
+    /// Use ONLY from within callController, to fail a call that arrives while
+    /// already disconnecting (see callController). The original caller is then
+    /// still on the stack, so the handler is covered by the caller's token, or
+    /// needs none. A call that was successfully enqueued is instead failed via
+    /// failPendingControllerCall; a real result uses
+    /// handleControllerCallResult.
+    void failControllerCallInline(OnControllerCallReturn OnComplete) {
+      S.failControllerCallInline(std::move(OnComplete));
     }
 
   private:
@@ -221,13 +294,14 @@ public:
   /// program are not generally visible to ORC-RT, but can optionally be
   /// reported by calling the orc_rt_Session_reportError function.)
   ///
-  /// The RunCall callback will be invoked for every incoming wrapper-function
-  /// call, and is responsible for arranging the call to be run (inline,
-  /// queued, or posted to a thread pool, at the caller's discretion).
+  /// The Dispatch callback is invoked to run tasks generated by the Session
+  /// (incoming wrapper-function calls, and continuations for results returned
+  /// by the controller), and is responsible for arranging each task to be run
+  /// inline, queued, or posted to a thread pool.
   ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
+  Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
           ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
@@ -361,65 +435,56 @@ public:
   /// When calling code managed by a Session (e.g. JIT'd code, or library code
   /// loaded on behalf of JIT'd code), clients should hold a token for this
   /// group, which can be constructed from the returned TokenSource. That token
-  /// will prevent the Session from shutting down any Services (and the Session
-  /// itself) until tasks accessing managed code have completed.
+  /// will delay Session teardown until all tasks accessing managed code have
+  /// completed.
   ///
-  /// Clients should prefer using the callManagedCodeSync and
-  /// callManagedCodeAsync helpers to automatically acquire and hold a token
-  /// for the duration of a call.
+  /// Clients should prefer using callManagedCode to automatically acquire
+  /// and hold a token for the duration of a call.
   TaskGroup::TokenSource managedCodeTokenSource() const {
     return ManagedCodeTaskGroup;
   }
 
-  /// Synchronously call managed code.
+  /// Call managed code.
   ///
-  /// This helper tries to acquire a ManagedCodeTaskGroup token and then call
-  /// the given function object with the given arguments while holding the
-  /// token.
+  /// This helper tries to acquire a ManagedCodeTaskGroup token and, if
+  /// successful, calls the given function object with the given arguments
+  /// while holding the token.
   ///
-  /// If the token is successfully acquired then this function will return the
-  /// call result as a std::optional<T> (for a non-void return type T), or
-  /// boolean true (for void returns).
+  /// The token is held only for the duration of the (synchronous) call to Fn,
+  /// and released as soon as Fn returns; anything Fn runs inline on this thread
+  /// before returning is covered by it. Work Fn defers past its return --
+  /// stashed to run later, or handed to another thread -- is NOT covered: it
+  /// runs on a stack the token no longer guards. Whoever runs such deferred
+  /// work is responsible for ensuring a token covers it, typically by acquiring
+  /// one (e.g. from a TokenSource, see managedCodeTokenSource) and aborting the
+  /// work if the acquire is denied, exactly as for any entry into managed code.
+  /// (A resumed continuation cannot bracket its own entry, since its landing
+  /// point may itself be managed code.)
   ///
-  /// If the token is not successfully acquired then this function will return
-  /// std::nullopt (for non-void return type) or boolean false (for void
-  /// returns).
+  /// If the token is successfully acquired then this function returns the
+  /// result of the call to Fn as a std::optional<T> (for a non-void return
+  /// type T), or boolean true (for void returns). Note that for asynchronous
+  /// functions (which typically return void) this reflects only that Fn was
+  /// invoked, not the result of the asynchronous operation.
+  ///
+  /// If the token is not successfully acquired then Fn is not called and this
+  /// function returns std::nullopt (for a non-void return type) or boolean
+  /// false (for void returns).
+  ///
+  /// See the "Managed code execution and shutdown" section of docs/Design.md
+  /// for the model behind managed-code tokens and shutdown.
   template <typename FnT, typename... ArgTs>
-  decltype(auto) callManagedCodeSync(FnT &&Fn, ArgTs &&...Args) {
-    return ManagedCodeSyncCaller<std::invoke_result_t<FnT, ArgTs...>>::call(
+  decltype(auto) callManagedCode(FnT &&Fn, ArgTs &&...Args) {
+    return ManagedCodeCaller<std::invoke_result_t<FnT, ArgTs...>>::call(
         TaskGroup::Token(ManagedCodeTaskGroup), std::forward<FnT>(Fn),
         std::forward<ArgTs>(Args)...);
-  }
-
-  /// Asynchronously call managed code.
-  ///
-  /// ReturnT must be a function object that takes either a boolean or a
-  /// std::optional<T>.
-  ///
-  /// callManagedCodeAsync tries to acquire a ManagedCodeTaskGroup token and
-  /// then call the given async function object while holding that token.
-  ///
-  /// If the token is successfully acquired then this function will call Fn,
-  /// passing in a wrapped version of Return that takes a T (if Return takes a
-  /// std::optional<T>), or a wrapped version of Return that takes no arguments
-  /// (if Return takes a bool).
-  ///
-  /// If the token is not successfully acquired then this function will not
-  /// call Fn, but instead immediately call Return with std::nullopt (if Return
-  /// takes a std::optional<T>), or false (if Return takes a boolean).
-  template <typename ReturnT, typename FnT, typename... ArgTs>
-  void callManagedCodeAsync(ReturnT &&Return, FnT &&Fn, ArgTs &&...Args) {
-    ManagedCodeAsyncCaller<typename CallableArgInfo<ReturnT>::args_tuple_type>::
-        call(TaskGroup::Token(ManagedCodeTaskGroup),
-             std::forward<ReturnT>(Return), std::forward<FnT>(Fn),
-             std::forward<ArgTs>(Args)...);
   }
 
   /// Call a tagged handler in the Controller.
   ///
   /// This method can be called directly, but is expected to be more commonly
-  /// called via WrapperFunction::call using a CallViaSession object (returned
-  /// by the callViaSession method).
+  /// called via WrapperFunction::call using a ControllerCaller object (returned
+  /// by the controllerCaller method).
   void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
@@ -433,9 +498,9 @@ public:
   /// controller handler with the given tag.
   ///
   /// Useable as a Caller implementation with WrapperFunction::call.
-  class CallViaSession {
+  class ControllerCaller {
   public:
-    CallViaSession(Session &S, HandlerTag T) : S(S), T(T) {}
+    ControllerCaller(Session &S, HandlerTag T) : S(S), T(T) {}
 
     void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
@@ -447,10 +512,10 @@ public:
     HandlerTag T;
   };
 
-  /// Get a WrapperFunction::call-compatible Caller that will call through to
-  /// the handler with the given tag.
-  CallViaSession callViaSession(HandlerTag T) noexcept {
-    return CallViaSession(*this, T);
+  /// Get a WrapperFunction::call-compatible Caller that will call the given
+  /// handler in the controller via Session::callController.
+  ControllerCaller controllerCaller(HandlerTag T) noexcept {
+    return ControllerCaller(*this, T);
   }
 
 private:
@@ -500,7 +565,8 @@ private:
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
                          WrapperFunctionBuffer ArgBytes) {
-    if (!ManagedCodeTaskGroup->acquireToken()) {
+    TaskGroup::Token T(ManagedCodeTaskGroup);
+    if (!T) {
       // The ManagedCodeTaskGroup is only closed after detach, so if token
       // acquisition fails we don't try to return an error: the controller
       // should already have signalled error to the caller, and we have no
@@ -508,7 +574,52 @@ private:
       return;
     }
 
-    RunCall(wrap(this), CallId, &wrapperReturn, Fn, std::move(ArgBytes));
+    Dispatch([this, CallId, Fn, ArgBytes = std::move(ArgBytes),
+              T = std::move(T)]() mutable {
+      Fn(wrap(this), CallId, &wrapperReturn, ArgBytes.release());
+    });
+  }
+
+  void handleControllerCallResult(
+      ControllerAccess::OnControllerCallReturn OnComplete,
+      WrapperFunctionBuffer ResultBytes) {
+    TaskGroup::Token T(ManagedCodeTaskGroup);
+
+    if (!T) {
+      // Contract violation: a deferred completion must precede
+      // notifyDisconnected (while the group is still open), and a synchronous
+      // failure must use failControllerCallInline instead. Reaching here means
+      // one of those was broken; falling through would run the handler
+      // unbracketed into a possibly-torn-down Session. Fail loudly.
+      assert(false && "handleControllerCallResult on a closed "
+                      "ManagedCodeTaskGroup");
+      abort();
+    }
+
+    Dispatch(
+        [OnComplete = std::move(OnComplete.Wrapped),
+         ResultBytes = std::move(ResultBytes),
+         T = std::move(T)]() mutable { OnComplete(std::move(ResultBytes)); });
+  }
+
+  /// The canonical out-of-band error delivered when a controller call is
+  /// failed because of disconnection. Used by failPendingControllerCall and
+  /// failControllerCallInline; not for direct use.
+  static WrapperFunctionBuffer disconnectError() {
+    return WrapperFunctionBuffer::createOutOfBandError("disconnected");
+  }
+
+  void failPendingControllerCall(
+      ControllerAccess::OnControllerCallReturn OnComplete) {
+    handleControllerCallResult(std::move(OnComplete), disconnectError());
+  }
+
+  void failControllerCallInline(
+      ControllerAccess::OnControllerCallReturn OnComplete) {
+    // Runs inline, on the caller's stack, without a token: valid only for a
+    // synchronous failure from within callController, where the caller (and its
+    // token, if any) is still on the stack. See callController.
+    OnComplete.Wrapped(disconnectError());
   }
 
   void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
@@ -516,7 +627,7 @@ private:
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
   ExecutorProcessInfo EPI;
-  RunWrapperCall RunCall;
+  DispatchFn Dispatch;
   std::shared_ptr<TaskGroup> ManagedCodeTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;

@@ -502,10 +502,14 @@ void cir::ConditionOp::getSuccessorRegions(
   // TODO(cir): The condition value may be folded to a constant, narrowing
   // down its list of possible successors.
 
-  // Parent is a loop: condition may branch to the body or to the parent op.
+  // Parent is a loop: condition may branch to the body, or on the false edge
+  // to the per-iteration cleanup region if present, otherwise to the parent op.
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody());
-    regions.emplace_back(getOperation());
+    if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
+      regions.emplace_back(cleanup);
+    else
+      regions.emplace_back(getOperation());
     return;
   }
 
@@ -534,6 +538,34 @@ LogicalResult cir::ConditionOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// WhileOp & ForOp
+//===----------------------------------------------------------------------===//
+
+template <typename LoopOpTy>
+static LogicalResult verifyLoopCleanup(LoopOpTy op) {
+  std::optional<cir::CleanupKind> cleanupKind = op.getCleanupKind();
+
+  // The cleanup kind attribute must be present exactly when a (non-empty)
+  // cleanup region is present.
+  if (cleanupKind.has_value() == op.getCleanup().empty())
+    return op.emitOpError("cleanup kind must be present if and only if the "
+                          "cleanup region is non-empty");
+
+  // A loop's per-iteration cleanup runs on every normal exit edge (loop exit,
+  // end of iteration, break/continue), so an EH-only cleanup is meaningless.
+  // Only 'normal' (exceptions disabled) and 'all' (normal + EH unwind) apply.
+  if (cleanupKind == cir::CleanupKind::EH)
+    return op.emitOpError("loop cleanup kind must be 'normal' or 'all', "
+                          "not 'eh'");
+
+  return success();
+}
+
+LogicalResult cir::WhileOp::verify() { return verifyLoopCleanup(*this); }
+
+LogicalResult cir::ForOp::verify() { return verifyLoopCleanup(*this); }
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -546,7 +578,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attrType)) {
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify or MethodAttr::verify. Don't need to repeat here.
     return success();
@@ -4655,6 +4688,18 @@ static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
   p.printNewline();
 
   p << "]";
+}
+
+//===----------------------------------------------------------------------===//
+// Standard library op signature matching
+//===----------------------------------------------------------------------===//
+
+bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
+                                      mlir::TypeRange results) {
+  if (operands.size() != getNumArgs() || results.size() != 1)
+    return false;
+  mlir::Type iterTy = operands[0];
+  return iterTy == operands[1] && iterTy == operands[2] && iterTy == results[0];
 }
 
 //===----------------------------------------------------------------------===//
