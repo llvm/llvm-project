@@ -1595,12 +1595,14 @@ Currently, only the following parameter attributes are defined:
 
 `nofreeobj`
 :   On arguments, this indicates that the underlying object of the argument
-    cannot be freed during the execution of the function (where "during" is in
-    the same sense as for `nofree`).
+    cannot be freed during the execution of the function. More precisely, any
+    free of the underlying object must happen-before function entry or function
+    exit must happen-before the free, otherwise the behavior is undefined.
 
     On return values, this indicates that the underlying object of the return
-    value cannot be freed from this point forward, for the duration of the
-    program's execution.
+    value cannot be freed from this point forward. More precisely, any free
+    of the underlying object must happen-before the function returns, otherwise
+    the behavior is undefined.
 
     Unlike `nofree`, it is not possible to free the underlying object through
     a different pointer either.
