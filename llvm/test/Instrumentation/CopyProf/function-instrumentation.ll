@@ -120,6 +120,20 @@ entry:
 ; CHECK-NEXT:    ret void
 ; CHECK-NOT:     call void @__copyprof_
 
+;; Tests that a function containing an ordinary tail call is instrumented normally,
+;; with the exit callback inserted between the tail call and return instructions.
+define void @ctor_with_tail(ptr %this) "copyprof-ctor"="8" {
+entry:
+  tail call void @tail_callee(ptr %this)
+  ret void
+}
+; CHECK-LABEL: define void @ctor_with_tail(ptr %this)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__copyprof_ctor_enter_callback(ptr %this, i64 8)
+; CHECK-NEXT:    tail call void @tail_callee(ptr %this)
+; CHECK-NEXT:    call void @__copyprof_ctor_exit_callback(ptr %this, i64 8)
+; CHECK-NEXT:    ret void
+
 ;; Tests that entry callbacks are inserted after alloca instructions.
 define void @ctor_with_alloca(ptr %this) "copyprof-ctor"="8" {
 entry:
