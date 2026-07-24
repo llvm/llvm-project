@@ -290,14 +290,15 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   if (Phi->getNumIncomingValues() != 2)
     return false;
 
-  for (unsigned Idx = 0; Idx != 2; ++Idx) {
-  Value *FoundStep = Phi->getIncomingValue(Idx);
-  Value *FoundStart = Phi->getIncomingValue(!Idx);
+  // Step comes from the loop latch, start comes from the other incoming value.
+  int LatchIdx = Phi->getBasicBlockIndex(L.getLoopLatch());
+  Value *FoundStep = Phi->getIncomingValue(LatchIdx);
+  Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
   Instruction *TV, *FV;
   if (!match(FoundStep,
              m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
-    continue;
+    return false;
 
   // For a conditional recurrence, both the true and false values of the
   // select must ultimately end up in the same recurrent BinOp.
@@ -316,8 +317,6 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   Start = FoundStart;
   Step = FoundStep;
   return true;
-  }
-  return false;
 }
 
 /// Iterates over all the phis in \p LoopLatch, and attempts to extract a
