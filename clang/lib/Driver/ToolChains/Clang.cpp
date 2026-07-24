@@ -9892,6 +9892,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         }
       }
 
+      // If no optimization level was requested we default to `-O0` for no-RDC
+      // mode compilations. Others default to `lto<O2>` as standard in ld.lld.
+      if (JA.getType() == types::TY_HIP_FATBIN &&
+          !ToolChainArgs.getLastArg(OPT_O_Group))
+        CompilerArgs.emplace_back("-O0");
+
       // If the user explicitly requested it via `--offload-arch` we should
       // extract it from any static libraries if present.
       for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ))

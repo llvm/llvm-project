@@ -75,7 +75,7 @@
 // O0-CGO2-NOT: "--lto-CGO2"
 
 // ALL: "{{.*}}clang-linker-wrapper{{.*}}" "--should-extract=gfx900"
-// DEFAULT-NOT: "--device-compiler=amdgcn-amd-amdhsa=-O{{.*}}"
+// DEFAULT: "--device-compiler=amdgcn-amd-amdhsa=-O0"
 // O0-SAME: "--device-compiler=amdgcn-amd-amdhsa=-O0"
 // O1-SAME: "--device-compiler=amdgcn-amd-amdhsa=-O1"
 // O2-SAME: "--device-compiler=amdgcn-amd-amdhsa=-O2"
@@ -86,7 +86,7 @@
 // O0-CGO2-SAME: "--device-compiler=amdgcn-amd-amdhsa=-O0"
 
 // ALL: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// DEFAULT-NOT: "-O{{.}}"
+// DEFAULT: "-O0"
 // O0-SAME: "-O0"
 // O1-SAME: "-O1"
 // O2-SAME: "-O2"
