@@ -19,11 +19,18 @@
 
 #include "test_macros.h"
 
+// The test should pass regardless of whether the compiler supports [[clang::trivial_abi]].
+#if __has_cpp_attribute(clang::trivial_abi)
+#  define TEST_CLANG_TRIVIAL_ABI [[clang::trivial_abi]]
+#else
+#  define TEST_CLANG_TRIVIAL_ABI
+#endif
+
 struct Tracker {
   std::size_t move_constructs = 0;
 };
 
-struct [[clang::trivial_abi]] Inner {
+struct TEST_CLANG_TRIVIAL_ABI Inner {
   TEST_CONSTEXPR_CXX20 explicit Inner(Tracker* tracker) : tracker_(tracker) {}
   TEST_CONSTEXPR_CXX20 Inner(const Inner& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
   TEST_CONSTEXPR_CXX20 Inner(Inner&& rhs) : tracker_(rhs.tracker_) { tracker_->move_constructs += 1; }
