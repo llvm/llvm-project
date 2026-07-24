@@ -1,10 +1,8 @@
-//===------ State.cpp - Kernel Language (CUDA/HIP) persistent state -------===//
+//===-- State.cpp - Kernel language persistent state ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,27 +10,32 @@
 #include "Types.h"
 
 #include "OffloadAPI.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
+#include <cassert>
 #include <cstdio>
 #include <mutex>
 
 #define CHECK_FATAL(Result, ...)                                               \
   if (Result && Result->Code) {                                                \
-    fprintf(stderr, __VA_ARGS__);                                              \
+    llvm::errs() << __VA_ARGS__ << '\n';                                       \
     abort();                                                                   \
   }
 
 using namespace llvm;
 using namespace offload;
 
-std::atomic<uint32_t> AnyNonDefaultDevice = 0;
+// Weak so another runtime object can override the default stream mode.
 __attribute__((weak)) uint32_t PerThreadQueue = 0;
 
 thread_local CallConfigurationTy CC = {};
 
+// Process-wide singleton and thread-state registry.
 static std::mutex StateLock;
 static std::atomic<StateTy *> StatePtr = nullptr;
 
@@ -50,7 +53,7 @@ static void deleteThreadState() {
     return;
 
   for (auto *TS : *ThreadStates)
-    delete (TS);
+    delete TS;
   delete ThreadStates;
   ThreadState = nullptr;
 }
@@ -58,7 +61,7 @@ static void deleteThreadState() {
 static void deleteState() {
   StateTy *ST = StatePtr.load();
   StatePtr.store(nullptr);
-  delete (ST);
+  delete ST;
 }
 
 static void destroyQueue(ol_queue_handle_t &Queue) {
@@ -69,6 +72,11 @@ static void destroyQueue(ol_queue_handle_t &Queue) {
   olDestroyQueue(Queue);
   Queue = nullptr;
 }
+
+namespace llvm {
+namespace offload {
+
+// ThreadStateTy implementation.
 
 ThreadStateTy::ThreadStateTy() {
   if (PerThreadQueue) [[unlikely]]
@@ -98,11 +106,6 @@ ol_device_handle_t ThreadStateTy::getDefaultDevice() {
     DD = Device;
     break;
   }
-  if (AnyNonDefaultDevice.load(std::memory_order_relaxed)) [[unlikely]] {
-    ol_device_handle_t TDD = ThreadStateTy::get().DefaultDevice;
-    if (TDD)
-      DD = TDD;
-  }
   return DD;
 }
 
@@ -117,8 +120,9 @@ CallConfigurationTy &ThreadStateTy::getCallConfiguration() {
 }
 
 void ThreadStateTy::setDefaultDevice(ol_device_handle_t Device) {
-  DefaultDevice = Device;
-  createDefaultQueue(Device);
+  ThreadStateTy &State = get();
+  State.DefaultDevice = Device;
+  State.createDefaultQueue(Device);
 }
 
 void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
@@ -127,6 +131,8 @@ void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
   CHECK_FATAL(olCreateQueue(Device, &DefaultQueue),
               "Failed to create per-thread default queue");
 }
+
+// StateTy implementation.
 
 StateTy &StateTy::get() {
   StateTy *ST = StatePtr.load();
@@ -143,7 +149,103 @@ StateTy &StateTy::get() {
 
 StateTy *StateTy::tryGet() { return StatePtr.load(); }
 
-static bool addDevices(ol_device_handle_t Device, void *Payload) {
+ol_device_handle_t StateTy::getHostDevice() { return get().HostDevice; }
+
+int StateTy::getDeviceCount() {
+  int DeviceCount = get().getDevices().size();
+  return DeviceCount;
+}
+
+ol_device_handle_t StateTy::getDevice(int *DeviceNo) {
+  ol_device_handle_t DefaultDevice = ThreadStateTy::getDefaultDevice();
+  int DeviceCount = get().getDevices().size();
+  ArrayRef<ol_device_handle_t> Devices = get().getDevices();
+  for (int i = 0; i < DeviceCount; i++) {
+    if (Devices[i] == DefaultDevice) {
+      *DeviceNo = i;
+      return Devices[i];
+    }
+  }
+  return nullptr;
+}
+
+ol_device_handle_t StateTy::setDefaultDevice(int DeviceNo) {
+  ArrayRef<ol_device_handle_t> Devices = get().getDevices();
+  if (DeviceNo < 0 || DeviceNo >= static_cast<int>(Devices.size()))
+    return nullptr;
+  ol_device_handle_t Device = Devices[DeviceNo];
+  ThreadStateTy::setDefaultDevice(Device);
+  return Device;
+}
+
+ArrayRef<ol_device_handle_t> StateTy::getDevices() const { return Devices; }
+
+void StateTy::addDevice(ol_device_handle_t Device) {
+  Devices.push_back(Device);
+}
+
+void StateTy::setHostDevice(ol_device_handle_t Device) {
+  if (!HostDevice)
+    HostDevice = Device;
+}
+
+void StateTy::addKernel(KernelIDTy KernelID, ol_symbol_handle_t Kernel) {
+  KernelMap[KernelID] = Kernel;
+}
+
+void StateTy::removeKernel(KernelIDTy KernelID) { KernelMap.erase(KernelID); }
+
+ol_symbol_handle_t StateTy::lookupKernel(KernelIDTy KernelID) {
+  return KernelMap[KernelID];
+}
+
+void StateTy::registerKernel(const void *ID, ol_symbol_handle_t Kernel) {
+  get().addKernel(ID, Kernel);
+}
+
+void StateTy::unregisterKernel(const void *ID) {
+  if (StateTy *State = tryGet())
+    State->removeKernel(ID);
+}
+
+ol_symbol_handle_t StateTy::getKernel(const void *ID) {
+  return get().lookupKernel(ID);
+}
+
+void StateTy::addProgram(const void *Binary, ol_program_handle_t Program) {
+  BinaryRegisterMap[Binary] = Program;
+}
+
+ol_program_handle_t StateTy::removeProgram(const void *Binary) {
+  auto It = BinaryRegisterMap.find(Binary);
+  if (It == BinaryRegisterMap.end())
+    return nullptr;
+  ol_program_handle_t Program = It->second;
+  BinaryRegisterMap.erase(It);
+  return Program;
+}
+
+ol_program_handle_t StateTy::lookupProgram(const void *Binary) {
+  assert(BinaryRegisterMap.count(Binary) &&
+         "Program not registered for binary");
+  return BinaryRegisterMap[Binary];
+}
+
+void StateTy::registerProgram(const void *ID, ol_program_handle_t Program) {
+  get().addProgram(ID, Program);
+}
+
+ol_program_handle_t StateTy::unregisterProgram(const void *ID) {
+  if (StateTy *State = tryGet())
+    return State->removeProgram(ID);
+  return nullptr;
+}
+
+ol_program_handle_t StateTy::getProgram(const void *ID) {
+  return get().lookupProgram(ID);
+}
+
+bool StateTy::addDevices(ol_device_handle_t Device, void *Payload) {
   StateTy &State = *reinterpret_cast<StateTy *>(Payload);
   ol_platform_handle_t Platform;
   ol_result_t Result;
@@ -168,7 +270,8 @@ static bool addDevices(ol_device_handle_t Device, void *Payload) {
 
 StateTy::StateTy() {
   CHECK_FATAL(olInit(nullptr), "Failed to initialize the LLVMOffload");
-  CHECK_FATAL(olIterateDevices(addDevices, this), "Failed to identify devices");
+  CHECK_FATAL(olIterateDevices(StateTy::addDevices, this),
+              "Failed to identify devices");
 
   if (!PerThreadQueue) [[likely]]
     if (!Devices.empty()) [[likely]]
@@ -196,3 +299,6 @@ void StateTy::destroyRegisteredPrograms() {
   for (ol_program_handle_t Program : Programs)
     olDestroyProgram(Program);
 }
+
+} // namespace offload
+} // namespace llvm

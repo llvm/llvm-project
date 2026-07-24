@@ -1,16 +1,14 @@
-//===------- Types.h - Kernel Language (CUDA/HIP) api types ---------------===//
+//===-- Types.h - Kernel language API types -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_TYPES_H
+#define LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_TYPES_H
 
-#include "Types.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -26,3 +24,5 @@ struct CallConfigurationTy {
   size_t SharedMemory;
   void *Stream;
 };
+
+#endif // LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_TYPES_H

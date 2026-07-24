@@ -1,14 +1,13 @@
-//===------- State.h - Kernel Language (CUDA/HIP) persistent state --------===//
+//===-- State.h - Kernel language persistent state ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_STATE_H
+#define LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_STATE_H
 
 #include "OffloadAPI.h"
 #include "Types.h"
@@ -16,23 +15,52 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
+
+#define CHECK_FATAL(ResultExpr, ...)                                           \
+  do {                                                                         \
+    ol_result_t CheckFatalResult = (ResultExpr);                               \
+    if (CheckFatalResult && CheckFatalResult->Code) {                          \
+      llvm::errs() << __VA_ARGS__;                                             \
+      if (CheckFatalResult->Details)                                           \
+        llvm::errs() << ": " << CheckFatalResult->Details;                     \
+      llvm::errs() << '\n';                                                    \
+      abort();                                                                 \
+    }                                                                          \
+  } while (false)
 
 namespace llvm {
 namespace offload {
 
+/// Opaque host-side key used to identify a registered kernel.
+///
+/// This is the address emitted in the offload entry table for the kernel,
+/// not a device number or liboffload handle.  The runtime maps it to the
+/// loaded device symbol during registration and uses it again during launch.
 using KernelIDTy = const void *;
 
+/// Per-thread state used by the language runtime entry points.
+///
+/// Tracks the current thread's default device, optional per-thread queue,
+/// and pending kernel launch configuration.
 struct ThreadStateTy {
   ~ThreadStateTy();
 
-  static ThreadStateTy &get();
-
+  /// Return the default queue for the current stream mode.
   static ol_queue_handle_t getDefaultQueue();
+
+  /// Return the thread-local default device, or the first discovered device.
   static ol_device_handle_t getDefaultDevice();
+
+  /// Return the pending kernel launch configuration for this thread.
   static CallConfigurationTy &getCallConfiguration();
-  void setDefaultDevice(ol_device_handle_t Device);
+
+  /// Set the thread-local default device to \p Device and recreate its queue.
+  static void setDefaultDevice(ol_device_handle_t Device);
 
 private:
+  static ThreadStateTy &get();
+
   void createDefaultQueue(ol_device_handle_t Device);
 
   ol_device_handle_t DefaultDevice = nullptr;
@@ -43,58 +71,78 @@ private:
   ThreadStateTy();
 };
 
+/// Process-wide state shared by CUDA and HIP language entry points.
+///
+/// Owns the discovered devices, host device, process default queue, and maps
+/// from registered binaries and kernels to liboffload handles.
 struct StateTy {
   ~StateTy();
 
   friend struct ThreadStateTy;
 
+  /// Return the host device discovered during runtime initialization.
+  static ol_device_handle_t getHostDevice();
+
+  /// Return the number of non-host devices available to kernel languages.
+  static int getDeviceCount();
+
+  /// Return the thread-local default device and write its number to \p DeviceNo.
+  static ol_device_handle_t getDevice(int *DeviceNo);
+
+  /// Set the thread-local default device by device number.
+  ///
+  /// \returns the selected device, or nullptr if \p DeviceNo is invalid.
+  static ol_device_handle_t setDefaultDevice(int DeviceNo);
+
+  /// Register \p Kernel for the host-side kernel identifier \p ID.
+  ///
+  /// \p ID is the opaque kernel key emitted by Clang in the offload entry
+  /// table.  It is later passed to the launch entry point to recover the
+  /// corresponding liboffload symbol handle.
+  static void registerKernel(const void *ID, ol_symbol_handle_t Kernel);
+
+  /// Remove any registered kernel handle for the host-side kernel key \p ID.
+  static void unregisterKernel(const void *ID);
+
+  /// Return the registered kernel handle for the host-side kernel key \p ID.
+  static ol_symbol_handle_t getKernel(const void *ID);
+
+  /// Register \p Program for the binary image identifier \p ID.
+  ///
+  /// \p ID is the device image start address from the offload binary
+  /// descriptor.  It keys the loaded program so later function registration
+  /// can look up the program that owns each kernel symbol.
+  static void registerProgram(const void *ID, ol_program_handle_t Program);
+
+  /// Remove and return the loaded program handle for binary image key \p ID.
+  static ol_program_handle_t unregisterProgram(const void *ID);
+
+  /// Return the loaded program handle for binary image key \p ID.
+  static ol_program_handle_t getProgram(const void *ID);
+
+private:
   static StateTy &get();
   static StateTy *tryGet();
+  static bool addDevices(ol_device_handle_t Device, void *Payload);
 
-  static ol_device_handle_t getHostDevice() { return get().HostDevice; }
+  llvm::ArrayRef<ol_device_handle_t> getDevices() const;
 
-  ArrayRef<ol_device_handle_t> getDevices() const { return Devices; }
+  void addDevice(ol_device_handle_t Device);
+  void setHostDevice(ol_device_handle_t Device);
 
-  void addDevice(ol_device_handle_t Device) { Devices.push_back(Device); }
-  void setHostDevice(ol_device_handle_t Device) {
-    if (!HostDevice)
-      HostDevice = Device;
-  }
+  void addKernel(KernelIDTy KernelID, ol_symbol_handle_t Kernel);
+  void removeKernel(KernelIDTy KernelID);
+  ol_symbol_handle_t lookupKernel(KernelIDTy KernelID);
 
-  void addKernel(KernelIDTy KernelID, ol_symbol_handle_t Kernel) {
-    KernelMap[KernelID] = Kernel;
-  }
-
-  void removeKernel(KernelIDTy KernelID) { KernelMap.erase(KernelID); }
-
-  ol_symbol_handle_t getKernel(KernelIDTy KernelID) {
-    return KernelMap[KernelID];
-  }
-
-  void addProgram(const void *Binary, ol_program_handle_t Program) {
-    BinaryRegisterMap[Binary] = Program;
-  }
-
-  ol_program_handle_t removeProgram(const void *Binary) {
-    auto It = BinaryRegisterMap.find(Binary);
-    if (It == BinaryRegisterMap.end())
-      return nullptr;
-    ol_program_handle_t Program = It->second;
-    BinaryRegisterMap.erase(It);
-    return Program;
-  }
-
-  ol_program_handle_t getProgram(const void *Binary) {
-    assert(BinaryRegisterMap.count(Binary));
-    return BinaryRegisterMap[Binary];
-  }
+  void addProgram(const void *Binary, ol_program_handle_t Program);
+  ol_program_handle_t removeProgram(const void *Binary);
+  ol_program_handle_t lookupProgram(const void *Binary);
 
   void destroyRegisteredPrograms();
 
-private:
-  DenseMap<const void *, ol_program_handle_t> BinaryRegisterMap;
-  DenseMap<KernelIDTy, ol_symbol_handle_t> KernelMap;
-  SmallVector<ol_device_handle_t, 8> Devices;
+  llvm::DenseMap<const void *, ol_program_handle_t> BinaryRegisterMap;
+  llvm::DenseMap<KernelIDTy, ol_symbol_handle_t> KernelMap;
+  llvm::SmallVector<ol_device_handle_t, 8> Devices;
 
   ol_queue_handle_t DefaultQueue = nullptr;
   ol_device_handle_t HostDevice = nullptr;
@@ -104,3 +152,5 @@ private:
 
 } // namespace offload
 } // namespace llvm
+
+#endif // LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_STATE_H
