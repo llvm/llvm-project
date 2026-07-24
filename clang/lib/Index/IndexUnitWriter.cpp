@@ -192,10 +192,9 @@ void IndexUnitWriter::addASTFileDependency(
   SmallString<64> UnitName;
   if (!withoutUnitName)
     getUnitNameForOutputFile(ASTFile.FileName, UnitName);
-  // FIXME: This assumes ModuleFile is backed by a FileEntry.
-  auto File = FileMgr.getOptionalFileRef(ASTFile.FileName);
-  assert(File && "No FileEntry for a ModuleFile");
-  addUnitDependency(UnitName.str(), File, IsSystem, Mod);
+  // FIXME: This only works when the ModuleFile is backed by a FileEntry.
+  if (auto File = FileMgr.getOptionalFileRef(ASTFile.FileName))
+    addUnitDependency(UnitName.str(), File, IsSystem, Mod);
 }
 
 void IndexUnitWriter::addUnitDependency(StringRef UnitFile,
