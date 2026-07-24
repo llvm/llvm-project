@@ -3136,6 +3136,18 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   if (!CGM.getLangOpts().hasAtExit() && !D.isStaticLocal())
     return CGF.registerGlobalDtorWithLLVM(D, dtor, addr);
 
+  // If '-fno-use-cxa-atexit' and '-fno-register-global-dtors-with-atexit' are also sepcified,
+  // this means the user does not want any invocation to __cxa_atexit or atexit,
+  // but we still have to check if the declaration is static-local or thread-local,
+  // which should not be supported by this case.
+  // As we investigated, ELF has its .fini_array section to support the global destructors.
+  // So we can safely apply this to ELF.
+  if (CGM.getTarget().getTriple().isOSBinFormatELF() &&
+    !CGM.getCodeGenOpts().CXAAtExit &&
+    !CGM.getCodeGenOpts().RegisterGlobalDtorsWithAtExit &&
+    !D.isStaticLocal() && !D.getTLSKind())
+    return CGF.registerGlobalDtorWithLLVM(D, dtor, addr);
+
   // emitGlobalDtorWithCXAAtExit will emit a call to either __cxa_thread_atexit
   // or __cxa_atexit depending on whether this VarDecl is a thread-local storage
   // or not. CXAAtExit controls only __cxa_atexit, so use it if it is enabled.
