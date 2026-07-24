@@ -170,7 +170,7 @@ template <typename T> struct IntrusiveRefCntPtrInfo {
 /// This class increments its pointee's reference count when it is created, and
 /// decrements its refcount when it's destroyed (or is changed to point to a
 /// different object).
-template <typename T> class IntrusiveRefCntPtr {
+template <typename T> class [[gnu::warn_unused]] IntrusiveRefCntPtr {
   T *Obj = nullptr;
 
 public:
