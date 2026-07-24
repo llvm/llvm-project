@@ -1910,6 +1910,7 @@ void BinaryContext::preprocessDebugInfo() {
         LineTable->Prologue.FileNames;
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
+    BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)

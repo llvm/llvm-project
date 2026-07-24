@@ -887,7 +887,7 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   case TST_##Trait:                                                            \
     return UnaryTransformType::Enum;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   default:
     llvm_unreachable("attempted to parse a non-unary transform builtin");
   }
@@ -1307,7 +1307,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for the transformation?");
     Result = S.BuildUnaryTransformType(
@@ -9349,6 +9349,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLIsArray:
+    case ParsedAttr::AT_HLSLIsMultiSampled:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those

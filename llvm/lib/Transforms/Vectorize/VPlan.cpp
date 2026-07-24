@@ -279,6 +279,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (isa<VPIRValue, VPSymbolicValue>(Def))
     return Def->getUnderlyingValue();
 
@@ -311,6 +313,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 }
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (NeedsScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
@@ -337,12 +341,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   VPLane LastLane = VPLane::getLastLaneForVF(VF);
   IRBuilderBase::InsertPointGuard Guard(Builder);
   if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
-    // Set the insert point after the last scalarized instruction or after the
-    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-    // will directly follow the scalar definitions.
-    Builder.SetInsertPoint(isa<PHINode>(LastInst)
-                               ? LastInst->getParent()->getFirstNonPHIIt()
-                               : std::next(BasicBlock::iterator(LastInst)));
+    // Set the insert point after the last scalarized instruction. This
+    // ensures the insertelement sequence will directly follow the scalar
+    // definitions.
+    if (auto InsertPt = LastInst->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*InsertPt);
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
   return VectorValue;
@@ -1006,7 +1009,8 @@ void VPlan::execute(VPTransformState *State) {
 
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    auto Blocks = OrigLoop->getBlocksVector();
+    SmallVector<BasicBlock *> Blocks(OrigLoop->block_begin(),
+                                     OrigLoop->block_end());
     Blocks.push_back(ScalarPh);
     while (!OrigLoop->isInnermost())
       State->LI->erase(*OrigLoop->begin());
