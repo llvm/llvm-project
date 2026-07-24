@@ -1493,7 +1493,7 @@ define i8 @early_exit_deref_or_null_arg_with_deref_assumption(ptr dereferenceabl
 ; CHECK:       [[DEOPT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[DEOPT]]
 ; CHECK:       [[DEOPT]]:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret i8 0
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[ELEMENT_LCSSA:%.*]] = phi i8 [ [[ELEMENT]], %[[LOOP]] ], [ [[TMP5]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i8 [[ELEMENT_LCSSA]]
@@ -1518,7 +1518,7 @@ latch:
   br i1 %ec, label %deopt, label %loop
 
 deopt:
-  unreachable
+  ret i8 0
 
 exit:
   ret i8 %element
