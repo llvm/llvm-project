@@ -1006,7 +1006,7 @@ static bool needPadding(uint64_t StartAddr, uint64_t Size,
 }
 
 uint64_t
-MCAssembler::computeBoundaryAlignSize(const MCBoundaryAlignFragment &BF) {
+MCAssembler::computeBoundaryAlignSize(const MCBoundaryAlignFragment &BF) const {
   if (!BF.getLastFragment())
     return 0;
 
