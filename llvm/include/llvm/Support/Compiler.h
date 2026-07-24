@@ -239,7 +239,7 @@
 #endif
 
 #if __has_attribute(warn_unused)
-#define LLVM_ATTRIBUTE_WARN_UNUSED [[gnu::warn_unused]]
+#define LLVM_ATTRIBUTE_WARN_UNUSED __attribute__((warn_unused))
 #else
 #define LLVM_ATTRIBUTE_WARN_UNUSED
 #endif
