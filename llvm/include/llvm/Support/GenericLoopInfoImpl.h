@@ -511,12 +511,10 @@ void LoopInfoBase<BlockT, LoopT>::discoverAndMapSubloop(
 /// (discoverAndMapSubloop). The backward traversal skips inner subloops, so
 /// this part of the algorithm is linear in the number of CFG edges.
 ///
-/// The block lists are then built in one shared layout: a forward CFG postorder
-/// records the in-loop blocks, and a reverse walk (RPO) carves each loop a
-/// contiguous slice of its parent's, writing each block once to its innermost
-/// loop. Lists are header-first with each subloop's blocks contiguous, ordered
-/// by first appearance in RPO; SubLoops keep program order, TopLevelLoops
-/// reverse program order.
+/// Then build a loop-contiguous reverse postorder for in-loops blocks. Lists
+/// are header-first with each subloop's blocks contiguous, ordered by first
+/// appearance in RPO; SubLoops keep program order, TopLevelLoops reverse
+/// program order.
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
@@ -577,8 +575,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   // Headers are dominator-tree nodes, hence reachable and in the postorder.
   assert(!LoopsPO.empty() && "discovered loops but found no header");
 
-  BlockLayoutLen = PO.size();
-  BlockLayout.reset(new BlockT *[BlockLayoutLen]);
+  BlockLayout.reset(new BlockT *[PO.size()]);
   BlockT **RootCursor = BlockLayout.get();
   for (auto &[BB, L] : llvm::reverse(PO)) {
     if (L->BlockCapacity == 0) {
@@ -599,10 +596,12 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     L->BlockData[L->BlockCapacity++] = BB;
   }
 
-#ifndef NDEBUG
-  for (LoopT *L : LoopsPO)
+  // Mark every slice as borrowed from BlockLayout; a later mutation copies it
+  // into private storage (see materializeBlocks).
+  for (LoopT *L : LoopsPO) {
     assert(L->BlockCapacity == L->BlockLen && "layout slice not fully used");
-#endif
+    L->BlockCapacity = LoopT::BorrowedCapacity;
+  }
 }
 
 template <class BlockT, class LoopT>

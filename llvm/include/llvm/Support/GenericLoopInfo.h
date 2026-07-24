@@ -62,11 +62,20 @@ template <class BlockT, class LoopT> class LoopBase {
   std::vector<LoopT *> SubLoops;
 
   // The list of blocks in this loop; first entry is the header. Either borrows
-  // from the owning LoopInfo's BlockLayout with BlockCapacity == BlockLen, or
-  // is a private allocation of BlockCapacity slots from its allocator.
-  BlockT **BlockData = nullptr;
+  // a slice of the owning LoopInfo's BlockLayout, marked by the
+  // BorrowedCapacity sentinel, or is a private allocation of BlockCapacity
+  // slots from its allocator.
+  //
+  // Until analyze()'s layout carve runs, PendingHeader stashes the loop header
+  // (see pendingHeader()).
+  union {
+    BlockT *PendingHeader;
+    BlockT **BlockData = nullptr;
+  };
   unsigned BlockLen = 0;
   unsigned BlockCapacity = 0;
+
+  static constexpr unsigned BorrowedCapacity = -1u;
 
   // The LoopInfo that owns this loop. Used to answer contains(BlockT *) from
   // the central block-to-loop map.
@@ -403,7 +412,9 @@ public:
   /// transformations should use addBasicBlockToLoop.
   void addBlockEntry(BlockT *BB) {
     assert(!isInvalid() && "Loop not in a valid state!");
-    if (BlockLen == BlockCapacity)
+    // A borrowed slice or a full private allocation grows into fresh private
+    // storage before appending.
+    if (BlockCapacity == BorrowedCapacity || BlockLen == BlockCapacity)
       LI->reallocBlocks(*static_cast<LoopT *>(this),
                         std::max(2 * BlockLen, 4u));
     BlockData[BlockLen++] = BB;
@@ -525,10 +536,9 @@ template <class BlockT, class LoopT> class LoopInfoBase {
 
   std::vector<LoopT *> TopLevelLoops;
 
-  // Shared reverse postorder layout of all blocks. Each initial loop is a slice
-  // of this array, subloop slices nested inside their parent's.
+  // Shared reverse postorder layout of the in-loop blocks. Each initial loop is
+  // a slice of this array, subloop slices nested inside their parent's.
   std::unique_ptr<BlockT *[]> BlockLayout;
-  unsigned BlockLayoutLen = 0;
 
   BumpPtrAllocator LoopAllocator;
 
@@ -549,7 +559,6 @@ public:
         LoopAllocator(std::move(Arg.LoopAllocator)) {
     ParentPtr = Arg.ParentPtr;
     BlockNumberEpoch = Arg.BlockNumberEpoch;
-    BlockLayoutLen = Arg.BlockLayoutLen;
     resetLoopInfoOwners();
     // We have to clear the arguments top level loops as we've taken ownership.
     Arg.TopLevelLoops.clear();
@@ -564,11 +573,9 @@ public:
 
     TopLevelLoops = std::move(RHS.TopLevelLoops);
     BlockLayout = std::move(RHS.BlockLayout);
-    BlockLayoutLen = RHS.BlockLayoutLen;
     LoopAllocator = std::move(RHS.LoopAllocator);
     resetLoopInfoOwners();
     RHS.TopLevelLoops.clear();
-    RHS.BlockLayoutLen = 0;
     return *this;
   }
 
@@ -579,7 +586,6 @@ public:
       L->~LoopT();
     TopLevelLoops.clear();
     BlockLayout.reset();
-    BlockLayoutLen = 0;
     LoopAllocator.Reset();
   }
 
@@ -653,25 +659,21 @@ private:
   /// the loop's block list.
   LoopT *allocateLoop(BlockT *Header) {
     LoopT *L = AllocateLoop();
-    L->BlockData = reinterpret_cast<BlockT **>(Header);
+    L->PendingHeader = Header;
     return L;
   }
 
-  /// The header of a loop under construction, stashed in BlockData until the
-  /// layout carve builds the block list.
-  static BlockT *pendingHeader(const LoopT *L) {
-    return reinterpret_cast<BlockT *>(L->BlockData);
-  }
+  /// The header of a loop under construction, stashed until the layout carve
+  /// builds the block list.
+  static BlockT *pendingHeader(const LoopT *L) { return L->PendingHeader; }
 
   void discoverAndMapSubloop(LoopT *L, BlockT *Header,
                              ArrayRef<BlockT *> Backedges,
                              const DominatorTreeBase<BlockT, false> &DomTree);
 
-  /// True if \p L's block list is a borrowed slice of BlockLayout rather than
-  /// a private allocation.
-  bool hasBorrowedBlocks(const LoopT &L) const {
-    return L.BlockData >= BlockLayout.get() &&
-           L.BlockData < BlockLayout.get() + BlockLayoutLen;
+  /// True if \p L borrows its block list from BlockLayout.
+  static bool hasBorrowedBlocks(const LoopT &L) {
+    return L.BlockCapacity == LoopT::BorrowedCapacity;
   }
 
   /// Replace \p L's block list with a private allocation of NewCapacity
