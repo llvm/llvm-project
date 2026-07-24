@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -614,6 +615,16 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   return eSectionTypeOther;
 }
 
+/// A `section` attribute on a data variable lands in a named data segment on
+/// wasm, not a top-level custom section, so formatter sections appear as
+/// segment names rather than section names.
+static SectionType GetSegmentTypeFromName(llvm::StringRef Name) {
+  return llvm::StringSwitch<SectionType>(Name)
+      .Case(".lldbsummaries", eSectionTypeLLDBTypeSummaries)
+      .Case(".lldbformatters", eSectionTypeLLDBFormatters)
+      .Default(eSectionTypeData);
+}
+
 std::optional<ObjectFileWasm::section_info>
 ObjectFileWasm::GetSectionInfo(uint32_t section_id) {
   for (const section_info &sect_info : m_sect_infos) {
@@ -780,7 +791,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         /*obj_file=*/this,
         ++segment_id << 8, // 1-based segment index, shifted by 8 bits to avoid
                            // collision with section IDs.
-        ConstString(segment.name), eSectionTypeData,
+        ConstString(segment.name), GetSegmentTypeFromName(segment.name),
         /*file_vm_addr=*/file_vm_addr,
         /*vm_size=*/segment.size,
         /*file_offset=*/file_offset,
@@ -857,18 +868,23 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
     lldb::addr_t section_load_addr;
-    if (section_sp->GetType() == eSectionTypeData ||
-        section_sp->GetType() == eSectionTypeZeroFill) {
-      // Data and BSS sections live in linear memory, a separate address space
-      // from code (the top two bits of the 64-bit address encode the space: 0
-      // for Memory, 1 for Object/code), so place the section at its virtual
-      // address in the Memory space while preserving the module id.
+    switch (section_sp->GetType()) {
+    case eSectionTypeData:
+    case eSectionTypeZeroFill:
+    case eSectionTypeLLDBTypeSummaries:
+    case eSectionTypeLLDBFormatters:
+      // These all live in linear memory, a separate address space from code
+      // (the top two bits of the 64-bit address encode the space: 0 for Memory,
+      // 1 for Object/code), so place the section at its virtual address in the
+      // Memory space while preserving the module id.
       section_load_addr = (load_address & ~(uint64_t(0b11) << 62)) |
                           section_sp->GetFileAddress();
-    } else {
+      break;
+    default:
       // Code (and other) sections are addressed by their offset within the
       // module in the Object address space.
       section_load_addr = load_address | section_sp->GetFileOffset();
+      break;
     }
     if (target.SetSectionLoadAddress(section_sp, section_load_addr))
       ++num_loaded_sections;
