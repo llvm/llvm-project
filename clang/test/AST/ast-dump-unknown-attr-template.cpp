@@ -13,3 +13,17 @@ template struct S<int>;
 // CHECK: ClassTemplateSpecializationDecl {{.*}} struct S definition
 // CHECK: FieldDecl {{.*}} x 'int'
 // CHECK-NEXT: UnknownAttr {{.*}} ns::transient "(a, b)"
+
+// A dependent argument is retained verbatim. The attribute is ignored, so its
+// arguments are never parsed, substituted, or checked: the specialization keeps
+// the same text as the template, and instantiating with a type that has no such
+// member is not an error.
+template <class T> struct D {
+  int y [[vendor::attr(T::value + 1)]];
+};
+struct NoValue {};
+template struct D<NoValue>;
+
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct D definition
+// CHECK: FieldDecl {{.*}} y 'int'
+// CHECK-NEXT: UnknownAttr {{.*}} vendor::attr "(T::value + 1)"
