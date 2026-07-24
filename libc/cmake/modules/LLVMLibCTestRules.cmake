@@ -792,6 +792,9 @@ function(add_libc_hermetic test_name)
       libc.src.strings.bcmp
       libc.src.strings.bzero
   )
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
+    list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
+  endif()
 
   # Syscalls used by death tests.
   if(LIBC_TEST_SUBPROCESS_TESTS)
@@ -936,15 +939,6 @@ function(add_libc_hermetic test_name)
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
                    ${fq_deps_list})
-  # TODO: currently the dependency chain is broken such that getauxval cannot properly
-  # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
-    target_link_libraries(
-      ${fq_build_target_name}
-      PRIVATE
-        libc.src.sys.auxv.getauxval
-    )
-  endif()
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if (LIBC_TEST_CMD)

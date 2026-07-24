@@ -1734,7 +1734,6 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
         Instruction::UDiv);
 
   case Intrinsic::aarch64_sve_addqv:
-  case Intrinsic::aarch64_sve_and_z:
   case Intrinsic::aarch64_sve_bic_z:
   case Intrinsic::aarch64_sve_brka_z:
   case Intrinsic::aarch64_sve_brkb_z:
@@ -1743,13 +1742,11 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_brkpb_z:
   case Intrinsic::aarch64_sve_cntp:
   case Intrinsic::aarch64_sve_compact:
-  case Intrinsic::aarch64_sve_eor_z:
   case Intrinsic::aarch64_sve_eorv:
   case Intrinsic::aarch64_sve_eorqv:
   case Intrinsic::aarch64_sve_nand_z:
   case Intrinsic::aarch64_sve_nor_z:
   case Intrinsic::aarch64_sve_orn_z:
-  case Intrinsic::aarch64_sve_orr_z:
   case Intrinsic::aarch64_sve_orv:
   case Intrinsic::aarch64_sve_orqv:
   case Intrinsic::aarch64_sve_pnext:
@@ -1817,6 +1814,16 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
     return SVEIntrinsicInfo::defaultZeroingOp();
+
+  case Intrinsic::aarch64_sve_and_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::And);
+  case Intrinsic::aarch64_sve_orr_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::Or);
+  case Intrinsic::aarch64_sve_eor_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::Xor);
 
   case Intrinsic::aarch64_sve_prf:
   case Intrinsic::aarch64_sve_prfb_gather_index:
@@ -1943,7 +1950,10 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   if (IInfo.inactiveLanesAreNotDefined())
     return IC.replaceInstUsesWith(II, SimpleII);
 
-  Value *Inactive = II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
+  Value *Inactive =
+      IInfo.resultIsZeroInitialized()
+          ? Constant::getNullValue(II.getType())
+          : II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
 
   // The intrinsic does nothing (e.g. sve.mul(pg, A, 1.0)).
   if (SimpleII == Inactive)
@@ -2013,12 +2023,37 @@ simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
 // from_svbool is free.
 static std::optional<Instruction *>
 tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
+  auto m_ConvertToSVBool = [](auto P) {
+    return m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(P);
+  };
+  constexpr Intrinsic::ID ConvertFromSVBool =
+      Intrinsic::aarch64_sve_convert_from_svbool;
+
+  Type *Ty = II.getType();
+  Value *LHS, *RHS, *NarrowLHS, *NarrowRHS;
+
+  if (match(II.getOperand(0),
+            m_LogicalAnd(m_Value(LHS),
+                         m_ConvertToSVBool(m_SpecificType(Ty, NarrowRHS))))) {
+    NarrowLHS = IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, LHS);
+    Value *NarrowAnd = IC.Builder.CreateLogicalAnd(NarrowLHS, NarrowRHS);
+    return IC.replaceInstUsesWith(II, NarrowAnd);
+  }
+
+  if (match(II.getOperand(0),
+            m_LogicalAnd(m_ConvertToSVBool(m_SpecificType(Ty, NarrowLHS)),
+                         m_Value(RHS)))) {
+    NarrowRHS = IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, RHS);
+    Value *NarrowAnd = IC.Builder.CreateLogicalAnd(NarrowLHS, NarrowRHS);
+    return IC.replaceInstUsesWith(II, NarrowAnd);
+  }
+
   auto BinOp = dyn_cast<IntrinsicInst>(II.getOperand(0));
   if (!BinOp)
     return std::nullopt;
 
-  auto IntrinsicID = BinOp->getIntrinsicID();
-  switch (IntrinsicID) {
+  Intrinsic::ID BinOpIID = BinOp->getIntrinsicID();
+  switch (BinOpIID) {
   case Intrinsic::aarch64_sve_and_z:
   case Intrinsic::aarch64_sve_bic_z:
   case Intrinsic::aarch64_sve_eor_z:
@@ -2031,32 +2066,22 @@ tryCombineFromSVBoolBinOp(InstCombiner &IC, IntrinsicInst &II) {
     return std::nullopt;
   }
 
-  auto BinOpPred = BinOp->getOperand(0);
-  auto BinOpOp1 = BinOp->getOperand(1);
-  auto BinOpOp2 = BinOp->getOperand(2);
+  Value *BinOpPred = BinOp->getOperand(0);
+  Value *BinOpOp1 = BinOp->getOperand(1);
+  Value *BinOpOp2 = BinOp->getOperand(2);
 
-  auto PredIntr = dyn_cast<IntrinsicInst>(BinOpPred);
-  if (!PredIntr ||
-      PredIntr->getIntrinsicID() != Intrinsic::aarch64_sve_convert_to_svbool)
+  Value *NarrowBinOpPred;
+  if (!match(BinOpPred, m_ConvertToSVBool(m_SpecificType(Ty, NarrowBinOpPred))))
     return std::nullopt;
 
-  auto PredOp = PredIntr->getOperand(0);
-  auto PredOpTy = cast<VectorType>(PredOp->getType());
-  if (PredOpTy != II.getType())
-    return std::nullopt;
-
-  SmallVector<Value *> NarrowedBinOpArgs = {PredOp};
-  auto NarrowBinOpOp1 = IC.Builder.CreateIntrinsic(
-      Intrinsic::aarch64_sve_convert_from_svbool, {PredOpTy}, {BinOpOp1});
-  NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
-  if (BinOpOp1 == BinOpOp2)
-    NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
-  else
-    NarrowedBinOpArgs.push_back(IC.Builder.CreateIntrinsic(
-        Intrinsic::aarch64_sve_convert_from_svbool, {PredOpTy}, {BinOpOp2}));
-
-  auto NarrowedBinOp =
-      IC.Builder.CreateIntrinsic(IntrinsicID, {PredOpTy}, NarrowedBinOpArgs);
+  Value *NarrowBinOpOp1 =
+      IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp1);
+  Value *NarrowBinOpOp2 = NarrowBinOpOp1;
+  if (BinOpOp1 != BinOpOp2)
+    NarrowBinOpOp2 =
+        IC.Builder.CreateIntrinsic(ConvertFromSVBool, Ty, BinOpOp2);
+  Value *NarrowedBinOp = IC.Builder.CreateIntrinsic(
+      BinOpIID, Ty, {NarrowBinOpPred, NarrowBinOpOp1, NarrowBinOpOp2});
   return IC.replaceInstUsesWith(II, NarrowedBinOp);
 }
 
