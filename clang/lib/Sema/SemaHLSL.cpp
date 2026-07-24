@@ -2096,7 +2096,8 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
 
 bool clang::CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo) {
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo,
+    Expr *SampleCountExpr) {
   assert(AttrList.size() && "expected list of resource attributes");
 
   QualType ContainedTy = QualType();
@@ -2167,6 +2168,7 @@ bool clang::CreateHLSLAttributedResourceType(
         return false;
       }
       ResAttrs.IsMultiSampled = true;
+      ResAttrs.SampleCountExpr = SampleCountExpr;
       break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
@@ -3950,6 +3952,49 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckLoadMSBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 3, 4))
+    return true;
+
+  // Check the multisampled texture handle.
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return !ResType->getAttrs().IsMultiSampled;
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  // Check the location (int2 for Texture2DMS, int3 for Texture2DMSArray).
+  // Unlike Load on regular textures, there is no mip/LOD component.
+  unsigned ResourceDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
+  QualType LocationTy = TheCall->getArg(1)->getType();
+  if (CheckVectorElementCount(&S, LocationTy, S.Context.IntTy, LocationDim,
+                              TheCall->getArg(1)->getBeginLoc()))
+    return true;
+
+  // Check the sample index operand (scalar int).
+  if (!TheCall->getArg(2)->getType()->isIntegerType()) {
+    S.Diag(TheCall->getArg(2)->getBeginLoc(), diag::err_typecheck_expect_int)
+        << TheCall->getArg(2)->getType();
+    return true;
+  }
+
+  // Check the offset operand (int2 for 2D textures; no array slice).
+  if (TheCall->getNumArgs() > 3) {
+    if (CheckVectorElementCount(&S, TheCall->getArg(3)->getType(),
+                                S.Context.IntTy, ResourceDim,
+                                TheCall->getArg(3)->getBeginLoc()))
+      return true;
+  }
+
+  TheCall->setType(ResourceTy->getContainedType());
+  return false;
+}
+
 static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   unsigned MinArgs, MaxArgs;
   if (Kind == SampleKind::Sample) {
@@ -4173,6 +4218,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_load_level:
     return CheckLoadLevelBuiltin(SemaRef, TheCall);
+  case Builtin::BI__builtin_hlsl_resource_load_ms:
+    return CheckLoadMSBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:

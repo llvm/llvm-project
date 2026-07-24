@@ -68,6 +68,12 @@ public:
   BuiltinTypeDeclBuilder &
   addSimpleTemplateParams(ArrayRef<StringRef> Names,
                           ArrayRef<QualType> DefaultTypes, ConceptDecl *CD);
+  // Adds `<typename element_type, int sample_count = 0>` for multisampled
+  // textures, with \p CD constraining the element type. Unlike the other
+  // textures the element type has no default argument.
+  BuiltinTypeDeclBuilder &addMSTextureTemplateParams(StringRef ElementName,
+                                                     StringRef SampleCountName,
+                                                     ConceptDecl *CD);
   CXXRecordDecl *finalizeForwardDeclaration() { return Record; }
   BuiltinTypeDeclBuilder &completeDefinition();
 
@@ -81,7 +87,7 @@ public:
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addTextureHandle(ResourceClass RC, bool IsROV, bool IsArray,
-                   ResourceDimension RD,
+                   ResourceDimension RD, bool IsMultiSampled = false,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
   BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
@@ -104,6 +110,8 @@ public:
   BuiltinTypeDeclBuilder &addLoadMethods();
   BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim,
                                                 bool IsArray = false);
+  BuiltinTypeDeclBuilder &addTextureLoadMSMethods(ResourceDimension Dim,
+                                                  bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim,
@@ -150,6 +158,7 @@ private:
   addResourceMember(StringRef MemberName, ResourceClass RC,
                     ResourceDimension RD, bool IsROV, bool RawBuffer,
                     bool IsCounter, bool IsArray, QualType ElementTy,
+                    bool IsMultiSampled = false,
                     AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
   CXXRecordDecl *addPrivateNestedRecord(StringRef Name);
@@ -158,6 +167,7 @@ private:
   BuiltinTypeDeclBuilder &
   addHandleMember(ResourceClass RC, ResourceDimension RD, bool IsROV,
                   bool RawBuffer, bool IsArray, QualType ElementTy,
+                  bool IsMultiSampled = false,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
