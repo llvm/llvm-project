@@ -41,19 +41,42 @@ static uint64_t getTimestampMillis() {
 #endif
 }
 
+#ifdef _WIN32
+// Write to files opened with OF_Append may not be guaranteed to be atomic
+// on Windows. Both openLogFile and writeLineToFD are noops on Windows.
+static int openLogFile(StringRef Path) {
+  (void)Path;
+  return -1;
+}
+
+static bool writeLineToFD(int FD, const char *Data, size_t Size) {
+  (void)FD, (void)Data, (void)Size;
+  return false;
+}
+
+#else
+
+static int openLogFile(StringRef Path) {
+  int FD = -1;
+  std::error_code EC = llvm::sys::fs::openFileForWrite(
+      Path, FD, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::OF_Append);
+  if (EC) {
+    llvm::errs() << "warning: unable to open log file '" << Path
+                 << "': " << EC.message() << "\n";
+    return -1;
+  }
+  return FD;
+}
+
 // Writes the whole line into an FD that is opened with OF_Append.
 // This function only does one write (up to retry due to interrupts), and the
 // single write is blocking and atomic on POSIX systems.
 static bool writeLineToFD(int FD, const char *Data, size_t Size) {
-#ifndef _WIN32
   ssize_t Written = llvm::sys::RetryAfterSignal(-1, write, FD, Data, Size);
   return Written >= 0 && (static_cast<size_t>(Written) == Size);
-#else
-  (void)FD, (void)Data, (void)Size;
-  llvm_unreachable("Logging not supported on Windows!");
-  return false;
-#endif
 }
+
+#endif
 
 LogLine::LogLine(int FD, std::atomic<uint64_t> *DroppedLines)
     : FormattingOS(Buffer), FD(FD), DroppedLines(DroppedLines) {
@@ -83,33 +106,44 @@ LogLine::~LogLine() {
     DroppedLines->fetch_add(1, std::memory_order_relaxed);
 }
 
-AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath)
-    : LogPath(LogFilePath.str()) {
-#ifndef _WIN32
+AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath) {
   if (LogFilePath.empty())
     return;
+  LogPath = LogFilePath.str();
+  FD.store(openLogFile(LogFilePath), std::memory_order_release);
+}
 
-  std::error_code EC = llvm::sys::fs::openFileForWrite(
-      LogFilePath, FD, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::OF_Append);
-  if (EC) {
-    llvm::errs() << "warning: unable to open log file '" << LogFilePath
-                 << "': " << EC.message() << "\n";
-    FD = -1;
+void AtomicLineLogger::enable(StringRef LogFilePath) {
+  if (LogFilePath.empty())
+    return;
+  std::lock_guard<std::mutex> Lock(EnableMtx);
+  if (FD.load(std::memory_order_relaxed) != -1) {
+    if (LogFilePath != LogPath && !WarnedConflict) {
+      llvm::errs() << "warning: dependency scanning log path '" << LogFilePath
+                   << "' ignored; already logging to '" << LogPath << "'\n";
+      WarnedConflict = true;
+    }
     return;
   }
-#endif
-  // Write to files opened with OF_Append may not be guaranteed to be atomic
-  // on Windows, so we do not enable logging on Windows.
+
+  int NewFD = openLogFile(LogFilePath);
+  if (NewFD == -1)
+    return;
+  LogPath = LogFilePath.str();
+  FD.store(NewFD, std::memory_order_relaxed);
+  return;
 }
 
 LogLine AtomicLineLogger::log() {
-  if (FD != -1)
-    return LogLine(FD, &DroppedLines);
+  int CurFD = FD.load(std::memory_order_relaxed);
+  if (CurFD != -1)
+    return LogLine(CurFD, &DroppedLines);
   return LogLine();
 }
 
 AtomicLineLogger::~AtomicLineLogger() {
-  if (FD == -1)
+  int CurFD = FD.load(std::memory_order_relaxed);
+  if (CurFD == -1)
     return;
   if (uint64_t Dropped = DroppedLines.load(std::memory_order_relaxed))
     llvm::errs() << "warning: log '" << LogPath
