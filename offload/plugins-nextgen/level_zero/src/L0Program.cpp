@@ -175,7 +175,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
   if (!ExpectedNewE) {
     std::string ErrMsg = toString(ExpectedNewE.takeError());
-    ODBG(OLDT_Module) << "Warning: unable to get ELF handle:" << ErrMsg;
+    ODBG(OLDT_Module) << "Warning: unable to get ELF handle: " << ErrMsg;
     return false;
   }
   bool Res = false;
@@ -188,7 +188,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     auto Sections = ELFF.sections();
     if (!Sections) {
       std::string ErrMsg = toString(Sections.takeError());
-      ODBG(OLDT_Module) << "Warning: unable to get ELF sections:" << ErrMsg;
+      ODBG(OLDT_Module) << "Warning: unable to get ELF sections: " << ErrMsg;
       return false;
     }
     bool SeenOffloadSection = false;
@@ -200,7 +200,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
         if (Err) {
           std::string ErrMsg = toString(std::move(Err));
           ODBG(OLDT_Module)
-              << "Warning: unable to get ELF notes handle:" << ErrMsg;
+              << "Warning: unable to get ELF notes handle: " << ErrMsg;
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
