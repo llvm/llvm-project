@@ -1247,7 +1247,7 @@ int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
 }
 
 std::pair<semantics::UnorderedSymbolSet, semantics::UnorderedSymbolSet>
-GetNbOfHostAndDeviceSymbols(const Expr<SomeType> &expr) {
+GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
   semantics::UnorderedSymbolSet hostSymbols;
   semantics::UnorderedSymbolSet deviceSymbols;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
@@ -1277,13 +1277,13 @@ GetNbOfHostAndDeviceSymbols(const Expr<SomeType> &expr) {
 }
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  auto [hostSymbols, deviceSymbols] = GetNbOfHostAndDeviceSymbols(expr);
+  auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
   bool hasConstant{HasConstant(expr)};
   return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
 }
 
 bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {
-  auto [hostSymbols, deviceSymbols] = GetNbOfHostAndDeviceSymbols(expr);
+  auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
   for (const Symbol &sym : deviceSymbols) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
