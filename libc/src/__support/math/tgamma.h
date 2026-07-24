@@ -50,6 +50,19 @@ LIBC_INLINE double tgamma(double x) {
     return FPBits::inf(xbits.sign()).get_val();
   }
 
+  // Range 1: Extremely small x, |x| < 2 ** -53
+  // We just approximate Gamma(x) as 1 / x
+  if (LIBC_UNLIKELY(xbits.abs().uintval() < FPBits(0x1.0p-53).uintval())) {
+    double r = 1.0 / x;
+
+    // Sufficiently tiny |x| pushes 1 / x past DBL_MAX leading to overflow
+    if (LIBC_UNLIKELY(FPBits(r).is_inf())) {
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW);
+    }
+    return r;
+  }
+
   // tgamma(x) > DBL_MAX for x >= 0x1.573fae561f648p+7
   // Source: https://members.loria.fr/PZimmermann/papers/gamma.pdf
   if (LIBC_UNLIKELY(x >= 0x1.573fae561f648p+7)) {
@@ -65,8 +78,7 @@ LIBC_INLINE double tgamma(double x) {
     return FPBits::quiet_nan().get_val();
   }
 
-  // Range 1: x is a positive integer in [1, 171]
-
+  // Range 2: x is a positive integer in [1, 171]
   // FACTORIALS[x] = x!, correctly rounded to nearest double
   // tgamma(x) = FACTORIALS[x - 1]
   // x = 0..22 exact, x = 23..170 correctly-rounded
