@@ -439,6 +439,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
 
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
+
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
 
@@ -1638,6 +1641,12 @@ public:
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
+  /// Return a placeholder type for a late-parsed type attribute.
+  /// This type wraps another type and holds the LateParsedAttribute
+  /// that will be parsed later.
+  QualType getLateParsedAttrType(QualType Wrapped,
+                                 LateParsedTypeAttribute *LateParsedAttr) const;
+
   /// Return the uniqued reference to a type adjusted from the original
   /// type to a new type.
   QualType getAdjustedType(QualType Orig, QualType New) const;
@@ -2529,6 +2538,17 @@ public:
     if (!MSTypeInfoTagDecl)
       MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be

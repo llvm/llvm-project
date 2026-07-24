@@ -2299,11 +2299,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 
 static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
                                                    const Descriptor *Desc) {
-  if (Desc->isPrimitive())
+  if (Desc->isPrimitive() || Desc->isArray())
     return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-  if (Desc->isArray())
-    return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
-           Desc->getNumElems();
+
   if (Desc->isRecord()) {
     // Can't use Descriptor::getType() as that may return a pointer type. Look
     // at the decl directly.
@@ -2942,6 +2940,45 @@ static bool interp__builtin_ia32_pmul(
 
     INT_TYPE_SWITCH_NO_BOOL(DestElemT,
                             { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_psadbw(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2);
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *SrcVT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType SrcElemT = *S.getContext().classify(SrcVT->getElementType());
+  unsigned SourceLen = SrcVT->getNumElements();
+  assert((SourceLen % 8) == 0);
+
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
+  bool DestUnsigned =
+      DestVT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+  unsigned DstElem = 0;
+  for (unsigned Lane = 0; Lane != SourceLen; Lane += 8) {
+    APInt Sum(64, 0);
+    for (unsigned I = 0; I != 8; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+        APSInt L = LHS.elem<T>(Lane + I).toAPSInt();
+        APSInt R = RHS.elem<T>(Lane + I).toAPSInt();
+        Sum += llvm::APIntOps::abdu(L.extOrTrunc(8), R.extOrTrunc(8)).zext(64);
+      });
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
+      Dst.elem<T>(DstElem) = static_cast<T>(APSInt(Sum, DestUnsigned));
+    });
     ++DstElem;
   }
 
@@ -5513,6 +5550,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return (LoLHS.sext(BitWidth) * LoRHS.sext(BitWidth)) +
                  (HiLHS.sext(BitWidth) * HiRHS.sext(BitWidth));
         });
+
+  case clang::X86::BI__builtin_ia32_psadbw128:
+  case clang::X86::BI__builtin_ia32_psadbw256:
+  case clang::X86::BI__builtin_ia32_psadbw512:
+    return interp__builtin_ia32_psadbw(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_dbpsadbw128:
   case clang::X86::BI__builtin_ia32_dbpsadbw256:

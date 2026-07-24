@@ -1139,11 +1139,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
         // Otherwise, the cost is proportional to the number of elements (VL *
         // Factor ops).
-        InstructionCost MemOpCost =
-            getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0,
-                            CostKind, {TTI::OK_AnyValue, TTI::OP_None});
         unsigned NumLoads = getEstimatedVLFor(VTy);
-        return NumLoads * MemOpCost;
+        return NumLoads * TTI::TCC_Basic;
       }
     }
   }
@@ -1303,14 +1300,8 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
 InstructionCost
 RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                      TTI::TargetCostKind CostKind) const {
-
-  unsigned Opcode = MICA.getID() == Intrinsic::experimental_vp_strided_load
-                        ? Instruction::Load
-                        : Instruction::Store;
-
   Type *DataTy = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
-  const Instruction *I = MICA.getInst();
 
   if (!isLegalStridedLoadStore(DataTy, Alignment))
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -1321,13 +1312,9 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
-  // FIXME: This will overcost for i64 on rv32 with +zve64x.
   auto &VTy = *cast<VectorType>(DataTy);
-  InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
-                      {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * MemOpCost;
+  return NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost
@@ -1732,6 +1719,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getShuffleCost(TTI::SK_Splice, cast<VectorType>(ICA.getReturnType()),
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
+  }
+  case Intrinsic::vp_merge: {
+    // If an operand is a binary op and the type is legal, RISCVVectorPeephole
+    // will likely fold the resulting vmerge.vvm away.
+    if (ICA.getVectorInstrContext() == VectorInstrContext::BinaryOp &&
+        getTypeLegalizationCost(RetTy).first == 1)
+      return TTI::TCC_Free;
+    break;
   }
   case Intrinsic::fptoui_sat:
   case Intrinsic::fptosi_sat: {
@@ -3017,6 +3012,10 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // taken cost of the backedge.
   if (Cost < 12)
     UP.Force = true;
+
+  // Set a lower runtime unrolling count for in-order models.
+  if (!ST->getSchedModel().isOutOfOrder())
+    UP.DefaultUnrollRuntimeCount = 4;
 }
 
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -3643,10 +3642,6 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  // TODO: Enable expansion when unaligned access is not supported after we fix
-  // issues in ExpandMemcmp.
-  if (!ST->enableUnalignedScalarMem())
-    return Options;
 
   if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;

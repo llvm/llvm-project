@@ -5,7 +5,7 @@
 
 [project]
 name = "standalone-python-bindings"
-dynamic = ["version"]
+version = "0.0.1"
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.19.5, <=2.1.2",

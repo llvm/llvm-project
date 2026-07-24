@@ -1164,6 +1164,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
   TRY_TO(TraverseType(T->desugar()));
 })
 
+DEF_TRAVERSE_TYPE(LateParsedAttrType,
+                  { TRY_TO(TraverseType(T->getWrappedType())); })
+
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1520,6 +1523,9 @@ DEF_TRAVERSE_TYPELOC(AttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getModifiedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(CountAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
+
+DEF_TRAVERSE_TYPELOC(LateParsedAttrType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
@@ -1908,6 +1914,14 @@ DEF_TRAVERSE_DECL(UsingDirectiveDecl, {
 DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
+
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
 
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
@@ -3161,6 +3175,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
     TRY_TO(TraverseConceptRequirement(Req));
 })
 
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionSelectExpr, {})
+
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})
 DEF_TRAVERSE_STMT(FixedPointLiteral, {})
@@ -4082,6 +4100,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;

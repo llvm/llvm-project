@@ -100,6 +100,53 @@ protected:
   }
 };
 
+class ContextSelectorFinder {
+public:
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(
+      const parser::traits::OmpContextSelectorSpecification &contextSelector) {
+    selector = &contextSelector;
+    return false;
+  }
+
+  const parser::traits::OmpContextSelectorSpecification *selector{nullptr};
+};
+
+TEST_F(OpenMPUtilsTest, MayVariantBeSelectedMatchAnyWithoutTargetTriple) {
+  *inputFileOs << R"(
+      integer :: i
+      !$omp metadirective when(implementation={vendor(gnu), extension(match_any)}: do) otherwise(nothing)
+      do i = 1, 10
+      end do
+      end
+  )";
+  inputFileOs.reset();
+
+  compInst.getInvocation().getFrontendOpts().programAction = ParseSyntaxOnly;
+
+  bool success{executeCompilerInvocation(&compInst)};
+  ASSERT_TRUE(success);
+
+  std::optional<parser::Program> &parseTree{compInst.getParsing().parseTree()};
+  ASSERT_TRUE(parseTree.has_value());
+
+  ContextSelectorFinder finder;
+  parser::Walk(*parseTree, finder);
+  ASSERT_NE(finder.selector, nullptr);
+
+  semantics::SemanticsContext &semanticsContext{compInst.getSemanticsContext()};
+  semantics::omp::OmpVariantMatchContext matchContext{semanticsContext};
+  EXPECT_FALSE(semantics::omp::MayVariantBeSelected(
+      finder.selector, semanticsContext, matchContext));
+
+  semanticsContext.set_targetTriple("");
+  semantics::omp::OmpVariantMatchContext noTargetMatchContext{semanticsContext};
+  EXPECT_TRUE(semantics::omp::MayVariantBeSelected(
+      finder.selector, semanticsContext, noTargetMatchContext));
+}
+
 TEST_F(OpenMPUtilsTest, AffectedNestDepthNoClauses) {
   // Populate the input file with the pre-defined input and flush it.
   *inputFileOs << R"(
