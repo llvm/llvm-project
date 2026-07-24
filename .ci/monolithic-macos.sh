@@ -34,6 +34,6 @@ xcrun cmake -G Ninja \
 start-group "ninja"
 
 if [[ -n "${targets}" ]]; then
-  ninja -C "${BUILD_DIR}" ${targets} |& tee ninja.log
+  ninja -C "${BUILD_DIR}" ${targets} 2>&1 | tee ninja.log
   cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
 fi
