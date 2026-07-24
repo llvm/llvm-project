@@ -28,7 +28,8 @@ struct Empty {};
 // WINDOWS-NEXT:   ret void
 //
 void testEmpty(struct Empty *e) {
-  // Emtpy struct is empty in C, no padding
+  // Emtpy struct is empty in C in Itanium ABI, no padding
+  // Emtpy struct has 4 bytes in C in clang's MSVC ABI
   __builtin_clear_padding(e);
 }
 
