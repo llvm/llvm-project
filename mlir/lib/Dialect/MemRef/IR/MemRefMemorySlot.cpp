@@ -73,9 +73,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 
   // A multi-element memref can be promoted to a single vector SSA value when it
   // is only ever accessed as a whole buffer (e.g. through whole-buffer
-  // `vector.transfer_read`/`vector.transfer_write`). Offering the slot is safe
-  // and purely additive: any access that is not a whole-buffer transfer will
-  // fail its `canUsesBeRemoved` check and abort promotion of this slot.
+  // `vector.transfer_read`/`vector.transfer_write`).
   if (VectorType::isValidElementType(type.getElementType()))
     return {MemorySlot{
         getResult(),

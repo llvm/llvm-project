@@ -27,51 +27,43 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns whether the transfer operation `xferOp` accesses exactly the whole
-/// contents of the memory slot `slot`, so that it can be treated as a plain
-/// whole-buffer load or store during Mem2Reg. `blockingUses` are the uses of
-/// the slot pointer that this operation must stop using for promotion.
+/// Returns whether `xferOp` accesses exactly the whole contents of `slot`, so
+/// it can act as a plain whole-buffer load/store during Mem2Reg.
 template <typename TransferOpTy>
 static bool
 isWholeBufferTransfer(TransferOpTy xferOp, const MemorySlot &slot,
                       const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  // The only blocking use must be the slot pointer itself.
+  // The sole blocking use must be the slot pointer as the transfer's base.
   if (blockingUses.size() != 1)
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   if (blockingUse != slot.ptr || xferOp.getBase() != slot.ptr)
     return false;
 
-  // Only the memref form can access a memref slot. This is already implied by
-  // `getBase() == slot.ptr` above (slot pointers are always memrefs), but guard
-  // defensively against the tensor form.
+  // Reject the tensor form (already implied, since slot pointers are memrefs).
   if (!isa<MemRefType>(xferOp.getBase().getType()))
     return false;
 
-  // The transferred vector must match the slot type exactly. This pins the
-  // rank, per-dimension extent and element type, and rejects scalable vectors
-  // (which never equal the fixed slot type).
+  // Exact type match pins rank/extents/element type and rejects scalable vectors.
   if (xferOp.getVectorType() != slot.elemType)
     return false;
 
-  // All indices must be constant zero so the access starts at the buffer
-  // origin in every dimension.
+  // Access must start at the buffer origin in every dimension.
   for (Value index : xferOp.getIndices()) {
     std::optional<int64_t> constIndex = getConstantIntValue(index);
     if (!constIndex || *constIndex != 0)
       return false;
   }
 
-  // The permutation map must be the identity: no broadcast, no transpose.
+  // Identity map: no broadcast or transpose.
   if (!xferOp.getPermutationMap().isIdentity())
     return false;
 
-  // Every dimension must be in bounds so no element lies outside the buffer and
-  // no padding takes effect.
+  // All dimensions in bounds: no out-of-buffer element, no padding.
   if (xferOp.hasOutOfBoundsDim())
     return false;
 
-  // A mask could disable some elements, making the access partial.
+  // A mask would make the access partial.
   if (xferOp.getMask())
     return false;
 
@@ -110,7 +102,7 @@ struct TransferReadOpMemOpModel
       Operation *op, const MemorySlot &slot,
       const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder,
       Value reachingDefinition, const DataLayout &dataLayout) const {
-    // `canUsesBeRemoved` guaranteed a whole-buffer read of the slot.
+    // Whole-buffer read: replace the loaded vector with the reaching definition.
     cast<vector::TransferReadOp>(op).getVector().replaceAllUsesWith(
         reachingDefinition);
     return DeletionKind::Delete;
@@ -135,11 +127,9 @@ struct TransferWriteOpMemOpModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    auto xferOp = cast<vector::TransferWriteOp>(op);
-    // The stored value must not be the slot pointer itself.
-    if (xferOp.getValueToStore() == slot.ptr)
-      return false;
-    return isWholeBufferTransfer(xferOp, slot, blockingUses);
+    // No self-store guard needed: a vector value can never equal a memref slot.
+    return isWholeBufferTransfer(cast<vector::TransferWriteOp>(op), slot,
+                                 blockingUses);
   }
 
   DeletionKind removeBlockingUses(
