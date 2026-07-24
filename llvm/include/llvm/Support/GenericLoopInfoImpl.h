@@ -558,7 +558,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   SmallVector<std::pair<BlockT *, LoopT *>, 32> PO;
   SmallVector<LoopT *, 4> LoopsPO;
   PO.reserve(BBMap.size());
-  for (BlockT *BB : post_order(DomRoot->getBlock())) {
+  for (BlockT *BB : post_order(ParentPtr)) {
     LoopT *L = lookupLoopFor(BB);
     if (!L)
       continue;

@@ -530,7 +530,7 @@ template <class BlockT, class LoopT> class LoopInfoBase {
   // occurs in (or null).
   SmallVector<LoopT *> BBMap;
 
-  using ParentT = decltype(std::declval<const BlockT *>()->getParent());
+  using ParentT = decltype(std::declval<BlockT *>()->getParent());
   ParentT ParentPtr = nullptr;
   unsigned BlockNumberEpoch;
 
@@ -639,7 +639,8 @@ private:
   }
 
   /// Verify that used block numbers are still valid.
-  void verifyBlockNumberEpoch(ParentT BBParent) const {
+  void
+  verifyBlockNumberEpoch(const std::remove_pointer_t<ParentT> *BBParent) const {
     assert(ParentPtr == BBParent &&
            "loop info queried with block of other function");
     assert(BlockNumberEpoch ==
