@@ -133,6 +133,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the ``if`` body has no braces.
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by adding the
+  :option:`WarnOnTimeTNarrowingConversion` option to diagnose conversions from
+  ``time_t`` values to integer types that may not preserve the full range of
+  ``time_t``. This option is disabled by default.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
