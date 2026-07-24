@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=disabled -Wno-counted-by-addrof %s
 // RUN: %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
+// RUN: cp %s %t.c
+// RUN: %clang_cc1 -fixit %t.c
+// RUN: %clang_cc1 -fsyntax-only -Werror=counted-by-addrof %t.c
+
 // disabled-no-diagnostics
 
 #define __counted_by(f) __attribute__((counted_by(f)))
@@ -23,16 +27,22 @@ struct annotated_flex *get_ptr(void);
 
 size_t ptr_addrof(struct annotated_flex *p) {
   return __builtin_dynamic_object_size(&p->fam, 1); // expected-warning {{taking the address of flexible array member 'fam' discards the 'counted_by' bound}}
+  // CHECK: :[[@LINE-1]]:40: warning: taking the address of flexible array member 'fam' discards the 'counted_by' bound
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:40-[[@LINE-2]]:41}:""
 }
 
-// Opaque pointer return. Allocation not statically known. fix-it offered.
+// Opaque pointer return. Allocation not statically known.
 size_t ret_addrof(void) {
   return __builtin_dynamic_object_size(&get_ptr()->fam, 1); // expected-warning {{taking the address of flexible array member 'fam' discards the 'counted_by' bound}}
+  // CHECK: :[[@LINE-1]]:40: warning: taking the address of flexible array member 'fam' discards the 'counted_by' bound
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:40-[[@LINE-2]]:41}:""
 }
 
-// Subscripting a pointer escapes to an unknown allocation. fix-it offered.
+// Subscripting a pointer escapes to an unknown allocation.
 size_t ptr_subscript_addrof(struct annotated_flex *parr, int i) {
   return __builtin_dynamic_object_size(&parr[i].fam, 1); // expected-warning {{taking the address of flexible array member 'fam' discards the 'counted_by' bound}}
+  // CHECK: :[[@LINE-1]]:40: warning: taking the address of flexible array member 'fam' discards the 'counted_by' bound
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:40-[[@LINE-2]]:41}:""
 }
 
 struct annotated_flex gaf;
@@ -85,5 +95,5 @@ char (*plain_addrof(struct plain_flex *p))[] {
   return &p->fam; // FAM without counted_by.
 }
 
-// CHECK-COUNT-3: fix-it:{{.*}}:""
+// No fix-its beyond the three checked above.
 // CHECK-NOT: fix-it:

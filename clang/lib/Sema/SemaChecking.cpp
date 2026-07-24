@@ -3046,9 +3046,11 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
 
 /// Returns true when the object holding the flexible array member reached by
 /// \p ME has a fixed allocation (a local, parameter, static, or global
-/// variable). A count cannot enlarge a fixed allocation, so '&fam' loses
-/// nothing useful there. Returns false when the member is reached through a
-/// pointer, where the count is the bound the layout fallback would lose.
+/// variable). A count cannot enlarge a fixed allocation, so for those the
+/// layout answer __bdos returns is already correct and '&fam' loses nothing
+/// useful -- warning would be a false positive. Returns false when the member
+/// is reached through a pointer, where the count is the bound the layout
+/// fallback would lose.
 static bool flexibleArrayMemberHasFixedStorage(const MemberExpr *ME) {
   const Expr *E = ME;
   while (true) {
