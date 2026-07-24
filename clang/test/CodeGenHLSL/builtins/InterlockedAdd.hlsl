@@ -14,45 +14,45 @@ groupshared int64_t  gs_i64;
 groupshared uint64_t gs_u64;
 
 // CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_int_2arg
-// DXCHECK:  call i32 @llvm.dx.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}})
-// SPVCHECK: call spir_func i32 @llvm.spv.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}})
+// DXCHECK:  atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} monotonic
+// SPVCHECK: atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} monotonic
 export void test_int_2arg(int v) {
   InterlockedAdd(gs_i32, v);
 }
 
 // CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_uint_2arg
-// DXCHECK:  call i32 @llvm.dx.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}})
-// SPVCHECK: call spir_func i32 @llvm.spv.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}})
+// DXCHECK:  atomicrmw add ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}} monotonic
+// SPVCHECK: atomicrmw add ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}} monotonic
 export void test_uint_2arg(uint v) {
   InterlockedAdd(gs_u32, v);
 }
 
 // CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_int_3arg
-// DXCHECK:  %[[R:.*]] = call i32 @llvm.dx.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}})
-// SPVCHECK: %[[R:.*]] = call spir_func i32 @llvm.spv.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}})
+// DXCHECK:  %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} monotonic
+// SPVCHECK: %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} monotonic
 // CHECK:    store i32 %[[R]], ptr {{.*}}
 export void test_int_3arg(int v, out int orig) {
   InterlockedAdd(gs_i32, v, orig);
 }
 
 // CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_uint_3arg
-// DXCHECK:  %[[R:.*]] = call i32 @llvm.dx.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}})
-// SPVCHECK: %[[R:.*]] = call spir_func i32 @llvm.spv.interlocked.add.i32.p3(ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}})
+// DXCHECK:  %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}} monotonic
+// SPVCHECK: %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_u32{{.*}}, i32 %{{.*}} monotonic
 // CHECK:    store i32 %[[R]], ptr {{.*}}
 export void test_uint_3arg(uint v, out uint orig) {
   InterlockedAdd(gs_u32, v, orig);
 }
 
 // CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_int64_2arg
-// DXCHECK:  call i64 @llvm.dx.interlocked.add.i64.p3(ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}})
-// SPVCHECK: call spir_func i64 @llvm.spv.interlocked.add.i64.p3(ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}})
+// DXCHECK:  atomicrmw add ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}} monotonic
+// SPVCHECK: atomicrmw add ptr addrspace(3) {{.*}}@gs_i64{{.*}}, i64 %{{.*}} monotonic
 export void test_int64_2arg(int64_t v) {
   InterlockedAdd(gs_i64, v);
 }
 
 // CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_uint64_3arg
-// DXCHECK:  %[[R:.*]] = call i64 @llvm.dx.interlocked.add.i64.p3(ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}})
-// SPVCHECK: %[[R:.*]] = call spir_func i64 @llvm.spv.interlocked.add.i64.p3(ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}})
+// DXCHECK:  %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}} monotonic
+// SPVCHECK: %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_u64{{.*}}, i64 %{{.*}} monotonic
 // CHECK:    store i64 %[[R]], ptr {{.*}}
 export void test_uint64_3arg(uint64_t v, out uint64_t orig) {
   InterlockedAdd(gs_u64, v, orig);
