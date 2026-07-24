@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: llvm-mc -triple=amdgpu8.03 -show-encoding %s | FileCheck %s --check-prefix=VI
 // RUN: llvm-mc -triple=amdgcn -mcpu=fiji -filetype=obj %s | llvm-objdump -d --mcpu=fiji - | FileCheck %s --check-prefix=BIN
 
 loop_start:
