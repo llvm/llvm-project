@@ -44,7 +44,8 @@ isWholeBufferTransfer(TransferOpTy xferOp, const MemorySlot &slot,
   if (!isa<MemRefType>(xferOp.getBase().getType()))
     return false;
 
-  // Exact type match pins rank/extents/element type and rejects scalable vectors.
+  // Exact type match pins rank/extents/element type and rejects scalable
+  // vectors.
   if (xferOp.getVectorType() != slot.elemType)
     return false;
 
@@ -98,11 +99,13 @@ struct TransferReadOpMemOpModel
                                  blockingUses);
   }
 
-  DeletionKind removeBlockingUses(
-      Operation *op, const MemorySlot &slot,
-      const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder,
-      Value reachingDefinition, const DataLayout &dataLayout) const {
-    // Whole-buffer read: replace the loaded vector with the reaching definition.
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    // Whole-buffer read: replace the loaded vector with the reaching
+    // definition.
     cast<vector::TransferReadOp>(op).getVector().replaceAllUsesWith(
         reachingDefinition);
     return DeletionKind::Delete;
@@ -132,10 +135,11 @@ struct TransferWriteOpMemOpModel
                                  blockingUses);
   }
 
-  DeletionKind removeBlockingUses(
-      Operation *op, const MemorySlot &slot,
-      const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder,
-      Value reachingDefinition, const DataLayout &dataLayout) const {
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
     return DeletionKind::Delete;
   }
 };

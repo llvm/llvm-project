@@ -76,8 +76,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   // `vector.transfer_read`/`vector.transfer_write`).
   if (VectorType::isValidElementType(type.getElementType()))
     return {MemorySlot{
-        getResult(),
-        VectorType::get(type.getShape(), type.getElementType())}};
+        getResult(), VectorType::get(type.getShape(), type.getElementType())}};
 
   return {};
 }
