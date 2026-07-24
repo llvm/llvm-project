@@ -267,7 +267,7 @@ public:
                          llvm::opt::ArgStringList &CC1Args) const;
 
   void detectDeviceLibrary();
-  void detectHIPRuntime();
+  void detectHIPRuntime(const llvm::Triple &HostTriple);
 
   /// Get the values for --rocm-device-lib-path arguments
   ArrayRef<std::string> getRocmDeviceLibPathArg() const {
