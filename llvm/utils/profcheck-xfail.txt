@@ -7,6 +7,9 @@ CodeGen/WinEH/wineh-statenumbering.ll
 DebugInfo/AArch64/ir-outliner.ll
 DebugInfo/Generic/block-asan.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
+Transforms/Coroutines/coro-split-00.ll
+Transforms/Coroutines/coro-split-addrspace.ll
+Transforms/Coroutines/coro-split-resume-fallthrough-destroy-slot.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
