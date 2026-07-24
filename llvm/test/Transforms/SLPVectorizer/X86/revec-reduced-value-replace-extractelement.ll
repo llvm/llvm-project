@@ -4,15 +4,14 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP6:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <3 x i32> <i32 poison, i32 poison, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> <i32 0, i32 0, i32 undef>, <3 x i32> <i32 3, i32 4, i32 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <6 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <6 x i32> [[TMP3]], <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = call i32 @llvm.vector.reduce.mul.v6i32(<6 x i32> [[TMP5]])
-; CHECK-NEXT:    [[TMP6]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[OP_RDX1]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP2:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
+; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 0, [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], [[TRUNC]]
+; CHECK-NEXT:    [[TMP2]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[OP_RDX1]], i64 1
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

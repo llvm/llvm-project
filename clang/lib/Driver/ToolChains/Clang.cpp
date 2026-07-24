@@ -3312,6 +3312,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       restoreFPContractState();
       break;
 
+    case options::OPT_cl_fast_relaxed_math:
+      applyFastMath(true, A->getSpelling());
+      break;
+
     case options::OPT_Ofast:
       // If -Ofast is the optimization level, then -ffast-math should be enabled
       if (!OFastEnabled)
@@ -4002,6 +4006,10 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   if (Args.hasArg(options::OPT_dxc_Qstrip_debug)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-strip-debug");
+  }
+  if (Args.hasArg(options::OPT_dxc_Qpdb_in_private)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-pdb-in-private");
   }
 }
 
