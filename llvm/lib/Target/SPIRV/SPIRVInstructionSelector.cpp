@@ -6486,8 +6486,6 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     }
 
     if (!IsDecorated) {
-      if (!DefMI)
-        DefMI = MRI->getVRegDef(CurrentReg);
       MachineBasicBlock &MBB = *DefMI->getParent();
       MachineInstr &InsertPt = DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI;
       buildOpDecorate(CurrentReg, InsertPt, TII,
