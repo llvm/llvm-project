@@ -6810,8 +6810,7 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
     unsigned IndexBits = DL->getIndexTypeSizeInBits(Base->getType());
     APInt LoadByteOffsetAP(IndexBits, LoadByteOffset, /*isSigned=*/true);
     APInt SourceByteOffset =
-        LoadByteOffsetAP +
-        static_cast<uint64_t>(IL.second) * ElementSizeBytes;
+        LoadByteOffsetAP + static_cast<uint64_t>(IL.second) * ElementSizeBytes;
     if (Lane == 0) {
       CommonBase = Base;
       StartByteOffset = SourceByteOffset;
