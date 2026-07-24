@@ -4,23 +4,7 @@
 ; RUN: llc < %s -mtriple aarch64 -mattr=-bf16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CVT,CHECK-CVT-GI
 ; RUN: llc < %s -mtriple aarch64 -mattr=+bf16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-BF16,CHECK-BF16-GI
 
-; CHECK-CVT-GI:       warning: Instruction selection used fallback path for test_fptosi_i8
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i32
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i8
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i64
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i8
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i32
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i64
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i8
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i32
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i64
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i8
+; CHECK-CVT-GI:       warning: Instruction selection used fallback path for test_sitofp_i8
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i16
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i64
@@ -29,23 +13,7 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
 ;
-; CHECK-BF16-GI:       warning: Instruction selection used fallback path for test_fptosi_i8
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i32
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i8
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i64
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i8
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i32
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_sat_i64
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i8
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i32
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_sat_i64
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i8
+; CHECK-BF16-GI:       warning: Instruction selection used fallback path for test_sitofp_i8
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i16
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i64
@@ -53,9 +21,6 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i16
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
-;
-;
-;
 
 define <4 x bfloat> @test_build(<4 x bfloat> %a) {
 ; CHECK-CVT-SD-LABEL: test_build:
@@ -1202,37 +1167,96 @@ define <4 x i32> @test_fptosi_i32(<4 x bfloat> %a) #0 {
 }
 
 define <4 x i64> @test_fptosi_i64(<4 x bfloat> %a) #0 {
-; CHECK-LABEL: test_fptosi_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    mov h2, v0.h[1]
-; CHECK-NEXT:    mov h3, v0.h[3]
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fcvtzs x10, s2
-; CHECK-NEXT:    fcvtzs x11, s3
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x11
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptosi_i64:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-CVT-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-CVT-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    fcvtzs x8, s0
+; CHECK-CVT-SD-NEXT:    fcvtzs x9, s1
+; CHECK-CVT-SD-NEXT:    fcvtzs x10, s2
+; CHECK-CVT-SD-NEXT:    fcvtzs x11, s3
+; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    fmov d1, x9
+; CHECK-CVT-SD-NEXT:    mov v0.d[1], x10
+; CHECK-CVT-SD-NEXT:    mov v1.d[1], x11
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fptosi_i64:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-BF16-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-BF16-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-BF16-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-SD-NEXT:    fcvtzs x8, s0
+; CHECK-BF16-SD-NEXT:    fcvtzs x9, s1
+; CHECK-BF16-SD-NEXT:    fcvtzs x10, s2
+; CHECK-BF16-SD-NEXT:    fcvtzs x11, s3
+; CHECK-BF16-SD-NEXT:    fmov d0, x8
+; CHECK-BF16-SD-NEXT:    fmov d1, x9
+; CHECK-BF16-SD-NEXT:    mov v0.d[1], x10
+; CHECK-BF16-SD-NEXT:    mov v1.d[1], x11
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptosi_i64:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v2.2d
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fptosi_i64:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-BF16-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-BF16-GI-NEXT:    fcvtzs v0.2d, v1.2d
+; CHECK-BF16-GI-NEXT:    fcvtzs v1.2d, v2.2d
+; CHECK-BF16-GI-NEXT:    ret
   %1 = fptosi <4 x bfloat> %a to <4 x i64>
   ret <4 x i64> %1
 }
 
 ; NOTE: fcvtzs selected here because the xtn shaves the sign bit
 define <4 x i8> @test_fptoui_i8(<4 x bfloat> %a) #0 {
-; CHECK-LABEL: test_fptoui_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptoui_i8:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fptoui_i8:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-BF16-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptoui_i8:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fptoui_i8:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-BF16-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BF16-GI-NEXT:    ret
   %1 = fptoui <4 x bfloat> %a to <4 x i8>
   ret <4 x i8> %1
 }
@@ -1259,40 +1283,111 @@ define <4 x i32> @test_fptoui_i32(<4 x bfloat> %a) #0 {
 }
 
 define <4 x i64> @test_fptoui_i64(<4 x bfloat> %a) #0 {
-; CHECK-LABEL: test_fptoui_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    mov h2, v0.h[1]
-; CHECK-NEXT:    mov h3, v0.h[3]
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-NEXT:    fcvtzu x8, s0
-; CHECK-NEXT:    fcvtzu x9, s1
-; CHECK-NEXT:    fcvtzu x10, s2
-; CHECK-NEXT:    fcvtzu x11, s3
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x11
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptoui_i64:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-CVT-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-CVT-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    fcvtzu x8, s0
+; CHECK-CVT-SD-NEXT:    fcvtzu x9, s1
+; CHECK-CVT-SD-NEXT:    fcvtzu x10, s2
+; CHECK-CVT-SD-NEXT:    fcvtzu x11, s3
+; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    fmov d1, x9
+; CHECK-CVT-SD-NEXT:    mov v0.d[1], x10
+; CHECK-CVT-SD-NEXT:    mov v1.d[1], x11
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fptoui_i64:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-BF16-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-BF16-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-BF16-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-SD-NEXT:    fcvtzu x8, s0
+; CHECK-BF16-SD-NEXT:    fcvtzu x9, s1
+; CHECK-BF16-SD-NEXT:    fcvtzu x10, s2
+; CHECK-BF16-SD-NEXT:    fcvtzu x11, s3
+; CHECK-BF16-SD-NEXT:    fmov d0, x8
+; CHECK-BF16-SD-NEXT:    fmov d1, x9
+; CHECK-BF16-SD-NEXT:    mov v0.d[1], x10
+; CHECK-BF16-SD-NEXT:    mov v1.d[1], x11
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptoui_i64:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzu v0.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzu v1.2d, v2.2d
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fptoui_i64:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-BF16-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-BF16-GI-NEXT:    fcvtzu v0.2d, v1.2d
+; CHECK-BF16-GI-NEXT:    fcvtzu v1.2d, v2.2d
+; CHECK-BF16-GI-NEXT:    ret
   %1 = fptoui <4 x bfloat> %a to <4 x i64>
   ret <4 x i64> %1
 }
 
 define <4 x i8> @test_fptosi_sat_i8(<4 x bfloat> %a) {
-; CHECK-LABEL: test_fptosi_sat_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    movi v1.4s, #127
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mvni v1.4s, #127
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptosi_sat_i8:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #127
+; CHECK-CVT-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    mvni v1.4s, #127
+; CHECK-CVT-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fptosi_sat_i8:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    movi v1.4s, #127
+; CHECK-BF16-SD-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-BF16-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-BF16-SD-NEXT:    mvni v1.4s, #127
+; CHECK-BF16-SD-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-BF16-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptosi_sat_i8:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #127
+; CHECK-CVT-GI-NEXT:    mvni v2.4s, #127
+; CHECK-CVT-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    smax v0.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fptosi_sat_i8:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    movi v1.4s, #127
+; CHECK-BF16-GI-NEXT:    mvni v2.4s, #127
+; CHECK-BF16-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-BF16-GI-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-BF16-GI-NEXT:    smax v0.4s, v0.4s, v2.4s
+; CHECK-BF16-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BF16-GI-NEXT:    ret
   %i = call <4 x i8> @llvm.fptosi.sat.v4i8.v4bf16(<4 x bfloat> %a)
   ret <4 x i8> %i
 }
@@ -1319,25 +1414,63 @@ define <4 x i32> @test_fptosi_sat_i32(<4 x bfloat> %a) {
 }
 
 define <4 x i64> @test_fptosi_sat_i64(<4 x bfloat> %a) {
-; CHECK-LABEL: test_fptosi_sat_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    mov h2, v0.h[1]
-; CHECK-NEXT:    mov h3, v0.h[3]
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fcvtzs x10, s2
-; CHECK-NEXT:    fcvtzs x11, s3
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x11
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptosi_sat_i64:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-CVT-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-CVT-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    fcvtzs x8, s0
+; CHECK-CVT-SD-NEXT:    fcvtzs x9, s1
+; CHECK-CVT-SD-NEXT:    fcvtzs x10, s2
+; CHECK-CVT-SD-NEXT:    fcvtzs x11, s3
+; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    fmov d1, x9
+; CHECK-CVT-SD-NEXT:    mov v0.d[1], x10
+; CHECK-CVT-SD-NEXT:    mov v1.d[1], x11
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fptosi_sat_i64:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-BF16-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-BF16-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-BF16-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-SD-NEXT:    fcvtzs x8, s0
+; CHECK-BF16-SD-NEXT:    fcvtzs x9, s1
+; CHECK-BF16-SD-NEXT:    fcvtzs x10, s2
+; CHECK-BF16-SD-NEXT:    fcvtzs x11, s3
+; CHECK-BF16-SD-NEXT:    fmov d0, x8
+; CHECK-BF16-SD-NEXT:    fmov d1, x9
+; CHECK-BF16-SD-NEXT:    mov v0.d[1], x10
+; CHECK-BF16-SD-NEXT:    mov v1.d[1], x11
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptosi_sat_i64:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v2.2d
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fptosi_sat_i64:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-BF16-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-BF16-GI-NEXT:    fcvtzs v0.2d, v1.2d
+; CHECK-BF16-GI-NEXT:    fcvtzs v1.2d, v2.2d
+; CHECK-BF16-GI-NEXT:    ret
   %i = call <4 x i64> @llvm.fptosi.sat.v4i64.v4bf16(<4 x bfloat> %a)
   ret <4 x i64> %i
 }
@@ -1377,25 +1510,63 @@ define <4 x i32> @test_fptoui_sat_i32(<4 x bfloat> %a) {
 }
 
 define <4 x i64> @test_fptoui_sat_i64(<4 x bfloat> %a) {
-; CHECK-LABEL: test_fptoui_sat_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    mov h2, v0.h[1]
-; CHECK-NEXT:    mov h3, v0.h[3]
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-NEXT:    fcvtzu x8, s0
-; CHECK-NEXT:    fcvtzu x9, s1
-; CHECK-NEXT:    fcvtzu x10, s2
-; CHECK-NEXT:    fcvtzu x11, s3
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x11
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_fptoui_sat_i64:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-CVT-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-CVT-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    fcvtzu x8, s0
+; CHECK-CVT-SD-NEXT:    fcvtzu x9, s1
+; CHECK-CVT-SD-NEXT:    fcvtzu x10, s2
+; CHECK-CVT-SD-NEXT:    fcvtzu x11, s3
+; CHECK-CVT-SD-NEXT:    fmov d0, x8
+; CHECK-CVT-SD-NEXT:    fmov d1, x9
+; CHECK-CVT-SD-NEXT:    mov v0.d[1], x10
+; CHECK-CVT-SD-NEXT:    mov v1.d[1], x11
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: test_fptoui_sat_i64:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-BF16-SD-NEXT:    mov h1, v0.h[2]
+; CHECK-BF16-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-BF16-SD-NEXT:    mov h3, v0.h[3]
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-BF16-SD-NEXT:    fcvtzu x8, s0
+; CHECK-BF16-SD-NEXT:    fcvtzu x9, s1
+; CHECK-BF16-SD-NEXT:    fcvtzu x10, s2
+; CHECK-BF16-SD-NEXT:    fcvtzu x11, s3
+; CHECK-BF16-SD-NEXT:    fmov d0, x8
+; CHECK-BF16-SD-NEXT:    fmov d1, x9
+; CHECK-BF16-SD-NEXT:    mov v0.d[1], x10
+; CHECK-BF16-SD-NEXT:    mov v1.d[1], x11
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_fptoui_sat_i64:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzu v0.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzu v1.2d, v2.2d
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_fptoui_sat_i64:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcvtl v1.2d, v0.2s
+; CHECK-BF16-GI-NEXT:    fcvtl2 v2.2d, v0.4s
+; CHECK-BF16-GI-NEXT:    fcvtzu v0.2d, v1.2d
+; CHECK-BF16-GI-NEXT:    fcvtzu v1.2d, v2.2d
+; CHECK-BF16-GI-NEXT:    ret
   %i = call <4 x i64> @llvm.fptoui.sat.v4i64.v4bf16(<4 x bfloat> %a)
   ret <4 x i64> %i
 }

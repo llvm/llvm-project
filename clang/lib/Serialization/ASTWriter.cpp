@@ -156,6 +156,9 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 #define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
   case Type::CLASS_ID: return TYPE_##CODE_ID;
 #include "clang/Serialization/TypeBitCodes.def"
+  case Type::LateParsedAttr:
+    llvm_unreachable(
+        "should be replaced with a concrete type before serialization");
   case Type::Builtin:
     llvm_unreachable("shouldn't be serializing a builtin type this way");
   }
@@ -585,6 +588,11 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 
 void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
+}
+
+void TypeLocWriter::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  llvm_unreachable(
+      "should be replaced with a concrete type before serialization");
 }
 
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -1608,6 +1616,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
+  Record.push_back(static_cast<unsigned>(LangOpts.LangStd));
   const uint64_t LanguageOptionValues[] = {
 #define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -5796,8 +5805,11 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     for (unsigned I = 0, N = SemaRef.VTableUses.size(); I != N; ++I)
       GetDeclRef(SemaRef.VTableUses[I].first);
 
-  // Writing all of the UnusedLocalTypedefNameCandidates.
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+  // Writing all of the UnusedLocalTypedefNameCandidates in a deterministic
+  // order.
+  SmallVector<const TypedefNameDecl *, 4> UnusedLocalTypedefs;
+  SemaRef.getSortedUnusedLocalTypedefNameCandidates(UnusedLocalTypedefs);
+  for (const TypedefNameDecl *TD : UnusedLocalTypedefs)
     GetDeclRef(TD);
 
   // Writing all of pending implicit instantiations.
@@ -5924,9 +5936,12 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(VTABLE_USES, VTableUses);
   }
 
-  // Write the record containing potentially unused local typedefs.
+  // Write the record containing potentially unused local typedefs, in a
+  // deterministic order.
   RecordData UnusedLocalTypedefNameCandidates;
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+  SmallVector<const TypedefNameDecl *, 4> SortedCandidates;
+  SemaRef.getSortedUnusedLocalTypedefNameCandidates(SortedCandidates);
+  for (const TypedefNameDecl *TD : SortedCandidates)
     AddEmittedDeclRef(TD, UnusedLocalTypedefNameCandidates);
   if (!UnusedLocalTypedefNameCandidates.empty())
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
@@ -8601,6 +8616,9 @@ void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  Record.AddStmt(C->getModifierExpr());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlist())

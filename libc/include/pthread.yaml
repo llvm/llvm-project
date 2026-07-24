@@ -232,6 +232,12 @@ functions:
       - type: pthread_t
       - type: char *
       - type: size_t
+  - name: pthread_getschedparam
+    return_type: int
+    arguments:
+      - type: pthread_t
+      - type: int *__restrict
+      - type: struct sched_param *__restrict
   - name: pthread_getspecific
     return_type: void *
     arguments:
@@ -422,6 +428,12 @@ functions:
     arguments:
       - type: pthread_t
       - type: const char *
+  - name: pthread_setschedparam
+    return_type: int
+    arguments:
+      - type: pthread_t
+      - type: int
+      - type: const struct sched_param *
   - name: pthread_setspecific
     return_type: int
     arguments:

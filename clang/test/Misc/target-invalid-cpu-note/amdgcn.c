@@ -85,3 +85,58 @@
 // CHECK-SAME: {{^}}, gfx12-5-generic
 // CHECK-SAME: {{^}}, gfx13-generic
 // CHECK-SAME: {{$}}
+
+// When the triple carries a major-family subarch, only the GPUs in that family
+// are valid (a CPU from another family is rejected).
+// RUN: not %clang_cc1 -triple amdgpu9--- -target-cpu gfx1030 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX9 %s
+// GFX9: error: unknown target CPU 'gfx1030'
+// GFX9-NEXT: note: valid target CPU values are:
+// GFX9-SAME: {{^}} gfx900
+// GFX9-SAME: {{^}}, gfx902
+// GFX9-SAME: {{^}}, gfx904
+// GFX9-SAME: {{^}}, gfx906
+// GFX9-SAME: {{^}}, gfx909
+// GFX9-SAME: {{^}}, gfx90c
+// GFX9-SAME: {{^}}, gfx9-generic
+// GFX9-SAME: {{$}}
+
+// gfx908 and gfx90a are not part of the gfx9-generic family (they are their own
+// major subarches), so they are rejected by the amdgpu9 triple above and only
+// accepted by their own specific subarch triples.
+// RUN: not %clang_cc1 -triple amdgpu9.08--- -target-cpu gfx900 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX908 %s
+// GFX908: error: unknown target CPU 'gfx900'
+// GFX908-NEXT: note: valid target CPU values are:
+// GFX908-SAME: {{^}} gfx908
+// GFX908-SAME: {{$}}
+
+// When the triple carries a specific subarch, only that GPU is valid, so even a
+// CPU from the same major family but a different specific subarch is rejected.
+// RUN: not %clang_cc1 -triple amdgpu9.0a--- -target-cpu gfx900 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX90A %s
+// GFX90A: error: unknown target CPU 'gfx900'
+// GFX90A-NEXT: note: valid target CPU values are:
+// GFX90A-SAME: {{^}} gfx90a
+// GFX90A-SAME: {{$}}
+
+// gfx810 is its own major subarch.
+// RUN: not %clang_cc1 -triple amdgpu8.10--- -target-cpu gfx803 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX810 %s
+// GFX810: error: unknown target CPU 'gfx803'
+// GFX810-NEXT: note: valid target CPU values are:
+// GFX810-SAME: {{^}} gfx810
+// GFX810-SAME: {{^}}, stoney
+// GFX810-SAME: {{$}}
+
+// amdgpu11.7 is a major-family subarch covering the gfx117x GPUs.
+// RUN: not %clang_cc1 -triple amdgpu11.7--- -target-cpu gfx1100 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX11_7 %s
+// GFX11_7: error: unknown target CPU 'gfx1100'
+// GFX11_7-NEXT: note: valid target CPU values are:
+// GFX11_7-SAME: {{^}} gfx1170
+// GFX11_7-SAME: {{^}}, gfx1171
+// GFX11_7-SAME: {{^}}, gfx1172
+// GFX11_7-SAME: {{$}}
+
+// amdgpu13 is a major-family subarch covering the gfx131x GPUs.
+// RUN: not %clang_cc1 -triple amdgpu13--- -target-cpu gfx1200 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX13 %s
+// GFX13: error: unknown target CPU 'gfx1200'
+// GFX13-NEXT: note: valid target CPU values are:
+// GFX13-SAME: {{^}} gfx1310
+// GFX13-SAME: {{$}}
