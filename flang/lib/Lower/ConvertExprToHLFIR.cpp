@@ -1862,7 +1862,7 @@ private:
   template <typename T>
   hlfir::Entity
   genConditionalOp(const Fortran::evaluate::ConditionalExpr<T> &condExpr,
-                   mlir::Type elementType, bool isPolymorphic) {  
+                   mlir::Type elementType, bool isPolymorphic) {
     const mlir::Location loc{getLoc()};
     fir::FirOpBuilder &builder{getBuilder()};
     // Lower the condition to i1.
