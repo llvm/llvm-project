@@ -2203,18 +2203,20 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
                bodyBuilder);
 }
 
+LogicalResult AffineForOp::verify() {
+  auto *body = getBody();
+  if (body->getNumArguments() == 0 || !getInductionVar().getType().isIndex())
+    return emitOpError("expected body to have an index argument for the "
+                       "induction variable");
+
+  return success();
+}
+
 LogicalResult AffineForOp::verifyRegions() {
   // Step must be a strictly positive integer.
   if (getStepAsInt() <= 0)
     return emitOpError("expected step to be a positive integer, got ")
            << getStepAsInt();
-
-  // Check that the body defines as single block argument for the induction
-  // variable.
-  auto *body = getBody();
-  if (body->getNumArguments() == 0 || !body->getArgument(0).getType().isIndex())
-    return emitOpError("expected body to have a single index argument for the "
-                       "induction variable");
 
   // Verify that the bound operands are valid dimension/symbols.
   /// Lower bound.
@@ -2826,6 +2828,61 @@ std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopUpperBounds() {
       OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()))};
 }
 
+std::optional<APInt> AffineForOp::getStaticTripCount() {
+  MLIRContext *context = getContext();
+  int64_t step = getStepAsInt();
+  if (step <= 0)
+    return std::nullopt;
+
+  if (hasConstantBounds()) {
+    int64_t lb = getConstantLowerBound();
+    int64_t ub = getConstantUpperBound();
+    int64_t loopSpan = ub - lb;
+    if (loopSpan < 0)
+      loopSpan = 0;
+    return APInt(64, llvm::divideCeilSigned(loopSpan, step));
+  }
+
+  auto lbMap = getLowerBoundMap();
+  auto ubMap = getUpperBoundMap();
+  if (lbMap.getNumResults() != 1)
+    return std::nullopt;
+
+  // Difference of each upper bound expression from the single lower bound
+  // expression (divided by the step) provides the expressions for the trip
+  // count map.
+  AffineValueMap ubValueMap(ubMap, getUpperBoundOperands());
+
+  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
+                                         lbMap.getResult(0));
+  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
+                                   lbSplatExpr, context);
+  AffineValueMap lbSplatValueMap(lbMapSplat, getLowerBoundOperands());
+
+  AffineValueMap tripCountValueMap;
+  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+
+  // Take the min if all trip counts are constant.
+  std::optional<uint64_t> tripCount;
+  for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i) {
+    AffineExpr expr = tripCountValueMap.getResult(i).ceilDiv(step);
+    if (auto constExpr = llvm::dyn_cast<AffineConstantExpr>(expr)) {
+      uint64_t value = constExpr.getValue();
+      if (tripCount.has_value())
+        tripCount = std::min(*tripCount, value);
+      else
+        tripCount = value;
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  if (tripCount.has_value())
+    return APInt(64, *tripCount);
+
+  return std::nullopt;
+}
+
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
     RewriterBase &rewriter, ValueRange newInitOperands,
     bool replaceInitOperandUsesInLoop,
@@ -2838,6 +2895,9 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
   AffineForOp newLoop = AffineForOp::create(
       rewriter, getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
       getUpperBoundOperands(), getUpperBoundMap(), getStepAsInt(), inits);
+  // Existing operands, results, and region arguments retain their positions;
+  // only new loop-carried values are appended.
+  newLoop->setDiscardableAttrs(getOperation()->getDiscardableAttrDictionary());
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<AffineYieldOp>(getBody()->getTerminator());

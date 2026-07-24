@@ -21,9 +21,12 @@ CCAssignFn CC_RISCV;
 /// This is used for assigning return values to locations when making calls.
 CCAssignFn RetCC_RISCV;
 
+class RISCVSubtarget;
+
 namespace RISCV {
 
-ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
+ArrayRef<MCPhysReg> getArgGPRs(const RISCVSubtarget &STI);
+ArrayRef<MCPhysReg> getArgFPRs(const RISCVSubtarget &STI);
 
 } // end namespace RISCV
 

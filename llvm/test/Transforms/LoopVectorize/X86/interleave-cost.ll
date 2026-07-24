@@ -289,7 +289,7 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 8, i64 16, i64 24>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP51:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP51:%.*]] = shl nuw i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP52:%.*]] = lshr exact i64 [[TMP51]], 1
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr nusw i32, ptr [[B]], i64 [[TMP52]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP53]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]

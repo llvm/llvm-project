@@ -2524,8 +2524,7 @@ static Value *extractVector(IRBuilderTy &IRB, Value *V, unsigned BeginIndex,
     return V;
 
   if (NumElements == 1) {
-    V = IRB.CreateExtractElement(V, IRB.getInt32(BeginIndex),
-                                 Name + ".extract");
+    V = IRB.CreateExtractElement(V, BeginIndex, Name + ".extract");
     LLVM_DEBUG(dbgs() << "     extract: " << *V << "\n");
     return V;
   }
@@ -2544,8 +2543,7 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   VectorType *Ty = dyn_cast<VectorType>(V->getType());
   if (!Ty) {
     // Single element to insert.
-    V = IRB.CreateInsertElement(Old, V, IRB.getInt32(BeginIndex),
-                                Name + ".insert");
+    V = IRB.CreateInsertElement(Old, V, BeginIndex, Name + ".insert");
     LLVM_DEBUG(dbgs() << "     insert: " << *V << "\n");
     return V;
   }
@@ -5306,11 +5304,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
 /// Try to canonicalize a homogeneous struct partition to a vector type.
 ///
-/// We can do this if all the elements of the struct are the same and tightly
-/// packed. This can sometimes eliminate allocas because structs cannot get
-/// promoted to LLVM values, but vectors can.
+/// We can do this if all the elements of the struct are the same and the
+/// corresponding vector has the same byte-level layout. This can sometimes
+/// eliminate allocas because structs cannot get promoted to LLVM values, but
+/// vectors can.
 ///
-/// We only apply this transformation when all users of the alloca are memory
+/// We only apply this transformation when all users of the partition are memory
 /// intrinsics. Otherwise, if there is a load or store of some other type to the
 /// partition, SROA would select that type.
 ///
@@ -5341,26 +5340,42 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
       !IsIntegralPointerTy)
     return nullptr;
 
+  // Ensure the struct is tightly packed so that the bit-layout is the same as
+  // the corresponding vector. For example, this prevents a miscompile for
+  // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
+  // tightly packed elements and trailing padding.
+  if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
+    return nullptr;
+
   auto *VTy = FixedVectorType::get(EltTy, NumElts);
   TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
-  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
+  TypeSize VectorSize = DL.getTypeStoreSize(VTy);
+  // After ruling out per-element padding, make sure a vector load/store
+  // covers the same number of bytes as the struct layout.
   if (StructSize != VectorSize)
     return nullptr;
 
-  for (const Slice &S : P) {
+  auto IsIgnorableOrMemIntrinsicSlice = [](const Slice &S) {
     if (S.isDead())
-      continue;
+      return true;
     auto *U = S.getUse();
     if (!U)
-      continue;
+      return true;
 
     User *Usr = U->getUser();
     if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      continue;
+      return true;
 
-    if (!isa<MemIntrinsic>(Usr))
+    return isa<MemIntrinsic>(Usr);
+  };
+
+  for (const Slice &S : P)
+    if (!IsIgnorableOrMemIntrinsicSlice(S))
       return nullptr;
-  }
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!IsIgnorableOrMemIntrinsicSlice(*S))
+      return nullptr;
 
   return VTy;
 }

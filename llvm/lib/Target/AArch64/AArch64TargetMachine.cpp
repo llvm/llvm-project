@@ -162,11 +162,6 @@ static cl::opt<int> EnableGlobalISelAtO(
     cl::init(0));
 
 static cl::opt<bool>
-    EnableSVEIntrinsicOpts("aarch64-enable-sve-intrinsic-opts", cl::Hidden,
-                           cl::desc("Enable SVE intrinsic opts"),
-                           cl::init(true));
-
-static cl::opt<bool>
     EnableSMEPeepholeOpt("enable-aarch64-sme-peephole-opt", cl::init(true),
                          cl::Hidden,
                          cl::desc("Perform SME peephole optimization"));
@@ -229,6 +224,12 @@ static cl::opt<bool> EnableSRLTSubregToRegMitigation(
              "super-regs when using Subreg Liveness Tracking"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableSVEShuffleOpt(
+    "aarch64-enable-sve-shuffle-opts",
+    cl::desc("Enable pattern matching of shuffles that could make use of SVE "
+             "instructions like tbl or the bottom/top variants"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -253,6 +254,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
+  initializeAArch64PTrueCoalescingLegacyPass(PR);
   initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
@@ -270,9 +272,8 @@ LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(PR);
   initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
-  initializeAArch64SRLTDefineSuperRegsPass(PR);
+  initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
-  initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
@@ -281,11 +282,12 @@ LLVMInitializeAArch64Target() {
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);
+  initializeSVEShuffleOptsPass(PR);
 }
 
 bool AArch64TargetMachine::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
+                              cl::boolOrDefault::BOU_TRUE;
 
   return getOptLevel() == CodeGenOptLevel::None ||
          (static_cast<unsigned>(getOptLevel()) >
@@ -397,8 +399,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
 
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
+                              cl::boolOrDefault::BOU_TRUE;
 
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
@@ -503,6 +505,18 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+// Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
+// uses/consumes it. This ensures its def has a short live range, which means
+// we're more likely to allocate registers its operands first (which works best
+// for the hints in AArch64RegisterInfo::getRegAllocationHints).
+static bool scheduleFormTransposedTupleAdjacentToUsers(
+    const TargetInstrInfo &TII, const TargetSubtargetInfo &TSI,
+    const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
+  return !FirstMI ||
+         FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+         FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
+}
+
 ScheduleDAGInstrs *
 AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
@@ -511,6 +525,9 @@ AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasFusion())
     DAG->addMutation(createAArch64MacroFusionDAGMutation());
+  if (ST.hasSME() && ST.isStreaming())
+    DAG->addMutation(createMacroFusionDAGMutation(
+        scheduleFormTransposedTupleAdjacentToUsers));
   return DAG;
 }
 
@@ -629,11 +646,6 @@ void AArch64PassConfig::addIRPasses() {
   // ourselves.
   addPass(createAtomicExpandLegacyPass());
 
-  // Expand any SVE vector library calls that we can't code generate directly.
-  if (EnableSVEIntrinsicOpts &&
-      TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSVEIntrinsicOptsPass());
-
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
@@ -678,6 +690,13 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
+  // Try to use tbl in place of other shuffling operations if doing so would
+  // reduce the total number of instructions. Shuffle masks for big endian may
+  // be different, so require a little endian target.
+  if (TM->createDataLayout().isLittleEndian() &&
+      getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt)
+    addPass(createSVEShuffleOptsPass());
+
   // Match complex arithmetic patterns
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(createComplexDeinterleavingPass(TM));
@@ -710,11 +729,11 @@ bool AArch64PassConfig::addPreISel() {
   // Basically, the addressable offsets are up to 4095 * Ty.getSizeInBytes().
   // and the offset has to be a multiple of the related size in bytes.
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::BOU_UNSET) ||
-      EnableGlobalMerge == cl::BOU_TRUE) {
+       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
+      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
     bool OnlyOptimizeForSize =
         (TM->getOptLevel() < CodeGenOptLevel::Aggressive) &&
-        (EnableGlobalMerge == cl::BOU_UNSET);
+        (EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET);
 
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
@@ -801,8 +820,10 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
 
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createAArch64MIPeepholeOptLegacyPass());
+    addPass(createAArch64PTrueCoalescingLegacyPass());
+  }
 }
 
 bool AArch64PassConfig::addILPOpts() {
@@ -846,7 +867,7 @@ void AArch64PassConfig::addPreRegAlloc() {
 
 void AArch64PassConfig::addPostRewrite() {
   if (EnableSRLTSubregToRegMitigation)
-    addPass(createAArch64SRLTDefineSuperRegsPass());
+    addPass(createAArch64SRLTDefineSuperRegsLegacyPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

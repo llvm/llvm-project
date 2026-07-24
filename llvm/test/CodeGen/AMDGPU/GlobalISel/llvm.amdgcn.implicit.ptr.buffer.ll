@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00-mesa-mesa3d < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Dropped parts from original test
 

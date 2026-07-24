@@ -15,6 +15,7 @@
 #define LLVM_TARGETPARSER_RISCVTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -94,6 +95,23 @@ LLVM_ABI CPUModel getCPUModel(StringRef CPU);
 LLVM_ABI StringRef getCPUNameFromCPUModel(const CPUModel &Model);
 
 } // namespace RISCV
+
+namespace RISCVCFI {
+enum class ZicfilpLabelSchemeKind {
+  Invalid,
+  Unlabeled,
+  FuncSig,
+};
+
+// See clang::getCFBranchLabelSchemeFlagVal() for possible CFBranchLabelScheme.
+inline ZicfilpLabelSchemeKind
+getZicfilpLabelScheme(const StringRef CFBranchLabelScheme) {
+  return StringSwitch<ZicfilpLabelSchemeKind>(CFBranchLabelScheme)
+      .Case("unlabeled", ZicfilpLabelSchemeKind::Unlabeled)
+      .Case("func-sig", ZicfilpLabelSchemeKind::FuncSig)
+      .Default(ZicfilpLabelSchemeKind::Invalid);
+}
+} // namespace RISCVCFI
 
 namespace RISCVVType {
 enum VLMUL : uint8_t {

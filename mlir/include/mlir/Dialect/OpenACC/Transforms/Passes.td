@@ -157,6 +157,10 @@ def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mli
     that device code can reference them.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", "false",
+           "Emit declaration-only device globals for CUDA unified memory.">
+  ];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
@@ -175,6 +179,37 @@ def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
       "mlir::arith::ArithDialect"];
 }
 
+
+def ACCEmitRemarksLoop : Pass<"acc-emit-remarks-loop", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC loop parallelism mapping remarks";
+  let description = [{
+    This pass emits optimization remarks describing how loops inside OpenACC
+    compute regions are mapped to parallelism levels (gang, worker, vector,
+    sequential) and the corresponding GPU parallel dimensions.
+
+    The pass walks `acc.compute_region` operations that originated from OpenACC
+    compute constructs and reports remarks for each loop carrying an
+    `acc.par_dims` attribute.
+  }];
+  let options = [
+    Option<"gpuDimSeparator", "gpu-dim-separator", "std::string", "\".\"",
+           "Separator between GPU index prefix and axis name in remarks ">
+  ];
+}
+
+def ACCEmitRemarksPrivate
+    : Pass<"acc-emit-remarks-private", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC private and firstprivate remarks";
+  let description = [{
+    This pass emits optimization remarks describing the private and firstprivate
+    variables associated with OpenACC compute and loop constructs.
+
+    The pass walks compute constructs and `acc.loop` operations and, for each,
+    reports the implicit and explicit `private` and `firstprivate` variables it
+    carries.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
 
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   let summary = "Tile OpenACC loops with tile clauses";
@@ -237,8 +272,13 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
       acc.declare_enter, acc.declare_exit
     - Compute constructs (inline region): acc.parallel, acc.serial, acc.kernels
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
+                  (folded if known): acc.on_device
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
+               "List of integers which represent the device we are specializing for">
+  ];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
@@ -493,7 +533,8 @@ def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
-def ACCBindRoutine : Pass<"acc-bind-routine", "mlir::func::FuncOp"> {
+def ACCBindRoutine
+    : InterfacePass<"acc-bind-routine", "mlir::FunctionOpInterface"> {
   let summary = "Apply bind clause to function calls in ACC compute regions";
   let description = [{
     For calls inside offload regions that target a function with an
@@ -502,6 +543,35 @@ def ACCBindRoutine : Pass<"acc-bind-routine", "mlir::func::FuncOp"> {
     call target.
   }];
   let options = [ AccDeviceTypeOption ];
+}
+
+def ACCCGToGPU : InterfacePass<"acc-cg-to-gpu", "mlir::FunctionOpInterface"> {
+  let summary = "Lower acc.compute_region to gpu.launch";
+  let description = [{
+    Generate GPU code for acc.compute_region loop nests by converting them to
+    gpu.launch and mapping acc.par_dims parallelism to GPU block and thread
+    dimensions.
+  }];
+  let options = [
+    AccDeviceTypeOption,
+    Option<"maxWorkgroupSharedMemory", "max-workgroup-shared-memory", "int64_t",
+        "49152",
+        "Maximum workgroup shared memory budget in bytes.">,
+    Option<"maxThreadPrivateStack", "max-thread-private-stack", "int64_t",
+        "16384",
+        "Maximum thread-private stack allocation in bytes.">,
+    Option<"subgroupSize", "subgroup-size", "int64_t", "32",
+        "Subgroup size used for block-dimension alignment and reductions.">
+  ];
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::complex::ComplexDialect",
+    "mlir::gpu::GPUDialect",
+    "mlir::acc::OpenACCDialect",
+    "mlir::scf::SCFDialect",
+    "mlir::NVVM::NVVMDialect",
+    "mlir::memref::MemRefDialect"
+  ];
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

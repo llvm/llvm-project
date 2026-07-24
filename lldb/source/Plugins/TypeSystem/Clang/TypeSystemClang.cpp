@@ -4099,6 +4099,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
   case clang::Type::FunctionNoProto:
@@ -4803,6 +4806,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
 
   case clang::Type::UnaryTransform:
     break;
@@ -5105,6 +5111,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
 
@@ -8477,14 +8486,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 

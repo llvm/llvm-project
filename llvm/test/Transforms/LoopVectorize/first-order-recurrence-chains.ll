@@ -689,7 +689,7 @@ define double @test_chained_first_order_recurrence_sink_users_1(ptr %ptr, i64 %n
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 1.000000e+01>, %[[VECTOR_PH]] ], [ [[WIDE_LOAD:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 2.000000e+01>, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add i64 1, [[INDEX1]]
+; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add nuw i64 1, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP2]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>

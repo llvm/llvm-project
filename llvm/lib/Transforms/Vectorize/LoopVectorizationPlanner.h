@@ -356,9 +356,7 @@ public:
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::none(), {}, DL, Name));
+    return createNoWrapPtrAdd(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name);
   }
 
   VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
@@ -395,7 +393,7 @@ public:
     VPlan &Plan = *getInsertBlock()->getPlan();
     VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
-      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      VPValue *VScale = createVScale(Ty);
       RuntimeEC = EC.getKnownMinValue() == 1
                       ? VScale
                       : createOverflowingOp(Instruction::Mul,
@@ -404,14 +402,13 @@ public:
     return RuntimeEC;
   }
 
-  /// Convert the input value \p Current to the corresponding value of an
-  /// induction with \p Start and \p Step values, using \p Start + \p Current *
-  /// \p Step.
+  /// Convert \p Current to \p Start + \p Current * \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPIRValue *Start,
-                                     VPValue *Current, VPValue *Step) {
+                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     VPValue *Current, VPValue *Step,
+                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
@@ -437,8 +434,26 @@ public:
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
   }
 
-  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
+  /// result type \p ResultTy
+  VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
+                                       ArrayRef<VPValue *> Operands,
+                                       Type *ResultTy, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    SmallVector<VPValue *, 2> Ops(Operands);
+    Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
+    return tryInsertInstruction(new VPInstructionWithType(
+        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+  }
+
+  /// Create a scalar llvm.vscale call.
+  VPInstruction *createVScale(Type *ResultTy,
+                              DebugLoc DL = DebugLoc::getUnknown()) {
+    return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
+  }
+
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -448,8 +463,8 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -507,11 +522,38 @@ public:
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
 
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, DebugLoc DL);
+
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
       Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
     return tryInsertInstruction(new VPWidenMemIntrinsicRecipe(
         VectorIntrinsicID, CallArguments, Ty, Alignment, MD, DL));
+  }
+
+  /// Create a recipe widening \p Load, loading from \p Addr with \p Mask (may
+  /// be null).
+  VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
+                                     VPValue *Mask, bool Consecutive,
+                                     const VPIRMetadata &Metadata,
+                                     DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+  }
+
+  /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
+  /// \p Mask (may be null).
+  VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
+                                       VPValue *StoredVal, VPValue *Mask,
+                                       bool Consecutive,
+                                       const VPIRMetadata &Metadata,
+                                       DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenStoreRecipe(
+        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -708,6 +750,13 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const TargetTransformInfo &getTTI() const { return TTI; }
+
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
+  /// \return The loop being analyzed.
+  const Loop *getLoop() const { return TheLoop; }
 
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
@@ -942,6 +991,10 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
+
+  /// Returns true if \p Plan requires a scalar epilogue after the vector
+  /// loop. Asserts that the VPlan decision matches the legacy cost model.
+  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

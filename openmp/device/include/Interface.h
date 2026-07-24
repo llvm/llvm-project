@@ -235,19 +235,18 @@ void __kmpc_target_deinit();
 /// Reduction
 ///
 ///{
-void *__kmpc_reduction_get_fixed_buffer();
-
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
                                                uint64_t reduce_data_size,
                                                void *reduce_data,
                                                ShuffleReductFnTy shflFct,
                                                InterWarpCopyFnTy cpyFct);
 
-int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
-    IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
-    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
-    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
-    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct);
+int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
+                                       ShuffleReductFnTy shflFct,
+                                       InterWarpCopyFnTy cpyFct,
+                                       ListGlobalFnTy lgcpyFct,
+                                       ListGlobalFnTy glcpyFct,
+                                       ListGlobalFnTy glredFct);
 ///}
 
 /// Synchronization

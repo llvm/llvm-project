@@ -65,3 +65,17 @@ struct MutCheck : MutOnly {
   // bool operator==(this MutCheck, MutCheck) = default;
 };
 }
+
+namespace immediate_deletion_check {
+struct HasPrivateSpaceship {
+private:
+  std::strong_ordering operator<=>(const HasPrivateSpaceship &) const; // expected-note 2 {{declared private here}}
+};
+
+struct S {
+  HasPrivateSpaceship member; // expected-note 2 {{because it would invoke a private 'operator<=>' member of 'immediate_deletion_check::HasPrivateSpaceship' to compare member 'member'}}
+  auto operator<=>(const S &) const = default; // expected-warning {{explicitly defaulted three-way comparison operator is implicitly deleted}} expected-note {{replace 'default' with 'delete'}} expected-note {{explicitly defaulted function was implicitly deleted here}}
+};
+
+bool b = (S{} < S{}); // expected-error {{object of type 'S' cannot be compared because its 'operator<=>' is implicitly deleted}}
+}

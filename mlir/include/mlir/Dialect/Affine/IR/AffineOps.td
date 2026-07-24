@@ -135,7 +135,7 @@ def AffineForOp : Affine_Op<"for",
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
       "getLoopUpperBounds", "getYieldedValuesMutable",
-      "replaceWithAdditionalYields"]>,
+      "replaceWithAdditionalYields", "getStaticTripCount"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";
@@ -343,6 +343,7 @@ def AffineForOp : Affine_Op<"for",
 
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
   let hasRegionVerifier = 1;
 }
 

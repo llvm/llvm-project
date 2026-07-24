@@ -19,7 +19,46 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 
+#include "cuda.h"
+#include "cuda_runtime.h"
+
 namespace Fortran::runtime::cuda {
+
+static bool deviceContextTornDown() {
+  // Must be transparent to the last-error seen by user code: the one-time
+  // cudaGetDriverEntryPoint() lookup below can fail (e.g. runtime newer than
+  // driver) and leave a sticky error that a later user cudaGetLastError() would
+  // misattribute. Consume an error only if the slot started clean, so we never
+  // discard a pre-existing one.
+  cudaError_t priorErr{cudaPeekAtLastError()};
+  bool tornDown{true};
+  int device{0};
+  if (cudaGetDevice(&device) == cudaSuccess) {
+    // Driver API reports primary-context state WITHOUT lazily creating one
+    // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
+    // Only the current device is checked (single-device assumption).
+    using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
+    static GetStateFn getState{[]() -> GetStateFn {
+      void *fn{nullptr};
+      if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
+              cudaEnableDefault, nullptr) != cudaSuccess) {
+        return nullptr;
+      }
+      return reinterpret_cast<GetStateFn>(fn);
+    }()};
+    if (getState) {
+      unsigned flags{0};
+      int active{0};
+      if (getState(device, &flags, &active) == CUDA_SUCCESS) {
+        tornDown = active == 0;
+      }
+    }
+  }
+  if (priorErr == cudaSuccess && cudaPeekAtLastError() != cudaSuccess) {
+    (void)cudaGetLastError();
+  }
+  return tornDown;
+}
 
 struct DeviceAllocation {
   void *ptr;
@@ -141,6 +180,8 @@ void RTDEF(CUFRegisterAllocator)() {
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
 }
 
+bool RTDEF(CUFDeviceIsActive)() { return !deviceContextTornDown(); }
+
 cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
   int pos = findAllocation(p);
   if (pos >= 0) {
@@ -164,8 +205,9 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
 }
 }
 
-void *CUFAllocPinned(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocPinned(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
@@ -173,7 +215,8 @@ void *CUFAllocPinned(
 
 void CUFFreePinned(void *p) { cudaFreeHost(p); }
 
-void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
+void *CUFAllocDevice(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment, std::int64_t *asyncObject) {
   void *p;
   if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
     CUDA_REPORT_IF_ERROR(
@@ -190,6 +233,8 @@ void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
   return p;
 }
 
+// Scope-exit cleanup is guarded in lowering; explicit deallocation after a
+// reset is unsupported, keeping cudaFreeAsync free of context-query overhead.
 void CUFFreeDevice(void *p) {
   CriticalSection critical{lock};
   int pos = findAllocation(p);
@@ -202,8 +247,9 @@ void CUFFreeDevice(void *p) {
   }
 }
 
-void *CUFAllocManaged(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocManaged(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(
       cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
@@ -212,10 +258,11 @@ void *CUFAllocManaged(
 
 void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
-void *CUFAllocUnified(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocUnified(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   // Call alloc managed for the time being.
-  return CUFAllocManaged(sizeInBytes, asyncObject);
+  return CUFAllocManaged(sizeInBytes, alignment, asyncObject);
 }
 
 void CUFFreeUnified(void *p) {

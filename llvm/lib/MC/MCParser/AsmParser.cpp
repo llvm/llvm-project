@@ -2408,12 +2408,8 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
 
   // Like SourceMgr::printMessage() we need to print the include stack if any
   // before printing the message.
-  unsigned DiagCurBuffer = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
-  if (!Parser->SavedDiagHandler && DiagCurBuffer &&
-      DiagCurBuffer != DiagSrcMgr.getMainFileID()) {
-    SMLoc ParentIncludeLoc = DiagSrcMgr.getParentIncludeLoc(DiagCurBuffer);
-    DiagSrcMgr.PrintIncludeStack(ParentIncludeLoc, OS);
-  }
+  if (!Parser->SavedDiagHandler)
+    DiagSrcMgr.printIncludeStackForDiagnostic(DiagLoc, OS);
 
   // If we have not parsed a cpp hash line filename comment or the source
   // manager changed or buffer changed (like in a nested include) then just
@@ -3480,8 +3476,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   // Check whether we should use optimal code alignment for this .align
   // directive.
   if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
-    getStreamer().emitCodeAlignment(
-        Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
+    getStreamer().emitCodeAlignment(Align(Alignment),
+                                    getTargetParser().getSTI(), MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
     getStreamer().emitValueToAlignment(Align(Alignment), FillExpr, ValueSize,

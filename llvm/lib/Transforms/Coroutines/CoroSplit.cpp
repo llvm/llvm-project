@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -55,7 +56,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -162,6 +165,50 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder,
     return;
 
   Shape.emitDealloc(Builder, FramePtr, CG);
+}
+
+/// Create a pointer to the switch destroy function field in the coroutine
+/// frame.
+static Value *createSwitchDestroyPtr(const coro::Shape &Shape,
+                                     IRBuilder<> &Builder, Value *FramePtr) {
+  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
+                                  Shape.SwitchLowering.DestroyOffset);
+  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "destroy.addr");
+}
+
+/// Make resume-clone coro.free conditional on whether the frame is elided.
+///
+/// The destroy slot holds the cleanup clone for an elided frame and the destroy
+/// clone for a heap frame. Load it before user code can reentrantly destroy the
+/// enclosing caller frame, then use the cached comparison to suppress only the
+/// deallocation. The resume clone has already performed the shared coroutine
+/// cleanup, so calling either clone here would run that cleanup twice.
+static void replaceSwitchResumeCoroFree(const coro::Shape &Shape,
+                                        Function &Resume, Function &Cleanup) {
+  Value *FramePtr = Resume.getArg(0);
+  IRBuilder<> EntryBuilder(Resume.getEntryBlock().getTerminator());
+  Value *DestroyAddr = createSwitchDestroyPtr(Shape, EntryBuilder, FramePtr);
+  Value *DestroyFn = EntryBuilder.CreateLoad(Shape.getSwitchResumePointerType(),
+                                             DestroyAddr, "destroy");
+  Value *CleanupFn =
+      EntryBuilder.CreatePointerCast(&Cleanup, DestroyFn->getType());
+  Value *IsElided =
+      EntryBuilder.CreateICmpEQ(DestroyFn, CleanupFn, "is.elided");
+
+  SmallVector<CoroFreeInst *, 4> CoroFrees;
+  for (User *U : FramePtr->users()) {
+    if (auto *CF = dyn_cast<CoroFreeInst>(U))
+      CoroFrees.push_back(CF);
+  }
+
+  for (CoroFreeInst *CF : CoroFrees) {
+    IRBuilder<> Builder(CF);
+    auto *Null = ConstantPointerNull::get(cast<PointerType>(CF->getType()));
+    Value *Replacement =
+        Builder.CreateSelect(IsElided, Null, FramePtr, "coro.free");
+    CF->replaceAllUsesWith(Replacement);
+    CF->eraseFromParent();
+  }
 }
 
 /// Replace an llvm.coro.end.async.
@@ -411,7 +458,11 @@ void coro::BaseCloner::handleFinalSuspend() {
   auto *Switch = cast<SwitchInst>(VMap[Shape.SwitchLowering.ResumeSwitch]);
   auto FinalCaseIt = std::prev(Switch->case_end());
   BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
-  Switch->removeCase(FinalCaseIt);
+
+  // Use SwitchInstProfUpdateWrapper to remove the case, keeping the profile
+  // branch weights in sync with the switch successors.
+  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
+  SwitchWrapper.removeCase(FinalCaseIt);
   if (isSwitchDestroyFunction()) {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
@@ -426,7 +477,11 @@ void coro::BaseCloner::handleFinalSuspend() {
       auto *Load =
           Builder.CreateLoad(Shape.getSwitchResumePointerType(), NewFramePtr);
       auto *Cond = Builder.CreateIsNull(Load);
-      Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      auto *Br = Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      applyProfMetadataIfEnabled(Br, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    Inst->getFunction());
+      });
     }
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
@@ -1099,6 +1154,13 @@ void coro::SwitchCloner::create() {
   // Clone the function
   coro::BaseCloner::create();
 
+  // Override EntryCount for the cloned resume function with the true sum of
+  // all suspension points profile counts.
+  if (FKind == coro::CloneKind::SwitchResume && OrigF.hasProfileData() &&
+      Shape.ResumeEntryCount.has_value()) {
+    NewF->setEntryCount(Shape.ResumeEntryCount.value());
+  }
+
   // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
   if (FKind == coro::CloneKind::SwitchCleanup)
     elideCoroFree(NewFramePtr);
@@ -1382,6 +1444,9 @@ struct SwitchCoroutineSplitter {
     auto *CleanupClone = coro::SwitchCloner::createClone(
         F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
 
+    if (Shape.SwitchLowering.HasCoroElideNoAllocVariant)
+      replaceSwitchResumeCoroFree(Shape, *ResumeClone, *CleanupClone);
+
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
     postSplitCleanup(*CleanupClone);
@@ -1505,6 +1570,10 @@ private:
 
     // Split all coro.suspend calls
     size_t SuspendIndex = 0;
+    SmallVector<uint64_t, 8> SwitchWeights64;
+    // Default destination (unreachable) has weight 0
+    SwitchWeights64.push_back(0);
+
     for (auto *AnyS : Shape.CoroSuspends) {
       auto *S = cast<CoroSuspendInst>(AnyS);
       ConstantInt *IndexVal = Shape.getIndex(SuspendIndex);
@@ -1557,6 +1626,14 @@ private:
           S->getNextNode(), ResumeBB->getName() + Twine(".landing"));
       Switch->addCase(IndexVal, ResumeBB);
 
+      // Get pre-split frequency for this suspend point
+      uint64_t Weight = 1; // Default fallback weight
+      auto It = Shape.SuspendFreqs.find(AnyS);
+      if (It != Shape.SuspendFreqs.end()) {
+        Weight = It->second;
+      }
+      SwitchWeights64.push_back(Weight);
+
       cast<UncondBrInst>(SuspendBB->getTerminator())->setSuccessor(LandingBB);
       auto *PN = PHINode::Create(Builder.getInt8Ty(), 2, "");
       PN->insertBefore(LandingBB->begin());
@@ -1590,6 +1667,13 @@ private:
       ++SuspendIndex;
     }
 
+    if (!Shape.SuspendFreqs.empty()) {
+      auto SwitchWeights32 = llvm::fitWeights(SwitchWeights64);
+      MDBuilder MDB(C);
+      Switch->setMetadata(LLVMContext::MD_prof,
+                          MDB.createBranchWeights(SwitchWeights32));
+    }
+
     Builder.SetInsertPoint(UnreachBB);
     Builder.CreateUnreachable();
     DBuilder.finalize();
@@ -1614,6 +1698,10 @@ private:
       // If there is a CoroAlloc and it returns false (meaning we elide the
       // allocation, use CleanupFn instead of DestroyFn).
       DestroyOrCleanupFn = Builder.CreateSelect(CA, DestroyFn, CleanupFn);
+      applyProfMetadataIfEnabled(DestroyOrCleanupFn, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    CoroId->getFunction());
+      });
     }
 
     // Destroy function pointer
@@ -2014,6 +2102,9 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   bool shouldCreateNoAllocVariant =
       !isNoSuspendCoroutine && Shape.ABI == coro::ABI::Switch &&
       hasSafeElideCaller(F) && !F.hasFnAttribute(llvm::Attribute::NoInline);
+  if (Shape.ABI == coro::ABI::Switch)
+    Shape.SwitchLowering.HasCoroElideNoAllocVariant =
+        shouldCreateNoAllocVariant;
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.
@@ -2052,10 +2143,22 @@ static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
   if (!Clones.empty()) {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
-      // Each clone in the Switch lowering is independent of the other clones.
-      // Let the LazyCallGraph know about each one separately.
-      for (Function *Clone : Clones)
-        CG.addSplitFunction(N.getFunction(), *Clone);
+      // The resume clone's elided-frame check holds a reference to the cleanup
+      // clone. Add the cleanup clone first, so populating the resume node does
+      // not materialize an unregistered cleanup node.
+      if (Shape.SwitchLowering.HasCoroElideNoAllocVariant) {
+        assert(Clones.size() >= 3 && "expected switch coroutine clones");
+        CG.addSplitFunction(N.getFunction(), *Clones[2]);
+        CG.addSplitFunction(N.getFunction(), *Clones[1]);
+        CG.addSplitFunction(N.getFunction(), *Clones[0]);
+        for (Function *Clone : drop_begin(Clones, 3))
+          CG.addSplitFunction(N.getFunction(), *Clone);
+      } else {
+        // Each clone in the Switch lowering is independent of the other
+        // clones. Let the LazyCallGraph know about each one separately.
+        for (Function *Clone : Clones)
+          CG.addSplitFunction(N.getFunction(), *Clone);
+      }
       break;
     case coro::ABI::Async:
     case coro::ABI::Retcon:
@@ -2247,6 +2350,29 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       continue;
 
     F.setSplittedCoroutine();
+
+    // Query BFI and populate SuspendFreqs right before splitting.
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+    for (auto *AnyS : Shape.CoroSuspends) {
+      BasicBlock *BB = AnyS->getParent();
+      uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
+      Shape.SuspendFreqs[AnyS] = Freq;
+
+      // Query BFI to get the actual estimated execution profile count of the
+      // basic block where this suspension point resides.
+      std::optional<uint64_t> Count =
+          BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true);
+      if (Count.has_value()) {
+        if (!Shape.ResumeEntryCount.has_value()) {
+          // For the first suspend point visited, initialize the total sum.
+          Shape.ResumeEntryCount = Count.value();
+        } else {
+          // Accumulate the absolute execution count of each subsequent suspend
+          // point into the total sum.
+          Shape.ResumeEntryCount.value() += Count.value();
+        }
+      }
+    }
 
     std::unique_ptr<coro::BaseABI> ABI = CreateAndInitABI(F, Shape);
 

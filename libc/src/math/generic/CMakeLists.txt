@@ -416,6 +416,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tanbf16
+  SRCS
+    tanbf16.cpp
+  HDRS
+    ../tanbf16.h
+  DEPENDS
+    libc.src.__support.math.tanbf16
+)
+
+add_entrypoint_object(
   tanf
   SRCS
     tanf.cpp
@@ -1232,6 +1242,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  expbf16
+  SRCS
+    expbf16.cpp
+  HDRS
+    ../expbf16.h
+  DEPENDS
+    libc.src.__support.math.expbf16
+)
+
+add_entrypoint_object(
   exp2
   SRCS
     exp2.cpp
@@ -1565,6 +1585,19 @@ add_entrypoint_object(
     ../ilogbbf16.h
   DEPENDS
     libc.src.__support.math.ilogbbf16
+)
+
+add_entrypoint_object(
+  lgammaf16
+  SRCS
+    lgammaf16.cpp
+  HDRS
+    ../lgammaf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.lgammaf16
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

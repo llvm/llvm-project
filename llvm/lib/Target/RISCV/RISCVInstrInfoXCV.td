@@ -272,7 +272,7 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins BasePtr:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12:$imm12),
               opcodestr, "$rd, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -293,7 +293,7 @@ class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
-              (ins GPR:$rs2, GPR:$rs1, simm12_lo:$imm12),
+              (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -594,6 +594,13 @@ let Predicates = [HasVendorXCVbi, IsRV32] in {
   def CV_BNEIMM : CVInstImmBranch<0b111, (outs),
         (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.bneimm", "$rs1, $imm5, $imm12">, Sched<[]>;
+  // Long-branch relaxation pseudos for cv.beqimm / cv.bneimm. These are emitted
+  // by the RISCVAsmBackend when the target of a CV_BEQIMM / CV_BNEIMM is
+  // further than +/-4 KiB away. Each expands to an inverted short cv.b{ne,eq}imm
+  // (4 bytes) plus an unconditional JAL trampoline (4 bytes). Reuses the
+  // LongBcciPseudo class from RISCVInstrInfo.td (size = 8 bytes, simm5 imm).
+  def PseudoLongCV_BEQIMM : LongBcciPseudo<simm5, 8>;
+  def PseudoLongCV_BNEIMM : LongBcciPseudo<simm5, 8>;
 }
 
 let Predicates = [HasVendorXCVmem, IsRV32] in {
@@ -675,8 +682,8 @@ class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
           (Inst CVrr:$regreg)>;
 
 class CVStriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_lo:$imm12),
-          (Inst GPR:$rs2, GPR:$rs1, simm12_lo:$imm12)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 class CVStrriPat<PatFrag StoreOp, RVInst Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, GPR:$rs3),
@@ -828,7 +835,7 @@ class PatCoreVMacGprGprUimm5 <string intr, string asm>
   : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5),
         (!cast<RVInst>("CV_" # asm) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
 
-let Predicates = [HasVendorXCVmac] in {
+let Predicates = [HasVendorXCVmac, IsRV32] in {
   def : PatCoreVMacGprGprGpr<"mac", "MAC">;
   def : PatCoreVMacGprGprGpr<"msu", "MSU">;
 

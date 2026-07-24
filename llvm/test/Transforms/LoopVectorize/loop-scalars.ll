@@ -72,7 +72,7 @@ define void @scalar_store(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[TMP3]]
@@ -132,7 +132,7 @@ define void @expansion(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x i8], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [8 x i8], ptr [[B]], i64 [[TMP3]]
@@ -191,8 +191,8 @@ define void @no_gep_or_bitcast(ptr noalias %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    store i32 0, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

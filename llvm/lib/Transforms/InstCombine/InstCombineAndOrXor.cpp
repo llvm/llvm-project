@@ -1472,11 +1472,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
                         FMFSource::intersect(LHS, RHS));
   }
 
-  // This transform is not valid for a logical select.
-  if (!IsLogicalSelect &&
-      ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
-       (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO &&
-        !IsAnd))) {
+  if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
+      (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
     if (LHS0->getType() != RHS0->getType())
       return nullptr;
 
@@ -1486,8 +1483,14 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
-      return Builder.CreateFCmpFMF(PredL, LHS0, RHS0,
-                                   FMFSource::intersect(LHS, RHS));
+      Value *Y = RHS0;
+      FastMathFlags FMF = LHS->getFastMathFlags() & RHS->getFastMathFlags();
+      if (IsLogicalSelect) {
+        Y = Builder.CreateFreeze(Y, Y->getName() + ".fr");
+        FMF.setNoNaNs(false);
+        FMF.setNoInfs(false);
+      }
+      return Builder.CreateFCmpFMF(PredL, LHS0, Y, FMF);
     }
   }
 
@@ -4669,6 +4672,23 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
+
+  // signum: or (ashr X, BW-1), zext (icmp ne|sgt X, 0) --> scmp(X, 0)
+  // The ashr already supplies -1 for negative X, so any predicate that
+  // produces 1 for positive X and 0 for X == 0 yields the same result here.
+  {
+    Value *X;
+    CmpPredicate SignPred;
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    if (match(&I,
+              m_c_Or(m_AShr(m_Value(X), m_SpecificIntAllowPoison(BitWidth - 1)),
+                     m_ZExt(m_ICmp(SignPred, m_Deferred(X), m_ZeroInt())))) &&
+        (SignPred == ICmpInst::ICMP_NE || SignPred == ICmpInst::ICMP_SGT) &&
+        (Op0->hasOneUse() || Op1->hasOneUse()))
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(Ty, Intrinsic::scmp,
+                                     {X, Constant::getNullValue(Ty)}));
+  }
 
   return nullptr;
 }
