@@ -1379,6 +1379,9 @@ void collectEnclosingConstructTraits(
   for (; op; op = op->getParentOp()) {
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+    if (mlir::isa<mlir::omp::DispatchOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_dispatch_dispatch);
     if (mlir::isa<mlir::omp::ParallelOp>(op))
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_parallel_parallel);

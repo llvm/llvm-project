@@ -8,55 +8,32 @@
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
 
-!CHECK-LABEL: define void @_QMfuncsPfoo_variant1()
-!CHECK: call ptr @_FortranAioBeginExternalListOutput
-
-!CHECK-LABEL: define void @_QMfuncsPfoo_variant2()
+!CHECK-LABEL: define void @_QMfuncsPfoo_variant()
 !CHECK: call ptr @_FortranAioBeginExternalListOutput
 
 !CHECK-LABEL: define void @_QMfuncsPfoo_dispatch()
-!CHECK: %[[COND:.*]] = load i32, ptr @_QMfuncsEfoo_sub
-!CHECK: %[[CMP:.*]] = icmp ne i32 %[[COND]], 0
-!CHECK: br i1 %[[CMP]], label %[[IF_TRUE:.*]], label %[[IF_FALSE:.*]]
-!CHECK: [[IF_TRUE]]:
-!CHECK: call void @_QMfuncsPfoo_variant2()
-!CHECK: [[IF_FALSE]]:
-!CHECK: call void @_QMfuncsPfoo_variant1()
+!CHECK: call ptr @_FortranAioBeginExternalListOutput
 
 !CHECK-LABEL: define void @_QQmain()
-!CHECK: store i32 0, ptr @_QMfuncsEfoo_sub
+!CHECK: call void @_QMfuncsPfoo_dispatch()
 !CHECK: br label %omp.dispatch.region
 !CHECK: omp.dispatch.region:
-!CHECK: call void @_QMfuncsPfoo_dispatch()
+!CHECK: call void @_QMfuncsPfoo_variant()
 !CHECK: br label %omp.region.cont
 !CHECK: omp.region.cont:
-!CHECK: store i32 1, ptr @_QMfuncsEfoo_sub
-!CHECK: br label %omp.dispatch.region2
-!CHECK: omp.dispatch.region2:
-!CHECK: call void @_QMfuncsPfoo_dispatch()
-!CHECK: br label %omp.region.cont1
-!CHECK: omp.region.cont1:
 
 module funcs
   implicit none
-  logical :: foo_sub
 
 contains
 
-  subroutine foo_variant1()
-    print *, "in foo_variant1"
-  end subroutine
-
-  subroutine foo_variant2()
-    print *, "in foo_variant2"
+  subroutine foo_variant()
+    print *, "in foo_variant"
   end subroutine
 
   subroutine foo_dispatch()
-    if (foo_sub) then
-      call foo_variant2()
-    else
-      call foo_variant1()
-    end if
+    !$omp declare variant(foo_dispatch:foo_variant) match(construct={dispatch})
+    print *, "in foo_dispatch"
   end subroutine
 
 end module funcs
@@ -65,11 +42,8 @@ program dispatch_test
   use funcs
   implicit none
 
-  foo_sub = .false.
-  !$omp dispatch
   call foo_dispatch()
 
-  foo_sub = .true.
   !$omp dispatch
   call foo_dispatch()
 

@@ -1,37 +1,23 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s --check-prefix=HLFIR
 
-!HLFIR-LABEL: func @_QMfuncsPfoo_dispatch
-!HLFIR: %[[XD_H:.*]]:2 = hlfir.declare %{{.*}} {{{.*}}uniq_name = {{.*}}foo_dispatch{{.*}}x{{.*}}
-!HLFIR: %[[LOAD_H:.*]] = fir.load %[[XD_H]]#0 : !fir.ref<i32>
-!HLFIR: %[[C1_H:.*]] = arith.constant 1 : i32
-!HLFIR: %[[CMP_H:.*]] = arith.cmpi eq, %[[LOAD_H]], %[[C1_H]] : i32
-!HLFIR: fir.if %[[CMP_H]] {
-!HLFIR:   fir.call @_QMfuncsPvariant1() {{.*}}: () -> ()
-!HLFIR: } else {
-!HLFIR:   fir.call @_QMfuncsPvariant2() {{.*}}: () -> ()
-!HLFIR: }
+! Variant selection is provided by DECLARE VARIANT with a `construct={dispatch}`
+! match: inside a dispatch region the call to the base procedure `foo_dispatch`
+! is replaced by a call to its variant `foo_variant`.
 
 module funcs
   implicit none
 
 contains
 
-  subroutine variant1()
-    print *, "in variant1"
+  !HLFIR-LABEL: func @_QMfuncsPfoo_variant
+  subroutine foo_variant()
+    print *, "in foo_variant"
   end subroutine
 
-  subroutine variant2()
-    print *, "in variant2"
-  end subroutine
-
-  !TODO: replace with declare_variant when the support is merged.
-  subroutine foo_dispatch(x)
-    integer, intent(in) :: x
-    if (x == 1) then
-      call variant1()
-    else
-      call variant2()
-    end if
+  !HLFIR-LABEL: func @_QMfuncsPfoo_dispatch
+  subroutine foo_dispatch()
+    !$omp declare variant(foo_dispatch:foo_variant) match(construct={dispatch})
+    print *, "in foo_dispatch"
   end subroutine
 
 end module funcs
@@ -40,33 +26,22 @@ end module funcs
 program dispatch_test
   use funcs
   implicit none
-  integer :: x
 
-  !HLFIR: %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = {{.*}}x{{.*}}
-  !HLFIR: %[[C1:.*]] = arith.constant 1 : i32
-  !HLFIR: hlfir.assign %[[C1]] to %[[X]]#0 : i32, !fir.ref<i32>
-  x = 1
+  ! A call outside any dispatch region targets the base procedure.
+  !HLFIR: fir.call @_QMfuncsPfoo_dispatch() {{.*}}: () -> ()
+  call foo_dispatch()
+
   !HLFIR: omp.dispatch {
   !$omp dispatch
-  !HLFIR:   fir.call @_QMfuncsPfoo_dispatch(%[[X]]#0) {{.*}}: (!fir.ref<i32>) -> ()
-    call foo_dispatch(x)
-  !HLFIR:   omp.terminator
-  !HLFIR: }
-
-  !HLFIR: %[[C2:.*]] = arith.constant 2 : i32
-  !HLFIR: hlfir.assign %[[C2]] to %[[X]]#0 : i32, !fir.ref<i32>
-  x = 2
-  !HLFIR: omp.dispatch {
-  !$omp dispatch
-  !HLFIR:   fir.call @_QMfuncsPfoo_dispatch(%[[X]]#0) {{.*}}: (!fir.ref<i32>) -> ()
-    call foo_dispatch(x)
+  !HLFIR:   fir.call @_QMfuncsPfoo_variant() {{.*}}: () -> ()
+    call foo_dispatch()
   !HLFIR:   omp.terminator
   !HLFIR: }
 
   !HLFIR: omp.dispatch nowait {
   !$omp dispatch nowait
-  !HLFIR:   fir.call @_QMfuncsPfoo_dispatch(%[[X]]#0) {{.*}}: (!fir.ref<i32>) -> ()
-    call foo_dispatch(x)
+  !HLFIR:   fir.call @_QMfuncsPfoo_variant() {{.*}}: () -> ()
+    call foo_dispatch()
   !HLFIR:   omp.terminator
   !HLFIR: }
 end program
