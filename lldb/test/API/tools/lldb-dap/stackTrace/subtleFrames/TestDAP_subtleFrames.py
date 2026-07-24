@@ -4,11 +4,11 @@ Test lldb-dap stack trace response
 
 from lldbsuite.test.decorators import add_test_categories
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap import testcase
-from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StackTraceArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-class TestDAP_subtleFrames(testcase.DAPTestCaseBase):
+class TestDAP_subtleFrames(DAPTestCaseBase):
     @add_test_categories(["libc++"])
     def test_subtleFrames(self):
         """
@@ -24,7 +24,7 @@ class TestDAP_subtleFrames(testcase.DAPTestCaseBase):
         stop_event = session.verify_stopped_on_breakpoint(bps, after=ctx.process_event)
 
         thread_id = self.expect_not_none(stop_event.body.threadId)
-        resp = session.send_request(StackTraceArgs(thread_id)).result()
+        resp = session.stack_trace(thread_id)
         frames = resp.body.stackFrames
         for f in frames:
             if "__function" in f.name:
