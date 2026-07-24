@@ -10,11 +10,9 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
-#if defined(__FreeBSD__) && defined(_KERNEL)
-#include <sys/stddef.h>
-#include <sys/types.h>
-#else
 #include <stddef.h>
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/types.h>
 #endif
 #ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <stdio.h>

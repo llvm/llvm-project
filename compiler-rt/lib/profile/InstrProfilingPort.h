@@ -146,10 +146,6 @@ static inline size_t getpagesize(void) {
 #define O_BINARY 0
 #endif
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
-#include <sys/stdint.h>
-#else
 #include <stdint.h>
-#endif
 
 #endif /* PROFILE_INSTRPROFILING_PORT_H_ */

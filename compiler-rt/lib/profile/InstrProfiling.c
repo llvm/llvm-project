@@ -9,11 +9,10 @@
 // Note: This is linked into the Darwin kernel, and must remain compatible
 // with freestanding compilation. See `darwin_add_builtin_libraries`.
 
+#include <limits.h>
 #if defined(__FreeBSD__) && defined(_KERNEL)
-#include <sys/limits.h>
 #include <sys/systm.h>
 #else
-#include <limits.h>
 #include <string.h>
 #endif
 
