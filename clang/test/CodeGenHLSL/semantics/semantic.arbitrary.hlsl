@@ -14,9 +14,9 @@ void main(float a : AAA, int b : B, float2 c : CC) {
 
 // CHECK: define void @main()
 
-// CHECK-DXIL: %AAA0 = call float @llvm.dx.load.input.f32(i32 4, i32 0, i32 0, i8 0, i32 poison)
-// CHECK-DXIL:   %B0 = call i32 @llvm.dx.load.input.i32(i32 4, i32 0, i32 0, i8 0, i32 poison)
-// CHECK-DXIL   %CC0 = call <2 x float> @llvm.dx.load.input.v2f32(i32 4, i32 0, i32 0, i8 0, i32 poison)
+// CHECK-DXIL: %AAA0 = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
+// CHECK-DXIL:   %B0 = call i32 @llvm.dx.load.input.i32(i32 1, i32 0, i8 0, i32 poison)
+// CHECK-DXIL   %CC0 = call <2 x float> @llvm.dx.load.input.v2f32(i32 2, i32 0, i8 0, i32 poison)
 // CHECK-DXIL:         call void @_Z4mainfiDv2_f(float %AAA0, i32 %B0, <2 x float> %CC0)
 
 // CHECK-SPIRV: %[[#AAA0:]] = load float, ptr addrspace(7) @AAA0, align 4

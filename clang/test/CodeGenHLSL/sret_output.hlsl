@@ -25,7 +25,7 @@ S vs_main() {
 // CHECK-VK:              call spir_func void @_Z7vs_mainv(ptr %[[#alloca]])
 // CHECK: %[[#a:]] = load %struct.S, ptr %[[#alloca]], align 4
 // CHECK: %[[#b:]] = extractvalue %struct.S %[[#a]], 0
-// CHECK-DX:         call void @llvm.dx.store.output.f32(i32 4, i32 0, i32 0, i8 0, i32 poison, float %[[#b]])
+// CHECK-DX:         call void @llvm.dx.store.output.f32(i32 0, i32 0, i8 0, float %[[#b]])
 // CHECK-VK:         store float %3, ptr addrspace(8) @A4, align 4
 // CHECK:            ret void
 

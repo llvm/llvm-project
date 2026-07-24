@@ -9,7 +9,7 @@
   // CHECK-SPIRV:            store <4 x float> %[[#R]], ptr addrspace(8) @SV_Target0, align 4
 
   // CHECK-DXIL:    %[[#TMP:]] = call <4 x float> @_Z4mainDv4_f(<4 x float> %SV_Position0)
-  // CHECK-DXIL:                 call void @llvm.dx.store.output.v4f32(i32 4, i32 0, i32 0, i8 0, i32 poison, <4 x float> %[[#TMP]])
+  // CHECK-DXIL:                 call void @llvm.dx.store.output.v4f32(i32 0, i32 0, i8 0, <4 x float> %[[#TMP]])
   return p;
 }
 

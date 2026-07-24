@@ -8,7 +8,7 @@ uint main(uint id : SV_VertexID) : A {
   // CHECK-SPIRV: %[[#P:]] = load i32, ptr addrspace(7) @SV_VertexID, align 4
   // CHECK-SPIRV:   %[[#]] = call spir_func i32 @_Z4mainj(i32 %[[#P]])
 
-  // CHECK-DXIL: %SV_VertexID0 = call i32 @llvm.dx.load.input.i32(i32 4, i32 0, i32 0, i8 0, i32 poison)
+  // CHECK-DXIL: %SV_VertexID0 = call i32 @llvm.dx.load.input.i32(i32 0, i32 0, i8 0, i32 poison)
   // CHECK-DXIL:        %[[#]] = call i32 @_Z4mainj(i32 %SV_VertexID0)
   return id;
 }

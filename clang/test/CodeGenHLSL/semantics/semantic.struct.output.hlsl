@@ -43,10 +43,10 @@ Output main(Input input) {
 // CHECK: %[[#TMP:]] = load %struct.Output, ptr %[[#OUTPUT]], align 4
 // CHECK: %[[#VAL:]] = extractvalue %struct.Output %[[#TMP]], 0
 // CHECK-SPIRV:        store float %[[#VAL]], ptr addrspace(8) @A4, align 4
-// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 4, i32 0, i32 0, i8 0, i32 poison, float %[[#VAL]])
+// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 0, i32 0, i8 0, float %[[#VAL]])
 // CHECK: %[[#VAL:]] = extractvalue %struct.Output %[[#TMP]], 1
 // CHECK-SPIRV:        store float %[[#VAL]], ptr addrspace(8) @A2, align 4
-// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 4, i32 0, i32 0, i8 0, i32 poison, float %[[#VAL]])
+// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 1, i32 0, i8 0, float %[[#VAL]])
 
 // CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
 // CHECK-SPIRV-DAG: ![[#METADATA_2]] = !{![[#METADATA_3:]]}
