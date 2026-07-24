@@ -1,14 +1,22 @@
-// RUN: %clang_cc1 -std=c++11 -x hip -triple x86_64-linux-gnu -aux-triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
-// RUN: %clang_cc1 -std=c++11 -x hip -triple x86_64-pc-windows-msvc -aux-triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -std=c++11 -x hip -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -std=c++17 -x hip -triple x86_64-linux-gnu -aux-triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -std=c++17 -x hip -triple x86_64-pc-windows-msvc -aux-triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -std=c++17 -x hip -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE
 
 #include "Inputs/cuda.h"
 
 // HOST: @0 = private unnamed_addr constant [43 x i8] c"_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_\00", align 1
 // HOST: @1 = private unnamed_addr constant [60 x i8] c"_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_\00", align 1
+// HOST: @2 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg1MUlvE_EEvT_\00", align 1
+// HOST: @3 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg2MUlvE_EEvT_\00", align 1
+// HOST: @4 = private unnamed_addr constant [33 x i8] c"_Z1fIN2QL10dg_inline1MUlvE_EEvT_\00", align 1
+// HOST: @5 = private unnamed_addr constant [40 x i8] c"_Z1fIN2QL11dg_templateILi3EEMUlvE_EEvT_\00", align 1
 // Check that, on MSVC, the same device kernel mangling name is generated.
 // MSVC: @0 = private unnamed_addr constant [43 x i8] c"_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_\00", align 1
 // MSVC: @1 = private unnamed_addr constant [60 x i8] c"_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_\00", align 1
+// MSVC: @2 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg1MUlvE_EEvT_\00", align 1
+// MSVC: @3 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg2MUlvE_EEvT_\00", align 1
+// MSVC: @4 = private unnamed_addr constant [33 x i8] c"_Z1fIN2QL10dg_inline1MUlvE_EEvT_\00", align 1
+// MSVC: @5 = private unnamed_addr constant [40 x i8] c"_Z1fIN2QL11dg_templateILi3EEMUlvE_EEvT_\00", align 1
 
 __device__ float d0(float x) {
   return [](float x) { return x + 1.f; }(x);
@@ -20,13 +28,13 @@ __device__ float d1(float x) {
 
 // DEVICE: amdgpu_kernel void @_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_(
 // DEVICE: define internal noundef float @_ZZZ2f1PfENKUlS_E_clES_ENKUlfE_clEf(
+// DEVICE: define amdgpu_kernel void @_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_(
+// DEVICE: define internal noundef float @_ZZ2f1PfENKUlfE_clEf(
 template <typename F>
 __global__ void k0(float *p, F f) {
   p[0] = f(p[0]) + d0(p[1]) + d1(p[2]);
 }
 
-// DEVICE: amdgpu_kernel void @_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_(
-// DEVICE: define internal noundef float @_ZZ2f1PfENKUlfE_clEf(
 // DEVICE: define internal noundef float @_ZZ2f1PfENKUlffE_clEff(
 // DEVICE: define internal noundef float @_ZZ2f1PfENKUlfE0_clEf(
 template <typename F0, typename F1, typename F2>
@@ -53,8 +61,58 @@ void f1(float *p) {
               [] __device__ (float x, float y) { return x * y; },
               [] __device__ (float x) { return x + 5.f; });
 }
+// HOST: define internal void @_Z16__device_stub__fIN2QL3dg1MUlvE_EEvT_(
+// HOST: define internal void @_Z16__device_stub__fIN2QL3dg2MUlvE_EEvT_(
+// HOST: define linkonce_odr void @_Z16__device_stub__fIN2QL10dg_inline1MUlvE_EEvT_
+// HOST: define internal void @_Z17__device_stub__k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_
+// HOST: define linkonce_odr void @_ZN4dim3C2Ejjj
+
 // HOST: @__hip_register_globals
 // HOST: __hipRegisterFunction{{.*}}@_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_{{.*}}@0
 // HOST: __hipRegisterFunction{{.*}}@_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_{{.*}}@1
-// MSVC: __hipRegisterFunction{{.*}}@"??$k0@V<lambda_1>@?0???R1?0??f1@@YAXPEAM@Z@QEBA@0@Z@@@YAXPEAMV<lambda_1>@?0???R0?0??f1@@YAX0@Z@QEBA@0@Z@@Z{{.*}}@0
+// HOST: __hipRegisterFunction{{.*}}@_Z1fIN2QL3dg1MUlvE_EEvT_{{.*}}@2
+// HOST: __hipRegisterFunction{{.*}}_Z1fIN2QL3dg2MUlvE_EEvT_{{.*}}@3
+// HOST: __hipRegisterFunction{{.*}}_Z1fIN2QL10dg_inline1MUlvE_EEvT_{{.*}}@4
+// HOST: __hipRegisterFunction{{.*}}_Z1fIN2QL11dg_templateILi3EEMUlvE_EEvT_{{.*}}@5
+
+// MSVC: __hipRegisterFunction{{.*}}@"??$k0@V<lambda_1>@?0???R1?0??f1@@YAXPEAM@Z@QEBA?A?<auto>@@0@Z@@@YAXPEAMV<lambda_1>@?0???R0?0??f1@@YAX0@Z@QEBA?A?<auto>@@0@Z@@Z{{.*}}@0
 // MSVC: __hipRegisterFunction{{.*}}@"??$k1@V<lambda_2>@?0??f1@@YAXPEAM@Z@V<lambda_3>@?0??2@YAX0@Z@V<lambda_4>@?0??2@YAX0@Z@@@YAXPEAMV<lambda_2>@?0??f1@@YAX0@Z@V<lambda_3>@?0??1@YAX0@Z@V<lambda_4>@?0??1@YAX0@Z@@Z{{.*}}@1
+// MSVC: __hipRegisterFunction{{.*}}@"??$f@V<lambda_1>@dg1@QL@@@@YAXV<lambda_1>@dg1@QL@@@Z"{{.*}}@2
+// MSVC: __hipRegisterFunction{{.*}}@"??$f@V<lambda_1>@dg2@QL@@@@YAXV<lambda_1>@dg2@QL@@@Z"{{.*}}@3
+// MSVC: __hipRegisterFunction{{.*}}@"??$f@V<lambda_1>@dg_inline1@QL@@@@YAXV<lambda_1>@dg_inline1@QL@@@Z"{{.*}}@4
+// MSVC: __hipRegisterFunction{{.*}}@"??$f@V<lambda_1>@?$dg_template@$02@QL@@@@YAXV<lambda_1>@?$dg_template@$02@QL@@@Z"{{.*}}@5
+
+
+// DEVICE: define amdgpu_kernel void @_Z1fIN2QL3dg1MUlvE_EEvT_(
+// DEVICE: call noundef i32 @_ZNK2QL3dg1MUlvE_clEv(
+// DEVICE: define internal noundef i32 @_ZNK2QL3dg1MUlvE_clEv(
+// DEVICE  define amdgpu_kernel void @_Z1fIN2QL3dg2MUlvE_EEvT_(
+// DEVICE: call noundef i32 @_ZNK2QL3dg2MUlvE_clEv(
+// DEVICE: define internal noundef i32 @_ZNK2QL3dg2MUlvE_clEv
+// DEVICE: define amdgpu_kernel void @_Z1fIN2QL10dg_inline1MUlvE_EEvT_
+// DEVICE: call noundef i32 @_ZNK2QL10dg_inline1MUlvE_clEv
+// DEVICE: define linkonce_odr noundef i32 @_ZNK2QL10dg_inline1MUlvE_clEv
+// DEVICE: define amdgpu_kernel void @_Z1fIN2QL11dg_templateILi3EEMUlvE_EEvT_
+// DEVICE: call noundef i32 @_ZNK2QL11dg_templateILi3EEMUlvE_clEv
+// DEVICE: define linkonce_odr noundef i32 @_ZNK2QL11dg_templateILi3EEMUlvE_clEv
+
+namespace QL {
+auto dg1 = [] { return 1; };
+inline auto dg_inline1 = [] { return 1; };
+}
+namespace QL {
+auto dg2 = [] { return 2; };
+template<int N>
+auto dg_template = [] { return N; };
+}
+using namespace QL;
+template<typename T>
+__global__ void f(T t) {
+  t();
+}
+void g() {
+  f<<<1,1>>>(dg1);
+  f<<<1,1>>>(dg2);
+  f<<<1,1>>>(dg_inline1);
+  f<<<1,1>>>(dg_template<3>);
+}
