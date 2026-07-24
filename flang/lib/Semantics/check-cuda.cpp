@@ -842,7 +842,8 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
-      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+      (evaluate::HasCUDAImplicitTransfer(assign->rhs) &&
+          !evaluate::HasOnlyCUDAConstntImplicitTransfer(assign->rhs))) {
     if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
         GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 && nbRhs == 1) {
       return; // This is a special case handled on the host.

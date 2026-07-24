@@ -1439,6 +1439,9 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 /// implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
+
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
 
