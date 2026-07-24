@@ -2441,11 +2441,9 @@ public:
 
   /// Mark the scanned entries that duplicate an already-loaded file. Returns
   /// the number of duplicates and the space they would otherwise occupy.
-  std::pair<unsigned, SourceLocation::UIntTy>
-  classifyDuplicateSLocEntries(ArrayRef<uint32_t> Offsets,
-                               ArrayRef<SLocFileIdentity> Files,
-                               SourceLocation::UIntTy SLocSpaceSize,
-                               SmallVectorImpl<bool> &IsDup);
+  std::pair<unsigned, SourceLocation::UIntTy> classifyDuplicateSLocEntries(
+      ArrayRef<uint32_t> Offsets, ArrayRef<SLocFileIdentity> Files,
+      SourceLocation::UIntTy SLocSpaceSize, SmallVectorImpl<bool> &IsDup);
 
   /// Build \p F's local-to-global SLoc remapping and register its files. Run
   /// after AllocateLoadedSLocEntries has assigned \p F's base ID and offset.

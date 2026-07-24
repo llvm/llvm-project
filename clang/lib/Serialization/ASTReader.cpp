@@ -1833,8 +1833,8 @@ void ASTReader::registerPrimaryLoadedFile(const SLocFileIdentity &Id,
                                           SourceLocation::UIntTy Offset,
                                           int ID) {
   assert(!Id.Name.empty() && "registering a non-file entry");
-  PrimaryLoadedFiles.try_emplace(
-      Id.Name, PrimaryLoadedFileLoc{Offset, ID, Id.Size});
+  PrimaryLoadedFiles.try_emplace(Id.Name,
+                                 PrimaryLoadedFileLoc{Offset, ID, Id.Size});
 }
 
 bool ASTReader::scanLoadedSLocEntries(
@@ -1875,9 +1875,10 @@ bool ASTReader::scanLoadedSLocEntries(
       // different directories are not treated as one; this is string work only.
       InputFileInfo IFI = getInputFileInfo(F, Record[4]);
       if (IFI.isValid())
-        Files[I] = SLocFileIdentity{
-            ResolveImportedPathAndAllocate(PathBuf, IFI.UnresolvedImportedFilename, F),
-            IFI.StoredSize};
+        Files[I] =
+            SLocFileIdentity{ResolveImportedPathAndAllocate(
+                                 PathBuf, IFI.UnresolvedImportedFilename, F),
+                             IFI.StoredSize};
     }
   }
   return true;
@@ -1915,13 +1916,10 @@ ASTReader::classifyDuplicateSLocEntries(ArrayRef<uint32_t> Offsets,
   return {NumDup, DupBytes};
 }
 
-void ASTReader::buildLoadedSLocRemapping(ModuleFile &F,
-                                         ArrayRef<uint32_t> Offsets,
-                                         ArrayRef<SLocFileIdentity> Files,
-                                         ArrayRef<bool> IsDup,
-                                         SourceLocation::UIntTy SLocSpaceSize,
-                                         unsigned NumDupEntries,
-                                         unsigned ReducedNumEntries) {
+void ASTReader::buildLoadedSLocRemapping(
+    ModuleFile &F, ArrayRef<uint32_t> Offsets, ArrayRef<SLocFileIdentity> Files,
+    ArrayRef<bool> IsDup, SourceLocation::UIntTy SLocSpaceSize,
+    unsigned NumDupEntries, unsigned ReducedNumEntries) {
   unsigned N = Files.size();
 
   // With no duplicates a single identity segment reproduces the flat shift and
@@ -1946,7 +1944,8 @@ void ASTReader::buildLoadedSLocRemapping(ModuleFile &F,
     SourceLocation::UIntTy LowEnd =
         LowStart + slocEntrySize(Offsets, I, SLocSpaceSize);
     if (IsDup[I]) {
-      // Redirect into the module that first loaded the file and reserve nothing.
+      // Redirect into the module that first loaded the file and reserve
+      // nothing.
       const PrimaryLoadedFileLoc *Primary = getPrimaryLoadedFile(Files[I]);
       F.SLocRemap.push_back({LowStart, LowEnd,
                              static_cast<int64_t>(Primary->Offset) -
@@ -1958,9 +1957,9 @@ void ASTReader::buildLoadedSLocRemapping(ModuleFile &F,
       int GlobalID = F.SLocEntryBaseID + (int)KeptCount++;
       SourceLocation::UIntTy GlobalStart =
           F.SLocEntryBaseOffset + Offsets[I] - DupBefore;
-      F.SLocRemap.push_back({LowStart, LowEnd,
-                             static_cast<int64_t>(GlobalStart) -
-                                 static_cast<int64_t>(LowStart)});
+      F.SLocRemap.push_back(
+          {LowStart, LowEnd,
+           static_cast<int64_t>(GlobalStart) - static_cast<int64_t>(LowStart)});
       F.LocalToGlobalID[I] = GlobalID;
       F.KeptSLocLocalIndex.push_back(I);
       if (!Files[I].Name.empty())
