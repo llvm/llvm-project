@@ -43988,14 +43988,15 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
       !VT.getSimpleVT().isFloatingPoint())
     return false;
 
-  // We only handle target-independent shuffles.
-  // FIXME: It would be easy and harmless to use the target shuffle mask
-  // extraction tool to support more.
-  if (N->getOpcode() != ISD::VECTOR_SHUFFLE)
+  SmallVector<int, 16> Mask;
+  SmallVector<SDValue, 2> OpInputs;
+  if (!getTargetShuffleInputs(SDValue(N, 0), OpInputs, Mask, DAG) ||
+      OpInputs.size() != 2 || isAnyZero(Mask) ||
+      OpInputs[0].getValueType() != VT || OpInputs[1].getValueType() != VT)
     return false;
 
-  SDValue V1 = N->getOperand(0);
-  SDValue V2 = N->getOperand(1);
+  SDValue V1 = OpInputs[0];
+  SDValue V2 = OpInputs[1];
 
   // Make sure we have an FADD and an FSUB.
   if ((V1.getOpcode() != ISD::FADD && V1.getOpcode() != ISD::FSUB) ||
@@ -44023,7 +44024,6 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
       return false;
   }
 
-  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
   bool Op0Even;
   if (!isAddSubOrSubAddMask(Mask, Op0Even))
     return false;
@@ -44043,20 +44043,21 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
 static SDValue combineShuffleToFMAddSub(SDNode *N, const SDLoc &DL,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
-  // We only handle target-independent shuffles.
-  // FIXME: It would be easy and harmless to use the target shuffle mask
-  // extraction tool to support more.
-  if (N->getOpcode() != ISD::VECTOR_SHUFFLE)
-    return SDValue();
-
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!Subtarget.hasAnyFMA() || !TLI.isTypeLegal(VT))
     return SDValue();
 
+  SmallVector<int, 16> Mask;
+  SmallVector<SDValue, 2> OpInputs;
+  if (!getTargetShuffleInputs(SDValue(N, 0), OpInputs, Mask, DAG) ||
+      OpInputs.size() != 2 || isAnyZero(Mask) ||
+      OpInputs[0].getValueType() != VT || OpInputs[1].getValueType() != VT)
+    return SDValue();
+
   // We're trying to match (shuffle fma(a, b, c), X86Fmsub(a, b, c).
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
+  SDValue Op0 = OpInputs[0];
+  SDValue Op1 = OpInputs[1];
   SDValue FMAdd = Op0, FMSub = Op1;
   if (FMSub.getOpcode() != X86ISD::FMSUB)
     std::swap(FMAdd, FMSub);
@@ -44068,7 +44069,6 @@ static SDValue combineShuffleToFMAddSub(SDNode *N, const SDLoc &DL,
     return SDValue();
 
   // Check for correct shuffle mask.
-  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
   bool Op0Even;
   if (!isAddSubOrSubAddMask(Mask, Op0Even))
     return SDValue();
