@@ -5649,15 +5649,11 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     if (LTZCNTInst) {
       unsigned InstCode = Instr.getOpcode();
-      bool UsesOnlyCF = X86::isADC(InstCode) || X86::isSBB(InstCode) ||
-                        X86::isRCL(InstCode) || X86::isRCR(InstCode) ||
-                        OldCC == X86::COND_B || OldCC == X86::COND_AE;
-      if (!UsesOnlyCF)
+      if (!X86::isADC(InstCode) && !X86::isSBB(InstCode) &&
+          !X86::isRCL(InstCode) && !X86::isRCR(InstCode))
         return false;
 
       MI = LTZCNTInst;
-      FlagsMayLiveOut = false;
-      break;
     }
 
     if (ShouldUpdateCC && ReplacementCC != OldCC) {
