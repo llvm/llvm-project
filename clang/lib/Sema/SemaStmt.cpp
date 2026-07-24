@@ -4082,7 +4082,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   const AttrVec *Attrs = nullptr;
   bool isObjCMethod = false;
 
-  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+  FunctionDecl *FD = getCurFunctionDecl();
+  if (FD) {
     FnRetType = FD->getReturnType();
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
@@ -4140,7 +4141,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // deduction.
   if (getLangOpts().CPlusPlus14) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
-      FunctionDecl *FD = cast<FunctionDecl>(CurContext);
       // If we've already decided this function is invalid, e.g. because
       // we saw a `return` whose expression had an error, don't keep
       // trying to deduce its return type.
@@ -4253,8 +4253,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     Result = ReturnStmt::Create(Context, ReturnLoc, RetValExp,
                                 /* NRVOCandidate=*/nullptr);
   } else if (!RetValExp && !HasDependentReturnType) {
-    FunctionDecl *FD = getCurFunctionDecl();
-
     if ((FD && FD->isInvalidDecl()) || FnRetType->containsErrors()) {
       // The intended return type might have been "void", so don't warn.
     } else if (getLangOpts().CPlusPlus11 && FD && FD->isConstexpr()) {
