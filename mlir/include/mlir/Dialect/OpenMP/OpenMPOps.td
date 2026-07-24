@@ -2328,11 +2328,13 @@ def MaskedOp : OpenMP_Op<"masked", traits = [
 //===----------------------------------------------------------------------===//
 // [Spec 5.1] 12.3 dispatch Construct
 //===----------------------------------------------------------------------===//
-def DispatchOp : OpenMP_Op<"dispatch", singleRegion = true, clauses = [
+def DispatchOp : OpenMP_Op<"dispatch", traits = [
+    NoRegionArguments
+  ], clauses = [
     // TODO: Complete clause list (device, depend, is_device_ptr, nocontext,
     // novariants).
     OpenMP_NowaitClause
-  ]> {
+  ], singleRegion = true> {
   let summary = "dispatch construct";
   let description = [{
     The dispatch construct enables the invocation of a variant of a
