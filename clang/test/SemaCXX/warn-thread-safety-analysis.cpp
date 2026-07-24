@@ -2197,6 +2197,30 @@ struct TestTryLock {
     if (mu.TryLock() ? 0 : 1) // expected-note{{mutex acquired here}}
       mu.Unlock();            // expected-warning{{releasing mutex 'mu' that was not held}}
   }                           // expected-warning{{mutex 'mu' is not held on every path through here}}
+
+  // A void conditional operator has no result to branch on later, so unlike
+  // foo13-foo15 the branch itself is honored. This is how glibc before 2.32
+  // spells assert().
+  void foo16() {
+    mu.TryLock() ? static_cast<void>(0) : fail();
+    a = 3;
+    mu.Unlock();
+  }
+
+  void foo17() {
+    !mu.TryLock() ? fail() : static_cast<void>(0);
+    a = 3;
+    mu.Unlock();
+  }
+
+  // Both arms return here, so the join disagrees -- as it would for an if.
+  void foo18() {
+    mu.TryLock() ? static_cast<void>(0) : static_cast<void>(0); // expected-note{{mutex acquired here}} \
+                                                                   expected-warning{{mutex 'mu' is not held on every path through here}}
+    mu.Unlock(); // expected-warning{{releasing mutex 'mu' that was not held}}
+  }
+
+  static void fail() __attribute__((noreturn));
 };  // end TestTrylock
 
 } // end namespace TrylockTest
