@@ -16,6 +16,29 @@ using LlvmLibcTgammaTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
+TEST_F(LlvmLibcTgammaTest, TinyInputs) {
+  constexpr double INPUTS[] = {
+      0x1.fffffffffffffp-54, // largest magnitude in the branch (~2^-53)
+      0x1.5555555555555p-54, // off-power-of-two
+      0x1.0000000000001p-54, // just above an exact power of two
+      0x1.0p-54,             // exact power of two (division is exact here)
+      0x1.0p-60,
+      0x1.0p-100,
+      0x1.0p-300,
+      0x1.0p-600,
+      0x1.0p-900,
+      0x1.0p-1000,
+  };
+
+  for (size_t i = 0; i < sizeof(INPUTS) / sizeof(INPUTS[0]); i++) {
+    double x = INPUTS[i];
+    EXPECT_MPFR_MATCH(mpfr::Operation::Tgamma, x, LIBC_NAMESPACE::tgamma(x),
+                      0.5);
+    EXPECT_MPFR_MATCH(mpfr::Operation::Tgamma, -x, LIBC_NAMESPACE::tgamma(-x),
+                      0.5);
+  }
+}
+
 TEST_F(LlvmLibcTgammaTest, PositiveIntegers) {
   // 171 is the maximum integer input for which
   // tgamma returns a finite output.

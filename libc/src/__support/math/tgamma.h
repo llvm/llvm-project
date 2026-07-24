@@ -60,6 +60,9 @@ LIBC_INLINE double tgamma(double x) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_OVERFLOW);
     }
+
+    // Gamma(x) is never exactly 1 / x here
+    fputil::raise_except_if_required(FE_INEXACT);
     return r;
   }
 
