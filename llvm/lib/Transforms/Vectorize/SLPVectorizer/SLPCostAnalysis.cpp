@@ -128,4 +128,17 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
   return std::make_pair(ScalarCost, VecCost);
 }
 
+InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
+                                   Align Alignment, unsigned AddressSpace,
+                                   TTI::TargetCostKind CostKind) {
+  Type *CmpTy = CmpInst::makeCmpResultType(VecTy);
+  return 2 * TTI.getMemIntrinsicInstrCost(
+                 MemIntrinsicCostAttributes(Intrinsic::masked_load, VecTy,
+                                            Alignment, AddressSpace),
+                 CostKind) +
+         TTI.getArithmeticInstrCost(Instruction::Xor, CmpTy, CostKind) +
+         TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
+                                CmpInst::BAD_ICMP_PREDICATE, CostKind);
+}
+
 } // namespace llvm::slpvectorizer
