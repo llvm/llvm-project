@@ -3,12 +3,13 @@
 
 ; This loop hangs if digRecurrence doesn't keep track of previously visited
 ; instructions since most instructions have multiple uses.
-define float @dense_use_def_chain(float %f) {
+define float @dense_use_def_chain(float %src) {
 ; CHECK-LABEL: 'dense_use_def_chain'
 ; CHECK-NEXT:  Did not find a hash algorithm
 ; CHECK-NEXT:  Reason: Unable to find conditional recurrence
 ;
 entry:
+  %f = fneg float %src
   br label %loop
 
 loop:
