@@ -32,7 +32,6 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -2539,6 +2538,8 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateDecl(VarTemplateDecl *D) {
   }
 
   Owner->addDecl(Inst);
+  SemaRef.InstantiateAttrsForDecl(TemplateArgs, D, Inst, LateAttrs,
+                                  StartingScope);
 
   if (!PrevVarTemplate) {
     // Queue up any out-of-line partial specializations of this member
@@ -3270,6 +3271,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   DeclarationNameInfo NameInfo
     = SemaRef.SubstDeclarationNameInfo(D->getNameInfo(), TemplateArgs);
+
+  // Check if the substitution of template args failed
+  // leading to an empty DeclarationNameInfo.
+  if (!NameInfo.getName())
+    return nullptr;
 
   if (FunctionRewriteKind != RewriteKind::None)
     adjustForRewrite(FunctionRewriteKind, D, T, TInfo, NameInfo);
@@ -5465,10 +5471,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       ActiveInst.Kind == ActiveInstType::DeducedTemplateArgumentSubstitution) {
     if (isa<FunctionTemplateDecl>(ActiveInst.Entity)) {
       SemaRef.CurrentSFINAEContext = nullptr;
-      atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef, ActiveInst);
       ActiveInst.Kind = ActiveInstType::TemplateInstantiation;
       ActiveInst.Entity = New;
-      atTemplateBegin(SemaRef.TemplateInstCallbacks, SemaRef, ActiveInst);
     }
   }
 

@@ -967,8 +967,10 @@ std::optional<Expr<SomeType>> ConvertToType(
 }
 
 int GetCorank(const ActualArgument &arg) {
-  const auto *expr{arg.UnwrapExpr()};
-  return GetCorank(*expr);
+  if (const auto *expr{arg.GetArgExpr()}) {
+    return GetCorank(*expr);
+  }
+  return 0;
 }
 
 bool IsProcedureDesignator(const Expr<SomeType> &expr) {
@@ -1325,29 +1327,11 @@ bool HasVectorSubscript(const ActualArgument &actual) {
 
 namespace {
 
-struct HasParenthesesHelper : public AnyTraverse<HasParenthesesHelper> {
-  using Base = AnyTraverse<HasParenthesesHelper>;
-  HasParenthesesHelper() : Base{*this} {}
-  using Base::operator();
-  template <typename T> bool operator()(const Parentheses<T> &) const {
-    return true;
-  }
-};
-
 struct HasProcedureRefHelper : public AnyTraverse<HasProcedureRefHelper> {
   using Base = AnyTraverse<HasProcedureRefHelper>;
   HasProcedureRefHelper() : Base{*this} {}
   using Base::operator();
   bool operator()(const ProcedureRef &) const { return true; }
-};
-
-struct HasSubtractHelper : public AnyTraverse<HasSubtractHelper> {
-  using Base = AnyTraverse<HasSubtractHelper>;
-  HasSubtractHelper() : Base{*this} {}
-  using Base::operator();
-  template <typename T> bool operator()(const Subtract<T> &) const {
-    return true;
-  }
 };
 
 struct HasVolatileOrAsynchronousSymbolHelper
@@ -1368,16 +1352,8 @@ struct HasVolatileOrAsynchronousSymbolHelper
 
 } // namespace
 
-bool HasParentheses(const Expr<SomeType> &expr) {
-  return HasParenthesesHelper{}(expr);
-}
-
 bool HasProcedureRef(const Expr<SomeType> &expr) {
   return HasProcedureRefHelper{}(expr);
-}
-
-bool HasSubtract(const Expr<SomeType> &expr) {
-  return HasSubtractHelper{}(expr);
 }
 
 bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr) {
@@ -1391,6 +1367,8 @@ template <int KIND> using RealExpr = Expr<Real<KIND>>;
 template <int KIND>
 static void flattenTopLevelAdds(
     const RealExpr<KIND> &expr, llvm::SmallVectorImpl<RealExpr<KIND>> &terms) {
+  // Only flatten real Add nodes. Every other node, including Parentheses and
+  // Subtract, is one opaque term whose internal expression tree is preserved.
   if (const auto *add = std::get_if<Add<Real<KIND>>>(&expr.u)) {
     flattenTopLevelAdds(add->left(), terms);
     flattenTopLevelAdds(add->right(), terms);
@@ -1450,13 +1428,9 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
 
 bool CanBuildSplitSumExpressionTree(
     const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
-  // The split only understands top-level Add nodes. Reject Subtract
-  // conservatively for now rather than trying to model signed terms in
-  // additive chains; this also rejects subtraction in subexpressions.
   return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
-      !HasVectorSubscript(lhs) && !HasParentheses(rhs) && !HasSubtract(rhs) &&
-      !HasProcedureRef(rhs) && !HasProcedureRef(lhs) &&
-      !HasVolatileOrAsynchronousSymbol(rhs) &&
+      !HasVectorSubscript(lhs) && !HasProcedureRef(rhs) &&
+      !HasProcedureRef(lhs) && !HasVolatileOrAsynchronousSymbol(rhs) &&
       !HasVolatileOrAsynchronousSymbol(lhs);
 }
 

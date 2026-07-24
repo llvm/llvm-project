@@ -7,13 +7,13 @@ import re
 
 from lldbsuite.test.decorators import skipIfWindows, skipUnlessDarwin
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     CompileUnitsArgs,
     LaunchArgs,
     ModuleEvent,
     ModuleReason,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_module(DAPTestCaseBase):

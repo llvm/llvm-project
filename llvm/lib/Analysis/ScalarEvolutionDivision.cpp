@@ -111,13 +111,8 @@ void SCEVDivision::visitConstant(const SCEVConstant *Numerator) {
   if (const SCEVConstant *D = dyn_cast<SCEVConstant>(Denominator)) {
     APInt NumeratorVal = Numerator->getAPInt();
     APInt DenominatorVal = D->getAPInt();
-    uint32_t NumeratorBW = NumeratorVal.getBitWidth();
-    uint32_t DenominatorBW = DenominatorVal.getBitWidth();
-
-    if (NumeratorBW > DenominatorBW)
-      DenominatorVal = DenominatorVal.sext(NumeratorBW);
-    else if (NumeratorBW < DenominatorBW)
-      NumeratorVal = NumeratorVal.sext(DenominatorBW);
+    assert(NumeratorVal.getBitWidth() == DenominatorVal.getBitWidth() &&
+           "Numerator and Denominator must have the same bit width");
 
     APInt QuotientVal(NumeratorVal.getBitWidth(), 0);
     APInt RemainderVal(NumeratorVal.getBitWidth(), 0);

@@ -23,9 +23,12 @@
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -44,7 +47,7 @@ static cl::opt<bool> WasmDisableEHPadSort(
 
 namespace {
 
-class WebAssemblyCFGSort final : public MachineFunctionPass {
+class WebAssemblyCFGSortLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override { return "WebAssembly CFG Sort"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -53,8 +56,8 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
-    AU.addRequired<WebAssemblyExceptionInfo>();
-    AU.addPreserved<WebAssemblyExceptionInfo>();
+    AU.addRequired<WebAssemblyExceptionInfoWrapperPass>();
+    AU.addPreserved<WebAssemblyExceptionInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -62,16 +65,16 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyCFGSort() : MachineFunctionPass(ID) {}
+  WebAssemblyCFGSortLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyCFGSort::ID = 0;
-INITIALIZE_PASS(WebAssemblyCFGSort, DEBUG_TYPE,
+char WebAssemblyCFGSortLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyCFGSortLegacy, DEBUG_TYPE,
                 "Reorders blocks in topological order", false, false)
 
-FunctionPass *llvm::createWebAssemblyCFGSort() {
-  return new WebAssemblyCFGSort();
+FunctionPass *llvm::createWebAssemblyCFGSortLegacyPass() {
+  return new WebAssemblyCFGSortLegacy();
 }
 
 static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
@@ -379,14 +382,12 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 #endif
 }
 
-bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
+static bool sortCFG(MachineFunction &MF, MachineLoopInfo &MLI,
+                    WebAssemblyExceptionInfo &WEI, MachineDominatorTree &MDT) {
   LLVM_DEBUG(dbgs() << "********** CFG Sorting **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
 
@@ -394,4 +395,25 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
   sortBlocks(MF, MLI, WEI, MDT);
 
   return true;
+}
+
+bool WebAssemblyCFGSortLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  WebAssemblyExceptionInfo &WEI =
+      getAnalysis<WebAssemblyExceptionInfoWrapperPass>().getWEI();
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return sortCFG(MF, MLI, WEI, MDT);
+}
+
+PreservedAnalyses
+WebAssemblyCFGSortPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  WebAssemblyExceptionInfo &WEI =
+      MFAM.getResult<WebAssemblyExceptionAnalysis>(MF);
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  return sortCFG(MF, MLI, WEI, MDT) ? getMachineFunctionPassPreservedAnalyses()
+                                          .preserveSet<CFGAnalyses>()
+                                    : PreservedAnalyses::all();
 }

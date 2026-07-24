@@ -6858,7 +6858,6 @@ static void updateDVIWithLocation(T &DbgVal, Value *Location,
                                     "contain any DW_OP_llvm_arg operands.");
   DbgVal.setRawLocation(ValueAsMetadata::get(Location));
   DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
-  DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
 }
 
 /// Overwrite DVI with locations placed into a DIArglist.

@@ -1839,10 +1839,11 @@ CompileUnit::getDirAndFilenameFromLineTable(
 
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
+  std::lock_guard<std::mutex> Guard(FileNamesMutex);
   FileNamesCache::iterator FileData = FileNames.find(FileIdx);
   if (FileData != FileNames.end())
-    return std::make_pair(StringRef(FileData->second.first),
-                          StringRef(FileData->second.second));
+    return {{StringRef(FileData->second->first),
+             StringRef(FileData->second->second)}};
 
   if (const DWARFDebugLine::LineTable *LineTable =
           getOrigUnit().getContext().getLineTableForUnit(&getOrigUnit())) {
@@ -1861,12 +1862,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
       if (isPathAbsoluteOnWindowsOrPosix(FileName)) {
         FileNamesCache::iterator FileData =
             FileNames
-                .insert(std::make_pair(
-                    FileIdx,
-                    std::make_pair(std::string(""), std::move(FileName))))
+                .insert({FileIdx,
+                         std::make_unique<std::pair<std::string, std::string>>(
+                             std::string(""), std::move(FileName))})
                 .first;
-        return std::make_pair(StringRef(FileData->second.first),
-                              StringRef(FileData->second.second));
+        return {{StringRef(FileData->second->first),
+                 StringRef(FileData->second->second)}};
       }
 
       SmallString<256> FilePath;
@@ -1912,12 +1913,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       FileNamesCache::iterator FileData =
           FileNames
-              .insert(
-                  std::make_pair(FileIdx, std::make_pair(std::string(FilePath),
-                                                         std::move(FileName))))
+              .insert({FileIdx,
+                       std::make_unique<std::pair<std::string, std::string>>(
+                           std::string(FilePath), std::move(FileName))})
               .first;
-      return std::make_pair(StringRef(FileData->second.first),
-                            StringRef(FileData->second.second));
+      return {{StringRef(FileData->second->first),
+               StringRef(FileData->second->second)}};
     }
   }
 
@@ -2005,7 +2006,8 @@ void CompileUnit::verifyDependencies() {
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {
   static dwarf::Attribute ODRAttributes[] = {
       dwarf::DW_AT_type, dwarf::DW_AT_specification,
-      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import};
+      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import,
+      dwarf::DW_AT_LLVM_alloc_type};
 
   return ODRAttributes;
 }

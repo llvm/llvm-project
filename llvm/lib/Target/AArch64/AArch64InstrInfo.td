@@ -2267,6 +2267,8 @@ let Predicates = [HasPAuth] in {
                (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2288,6 +2290,8 @@ let Predicates = [HasPAuth] in {
                (ins i32imm:$AUTKey,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X17 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2308,6 +2312,8 @@ let Predicates = [HasPAuth] in {
                    i64imm:$Addend),
                []>,
         Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2844,6 +2850,17 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+def negate_imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), N->getValueType(0));
+}]>;
+def neg_cheaper_imm32 : PatLeaf<(i32 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+def neg_cheaper_imm64 : PatLeaf<(i64 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+
+// Prefer (sub x, -c) over (add x, c) if -c is cheaper to materialise than c.
+def : Pat<(add GPR32:$Rn, neg_cheaper_imm32:$imm),
+          (SUBSWrr GPR32:$Rn, (MOVi32imm neg_cheaper_imm32:$imm))>;
+def : Pat<(add GPR64:$Rn, neg_cheaper_imm64:$imm),
+          (SUBSXrr GPR64:$Rn, (MOVi64imm neg_cheaper_imm64:$imm))>;
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];

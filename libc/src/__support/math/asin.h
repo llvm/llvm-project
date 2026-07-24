@@ -72,7 +72,8 @@ LIBC_INLINE double asin(double x) {
     }
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return x * asin_eval(x * x);
+    double xsq = x * x;
+    return fputil::multiply_add(x * xsq, asin_eval(xsq), x);
 #else
     using DFloat128 = fputil::DyadicFloat<128>;
     using DoubleDouble = fputil::DoubleDouble;
@@ -189,8 +190,9 @@ LIBC_INLINE double asin(double x) {
   double v_hi = fputil::sqrt<double>(u);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  double p = asin_eval(u);
-  double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, PI_OVER_TWO.hi);
+  double neg2_v = -2.0 * v_hi;
+  double r = x_sign * fputil::multiply_add(neg2_v * u, asin_eval(u),
+                                           PI_OVER_TWO.hi + neg2_v);
   return r;
 #else
 
