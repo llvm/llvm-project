@@ -683,7 +683,6 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
   assert(B->getOpcode() == BO_LAnd ||
          B->getOpcode() == BO_LOr);
 
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
 
   if (B->getType()->isVectorType()) {
@@ -692,7 +691,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     // logical operators on vectors are not short-circuit. Currently they are
     // modeled as short-circuit in Clang CFG but this is incorrect.
     // Do not set the value for the expression. It'd be UnknownVal by default.
-    Bldr.generateNode(B, Pred, state);
+    Dst.insert(Engine.makePostStmtNode(B, state, Pred));
     return;
   }
 
@@ -704,7 +703,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     (void) P;
     if (N->pred_size() != 1) {
       // We failed to track back where we came from.
-      Bldr.generateNode(B, Pred, state);
+      Dst.insert(Engine.makePostStmtNode(B, state, Pred));
       return;
     }
     N = *N->pred_begin();
@@ -712,7 +711,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
 
   if (N->pred_size() != 1) {
     // We failed to track back where we came from.
-    Bldr.generateNode(B, Pred, state);
+    Dst.insert(Engine.makePostStmtNode(B, state, Pred));
     return;
   }
 
@@ -752,7 +751,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
                     svalBuilder.makeZeroVal(RHS->getType()), B->getType());
     }
   }
-  Bldr.generateNode(B, Pred, state->BindExpr(B, Pred->getStackFrame(), X));
+  Dst.insert(Engine.makeNodeWithBinding(Pred, B, X));
 }
 
 void ExprEngine::VisitGuardedExpr(const Expr *Ex,
