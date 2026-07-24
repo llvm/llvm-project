@@ -66,7 +66,7 @@ void associative_container_benchmarks(std::string container) {
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(1024)->Arg(8192);
   };
   auto bench_non_empty = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(1)->Arg(4)->Arg(8)->Arg(16)->Arg(32)->Arg(1024)->Arg(8192);
   };
 
   static constexpr bool is_multi_key_container =
@@ -692,9 +692,17 @@ void associative_container_benchmarks(std::string container) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size));
       Container c(in.begin(), in.end());
+      std::vector<Key> keys;
+      for(size_t i = 0; i <in.size(); ++i) {
+        keys.push_back(get_key(in[getRandomEngine()() % in.size()]));
+      }
+      size_t i = 0;
 
       for (auto _ : st) {
-        auto result = func(c, get_key(in[getRandomEngine()() % in.size()]));
+      //st.PauseTiming();
+      const auto& key =  keys[++i%keys.size()];
+      //st.ResumeTiming();
+        auto result = func(c, key);
         benchmark::DoNotOptimize(c);
         benchmark::DoNotOptimize(result);
         benchmark::ClobberMemory();

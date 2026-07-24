@@ -15,6 +15,7 @@
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
+#include <__algorithm/ranges_find.h>
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
@@ -64,6 +65,7 @@
 #include <__vector/vector.h>
 #include <initializer_list>
 #include <stdexcept>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -989,6 +991,12 @@ private:
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto __find_impl(_Self&& __self, const _Kp& __key) {
+    auto __key_iter = std::ranges::find(__self.__containers_.keys, __key);
+    auto __mapped_iter = __corresponding_mapped_it(__self, __key_iter);
+
+    using Res = std::conditional_t<std::is_const_v<std::remove_reference_t<_Self>>, const_iterator, iterator>;
+    return Res(__key_iter, __mapped_iter);
+
     auto __it   = __self.lower_bound(__key);
     auto __last = __self.end();
     if (__it == __last || __self.__compare_(__key, __it->first)) {
