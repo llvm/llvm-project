@@ -514,7 +514,6 @@ void lto_set_debug_options(const char *const *options, int number) {
   llvm::append_range(Options, ArrayRef(options, number));
 
   llvm::parseCommandLineOptions(Options);
-  llvm::append_range(ThinLTOMllvmArgs, Options);
   optionParsingState = OptParsingState::Early;
 }
 
@@ -558,6 +557,7 @@ lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
   ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
+  CodeGen->setMllvmArgs(ThinLTOMllvmArgs);
   CodeGen->setTargetOptions(
       codegen::InitTargetOptionsFromCodeGenFlags(Triple()));
   CodeGen->setFreestanding(EnableFreestanding);
@@ -600,10 +600,7 @@ void thinlto_codegen_add_module(thinlto_code_gen_t cg, const char *Identifier,
   unwrap(cg)->addModule(Identifier, StringRef(Data, Length));
 }
 
-void thinlto_codegen_process(thinlto_code_gen_t cg) {
-  unwrap(cg)->setMllvmArgs(ThinLTOMllvmArgs);
-  unwrap(cg)->run();
-}
+void thinlto_codegen_process(thinlto_code_gen_t cg) { unwrap(cg)->run(); }
 
 unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg) {
   return unwrap(cg)->getProducedBinaries().size();
@@ -642,9 +639,7 @@ void thinlto_debug_options(const char *const *options, int number) {
     std::vector<const char *> CodegenArgv(1, "libLTO");
     append_range(CodegenArgv, ArrayRef<const char *>(options, number));
     cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
-    // The parsed options modify process-global state, so retain every argument
-    // cumulatively in parsing order for subsequent ThinLTO cache keys.
-    ThinLTOMllvmArgs.insert(ThinLTOMllvmArgs.end(), options, options + number);
+    ThinLTOMllvmArgs.assign(options, options + number);
   }
 }
 
