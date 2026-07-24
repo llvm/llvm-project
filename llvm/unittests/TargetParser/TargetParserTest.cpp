@@ -2969,6 +2969,15 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   EXPECT_FALSE(
       TargetID::parseTargetIDString("amdgpu11-amd-amdhsa-unknown-gfx1200"));
 
+  // A subarchless "amdgpu" or an unrecognized "amdgpu<x>" arch is rejected,
+  // even with an otherwise valid processor.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown"));
+
   // Constructing directly from a triple and processor+features string must
   // also be crash-safe on empty components.
   Triple AMDHSA("amdgcn-amd-amdhsa");
