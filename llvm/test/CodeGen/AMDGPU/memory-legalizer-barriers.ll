@@ -42,7 +42,7 @@ define amdgpu_kernel void @test_s_barrier() {
 ;
 ; GFX1250-LABEL: test_s_barrier:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_barrier_signal -1
@@ -104,7 +104,7 @@ define amdgpu_kernel void @test_s_barrier_workgroup_fence() {
 ;
 ; GFX1250-LABEL: test_s_barrier_workgroup_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -169,7 +169,7 @@ define amdgpu_kernel void @test_s_barrier_agent_fence() {
 ;
 ; GFX1250-LABEL: test_s_barrier_agent_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

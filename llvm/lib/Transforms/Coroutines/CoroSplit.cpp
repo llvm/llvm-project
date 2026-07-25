@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -55,7 +56,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -455,7 +458,11 @@ void coro::BaseCloner::handleFinalSuspend() {
   auto *Switch = cast<SwitchInst>(VMap[Shape.SwitchLowering.ResumeSwitch]);
   auto FinalCaseIt = std::prev(Switch->case_end());
   BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
-  Switch->removeCase(FinalCaseIt);
+
+  // Use SwitchInstProfUpdateWrapper to remove the case, keeping the profile
+  // branch weights in sync with the switch successors.
+  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
+  SwitchWrapper.removeCase(FinalCaseIt);
   if (isSwitchDestroyFunction()) {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
@@ -470,7 +477,11 @@ void coro::BaseCloner::handleFinalSuspend() {
       auto *Load =
           Builder.CreateLoad(Shape.getSwitchResumePointerType(), NewFramePtr);
       auto *Cond = Builder.CreateIsNull(Load);
-      Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      auto *Br = Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      applyProfMetadataIfEnabled(Br, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    Inst->getFunction());
+      });
     }
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
@@ -1143,6 +1154,13 @@ void coro::SwitchCloner::create() {
   // Clone the function
   coro::BaseCloner::create();
 
+  // Override EntryCount for the cloned resume function with the true sum of
+  // all suspension points profile counts.
+  if (FKind == coro::CloneKind::SwitchResume && OrigF.hasProfileData() &&
+      Shape.ResumeEntryCount.has_value()) {
+    NewF->setEntryCount(Shape.ResumeEntryCount.value());
+  }
+
   // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
   if (FKind == coro::CloneKind::SwitchCleanup)
     elideCoroFree(NewFramePtr);
@@ -1552,6 +1570,10 @@ private:
 
     // Split all coro.suspend calls
     size_t SuspendIndex = 0;
+    SmallVector<uint64_t, 8> SwitchWeights64;
+    // Default destination (unreachable) has weight 0
+    SwitchWeights64.push_back(0);
+
     for (auto *AnyS : Shape.CoroSuspends) {
       auto *S = cast<CoroSuspendInst>(AnyS);
       ConstantInt *IndexVal = Shape.getIndex(SuspendIndex);
@@ -1604,6 +1626,14 @@ private:
           S->getNextNode(), ResumeBB->getName() + Twine(".landing"));
       Switch->addCase(IndexVal, ResumeBB);
 
+      // Get pre-split frequency for this suspend point
+      uint64_t Weight = 1; // Default fallback weight
+      auto It = Shape.SuspendFreqs.find(AnyS);
+      if (It != Shape.SuspendFreqs.end()) {
+        Weight = It->second;
+      }
+      SwitchWeights64.push_back(Weight);
+
       cast<UncondBrInst>(SuspendBB->getTerminator())->setSuccessor(LandingBB);
       auto *PN = PHINode::Create(Builder.getInt8Ty(), 2, "");
       PN->insertBefore(LandingBB->begin());
@@ -1637,6 +1667,13 @@ private:
       ++SuspendIndex;
     }
 
+    if (!Shape.SuspendFreqs.empty()) {
+      auto SwitchWeights32 = llvm::fitWeights(SwitchWeights64);
+      MDBuilder MDB(C);
+      Switch->setMetadata(LLVMContext::MD_prof,
+                          MDB.createBranchWeights(SwitchWeights32));
+    }
+
     Builder.SetInsertPoint(UnreachBB);
     Builder.CreateUnreachable();
     DBuilder.finalize();
@@ -1661,6 +1698,10 @@ private:
       // If there is a CoroAlloc and it returns false (meaning we elide the
       // allocation, use CleanupFn instead of DestroyFn).
       DestroyOrCleanupFn = Builder.CreateSelect(CA, DestroyFn, CleanupFn);
+      applyProfMetadataIfEnabled(DestroyOrCleanupFn, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    CoroId->getFunction());
+      });
     }
 
     // Destroy function pointer
@@ -2309,6 +2350,29 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       continue;
 
     F.setSplittedCoroutine();
+
+    // Query BFI and populate SuspendFreqs right before splitting.
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+    for (auto *AnyS : Shape.CoroSuspends) {
+      BasicBlock *BB = AnyS->getParent();
+      uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
+      Shape.SuspendFreqs[AnyS] = Freq;
+
+      // Query BFI to get the actual estimated execution profile count of the
+      // basic block where this suspension point resides.
+      std::optional<uint64_t> Count =
+          BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true);
+      if (Count.has_value()) {
+        if (!Shape.ResumeEntryCount.has_value()) {
+          // For the first suspend point visited, initialize the total sum.
+          Shape.ResumeEntryCount = Count.value();
+        } else {
+          // Accumulate the absolute execution count of each subsequent suspend
+          // point into the total sum.
+          Shape.ResumeEntryCount.value() += Count.value();
+        }
+      }
+    }
 
     std::unique_ptr<coro::BaseABI> ABI = CreateAndInitABI(F, Shape);
 

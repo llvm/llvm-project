@@ -234,9 +234,13 @@ BinaryOperator *
 RecurrenceInfo::digRecurrence(Instruction *V,
                               Instruction::BinaryOps BOWithConstOpToMatch) {
   SmallVector<Instruction *> Worklist;
+  SmallPtrSet<Instruction *, 16> Visited;
   Worklist.push_back(V);
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))

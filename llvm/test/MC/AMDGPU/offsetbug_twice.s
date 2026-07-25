@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck %s --check-prefix=GFX10
+// RUN: llvm-mc -triple=amdgpu10.10 -show-encoding %s | FileCheck %s --check-prefix=GFX10
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -filetype=obj %s | llvm-objdump -d --mcpu=gfx1010 - | FileCheck %s --check-prefix=BIN
 	s_getpc_b64 s[0:1]
 	s_cbranch_vccnz BB0_2

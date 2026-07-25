@@ -303,23 +303,26 @@ class SPIRVStructurizerImpl {
   // the boundary of multiple constructs.
   struct Splitter {
     Function &F;
-    LoopInfo &LI;
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
     std::optional<PartialOrderingVisitor> POV;
 
-    Splitter(Function &F, LoopInfo &LI) : F(F), LI(LI) { invalidate(); }
+    Splitter(Function &F) : F(F) { invalidate(); }
 
     void invalidate() {
       PDT.recalculate(F);
-      DT.recalculate(F);
       POV.emplace(F);
+    }
+
+    const DomTreeBuilder::BBDomTree &getDT() const {
+      return POV->getDominatorTree();
     }
 
     // Returns the list of blocks that belong to a SPIR-V loop construct,
     // including the continue construct.
     std::vector<BasicBlock *> getLoopConstructBlocks(BasicBlock *Header,
                                                      BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
       POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
@@ -336,6 +339,7 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V selection construct.
     std::vector<BasicBlock *>
     getSelectionConstructBlocks(DivergentConstruct *Node) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Node->Header, Node->Merge));
       BlockSet OutsideBlocks;
       OutsideBlocks.insert(Node->Merge);
@@ -362,6 +366,7 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V switch construct.
     std::vector<BasicBlock *> getSwitchConstructBlocks(BasicBlock *Header,
                                                        BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Header, Merge));
 
       std::vector<BasicBlock *> Output;
@@ -382,6 +387,7 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V case construct.
     std::vector<BasicBlock *> getCaseConstructBlocks(BasicBlock *Target,
                                                      BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Target, Merge));
 
       std::vector<BasicBlock *> Output;
@@ -868,7 +874,7 @@ class SPIRVStructurizerImpl {
   }
 
   bool splitCriticalEdges(Function &F) {
-    Splitter S(F, LI);
+    Splitter S(F);
 
     DivergentConstruct Root;
     BlockSet Visited;
