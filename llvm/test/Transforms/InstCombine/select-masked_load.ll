@@ -159,6 +159,16 @@ define <4 x i32> @fold_sel_into_masked_load_metadata(ptr %ptr, <4 x i1> %mask) {
   ret <4 x i32> %sel
 }
 
+define <vscale x 4 x i32> @fold_sel_into_masked_load_drop_metadata(ptr %loc, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthrough) {
+; CHECK-LABEL: @fold_sel_into_masked_load_drop_metadata(
+; CHECK-NEXT:    [[SEL:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 1 [[LOC:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i32> [[PASSTHROUGH:%.*]]), !range [[RNG9:![0-9]+]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[SEL]]
+;
+  %load = call <vscale x 4 x i32> @llvm.masked.load.v4i32.p0(ptr %loc, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i32> zeroinitializer), !range !9
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %load, <vscale x 4 x i32> %passthrough
+  ret <vscale x 4 x i32> %sel
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !8, i64 0}
@@ -168,6 +178,8 @@ define <4 x i32> @fold_sel_into_masked_load_metadata(ptr %ptr, <4 x i1> %mask) {
 !6 = !{!7}
 !7 = distinct !{!7, !5, !"noscope"}
 !8 = !{!"Simple C/C++ TBAA"}
+!9 = !{i32 0, i32 2}
+
 
 declare <8 x float> @llvm.masked.load.v8f32.p0(ptr, i32 immarg, <8 x i1>, <8 x float>)
 declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
