@@ -59,11 +59,11 @@ TEST(GOFFObjectFileTest, createObjectFile) {
       0x00, 0x00, 0x00, 0x00,
   };
   ArrayRef<uint8_t> GOFFRef(GOFFData, sizeof(GOFFData));
-  Expected<std::unique_ptr<ObjectFile>> XCOFFObjOrErr =
+  Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createObjectFile(
           MemoryBufferRef(toStringRef(GOFFRef), "dummyGOFF"),
           file_magic::goff_object);
-  ASSERT_THAT_EXPECTED(XCOFFObjOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 }
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectValidSize) {
