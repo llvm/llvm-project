@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
+// UNSUPPORTED: gcc
 
 // Older versions of Clang don't support __builtin_clear_padding
 // UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17, apple-clang-21
