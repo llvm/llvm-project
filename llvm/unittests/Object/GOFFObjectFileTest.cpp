@@ -11,6 +11,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -67,24 +68,24 @@ TEST(GOFFObjectFileTest, createObjectFile) {
 }
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectValidSize) {
-  char GOFFData[GOFF::RecordLength * 3] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 3, 0x00);
   GOFFData[0] = (char)0x03;
   GOFFData[1] = (char)0xF0;
   GOFFData[80] = (char)0x03;
   GOFFData[81] = (char)0x40;
-  constructValidGOFF(GOFFData, 160);
-  constructValidGOFF(GOFFData, 0);
+  constructValidGOFF(GOFFData.data(), 160);
+  constructValidGOFF(GOFFData.data(), 0);
 }
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectInvalidSize) {
-  char GOFFData[GOFF::RecordLength * 3] = {0x00};
-  constructInvalidGOFF(GOFFData, 70);
-  constructInvalidGOFF(GOFFData, 79);
-  constructInvalidGOFF(GOFFData, 81);
+  std::vector<char> GOFFData(GOFF::RecordLength * 3, 0x00);
+  constructInvalidGOFF(GOFFData.data(), 70);
+  constructInvalidGOFF(GOFFData.data(), 79);
+  constructInvalidGOFF(GOFFData.data(), 81);
 }
 
 TEST(GOFFObjectFileTest, MissingHDR) {
-  char GOFFData[GOFF::RecordLength * 2] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 2, 0x00);
 
   // ESD record.
   GOFFData[0] = (char)0x03;
@@ -93,7 +94,7 @@ TEST(GOFFObjectFileTest, MissingHDR) {
   GOFFData[GOFF::RecordLength] = (char)0x03;
   GOFFData[GOFF::RecordLength + 1] = (char)0x40;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 2);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 2);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -105,7 +106,7 @@ TEST(GOFFObjectFileTest, MissingHDR) {
 }
 
 TEST(GOFFObjectFileTest, MissingEND) {
-  char GOFFData[GOFF::RecordLength * 2] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 2, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -114,7 +115,7 @@ TEST(GOFFObjectFileTest, MissingEND) {
   // ESD record.
   GOFFData[GOFF::RecordLength] = (char)0x03;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 2);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 2);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -125,7 +126,7 @@ TEST(GOFFObjectFileTest, MissingEND) {
 }
 
 TEST(GOFFObjectFileTest, GetSymbolName) {
-  char GOFFData[GOFF::RecordLength * 3] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 3, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -147,7 +148,7 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
   GOFFData[GOFF::RecordLength * 2] = 0x03;
   GOFFData[GOFF::RecordLength * 2 + 1] = 0x40;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 3);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 3);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -167,7 +168,7 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
 }
 
 TEST(GOFFObjectFileTest, ConcatenatedGOFFFile) {
-  char GOFFData[GOFF::RecordLength * 6] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 6, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -186,7 +187,7 @@ TEST(GOFFObjectFileTest, ConcatenatedGOFFFile) {
   GOFFData[GOFF::RecordLength * 5] = (char)0x03;
   GOFFData[GOFF::RecordLength * 5 + 1] = (char)0x40;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 6);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 6);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -196,7 +197,7 @@ TEST(GOFFObjectFileTest, ConcatenatedGOFFFile) {
 }
 
 TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
-  char GOFFContData[GOFF::RecordLength * 4] = {0x00};
+  std::vector<char> GOFFContData(GOFF::RecordLength * 4, 0x00);
 
   // HDR record.
   GOFFContData[0] = (char)0x03;
@@ -228,7 +229,7 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
   GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
   GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
-  StringRef Data(GOFFContData, GOFF::RecordLength * 4);
+  StringRef Data(GOFFContData.data(), GOFF::RecordLength * 4);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -247,7 +248,7 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
 }
 
 TEST(GOFFObjectFileTest, ContinuationBitNotSet) {
-  char GOFFContData[GOFF::RecordLength * 4] = {0x00};
+  std::vector<char> GOFFContData(GOFF::RecordLength * 4, 0x00);
 
   // HDR record.
   GOFFContData[0] = (char)0x03;
@@ -279,7 +280,7 @@ TEST(GOFFObjectFileTest, ContinuationBitNotSet) {
   GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
   GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
-  StringRef Data(GOFFContData, GOFF::RecordLength * 4);
+  StringRef Data(GOFFContData.data(), GOFF::RecordLength * 4);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -291,7 +292,7 @@ TEST(GOFFObjectFileTest, ContinuationBitNotSet) {
 }
 
 TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
-  char GOFFContData[GOFF::RecordLength * 4] = {0x00};
+  std::vector<char> GOFFContData(GOFF::RecordLength * 4, 0x00);
 
   // HDR record.
   GOFFContData[0] = (char)0x03;
@@ -323,7 +324,7 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
   GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
   GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
-  StringRef Data(GOFFContData, GOFF::RecordLength * 4);
+  StringRef Data(GOFFContData.data(), GOFF::RecordLength * 4);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -340,7 +341,7 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
 }
 
 TEST(GOFFObjectFileTest, PrevNotContinued) {
-  char GOFFContData[GOFF::RecordLength * 4] = {0x00};
+  std::vector<char> GOFFContData(GOFF::RecordLength * 4, 0x00);
 
   // HDR record.
   GOFFContData[0] = (char)0x03;
@@ -357,7 +358,7 @@ TEST(GOFFObjectFileTest, PrevNotContinued) {
   GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
   GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
-  StringRef Data(GOFFContData, GOFF::RecordLength * 4);
+  StringRef Data(GOFFContData.data(), GOFF::RecordLength * 4);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -370,7 +371,7 @@ TEST(GOFFObjectFileTest, PrevNotContinued) {
 }
 
 TEST(GOFFObjectFileTest, ContinuationTypeMismatch) {
-  char GOFFContData[GOFF::RecordLength * 4] = {0x00};
+  std::vector<char> GOFFContData(GOFF::RecordLength * 4, 0x00);
 
   // HDR record.
   GOFFContData[0] = (char)0x03;
@@ -388,7 +389,7 @@ TEST(GOFFObjectFileTest, ContinuationTypeMismatch) {
   GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
   GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
-  StringRef Data(GOFFContData, GOFF::RecordLength * 4);
+  StringRef Data(GOFFContData.data(), GOFF::RecordLength * 4);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -401,7 +402,7 @@ TEST(GOFFObjectFileTest, ContinuationTypeMismatch) {
 }
 
 TEST(GOFFObjectFileTest, TwoSymbols) {
-  char GOFFData[GOFF::RecordLength * 4] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 4, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -430,7 +431,7 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
   GOFFData[GOFF::RecordLength * 3] = (char)0x03;
   GOFFData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 4);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 4);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -449,7 +450,7 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
 }
 
 TEST(GOFFObjectFileTest, InvalidSymbolType) {
-  char GOFFData[GOFF::RecordLength * 3] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 3, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -467,7 +468,7 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
   GOFFData[GOFF::RecordLength * 2] = (char)0x03;
   GOFFData[GOFF::RecordLength * 2 + 1] = (char)0x40;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 3);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 3);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -492,7 +493,7 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
 }
 
 TEST(GOFFObjectFileTest, InvalidERSymbolType) {
-  char GOFFData[GOFF::RecordLength * 3] = {0x00};
+  std::vector<char> GOFFData(GOFF::RecordLength * 3, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -511,7 +512,7 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
   GOFFData[GOFF::RecordLength * 2] = (char)0x03;
   GOFFData[GOFF::RecordLength * 2 + 1] = (char)0x40;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 3);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 3);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -530,7 +531,7 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
 }
 
 TEST(GOFFObjectFileTest, TXTConstruct) {
-  char GOFFData[GOFF::RecordLength * 6] = {};
+  std::vector<char> GOFFData(GOFF::RecordLength * 6, 0x00);
 
   // HDR record.
   GOFFData[0] = (char)0x03;
@@ -600,7 +601,7 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
   GOFFData[GOFF::RecordLength * 5 + 1] = (char)0x40;
   GOFFData[GOFF::RecordLength * 5 + 11] = (char)0x06;
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 6);
+  StringRef Data(GOFFData.data(), GOFF::RecordLength * 6);
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
