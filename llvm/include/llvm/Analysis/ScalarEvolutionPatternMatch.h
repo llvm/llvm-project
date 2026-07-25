@@ -187,12 +187,6 @@ m_scev_ZExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>
-m_scev_PtrToInt(const Op0_t &Op0) {
-  return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
-}
-
-template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>
 m_scev_PtrToAddr(const Op0_t &Op0) {
   return SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>(Op0);
