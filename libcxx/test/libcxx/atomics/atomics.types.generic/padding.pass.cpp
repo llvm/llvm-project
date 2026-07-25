@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
+
+// Older Clang doesn't implement __builtin_clear_padding
 // XFAIL: clang-21, apple-clang-21, clang-22
 
 // atomic_init is deprecated
@@ -88,6 +90,8 @@ template <class T>
 void test() {
   {
     // atomic();
+    // Prio to C++20, the default constructor leaves std::atomic unitialized,
+    // so padding bytes are not guaranteed zero
 #if TEST_STD_VER >= 20
     std::atomic<T> a;
     assert_padding(a, 0);

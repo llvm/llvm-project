@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
 // XFAIL: !has-64-bit-atomics
+
+// Older Clang doesn't implement __builtin_clear_padding
 // XFAIL: clang-21, apple-clang-21, clang-22
 
 // atomic<T>::compare_exchange_weak
@@ -68,16 +70,6 @@ void assert_padding(const T& obj, unsigned char pad_byte) {
 }
 
 template <class T>
-void libcpp_assert_padding(const T& obj, unsigned char pad_byte) {
-#ifdef _LIBCPP_VERSION
-  assert_padding(obj, pad_byte);
-#else
-  (void)obj;
-  (void)pad_byte;
-#endif
-}
-
-template <class T>
 void test() {
   {
     // compare_exchange_strong
@@ -130,8 +122,10 @@ void test() {
     assert(!r);
     assert(expected.i == 10);
     assert(expected.c == 'a');
-    // expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
-    libcpp_assert_padding(expected, 0);
+// expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
+#ifdef _LIBCPP_VERSION
+    assert_padding(expected, 0);
+#endif
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
@@ -198,8 +192,10 @@ void test() {
         // Spurious failure: expected is updated to the current atomic value.
         assert(expected.i == 10);
         assert(expected.c == 'a');
-        // expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
-        libcpp_assert_padding(expected, 0);
+// expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
+#ifdef _LIBCPP_VERSION
+        assert_padding(expected, 0);
+#endif
       }
     }
 
@@ -229,8 +225,10 @@ void test() {
     assert(!r);
     assert(expected.i == 10);
     assert(expected.c == 'a');
-    // expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
-    libcpp_assert_padding(expected, 0);
+// expected is updated to contain atomic's value and in libc++, the paddings bits are always zero
+#ifdef _LIBCPP_VERSION
+    assert_padding(expected, 0);
+#endif
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');

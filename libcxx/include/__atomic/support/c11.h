@@ -137,13 +137,16 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     memory_order __success,
     memory_order __failure) _NOEXCEPT {
   return std::__atomic_cas_with_clear_padding(
-      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+      __expected,
+      __value,
+      // clang fails to inline the lambda when the memory order is a constant
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
         return __c11_atomic_compare_exchange_strong(
             std::addressof(__a->__a_value),
             __expected_or_copy,
             __value_maybe_padding_cleared,
             static_cast<__memory_order_underlying_t>(__success),
-            static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
       });
 }
 template <class _Tp>
@@ -151,13 +154,15 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
     _NOEXCEPT {
   return std::__atomic_cas_with_clear_padding(
-      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+      __expected,
+      __value,
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
         return __c11_atomic_compare_exchange_strong(
             std::addressof(__a->__a_value),
             __expected_or_copy,
             __value_maybe_padding_cleared,
             static_cast<__memory_order_underlying_t>(__success),
-            static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
       });
 }
 
@@ -169,13 +174,15 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     memory_order __success,
     memory_order __failure) _NOEXCEPT {
   return std::__atomic_cas_with_clear_padding(
-      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+      __expected,
+      __value,
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
         return __c11_atomic_compare_exchange_weak(
             std::addressof(__a->__a_value),
             __expected_or_copy,
             __value_maybe_padding_cleared,
             static_cast<__memory_order_underlying_t>(__success),
-            static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
       });
 }
 
@@ -184,13 +191,15 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
     _NOEXCEPT {
   return std::__atomic_cas_with_clear_padding(
-      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+      __expected,
+      __value,
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
         return __c11_atomic_compare_exchange_weak(
             std::addressof(__a->__a_value),
             __expected_or_copy,
             __value_maybe_padding_cleared,
             static_cast<__memory_order_underlying_t>(__success),
-            static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
       });
 }
 
