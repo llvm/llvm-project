@@ -107,11 +107,20 @@ template <typename DomTreeT> struct SemiNCAInfo {
   using BatchUpdatePtr = BatchUpdateInfo *;
 
   // If BUI is a nullptr, then there's no batch update in progress.
-  SemiNCAInfo(BatchUpdatePtr BUI) : BatchUpdates(BUI) {}
+  SemiNCAInfo(const DomTreeT &DT, BatchUpdatePtr BUI) : BatchUpdates(BUI) {
+    if constexpr (GraphHasNodeNumbers<NodePtr>) {
+      unsigned MaxNodeNumber =
+          GraphTraits<typename DomTreeT::ParentPtr>::getMaxNumber(DT.Parent);
+      NodeInfos.resize(MaxNodeNumber + 1); // nullptr block is zero.
+    }
+  }
 
   void clear() {
     NumToNode.clear();
-    NodeInfos.clear();
+    if constexpr (GraphHasNodeNumbers<NodePtr>)
+      NodeInfos.assign(NodeInfos.size(), InfoRec{});
+    else
+      NodeInfos.clear();
     ReverseChildren.clear();
     // Don't reset the pointer to BatchUpdateInfo here -- if there's an update
     // in progress, we need this information to continue it.
@@ -136,14 +145,6 @@ template <typename DomTreeT> struct SemiNCAInfo {
   InfoRec &getNodeInfo(NodePtr BB) {
     if constexpr (GraphHasNodeNumbers<NodePtr>) {
       unsigned Idx = BB ? GraphTraits<NodePtr>::getNumber(BB) + 1 : 0;
-      if (Idx >= NodeInfos.size()) {
-        unsigned Max = 0;
-        if (BB)
-          Max = GraphTraits<decltype(BB->getParent())>::getMaxNumber(
-              BB->getParent());
-        // Max might be zero, graphs might not support getMaxNumber().
-        NodeInfos.resize(Max ? Max + 1 : Idx + 1);
-      }
       return NodeInfos[Idx];
     } else {
       return NodeInfos[BB];
@@ -383,7 +384,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       return Roots;
     }
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
 
     // PostDominatorTree always has a virtual root.
     SNCA.addVirtualRoot();
@@ -534,7 +535,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     assert(IsPostDom && "This function is for postdominators only");
     LLVM_DEBUG(dbgs() << "Removing redundant roots\n");
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
 
     for (unsigned i = 0; i < Roots.size(); ++i) {
       auto &Root = Roots[i];
@@ -596,7 +597,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     }
     // This is rebuilding the whole tree, not incrementally, but PostViewBUI is
     // used in case the caller needs a DT update with a CFGView.
-    SemiNCAInfo SNCA(PostViewBUI);
+    SemiNCAInfo SNCA(DT, PostViewBUI);
 
     // Step #0: Number blocks in depth-first order and initialize variables used
     // in later stages of the algorithm.
@@ -932,7 +933,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       return false;
     };
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
     SNCA.runDFS(Root, 0, UnreachableDescender, 0);
     SNCA.runSemiNCA();
     SNCA.attachNewSubtree(DT, Incoming);
@@ -1027,7 +1028,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "\tTop of subtree: " << BlockNamePrinter(ToIDomTN)
                       << "\n");
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
     SNCA.runDFS(ToIDom, 0, DescendBelow, 0);
     LLVM_DEBUG(dbgs() << "\tRunning Semi-NCA\n");
     SNCA.runSemiNCA();
@@ -1096,7 +1097,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       return false;
     };
 
-    SemiNCAInfo SNCA(BUI);
+    SemiNCAInfo SNCA(DT, BUI);
     unsigned LastDFSNum =
         SNCA.runDFS(ToTN->getBlock(), 0, DescendAndCollect, 0);
 
@@ -1630,7 +1631,7 @@ void ApplyUpdates(DomTreeT &DT,
 
 template <class DomTreeT>
 bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
-  SemiNCAInfo<DomTreeT> SNCA(nullptr);
+  SemiNCAInfo<DomTreeT> SNCA(DT, nullptr);
 
   // Simplist check is to compare against a new tree. This will also
   // usefully print the old and new trees, if they are different.
