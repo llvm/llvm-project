@@ -6555,13 +6555,18 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
     }
     return DL.getPointerTypeSizeInBits(PtrTy) == IntTy->getIntegerBitWidth();
   };
-  if (CastOp0->getOpcode() == Instruction::PtrToInt &&
+  if (isa<PtrToIntInst, PtrToAddrInst>(CastOp0) &&
       CompatibleSizes(SrcTy, DestTy)) {
     Value *NewOp1 = nullptr;
     if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
       Value *PtrSrc = PtrToIntOp1->getOperand(0);
       if (PtrSrc->getType() == Op0Src->getType())
         NewOp1 = PtrToIntOp1->getOperand(0);
+    } else if (auto *PtrToAddrOp1 =
+                   dyn_cast<PtrToAddrOperator>(ICmp.getOperand(1))) {
+      Value *PtrSrc = PtrToAddrOp1->getOperand(0);
+      if (PtrSrc->getType() == Op0Src->getType())
+        NewOp1 = PtrToAddrOp1->getOperand(0);
     } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
       NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
