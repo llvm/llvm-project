@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
@@ -242,6 +243,146 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   return loopDepth;
 }
 
+/// Return whether `dependenceConstraints` contains a dependence that becomes
+/// lexicographically backward after executing the source slice in the
+/// destination loop nest.
+static std::optional<bool> hasBackwardDependenceAfterFusion(
+    const FlatAffineValueConstraints &dependenceConstraints,
+    const FlatAffineValueConstraints &sliceConstraints,
+    ArrayRef<Value> srcIVs, ArrayRef<Value> dstIVs, unsigned dstLoopDepth,
+    unsigned numCommonLoops) {
+  if (dstLoopDepth < numCommonLoops || dstIVs.size() < dstLoopDepth)
+    return std::nullopt;
+
+  unsigned numSrcIVs = srcIVs.size();
+  if (sliceConstraints.getNumDimVars() != numSrcIVs ||
+      dependenceConstraints.getNumDimVars() !=
+          numSrcIVs + dstIVs.size())
+    return std::nullopt;
+  for (auto [index, iv] : llvm::enumerate(srcIVs)) {
+    if (!sliceConstraints.hasValue(index) ||
+        sliceConstraints.getValue(index) != iv ||
+        !dependenceConstraints.hasValue(index) ||
+        dependenceConstraints.getValue(index) != iv)
+      return std::nullopt;
+  }
+  for (auto [index, iv] : llvm::enumerate(dstIVs)) {
+    unsigned pos = numSrcIVs + index;
+    if (!dependenceConstraints.hasValue(pos) ||
+        dependenceConstraints.getValue(pos) != iv)
+      return std::nullopt;
+  }
+
+  // View the slice as a relation from its destination insertion point to the
+  // source iteration, and the dependence as source-to-destination. Their
+  // composition directly relates the transformed source schedule to the
+  // original dependence destination.
+  unsigned firstScheduleSymbol = 0;
+  unsigned numScheduleDims = dstLoopDepth - numCommonLoops;
+  for (unsigned depth = numCommonLoops; depth < dstLoopDepth; ++depth) {
+    unsigned pos;
+    if (!sliceConstraints.findVar(dstIVs[depth], &pos,
+                                  sliceConstraints.getNumDimVars()))
+      return std::nullopt;
+    unsigned symbolPos = pos - sliceConstraints.getNumDimVars();
+    if (depth == numCommonLoops)
+      firstScheduleSymbol = symbolPos;
+    else if (symbolPos != firstScheduleSymbol + depth - numCommonLoops)
+      return std::nullopt;
+  }
+
+  presburger::IntegerRelation sliceRelation(sliceConstraints);
+  sliceRelation.convertVarKind(presburger::VarKind::Symbol,
+                               firstScheduleSymbol,
+                               firstScheduleSymbol + numScheduleDims,
+                               presburger::VarKind::Domain);
+  presburger::IntegerRelation fusedDependence(dependenceConstraints);
+  fusedDependence.convertVarKind(presburger::VarKind::Range, 0, numSrcIVs,
+                                 presburger::VarKind::Domain);
+  fusedDependence.mergeAndCompose(sliceRelation);
+  if (fusedDependence.getNumDomainVars() != numScheduleDims ||
+      fusedDependence.getNumRangeVars() != dstIVs.size())
+    return std::nullopt;
+
+  unsigned dstOffset =
+      fusedDependence.getVarKindOffset(presburger::VarKind::Range);
+  for (unsigned depth = 0; depth < numScheduleDims; ++depth) {
+    presburger::IntegerRelation backwardConstraints(fusedDependence);
+    for (unsigned outerDepth = 0; outerDepth < depth; ++outerDepth) {
+      SmallVector<int64_t> equality(backwardConstraints.getNumCols(), 0);
+      equality[outerDepth] = 1;
+      equality[dstOffset + numCommonLoops + outerDepth] = -1;
+      backwardConstraints.addEquality(equality);
+    }
+
+    SmallVector<int64_t> inequality(backwardConstraints.getNumCols(), 0);
+    inequality[depth] = 1;
+    inequality[dstOffset + numCommonLoops + depth] = -1;
+    inequality.back() = -1;
+    backwardConstraints.addInequality(inequality);
+    if (!backwardConstraints.isIntegerEmpty())
+      return true;
+  }
+  return false;
+}
+
+/// Check affine WAR dependences between the source and destination that did
+/// not define the producer-consumer slice.
+static bool preservesAdditionalAffineWARDependences(
+    ArrayRef<Operation *> srcOps, ArrayRef<Operation *> dstOps,
+    unsigned dstLoopDepth, unsigned numCommonLoops,
+    const ComputationSliceState &srcSlice) {
+  FlatAffineValueConstraints sliceConstraints;
+  if (failed(srcSlice.getAsConstraints(&sliceConstraints)))
+    return false;
+
+  for (Operation *srcOp : srcOps) {
+    MemRefAccess srcAccess(srcOp);
+    for (Operation *dstOp : dstOps) {
+      MemRefAccess dstAccess(dstOp);
+      if (srcAccess.memref != dstAccess.memref)
+        continue;
+      // Source stores already participate in the producer-consumer slice.
+      // Only source-read/destination-write dependences are additional to it.
+      if (srcAccess.isStore() || !dstAccess.isStore())
+        continue;
+
+      FlatAffineValueConstraints dependenceConstraints;
+      DependenceResult result = checkMemrefAccessDependence(
+          srcAccess, dstAccess, numCommonLoops + 1, &dependenceConstraints);
+      if (result.value == DependenceResult::NoDependence)
+        continue;
+      if (result.value == DependenceResult::Failure)
+        return false;
+
+      SmallVector<AffineForOp> dstLoops;
+      getAffineForIVs(*dstOp, &dstLoops);
+      SmallVector<AffineForOp> srcLoops;
+      getAffineForIVs(*srcOp, &srcLoops);
+      SmallVector<Value> srcIVs;
+      for (AffineForOp loop : srcLoops)
+        srcIVs.push_back(loop.getInductionVar());
+      SmallVector<Value> dstIVs;
+      for (AffineForOp loop : dstLoops)
+        dstIVs.push_back(loop.getInductionVar());
+      std::optional<bool> hasBackward = hasBackwardDependenceAfterFusion(
+          dependenceConstraints, sliceConstraints, srcIVs, dstIVs,
+          dstLoopDepth, numCommonLoops);
+      if (!hasBackward) {
+        LDBG() << "Could not compare the affine dependence with the fused "
+                  "schedule";
+        return false;
+      }
+      if (*hasBackward) {
+        LDBG() << "Affine WAR dependence becomes backward between " << *srcOp
+               << " and " << *dstOp;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // TODO: This pass performs some computation that is the same for all the depths
 // (e.g., getMaxLoopDepth). Implement a version of this utility that processes
 // all the depths at once or only the legal maximal depth for maximal fusion.
@@ -347,6 +488,13 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
       SliceComputationResult::IncorrectSliceFailure) {
     LDBG() << "Incorrect slice computation";
     return FusionResult::FailIncorrectSlice;
+  }
+
+  if (fusionStrategy.getStrategy() == FusionStrategy::ProducerConsumer &&
+      !preservesAdditionalAffineWARDependences(
+          opsA, opsB, dstLoopDepth, numCommonLoops, *srcSlice)) {
+    LDBG() << "Fusion would reverse an additional affine WAR dependence";
+    return FusionResult::FailFusionDependence;
   }
 
   return FusionResult::Success;
