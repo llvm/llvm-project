@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s --check-prefixes=CHECK,CHECK-DERIVE
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
@@ -969,11 +969,11 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2
 
 // -----
 
-//   CHECK-LABEL: func @supported_fp_type
-//         CHECK:   llvm.fadd {{.*}} : f32
-//         CHECK:   llvm.fadd {{.*}} : vector<4xf32>
+// CHECK-LABEL: func @supported_fp_type
+//       CHECK:   llvm.fadd {{.*}} : f32
+//       CHECK:   llvm.fadd {{.*}} : vector<4xf32>
 // CHECK-COUNT-4:   llvm.fadd {{.*}} : vector<8xf32>
-//         CHECK:   llvm.fcmp {{.*}} : f32
+//       CHECK:   llvm.fcmp {{.*}} : f32
 func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>, %arg3: f32) {
   %0 = arith.addf %arg0, %arg0 : f32
   %1 = arith.addf %arg1, %arg1 : vector<4xf32>
@@ -981,4 +981,77 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
   %3 = arith.cmpf oeq, %arg0, %arg3 : f32
   return
 }
+
+// -----
+
+// Verify that the pass respects the module's data layout when deriving the
+// index type.  When the module declares a 32-bit index via dlti.dl_spec,
+// index constants and index arithmetic ops must be emitted as i32 instead of
+// the default i64.
+
+// 32-bit data layout: arith.constant with index type -> i32 constant.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+func.func @constant_index_32bit() -> index {
+  %c0 = arith.constant 0 : index
+  return %c0 : index
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @constant_index_32bit
+// CHECK-DERIVE: llvm.mlir.constant(0 : index) : i32
+
+// -----
+
+// 32-bit data layout: arith.cmpi on index type -> icmp on i32.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+func.func @cmpi_index_32bit(%a: index, %b: index) -> i1 {
+  %cmp = arith.cmpi slt, %a, %b : index
+  return %cmp : i1
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @cmpi_index_32bit
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: llvm.icmp "slt" %{{.*}}, %{{.*}} : i32
+
+// -----
+
+// 32-bit data layout: arith.addi on index type -> add on i32.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+func.func @addi_index_32bit(%a: index, %b: index) -> index {
+  %add = arith.addi %a, %b : index
+  return %add : index
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @addi_index_32bit
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: llvm.add %{{.*}}, %{{.*}} : i32
+
+// -----
+
+// Without dlti.dl_spec the default index width (i64) is preserved.
+
+module {
+
+func.func @constant_index_default() -> index {
+  %c0 = arith.constant 0 : index
+  return %c0 : index
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @constant_index_default
+// CHECK-DERIVE: llvm.mlir.constant(0 : index) : i64
 
