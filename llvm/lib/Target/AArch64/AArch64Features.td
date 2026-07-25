@@ -853,6 +853,11 @@ def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "CPU fuses (a + b + 1) and (a - b - 1)",
    [], InlineIgnore>;
 
+def FeatureFuseAppleSMECompute : SubtargetFeature<
+   "fuse-apple-sme-compute", "HasFuseAppleSMECompute", "true",
+   "CPU fuses SME compute operations",
+   [], InlineIgnore>;
+
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic",

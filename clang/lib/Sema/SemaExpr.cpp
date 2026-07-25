@@ -1924,8 +1924,8 @@ ExprResult Sema::CreateGenericSelectionExpr(
         // earlier because GCC does so.
         unsigned D = 0;
         if (ControllingExpr && Types[i]->getType()->isIncompleteType())
-          D = LangOpts.C2y ? diag::warn_c2y_compat_assoc_type_incomplete
-                           : diag::ext_assoc_type_incomplete;
+          D = LangOpts.C2y ? diag::compat_c2y_assoc_type_incomplete
+                           : diag::compat_pre_c2y_assoc_type_incomplete;
         else if (ControllingExpr && !Types[i]->getType()->isObjectType())
           D = diag::err_assoc_type_nonobject;
         else if (Types[i]->getType()->isVariablyModifiedType())
@@ -4260,14 +4260,10 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
                                         Context.getComplexType(Res->getType()));
 
     // In C++, this is a GNU extension. In C, it's a C2y extension.
-    unsigned DiagId;
     if (getLangOpts().CPlusPlus)
-      DiagId = diag::ext_gnu_imaginary_constant;
-    else if (getLangOpts().C2y)
-      DiagId = diag::warn_c23_compat_imaginary_constant;
+      Diag(Tok.getLocation(), diag::ext_gnu_imaginary_constant);
     else
-      DiagId = diag::ext_c2y_imaginary_constant;
-    Diag(Tok.getLocation(), DiagId);
+      DiagCompat(Tok.getLocation(), diag_compat::imaginary_constant);
   }
   return Res;
 }
@@ -4676,6 +4672,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    case Type::LateParsedAttr:
       // Keep walking after single level desugaring.
       T = T.getSingleStepDesugaredType(Context);
       break;
@@ -4734,9 +4731,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
     // trait to an incomplete array is an extension.
     if (ExprKind == UETT_AlignOf && !getLangOpts().CPlusPlus &&
         ExprType->isIncompleteArrayType())
-      Diag(OpLoc, getLangOpts().C2y
-                      ? diag::warn_c2y_compat_alignof_incomplete_array
-                      : diag::ext_c2y_alignof_incomplete_array);
+      DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
 
@@ -5704,17 +5699,12 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
   }
 
   // A nested lambda might have parameters with immediate invocations
-  // in their default arguments, or init-captures that are evaluated in the
-  // enclosing context.
+  // in their default arguments.
   // The compound statement is not visited (as it does not constitute a
   // subexpression).
+  // FIXME: We should consider visiting and transforming captures
+  // with init expressions.
   bool VisitLambdaExpr(LambdaExpr *E) override {
-    auto Init = E->capture_init_begin();
-    for (auto C = E->capture_begin(), CEnd = E->capture_end(); C != CEnd;
-         ++C, ++Init) {
-      if (E->isInitCapture(C) && !TraverseLambdaCapture(E, C, *Init))
-        return false;
-    }
     return VisitCXXMethodDecl(E->getCallOperator());
   }
 
@@ -5729,51 +5719,16 @@ struct ImmediateCallVisitor : DynamicRecursiveASTVisitor {
 
 struct EnsureImmediateInvocationInDefaultArgs
     : TreeTransform<EnsureImmediateInvocationInDefaultArgs> {
-  using Base = TreeTransform<EnsureImmediateInvocationInDefaultArgs>;
-
   EnsureImmediateInvocationInDefaultArgs(Sema &SemaRef)
       : TreeTransform(SemaRef) {}
 
   bool AlwaysRebuild() { return true; }
-  bool ReplacingOriginal() { return true; }
 
-  // Lambda bodies are not subexpressions of the enclosing default initializer,
-  // but init-capture expressions are evaluated in the enclosing context. Keep
-  // the existing closure type and capture declarations so the existing body
-  // still refers to the right declarations.
-  ExprResult TransformLambdaExpr(LambdaExpr *E) {
-    SmallVector<Expr *, 4> CaptureInits(E->capture_inits());
-
-    bool Changed = false;
-    for (unsigned I = 0, N = E->capture_size(); I != N; ++I) {
-      const LambdaCapture *C = E->capture_begin() + I;
-      if (!E->isInitCapture(C))
-        continue;
-
-      auto *VD = cast<VarDecl>(C->getCapturedVar());
-      Expr *Init = CaptureInits[I];
-      ExprResult NewInit =
-          TransformInitializer(Init, VD->getInitStyle() == VarDecl::CallInit);
-      if (NewInit.isInvalid())
-        return ExprError();
-      Changed |= NewInit.get() != Init;
-      CaptureInits[I] = NewInit.get();
-    }
-
-    LambdaExpr *Lambda = E;
-    if (Changed) {
-      // Reuse the existing closure class: it owns the capture declarations,
-      // fields, and call operator body. Only the LambdaExpr's capture
-      // initializer list is replaced.
-      Lambda = LambdaExpr::Create(
-          SemaRef.Context, E->getLambdaClass(), E->getIntroducerRange(),
-          E->getCaptureDefault(), E->getCaptureDefaultLoc(),
-          E->hasExplicitParameters(), E->hasExplicitResultType(), CaptureInits,
-          E->getEndLoc(), E->containsUnexpandedParameterPack());
-    }
-
-    return SemaRef.MaybeBindToTemporary(Lambda);
-  }
+  // Lambda can only have immediate invocations in the default
+  // args of their parameters, which is transformed upon calling the closure.
+  // The body is not a subexpression, so we have nothing to do.
+  // FIXME: Immediate calls in capture initializers should be transformed.
+  ExprResult TransformLambdaExpr(LambdaExpr *E) { return E; }
   ExprResult TransformBlockExpr(BlockExpr *E) { return E; }
 
   // Make sure we don't rebuild the this pointer as it would
@@ -14824,8 +14779,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
       return QualType();
   } else if (ResType->isAnyComplexType()) {
     // C99 does not support ++/-- on complex types, we allow as an extension.
-    S.Diag(OpLoc, S.getLangOpts().C2y ? diag::warn_c2y_compat_increment_complex
-                                      : diag::ext_c2y_increment_complex)
+    S.DiagCompat(OpLoc, diag_compat::increment_complex)
         << IsInc << Op->getSourceRange();
   } else if (ResType->isPlaceholderType()) {
     ExprResult PR = S.CheckPlaceholderExpr(Op);

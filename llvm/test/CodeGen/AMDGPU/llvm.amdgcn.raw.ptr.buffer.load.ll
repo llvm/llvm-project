@@ -36,7 +36,7 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(ptr addrsp
 ;
 ; GFX1250-LABEL: buffer_load:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_clause 0x2
@@ -45,6 +45,22 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(ptr addrsp
 ; GFX1250-NEXT:    buffer_load_b128 v[8:11], off, s[0:3], null th:TH_LOAD_HT
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; SI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; VI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 0)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 1)
@@ -84,7 +100,7 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_dlc(ptr ad
 ;
 ; GFX1250-LABEL: buffer_load_dlc:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_clause 0x2
@@ -93,6 +109,22 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_dlc(ptr ad
 ; GFX1250-NEXT:    buffer_load_b128 v[8:11], off, s[0:3], null th:TH_LOAD_NT_HT
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_dlc:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; SI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_dlc:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; VI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 4)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 5)
@@ -136,7 +168,7 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_volatile(p
 ;
 ; GFX1250-LABEL: buffer_load_volatile:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null scope:SCOPE_SYS
@@ -146,6 +178,26 @@ define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load_volatile(p
 ; GFX1250-NEXT:    buffer_load_b128 v[8:11], off, s[0:3], null th:TH_LOAD_HT scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_volatile:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 glc slc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_volatile:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[0:3], 0 glc slc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 -2147483648)
   %data_glc = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 0, i32 0, i32 -2147483647)
@@ -177,12 +229,24 @@ define amdgpu_ps <4 x float> @buffer_load_immoffs(ptr addrspace(8) inreg) {
 ;
 ; GFX1250-LABEL: buffer_load_immoffs:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:40
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_immoffs:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:40
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_immoffs:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:40
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 40, i32 0, i32 0)
   ret <4 x float> %data
@@ -212,13 +276,27 @@ define amdgpu_ps <4 x float> @buffer_load_immoffs_large(ptr addrspace(8) inreg) 
 ;
 ; GFX1250-LABEL: buffer_load_immoffs_large:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_movk_i32 s4, 0x1ffc
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:4
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_immoffs_large:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    s_movk_i32 s4, 0x1ffc
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_immoffs_large:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    s_movk_i32 s4, 0x1ffc
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 4, i32 8188, i32 0)
   ret <4 x float> %data
@@ -245,12 +323,24 @@ define amdgpu_ps <4 x float> @buffer_load_ofs(ptr addrspace(8) inreg, i32) {
 ;
 ; GFX1250-LABEL: buffer_load_ofs:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_ofs:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_ofs:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 %1, i32 0, i32 0)
   ret <4 x float> %data
@@ -277,13 +367,25 @@ define amdgpu_ps <4 x float> @buffer_load_ofs_imm(ptr addrspace(8) inreg, i32) {
 ;
 ; GFX1250-LABEL: buffer_load_ofs_imm:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 60, v0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_ofs_imm:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_ofs_imm:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %ofs = add i32 %1, 60
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 %ofs, i32 0, i32 0)
@@ -311,12 +413,24 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_12bit(ptr addrspace(8) i
 ;
 ; GFX1250-LABEL: buffer_load_voffset_large_12bit:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:4092
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_voffset_large_12bit:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_voffset_large_12bit:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 4092, i32 0, i32 0)
   ret <4 x float> %data
@@ -346,12 +460,26 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_13bit(ptr addrspace(8) i
 ;
 ; GFX1250-LABEL: buffer_load_voffset_large_13bit:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:8188
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_voffset_large_13bit:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_voffset_large_13bit:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 8188, i32 0, i32 0)
   ret <4 x float> %data
@@ -381,12 +509,26 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_16bit(ptr addrspace(8) i
 ;
 ; GFX1250-LABEL: buffer_load_voffset_large_16bit:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:65532
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_voffset_large_16bit:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0xf000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_voffset_large_16bit:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0xf000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 65532, i32 0, i32 0)
   ret <4 x float> %data
@@ -416,12 +558,26 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_23bit(ptr addrspace(8) i
 ;
 ; GFX1250-LABEL: buffer_load_voffset_large_23bit:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:8388604
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_voffset_large_23bit:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0x7ff000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_voffset_large_23bit:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0x7ff000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 8388604, i32 0, i32 0)
   ret <4 x float> %data
@@ -451,13 +607,27 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_24bit(ptr addrspace(8) i
 ;
 ; GFX1250-LABEL: buffer_load_voffset_large_24bit:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:8388604
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_voffset_large_24bit:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0xfff000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_voffset_large_24bit:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0xfff000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 16777212, i32 0, i32 0)
   ret <4 x float> %data
@@ -485,12 +655,24 @@ define amdgpu_ps float @buffer_load_x1(ptr addrspace(8) inreg %rsrc, i32 %ofs) {
 ;
 ; GFX1250-LABEL: buffer_load_x1:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_x1:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_x1:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0, i32 0)
   ret float %data
@@ -517,12 +699,24 @@ define amdgpu_ps <2 x float> @buffer_load_x2(ptr addrspace(8) inreg %rsrc, i32 %
 ;
 ; GFX1250-LABEL: buffer_load_x2:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_x2:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[0:3], 0 offen
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_x2:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[0:3], 0 offen
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %ofs, i32 0, i32 0)
   ret <2 x float> %data
@@ -545,13 +739,27 @@ define amdgpu_ps <4 x float> @buffer_load_negative_offset(ptr addrspace(8) inreg
 ;
 ; GFX1250-LABEL: buffer_load_negative_offset:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v0, -16, v0
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_negative_offset:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_add_i32_e32 v0, vcc, -16, v0
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_negative_offset:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_add_u32_e32 v0, vcc, -16, v0
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %ofs.1 = add i32 %ofs, -16
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %0, i32 %ofs.1, i32 0, i32 0)
@@ -581,7 +789,7 @@ define amdgpu_ps float @buffer_load_mmo(ptr addrspace(8) inreg %rsrc, ptr addrsp
 ;
 ; GFX1250-LABEL: buffer_load_mmo:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b32 v1, off, s[0:3], null
@@ -591,6 +799,30 @@ define amdgpu_ps float @buffer_load_mmo(ptr addrspace(8) inreg %rsrc, ptr addrsp
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_mmo:
+; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; SI-NEXT:    v_mov_b32_e32 v2, 0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    ds_write_b32 v0, v2
+; SI-NEXT:    v_add_i32_e32 v0, vcc, 16, v0
+; SI-NEXT:    ds_write_b32 v0, v2
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_mmo:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; VI-NEXT:    v_mov_b32_e32 v2, 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    ds_write2_b32 v0, v2, v2 offset1:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, v1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 entry:
   store float 0.0, ptr addrspace(3) %lds
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
@@ -628,7 +860,7 @@ define amdgpu_ps {<4 x float>, <2 x float>, float} @buffer_load_int(ptr addrspac
 ;
 ; GFX1250-LABEL: buffer_load_int:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_clause 0x2
@@ -637,6 +869,22 @@ define amdgpu_ps {<4 x float>, <2 x float>, float} @buffer_load_int(ptr addrspac
 ; GFX1250-NEXT:    buffer_load_b32 v6, off, s[0:3], null th:TH_LOAD_HT
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: buffer_load_int:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+; SI-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 glc
+; SI-NEXT:    buffer_load_dword v6, off, s[0:3], 0 slc
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: buffer_load_int:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+; VI-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 glc
+; VI-NEXT:    buffer_load_dword v6, off, s[0:3], 0 slc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %0, i32 0, i32 0, i32 0)
   %data_glc = call <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) %0, i32 0, i32 0, i32 1)
@@ -674,13 +922,27 @@ define amdgpu_ps float @raw_ptr_buffer_load_ubyte(ptr addrspace(8) inreg %rsrc) 
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_ubyte:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_u8 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: raw_ptr_buffer_load_ubyte:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: raw_ptr_buffer_load_ubyte:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %tmp = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   %tmp2 = zext i8 %tmp to i32
@@ -712,13 +974,27 @@ define amdgpu_ps float @raw_ptr_buffer_load_i16(ptr addrspace(8) inreg %rsrc) {
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_i16:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_u16 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: raw_ptr_buffer_load_i16:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: raw_ptr_buffer_load_i16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %tmp = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   %tmp2 = zext i16 %tmp to i32
@@ -750,13 +1026,27 @@ define amdgpu_ps float @raw_ptr_buffer_load_sbyte(ptr addrspace(8) inreg %rsrc) 
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_sbyte:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_i8 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cvt_f32_i32_e32 v0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: raw_ptr_buffer_load_sbyte:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: raw_ptr_buffer_load_sbyte:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %tmp = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   %tmp2 = sext i8 %tmp to i32
@@ -788,13 +1078,27 @@ define amdgpu_ps float @raw_ptr_buffer_load_sshort(ptr addrspace(8) inreg %rsrc)
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_sshort:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_i16 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cvt_f32_i32_e32 v0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
+;
+; SI-LABEL: raw_ptr_buffer_load_sshort:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_sshort v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: raw_ptr_buffer_load_sshort:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_sshort v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %tmp = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   %tmp2 = sext i16 %tmp to i32
@@ -827,13 +1131,29 @@ define amdgpu_ps void @raw_ptr_buffer_load_f16(ptr addrspace(8) inreg %rsrc, ptr
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_f16:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_u16 v1, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b16 v0, v1
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_f16:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_ushort v1, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b16 v0, v1
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_f16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_ushort v1, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b16 v0, v1
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store half %val, ptr addrspace(3) %ptr
@@ -865,13 +1185,29 @@ define amdgpu_ps void @raw_ptr_buffer_load_v2f16(ptr addrspace(8) inreg %rsrc, p
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_v2f16:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b32 v1, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_v2f16:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b32 v0, v1
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_v2f16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b32 v0, v1
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <2 x half> %val, ptr addrspace(3) %ptr
@@ -903,13 +1239,29 @@ define amdgpu_ps void @raw_ptr_buffer_load_v4f16(ptr addrspace(8) inreg %rsrc, p
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_v4f16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b64 v0, v[2:3]
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_v4f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b64 v0, v[1:2]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_v4f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b64 v0, v[1:2]
+; VI-NEXT:    s_endpgm
   %val = call <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <4 x half> %val, ptr addrspace(3) %ptr
   ret void
@@ -939,13 +1291,31 @@ define amdgpu_ps void @raw_ptr_buffer_load_v8f16(ptr addrspace(8) inreg %rsrc, p
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_v8f16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[2:5], off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b128 v0, v[2:5]
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_v8f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    buffer_load_dwordx4 v[1:4], off, s[0:3], 0
+; SI-NEXT:    v_add_i32_e32 v5, vcc, 8, v0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b64 v5, v[3:4]
+; SI-NEXT:    ds_write_b64 v0, v[1:2]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_v8f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    buffer_load_dwordx4 v[1:4], off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b128 v0, v[1:4]
+; VI-NEXT:    s_endpgm
   %val = call <8 x half> @llvm.amdgcn.raw.ptr.buffer.load.v8f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <8 x half> %val, ptr addrspace(3) %ptr
   ret void
@@ -976,13 +1346,29 @@ define amdgpu_ps void @raw_ptr_buffer_load_v2i16(ptr addrspace(8) inreg %rsrc, p
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_v2i16:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b32 v1, off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_v2i16:
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b32 v0, v1
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_v2i16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dword v1, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b32 v0, v1
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call <2 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v2i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <2 x i16> %val, ptr addrspace(3) %ptr
@@ -1014,13 +1400,29 @@ define amdgpu_ps void @raw_ptr_buffer_load_v4i16(ptr addrspace(8) inreg %rsrc, p
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_v4i16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b64 v0, v[2:3]
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_v4i16:
+; SI:       ; %bb.0:
+; SI-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b64 v0, v[1:2]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_v4i16:
+; VI:       ; %bb.0:
+; VI-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b64 v0, v[1:2]
+; VI-NEXT:    s_endpgm
   %val = call <4 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v4i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <4 x i16> %val, ptr addrspace(3) %ptr
   ret void
@@ -1050,13 +1452,31 @@ define amdgpu_ps void @raw_ptr_buffer_load_v8i16(ptr addrspace(8) inreg %rsrc, p
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_v8i16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    buffer_load_b128 v[2:5], off, s[0:3], null
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ds_store_b128 v0, v[2:5]
 ; GFX1250-NEXT:    s_endpgm
+;
+; SI-LABEL: raw_ptr_buffer_load_v8i16:
+; SI:       ; %bb.0:
+; SI-NEXT:    buffer_load_dwordx4 v[1:4], off, s[0:3], 0
+; SI-NEXT:    v_add_i32_e32 v5, vcc, 8, v0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ds_write_b64 v5, v[3:4]
+; SI-NEXT:    ds_write_b64 v0, v[1:2]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: raw_ptr_buffer_load_v8i16:
+; VI:       ; %bb.0:
+; VI-NEXT:    buffer_load_dwordx4 v[1:4], off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b128 v0, v[1:4]
+; VI-NEXT:    s_endpgm
   %val = call <8 x i16> @llvm.amdgcn.raw.ptr.buffer.load.v8i16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   store <8 x i16> %val, ptr addrspace(3) %ptr
   ret void
@@ -1092,6 +1512,20 @@ define double @buffer_load_f64__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %v
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_f64__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_f64__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call double @llvm.amdgcn.raw.ptr.buffer.load.f64(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret double %data
@@ -1127,6 +1561,20 @@ define <2 x double> @buffer_load_v2f64__voffset_add(ptr addrspace(8) inreg %rsrc
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2f64__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2f64__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x double> @llvm.amdgcn.raw.ptr.buffer.load.v2f64(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x double> %data
@@ -1162,6 +1610,20 @@ define i64 @buffer_load_i64__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voff
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_i64__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_i64__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret i64 %data
@@ -1197,6 +1659,20 @@ define <2 x i64> @buffer_load_v2i64__voffset_add(ptr addrspace(8) inreg %rsrc, i
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2i64__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2i64__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x i64> @llvm.amdgcn.raw.ptr.buffer.load.v2i64(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x i64> %data
@@ -1232,6 +1708,20 @@ define ptr @buffer_load_p0__voffset_add(ptr addrspace(8) inreg %rsrc, i32 %voffs
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p0__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p0__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr @llvm.amdgcn.raw.ptr.buffer.load.p0(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr %data
@@ -1267,6 +1757,20 @@ define <2 x ptr> @buffer_load_v2p0__voffset_add(ptr addrspace(8) inreg %rsrc, i3
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p0__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p0__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr> @llvm.amdgcn.raw.ptr.buffer.load.p0(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr> %data
@@ -1302,6 +1806,20 @@ define ptr addrspace(1) @buffer_load_p1__voffset_add(ptr addrspace(8) inreg %rsr
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p1__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p1__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(1) @llvm.amdgcn.raw.ptr.buffer.load.p1(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(1) %data
@@ -1337,6 +1855,20 @@ define <2 x ptr addrspace(1)> @buffer_load_v2p1__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p1__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p1__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(1)> @llvm.amdgcn.raw.ptr.buffer.load.p1(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(1)> %data
@@ -1372,6 +1904,20 @@ define ptr addrspace(4) @buffer_load_p4__voffset_add(ptr addrspace(8) inreg %rsr
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p4__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p4__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(4) @llvm.amdgcn.raw.ptr.buffer.load.p4(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(4) %data
@@ -1407,6 +1953,20 @@ define <2 x ptr addrspace(4)> @buffer_load_v2p4__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p4__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p4__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(4)> @llvm.amdgcn.raw.ptr.buffer.load.p4(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(4)> %data
@@ -1442,6 +2002,20 @@ define ptr addrspace(999) @buffer_load_p999__voffset_add(ptr addrspace(8) inreg 
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p999__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p999__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(999) @llvm.amdgcn.raw.ptr.buffer.load.p999(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(999) %data
@@ -1477,6 +2051,20 @@ define <2 x ptr addrspace(999)> @buffer_load_v2p999__voffset_add(ptr addrspace(8
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p999__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p999__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(999)> @llvm.amdgcn.raw.ptr.buffer.load.p999(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(999)> %data
@@ -1512,6 +2100,20 @@ define ptr addrspace(2) @buffer_load_p2__voffset_add(ptr addrspace(8) inreg %rsr
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p2__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p2__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(2) @llvm.amdgcn.raw.ptr.buffer.load.p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(2) %data
@@ -1547,6 +2149,20 @@ define <2 x ptr addrspace(2)> @buffer_load_v2p2__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p2__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p2__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(2)> @llvm.amdgcn.raw.ptr.buffer.load.v2p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(2)> %data
@@ -1575,6 +2191,20 @@ define <3 x ptr addrspace(2)> @buffer_load_v3p2__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v3p2__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v3p2__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <3 x ptr addrspace(2)> @llvm.amdgcn.raw.ptr.buffer.load.v3p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <3 x ptr addrspace(2)> %data
@@ -1610,6 +2240,20 @@ define <4 x ptr addrspace(2)> @buffer_load_v4p2__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v4p2__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v4p2__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <4 x ptr addrspace(2)> @llvm.amdgcn.raw.ptr.buffer.load.v4p2(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <4 x ptr addrspace(2)> %data
@@ -1645,6 +2289,20 @@ define ptr addrspace(3) @buffer_load_p3__voffset_add(ptr addrspace(8) inreg %rsr
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p3__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p3__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(3) @llvm.amdgcn.raw.ptr.buffer.load.p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(3) %data
@@ -1680,6 +2338,20 @@ define <2 x ptr addrspace(3)> @buffer_load_v2p3__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p3__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p3__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(3)> @llvm.amdgcn.raw.ptr.buffer.load.v2p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(3)> %data
@@ -1708,6 +2380,20 @@ define <3 x ptr addrspace(3)> @buffer_load_v3p3__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v3p3__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v3p3__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <3 x ptr addrspace(3)> @llvm.amdgcn.raw.ptr.buffer.load.v3p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <3 x ptr addrspace(3)> %data
@@ -1743,6 +2429,20 @@ define <4 x ptr addrspace(3)> @buffer_load_v4p3__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v4p3__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v4p3__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <4 x ptr addrspace(3)> @llvm.amdgcn.raw.ptr.buffer.load.v4p3(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <4 x ptr addrspace(3)> %data
@@ -1778,6 +2478,20 @@ define ptr addrspace(5) @buffer_load_p5__voffset_add(ptr addrspace(8) inreg %rsr
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p5__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p5__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(5) @llvm.amdgcn.raw.ptr.buffer.load.p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(5) %data
@@ -1813,6 +2527,20 @@ define <2 x ptr addrspace(5)> @buffer_load_v2p5__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p5__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p5__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(5)> @llvm.amdgcn.raw.ptr.buffer.load.v2p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(5)> %data
@@ -1841,6 +2569,20 @@ define <3 x ptr addrspace(5)> @buffer_load_v3p5__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v3p5__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v3p5__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <3 x ptr addrspace(5)> @llvm.amdgcn.raw.ptr.buffer.load.v3p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <3 x ptr addrspace(5)> %data
@@ -1876,6 +2618,20 @@ define <4 x ptr addrspace(5)> @buffer_load_v4p5__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v4p5__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v4p5__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <4 x ptr addrspace(5)> @llvm.amdgcn.raw.ptr.buffer.load.v4p5(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <4 x ptr addrspace(5)> %data
@@ -1911,6 +2667,20 @@ define ptr addrspace(6) @buffer_load_p6__voffset_add(ptr addrspace(8) inreg %rsr
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_p6__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_p6__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call ptr addrspace(6) @llvm.amdgcn.raw.ptr.buffer.load.p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret ptr addrspace(6) %data
@@ -1946,6 +2716,20 @@ define <2 x ptr addrspace(6)> @buffer_load_v2p6__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v2p6__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v2p6__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <2 x ptr addrspace(6)> @llvm.amdgcn.raw.ptr.buffer.load.v2p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <2 x ptr addrspace(6)> %data
@@ -1974,6 +2758,20 @@ define <3 x ptr addrspace(6)> @buffer_load_v3p6__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b96 v[0:2], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v3p6__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v3p6__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx3 v[0:2], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <3 x ptr addrspace(6)> @llvm.amdgcn.raw.ptr.buffer.load.v3p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <3 x ptr addrspace(6)> %data
@@ -2009,45 +2807,169 @@ define <4 x ptr addrspace(6)> @buffer_load_v4p6__voffset_add(ptr addrspace(8) in
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; SI-LABEL: buffer_load_v4p6__voffset_add:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: buffer_load_v4p6__voffset_add:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[16:19], 0 offen offset:60
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 60
   %data = call <4 x ptr addrspace(6)> @llvm.amdgcn.raw.ptr.buffer.load.v4p6(ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
   ret <4 x ptr addrspace(6)> %data
 }
 
 define amdgpu_ps <4 x float> @raw_ptr_large_zero_soffset(ptr addrspace(8) inreg %rsrc) {
+; PREGFX10-LABEL: raw_ptr_large_zero_soffset:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: raw_ptr_large_zero_soffset:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: raw_ptr_large_zero_soffset:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: raw_ptr_large_zero_soffset:
+; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:8188
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
 ; SI-LABEL: raw_ptr_large_zero_soffset:
-; SI: v_mov_b32_e32 [[VOFF:v[0-9]+]], 0x1000
-; SI-NEXT: buffer_load_dwordx4 v[0:3], [[VOFF]], s[0:3], 0 offen offset:4092
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: raw_ptr_large_zero_soffset:
-; VI: v_mov_b32_e32 [[VOFF:v[0-9]+]], 0x1000
-; VI-NEXT: buffer_load_dwordx4 v[0:3], [[VOFF]], s[0:3], 0 offen offset:4092
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 8188, i32 0, i32 0)
   ret <4 x float> %data
 }
 
 define amdgpu_ps <4 x float> @raw_ptr_large_safe_soffset(ptr addrspace(8) inreg %rsrc) {
+; PREGFX10-LABEL: raw_ptr_large_safe_soffset:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 16 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: raw_ptr_large_safe_soffset:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 16 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: raw_ptr_large_safe_soffset:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 16 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: raw_ptr_large_safe_soffset:
+; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b32 s4, 16
+; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:8188
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
 ; SI-LABEL: raw_ptr_large_safe_soffset:
-; SI: v_mov_b32_e32 [[VOFF:v[0-9]+]], 0x1000
-; SI-NEXT: buffer_load_dwordx4 v[0:3], [[VOFF]], s[0:3], 16 offen offset:4092
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 16 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: raw_ptr_large_safe_soffset:
-; VI: v_mov_b32_e32 [[VOFF:v[0-9]+]], 0x1000
-; VI-NEXT: buffer_load_dwordx4 v[0:3], [[VOFF]], s[0:3], 16 offen offset:4092
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 16 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 8188, i32 16, i32 0)
   ret <4 x float> %data
 }
 
 define amdgpu_ps <4 x float> @raw_ptr_large_overflowing_soffset(ptr addrspace(8) inreg %rsrc) {
+; PREGFX10-LABEL: raw_ptr_large_overflowing_soffset:
+; PREGFX10:       ; %bb.0: ; %main_body
+; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], -16 offen offset:4092
+; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
+; PREGFX10-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: raw_ptr_large_overflowing_soffset:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], -16 offen offset:4092
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: raw_ptr_large_overflowing_soffset:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], -16 offen offset:4092
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: raw_ptr_large_overflowing_soffset:
+; GFX1250:       ; %bb.0: ; %main_body
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b32 s4, -16
+; GFX1250-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:8188
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
+;
 ; SI-LABEL: raw_ptr_large_overflowing_soffset:
-; SI: v_mov_b32_e32 [[VOFF:v[0-9]+]], 0x1000
-; SI-NEXT: buffer_load_dwordx4 v[0:3], [[VOFF]], s[0:3], -16 offen offset:4092
+; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], -16 offen offset:4092
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: raw_ptr_large_overflowing_soffset:
-; VI: v_mov_b32_e32 [[VOFF:v[0-9]+]], 0x1000
-; VI-NEXT: buffer_load_dwordx4 v[0:3], [[VOFF]], s[0:3], -16 offen offset:4092
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    v_mov_b32_e32 v0, 0x1000
+; VI-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], -16 offen offset:4092
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 8188, i32 -16, i32 0)
   ret <4 x float> %data

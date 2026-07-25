@@ -222,8 +222,11 @@ def GPR64sp : RegisterClass<"AArch64", [i64], 64, (add GPR64common, SP)> {
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID,0, 32>";
 }
 
-def GPR32sponly : RegisterClass<"AArch64", [i32], 32, (add WSP)>;
-def GPR64sponly : RegisterClass<"AArch64", [i64], 64, (add SP)>;
+// SP/WSP are always reserved.
+let isAllocatable = 0 in {
+  def GPR32sponly : RegisterClass<"AArch64", [i32], 32, (add WSP)>;
+  def GPR64sponly : RegisterClass<"AArch64", [i64], 64, (add SP)>;
+}
 
 def GPR64spPlus0Operand : AsmOperandClass {
   let Name = "GPR64sp0";

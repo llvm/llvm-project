@@ -7,6 +7,7 @@
 // HOST: module {{.*}} attributes {
 // HOST-SAME: omp.is_gpu = false
 // HOST-SAME: omp.is_target_device = false
+// HOST-SAME: omp.version = #omp.version<version = {{[0-9]+}}>
 
 // Host with target triples
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir \

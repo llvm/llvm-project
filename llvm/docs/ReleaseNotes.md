@@ -60,13 +60,23 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to TableGen
 
+* `!cond` operator short-circuits at the first `true` condition.  Subsequent
+  `condition : value` pairs, along with their corresponding side effects,
+  are left unresolved.
+
 ### Changes to Interprocedural Optimizations
 
 ### Changes to Vectorizers
 
 ### Changes to the AArch64 Backend
 
+* On AArch64 Windows targets, return address signing now uses the B-key by
+  default because Windows unwind information only supports B-key signing.
+
 ### Changes to the AMDGPU Backend
+
+* Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
+  and `amdgpu.sramecc` module flags.
 
 ### Changes to the ARM Backend
 
@@ -103,6 +113,8 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
 

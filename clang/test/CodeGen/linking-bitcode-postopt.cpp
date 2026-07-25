@@ -13,7 +13,7 @@
 // RUN:   -mlink-builtin-bitcode-postopt \
 // RUN: %s 2>&1 | FileCheck --check-prefixes=OPTION-POSITIVE %s
 
-// OPTION-POSITIVE: LinkInModulesPass
+// OPTION-POSITIVE: LinkInModulesPass,assign-guid
 
 // RUN: %clang_cc1 -triple amdgcn-- -emit-llvm-bc -o /dev/null \
 // RUN:   -mllvm -print-pipeline-passes \

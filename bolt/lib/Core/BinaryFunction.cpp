@@ -2874,6 +2874,7 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3019,6 +3020,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3174,6 +3176,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -4500,9 +4503,9 @@ void BinaryFunction::calculateLoopInfo() {
     L->EntryCount = L->getHeader()->getExecutionCount() - L->TotalBackEdgeCount;
 
     // Compute exit count.
-    SmallVector<BinaryLoop::Edge, 1> ExitEdges;
-    L->getExitEdges(ExitEdges);
-    for (BinaryLoop::Edge &Exit : ExitEdges) {
+    SmallVector<BinaryLoopInfo::Edge, 1> ExitEdges;
+    BLI->getExitEdges(*L, ExitEdges);
+    for (BinaryLoopInfo::Edge &Exit : ExitEdges) {
       const BinaryBasicBlock *Exiting = Exit.first;
       const BinaryBasicBlock *ExitTarget = Exit.second;
       auto BI = Exiting->branch_info_begin();

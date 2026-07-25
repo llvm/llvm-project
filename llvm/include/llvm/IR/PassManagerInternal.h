@@ -151,8 +151,25 @@ public:
 /// to.
 template <typename IRUnitT, typename InvalidatorT>
 struct AnalysisResultConcept {
-  virtual ~AnalysisResultConcept() = default;
+private:
+  using DestroyTy = void (*)(AnalysisResultConcept &);
+  using InvalidateTy = bool (*)(AnalysisResultConcept &, IRUnitT &,
+                                const PreservedAnalyses &, InvalidatorT &);
 
+public:
+  struct Deleter {
+    void operator()(AnalysisResultConcept *C) { C->Destroy(*C); }
+  };
+
+  using unique_ptr = std::unique_ptr<AnalysisResultConcept, Deleter>;
+
+protected:
+  DestroyTy Destroy;
+  InvalidateTy Invalidate = nullptr;
+
+  AnalysisResultConcept(DestroyTy Destroy) : Destroy(Destroy) {}
+
+public:
   /// Method to try and mark a result as invalid.
   ///
   /// When the outer analysis manager detects a change in some underlying
@@ -168,8 +185,9 @@ struct AnalysisResultConcept {
   /// them. See the documentation in the \c AnalysisManager for more details.
   ///
   /// \returns true if the result is indeed invalid (the default).
-  virtual bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA,
-                          InvalidatorT &Inv) = 0;
+  bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA, InvalidatorT &Inv) {
+    return Invalidate(*this, IR, PA, Inv);
+  }
 };
 
 /// SFINAE metafunction for computing whether \c ResultT provides an
@@ -209,85 +227,35 @@ public:
 };
 
 /// Wrapper to model the analysis result concept.
-///
-/// By default, this will implement the invalidate method with a trivial
-/// implementation so that the actual analysis result doesn't need to provide
-/// an invalidation handler. It is only selected when the invalidation handler
-/// is not part of the ResultT's interface.
-template <typename IRUnitT, typename PassT, typename ResultT,
-          typename InvalidatorT,
-          bool HasInvalidateHandler =
-              ResultHasInvalidateMethod<IRUnitT, ResultT>::Value>
-struct AnalysisResultModel;
-
-/// Specialization of \c AnalysisResultModel which provides the default
-/// invalidate functionality.
 template <typename IRUnitT, typename PassT, typename ResultT,
           typename InvalidatorT>
-struct AnalysisResultModel<IRUnitT, PassT, ResultT, InvalidatorT, false>
-    : AnalysisResultConcept<IRUnitT, InvalidatorT> {
-  explicit AnalysisResultModel(ResultT Result) : Result(std::move(Result)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
-  AnalysisResultModel(AnalysisResultModel &&Arg)
-      : Result(std::move(Arg.Result)) {}
-
-  friend void swap(AnalysisResultModel &LHS, AnalysisResultModel &RHS) {
-    using std::swap;
-    swap(LHS.Result, RHS.Result);
-  }
-
-  AnalysisResultModel &operator=(AnalysisResultModel RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
-
-  /// The model bases invalidation solely on being in the preserved set.
-  //
-  // FIXME: We should actually use two different concepts for analysis results
-  // rather than two different models, and avoid the indirect function call for
-  // ones that use the trivial behavior.
-  bool invalidate(IRUnitT &, const PreservedAnalyses &PA,
-                  InvalidatorT &) override {
-    auto PAC = PA.template getChecker<PassT>();
-    return !PAC.preserved() &&
-           !PAC.template preservedSet<AllAnalysesOn<IRUnitT>>();
-  }
+struct AnalysisResultModel
+    : public AnalysisResultConcept<IRUnitT, InvalidatorT> {
+  using AnalysisResultConceptT = AnalysisResultConcept<IRUnitT, InvalidatorT>;
 
   ResultT Result;
-};
 
-/// Specialization of \c AnalysisResultModel which delegates invalidate
-/// handling to \c ResultT.
-template <typename IRUnitT, typename PassT, typename ResultT,
-          typename InvalidatorT>
-struct AnalysisResultModel<IRUnitT, PassT, ResultT, InvalidatorT, true>
-    : AnalysisResultConcept<IRUnitT, InvalidatorT> {
-  explicit AnalysisResultModel(ResultT Result) : Result(std::move(Result)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
-  AnalysisResultModel(AnalysisResultModel &&Arg)
-      : Result(std::move(Arg.Result)) {}
-
-  friend void swap(AnalysisResultModel &LHS, AnalysisResultModel &RHS) {
-    using std::swap;
-    swap(LHS.Result, RHS.Result);
+  static void destroyImpl(AnalysisResultConceptT &Self) {
+    delete static_cast<AnalysisResultModel *>(&Self);
   }
 
-  AnalysisResultModel &operator=(AnalysisResultModel RHS) {
-    swap(*this, RHS);
-    return *this;
+  template <typename... ExtraArgTs>
+  AnalysisResultModel(PassT &Pass, IRUnitT &IR,
+                      AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
+                      ExtraArgTs &&...ExtraArgs)
+      : AnalysisResultConceptT(destroyImpl),
+        Result(Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...)) {
+    this->Invalidate = [](AnalysisResultConceptT &Self, IRUnitT &IR,
+                          const PreservedAnalyses &PA, InvalidatorT &Inv) {
+      if constexpr (ResultHasInvalidateMethod<IRUnitT, ResultT>::Value) {
+        ResultT &Result = static_cast<AnalysisResultModel &>(Self).Result;
+        return Result.invalidate(IR, PA, Inv);
+      }
+      auto PAC = PA.template getChecker<PassT>();
+      return !PAC.preserved() &&
+             !PAC.template preservedSet<AllAnalysesOn<IRUnitT>>();
+    };
   }
-
-  /// The model delegates to the \c ResultT method.
-  bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA,
-                  InvalidatorT &Inv) override {
-    return Result.invalidate(IR, PA, Inv);
-  }
-
-  ResultT Result;
 };
 
 /// Abstract concept of an analysis pass.
@@ -301,7 +269,7 @@ struct AnalysisPassConcept {
   /// Method to run this analysis over a unit of IR.
   /// \returns A unique_ptr to the analysis result object to be queried by
   /// users.
-  virtual std::unique_ptr<AnalysisResultConcept<IRUnitT, InvalidatorT>>
+  virtual typename AnalysisResultConcept<IRUnitT, InvalidatorT>::unique_ptr
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) = 0;
 
@@ -341,11 +309,12 @@ struct AnalysisPassModel
   /// The model delegates to the \c PassT::run method.
   ///
   /// The return is wrapped in an \c AnalysisResultModel.
-  std::unique_ptr<AnalysisResultConcept<IRUnitT, InvalidatorT>>
+  typename ResultModelT::unique_ptr
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) override {
-    return std::make_unique<ResultModelT>(
-        Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...));
+    // Call Pass.run in constructor to avoid move of analysis result.
+    return typename ResultModelT::unique_ptr(
+        new ResultModelT(Pass, IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...));
   }
 
   /// The model delegates to a static \c PassT::name method.

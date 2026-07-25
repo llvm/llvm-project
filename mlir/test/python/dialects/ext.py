@@ -105,6 +105,81 @@ def testMyInt():
         print(adaptor1.rhs)
 
 
+# CHECK: TEST: testDialectLoadInMultipleContexts
+@run
+def testDialectLoadInMultipleContexts():
+    class ContextLoadDialect(Dialect, name="ext_context_load"):
+        pass
+
+    class ContextLoadType(ContextLoadDialect.Type, name="type"):
+        value: IntegerAttr
+
+    class ContextLoadAttr(ContextLoadDialect.Attribute, name="attr"):
+        value: StringAttr
+
+    class ContextLoadOp(ContextLoadDialect.Operation, name="op"):
+        attr: ContextLoadAttr
+        result: Result[ContextLoadType]
+
+    def check_dialect(context_name, type_value):
+        i32 = IntegerType.get_signless(32)
+        result_type = ContextLoadType.get(IntegerAttr.get(i32, type_value))
+        attr = ContextLoadAttr.get(StringAttr.get(context_name))
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            ContextLoadOp(attr, result_type)
+
+        assert module.operation.verify()
+        module = Module.parse(str(module))
+        op = module.body.operations[0]
+        assert isinstance(op, ContextLoadOp)
+        assert isinstance(op.attr, ContextLoadAttr)
+        assert isinstance(op.result.type, ContextLoadType)
+
+        print(
+            f"{context_name}: {type(op).__name__}, "
+            f"{type(op.attr).__name__}, {type(op.result.type).__name__}"
+        )
+        print(op.attr.value)
+        print(op.result.type.value)
+
+    first_context = Context()
+    second_context = Context()
+
+    with first_context, Location.unknown():
+        ContextLoadDialect.load()
+        try:
+            ContextLoadDialect.load()
+        except DialectAlreadyLoadedError as e:
+            assert isinstance(e, RuntimeError)
+            # CHECK: same context: Dialect 'ext_context_load' has already been loaded in the current context.
+            print("same context:", e)
+        else:
+            raise AssertionError("expected DialectAlreadyLoadedError")
+
+        # CHECK: first context: ContextLoadOp, ContextLoadAttr, ContextLoadType
+        # CHECK: "first context"
+        # CHECK: 1 : i32
+        check_dialect("first context", 1)
+
+    with second_context, Location.unknown():
+        ContextLoadDialect.load()
+        # CHECK: second context: ContextLoadOp, ContextLoadAttr, ContextLoadType
+        # CHECK: "second context"
+        # CHECK: 2 : i32
+        check_dialect("second context", 2)
+
+    with first_context, Location.unknown():
+        try:
+            ContextLoadDialect.load()
+        except DialectAlreadyLoadedError as e:
+            # CHECK: same context again: Dialect 'ext_context_load' has already been loaded in the current context.
+            print("same context again:", e)
+        else:
+            raise AssertionError("expected DialectAlreadyLoadedError")
+
+
 # CHECK: TEST: testExtDialect
 @run
 def testExtDialect():

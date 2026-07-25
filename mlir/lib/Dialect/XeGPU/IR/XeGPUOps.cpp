@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -192,6 +193,16 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
   if (subgroup_block_io && !blockShape.size())
     return emitError() << "mem_desc must have block attribute when "
                           "subgroup_block_io is set.";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_CreateMemDescOp
+//===----------------------------------------------------------------------===//
+LogicalResult CreateMemDescOp::verify() {
+  auto srcTy = getSource().getType();
+  if (!memref::isStaticShapeAndContiguousRowMajor(srcTy))
+    return emitOpError("source memref must be contiguous.");
   return success();
 }
 

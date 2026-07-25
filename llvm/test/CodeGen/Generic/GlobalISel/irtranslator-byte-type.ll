@@ -4,7 +4,7 @@
 ; REQUIRES: x86-registered-target
 
 ; RUN: llc -mtriple=aarch64-linux-gnu  -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=AARCH64
-; RUN: llc -mtriple=amdgcn--mesa-mesa3d -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=AMDGPU
+; RUN: llc -mtriple=amdgpu6.00--mesa-mesa3d -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=AMDGPU
 ; RUN: llc -mtriple=x86_64-linux-gnu   -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=X86
 
 ; IRTranslator handling of LLVM IR's byte type (bN), constants and loads /

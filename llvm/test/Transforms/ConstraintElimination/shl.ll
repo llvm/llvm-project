@@ -1392,3 +1392,89 @@ define i1 @shl_nsw_by_bw_plus_1(i64 %x) {
   %t.1 = icmp slt i64 %x, 0
   ret i1 %t.1
 }
+
+; shl nuw %c, 2 can use signed decomposition due to the bound on %c.
+define i1 @shl_nuw_signed_bounded(i64 %c) {
+; CHECK-LABEL: @shl_nuw_signed_bounded(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BND:%.*]] = icmp slt i64 [[C:%.*]], 2305843009213693952
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BND]])
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i64 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i64 [[C]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+entry:
+  %bnd = icmp slt i64 %c, 2305843009213693952
+  call void @llvm.assume(i1 %bnd)
+  %nn = icmp sge i64 %c, 0
+  call void @llvm.assume(i1 %nn)
+  %m = shl nuw i64 %c, 2
+  %t = icmp slt i64 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_tight_bound(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_tight_bound(
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 32
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %b = icmp slt i8 %x, 32
+  call void @llvm.assume(i1 %b)
+  %nn = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %nn)
+  %m = shl nuw i8 %x, 2
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_no_bound(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_no_bound(
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %m = shl nuw i8 %x, 2
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_weak_bound(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_weak_bound(
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 64
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %b = icmp slt i8 %x, 64
+  call void @llvm.assume(i1 %b)
+  %nn = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %nn)
+  %m = shl nuw i8 %x, 2
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_shift_zero(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_shift_zero(
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 32
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X]], 0
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %b = icmp slt i8 %x, 32
+  call void @llvm.assume(i1 %b)
+  %m = shl nuw i8 %x, 0
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
