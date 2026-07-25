@@ -141,23 +141,48 @@ Potentially Breaking Changes
 Improvements to clangd
 ----------------------
 
-Inlay hints
-^^^^^^^^^^^
+Compile flags
+^^^^^^^^^^^^^
+
+- The clang-cl flags ``/std:c++23preview`` and ``/std:clatest`` are recognized
+
+- Improved logic for finding the resource directory containing clang's builtin
+  headers, to handle cases where clangd and clang are installed in different prefixes
+
+- Environment variables that influence compilation are logged on startup
 
 Diagnostics
 ^^^^^^^^^^^
 
-Semantic Highlighting
-^^^^^^^^^^^^^^^^^^^^^
+- Driver diagnostics can be suppressed via config
 
-Compile flags
-^^^^^^^^^^^^^
+- ``pragma diagnostic push/pop`` is handled correctly across a preamble boundary
+
+- Unknown compiler options are dropped instead of causing a fatal error
+
+Clang-tidy integration
+^^^^^^^^^^^^^^^^^^^^^^
+
+- ``bugprone-bad-signal-to-kill-thread`` now works with clangd
+
+- Clang-tidy checks can properly see macro definitions located in the preamble
+  region at the top of the file
 
 Hover
 ^^^^^
 
+- When hovering over an accessor method, the comment for the accessed field is shown
+
+- Improved handling of unknown doxygen commands
+
+- Fixed a regression in whitespace escaping behaviour when processing
+  documentation comments
+
 Code completion
 ^^^^^^^^^^^^^^^
+
+- Clangd recognizes when a definition of a function (as opposed to a call) is
+  being completed, and provides dedicated behaviour suitable for definitions
 
 - Now also provides include files without extension, if they are in a directory
   only called ``include``.
@@ -165,6 +190,9 @@ Code completion
 - Added support for ``InsertReplaceEdit`` in code completion (LSP 3.16),
   allowing clients that advertise ``insertReplaceSupport`` to receive both
   insert and replace ranges for completion items.
+
+- Improved logic to avoid inserting a redundant parenthesis when completing
+  in the middle of an identifier
 
 - Changed completion-style default to ``detailed``. This means function
   overloads will no longer be bundled together, but instead each have
@@ -174,23 +202,92 @@ Code completion
   ``bundled``. To change back to the old behaviour, pass the argument
   ``--completion-style=bundled`` to clangd.
 
+- The ``ArgumentLists`` config option is respected for lambdas
+
+- Code completion for field names in ``__builtin_offsetof`` expressions
+
+- Clangd tries harder to find parameter names to show during code completion,
+  looking in other redeclarations of a function if necessary
+
+Cross-references
+^^^^^^^^^^^^^^^^
+
+- Code navigation works correctly on tokens inside attributes,
+  ``__builtin_offsetof`` expressions, and member pointers
+
+- "Find implementations" finds implementations recursively
+
+- "Go to definition" on a forwarding wrapper like ``make_unique``
+  also offers the called constructor as a target
+
+- "Document symbols" supports the new symbol tags added in LSP 3.18
+
+- "Workspace symbols" ensures that a primary definition is ranked
+  above typedefs
+
+Inlay hints
+^^^^^^^^^^^
+
+- Correct inlay hints are shown for dependent calls to functions with
+  an explicit object parameter (C++23 "deducing this")
+
 Code actions
 ^^^^^^^^^^^^
 
 - A new tweak "Create function body out-of-line" was added that creates
   an implementation for a function declaration.
 
-Signature help
+- The "define out of line" code action has improved logic for finding
+  an insertion point which considers ``=default`` functions.
+
+- The "define out of line" code action has improved logic for using
+  qualified names in the printed definition
+
+Semantic Highlighting
+^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed a regression in the highlighting of using-declarations and
+  symbols introduced by them
+
+Call hierarchy
 ^^^^^^^^^^^^^^
 
-Cross-references
-^^^^^^^^^^^^^^^^
+- Removed redundant symbol name from hierarchy item details
 
-Objective-C
-^^^^^^^^^^^
+Remote index
+^^^^^^^^^^^^
+
+- Improved cross platform support (e.g. serving an index to windows
+  clients from a server running on linux)
+
+Improvements to C++20 Modules support
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Enabled content valiation for module input files
+
+- Fixed handling of relative paths in prebuilt module files
+
+- Added a ``--skip-preamble-build`` command-line option
+
+- Support different modules with the same name in a project
+
+- Cache built module files across clangd invocation
+
+- Module builds respect compile command edits specified via ``CompileFlags``
+  in clangd configuration
+
+- Invalidate preamble when new module imports are added
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- The "switch between source/header" command prefers an .hpp file
+  over an .h file if both are present
+
+- Added a new standalone tool ``clangd-remap`` for remapping paths
+  inside clangd background index files
+
+- Various crash fixes and stability improvements
 
 Improvements to clang-doc
 -------------------------
