@@ -212,6 +212,9 @@ unsigned X86ELFObjectWriter::getRelocType64(SMLoc Loc, X86::Specifier Specifier,
   case X86::S_PLT:
     checkIs32(Loc, Type);
     return ELF::R_X86_64_PLT32;
+  case X86::S_PCNEXT32:
+    checkIs32(Loc, Type);
+    return ELF::R_X86_64_PCNEXT32;
   case X86::S_GOTPCREL:
     checkIs32(Loc, Type);
     // Older versions of ld.bfd/ld.gold/lld

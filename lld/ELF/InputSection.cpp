@@ -918,6 +918,10 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   }
   case RE_LOONGARCH_PAGE_PC:
     return getLoongArchPageDelta(r.sym->getVA(ctx, a), p, r.type);
+  case RE_X86_64_PCNEXT32:
+    if (r.sym->isUndefined() || r.sym->isShared())
+      return 0;
+    return r.sym->getVA(ctx, a) - p;
   case R_PC:
   case RE_ARM_PCA: {
     uint64_t dest;

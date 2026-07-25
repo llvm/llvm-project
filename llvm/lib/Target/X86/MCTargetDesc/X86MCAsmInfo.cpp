@@ -49,6 +49,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {X86::S_INDNTPOFF, "INDNTPOFF"},
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
     {X86::S_NTPOFF, "NTPOFF"},
+    {X86::S_PCNEXT32, "PCNEXT32"},
     {X86::S_PCREL, "PCREL"},
     {X86::S_PLT, "PLT"},
     {X86::S_PLTOFF, "PLTOFF"},

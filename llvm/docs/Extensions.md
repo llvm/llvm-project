@@ -764,6 +764,17 @@ is also not the same as `cmpb $foo, %dil`, which is an 8-bit comparison.
 the assembler emits an `R_X86_64_GOTPCREL` relocation instead of a relaxable
 `R_X86_64[_REX]_GOTPCRELX` relocation.
 
+
+**@PCNEXT32** can be used on symbol references to indicate that the immediate
+operand is an offset to the target symbol from the next code location, causing
+the assembler to emit an `R_X86_64_PCNEXT32` relocation. If the target symbol
+is defined, the relocation resolves identically to `R_X86_64_PC32` (`S + A - P`).
+If the target symbol is undefined or in a shared library, it resolves to zero
+displacement (`0`) without generating a linker diagnostic. This allows
+undefined code prefetch targets (e.g. `prefetchit1 target@PCNEXT32(%rip)`) to
+gracefully degrade to a harmless prefetch of the immediately following
+instruction.
+
 ### Windows on ARM
 
 #### Stack Probe Emission

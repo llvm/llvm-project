@@ -90,6 +90,7 @@ enum {
   S_GOTTPOFF,
   S_INDNTPOFF,
   S_NTPOFF,
+  S_PCNEXT32,
   S_PCREL,
   S_PLT,
   S_PLTOFF,

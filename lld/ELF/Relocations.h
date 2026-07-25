@@ -116,6 +116,7 @@ enum RelExpr {
   RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
+  RE_X86_64_PCNEXT32,
 };
 
 // Architecture-neutral representation of relocation.

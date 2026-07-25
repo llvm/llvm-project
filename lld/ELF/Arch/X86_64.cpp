@@ -576,6 +576,8 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_PC32:
   case R_X86_64_PC64:
     return R_PC;
+  case R_X86_64_PCNEXT32:
+    return RE_X86_64_PCNEXT32;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
   case R_X86_64_GOTPC32:
@@ -654,7 +656,7 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelType type = rel.getType(false);
-    if (sym.isUndefined() && symIdx != 0 &&
+    if (sym.isUndefined() && symIdx != 0 && type != R_X86_64_PCNEXT32 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
     int64_t addend = rs.getAddend<ELFT>(rel, type);
@@ -681,6 +683,9 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_X86_64_PC32:
     case R_X86_64_PC64:
       rs.processR_PC(type, offset, addend, sym);
+      continue;
+    case R_X86_64_PCNEXT32:
+      rs.process(RE_X86_64_PCNEXT32, type, offset, sym, addend);
       continue;
 
       // GOT-generating relocations:
@@ -1182,6 +1187,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_GOTPC32:
   case R_X86_64_GOTPCREL:
   case R_X86_64_PC32:
+  case R_X86_64_PCNEXT32:
   case R_X86_64_PLT32:
   case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
