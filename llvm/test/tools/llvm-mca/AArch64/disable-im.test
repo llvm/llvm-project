@@ -1,5 +1,6 @@
-# RUN: llvm-mca < %s -mtriple=aarch64 -iterations=1 -debug 2>&1 | FileCheck %s --check-prefix=IMENABLED
-# RUN: llvm-mca < %s -mtriple=aarch64 -iterations=1 -disable-im -debug 2>&1 | FileCheck %s --check-prefix=IMDISABLED
+# REQUIRES: asserts
+# RUN: llvm-mca < %s -mtriple=aarch64 -iterations=1 -debug-only=asm-matcher 2>&1 | FileCheck %s --check-prefix=IMENABLED
+# RUN: llvm-mca < %s -mtriple=aarch64 -iterations=1 -disable-im -debug-only=asm-matcher 2>&1 | FileCheck %s --check-prefix=IMDISABLED
 
 # IMENABLED-COUNT-2: AsmMatcher: found
 # IMENABLED-NOT: AsmMatcher: found
