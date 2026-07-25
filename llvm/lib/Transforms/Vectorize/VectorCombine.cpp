@@ -2980,6 +2980,12 @@ compactShuffleOperand(Constant *ShuffleInput,
   auto *VecTy = cast<FixedVectorType>(ShuffleInput->getType());
   unsigned Width = VecTy->getNumElements();
 
+  // Bail out if the individual elements are not accessible, e.g. for a bitcast
+  // of a constant expression, before the loop below updates UserShuffleMask.
+  for (unsigned Idx = 0; Idx != Width; ++Idx)
+    if (!ShuffleInput->getAggregateElement(Idx))
+      return {0, Width, nullptr};
+
   // Collect only the constant elements that are actually used.
   SmallVector<Constant *, 16> CompactedElts;
   // Map from original element index to compacted index.

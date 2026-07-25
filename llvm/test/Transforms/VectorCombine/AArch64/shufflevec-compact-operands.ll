@@ -153,6 +153,18 @@ define <8 x i8> @interleave_constant_argument(<8 x i8> %x) {
   ret <8 x i8> %1
 }
 
+; Constant operand without individually accessible elements - does NOT compact
+define <8 x i8> @interleave_shuffle_bitcast_constant(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @interleave_shuffle_bitcast_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <8 x i32> <i32 7, i32 4, i32 1, i32 6, i32 3, i32 0, i32 2, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> bitcast (<1 x i64> splat (i64 650777868590383872) to <8 x i8>), <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; CHECK-NEXT:    ret <8 x i8> [[TMP2]]
+;
+  %1 = shufflevector <4 x i8> %x, <4 x i8> %y, <8 x i32> <i32 7, i32 4, i32 1, i32 6, i32 3, i32 0, i32 2, i32 5>
+  %2 = shufflevector <8 x i8> %1, <8 x i8> bitcast (<1 x i64> <i64 650777868590383872> to <8 x i8>), <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  ret <8 x i8> %2
+}
+
 ; Randomly shuffle non-compactible operand with constant operand - SHOULD compact
 define <8 x i8> @shuffle_argument_constant(<8 x i8> %x) {
 ; CHECK-LABEL: @shuffle_argument_constant(
