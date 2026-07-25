@@ -80,8 +80,7 @@ struct DeviceExprChecker
   Result operator()(const evaluate::ProcedureDesignator &x) const {
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
       const Symbol &ultimate{sym->GetUltimate()};
-      const auto *subp{
-          ultimate.detailsIf<semantics::SubprogramDetails>()};
+      const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
       if (subp) {
         if (const auto &stmtFunction{subp->stmtFunction()};
             stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
