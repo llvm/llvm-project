@@ -7850,8 +7850,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   SIW.removeCase(Case);
   SIW->setCondition(A);
 
-  if (!is_contained(successors(BB), Unreachable))
-    Updates.push_back({DominatorTree::Delete, BB, Unreachable});
+  Updates.push_back({DominatorTree::Delete, BB, Unreachable});
 
   if (DTU)
     DTU->applyUpdates(Updates);
