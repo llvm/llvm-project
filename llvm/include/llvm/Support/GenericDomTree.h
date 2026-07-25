@@ -272,6 +272,8 @@ template <typename NodeT> struct DomTreeNodeTraits {
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase {
  public:
+  static_assert(GraphHasNodeNumbers<NodeT *>,
+                "DominatorTreeBase requires graphs with numbered nodes");
   static_assert(std::is_pointer_v<typename GraphTraits<NodeT *>::NodeRef>,
                 "Currently DominatorTreeBase supports only pointer nodes");
   using NodeTrait = DomTreeNodeTraits<NodeT>;
@@ -296,11 +298,6 @@ protected:
 
   using DomTreeNodeStorageTy = SmallVector<DomTreeNodeBase<NodeT> *>;
   DomTreeNodeStorageTy DomTreeNodes;
-  // For graphs where blocks don't have numbers, create a numbering here.
-  // TODO: use an empty struct with [[no_unique_address]] in C++20.
-  std::conditional_t<!GraphHasNodeNumbers<NodeT *>,
-                     DenseMap<const NodeT *, unsigned>, std::tuple<>>
-      NodeNumberMap;
   DomTreeNodeBase<NodeT> *RootNode = nullptr;
   ParentPtr Parent = nullptr;
 
@@ -392,41 +389,27 @@ private:
     });
   }
 
-  std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
-    if constexpr (GraphHasNodeNumbers<NodeT *>) {
-      assert(BlockNumberEpoch ==
-                 GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
-             "dominator tree used with outdated block numbers");
-      if constexpr (IsPostDom) {
-        if (!BB)
-          return 0; // BB may be nullptr for post-dominator tree, map to 0.
-      } else
-        assert(BB && "dominator tree block must be non-null");
-      return GraphTraits<const NodeT *>::getNumber(BB) + 1;
-    } else {
-      if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
-        return It->second;
-      return std::nullopt;
-    }
+  unsigned getNodeIndex(const NodeT *BB) const {
+    assert(BlockNumberEpoch ==
+               GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
+           "dominator tree used with outdated block numbers");
+    if constexpr (IsPostDom) {
+      if (!BB)
+        return 0; // BB may be nullptr for post-dominator tree, map to 0.
+    } else
+      assert(BB && "dominator tree block must be non-null");
+    return GraphTraits<const NodeT *>::getNumber(BB) + IsPostDom;
   }
 
   unsigned getNodeIndexForInsert(const NodeT *BB) {
-    if constexpr (GraphHasNodeNumbers<NodeT *>) {
-      // getNodeIndex will never fail if nodes have getNumber().
-      unsigned Idx = *getNodeIndex(BB);
-      if (Idx >= DomTreeNodes.size()) {
-        unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent);
-        DomTreeNodes.resize(Max > Idx + 1 ? Max : Idx + 1);
-      }
-      return Idx;
-    } else {
-      // We might already have a number stored for BB.
-      unsigned Idx =
-          NodeNumberMap.try_emplace(BB, DomTreeNodes.size()).first->second;
-      if (Idx >= DomTreeNodes.size())
-        DomTreeNodes.resize(Idx + 1);
-      return Idx;
+    unsigned Idx = getNodeIndex(BB);
+    if (Idx >= DomTreeNodes.size()) {
+      // Add 1 for post-dominator trees, 0 is nullptr block.
+      unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent) + IsPostDom;
+      assert(Idx < Max && "getMaxNumber returned too small value");
+      DomTreeNodes.resize(Max + IsPostDom);
     }
+    return Idx;
   }
 
 public:
@@ -437,8 +420,8 @@ public:
   DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
     assert((!BB || Parent == NodeTrait::getParent(const_cast<NodeT *>(BB))) &&
            "cannot get DomTreeNode of block with different parent");
-    if (auto Idx = getNodeIndex(BB); Idx && *Idx < DomTreeNodes.size())
-      return DomTreeNodes[*Idx];
+    if (unsigned Idx = getNodeIndex(BB); Idx < DomTreeNodes.size())
+      return DomTreeNodes[Idx];
     return nullptr;
   }
 
@@ -771,10 +754,9 @@ public:
   /// dominate any other blocks. Removes node from its immediate dominator's
   /// children list. Deletes dominator node associated with basic block BB.
   void eraseNode(NodeT *BB) {
-    std::optional<unsigned> IdxOpt = getNodeIndex(BB);
-    assert(IdxOpt && DomTreeNodes[*IdxOpt] &&
-           "Removing node that isn't in dominator tree.");
-    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[*IdxOpt];
+    unsigned Idx = getNodeIndex(BB);
+    DomTreeNodeBase<NodeT> *Node = DomTreeNodes[Idx];
+    assert(Node && "Removing node that isn't in dominator tree.");
     assert(Node->isLeaf() && "Node is not a leaf node.");
 
     DFSInfoValid = false;
@@ -783,9 +765,7 @@ public:
     if (DomTreeNodeBase<NodeT> *IDom = Node->getIDom())
       IDom->removeChild(Node);
 
-    DomTreeNodes[*IdxOpt] = nullptr;
-    if constexpr (!GraphHasNodeNumbers<NodeT *>)
-      NodeNumberMap.erase(BB);
+    DomTreeNodes[Idx] = nullptr;
 
     if (!IsPostDom) return;
 
@@ -878,9 +858,7 @@ public:
 
 private:
   void updateBlockNumberEpoch() {
-    // Nothing to do for graphs that don't number their blocks.
-    if constexpr (GraphHasNodeNumbers<NodeT *>)
-      BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
+    BlockNumberEpoch = GraphTraits<ParentPtr>::getNumberEpoch(Parent);
   }
 
 public:
@@ -898,8 +876,7 @@ public:
   }
 
   /// Update dominator tree after renumbering blocks.
-  template <typename T = NodeT>
-  std::enable_if_t<GraphHasNodeNumbers<T *>, void> updateBlockNumbers() {
+  void updateBlockNumbers() {
     updateBlockNumberEpoch();
 
     unsigned MaxNumber = GraphTraits<ParentPtr>::getMaxNumber(Parent);
@@ -908,7 +885,7 @@ public:
     for (auto &Node : DomTreeNodes) {
       if (!Node)
         continue;
-      unsigned Idx = *getNodeIndex(Node->getBlock());
+      unsigned Idx = getNodeIndex(Node->getBlock());
       // getMaxNumber is not necessarily supported
       if (Idx >= NewVector.size())
         NewVector.resize(Idx + 1);
@@ -937,8 +914,6 @@ public:
 
   void reset() {
     DomTreeNodes.clear();
-    if constexpr (!GraphHasNodeNumbers<NodeT *>)
-      NodeNumberMap.clear();
     Roots.clear();
     RootNode = nullptr;
     Parent = nullptr;
