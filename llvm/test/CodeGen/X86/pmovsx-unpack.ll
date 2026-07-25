@@ -13,16 +13,12 @@ define <8 x i16> @pmovsxbw_test(<16 x i8> %arg) {
 ;
 ; SSE41-LABEL: pmovsxbw_test:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pcmpgtb %xmm0, %xmm1
-; SSE41-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE41-NEXT:    pmovsxbw %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX2-LABEL: pmovsxbw_test:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX2-NEXT:    vpmovsxbw %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %cmp = icmp sgt <16 x i8> zeroinitializer, %arg
   %ext = sext <16 x i1> %cmp to <16 x i8>
@@ -41,16 +37,12 @@ define <4 x i32> @pmovsxwd_test(<8 x i16> %arg) {
 ;
 ; SSE41-LABEL: pmovsxwd_test:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pcmpgtw %xmm0, %xmm1
-; SSE41-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX2-LABEL: pmovsxwd_test:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %cmp = icmp sgt <8 x i16> zeroinitializer, %arg
   %ext = sext <8 x i1> %cmp to <8 x i16>
@@ -69,16 +61,12 @@ define <2 x i64> @pmovsxdq_test(<4 x i32> %arg) {
 ;
 ; SSE41-LABEL: pmovsxdq_test:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE41-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE41-NEXT:    pmovsxdq %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX2-LABEL: pmovsxdq_test:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX2-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %arg
   %ext = sext <4 x i1> %cmp to <4 x i32>

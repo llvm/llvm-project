@@ -6,16 +6,12 @@
 define <4 x i32> @test_pcmpgt_v8i16(<8 x i16> %x) {
 ; SSE-LABEL: test_pcmpgt_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpgtw %xmm0, %xmm1
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test_pcmpgt_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %cmp = icmp sgt <8 x i16> zeroinitializer, %x
   %ext = sext <8 x i1> %cmp to <8 x i16>
@@ -28,15 +24,12 @@ define <4 x i32> @test_pcmpgt_v8i16(<8 x i16> %x) {
 define <4 x i32> @test_sra_v8i16(<8 x i16> %x) {
 ; SSE-LABEL: test_sra_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psraw $15, %xmm1
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test_sra_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm1
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %mask = ashr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %unpack = shufflevector <8 x i16> %x, <8 x i16> %mask, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
@@ -49,16 +42,12 @@ define <4 x i32> @test_pcmpgt_bitcast_zero_v8i16(<8 x i16> %x) {
   ; Using a bitcast to attempt to hide the zero vector from simple checks
 ; SSE-LABEL: test_pcmpgt_bitcast_zero_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpgtw %xmm0, %xmm1
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: test_pcmpgt_bitcast_zero_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm1
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %zero = bitcast <4 x i32> zeroinitializer to <8 x i16>
   %cmp = icmp sgt <8 x i16> %zero, %x

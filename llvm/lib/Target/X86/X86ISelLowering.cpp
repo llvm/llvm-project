@@ -42965,6 +42965,51 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     return SDValue();
   }
+  case X86ISD::UNPCKL: {
+    // Fold UNPCKL(X, PCMPGT(0, X)) or UNPCKL(X, SRA(X, EltSize-1))
+    //   -> SIGN_EXTEND_VECTOR_INREG(X)
+    EVT VT = N->getValueType(0);
+    EVT SVT = VT.getVectorElementType();
+
+    if (!VT.is128BitVector() || SVT.getSizeInBits() > 32)
+      return SDValue();
+
+    EVT ExtSVT = EVT::getIntegerVT(*DAG.getContext(), SVT.getSizeInBits() * 2);
+    EVT ExtVT = EVT::getVectorVT(*DAG.getContext(), ExtSVT,
+                                 VT.getVectorNumElements() / 2);
+
+    if (!DAG.getTargetLoweringInfo().isOperationLegal(
+            ISD::SIGN_EXTEND_VECTOR_INREG, ExtVT))
+      return SDValue();
+
+    SDValue N0 = peekThroughBitcasts(N->getOperand(0));
+    if (N0.getValueType() != VT)
+      return SDValue();
+
+    SDValue N1 = peekThroughBitcasts(N->getOperand(1));
+
+    if (N1.getOpcode() == X86ISD::PCMPGT &&
+        peekThroughBitcasts(N1.getOperand(1)) == N0 &&
+        ISD::isBuildVectorAllZeros(
+            peekThroughBitcasts(N1.getOperand(0)).getNode())) {
+      SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, ExtVT, N0);
+      return DAG.getBitcast(VT, Ext);
+    }
+
+    if ((N1.getOpcode() == ISD::SRA || N1.getOpcode() == X86ISD::VSRAI) &&
+        peekThroughBitcasts(N1.getOperand(0)) == N0) {
+      if (auto *C =
+              isConstOrConstSplat(N1.getOperand(1), /*AllowUndefs*/ true)) {
+        if (C->getAPIntValue() == (SVT.getSizeInBits() - 1)) {
+          SDValue Ext =
+              DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, ExtVT, N0);
+          return DAG.getBitcast(VT, Ext);
+        }
+      }
+    }
+
+    return SDValue();
+  }
   case X86ISD::VBROADCAST: {
     SDValue Src = N.getOperand(0);
     SDValue BC = peekThroughBitcasts(Src);
