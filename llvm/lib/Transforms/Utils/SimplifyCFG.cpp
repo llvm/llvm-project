@@ -7828,10 +7828,9 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     }
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
+    Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
     I = SIW.removeCase(I);
     E = SIW->case_end();
-    if (!is_contained(successors(BB), DeadCaseBB))
-      Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
   }
 
   auto Case = SI->findCaseValue(Constant);
@@ -7841,7 +7840,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   // is reachable.
   if (!SI->defaultDestUnreachable() || Case == SI->case_default()) {
     if (DTU)
-      DTU->applyUpdates(Updates);
+      DTU->applyUpdatesPermissive(Updates);
     return !Updates.empty();
   }
 
@@ -7853,7 +7852,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   Updates.push_back({DominatorTree::Delete, BB, Unreachable});
 
   if (DTU)
-    DTU->applyUpdates(Updates);
+    DTU->applyUpdatesPermissive(Updates);
 
   return true;
 }
