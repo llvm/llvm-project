@@ -315,13 +315,8 @@ class SCEVUDivExpr : public SCEV {
   std::array<SCEVUse, 2> Operands;
 
   SCEVUDivExpr(const FoldingSetNodeIDRef ID, SCEVUse lhs, SCEVUse rhs)
-      // In most cases the types of LHS and RHS will be the same, but in some
-      // crazy cases one or the other may be a pointer. ScalarEvolution doesn't
-      // depend on the type for correctness, but handling types carefully can
-      // avoid extra casts in the SCEVExpander. The LHS is more likely to be
-      // a pointer type than the RHS, so use the RHS' type here.
       : SCEV(ID, scUDivExpr, computeExpressionSize({lhs, rhs}),
-             rhs->getType()) {
+             lhs->getType()) {
     Operands[0] = lhs;
     Operands[1] = rhs;
   }
