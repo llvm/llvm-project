@@ -1204,6 +1204,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
   if (Ty->isFloatingPointTy()) {
+    if (Ty->isFP128Ty() || Ty->isPPC_FP128Ty())
+      llvm::reportFatalUsageError("fp128 is not supported in SPIR-V");
     if (Ty->isBFloatTy()) {
       return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder,
                             SPIRV::FPEncoding::BFloat16KHR);
@@ -1998,6 +2000,16 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
+  if (BaseType->isFunctionTy() &&
+      !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
+           .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+    const Function &F = MIRBuilder.getMF().getFunction();
+    F.getContext().diagnose(
+        DiagnosticInfoUnsupported(F,
+                                  "Function used as a data pointer requires "
+                                  "SPV_INTEL_function_pointers extension",
+                                  DebugLoc(), DS_Error));
+  }
   // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,

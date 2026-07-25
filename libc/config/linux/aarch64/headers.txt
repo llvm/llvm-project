@@ -1,4 +1,5 @@
 set(TARGET_PUBLIC_HEADERS
+    libc.include.alloca
     libc.include.arpa_inet
     libc.include.assert
     libc.include.byteswap
@@ -9,18 +10,21 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dlfcn
     libc.include.elf
     libc.include.endian
+    libc.include.err
     libc.include.errno
     libc.include.fcntl
     libc.include.features
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.langinfo
     libc.include.libgen
     libc.include.limits
     libc.include.link
     libc.include.locale
     libc.include.malloc
     libc.include.math
+    libc.include.net_if
     libc.include.netinet_in
     libc.include.netinet_tcp
     libc.include.netinet_udp

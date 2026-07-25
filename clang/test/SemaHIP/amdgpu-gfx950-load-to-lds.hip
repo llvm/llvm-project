@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -fsyntax-only -triple amdgcn -target-cpu gfx950 -verify %s -fcuda-is-device
+// RUN: %clang_cc1 -fsyntax-only -triple amdgpu9.50 -verify %s -fcuda-is-device
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgcn -verify %s
 
 #define __device__ __attribute__((device))

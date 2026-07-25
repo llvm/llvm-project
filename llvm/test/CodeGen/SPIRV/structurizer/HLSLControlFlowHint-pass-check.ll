@@ -1,5 +1,14 @@
 ; RUN: opt -passes='spirv-structurizer' -S -mtriple=spirv-unknown-unknown %s | FileCheck %s
 
+; The structurizer modifies the CFG, so it must not claim to preserve
+; CFG-dependent analyses in the new pass manager.
+; RUN: opt -passes='spirv-structurizer' -disable-output -debug-pass-manager \
+; RUN:   -mtriple=spirv-unknown-unknown %s 2>&1 | FileCheck %s --check-prefix=INVALIDATE
+; INVALIDATE: Running pass: SPIRVStructurizerWrapper on test_branch
+; INVALIDATE: Invalidating analysis: DominatorTreeAnalysis on test_branch
+; INVALIDATE: Invalidating analysis: LoopAnalysis on test_branch
+; INVALIDATE: Invalidating analysis: SPIRVConvergenceRegionAnalysis on test_branch
+
 ; CHECK-LABEL: define spir_func noundef i32 @test_branch
 ; CHECK: call void @llvm.spv.selection.merge.p0(ptr blockaddress(@test_branch, %if.end), i32 1)
 ; CHECK-NEXT: br i1 %cmp, label %if.then, label %if.else, !hlsl.controlflow.hint !{{[0-9]+}}
