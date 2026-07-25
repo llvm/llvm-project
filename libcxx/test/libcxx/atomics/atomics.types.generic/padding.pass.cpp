@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
+// XFAIL: !has-128-bit-atomics
 
 // Older Clang doesn't implement __builtin_clear_padding
 // XFAIL: clang-21, apple-clang-21, clang-22
