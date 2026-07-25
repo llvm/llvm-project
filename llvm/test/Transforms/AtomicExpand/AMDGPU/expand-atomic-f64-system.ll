@@ -697,7 +697,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[NEWLOADED]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -755,12 +755,12 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -814,7 +814,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -889,7 +889,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
@@ -943,7 +943,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1001,12 +1001,12 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -1060,7 +1060,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1118,12 +1118,12 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
@@ -1177,7 +1177,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1235,12 +1235,12 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
@@ -1294,7 +1294,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1408,7 +1408,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1430,7 +1430,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1452,7 +1452,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1474,7 +1474,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1861,7 +1861,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1919,17 +1919,17 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX10-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -1966,7 +1966,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2041,7 +2041,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
@@ -2095,7 +2095,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2153,17 +2153,17 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -2200,7 +2200,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2587,7 +2587,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2645,17 +2645,17 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX10-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -2692,7 +2692,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2767,7 +2767,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
@@ -2821,7 +2821,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2879,17 +2879,17 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
 ; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -2926,7 +2926,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ; GFX12:       atomicrmw.end:
 ; GFX12-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret double %res
 }
 

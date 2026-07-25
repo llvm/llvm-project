@@ -31,7 +31,7 @@ __global__ void ffp1(float *p) {
   // SAFEIR: atomicrmw fmax ptr {{.*}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
   // SAFEIR: atomicrmw fmin ptr {{.*}} syncscope("workgroup") monotonic, align 4, !noalias.addrspace ![[$NO_PRIVATE]], [[DEFMD]]
 
-  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[FADDMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+, !amdgpu.ignore.denormal.mode ![0-9]+$]]
+  // UNSAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[FADDMD:!atomic.ignore.denormal.mode ![0-9]+, !amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
   // UNSAFEIR: atomicrmw fmax ptr {{.*}} monotonic, align 4, [[DEFMD]]
   // UNSAFEIR: atomicrmw fmin ptr {{.*}} monotonic, align 4, [[DEFMD]]

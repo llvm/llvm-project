@@ -2441,7 +2441,7 @@ cases. This will typically be used in conjunction with
 
 .. _amdgpu_no_remote_memory_access:
 
-'``amdgpu.ignore.denormal.mode``' Metadata
+'``atomic.ignore.denormal.mode``' Metadata
 ------------------------------------------
 
 For use with :ref:`atomicrmw <i_atomicrmw>` floating-point
@@ -2454,11 +2454,13 @@ unconditionally flushed. This is typically used in conjunction with
 and
 :ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`
 
+This was previously target-specific metadata named ``amdgpu.ignore.denormal.mode``.
+
 
 .. code-block:: llvm
 
-  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
-  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
 
   !0 = !{}
 

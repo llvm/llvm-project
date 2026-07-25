@@ -2443,7 +2443,7 @@ bool LLParser::parseMetadataAttachment(unsigned &Kind, MDNode *&MD) {
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata attachment");
 
   std::string Name = Lex.getStrVal();
-  Kind = M->getMDKindID(Name);
+  Kind = M->getMDKindID(UpgradeMetadataID(Name));
   Lex.Lex();
 
   return parseMDNode(MD);
