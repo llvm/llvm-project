@@ -10,9 +10,9 @@
 
 // <ranges>
 
-// V models only input_range:
-//   friend constexpr range_rvalue_reference_t<V> iter_move(const inner_iterator& i)
-//     noexcept(noexcept(ranges::iter_move(i.parent_->current_.value())));
+//   V models only input_range:
+//     friend constexpr range_rvalue_reference_t<V> iter_move(const inner_iterator& i)
+//       noexcept(noexcept(ranges::iter_move(i.parent_->current_.value())));
 
 #include <concepts>
 #include <ranges>

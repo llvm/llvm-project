@@ -10,8 +10,8 @@
 
 // <ranges>
 
-// V models only input_range:
-//   constexpr range_reference_v<V> inner_iterator::operator*() const;
+//   V models only input_range:
+//     constexpr range_reference_v<V> inner_iterator::operator*() const;
 
 #include <cassert>
 #include <concepts>

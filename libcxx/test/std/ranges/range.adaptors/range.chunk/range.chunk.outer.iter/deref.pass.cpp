@@ -10,10 +10,10 @@
 
 // <ranges>
 
-// V models only input_range:
-//   constexpr value_type outer_iterator::operator*() const;
-//   constexpr inner_iterator outer_iterator::value_type::begin() const noexcept;
-//   constexpr default_sentinel_t outer_iterator::value_type::end() const noexcept;
+//   V models only input_range:
+//     constexpr value_type outer_iterator::operator*() const;
+//     constexpr inner_iterator outer_iterator::value_type::begin() const noexcept;
+//     constexpr default_sentinel_t outer_iterator::value_type::end() const noexcept;
 
 #include <cassert>
 #include <compare>

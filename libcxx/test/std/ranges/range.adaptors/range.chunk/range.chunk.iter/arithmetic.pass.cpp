@@ -10,19 +10,19 @@
 
 // <ranges>
 
-// V models forward_range:
-//   friend constexpr iterator operator+(const iterator& i, difference_type n)
-//     requires random_access_range<Base>;
-//   friend constexpr iterator operator+(difference_type n, const iterator& i)
-//     requires random_access_range<Base>;
-//   friend constexpr iterator operator-(const iterator& i, difference_type n)
-//     requires random_access_range<Base>;
-//   friend constexpr difference_type operator-(const iterator& x, const iterator& y)
-//     requires sized_sentinel_for<iterator_t<Base>, iterator_t<Base>>;
-//   friend constexpr difference_type operator-(default_sentinel_t y, const iterator& x)
-//     requires sized_sentinel_for<sentinel_t<Base>, iterator_t<Base>>;
-//   friend constexpr difference_type operator-(const iterator& x, default_sentinel_t y)
-//     requires sized_sentinel_for<sentinel_t<Base>, iterator_t<Base>>;
+//   V models forward_range:
+//     friend constexpr iterator operator+(const iterator& i, difference_type n)
+//       requires random_access_range<Base>;
+//     friend constexpr iterator operator+(difference_type n, const iterator& i)
+//       requires random_access_range<Base>;
+//     friend constexpr iterator operator-(const iterator& i, difference_type n)
+//       requires random_access_range<Base>;
+//     friend constexpr difference_type operator-(const iterator& x, const iterator& y)
+//       requires sized_sentinel_for<iterator_t<Base>, iterator_t<Base>>;
+//     friend constexpr difference_type operator-(default_sentinel_t y, const iterator& x)
+//       requires sized_sentinel_for<sentinel_t<Base>, iterator_t<Base>>;
+//     friend constexpr difference_type operator-(const iterator& x, default_sentinel_t y)
+//       requires sized_sentinel_for<sentinel_t<Base>, iterator_t<Base>>;
 
 #include <algorithm>
 #include <cassert>

@@ -10,8 +10,8 @@
 
 // <ranges>
 
-// V models forward_range:
-//   constexpr value_type iterator::operator*() const;
+//   V models forward_range:
+//     constexpr value_type iterator::operator*() const;
 
 #include <cassert>
 #include <concepts>

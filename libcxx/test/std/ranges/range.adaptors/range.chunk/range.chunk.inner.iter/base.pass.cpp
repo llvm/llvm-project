@@ -10,8 +10,8 @@
 
 // <ranges>
 
-// V models only input_range:
-//   constexpr const iterator_t<V> base() const&;
+//   V models only input_range:
+//     constexpr const iterator_t<V> base() const&;
 
 #include <cassert>
 #include <concepts>

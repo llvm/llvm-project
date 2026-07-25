@@ -10,12 +10,12 @@
 
 // <ranges>
 
-// V models only input_range:
-//   class inner_iterator;
+//   V models only input_range:
+//     class inner_iterator;
 
-//   using inner_iterator::iterator_concept = input_iterator_tag;
-//   using inner_iterator::difference_type = range_difference_t<V>;
-//   using inner_iterator::value_type = range_value_t<V>;
+//     using inner_iterator::iterator_concept = input_iterator_tag;
+//     using inner_iterator::difference_type = range_difference_t<V>;
+//     using inner_iterator::value_type = range_value_t<V>;
 
 #include <concepts>
 #include <iterator>
