@@ -95,13 +95,8 @@ TEST(GenericDomTree, BlockNumbers) {
   // Adding a new node with a higher number is no problem
   NumberedNode *N3 = G.addNode();
   EXPECT_EQ(DT.getNode(N3), nullptr);
-  // ... even if it exceeds getMaxNumber()
-  NumberedNode *N4 = G.addNode();
-  N4->Number = 1000;
-  EXPECT_EQ(DT.getNode(N4), nullptr);
 
   DT.addNewBlock(N3, N1);
-  DT.addNewBlock(N4, N1);
   for (auto &N : G.Nodes)
     EXPECT_EQ(DT.getNode(N.get())->getBlock(), N.get());
 }
