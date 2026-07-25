@@ -14,6 +14,7 @@
 #include <iterator>
 #include <list>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "benchmark/benchmark.h"
@@ -25,28 +26,31 @@ int main(int argc, char** argv) {
 
   // {std,ranges}::move_backward(normal container)
   {
-    auto bm = []<class Container>(std::string name, auto move_backward) {
+    auto bm = []<class InputContainer, class OutputContainer>(std::string name, auto move_backward) {
       benchmark::RegisterBenchmark(name, [move_backward](auto& st) {
         std::size_t const size = st.range(0);
-        using ValueType        = typename Container::value_type;
-        Container c1(size);
-        Container c2(size);
-        std::generate_n(c1.begin(), size, [] { return Generate<ValueType>::random(); });
+        using ValueType        = typename InputContainer::value_type;
+        InputContainer in;
+        std::generate_n(std::back_inserter(in), size, [] { return Generate<ValueType>::random(); });
 
-        Container* in  = &c1;
-        Container* out = &c2;
+        OutputContainer out(size);
+
         for ([[maybe_unused]] auto _ : st) {
           benchmark::DoNotOptimize(in);
           benchmark::DoNotOptimize(out);
-          auto result = move_backward(in->begin(), in->end(), out->end());
+          static_assert(std::is_trivially_move_assignable_v<ValueType>, "avoid double moves");
+          auto result = move_backward(in.begin(), in.end(), out.end());
           benchmark::DoNotOptimize(result);
-          std::swap(in, out);
         }
       })->Range(8, 1 << 20);
     };
-    bm.operator()<std::vector<int>>("std::move_backward(vector<int>)", std_move_backward);
-    bm.operator()<std::deque<int>>("std::move_backward(deque<int>)", std_move_backward);
-    bm.operator()<std::list<int>>("std::move_backward(list<int>)", std_move_backward);
+    // clang-format off
+    bm.operator()<std::vector<int>, std::vector<int>>("std::move_backward(vector<int>) -> std::vector<int>", std_move_backward);
+    bm.operator()<std::vector<int>, std::deque<int>>("std::move_backward(vector<int>) -> std::deque<int>", std_move_backward);
+    bm.operator()<std::deque<int>, std::vector<int>>("std::move_backward(deque<int>) -> std::vector<int>", std_move_backward);
+    bm.operator()<std::deque<int>, std::deque<int>>("std::move_backward(deque<int>) -> std::deque<int>", std_move_backward);
+    bm.operator()<std::list<int>, std::vector<int>>("std::move_backward(list<int>) -> std::vector<int>", std_move_backward);
+    // clang-format on
   }
 
   // {std,ranges}::move_backward(vector<bool>)
