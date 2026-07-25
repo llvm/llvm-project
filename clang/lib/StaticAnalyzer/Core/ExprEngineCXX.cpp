@@ -895,7 +895,6 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
   // Store return value of operator new() for future use, until the actual
   // CXXNewExpr gets processed.
   ExplodedNodeSet DstPostValue;
-  NodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
   for (ExplodedNode *I : DstPostCall) {
     // FIXME: Because CNE serves as the "call site" for the allocator (due to
     // lack of a better expression in the AST), the conjured return value symbol
@@ -928,8 +927,8 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
           State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
     }
 
-    ValueBldr.generateNode(CNE, I,
-                           addObjectUnderConstruction(State, CNE, SF, RetVal));
+    DstPostValue.insert(Engine.makePostStmtNode(
+        CNE, addObjectUnderConstruction(State, CNE, SF, RetVal), I));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;
