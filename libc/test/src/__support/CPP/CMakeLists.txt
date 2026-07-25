@@ -181,7 +181,6 @@ add_libc_test(
     string_test.cpp
   DEPENDS
   libc.hdr.func.free
-  libc.hdr.signal_macros
   libc.src.__support.CPP.string
   libc.src.__support.CPP.string_view
 )
