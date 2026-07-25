@@ -6144,8 +6144,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (!HasDefault) {
     BasicBlock *OrigDefaultBlock = SI->getDefaultDest();
     OrigDefaultBlock->removePredecessor(BB);
-    if (!is_contained(NewBI->successors(), OrigDefaultBlock))
-      Updates.push_back({DominatorTree::Delete, BB, OrigDefaultBlock});
+    Updates.push_back({DominatorTree::Delete, BB, OrigDefaultBlock});
   }
 
   // Drop the switch.
