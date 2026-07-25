@@ -125,6 +125,7 @@ struct Relocation {
   uint64_t offset;
   int64_t addend;
   Symbol *sym;
+  bool relaxed = false;
 };
 
 // Manipulate jump instructions with these modifiers.  These are used to relax

@@ -403,6 +403,9 @@ def print_archive_stats: J<"print-archive-stats=">,
   HelpText<"Write archive usage statistics to the specified file. "
            "Print the numbers of members and extracted members for each archive">;
 
+def print_relax_stats: J<"print-relax-stats=">,
+  HelpText<"Write linker relaxation statistics to the specified file as JSON">;
+
 defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 

@@ -71,7 +71,7 @@ public:
                int64_t addend) const;
   // Process relocation after needsGot/needsPlt flags are already handled.
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
-                  int64_t addend) const;
+                  int64_t addend, bool relaxed = false) const;
 
   // Process R_PC relocations. These are the most common relocation type, so we
   // inline the isStaticLinkTimeConstant check.
@@ -109,7 +109,7 @@ public:
                    int64_t addend, Symbol &sym) {
     if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
       // Optimize to Local Exec.
-      sec->addReloc({R_TPREL, type, offset, addend, &sym});
+      sec->addReloc({R_TPREL, type, offset, addend, &sym, /*relaxed=*/true});
     } else {
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
@@ -134,7 +134,7 @@ public:
       return false;
     }
     // Optimize to Local Exec.
-    sec->addReloc({R_TPREL, type, offset, addend, &sym});
+    sec->addReloc({R_TPREL, type, offset, addend, &sym, /*relaxed=*/true});
     return true;
   }
 
@@ -147,10 +147,10 @@ public:
       if (sym.isPreemptible) {
         // Optimize to Initial Exec.
         sym.setFlags(NEEDS_TLSIE);
-        sec->addReloc({ieExpr, type, offset, addend, &sym});
+        sec->addReloc({ieExpr, type, offset, addend, &sym, /*relaxed=*/true});
       } else {
         // Optimize to Local Exec.
-        sec->addReloc({leExpr, type, offset, addend, &sym});
+        sec->addReloc({leExpr, type, offset, addend, &sym, /*relaxed=*/true});
       }
       return true;
     }
@@ -170,10 +170,10 @@ public:
     } else if (sym.isPreemptible) {
       // Optimize to Initial Exec.
       sym.setFlags(NEEDS_TLSIE);
-      sec->addReloc({ieExpr, type, offset, addend, &sym});
+      sec->addReloc({ieExpr, type, offset, addend, &sym, /*relaxed=*/true});
     } else {
       // Optimize to Local Exec.
-      sec->addReloc({R_TPREL, type, offset, addend, &sym});
+      sec->addReloc({R_TPREL, type, offset, addend, &sym, /*relaxed=*/true});
     }
   }
 };
