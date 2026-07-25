@@ -2,10 +2,12 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_DEFUSEINSTRUMENTATION_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/IRBuilder.h"
@@ -33,9 +35,13 @@ struct DefUseInstrumentationPass
       if (F.isDeclaration()) {
         continue;
       }
-      Builder.SetInsertPointPastAllocas(&F );
-      Builder.CreateCall(Hook, Builder.getInt64(CallID));
-      CallID++;
+      for (BasicBlock &BB : F) {
+        for (Instruction &I : BB) {
+          Builder.SetInsertPoint(&I);
+          Builder.CreateCall(Hook, Builder.getInt64(CallID));
+          CallID++;
+        }
+      }
     }
     
     return PreservedAnalyses::none();

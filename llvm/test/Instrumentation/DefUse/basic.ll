@@ -2,20 +2,9 @@
 
 declare void @nobodyfunc ()
 
-define i32 @main() {
+define i32 @foo(i32 %x) {
 entry:
-  %x = alloca i32
-  ret i32 0
-}
-
-define i32 @foo() {
-entry:
-  %x = alloca i32
-  ret i32 0
-}
-
-define i32 @bar() {
-entry:
-  %x = alloca i32
-  ret i32 0
+  %a = add i32 %x, 1
+  %b = mul i32 %a, 2
+  ret i32 %b
 }
