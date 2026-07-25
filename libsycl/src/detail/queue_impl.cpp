@@ -222,12 +222,14 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
   const void *Mems[] = {Ptr};
   const std::size_t Sizes[] = {NumBytes};
 
-  ol_mem_migration_flags_t Flag = OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
+  ol_mem_migration_flags_t Flag = (MDevice.isCPU())
+                                      ? OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST
+                                      : OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
 
-  return nullptr;
+  return createEvent();
 }
 
 void QueueImpl::handleEventDependencies(const std::vector<EventImplPtr> &Deps) {
