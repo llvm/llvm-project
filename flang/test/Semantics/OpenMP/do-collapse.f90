@@ -3,7 +3,7 @@
 ! 2.7.1 Collapse Clause
 program omp_doCollapse
   integer:: i,j
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do collapse(3)
   do i = 1,10
@@ -15,7 +15,7 @@ program omp_doCollapse
 
   do i = 1,10
     do j = 1, 10
-      !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+      !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
       !BECAUSE: COLLAPSE clause was specified with argument 2
       !$omp do collapse(2)
       do k = 1, 10
@@ -25,7 +25,7 @@ program omp_doCollapse
     end do
   end do
 
-  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp parallel do collapse(2)
     do i = 1, 3
@@ -35,7 +35,7 @@ program omp_doCollapse
       end do
     end do
 
-  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
   !BECAUSE: COLLAPSE clause was specified with argument 2
   !ERROR: At most one COLLAPSE clause can appear on SIMD directive
   !$omp simd collapse(2) collapse(1)

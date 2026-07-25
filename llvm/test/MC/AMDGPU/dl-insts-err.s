@@ -1,8 +1,8 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx800 %s -filetype=null 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx906 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1013 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX1013
+// RUN: not llvm-mc -triple=amdgpu9.00 %s -filetype=null 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgpu9.06 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
+// RUN: not llvm-mc -triple=amdgpu9.08 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
+// RUN: not llvm-mc -triple=amdgpu10.13 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX1013
 
 //
 // Test unsupported GPUs.

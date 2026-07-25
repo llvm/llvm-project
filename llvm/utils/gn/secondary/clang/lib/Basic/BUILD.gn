@@ -43,6 +43,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:DiagnosticStableIDs",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
+    "//clang/include/clang/Basic:Traits",
     "//clang/include/clang/Basic:arm_cde_builtins",
     "//clang/include/clang/Basic:arm_immcheck_types",
     "//clang/include/clang/Basic:arm_mve_builtins",

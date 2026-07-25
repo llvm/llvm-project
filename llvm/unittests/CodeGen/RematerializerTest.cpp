@@ -526,6 +526,52 @@ TEST_F(RematerializerTest, SubRegRematSupport) {
   });
 }
 
+/// When updating a subregister-tracked interval, extendToNewUsers must create
+/// subranges even when the transferred user reads the full register. A previous
+/// version only did so for users reading a partial lane mask, so processing a
+/// full-register user first left the interval without subranges; a later
+/// subregister use then tripped the `SubRegIdx != 0 && LI.hasSubRanges()`
+/// assertion in VirtRegRewriter.
+TEST_F(RematerializerTest, ExtendToNewUsersFullMaskCreatesSubRanges) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %0:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+
+  bb.1:
+    S_NOP 0, implicit %0.sub0
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    const unsigned MBB1 = 1;
+    const RegisterIdx Cst0 = 0;
+    ASSERT_EQ(RW->getNumRegs(), 1U);
+
+    MachineBasicBlock &BB1 = *RW.MF.getBlockNumbered(1);
+    MachineInstr *NopSub0 = &*BB1.begin();
+    MachineInstr *NopFull = &*std::next(BB1.begin());
+
+    // Rematerialize %0 into bb.1. The fresh remat register is defined by a
+    // full-register def, so its interval starts out without subranges; this
+    // guards against the test silently degrading into a tautology should remat
+    // ever create subranges eagerly.
+    const RegisterIdx RematCst0 =
+        RW->rematerializeToPos(Cst0, MBB1, NopSub0, DRI);
+    const Register DefReg = RW->getReg(RematCst0).getDefReg();
+    ASSERT_FALSE(RW.LIS.getInterval(DefReg).hasSubRanges());
+
+    // Transferring the full-register user first must still create subranges for
+    // the subregister-tracked interval; without them the subsequent .sub0 user
+    // would leave VirtRegRewriter asserting.
+    RW->transferUser(Cst0, RematCst0, MBB1, *NopFull);
+    ASSERT_TRUE(RW.LIS.getInterval(DefReg).hasSubRanges());
+
+    RW->transferUser(Cst0, RematCst0, MBB1, *NopSub0);
+    EXPECT_TRUE(RW.LIS.getInterval(DefReg).hasSubRanges());
+  });
+}
+
 /// The rematerializer had a bug where re-creating the interval of a
 /// super-register defined over multiple MIs, some of which defining entirely
 /// dead subregisters, could cause a crash when changing the order of

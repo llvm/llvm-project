@@ -537,6 +537,74 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
+static bool definesRegInClass(const MachineInstr &MI,
+                              const TargetRegisterInfo *TRI,
+                              const TargetRegisterClass &Class) {
+  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
+    return MI.definesRegister(Reg, TRI);
+  });
+}
+
+static bool readsRegInClass(const MachineInstr &MI,
+                            const TargetRegisterInfo *TRI,
+                            const TargetRegisterClass &Class) {
+  return llvm::any_of(
+      Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
+}
+
+static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
+                                       const TargetInstrInfo &TII,
+                                       const TargetRegisterInfo *TRI) {
+  const bool ReadOrWriteZA = MI.readsRegister(AArch64::ZA, TRI) ||
+                             MI.definesRegister(AArch64::ZA, TRI);
+
+  // (read/write ZA or read/write Z)
+  if (!ReadOrWriteZA && !definesRegInClass(MI, TRI, AArch64::ZPRRegClass))
+    return false;
+
+  // (NOT load/store)
+  if (MI.mayLoad() || MI.mayStore())
+    return false;
+
+  // (NOT write P)
+  if (definesRegInClass(MI, TRI, AArch64::PPRRegClass))
+    return false;
+
+  // (NOT write GPR)
+  const bool WriteGPR = definesRegInClass(MI, TRI, AArch64::GPR32RegClass) ||
+                        definesRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  if (WriteGPR)
+    return false;
+
+  // (NOT read/write NZCV)
+  if (MI.readsRegister(AArch64::NZCV, TRI) ||
+      MI.definesRegister(AArch64::NZCV, TRI))
+    return false;
+
+  const bool ReadGPR = readsRegInClass(MI, TRI, AArch64::GPR32RegClass) &&
+                       readsRegInClass(MI, TRI, AArch64::GPR64RegClass);
+
+  // ( (NOT read GPR) or read/write ZA )
+  if (ReadGPR && !ReadOrWriteZA)
+    return false;
+
+  return true;
+}
+
+static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
+                                  const MachineInstr &SecondMI,
+                                  const TargetInstrInfo &TII,
+                                  const TargetRegisterInfo *TRI) {
+  if (!isFusableAppleSMEComputeOp(SecondMI, TII, TRI))
+    return false;
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+  if (isFusableAppleSMEComputeOp(*FirstMI, TII, TRI))
+    return true;
+  return false;
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
@@ -575,6 +643,10 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     return true;
   if (ST.hasFuseAddSub2RegAndConstOne() &&
       isAddSub2RegAndConstOnePair(FirstMI, SecondMI))
+    return true;
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
+  if (ST.hasFuseAppleSMECompute() &&
+      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI))
     return true;
 
   return false;

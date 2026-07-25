@@ -1024,6 +1024,10 @@ class SDNodeXForm<SDNode opc, code xformFunction> {
 // The default transform does not change the matched node.
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Fragments.
 //

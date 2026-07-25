@@ -78,7 +78,6 @@ FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
 FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
-ModulePass *createSVEIntrinsicOptsPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -203,7 +202,6 @@ void initializeLDTLSCleanupPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
 void initializeAArch64SRLTDefineSuperRegsLegacyPass(PassRegistry &);
-void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 

@@ -46,9 +46,21 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### C/C++ Language Potentially Breaking Changes
 
+- `-Wunicode-whitespace` now defaults to an error.
+The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
+Clang will stop accepting non-ascii whitespaces as token separators
+in a future version of Clang.
+
 ### C++ Specific Potentially Breaking Changes
 
 ### ABI Changes in This Version
+
+- Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
+for 256- and 512-bit vector arguments and returns from effective per-function
+target features. Features and `arch=` CPUs that imply AVX or AVX512F are
+honored, and calls use the caller's features, matching GCC. Per-function
+features cannot lower the translation-unit ABI level;
+`-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -57,6 +69,23 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Templight support has been removed.
 
 ### Clang Python Bindings Potentially Breaking Changes
+
+- `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
+  The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
+- Remove the deprecated `SPELLING_CACHE` alias.
+  All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
+  Note that this uses `CompletionChunkKind` enumeration as keys, instead of integer values.
+
+- Remove the deprecated `CompletionChunk.isKind...` methods.
+  Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
+
+  Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
+  `isKindInformative` and `isKindResultType`.
+
+- `CompletionString.availability` now returns instances of `AvailabilityKind`.
+  As a result, the `__str__` representation of its return values changed.
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
 
 ### OpenCL Potentially Breaking Changes
 
@@ -115,6 +144,13 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### New Compiler Flags
 
+- New option `-fdefined-pointer-subtraction` added to preserve stable semantics
+  when subtracting pointers to unrelated objects.
+
+- Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
+  the C++ standard library selected by the driver and the include directories
+  added for it.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -123,7 +159,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Attribute Changes in Clang
 
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+
 ### Improvements to Clang's diagnostics
+
+- More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -290,6 +330,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 
 ### Improvements to Clang's time-trace
 
@@ -301,6 +344,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 
 #### Bug Fixes to Compiler Builtins
+
+- Fixed a crash when classifying a call to a builtin with dependent arguments,
+  such as when the call is used as an `auto` non-type template argument.
 
 #### Bug Fixes to Attribute Support
 
@@ -318,6 +364,22 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a regression where an internal-linkage function (e.g. a `static` or
+  anonymous-namespace helper) declared in the global module fragment of the
+  current translation unit was removed from the overload set when the calling
+  template was instantiated after the global module fragment was closed,
+  producing a spurious "no matching function" error with no candidate notes.
+  (#GH210822)
+  
+- Fixed a crash when a lambda parameter pack was given a default argument that
+  is a pack expansion referencing an enclosing function's parameter pack (e.g.
+  `[](Types... = args...) {}`). Clang now diagnoses the illegal default
+  argument instead of asserting. (#GH210714)
+
+- Fixed a crash when computing the implicit deletion of a defaulted comparison
+  operator required an access check that ran while an enclosing declaration
+  was still being parsed. (#GH210692)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -327,6 +389,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+- Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 
 ### OpenACC Specific Changes
 

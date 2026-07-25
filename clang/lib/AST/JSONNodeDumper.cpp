@@ -771,7 +771,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   case UnaryTransformType::Enum:                                               \
     JOS.attribute("transformKind", #Trait);                                    \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 

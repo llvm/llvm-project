@@ -17,6 +17,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TextNodeDumper.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -30,6 +31,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
@@ -2973,4 +2975,149 @@ bool SubsumptionChecker::Subsumes(Literal A, Literal B) {
         static_cast<const FoldExpandedConstraint *>(ReverseMap[B.Value]));
   }
   llvm_unreachable("unknown literal kind");
+}
+
+namespace {
+
+class DumpNormalizedConstraint {
+  raw_ostream &OS;
+  const PrintingPolicy &PP;
+  TextNodeDumper TD;
+
+public:
+  DumpNormalizedConstraint(raw_ostream &OS, ASTContext &Context)
+      : OS(OS), PP(Context.getPrintingPolicy()),
+        TD(OS, Context, /*ShowColors=*/false) {}
+
+  void dump(const NormalizedConstraint &N) {
+    TD.AddChild([&] { Traverse(N); });
+  }
+
+private:
+  void Traverse(const NormalizedConstraint &N) {
+    switch (N.getKind()) {
+    case NormalizedConstraint::ConstraintKind::Compound:
+      VisitCompound(static_cast<const CompoundConstraint &>(N));
+      break;
+    case NormalizedConstraint::ConstraintKind::Atomic:
+      VisitAtomic(static_cast<const AtomicConstraint &>(N));
+      break;
+    case NormalizedConstraint::ConstraintKind::ConceptId:
+      VisitConceptId(static_cast<const ConceptIdConstraint &>(N));
+      break;
+    case NormalizedConstraint::ConstraintKind::FoldExpanded:
+      VisitFoldExpanded(static_cast<const FoldExpandedConstraint &>(N));
+      break;
+    }
+  }
+
+  void WriteNodeHeader(const NormalizedConstraint &N, StringRef Kind) {
+    OS << Kind;
+    TD.dumpPointer(&N);
+    TD.dumpSourceRange(N.getSourceRange());
+  }
+
+  void WritePackIndex(const NormalizedConstraintWithParamMapping &N) {
+    if (auto Idx = N.getPackSubstitutionIndex())
+      OS << " SubstIndex=" << *Idx;
+  }
+
+  void VisitCompound(const CompoundConstraint &C) {
+    WriteNodeHeader(C, "CompoundConstraint");
+    OS << " "
+       << (C.getCompoundKind() == NormalizedConstraint::CCK_Conjunction
+               ? "Conjunction"
+               : "Disjunction");
+    TD.AddChild([&] { Traverse(C.getLHS()); });
+    TD.AddChild([&] { Traverse(C.getRHS()); });
+  }
+
+  void VisitAtomic(const AtomicConstraint &A) {
+    WriteNodeHeader(A, "AtomicConstraint");
+    WritePackIndex(A);
+    OS << " ";
+    A.getConstraintExpr()->printPretty(OS, /*Helper=*/nullptr, PP);
+    WriteParameterMapping(A);
+  }
+
+  void VisitConceptId(const ConceptIdConstraint &C) {
+    WriteNodeHeader(C, "ConceptIdConstraint");
+    WritePackIndex(C);
+    OS << " ";
+    if (auto *CSE = C.getConceptSpecializationExpr()) {
+      CSE->printPretty(OS, /*Helper=*/nullptr, PP);
+    } else {
+      C.getConceptId()->print(OS, PP);
+    }
+    WriteParameterMapping(C);
+    TD.AddChild([&] { Traverse(C.getNormalizedConstraint()); });
+  }
+
+  void VisitFoldExpanded(const FoldExpandedConstraint &F) {
+    WriteNodeHeader(F, "FoldExpandedConstraint");
+    OS << " "
+       << (F.getFoldOperator() == FoldExpandedConstraint::FoldOperatorKind::And
+               ? "And"
+               : "Or");
+    WritePackIndex(F);
+    OS << " ";
+    F.getPattern()->printPretty(OS, /*Helper=*/nullptr, PP);
+    WriteParameterMapping(F);
+    TD.AddChild([&] { Traverse(F.getNormalizedPattern()); });
+  }
+
+  void WriteParameterMapping(const NormalizedConstraintWithParamMapping &N) {
+    if (!N.hasParameterMapping() || N.mappingOccurenceList().none())
+      return;
+    TD.AddChild([this, Indexes(N.mappingOccurenceList()),
+                 IndexesForSub(N.mappingOccurenceListForSubsumption()),
+                 Mapping(N.getParameterMapping()),
+                 TPL(N.getUsedTemplateParamList())] {
+      OS << "ParameterMapping";
+      WriteOccurenceList("Indexes", Indexes);
+      WriteOccurenceList("IndexesForSubsumption", IndexesForSub);
+      unsigned Slot = 0;
+      for (unsigned ParamIndex : Indexes.set_bits()) {
+        TD.AddChild([this, Slot, ParamIndex, Mapping, TPL] {
+          assert(TPL && Slot < TPL->size());
+          const NamedDecl *Param = TPL->getParam(Slot);
+          OS << "#" << ParamIndex << ": <";
+          Param->print(OS, PP);
+          OS << "> -> ";
+          Mapping[Slot].getArgument().print(PP, OS,
+                                            /*IncludeType=*/false);
+          TD.AddChild([this, Slot, Mapping] {
+            const TemplateArgument &TA = Mapping[Slot].getArgument();
+            OS << "TemplateArgument " << TA.getKindName();
+            TD.dumpPointer(&TA);
+          });
+        });
+        ++Slot;
+      }
+    });
+  }
+
+  void WriteOccurenceList(StringRef Label,
+                          const NormalizedConstraint::OccurenceList &BV) {
+    if (BV.none())
+      return;
+    OS << " " << Label << "={"
+       << llvm::join(
+              llvm::map_range(
+                  llvm::make_range(BV.set_bits_begin(), BV.set_bits_end()),
+                  [](unsigned I) { return llvm::to_string(I); }),
+              ", ")
+       << '}';
+  }
+};
+
+} // namespace
+
+LLVM_DUMP_METHOD void NormalizedConstraint::dump(ASTContext &Context) const {
+  dump(llvm::errs(), Context);
+}
+
+LLVM_DUMP_METHOD void NormalizedConstraint::dump(llvm::raw_ostream &OS,
+                                                 ASTContext &Context) const {
+  return DumpNormalizedConstraint(OS, Context).dump(*this);
 }
