@@ -7886,6 +7886,9 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
     SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
     SIW.setSuccessorWeight(0, 0);
   }
+  // If there is a pre-existing case for the constant, the default branch
+  // will be removed rather than being moved. Thus, we are removing an edge
+  // in the CFG, and need to update any PHIs in the default block.
   createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock=*/CaseIt !=
                                               SI->case_default());
 
