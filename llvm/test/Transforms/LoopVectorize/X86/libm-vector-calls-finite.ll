@@ -16,9 +16,9 @@ define void @exp_f32(ptr nocapture %varray) {
 ; CHECK-VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF2-NEXT:    [[TMP0:%.*]] = sitofp <2 x i32> [[VEC_IND]] to <2 x float>
-; CHECK-VF2-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
+; CHECK-VF2-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i64 0
 ; CHECK-VF2-NEXT:    [[TMP2:%.*]] = tail call fast float @__expf_finite(float [[TMP1]]) #[[ATTR0:[0-9]+]]
+; CHECK-VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP0]], i64 1
 ; CHECK-VF2-NEXT:    [[TMP4:%.*]] = tail call fast float @__expf_finite(float [[TMP3]]) #[[ATTR0]]
 ; CHECK-VF2-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
 ; CHECK-VF2-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP4]], i32 1
@@ -150,21 +150,21 @@ define void @exp_f64(ptr nocapture %varray) {
 ; CHECK-VF8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF8-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF8-NEXT:    [[TMP0:%.*]] = sitofp <8 x i32> [[VEC_IND]] to <8 x double>
-; CHECK-VF8-NEXT:    [[TMP1:%.*]] = extractelement <8 x double> [[TMP0]], i32 0
-; CHECK-VF8-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP0]], i32 1
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP0]], i32 2
-; CHECK-VF8-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP0]], i32 3
-; CHECK-VF8-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP0]], i32 4
-; CHECK-VF8-NEXT:    [[TMP13:%.*]] = extractelement <8 x double> [[TMP0]], i32 5
-; CHECK-VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP0]], i32 6
-; CHECK-VF8-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP0]], i32 7
+; CHECK-VF8-NEXT:    [[TMP1:%.*]] = extractelement <8 x double> [[TMP0]], i64 0
 ; CHECK-VF8-NEXT:    [[TMP2:%.*]] = tail call fast double @__exp_finite(double [[TMP1]]) #[[ATTR0:[0-9]+]]
-; CHECK-VF8-NEXT:    [[TMP4:%.*]] = tail call fast double @__exp_finite(double [[TMP9]]) #[[ATTR0]]
-; CHECK-VF8-NEXT:    [[TMP6:%.*]] = tail call fast double @__exp_finite(double [[TMP3]]) #[[ATTR0]]
-; CHECK-VF8-NEXT:    [[TMP8:%.*]] = tail call fast double @__exp_finite(double [[TMP11]]) #[[ATTR0]]
-; CHECK-VF8-NEXT:    [[TMP10:%.*]] = tail call fast double @__exp_finite(double [[TMP5]]) #[[ATTR0]]
-; CHECK-VF8-NEXT:    [[TMP12:%.*]] = tail call fast double @__exp_finite(double [[TMP13]]) #[[ATTR0]]
-; CHECK-VF8-NEXT:    [[TMP14:%.*]] = tail call fast double @__exp_finite(double [[TMP7]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP0]], i64 1
+; CHECK-VF8-NEXT:    [[TMP4:%.*]] = tail call fast double @__exp_finite(double [[TMP3]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP0]], i64 2
+; CHECK-VF8-NEXT:    [[TMP6:%.*]] = tail call fast double @__exp_finite(double [[TMP5]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP0]], i64 3
+; CHECK-VF8-NEXT:    [[TMP8:%.*]] = tail call fast double @__exp_finite(double [[TMP7]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP0]], i64 4
+; CHECK-VF8-NEXT:    [[TMP10:%.*]] = tail call fast double @__exp_finite(double [[TMP9]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP0]], i64 5
+; CHECK-VF8-NEXT:    [[TMP12:%.*]] = tail call fast double @__exp_finite(double [[TMP11]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP13:%.*]] = extractelement <8 x double> [[TMP0]], i64 6
+; CHECK-VF8-NEXT:    [[TMP14:%.*]] = tail call fast double @__exp_finite(double [[TMP13]]) #[[ATTR0]]
+; CHECK-VF8-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP0]], i64 7
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = tail call fast double @__exp_finite(double [[TMP15]]) #[[ATTR0]]
 ; CHECK-VF8-NEXT:    [[TMP17:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
 ; CHECK-VF8-NEXT:    [[TMP18:%.*]] = insertelement <8 x double> [[TMP17]], double [[TMP4]], i32 1
@@ -214,9 +214,9 @@ define void @log_f32(ptr nocapture %varray) {
 ; CHECK-VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF2-NEXT:    [[TMP0:%.*]] = sitofp <2 x i32> [[VEC_IND]] to <2 x float>
-; CHECK-VF2-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
+; CHECK-VF2-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i64 0
 ; CHECK-VF2-NEXT:    [[TMP2:%.*]] = tail call fast float @__logf_finite(float [[TMP1]]) #[[ATTR1:[0-9]+]]
+; CHECK-VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP0]], i64 1
 ; CHECK-VF2-NEXT:    [[TMP4:%.*]] = tail call fast float @__logf_finite(float [[TMP3]]) #[[ATTR1]]
 ; CHECK-VF2-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
 ; CHECK-VF2-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP4]], i32 1
@@ -348,21 +348,21 @@ define void @log_f64(ptr nocapture %varray) {
 ; CHECK-VF8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF8-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF8-NEXT:    [[TMP0:%.*]] = sitofp <8 x i32> [[VEC_IND]] to <8 x double>
-; CHECK-VF8-NEXT:    [[TMP1:%.*]] = extractelement <8 x double> [[TMP0]], i32 0
-; CHECK-VF8-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP0]], i32 1
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP0]], i32 2
-; CHECK-VF8-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP0]], i32 3
-; CHECK-VF8-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP0]], i32 4
-; CHECK-VF8-NEXT:    [[TMP13:%.*]] = extractelement <8 x double> [[TMP0]], i32 5
-; CHECK-VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP0]], i32 6
-; CHECK-VF8-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP0]], i32 7
+; CHECK-VF8-NEXT:    [[TMP1:%.*]] = extractelement <8 x double> [[TMP0]], i64 0
 ; CHECK-VF8-NEXT:    [[TMP2:%.*]] = tail call fast double @__log_finite(double [[TMP1]]) #[[ATTR1:[0-9]+]]
-; CHECK-VF8-NEXT:    [[TMP4:%.*]] = tail call fast double @__log_finite(double [[TMP9]]) #[[ATTR1]]
-; CHECK-VF8-NEXT:    [[TMP6:%.*]] = tail call fast double @__log_finite(double [[TMP3]]) #[[ATTR1]]
-; CHECK-VF8-NEXT:    [[TMP8:%.*]] = tail call fast double @__log_finite(double [[TMP11]]) #[[ATTR1]]
-; CHECK-VF8-NEXT:    [[TMP10:%.*]] = tail call fast double @__log_finite(double [[TMP5]]) #[[ATTR1]]
-; CHECK-VF8-NEXT:    [[TMP12:%.*]] = tail call fast double @__log_finite(double [[TMP13]]) #[[ATTR1]]
-; CHECK-VF8-NEXT:    [[TMP14:%.*]] = tail call fast double @__log_finite(double [[TMP7]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP0]], i64 1
+; CHECK-VF8-NEXT:    [[TMP4:%.*]] = tail call fast double @__log_finite(double [[TMP3]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP0]], i64 2
+; CHECK-VF8-NEXT:    [[TMP6:%.*]] = tail call fast double @__log_finite(double [[TMP5]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP0]], i64 3
+; CHECK-VF8-NEXT:    [[TMP8:%.*]] = tail call fast double @__log_finite(double [[TMP7]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP0]], i64 4
+; CHECK-VF8-NEXT:    [[TMP10:%.*]] = tail call fast double @__log_finite(double [[TMP9]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP0]], i64 5
+; CHECK-VF8-NEXT:    [[TMP12:%.*]] = tail call fast double @__log_finite(double [[TMP11]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP13:%.*]] = extractelement <8 x double> [[TMP0]], i64 6
+; CHECK-VF8-NEXT:    [[TMP14:%.*]] = tail call fast double @__log_finite(double [[TMP13]]) #[[ATTR1]]
+; CHECK-VF8-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[TMP0]], i64 7
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = tail call fast double @__log_finite(double [[TMP15]]) #[[ATTR1]]
 ; CHECK-VF8-NEXT:    [[TMP17:%.*]] = insertelement <8 x double> poison, double [[TMP2]], i32 0
 ; CHECK-VF8-NEXT:    [[TMP18:%.*]] = insertelement <8 x double> [[TMP17]], double [[TMP4]], i32 1
@@ -406,12 +406,13 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF2-LABEL: define void @pow_f32(
 ; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
 ; CHECK-VF2-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF2-NEXT:    [[EXP2:%.*]] = ptrtoint ptr [[EXP]] to i64
-; CHECK-VF2-NEXT:    [[VARRAY1:%.*]] = ptrtoint ptr [[VARRAY]] to i64
+; CHECK-VF2-NEXT:    [[EXP2:%.*]] = ptrtoaddr ptr [[EXP]] to i64
+; CHECK-VF2-NEXT:    [[VARRAY1:%.*]] = ptrtoaddr ptr [[VARRAY]] to i64
 ; CHECK-VF2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF2:       [[VECTOR_MEMCHECK]]:
 ; CHECK-VF2-NEXT:    [[TMP0:%.*]] = sub i64 [[VARRAY1]], [[EXP2]]
-; CHECK-VF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-VF2-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-VF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 7
 ; CHECK-VF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF2:       [[VECTOR_PH]]:
 ; CHECK-VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -419,14 +420,14 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF2-NEXT:    [[TMP1:%.*]] = sitofp <2 x i32> [[VEC_IND]] to <2 x float>
-; CHECK-VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; CHECK-VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
 ; CHECK-VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[EXP]], i64 [[INDEX]]
 ; CHECK-VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
-; CHECK-VF2-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
-; CHECK-VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
-; CHECK-VF2-NEXT:    [[TMP5:%.*]] = tail call fast float @__powf_finite(float [[TMP4]], float [[TMP7]]) #[[ATTR2:[0-9]+]]
-; CHECK-VF2-NEXT:    [[TMP8:%.*]] = tail call fast float @__powf_finite(float [[TMP3]], float [[TMP6]]) #[[ATTR2]]
+; CHECK-VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
+; CHECK-VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 0
+; CHECK-VF2-NEXT:    [[TMP5:%.*]] = tail call fast float @__powf_finite(float [[TMP4]], float [[TMP6]]) #[[ATTR2:[0-9]+]]
+; CHECK-VF2-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
+; CHECK-VF2-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 1
+; CHECK-VF2-NEXT:    [[TMP8:%.*]] = tail call fast float @__powf_finite(float [[TMP7]], float [[TMP13]]) #[[ATTR2]]
 ; CHECK-VF2-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
 ; CHECK-VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[TMP8]], i32 1
 ; CHECK-VF2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[VARRAY]], i64 [[INDEX]]
@@ -444,10 +445,10 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF2-NEXT:    [[TMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-VF2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP]] to float
 ; CHECK-VF2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[EXP]], i64 [[INDVARS_IV]]
-; CHECK-VF2-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-VF2-NEXT:    [[TMP4:%.*]] = tail call fast float @__powf_finite(float [[CONV]], float [[TMP1]]) #[[ATTR2]]
+; CHECK-VF2-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-VF2-NEXT:    [[TMP1:%.*]] = tail call fast float @__powf_finite(float [[CONV]], float [[TMP3]]) #[[ATTR2]]
 ; CHECK-VF2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[VARRAY]], i64 [[INDVARS_IV]]
-; CHECK-VF2-NEXT:    store float [[TMP4]], ptr [[ARRAYIDX2]], align 4
+; CHECK-VF2-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-VF2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF2-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1000
 ; CHECK-VF2-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -457,12 +458,13 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF4-LABEL: define void @pow_f32(
 ; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
 ; CHECK-VF4-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF4-NEXT:    [[EXP2:%.*]] = ptrtoint ptr [[EXP]] to i64
-; CHECK-VF4-NEXT:    [[VARRAY1:%.*]] = ptrtoint ptr [[VARRAY]] to i64
+; CHECK-VF4-NEXT:    [[EXP2:%.*]] = ptrtoaddr ptr [[EXP]] to i64
+; CHECK-VF4-NEXT:    [[VARRAY1:%.*]] = ptrtoaddr ptr [[VARRAY]] to i64
 ; CHECK-VF4-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4:       [[VECTOR_MEMCHECK]]:
 ; CHECK-VF4-NEXT:    [[TMP0:%.*]] = sub i64 [[VARRAY1]], [[EXP2]]
-; CHECK-VF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-VF4-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-VF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
 ; CHECK-VF4-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4:       [[VECTOR_PH]]:
 ; CHECK-VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -488,10 +490,10 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF4-NEXT:    [[TMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-VF4-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP]] to float
 ; CHECK-VF4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[EXP]], i64 [[INDVARS_IV]]
-; CHECK-VF4-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-VF4-NEXT:    [[TMP2:%.*]] = tail call fast float @__powf_finite(float [[CONV]], float [[TMP1]]) #[[ATTR0:[0-9]+]]
+; CHECK-VF4-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-VF4-NEXT:    [[TMP1:%.*]] = tail call fast float @__powf_finite(float [[CONV]], float [[TMP6]]) #[[ATTR0:[0-9]+]]
 ; CHECK-VF4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[VARRAY]], i64 [[INDVARS_IV]]
-; CHECK-VF4-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX2]], align 4
+; CHECK-VF4-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-VF4-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1000
 ; CHECK-VF4-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -501,12 +503,13 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF8-LABEL: define void @pow_f32(
 ; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
 ; CHECK-VF8-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF8-NEXT:    [[EXP2:%.*]] = ptrtoint ptr [[EXP]] to i64
-; CHECK-VF8-NEXT:    [[VARRAY1:%.*]] = ptrtoint ptr [[VARRAY]] to i64
+; CHECK-VF8-NEXT:    [[EXP2:%.*]] = ptrtoaddr ptr [[EXP]] to i64
+; CHECK-VF8-NEXT:    [[VARRAY1:%.*]] = ptrtoaddr ptr [[VARRAY]] to i64
 ; CHECK-VF8-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF8:       [[VECTOR_MEMCHECK]]:
 ; CHECK-VF8-NEXT:    [[TMP0:%.*]] = sub i64 [[VARRAY1]], [[EXP2]]
-; CHECK-VF8-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-VF8-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-VF8-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
 ; CHECK-VF8-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF8:       [[VECTOR_PH]]:
 ; CHECK-VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -532,10 +535,10 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF8-NEXT:    [[TMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-VF8-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP]] to float
 ; CHECK-VF8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[EXP]], i64 [[INDVARS_IV]]
-; CHECK-VF8-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-VF8-NEXT:    [[TMP2:%.*]] = tail call fast float @__powf_finite(float [[CONV]], float [[TMP1]]) #[[ATTR2:[0-9]+]]
+; CHECK-VF8-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-VF8-NEXT:    [[TMP1:%.*]] = tail call fast float @__powf_finite(float [[CONV]], float [[TMP6]]) #[[ATTR2:[0-9]+]]
 ; CHECK-VF8-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[VARRAY]], i64 [[INDVARS_IV]]
-; CHECK-VF8-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX2]], align 4
+; CHECK-VF8-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-VF8-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF8-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1000
 ; CHECK-VF8-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -566,12 +569,13 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF2-LABEL: define void @pow_f64(
 ; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
 ; CHECK-VF2-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF2-NEXT:    [[EXP2:%.*]] = ptrtoint ptr [[EXP]] to i64
-; CHECK-VF2-NEXT:    [[VARRAY1:%.*]] = ptrtoint ptr [[VARRAY]] to i64
+; CHECK-VF2-NEXT:    [[EXP2:%.*]] = ptrtoaddr ptr [[EXP]] to i64
+; CHECK-VF2-NEXT:    [[VARRAY1:%.*]] = ptrtoaddr ptr [[VARRAY]] to i64
 ; CHECK-VF2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF2:       [[VECTOR_MEMCHECK]]:
 ; CHECK-VF2-NEXT:    [[TMP0:%.*]] = sub i64 [[VARRAY1]], [[EXP2]]
-; CHECK-VF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-VF2-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-VF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
 ; CHECK-VF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF2:       [[VECTOR_PH]]:
 ; CHECK-VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -597,10 +601,10 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF2-NEXT:    [[TMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-VF2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP]] to double
 ; CHECK-VF2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[EXP]], i64 [[INDVARS_IV]]
-; CHECK-VF2-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX]], align 4
-; CHECK-VF2-NEXT:    [[TMP2:%.*]] = tail call fast double @__pow_finite(double [[CONV]], double [[TMP1]]) #[[ATTR3:[0-9]+]]
+; CHECK-VF2-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX]], align 4
+; CHECK-VF2-NEXT:    [[TMP1:%.*]] = tail call fast double @__pow_finite(double [[CONV]], double [[TMP6]]) #[[ATTR3:[0-9]+]]
 ; CHECK-VF2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[VARRAY]], i64 [[INDVARS_IV]]
-; CHECK-VF2-NEXT:    store double [[TMP2]], ptr [[ARRAYIDX2]], align 4
+; CHECK-VF2-NEXT:    store double [[TMP1]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-VF2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF2-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1000
 ; CHECK-VF2-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -610,12 +614,13 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF4-LABEL: define void @pow_f64(
 ; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
 ; CHECK-VF4-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF4-NEXT:    [[EXP2:%.*]] = ptrtoint ptr [[EXP]] to i64
-; CHECK-VF4-NEXT:    [[VARRAY1:%.*]] = ptrtoint ptr [[VARRAY]] to i64
+; CHECK-VF4-NEXT:    [[EXP2:%.*]] = ptrtoaddr ptr [[EXP]] to i64
+; CHECK-VF4-NEXT:    [[VARRAY1:%.*]] = ptrtoaddr ptr [[VARRAY]] to i64
 ; CHECK-VF4-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4:       [[VECTOR_MEMCHECK]]:
 ; CHECK-VF4-NEXT:    [[TMP0:%.*]] = sub i64 [[VARRAY1]], [[EXP2]]
-; CHECK-VF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-VF4-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-VF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
 ; CHECK-VF4-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4:       [[VECTOR_PH]]:
 ; CHECK-VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -641,10 +646,10 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF4-NEXT:    [[TMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-VF4-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP]] to double
 ; CHECK-VF4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[EXP]], i64 [[INDVARS_IV]]
-; CHECK-VF4-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX]], align 4
-; CHECK-VF4-NEXT:    [[TMP2:%.*]] = tail call fast double @__pow_finite(double [[CONV]], double [[TMP1]]) #[[ATTR1:[0-9]+]]
+; CHECK-VF4-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX]], align 4
+; CHECK-VF4-NEXT:    [[TMP1:%.*]] = tail call fast double @__pow_finite(double [[CONV]], double [[TMP6]]) #[[ATTR1:[0-9]+]]
 ; CHECK-VF4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[VARRAY]], i64 [[INDVARS_IV]]
-; CHECK-VF4-NEXT:    store double [[TMP2]], ptr [[ARRAYIDX2]], align 4
+; CHECK-VF4-NEXT:    store double [[TMP1]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-VF4-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1000
 ; CHECK-VF4-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -654,12 +659,13 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF8-LABEL: define void @pow_f64(
 ; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
 ; CHECK-VF8-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF8-NEXT:    [[EXP2:%.*]] = ptrtoint ptr [[EXP]] to i64
-; CHECK-VF8-NEXT:    [[VARRAY1:%.*]] = ptrtoint ptr [[VARRAY]] to i64
+; CHECK-VF8-NEXT:    [[EXP2:%.*]] = ptrtoaddr ptr [[EXP]] to i64
+; CHECK-VF8-NEXT:    [[VARRAY1:%.*]] = ptrtoaddr ptr [[VARRAY]] to i64
 ; CHECK-VF8-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF8:       [[VECTOR_MEMCHECK]]:
 ; CHECK-VF8-NEXT:    [[TMP0:%.*]] = sub i64 [[VARRAY1]], [[EXP2]]
-; CHECK-VF8-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 64
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-VF8-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 63
 ; CHECK-VF8-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF8:       [[VECTOR_PH]]:
 ; CHECK-VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -667,32 +673,32 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF8-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF8-NEXT:    [[TMP1:%.*]] = sitofp <8 x i32> [[VEC_IND]] to <8 x double>
-; CHECK-VF8-NEXT:    [[TMP10:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
-; CHECK-VF8-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i32 2
-; CHECK-VF8-NEXT:    [[TMP19:%.*]] = extractelement <8 x double> [[TMP1]], i32 3
-; CHECK-VF8-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP1]], i32 4
-; CHECK-VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i32 5
-; CHECK-VF8-NEXT:    [[TMP21:%.*]] = extractelement <8 x double> [[TMP1]], i32 6
-; CHECK-VF8-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP1]], i32 7
 ; CHECK-VF8-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[EXP]], i64 [[INDEX]]
 ; CHECK-VF8-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x double>, ptr [[TMP2]], align 4
-; CHECK-VF8-NEXT:    [[TMP22:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 0
-; CHECK-VF8-NEXT:    [[TMP12:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 1
-; CHECK-VF8-NEXT:    [[TMP13:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 2
-; CHECK-VF8-NEXT:    [[TMP24:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 3
-; CHECK-VF8-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 4
-; CHECK-VF8-NEXT:    [[TMP16:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 5
-; CHECK-VF8-NEXT:    [[TMP25:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 6
-; CHECK-VF8-NEXT:    [[TMP18:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i32 7
-; CHECK-VF8-NEXT:    [[TMP5:%.*]] = tail call fast double @__pow_finite(double [[TMP10]], double [[TMP22]]) #[[ATTR3:[0-9]+]]
-; CHECK-VF8-NEXT:    [[TMP8:%.*]] = tail call fast double @__pow_finite(double [[TMP3]], double [[TMP12]]) #[[ATTR3]]
-; CHECK-VF8-NEXT:    [[TMP11:%.*]] = tail call fast double @__pow_finite(double [[TMP4]], double [[TMP13]]) #[[ATTR3]]
-; CHECK-VF8-NEXT:    [[TMP14:%.*]] = tail call fast double @__pow_finite(double [[TMP19]], double [[TMP24]]) #[[ATTR3]]
-; CHECK-VF8-NEXT:    [[TMP17:%.*]] = tail call fast double @__pow_finite(double [[TMP6]], double [[TMP15]]) #[[ATTR3]]
-; CHECK-VF8-NEXT:    [[TMP20:%.*]] = tail call fast double @__pow_finite(double [[TMP7]], double [[TMP16]]) #[[ATTR3]]
-; CHECK-VF8-NEXT:    [[TMP23:%.*]] = tail call fast double @__pow_finite(double [[TMP21]], double [[TMP25]]) #[[ATTR3]]
-; CHECK-VF8-NEXT:    [[TMP26:%.*]] = tail call fast double @__pow_finite(double [[TMP9]], double [[TMP18]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP1]], i64 0
+; CHECK-VF8-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 0
+; CHECK-VF8-NEXT:    [[TMP5:%.*]] = tail call fast double @__pow_finite(double [[TMP4]], double [[TMP6]]) #[[ATTR3:[0-9]+]]
+; CHECK-VF8-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP1]], i64 1
+; CHECK-VF8-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 1
+; CHECK-VF8-NEXT:    [[TMP8:%.*]] = tail call fast double @__pow_finite(double [[TMP7]], double [[TMP9]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP10:%.*]] = extractelement <8 x double> [[TMP1]], i64 2
+; CHECK-VF8-NEXT:    [[TMP12:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 2
+; CHECK-VF8-NEXT:    [[TMP11:%.*]] = tail call fast double @__pow_finite(double [[TMP10]], double [[TMP12]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP13:%.*]] = extractelement <8 x double> [[TMP1]], i64 3
+; CHECK-VF8-NEXT:    [[TMP15:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 3
+; CHECK-VF8-NEXT:    [[TMP14:%.*]] = tail call fast double @__pow_finite(double [[TMP13]], double [[TMP15]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP16:%.*]] = extractelement <8 x double> [[TMP1]], i64 4
+; CHECK-VF8-NEXT:    [[TMP18:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 4
+; CHECK-VF8-NEXT:    [[TMP17:%.*]] = tail call fast double @__pow_finite(double [[TMP16]], double [[TMP18]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP19:%.*]] = extractelement <8 x double> [[TMP1]], i64 5
+; CHECK-VF8-NEXT:    [[TMP21:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 5
+; CHECK-VF8-NEXT:    [[TMP20:%.*]] = tail call fast double @__pow_finite(double [[TMP19]], double [[TMP21]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP22:%.*]] = extractelement <8 x double> [[TMP1]], i64 6
+; CHECK-VF8-NEXT:    [[TMP24:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 6
+; CHECK-VF8-NEXT:    [[TMP23:%.*]] = tail call fast double @__pow_finite(double [[TMP22]], double [[TMP24]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP25:%.*]] = extractelement <8 x double> [[TMP1]], i64 7
+; CHECK-VF8-NEXT:    [[TMP37:%.*]] = extractelement <8 x double> [[WIDE_LOAD]], i64 7
+; CHECK-VF8-NEXT:    [[TMP26:%.*]] = tail call fast double @__pow_finite(double [[TMP25]], double [[TMP37]]) #[[ATTR3]]
 ; CHECK-VF8-NEXT:    [[TMP27:%.*]] = insertelement <8 x double> poison, double [[TMP5]], i32 0
 ; CHECK-VF8-NEXT:    [[TMP28:%.*]] = insertelement <8 x double> [[TMP27]], double [[TMP8]], i32 1
 ; CHECK-VF8-NEXT:    [[TMP29:%.*]] = insertelement <8 x double> [[TMP28]], double [[TMP11]], i32 2
@@ -716,10 +722,10 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-VF8-NEXT:    [[TMP:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-VF8-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP]] to double
 ; CHECK-VF8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[EXP]], i64 [[INDVARS_IV]]
-; CHECK-VF8-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX]], align 4
-; CHECK-VF8-NEXT:    [[TMP10:%.*]] = tail call fast double @__pow_finite(double [[CONV]], double [[TMP1]]) #[[ATTR3]]
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = load double, ptr [[ARRAYIDX]], align 4
+; CHECK-VF8-NEXT:    [[TMP1:%.*]] = tail call fast double @__pow_finite(double [[CONV]], double [[TMP3]]) #[[ATTR3]]
 ; CHECK-VF8-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[VARRAY]], i64 [[INDVARS_IV]]
-; CHECK-VF8-NEXT:    store double [[TMP10]], ptr [[ARRAYIDX2]], align 4
+; CHECK-VF8-NEXT:    store double [[TMP1]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-VF8-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF8-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1000
 ; CHECK-VF8-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
