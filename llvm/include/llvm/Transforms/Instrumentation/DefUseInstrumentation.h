@@ -1,6 +1,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_DEFUSEINSTRUMENTATION_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_DEFUSEINSTRUMENTATION_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -16,16 +17,20 @@ class Module;
 struct DefUseInstrumentationPass
     : PassInfoMixin<DefUseInstrumentationPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
-    Function* Main = M.getFunction("main");
-    if (!Main || Main->isDeclaration()) {
-      return PreservedAnalyses::all();
-    }
+
     LLVMContext& Ctx = M.getContext();
+    IRBuilder<> Builder(Ctx);
 
-    FunctionType* HookType = FunctionType::get(Type::getVoidTy(Ctx), false);
-
-    FunctionCallee funccall =  M.getOrInsertFunction("__def_use_trace_main_enter", HookType);
-
+    for (Function &F : M) {
+      if (F.isDeclaration()) {
+        return PreservedAnalyses::all();
+      }
+      Builder.SetInsertPointPastAllocas(&F);
+      FunctionType* HookType = FunctionType::get(Type::getVoidTy(Ctx), false);
+      FunctionCallee Hook =  M.getOrInsertFunction("__def_use_trace_enter", HookType);
+      Builder.CreateCall(Hook);
+    }
+    
     return PreservedAnalyses::none();
   }
 };

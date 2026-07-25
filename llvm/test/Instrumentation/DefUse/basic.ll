@@ -2,7 +2,18 @@
 
 define i32 @main() {
 entry:
+  %x = alloca i32
   ret i32 0
 }
 
-; CHECK: declare void @__def_use_trace_main_enter()
+define i32 @foo() {
+entry:
+  %x = alloca i32
+  ret i32 0
+}
+
+define i32 @bar() {
+entry:
+  %x = alloca i32
+  ret i32 0
+}
