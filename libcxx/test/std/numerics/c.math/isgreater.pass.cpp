@@ -63,8 +63,8 @@ struct TestInt {
 };
 
 TEST_CONSTEXPR_CXX23 bool test() {
-  using lim                    = std::numeric_limits<int>;
-  TEST_CONSTEXPR_CXX23 int nan = lim::quiet_NaN();
+  using lim                     = std::numeric_limits<double>;
+  TEST_CONSTEXPR_CXX23 auto nan = lim::quiet_NaN();
 
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());

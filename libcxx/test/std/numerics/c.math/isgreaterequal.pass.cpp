@@ -18,58 +18,52 @@
 
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::isgreaterequal(std::numeric_limits<T>::max(), T(0)));
-    assert(!std::isgreaterequal(T(0), std::numeric_limits<T>::max()));
-    assert(std::isgreaterequal(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                    = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max   = lim::max();
+    TEST_CONSTEXPR_CXX23 T low   = lim::lowest();
+    TEST_CONSTEXPR_CXX23 T inf   = lim::infinity();
+    TEST_CONSTEXPR_CXX23 T nan   = lim::quiet_NaN();
+    TEST_CONSTEXPR_CXX23 T s_nan = lim::signaling_NaN();
 
-    assert(std::isgreaterequal(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::max()));
-    assert(!std::isgreaterequal(-std::numeric_limits<T>::infinity(), std::numeric_limits<T>::lowest()));
-    assert(std::isgreaterequal(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity()));
+    assert(std::isgreaterequal(max, T(0)));
+    assert(!std::isgreaterequal(T(0), max));
+    assert(std::isgreaterequal(max, max));
 
-    assert(!std::isgreaterequal(std::numeric_limits<T>::quiet_NaN(), T(0)));
-    assert(!std::isgreaterequal(T(0), std::numeric_limits<T>::quiet_NaN()));
-    assert(!std::isgreaterequal(std::numeric_limits<T>::signaling_NaN(), T(0)));
+    assert(std::isgreaterequal(inf, max));
+    assert(!std::isgreaterequal(-inf, low));
+    assert(std::isgreaterequal(inf, inf));
 
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
+    assert(!std::isgreaterequal(nan, T(0)));
+    assert(!std::isgreaterequal(T(0), nan));
+    assert(!std::isgreaterequal(s_nan, T(0)));
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(std::isgreaterequal(std::numeric_limits<T>::max(), T(0)));
-    assert(!std::isgreaterequal(T(0), std::numeric_limits<T>::max()));
-    assert(std::isgreaterequal(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                  = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max = lim::max();
+    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
+
+    assert(std::isgreaterequal(max, T(0)));
+    assert(!std::isgreaterequal(T(0), max));
+    assert(std::isgreaterequal(max, max));
 
     assert(std::isgreaterequal(T(1), T(1)));
 
     if (std::is_signed<T>::value) {
-      assert(std::isgreaterequal(T(-1), std::numeric_limits<T>::lowest()));
-      assert(!std::isgreaterequal(std::numeric_limits<T>::lowest(), T(-1)));
+      assert(std::isgreaterequal(T(-1), low));
+      assert(!std::isgreaterequal(low, T(-1)));
     }
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
+  using lim                     = std::numeric_limits<double>;
+  TEST_CONSTEXPR_CXX23 auto nan = lim::quiet_NaN();
+
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
@@ -78,15 +72,16 @@ int main(int, char**) {
     assert(std::isgreaterequal(2.0, 1));     // double vs int
     assert(!std::isgreaterequal(1, 2.0f));   // int vs float
     assert(std::isgreaterequal(2.0L, 1.0f)); // long double vs float
-    assert(!std::isgreaterequal(std::numeric_limits<double>::quiet_NaN(), 0));
-
-#if TEST_STD_VER >= 23
-    static_assert(std::isgreaterequal(2.0, 1));     // double vs int
-    static_assert(!std::isgreaterequal(1, 2.0f));   // int vs float
-    static_assert(std::isgreaterequal(2.0L, 1.0f)); // long double vs float
-    static_assert(!std::isgreaterequal(std::numeric_limits<double>::quiet_NaN(), 0));
-#endif
+    assert(!std::isgreaterequal(nan, 0));    // NaN vs int
   }
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
   return 0;
 }
