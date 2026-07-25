@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1250 -fcuda-is-device -emit-llvm -x hip -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa -fcuda-is-device -emit-llvm -x hip -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -aux-triple amdgcn-amd-amdhsa -emit-llvm -x hip -o - %s | FileCheck --check-prefix=HOST %s
 
 #include "Inputs/cuda.h"

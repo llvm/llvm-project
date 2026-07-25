@@ -902,8 +902,10 @@ VPlan::~VPlan() {
       for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
         R.setOperand(I, &DummyValue);
 
-  for (auto *VPB : CreatedBlocks)
+  for (auto [Idx, VPB] : enumerate(CreatedBlocks)) {
+    assert(VPB->getNumber() == Idx && "block with mismatched number");
     delete VPB;
+  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
@@ -1293,8 +1295,10 @@ VPlan *VPlan::duplicate() {
   // current to new VPlan.
   unsigned NumBlocksAfterCloning = CreatedBlocks.size();
   for (unsigned I :
-       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning))
+       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning)) {
+    this->CreatedBlocks[I]->setNumber(NewPlan->CreatedBlocks.size());
     NewPlan->CreatedBlocks.push_back(this->CreatedBlocks[I]);
+  }
   CreatedBlocks.truncate(NumBlocksBeforeCloning);
 
   // Update ExitBlocks of the new plan.
@@ -1309,6 +1313,7 @@ VPlan *VPlan::duplicate() {
 
 VPIRBasicBlock *VPlan::createEmptyVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = new VPIRBasicBlock(IRBB);
+  VPIRBB->setNumber(CreatedBlocks.size());
   CreatedBlocks.push_back(VPIRBB);
   return VPIRBB;
 }
