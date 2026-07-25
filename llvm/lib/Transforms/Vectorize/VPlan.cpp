@@ -738,6 +738,13 @@ VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
                         Exiting ? Old2NewVPBlocks[Exiting] : nullptr);
 }
 
+const VPBranchOnMaskRecipe *VPRegionBlock::getEntryBranchOnMask() const {
+  const auto *EntryBB = cast<VPBasicBlock>(getEntry());
+  assert(isReplicator() && EntryBB && EntryBB->size() == 1 &&
+         "not a valid replicating region");
+  return cast<VPBranchOnMaskRecipe>(&EntryBB->front());
+}
+
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
