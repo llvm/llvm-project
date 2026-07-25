@@ -4059,6 +4059,13 @@ public:
     return SemaRef.BuiltinShuffleVector(cast<CallExpr>(TheCall.get()));
   }
 
+  /// Build a new splat vector expression.
+  ExprResult RebuildSplatVectorExpr(SourceLocation BuiltinLoc, Expr *SrcExpr,
+                                    TypeSourceInfo *DstTInfo,
+                                    SourceLocation RParenLoc) {
+    return SemaRef.SplatVectorExpr(SrcExpr, DstTInfo, BuiltinLoc, RParenLoc);
+  }
+
   /// Build a new convert vector expression.
   ExprResult RebuildConvertVectorExpr(SourceLocation BuiltinLoc,
                                       Expr *SrcExpr, TypeSourceInfo *DstTInfo,
@@ -17650,6 +17657,25 @@ TreeTransform<Derived>::TransformShuffleVectorExpr(ShuffleVectorExpr *E) {
   return getDerived().RebuildShuffleVectorExpr(E->getBuiltinLoc(),
                                                SubExprs,
                                                E->getRParenLoc());
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformSplatVectorExpr(SplatVectorExpr *E) {
+  ExprResult SrcExpr = getDerived().TransformExpr(E->getSrcExpr());
+  if (SrcExpr.isInvalid())
+    return ExprError();
+
+  TypeSourceInfo *Type = getDerived().TransformType(E->getTypeSourceInfo());
+  if (!Type)
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Type == E->getTypeSourceInfo() &&
+      SrcExpr.get() == E->getSrcExpr())
+    return E;
+
+  return getDerived().RebuildSplatVectorExpr(E->getBuiltinLoc(), SrcExpr.get(),
+                                             Type, E->getRParenLoc());
 }
 
 template<typename Derived>

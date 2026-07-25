@@ -3357,6 +3357,12 @@ void TextNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
   OS << ' ' << AE->getOpAsString();
 }
 
+void TextNodeDumper::VisitSplatVectorExpr(const SplatVectorExpr *S) {
+  VisitStmt(S);
+  if (S->hasStoredFPFeatures())
+    printFPOptions(S->getStoredFPFeatures());
+}
+
 void TextNodeDumper::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
   VisitStmt(S);
   if (S->hasStoredFPFeatures())

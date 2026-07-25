@@ -14,6 +14,12 @@ v8b integral(v8i v) {
   v8b m4 = __builtin_convertvector(v, unsigned long [[clang::ext_vector_type(8)]]);
   v8b m5 = __builtin_convertvector(v, char [[clang::ext_vector_type(8)]]);
   v8b m6 = __builtin_convertvector(v, unsigned char [[clang::ext_vector_type(8)]]);
+  v8b s1 = __builtin_splatvector(v[0], int [[clang::ext_vector_type(8)]]);
+  v8b s2 = __builtin_splatvector(v[0], unsigned [[clang::ext_vector_type(8)]]);
+  v8b s3 = __builtin_splatvector(v[0], long [[clang::ext_vector_type(8)]]);
+  v8b s4 = __builtin_splatvector(v[0], unsigned long [[clang::ext_vector_type(8)]]);
+  v8b s5 = __builtin_splatvector(v[0], char [[clang::ext_vector_type(8)]]);
+  v8b s6 = __builtin_splatvector(v[0], unsigned char [[clang::ext_vector_type(8)]]);
   foo(v);
   return v;
 }

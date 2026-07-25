@@ -438,6 +438,7 @@ public:
   void VisitOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
+  void VisitSplatVectorExpr(const SplatVectorExpr *S);
   void VisitConvertVectorExpr(const ConvertVectorExpr *S);
 };
 

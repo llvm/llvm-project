@@ -4717,6 +4717,126 @@ public:
   }
 };
 
+/// SplatVectorExpr - clang-specific builtin-in function
+/// __builtin_splatvector.
+/// This AST node represents a operator that does a splat,
+/// similar to LLVM's splat instruction. It takes a scalar value
+/// and returns the appropriately splatted vector.
+class SplatVectorExpr final
+    : public Expr,
+      private llvm::TrailingObjects<SplatVectorExpr, FPOptionsOverride> {
+private:
+  Stmt *SrcExpr;
+  TypeSourceInfo *TInfo;
+  SourceLocation BuiltinLoc, RParenLoc;
+
+  friend TrailingObjects;
+  friend class ASTReader;
+  friend class ASTStmtReader;
+  explicit SplatVectorExpr(bool HasFPFeatures, EmptyShell Empty)
+      : Expr(SplatVectorExprClass, Empty) {
+    SplatVectorExprBits.HasFPFeatures = HasFPFeatures;
+  }
+
+  SplatVectorExpr(Expr *SrcExpr, TypeSourceInfo *TI, QualType DstType,
+                  ExprValueKind VK, ExprObjectKind OK,
+                  SourceLocation BuiltinLoc, SourceLocation RParenLoc,
+                  FPOptionsOverride FPFeatures)
+      : Expr(SplatVectorExprClass, DstType, VK, OK), SrcExpr(SrcExpr),
+        TInfo(TI), BuiltinLoc(BuiltinLoc), RParenLoc(RParenLoc) {
+    SplatVectorExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
+    if (hasStoredFPFeatures())
+      setStoredFPFeatures(FPFeatures);
+    setDependence(computeDependence(this));
+  }
+
+  size_t numTrailingObjects(OverloadToken<FPOptionsOverride>) const {
+    return SplatVectorExprBits.HasFPFeatures ? 1 : 0;
+  }
+
+  FPOptionsOverride &getTrailingFPFeatures() {
+    assert(SplatVectorExprBits.HasFPFeatures);
+    return *getTrailingObjects();
+  }
+
+  const FPOptionsOverride &getTrailingFPFeatures() const {
+    assert(SplatVectorExprBits.HasFPFeatures);
+    return *getTrailingObjects();
+  }
+
+public:
+  static SplatVectorExpr *CreateEmpty(const ASTContext &C, bool hasFPFeatures);
+
+  static SplatVectorExpr *Create(const ASTContext &C, Expr *SrcExpr,
+                                 TypeSourceInfo *TI, QualType DstType,
+                                 ExprValueKind VK, ExprObjectKind OK,
+                                 SourceLocation BuiltinLoc,
+                                 SourceLocation RParenLoc,
+                                 FPOptionsOverride FPFeatures);
+
+  /// Get the FP contractibility status of this operator. Only meaningful for
+  /// operations on floating point types.
+  bool isFPContractableWithinStatement(const LangOptions &LO) const {
+    return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
+  }
+
+  /// Is FPFeatures in Trailing Storage?
+  bool hasStoredFPFeatures() const { return SplatVectorExprBits.HasFPFeatures; }
+
+  /// Get FPFeatures from trailing storage.
+  FPOptionsOverride getStoredFPFeatures() const {
+    return getTrailingFPFeatures();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
+  /// Set FPFeatures in trailing storage, used by Serialization & ASTImporter.
+  void setStoredFPFeatures(FPOptionsOverride F) { getTrailingFPFeatures() = F; }
+
+  /// Get the FP features status of this operator. Only meaningful for
+  /// operations on floating point types.
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
+    if (SplatVectorExprBits.HasFPFeatures)
+      return getStoredFPFeatures().applyOverrides(LO);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+
+  FPOptionsOverride getFPOptionsOverride() const {
+    if (SplatVectorExprBits.HasFPFeatures)
+      return getStoredFPFeatures();
+    return FPOptionsOverride();
+  }
+
+  /// getSrcExpr - Return the Expr to be splat.
+  Expr *getSrcExpr() const { return cast<Expr>(SrcExpr); }
+
+  /// getTypeSourceInfo - Return the destination type.
+  TypeSourceInfo *getTypeSourceInfo() const { return TInfo; }
+  void setTypeSourceInfo(TypeSourceInfo *ti) { TInfo = ti; }
+
+  /// getBuiltinLoc - Return the location of the __builtin_splatvector token.
+  SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
+
+  /// getRParenLoc - Return the location of final right parenthesis.
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == SplatVectorExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&SrcExpr, &SrcExpr + 1); }
+  const_child_range children() const {
+    return const_child_range(&SrcExpr, &SrcExpr + 1);
+  }
+};
+
 /// ConvertVectorExpr - Clang builtin function __builtin_convertvector
 /// This AST node provides support for converting a vector type to another
 /// vector type of the same arity.

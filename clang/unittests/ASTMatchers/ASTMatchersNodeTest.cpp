@@ -1170,6 +1170,16 @@ TEST_P(ASTMatchersTest, ParenListExpr) {
               varDecl(hasInitializer(parenListExpr(has(unaryOperator()))))));
 }
 
+TEST_P(ASTMatchersTest, SplatVectorExpr) {
+  EXPECT_TRUE(matches(
+      "typedef double vector4double __attribute__((__vector_size__(32)));"
+      "float f;"
+      "void foo() { (void)__builtin_splatvector(f, vector4double); }",
+      splatVectorExpr()));
+  EXPECT_TRUE(notMatches("void foo() { (void)__builtin_choose_expr(1, 2, 3); }",
+                         splatVectorExpr()));
+}
+
 TEST_P(ASTMatchersTest, StmtExpr) {
   EXPECT_TRUE(matches("void declToImport() { int C = ({int X=4; X;}); }",
                       varDecl(hasInitializer(stmtExpr()))));

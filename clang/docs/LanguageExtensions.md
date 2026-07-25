@@ -690,7 +690,7 @@ these attributes requires the command line option `-msve-vector-bits=<N>` or
 supported on both sizeless and VLS types. For RVV, the operators are only
 supported on VLS types.
 
-See also {ref}`langext-builtin-shufflevector`, {ref}`langext-builtin-convertvector`.
+See also {ref}`langext-builtin-shufflevector`, {ref}`langext-builtin-splatvector` ,{ref}`langext-builtin-convertvector`.
 
 <aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id5" role="doc-footnote">
@@ -3562,6 +3562,49 @@ type as `vec1`/`vec2` but that has an element count equal to the number of
 indices specified.
 
 Query for this feature with `__has_builtin(__builtin_shufflevector)`.
+
+(langext-__builtin_splatvector)=
+(langext-builtin-splatvector)=
+
+### `__builtin_splatvector`
+
+`__builtin_splatvector` is used to express generic vector splat
+operations. This builtin can be used within constant expressions.
+
+**Syntax**:
+
+```c++
+__builtin_splatvector(src_value, dst_vec_type)
+```
+
+**Examples**:
+
+```c++
+typedef double vector4double __attribute__((__vector_size__(32)));
+typedef float  vector4float  __attribute__((__vector_size__(16)));
+typedef short  vector4short  __attribute__((__vector_size__(8)));
+float f; short s;
+
+// splat a float value to a vector of 4 doubles.
+__builtin_splatvector(f, vector4double)
+// equivalent to:
+(vector4double) { (double) f, (double) f, (double) f, (double) f }
+
+// splat a short integer value to a vector of 4 floats.
+__builtin_splatvector(s, vector4float)
+// equivalent to:
+(vector4float) { (float) s, (float) s, (float) s, (float) s }
+```
+
+**Description**:
+
+The first argument to `__builtin_splatvector` is a value, and the second
+argument is a vector type.
+
+The result of `__builtin_splatvector` is a vector with the value from the
+first argument copied to each its element.
+
+Query for this feature with `__has_builtin(__builtin_splatvector)`.
 
 (langext-__builtin_convertvector)=
 (langext-builtin-convertvector)=

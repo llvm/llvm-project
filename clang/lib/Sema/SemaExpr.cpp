@@ -7095,6 +7095,14 @@ ExprResult Sema::BuildAsTypeExpr(Expr *E, QualType DestTy,
   return new (Context) AsTypeExpr(E, DestTy, VK, OK, BuiltinLoc, RParenLoc);
 }
 
+ExprResult Sema::ActOnSplatVectorExpr(Expr *E, ParsedType ParsedDestTy,
+                                      SourceLocation BuiltinLoc,
+                                      SourceLocation RParenLoc) {
+  TypeSourceInfo *TInfo;
+  GetTypeFromParser(ParsedDestTy, &TInfo);
+  return SplatVectorExpr(E, TInfo, BuiltinLoc, RParenLoc);
+}
+
 ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
                                         SourceLocation BuiltinLoc,
                                         SourceLocation RParenLoc) {

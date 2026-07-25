@@ -648,6 +648,7 @@ public:
   Value *VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *E);
   Value *VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E);
   Value *VisitShuffleVectorExpr(ShuffleVectorExpr *E);
+  Value *VisitSplatVectorExpr(SplatVectorExpr *E);
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
   Value *VisitMemberExpr(MemberExpr *E);
   Value *VisitExtVectorElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
@@ -2056,6 +2057,92 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   }
 
   return Builder.CreateShuffleVector(V1, V2, Indices, "shuffle");
+}
+
+static QualType getRawVectorElementType(ASTContext &Context,
+                                        QualType VectorTy) {
+  if (const auto *TyA = VectorTy->getAs<VectorType>())
+    return TyA->getElementType();
+  if (VectorTy->isSizelessVectorType()) {
+    // Scalable vector types (SVE, RVV) can alter the element type for Bool
+    // in order to avoid any layout issues. Effectively, it makes it harder
+    // to figure out what the actual element type was. See the comment added
+    // to Type::getSveEltType().
+    if (VectorTy->isSveVLSBuiltinType() || VectorTy->isRVVVLSBuiltinType()) {
+      const auto *BTy = VectorTy->castAs<BuiltinType>();
+      return Context.getBuiltinVectorTypeInfo(BTy).ElementType;
+    }
+    return VectorTy->getSizelessVectorEltType(Context);
+  }
+  return QualType();
+}
+
+Value *ScalarExprEmitter::VisitSplatVectorExpr(SplatVectorExpr *E) {
+  CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
+
+  QualType SrcType = E->getSrcExpr()->getType(), DstType = E->getType();
+
+  Value *Src = CGF.EmitScalarExpr(E->getSrcExpr());
+
+  SrcType = CGF.getContext().getCanonicalType(SrcType);
+  DstType = CGF.getContext().getCanonicalType(DstType);
+
+  assert(!SrcType->isVectorType() && !SrcType->isSizelessVectorType() &&
+         "SplatVector source type must not be a vector");
+  assert((DstType->isVectorType() || DstType->isSizelessVectorType()) &&
+         "SplatVector destination type must be a vector");
+
+  llvm::Type *SrcTy = Src->getType();
+  llvm::Type *DstTy = ConvertType(DstType);
+
+  QualType DstEltType = getRawVectorElementType(CGF.getContext(), DstType);
+  llvm::Type *DstEltTy = ConvertType(DstEltType);
+
+  Value *Splat = Builder.CreateVectorSplat(
+      cast<llvm::VectorType>(DstTy)->getElementCount(), Src, "splatvector");
+  llvm::Type *SplatTy = Splat->getType();
+  if (SplatTy == DstTy)
+    return Splat;
+
+  if (DstEltType->isBooleanType()) {
+    assert((SrcTy->isFloatingPointTy() || isa<llvm::IntegerType>(SrcTy)) &&
+           "Unknown boolean conversion");
+
+    llvm::Value *Zero = llvm::Constant::getNullValue(SplatTy);
+    if (SrcTy->isFloatingPointTy())
+      return Builder.CreateFCmpUNE(Splat, Zero, "splattobool");
+    else
+      return Builder.CreateICmpNE(Splat, Zero, "splattobool");
+  }
+
+  // We have the arithmetic types: real int/float.
+  Value *Res = nullptr;
+
+  if (isa<llvm::IntegerType>(SrcTy)) {
+    bool InputSigned = SrcType->isSignedIntegerOrEnumerationType();
+    if (isa<llvm::IntegerType>(DstEltTy))
+      Res = Builder.CreateIntCast(Splat, DstTy, InputSigned, "splatconv");
+    else {
+      if (InputSigned)
+        Res = Builder.CreateSIToFP(Splat, DstTy, "splatconv");
+      else
+        Res = Builder.CreateUIToFP(Splat, DstTy, "splatconv");
+    }
+  } else if (isa<llvm::IntegerType>(DstEltTy)) {
+    assert(SrcTy->isFloatingPointTy() && "Unknown real conversion");
+    if (DstEltType->isSignedIntegerOrEnumerationType())
+      Res = Builder.CreateFPToSI(Splat, DstTy, "splatconv");
+    else
+      Res = Builder.CreateFPToUI(Splat, DstTy, "splatconv");
+  } else {
+    assert(SrcTy->isFloatingPointTy() && DstEltTy->isFloatingPointTy() &&
+           "Unknown real conversion");
+    if (DstEltTy->getTypeID() < SrcTy->getTypeID())
+      Res = Builder.CreateFPTrunc(Splat, DstTy, "splatconv");
+    else
+      Res = Builder.CreateFPExt(Splat, DstTy, "splatconv");
+  }
+  return Res;
 }
 
 Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {

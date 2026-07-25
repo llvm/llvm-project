@@ -1390,6 +1390,19 @@ void ASTStmtWriter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   Code = serialization::EXPR_SHUFFLE_VECTOR;
 }
 
+void ASTStmtWriter::VisitSplatVectorExpr(SplatVectorExpr *E) {
+  VisitExpr(E);
+  bool HasFPFeatures = E->hasStoredFPFeatures();
+  CurrentPackingBits.addBit(HasFPFeatures);
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Record.AddTypeSourceInfo(E->getTypeSourceInfo());
+  Record.AddStmt(E->getSrcExpr());
+  Code = serialization::EXPR_SPLAT_VECTOR;
+  if (HasFPFeatures)
+    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
+}
+
 void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
   bool HasFPFeatures = E->hasStoredFPFeatures();

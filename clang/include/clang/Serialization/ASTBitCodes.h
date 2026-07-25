@@ -1756,6 +1756,9 @@ enum StmtCode {
   /// A ShuffleVectorExpr record.
   EXPR_SHUFFLE_VECTOR,
 
+  /// A SplatVectorExpr record.
+  EXPR_SPLAT_VECTOR,
+
   /// A ConvertVectorExpr record.
   EXPR_CONVERT_VECTOR,
 

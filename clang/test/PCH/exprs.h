@@ -102,6 +102,10 @@ typedef typeof(__builtin_choose_expr(17 > 19, d0, 1)) choose_expr;
 // ShuffleVectorExpr
 typedef typeof(__builtin_shufflevector(vec2, vec2b, 2, 1)) shuffle_expr;
 
+// SplatVectorExpr
+typedef __attribute__(( ext_vector_type(2) )) float float2;
+typedef typeof(__builtin_splatvector(d0, float2)) splat_expr;
+
 // ConvertVectorExpr
 typedef __attribute__(( ext_vector_type(2) )) float float2;
 typedef typeof(__builtin_convertvector(vec2, float2)) convert_expr;

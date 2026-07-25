@@ -1089,6 +1089,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw___builtin_offsetof:
   case tok::kw___builtin_choose_expr:
   case tok::kw___builtin_astype: // primary-expression: [OCL] as_type()
+  case tok::kw___builtin_splatvector:
   case tok::kw___builtin_convertvector:
   case tok::kw___builtin_COLUMN:
   case tok::kw___builtin_FILE:
@@ -2552,6 +2553,35 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
 
     Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
                                   ConsumeParen());
+    break;
+  }
+  case tok::kw___builtin_splatvector: {
+    // The first argument is an expression to be splat, followed by a comma.
+    ExprResult Expr(ParseAssignmentExpression());
+    if (Expr.isInvalid()) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    if (ExpectAndConsume(tok::comma)) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    // Second argument is the type to bitcast to.
+    TypeResult DestTy = ParseTypeName();
+    if (DestTy.isInvalid())
+      return ExprError();
+
+    // Attempt to consume the r-paren.
+    if (Tok.isNot(tok::r_paren)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+
+    Res = Actions.ActOnSplatVectorExpr(Expr.get(), DestTy.get(), StartLoc,
+                                       ConsumeParen());
     break;
   }
   case tok::kw___builtin_convertvector: {

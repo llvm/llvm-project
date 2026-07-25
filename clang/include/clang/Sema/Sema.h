@@ -2680,6 +2680,11 @@ public:
   // Used by C++ template instantiation.
   ExprResult BuiltinShuffleVector(CallExpr *TheCall);
 
+  /// SplatVectorExpr - Handle __builtin_splatvector
+  ExprResult SplatVectorExpr(Expr *E, TypeSourceInfo *TInfo,
+                             SourceLocation BuiltinLoc,
+                             SourceLocation RParenLoc);
+
   /// ConvertVectorExpr - Handle __builtin_convertvector
   ExprResult ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                                SourceLocation BuiltinLoc,
@@ -7719,6 +7724,15 @@ public:
                                 Scope *CurScope);
 
   //===---------------------------- Clang Extensions ----------------------===//
+
+  /// ActOnSplatVectorExpr - create a new splat-vector expression from the
+  /// provided argument.
+  ///
+  /// __builtin_splatvector( value, dst type )
+  ///
+  ExprResult ActOnSplatVectorExpr(Expr *E, ParsedType ParsedDestTy,
+                                  SourceLocation BuiltinLoc,
+                                  SourceLocation RParenLoc);
 
   /// ActOnConvertVectorExpr - create a new convert-vector expression from the
   /// provided arguments.

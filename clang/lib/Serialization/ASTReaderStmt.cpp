@@ -1439,6 +1439,19 @@ void ASTStmtReader::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   E->setRParenLoc(readSourceLocation());
 }
 
+void ASTStmtReader::VisitSplatVectorExpr(SplatVectorExpr *E) {
+  VisitExpr(E);
+  bool HasFPFeatures = CurrentUnpackingBits->getNextBit();
+  assert(HasFPFeatures == E->hasStoredFPFeatures());
+  E->BuiltinLoc = readSourceLocation();
+  E->RParenLoc = readSourceLocation();
+  E->TInfo = readTypeSourceInfo();
+  E->SrcExpr = Record.readSubExpr();
+  if (HasFPFeatures)
+    E->setStoredFPFeatures(
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
+}
+
 void ASTStmtReader::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
   bool HasFPFeatures = CurrentUnpackingBits->getNextBit();
@@ -3516,6 +3529,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_SHUFFLE_VECTOR:
       S = new (Context) ShuffleVectorExpr(Empty);
       break;
+
+    case EXPR_SPLAT_VECTOR: {
+      BitsUnpacker SplatVectorExprBits(Record[ASTStmtReader::NumStmtFields]);
+      SplatVectorExprBits.advance(ASTStmtReader::NumExprBits);
+      bool HasFPFeatures = SplatVectorExprBits.getNextBit();
+      S = SplatVectorExpr::CreateEmpty(Context, HasFPFeatures);
+      break;
+    }
 
     case EXPR_CONVERT_VECTOR: {
       BitsUnpacker ConvertVectorExprBits(Record[ASTStmtReader::NumStmtFields]);

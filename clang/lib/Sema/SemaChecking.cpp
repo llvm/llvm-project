@@ -6632,6 +6632,27 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
   return Result;
 }
 
+ExprResult Sema::SplatVectorExpr(Expr *E, TypeSourceInfo *TInfo,
+                                 SourceLocation BuiltinLoc,
+                                 SourceLocation RParenLoc) {
+  ExprValueKind VK = VK_PRValue;
+  ExprObjectKind OK = OK_Ordinary;
+  QualType DstTy = TInfo->getType();
+  QualType SrcTy = E->getType();
+
+  if (SrcTy->isVectorType() || SrcTy->isSizelessVectorType())
+    return ExprError(Diag(BuiltinLoc, diag::err_splatvector_non_scalar)
+                     << E->getSourceRange());
+  if (!DstTy->isVectorType() && !DstTy->isSizelessVectorType() &&
+      !DstTy->isDependentType())
+    return ExprError(Diag(BuiltinLoc, diag::err_builtin_non_vector_type)
+                     << "second"
+                     << "__builtin_splatvector");
+
+  return SplatVectorExpr::Create(Context, E, TInfo, DstTy, VK, OK, BuiltinLoc,
+                                 RParenLoc, CurFPFeatureOverrides());
+}
+
 ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                                    SourceLocation BuiltinLoc,
                                    SourceLocation RParenLoc) {

@@ -11482,6 +11482,9 @@ def err_shufflevector_argument_too_large : Error<
 def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
   "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 is not permitted in a constexpr context">;
 
+def err_splatvector_non_scalar : Error<
+  "first argument to __builtin_splatvector must be a single value">;
+
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
 def err_convertvector_constexpr_unsupported_vector_cast : Error<
