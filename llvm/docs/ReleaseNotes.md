@@ -66,6 +66,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Interprocedural Optimizations
 
+- The IR Outliner has been removed, due to lack of a maintainer and the presence
+  of correctness issues.
+
 ### Changes to Vectorizers
 
 ### Changes to the AArch64 Backend
