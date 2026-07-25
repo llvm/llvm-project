@@ -2178,9 +2178,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   SmallVector<DominatorTree::UpdateType, 4> Updates;
 
   // Update any PHI nodes in our new successors.
+  SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
   for (BasicBlock *Succ : successors(BB1)) {
     addPredecessorToBlock(Succ, TIParent, BB1);
-    if (DTU)
+
+    if (DTU && VisitedSuccs.insert(Succ).second)
       Updates.push_back({DominatorTree::Insert, TIParent, Succ});
   }
 
@@ -6142,13 +6144,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (!HasDefault)
     createUnreachableSwitchDefault(SI, DTU);
 
-  auto *UnreachableDefault = SI->getDefaultDest();
-
   // Drop the switch.
   SI->eraseFromParent();
 
-  if (!HasDefault && DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, UnreachableDefault}});
+  if (DTU && isa<UncondBrInst>(NewBI))
+    DTU->applyUpdates({{DominatorTree::Delete, BB, OtherDest}});
 
   return true;
 }
@@ -7885,6 +7885,12 @@ static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
     SwitchInstProfUpdateWrapper SIW(*SI);
     SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
     SIW.setSuccessorWeight(0, 0);
+  } else {
+    // On the other hand, if there is a pre-existing case for the
+    // constant, the default branch will be removed rather than being
+    // moved. Thus, we are removing an edge in the CFG, and need to
+    // update any PHIs in the default block.
+    Default->removePredecessor(SI->getParent());
   }
   createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
 

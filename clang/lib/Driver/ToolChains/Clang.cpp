@@ -3312,6 +3312,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       restoreFPContractState();
       break;
 
+    case options::OPT_cl_fast_relaxed_math:
+      applyFastMath(true, A->getSpelling());
+      break;
+
     case options::OPT_Ofast:
       // If -Ofast is the optimization level, then -ffast-math should be enabled
       if (!OFastEnabled)

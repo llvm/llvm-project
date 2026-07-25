@@ -225,6 +225,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -240,6 +241,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
+#include <array>
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -416,13 +418,13 @@ public:
   }
 };
 
-class EagerSampleProfileNameTable final : public SampleProfileNameTable {
+class StringSampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
 
 public:
-  explicit EagerSampleProfileNameTable(std::vector<FunctionId> &&Vec)
+  explicit StringSampleProfileNameTable(std::vector<FunctionId> &&Vec)
       : Vec(std::move(Vec)) {}
-  explicit EagerSampleProfileNameTable(const std::vector<FunctionId> &Vec)
+  explicit StringSampleProfileNameTable(const std::vector<FunctionId> &Vec)
       : Vec(Vec) {}
 
   size_t size() const override { return Vec.size(); }
@@ -430,6 +432,39 @@ public:
   FunctionId operator[](size_t Idx) const override {
     assert(Idx < Vec.size() && "Index out of bounds");
     return Vec[Idx];
+  }
+};
+
+class MD5SampleProfileNameTable final : public SampleProfileNameTable {
+  std::vector<FunctionId> Vec;
+
+public:
+  explicit MD5SampleProfileNameTable(std::vector<FunctionId> &&Vec)
+      : Vec(std::move(Vec)) {}
+  explicit MD5SampleProfileNameTable(const std::vector<FunctionId> &Vec)
+      : Vec(Vec) {}
+
+  size_t size() const override { return Vec.size(); }
+
+  FunctionId operator[](size_t Idx) const override {
+    assert(Idx < Vec.size() && "Index out of bounds");
+    return Vec[Idx];
+  }
+};
+
+class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
+  ArrayRef<support::ulittle64_t> Array;
+
+public:
+  EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
+                                  uint64_t NumCS, uint64_t NumFlat,
+                                  uint64_t NumInlinees)
+      : Array(Data, NumCS + NumFlat + NumInlinees) {}
+
+  size_t size() const override { return Array.size(); }
+
+  FunctionId operator[](size_t Idx) const override {
+    return FunctionId(Array[Idx]);
   }
 };
 
@@ -1017,7 +1052,10 @@ protected:
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
                                    SampleProfileMap &Profiles);
-  std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
+  std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5,
+                                   bool IsEytzinger = false);
+  std::error_code readNameTableSecEytzinger(bool IsMD5, bool FixedLengthMD5);
+  std::error_code readNameTableSecLegacy(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList(bool IsMD5);
   std::error_code readStringBasedProfileSymbolList();

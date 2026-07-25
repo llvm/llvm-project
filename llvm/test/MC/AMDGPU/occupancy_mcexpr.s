@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
 
 // The occupancy() MCExpr arguments are:
 //   occupancy(MaxWaves, VGPRGranule, TotalVGPRs, InitOcc,

@@ -114,6 +114,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* llvm-mca no longer defaults -mcpu to "native"
+
 ### Changes to LLDB
 
 #### Windows

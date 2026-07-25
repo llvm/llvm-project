@@ -24,7 +24,6 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
@@ -35,6 +34,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -51,6 +51,7 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
@@ -58,6 +59,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -333,12 +335,12 @@ public:
 protected:
   /// Initializes the visitor and returns the set of initial directives of
   /// interest to be matched the beginning of the pattern.
-  virtual OmpDirectiveSet initialize() = 0;
+  virtual llvm::omp::DirectiveSet initialize() = 0;
 
   /// Visits a single directive and, based on it, returns the set of other
   /// directives of interest that would be part of the pattern if nested inside.
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) = 0;
+  virtual llvm::omp::DirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                                 llvm::omp::Directive dir) = 0;
 
   /// Obtain the list of clauses of the given OpenMP block or loop construct
   /// evaluation. If it's not an OpenMP construct, no modifications are made to
@@ -395,14 +397,14 @@ private:
       return;
 
     const auto &ompEval{eval.get<parser::OpenMPConstruct>()};
-    OmpDirectiveSet visitNested{
+    llvm::omp::DirectiveSet visitNested{
         visitDirective(eval, parser::omp::GetOmpDirectiveName(ompEval).v)};
 
-    if (visitNested.empty())
+    if (visitNested.none())
       return;
 
     if (lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval)) {
-      OmpDirectiveSet prevDirs{directivesOfInterest};
+      llvm::omp::DirectiveSet prevDirs{directivesOfInterest};
       directivesOfInterest = visitNested;
       visitEval(*nestedEval);
       directivesOfInterest = prevDirs;
@@ -413,7 +415,7 @@ protected:
   semantics::SemanticsContext &semaCtx;
 
 private:
-  OmpDirectiveSet directivesOfInterest;
+  llvm::omp::DirectiveSet directivesOfInterest;
 };
 
 /// Helper pattern to navigate target SPMD.
@@ -423,13 +425,14 @@ public:
   virtual ~TargetSPMDVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet initialize() override {
+  virtual llvm::omp::DirectiveSet initialize() override {
     teamsVisited = false;
     return llvm::omp::allTargetSet;
   }
 
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     // The default implementation does nothing, except it returns the allowed
@@ -501,8 +504,9 @@ public:
   virtual ~HostEvalVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     List<lower::omp::Clause> clauses;
@@ -626,8 +630,9 @@ public:
   }
 
 protected:
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     // We know this to be the case because any changes to the exec mode are made
@@ -1059,8 +1064,9 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   // Last value the induction variable at \p lvl actually takes:
   // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
   auto computeLastIV = [&](const int lvl) -> mlir::Value {
-    const auto constStep = fir::getIntIfConstant(steps[lvl]);
-    if (constStep && (*constStep == 1 || *constStep == -1))
+    const std::optional<llvm::APInt> constStep =
+        fir::getIntIfConstant(steps[lvl]);
+    if (constStep && (constStep->isOne() || constStep->isAllOnes()))
       return ubs[lvl];
     const mlir::Value lb = lbs[lvl];
     const mlir::Value ub = ubs[lvl];
@@ -4001,7 +4007,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
-            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
+            //
+            // For an allocatable capture, only synthesize an implicit default
+            // mapper when the type requires one; a flat record does not.
+            if (!isPointer &&
+                (hasDefaultMapper ||
+                 (isAllocatable &&
+                  requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -5024,11 +5036,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
       // statements or directives preventing them from being combined need the
       // attribute as well. Disallow block constructs that can only be outermost
       // leafs and loop transformation constructs.
-      OmpDirectiveSet combinableDirs =
+      llvm::omp::DirectiveSet combinableDirs =
           (llvm::omp::blockConstructSet &
-           ~OmpDirectiveSet{llvm::omp::Directive::OMPD_ordered,
-                            llvm::omp::Directive::OMPD_scope,
-                            llvm::omp::Directive::OMPD_taskgroup}) |
+           ~llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_ordered,
+                                    llvm::omp::Directive::OMPD_scope,
+                                    llvm::omp::Directive::OMPD_taskgroup}) |
           (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
       const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
       llvm::omp::Directive nestedDir =
@@ -5074,8 +5086,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
+  // Assumption clauses are hints with no representation in the OpenMP dialect,
+  // so this declarative directive is a no-op.
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+    TODO(converter.getCurrentLocation(),
+         "assumption clauses on the assumes directive");
 }
 
 static void
@@ -6534,9 +6549,31 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumeDirective &assumeConstruct) {
-  mlir::Location clauseLocation = converter.genLocation(assumeConstruct.source);
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(clauseLocation, "OpenMP ASSUME construct");
+  if (!semaCtx.langOptions().OpenMPSimd) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    lower::StatementContext stmtCtx;
+
+    const parser::OmpDirectiveSpecification &beginSpec =
+        assumeConstruct.BeginDir();
+    for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
+      mlir::Location clauseLoc = converter.genLocation(clause.source);
+      const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
+      if (!holds) {
+        TODO(clauseLoc, "assumption clause is not implemented yet");
+      }
+      const parser::Expr &parserExpr = holds->v.v.value();
+      const semantics::SomeExpr *expr = semantics::GetExpr(semaCtx, parserExpr);
+      assert(expr && "Expecting analyzed expression for holds clause");
+
+      mlir::Value cond =
+          fir::getBase(converter.genExprValue(*expr, stmtCtx, &clauseLoc));
+      cond =
+          firOpBuilder.createConvert(clauseLoc, firOpBuilder.getI1Type(), cond);
+      mlir::LLVM::AssumeOp::create(firOpBuilder, clauseLoc, cond);
+    }
+    stmtCtx.finalizeAndPop();
+  }
+  genNestedEvaluations(converter, eval);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -6568,6 +6605,98 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 queue.begin(), critName);
 }
 
+// Copy the character value `str` into fresh stack memory with an appended NUL
+// and return a pointer to its first character. Fortran characters are not
+// NUL-terminated, so the terminator is needed for C runtime entry points (such
+// as `__kmpc_error`) that expect a NUL-terminated string.
+static mlir::Value genNullTerminatedString(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::ExtendedValue &str) {
+  fir::factory::CharacterExprHelper helper(builder, loc);
+  const mlir::Value addr = fir::getBase(str);
+  const mlir::Value len = fir::getLen(str);
+  const auto charTy =
+      mlir::cast<fir::CharacterType>(fir::unwrapRefType(addr.getType()));
+  mlir::MLIRContext *ctx = builder.getContext();
+  const mlir::Type idxTy = builder.getIndexType();
+  const mlir::Value idxLen = builder.createConvert(loc, idxTy, len);
+  const mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  const mlir::Value lenPlusOne =
+      mlir::arith::AddIOp::create(builder, loc, idxLen, one);
+
+  // Allocate `len + 1` characters and copy the message into them, leaving room
+  // for the terminating NUL.
+  const fir::CharBoxValue temp = helper.createCharacterTemp(charTy, lenPlusOne);
+  helper.createCopy(temp, fir::CharBoxValue{addr, len}, len);
+
+  // Address the buffer as an array of single characters so the terminating NUL
+  // can be stored at index `len`.
+  const auto singleTy = fir::CharacterType::get(
+      ctx, charTy.getFKind(), fir::CharacterType::singleton());
+  const mlir::Type singleRefTy = builder.getRefType(singleTy);
+  const mlir::Type seqRefTy = builder.getRefType(fir::SequenceType::get(
+      {fir::SequenceType::getUnknownExtent()}, singleTy));
+  const mlir::Value seq =
+      builder.createConvert(loc, seqRefTy, temp.getBuffer());
+  const mlir::Value nulAddr =
+      fir::CoordinateOp::create(builder, loc, singleRefTy, seq, idxLen);
+  const mlir::Value zero =
+      builder.createIntegerConstant(loc, builder.getI8Type(), 0);
+  const mlir::Value nul =
+      helper.createSingletonFromCode(zero, charTy.getFKind());
+  fir::StoreOp::create(builder, loc, nul, nulAddr);
+
+  // Pass a pointer to the first character of the buffer.
+  return builder.createConvert(loc, singleRefTy, temp.getBuffer());
+}
+
+// Lower an `!$omp error` directive. The `at(compilation)` form is handled
+// entirely in semantics, so only the `at(execution)` form reaches lowering,
+// where it becomes an `omp.error` operation.
+static void genErrorDirective(lower::AbstractConverter &converter,
+                              semantics::SemanticsContext &semaCtx,
+                              const parser::OmpErrorDirective &errDir) {
+  const semantics::omp::OmpErrorArgs args{
+      semantics::omp::GetErrorDirectiveArgs(errDir)};
+
+  if (args.at != parser::OmpAtClause::ActionTime::Execution ||
+      semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  std::optional<std::string> message;
+  MaybeExpr messageExpr;
+  if (args.message) {
+    if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
+        message = *val;
+      else
+        messageExpr = expr;
+    }
+  }
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = converter.getCurrentLocation();
+  const mlir::omp::ClauseSeverity sev =
+      args.severity == parser::OmpSeverityClause::SevLevel::Warning
+          ? mlir::omp::ClauseSeverity::warning
+          : mlir::omp::ClauseSeverity::fatal;
+
+  // A compile-time-constant message is stored directly on the operation as an
+  // attribute. A non-constant message is lowered to a null-terminated string in
+  // memory and passed as the `message_expr` operand.
+  mlir::StringAttr msgAttr;
+  mlir::Value msgExprVal;
+  if (message) {
+    msgAttr = builder.getStringAttr(*message);
+  } else if (messageExpr) {
+    lower::StatementContext stmtCtx;
+    fir::ExtendedValue str = converter.genExprAddr(loc, *messageExpr, stmtCtx);
+    msgExprVal = genNullTerminatedString(builder, loc, str);
+  }
+
+  mlir::omp::ErrorOp::create(builder, loc, sev, msgAttr, msgExprVal);
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -6576,10 +6705,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                     [&](const parser::OmpNothingDirective &) {
                       // nothing-directive is a no-op (OpenMP 5.2 [8.4])
                     },
-                    [&](const parser::OmpErrorDirective &) {
-                      if (!semaCtx.langOptions().OpenMPSimd)
-                        TODO(converter.getCurrentLocation(),
-                             "OmpErrorDirective");
+                    [&](const parser::OmpErrorDirective &errDir) {
+                      genErrorDirective(converter, semaCtx, errDir);
                     },
                 },
                 dir.u);
@@ -6912,7 +7039,7 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::OmpClauseSet reqs;
+    llvm::omp::ClauseSet reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
