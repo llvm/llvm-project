@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##===-- sandbox.py -------------------------------------------*- Python -*-===##
 ##
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -14,10 +14,7 @@ import os
 import signal
 import sys
 
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 import cui
 

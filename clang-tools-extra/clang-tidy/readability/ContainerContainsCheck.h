@@ -29,7 +29,7 @@ public:
     return LO.CPlusPlus;
   }
   std::optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_AsIs;
+    return TK_IgnoreUnlessSpelledInSource;
   }
 };
 

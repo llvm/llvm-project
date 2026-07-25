@@ -192,27 +192,3 @@ template <class... Types> static const bool inheritance_relocatability_matches_b
 static_assert(multiple_inheritance_is_relocatable<S4, S5> == multiple_inheritance_is_relocatable<S5, S4>);
 static_assert(inheritance_relocatability_matches_bases_v<S4, S5>);
 static_assert(inheritance_relocatability_matches_bases_v<S5, S4>);
-
-struct AA AddressDiscriminatedPolymorphicBase trivially_relocatable_if_eligible {
-  virtual void foo();
-};
-
-struct IA NoAddressDiscriminatedPolymorphicBase trivially_relocatable_if_eligible {
-  virtual void bar();
-};
-
-template <class T> struct UnionWrapper trivially_relocatable_if_eligible {
-  union U {
-    T field1;
-  } u;
-};
-
-static_assert(!test_is_trivially_relocatable_v<AddressDiscriminatedPolymorphicBase>);
-static_assert(test_is_trivially_relocatable_v<NoAddressDiscriminatedPolymorphicBase>);
-static_assert(inheritance_relocatability_matches_bases_v<AddressDiscriminatedPolymorphicBase, NoAddressDiscriminatedPolymorphicBase>);
-static_assert(inheritance_relocatability_matches_bases_v<NoAddressDiscriminatedPolymorphicBase, AddressDiscriminatedPolymorphicBase>);
-
-static_assert(!test_is_trivially_relocatable_v<UnionWrapper<AddressDiscriminatedPolymorphicBase>>);
-static_assert(test_is_trivially_relocatable_v<UnionWrapper<NoAddressDiscriminatedPolymorphicBase>>);
-static_assert(!test_is_trivially_relocatable_v<UnionWrapper<MultipleInheriter<NoAddressDiscriminatedPolymorphicBase, AddressDiscriminatedPolymorphicBase>>>);
-static_assert(!test_is_trivially_relocatable_v<UnionWrapper<MultipleInheriter<AddressDiscriminatedPolymorphicBase, NoAddressDiscriminatedPolymorphicBase>>>);

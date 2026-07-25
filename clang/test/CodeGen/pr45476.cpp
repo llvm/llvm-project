@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv6m-eabi -emit-llvm %s -o - | FileCheck -check-prefix=LIBCALL %s
+// RUN: %clang_cc1 -triple thumbv6m-eabi -emit-llvm %s -o - | FileCheck -check-prefix=LIBCALL %s
 // RUN: %clang_cc1 -triple armv8-eabi -emit-llvm %s -o - | FileCheck -check-prefix=NATIVE %s
 // PR45476
 

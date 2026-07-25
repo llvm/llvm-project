@@ -28,7 +28,7 @@
 // stack pointer when compiling a C function.
 // Hence we have to write this function in assembly.
 
-.section .text
+TEXT_SECTION
 .file "hwasan_setjmp_aarch64.S"
 
 .global ASM_WRAPPER_NAME(setjmp)

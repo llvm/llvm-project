@@ -157,66 +157,55 @@ static_assert(And1<S, S>() == 1);
 // FIXME: The diagnostics are not so great
 static_assert(And1<int>() == 1); // expected-error {{no matching function for call to 'And1'}}
                                  // expected-note@#and1 {{candidate template ignored: constraints not satisfied [with T = <int>]}}
-                                 // expected-note@#and1 {{because 'typename T::type' does not satisfy 'C'}}
-                                 // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                 // expected-note@#and1 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(And1<S, int>() == 1); // expected-error {{no matching function for call to 'And1'}}
                                    // expected-note@#and1 {{candidate template ignored: constraints not satisfied [with T = <S, int>]}}
-                                   // expected-note@#and1 {{because 'typename T::type' does not satisfy 'C'}}
-                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and1 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(And1<int, S>() == 1); // expected-error {{no matching function for call to 'And1'}}
                                    // expected-note@#and1 {{candidate template ignored: constraints not satisfied [with T = <int, S>]}}
-                                   // expected-note@#and1 {{because 'typename T::type' does not satisfy 'C'}}
-                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and1 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(And2<S>() == 2);
 static_assert(And2<S, S>() == 2);
 static_assert(And2<int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
                                   // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = int, U = <>]}}
-                                  // expected-note@#and2 {{because 'typename U::type' does not satisfy 'C'}}
-                                  // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                  // expected-note@#and2 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 
 static_assert(And2<int, int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
                                       // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = S, U = <int>]}} \
-                                      // expected-note@#and2 {{because 'typename U::type' does not satisfy 'C'}}
-                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                      // expected-note@#and2 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(And2<S, int>() == 2); // expected-error {{no matching function for call to 'And2'}}
                                    // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = int, U = <S>]}}
-                                   // expected-note@#and2 {{because 'typename T::type' does not satisfy 'C'}}
-                                 // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and2 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(And2<int, S>() == 2); // expected-error {{no matching function for call to 'And2'}}
                                    // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = int, U = <int>]}}
-                                   // expected-note@#and2 {{because 'typename T::type' does not satisfy 'C'}}
-                                 // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and2 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(And3<S>() == 3);
 static_assert(And3<S, S>() == 3);
 static_assert(And3<int>() == 3);   // expected-error {{no matching function for call to 'And3'}}
                                    // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = int, U = <>]}}
-                                   // expected-note@#and3 {{because 'typename T::type' does not satisfy 'C'}}
-                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and3 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 
 static_assert(And3<int, int>() == 3);  // expected-error {{no matching function for call to 'And3'}}
                                       // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = int, U = <int>]}}
-                                      // expected-note@#and3 {{because 'typename T::type' does not satisfy 'C'}}
-                                     // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                      // expected-note@#and3 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 
 static_assert(And3<S, int>() == 3); // expected-error {{no matching function for call to 'And3'}}
                                    // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = S, U = <int>]}}
-                                   // expected-note@#and3 {{because 'typename U::type' does not satisfy 'C'}}
-                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and3 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 
 static_assert(And3<int, S>() == 3); // expected-error {{no matching function for call to 'And3'}}
                                    // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = int, U = <S>]}}
-                                   // expected-note@#and3 {{because 'typename T::type' does not satisfy 'C'}}
-                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                   // expected-note@#and3 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 
 static_assert(Or1<>() == 1); // expected-error {{no matching function for call to 'Or1'}}
@@ -227,8 +216,7 @@ static_assert(Or1<S, int>() == 1);
 static_assert(Or1<S, S>() == 1);
 static_assert(Or1<int>() == 1); // expected-error {{no matching function for call to 'Or1'}}
                                 // expected-note@#or1 {{candidate template ignored: constraints not satisfied}}
-                                // expected-note@#or1 {{because 'typename T::type' does not satisfy 'C'}}
-                                // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                // expected-note@#or1 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 
 static_assert(Or2<S>() == 2);
 static_assert(Or2<int, S>() == 2);
@@ -236,16 +224,14 @@ static_assert(Or2<S, int>() == 2);
 static_assert(Or2<S, S>() == 2);
 static_assert(Or2<int>() == 2); // expected-error {{no matching function for call to 'Or2'}}
                                 // expected-note@#or2 {{candidate template ignored: constraints not satisfied [with T = int, U = <>]}}
-                                // expected-note@#or2 {{because 'typename T::type' does not satisfy 'C'}}
-                                // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                // expected-note@#or2 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 static_assert(Or3<S>() == 3);
 static_assert(Or3<int, S>() == 3);
 static_assert(Or3<S, int>() == 3);
 static_assert(Or3<S, S>() == 3);
 static_assert(Or3<int>() == 3); // expected-error {{no matching function for call to 'Or3'}}
                                 // expected-note@#or3 {{candidate template ignored: constraints not satisfied}}
-                                // expected-note@#or3 {{because 'typename T::type' does not satisfy 'C'}}
-                                // expected-note@#C {{because 'T' does not satisfy 'A'}}
+                                // expected-note@#or3 {{because substituted constraint expression is ill-formed: type 'int' cannot be used prior to '::' because it has no members}}
 }
 
 namespace bool_conversion_break {
@@ -504,5 +490,111 @@ void test() {
 }
 
 }
+
+namespace GH177245 {
+
+template <class _Fun, class... _As>
+concept __callable = requires (_Fun __fun, _As...) { __fun(); };
+
+template <class... _Args>
+struct __mdispatch {
+  template <class... _Ts>
+    requires (__callable<_Args, _Ts...> && ...)
+  void operator()();
+};
+
+static_assert(!__callable<__mdispatch<int>>);
+
+}
+
+}
+
+namespace GH190169 {
+
+namespace _1 {
+
+template <typename Type, typename... Choices>
+concept OneOf = (... || __is_same(Type, Choices));
+
+template <typename F, typename... Ts>
+using check = decltype((F{}(Ts{}), ...));
+
+using X = check<decltype([](auto val) {
+  [](OneOf<int, char> auto) {}(val);
+}), char>;
+
+}
+
+namespace _2 {
+
+template <typename T, typename U>
+concept Same = __is_same(T, U);
+
+template <typename Type, typename... Choices>
+concept OneOf = (... || Same<Type, Choices>);
+
+template <class... Ts>
+struct visitor : Ts... { using Ts::operator()...; };
+
+struct A {};
+struct B {};
+struct C {};
+
+template <typename F, typename T, typename = decltype(F{}(T{}))>
+struct check {};
+
+template <typename F, typename... Ts>
+struct check_all : check<F, Ts>... {};
+
+using F = decltype([](auto val) {
+  visitor{[](const A&) {},
+          [](const OneOf<B, C> auto&) {}}(val);
+});
+
+check_all<F, A, B, C> x;
+
+}
+
+}
+
+namespace GH188505 {
+
+template <class _Tp, class _Up>
+concept same_as = __is_same(_Tp, _Up) && __is_same(_Up, _Tp);
+
+template <typename T, typename... Ts>
+concept AnyOf = (same_as<T, Ts> || ...);
+
+struct Constant
+{
+    template <typename T>
+    using alias = const T;
+};
+
+struct Mutable
+{
+    template <typename T>
+    using alias = __remove_cv(T);
+};
+
+template <template <typename> typename M, typename T>
+concept MutabilityAliasFor = requires {
+    requires AnyOf<M<T>, const T, __remove_cv(T)>;
+    requires same_as<M<M<T>>, M<T>>;
+};
+
+template <template <typename> typename M, typename... Ts>
+concept MutabilityAliasForAllOf = (MutabilityAliasFor<M, Ts> && ...);
+
+template <template <typename T> typename M>
+concept MutabilityAlias = MutabilityAliasForAllOf<M, int, char, double>;
+
+static_assert(AnyOf<char, const char, char>);
+
+static_assert(MutabilityAliasFor<Constant::alias, int>);
+static_assert(MutabilityAliasForAllOf<Constant::alias, char, int>);
+
+static_assert(MutabilityAlias<Constant::alias>);
+static_assert(MutabilityAlias<Mutable::alias>);
 
 }

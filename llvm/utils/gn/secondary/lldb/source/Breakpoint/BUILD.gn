@@ -30,6 +30,7 @@ static_library("Breakpoint") {
     "BreakpointResolverName.cpp",
     "BreakpointResolverScripted.cpp",
     "BreakpointSite.cpp",
+    "ScriptedBreakpointOverrideResolver.cpp",
     "StopPointSiteList.cpp",
     "Stoppoint.cpp",
     "StoppointCallbackContext.cpp",

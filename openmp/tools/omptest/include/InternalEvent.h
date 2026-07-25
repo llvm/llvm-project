@@ -371,6 +371,7 @@ struct BufferRecordDeallocation : public EventBase<BufferRecordDeallocation> {
 // take precedence over the following default equality operator definition.
 bool operator==(const ParallelBegin &, const ParallelBegin &);
 bool operator==(const Work &, const Work &);
+bool operator==(const Dispatch &, const Dispatch &);
 bool operator==(const ImplicitTask &, const ImplicitTask &);
 bool operator==(const SyncRegion &, const SyncRegion &);
 bool operator==(const Target &, const Target &);

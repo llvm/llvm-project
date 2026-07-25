@@ -43,7 +43,12 @@ public:
           << remark::add("This is a test missed remark")
           << remark::reason("because we are testing the remark pipeline")
           << remark::suggest("try using the remark pipeline feature");
-
+      mlir::remark::passed(
+          loc,
+          remark::RemarkOpts::name("test-remark").category("category-1-passed"))
+          << remark::add("This is a test passed remark (should be dropped)")
+          << remark::reason("because we are testing the remark pipeline")
+          << remark::suggest("try using the remark pipeline feature");
       mlir::remark::passed(
           loc,
           remark::RemarkOpts::name("test-remark").category("category-1-passed"))
@@ -61,6 +66,20 @@ public:
       mlir::remark::analysis(loc, remark::RemarkOpts::name("test-remark")
                                       .category("category-2-analysis"))
           << remark::add("This is a test analysis remark");
+
+      // Test remark linking: emit an analysis remark, then link a passed
+      // remark to it using relatedTo on RemarkOpts (no manual ID threading).
+      auto analysisRemark = mlir::remark::analysis(
+          loc,
+          remark::RemarkOpts::name("test-remark").category("category-link"));
+      analysisRemark << remark::add("Analysis that enables optimization");
+
+      // The passed remark finds the analysis via relatedTo on RemarkOpts:
+      mlir::remark::passed(loc, remark::RemarkOpts::name("test-remark")
+                                    .category("category-link")
+                                    .relatedTo(analysisRemark))
+          << remark::add("Optimization enabled by analysis");
+
       return WalkResult::advance();
     });
   }

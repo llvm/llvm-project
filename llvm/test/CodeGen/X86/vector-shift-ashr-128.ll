@@ -1673,7 +1673,7 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,65535,0,65535,65535]
 ; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,128,0,16,0,2,0,32,0,64,0,0,0,8,0,4]
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
@@ -1750,7 +1750,7 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,65535,0,65535,65535]
 ; X86-SSE-NEXT:    pandn %xmm0, %xmm1
-; X86-SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,128,0,16,0,2,0,32,0,64,0,0,0,8,0,4]
 ; X86-SSE-NEXT:    por %xmm1, %xmm0
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
@@ -2042,6 +2042,55 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; X86-SSE-NEXT:    psubb %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %shift = ashr <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+  ret <16 x i8> %shift
+}
+
+define <16 x i8> @splatconstant_shift_v16i8_by_one(<16 x i8> %a) nounwind {
+; SSE-LABEL: splatconstant_shift_v16i8_by_one:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pavgb %xmm0, %xmm1
+; SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: splatconstant_shift_v16i8_by_one:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpavgb %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; XOP-LABEL: splatconstant_shift_v16i8_by_one:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; XOP-NEXT:    vpshab %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: splatconstant_shift_v16i8_by_one:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpavgb %xmm1, %xmm0, %xmm1
+; AVX512-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: splatconstant_shift_v16i8_by_one:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpavgb %xmm1, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (m32bcst & ~xmm0)
+; AVX512VL-NEXT:    retq
+;
+; X86-SSE-LABEL: splatconstant_shift_v16i8_by_one:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-SSE-NEXT:    pavgb %xmm0, %xmm1
+; X86-SSE-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    pxor %xmm1, %xmm0
+; X86-SSE-NEXT:    retl
+  %shift = ashr <16 x i8> %a, splat (i8 1)
   ret <16 x i8> %shift
 }
 

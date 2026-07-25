@@ -43,11 +43,17 @@ entry:
 }
 
 define half @ui8_to_half(ptr %i, ptr %f) {
-; CHECK-LABEL: ui8_to_half:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ucvtf h0, w8
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui8_to_half:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr b0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf h0, h0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui8_to_half:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrb w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf h0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i8, ptr %i, align 1
   %conv = uitofp i8 %ld to half
@@ -91,11 +97,17 @@ entry:
 }
 
 define half @ui16_to_half(ptr %i, ptr %f) {
-; CHECK-LABEL: ui16_to_half:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ucvtf h0, w8
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: ui16_to_half:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr h0, [x0]
+; NEON-ENABLED-NEXT:    ucvtf h0, h0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: ui16_to_half:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrh w8, [x0]
+; NEON-DISABLED-NEXT:    ucvtf h0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i16, ptr %i, align 1
   %conv = uitofp i16 %ld to half
@@ -277,11 +289,17 @@ entry:
 }
 
 define half @si16_to_half(ptr %i, ptr %f) {
-; CHECK-LABEL: si16_to_half:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrsh w8, [x0]
-; CHECK-NEXT:    scvtf h0, w8
-; CHECK-NEXT:    ret
+; NEON-ENABLED-LABEL: si16_to_half:
+; NEON-ENABLED:       // %bb.0: // %entry
+; NEON-ENABLED-NEXT:    ldr h0, [x0]
+; NEON-ENABLED-NEXT:    scvtf h0, h0
+; NEON-ENABLED-NEXT:    ret
+;
+; NEON-DISABLED-LABEL: si16_to_half:
+; NEON-DISABLED:       // %bb.0: // %entry
+; NEON-DISABLED-NEXT:    ldrsh w8, [x0]
+; NEON-DISABLED-NEXT:    scvtf h0, w8
+; NEON-DISABLED-NEXT:    ret
 entry:
   %ld = load i16, ptr %i, align 1
   %conv = sitofp i16 %ld to half

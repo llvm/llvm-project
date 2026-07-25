@@ -35,8 +35,8 @@ struct HostInfoLinuxFields {
 
 static HostInfoLinuxFields *g_fields = nullptr;
 
-void HostInfoLinux::Initialize(SharedLibraryDirectoryHelper *helper) {
-  HostInfoPosix::Initialize(helper);
+void HostInfoLinux::Initialize() {
+  HostInfoPosix::Initialize();
 
   g_fields = new HostInfoLinuxFields();
 }

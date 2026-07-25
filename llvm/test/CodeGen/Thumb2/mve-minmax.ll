@@ -259,7 +259,7 @@ define arm_aapcs_vfpcc <4 x float> @maxnm_float32_t(<4 x float> %src1, <4 x floa
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
   %cmp = fcmp fast ogt <4 x float> %src2, %src1
-  %0 = select <4 x i1> %cmp, <4 x float> %src2, <4 x float> %src1
+  %0 = select fast <4 x i1> %cmp, <4 x float> %src2, <4 x float> %src1
   ret <4 x float> %0
 }
 
@@ -294,7 +294,7 @@ define arm_aapcs_vfpcc <8 x half> @minnm_float16_t(<8 x half> %src1, <8 x half> 
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
   %cmp = fcmp fast ogt <8 x half> %src2, %src1
-  %0 = select <8 x i1> %cmp, <8 x half> %src1, <8 x half> %src2
+  %0 = select fast <8 x i1> %cmp, <8 x half> %src1, <8 x half> %src2
   ret <8 x half> %0
 }
 
@@ -327,6 +327,6 @@ define arm_aapcs_vfpcc <2 x double> @maxnm_float64_t(<2 x double> %src1, <2 x do
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp = fcmp fast ogt <2 x double> %src2, %src1
-  %0 = select <2 x i1> %cmp, <2 x double> %src2, <2 x double> %src1
+  %0 = select fast <2 x i1> %cmp, <2 x double> %src2, <2 x double> %src1
   ret <2 x double> %0
 }

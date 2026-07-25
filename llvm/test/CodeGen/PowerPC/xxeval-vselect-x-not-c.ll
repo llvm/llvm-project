@@ -15,11 +15,9 @@ define <4 x i32> @ternary_A_and_BC_not_C_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i3
 ; CHECK-LABEL: ternary_A_and_BC_not_C_4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    xxland vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 161
 ; CHECK-NEXT:    blr
 entry:
   %and = and <4 x i32> %B, %C
@@ -33,12 +31,10 @@ define <2 x i64> @ternary_A_and_BC_not_C_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i6
 ; CHECK-LABEL: ternary_A_and_BC_not_C_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxland vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 161
 ; CHECK-NEXT:    blr
 entry:
   %and = and <2 x i64> %B, %C
@@ -52,11 +48,9 @@ define <16 x i8> @ternary_A_and_BC_not_C_16x8(<16 x i1> %A, <16 x i8> %B, <16 x 
 ; CHECK-LABEL: ternary_A_and_BC_not_C_16x8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v5, 7
-; CHECK-NEXT:    xxland vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslb v2, v2, v5
 ; CHECK-NEXT:    vsrab v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 161
 ; CHECK-NEXT:    blr
 entry:
   %and = and <16 x i8> %B, %C
@@ -70,11 +64,9 @@ define <8 x i16> @ternary_A_and_BC_not_C_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i1
 ; CHECK-LABEL: ternary_A_and_BC_not_C_8x16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltiw v5, 983055
-; CHECK-NEXT:    xxland vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslh v2, v2, v5
 ; CHECK-NEXT:    vsrah v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 161
 ; CHECK-NEXT:    blr
 entry:
   %and = and <8 x i16> %B, %C
@@ -88,10 +80,9 @@ define <4 x i32> @ternary_A_B_not_C_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C
 ; CHECK-LABEL: ternary_A_B_not_C_4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    xxlnor vs0, v4, v4
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs0, v3, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 163
 ; CHECK-NEXT:    blr
 entry:
   %not = xor <4 x i32> %C, <i32 -1, i32 -1, i32 -1, i32 -1>  ; Vector not operation
@@ -104,11 +95,10 @@ define <2 x i64> @ternary_A_B_not_C_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %C
 ; CHECK-LABEL: ternary_A_B_not_C_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlnor vs0, v4, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs0, v3, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 163
 ; CHECK-NEXT:    blr
 entry:
   %not = xor <2 x i64> %C, <i64 -1, i64 -1>  ; Vector not operation
@@ -121,10 +111,9 @@ define <16 x i8> @ternary_A_B_not_C_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %
 ; CHECK-LABEL: ternary_A_B_not_C_16x8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v5, 7
-; CHECK-NEXT:    xxlnor vs0, v4, v4
 ; CHECK-NEXT:    vslb v2, v2, v5
 ; CHECK-NEXT:    vsrab v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs0, v3, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 163
 ; CHECK-NEXT:    blr
 entry:
   %not = xor <16 x i8> %C, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>  ; Vector not operation
@@ -137,10 +126,9 @@ define <8 x i16> @ternary_A_B_not_C_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C
 ; CHECK-LABEL: ternary_A_B_not_C_8x16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltiw v5, 983055
-; CHECK-NEXT:    xxlnor vs0, v4, v4
 ; CHECK-NEXT:    vslh v2, v2, v5
 ; CHECK-NEXT:    vsrah v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs0, v3, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 163
 ; CHECK-NEXT:    blr
 entry:
   %not = xor <8 x i16> %C, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>  ; Vector not operation
@@ -153,11 +141,9 @@ define <4 x i32> @ternary_A_xor_BC_not_C_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i3
 ; CHECK-LABEL: ternary_A_xor_BC_not_C_4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    xxlxor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 166
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <4 x i32> %B, %C
@@ -171,12 +157,10 @@ define <2 x i64> @ternary_A_xor_BC_not_C_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i6
 ; CHECK-LABEL: ternary_A_xor_BC_not_C_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlxor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 166
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <2 x i64> %B, %C
@@ -190,11 +174,9 @@ define <16 x i8> @ternary_A_xor_BC_not_C_16x8(<16 x i1> %A, <16 x i8> %B, <16 x 
 ; CHECK-LABEL: ternary_A_xor_BC_not_C_16x8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v5, 7
-; CHECK-NEXT:    xxlxor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslb v2, v2, v5
 ; CHECK-NEXT:    vsrab v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 166
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <16 x i8> %B, %C
@@ -208,11 +190,9 @@ define <8 x i16> @ternary_A_xor_BC_not_C_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i1
 ; CHECK-LABEL: ternary_A_xor_BC_not_C_8x16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltiw v5, 983055
-; CHECK-NEXT:    xxlxor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslh v2, v2, v5
 ; CHECK-NEXT:    vsrah v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 166
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <8 x i16> %B, %C
@@ -226,11 +206,9 @@ define <4 x i32> @ternary_A_or_BC_not_C_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32
 ; CHECK-LABEL: ternary_A_or_BC_not_C_4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    xxlor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 167
 ; CHECK-NEXT:    blr
 entry:
   %or = or <4 x i32> %B, %C
@@ -244,12 +222,10 @@ define <2 x i64> @ternary_A_or_BC_not_C_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64
 ; CHECK-LABEL: ternary_A_or_BC_not_C_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 167
 ; CHECK-NEXT:    blr
 entry:
   %or = or <2 x i64> %B, %C
@@ -263,11 +239,9 @@ define <16 x i8> @ternary_A_or_BC_not_C_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i
 ; CHECK-LABEL: ternary_A_or_BC_not_C_16x8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v5, 7
-; CHECK-NEXT:    xxlor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslb v2, v2, v5
 ; CHECK-NEXT:    vsrab v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 167
 ; CHECK-NEXT:    blr
 entry:
   %or = or <16 x i8> %B, %C
@@ -281,11 +255,9 @@ define <8 x i16> @ternary_A_or_BC_not_C_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16
 ; CHECK-LABEL: ternary_A_or_BC_not_C_8x16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltiw v5, 983055
-; CHECK-NEXT:    xxlor vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslh v2, v2, v5
 ; CHECK-NEXT:    vsrah v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 167
 ; CHECK-NEXT:    blr
 entry:
   %or = or <8 x i16> %B, %C
@@ -299,11 +271,9 @@ define <4 x i32> @ternary_A_not_B_not_C_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32
 ; CHECK-LABEL: ternary_A_not_B_not_C_4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    xxlnor vs0, v3, v3
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 172
 ; CHECK-NEXT:    blr
 entry:
   %not_b = xor <4 x i32> %B, <i32 -1, i32 -1, i32 -1, i32 -1>  ; Vector not operation
@@ -317,12 +287,10 @@ define <2 x i64> @ternary_A_not_B_not_C_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64
 ; CHECK-LABEL: ternary_A_not_B_not_C_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlnor vs0, v3, v3
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 172
 ; CHECK-NEXT:    blr
 entry:
   %not_b = xor <2 x i64> %B, <i64 -1, i64 -1>  ; Vector not operation
@@ -336,11 +304,9 @@ define <16 x i8> @ternary_A_not_B_not_C_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i
 ; CHECK-LABEL: ternary_A_not_B_not_C_16x8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v5, 7
-; CHECK-NEXT:    xxlnor vs0, v3, v3
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslb v2, v2, v5
 ; CHECK-NEXT:    vsrab v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 172
 ; CHECK-NEXT:    blr
 entry:
   %not_b = xor <16 x i8> %B, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>  ; Vector not operation
@@ -354,11 +320,9 @@ define <8 x i16> @ternary_A_not_B_not_C_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16
 ; CHECK-LABEL: ternary_A_not_B_not_C_8x16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltiw v5, 983055
-; CHECK-NEXT:    xxlnor vs0, v3, v3
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslh v2, v2, v5
 ; CHECK-NEXT:    vsrah v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 172
 ; CHECK-NEXT:    blr
 entry:
   %not_b = xor <8 x i16> %B, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>  ; Vector not operation
@@ -372,11 +336,9 @@ define <4 x i32> @ternary_A_nand_BC_not_C_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i
 ; CHECK-LABEL: ternary_A_nand_BC_not_C_4x32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    xxlnand vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslw v2, v2, v5
 ; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 174
 ; CHECK-NEXT:    blr
 entry:
   %and = and <4 x i32> %B, %C
@@ -391,12 +353,10 @@ define <2 x i64> @ternary_A_nand_BC_not_C_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i
 ; CHECK-LABEL: ternary_A_nand_BC_not_C_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlnand vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 174
 ; CHECK-NEXT:    blr
 entry:
   %and = and <2 x i64> %B, %C
@@ -411,11 +371,9 @@ define <16 x i8> @ternary_A_nand_BC_not_C_16x8(<16 x i1> %A, <16 x i8> %B, <16 x
 ; CHECK-LABEL: ternary_A_nand_BC_not_C_16x8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltib v5, 7
-; CHECK-NEXT:    xxlnand vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslb v2, v2, v5
 ; CHECK-NEXT:    vsrab v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 174
 ; CHECK-NEXT:    blr
 entry:
   %and = and <16 x i8> %B, %C
@@ -430,11 +388,9 @@ define <8 x i16> @ternary_A_nand_BC_not_C_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i
 ; CHECK-LABEL: ternary_A_nand_BC_not_C_8x16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltiw v5, 983055
-; CHECK-NEXT:    xxlnand vs0, v3, v4
-; CHECK-NEXT:    xxlnor vs1, v4, v4
 ; CHECK-NEXT:    vslh v2, v2, v5
 ; CHECK-NEXT:    vsrah v2, v2, v5
-; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 174
 ; CHECK-NEXT:    blr
 entry:
   %and = and <8 x i16> %B, %C

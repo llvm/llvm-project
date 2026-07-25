@@ -30,7 +30,8 @@ void MisplacedConstCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static QualType guessAlternateQualification(ASTContext &Context, QualType QT) {
+static QualType guessAlternateQualification(const ASTContext &Context,
+                                            QualType QT) {
   // We're given a QualType from a typedef where the qualifiers apply to the
   // pointer instead of the pointee. Strip the const qualifier from the pointer
   // type and add it to the pointee instead.
@@ -40,15 +41,15 @@ static QualType guessAlternateQualification(ASTContext &Context, QualType QT) {
   Qualifiers Quals = QT.getLocalQualifiers();
   Quals.removeConst();
 
-  QualType NewQT = Context.getPointerType(
+  const QualType NewQT = Context.getPointerType(
       QualType(QT->getPointeeType().getTypePtr(), Qualifiers::Const));
   return NewQT.withCVRQualifiers(Quals.getCVRQualifiers());
 }
 
 void MisplacedConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<ValueDecl>("decl");
-  ASTContext &Ctx = *Result.Context;
-  QualType CanQT = Var->getType().getCanonicalType();
+  const ASTContext &Ctx = *Result.Context;
+  const QualType CanQT = Var->getType().getCanonicalType();
 
   SourceLocation AliasLoc;
   const char *AliasType = nullptr;

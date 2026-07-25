@@ -69,7 +69,7 @@ template <typename Info> class OnDiskChainedHashTableGenerator {
         : Key(Key), Data(Data), Next(nullptr), Hash(InfoObj.ComputeHash(Key)) {}
   };
 
-  typedef typename Info::offset_type offset_type;
+  using offset_type = typename Info::offset_type;
   offset_type NumBuckets;
   offset_type NumEntries;
   llvm::SpecificBumpPtrAllocator<Item> BA;
@@ -278,12 +278,12 @@ template <typename Info> class OnDiskChainedHashTable {
   Info InfoObj;
 
 public:
-  typedef Info InfoType;
-  typedef typename Info::internal_key_type internal_key_type;
-  typedef typename Info::external_key_type external_key_type;
-  typedef typename Info::data_type data_type;
-  typedef typename Info::hash_value_type hash_value_type;
-  typedef typename Info::offset_type offset_type;
+  using InfoType = Info;
+  using internal_key_type = typename Info::internal_key_type;
+  using external_key_type = typename Info::external_key_type;
+  using data_type = typename Info::data_type;
+  using hash_value_type = typename Info::hash_value_type;
+  using offset_type = typename Info::offset_type;
 
   OnDiskChainedHashTable(offset_type NumBuckets, offset_type NumEntries,
                          const unsigned char *Buckets,
@@ -435,12 +435,12 @@ class OnDiskIterableChainedHashTable : public OnDiskChainedHashTable<Info> {
   const unsigned char *Payload;
 
 public:
-  typedef OnDiskChainedHashTable<Info>          base_type;
-  typedef typename base_type::internal_key_type internal_key_type;
-  typedef typename base_type::external_key_type external_key_type;
-  typedef typename base_type::data_type         data_type;
-  typedef typename base_type::hash_value_type   hash_value_type;
-  typedef typename base_type::offset_type       offset_type;
+  using base_type = OnDiskChainedHashTable<Info>;
+  using internal_key_type = typename base_type::internal_key_type;
+  using external_key_type = typename base_type::external_key_type;
+  using data_type = typename base_type::data_type;
+  using hash_value_type = typename base_type::hash_value_type;
+  using offset_type = typename base_type::offset_type;
 
 private:
   /// Iterates over all of the keys in the table.
@@ -450,7 +450,7 @@ private:
     offset_type NumEntriesLeft;
 
   public:
-    typedef external_key_type value_type;
+    using value_type = external_key_type;
 
     iterator_base(const unsigned char *const Ptr, offset_type NumEntries)
         : Ptr(Ptr), NumItemsInBucketLeft(0), NumEntriesLeft(NumEntries) {}
@@ -505,7 +505,7 @@ public:
     Info *InfoObj;
 
   public:
-    typedef external_key_type value_type;
+    using value_type = external_key_type;
 
     key_iterator(const unsigned char *const Ptr, offset_type NumEntries,
                  Info *InfoObj)
@@ -551,7 +551,7 @@ public:
     Info *InfoObj;
 
   public:
-    typedef data_type value_type;
+    using value_type = data_type;
 
     data_iterator(const unsigned char *const Ptr, offset_type NumEntries,
                   Info *InfoObj)

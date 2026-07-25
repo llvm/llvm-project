@@ -254,3 +254,67 @@ func::deduplicateArgsOfFuncOp(RewriterBase &rewriter, func::FuncOp funcOp,
 
   return std::make_pair(*newFuncOpOrFailure, newCallOp);
 }
+
+FailureOr<func::FuncOp>
+func::lookupFnDecl(SymbolOpInterface symTable, StringRef name,
+                   FunctionType funcT, SymbolTableCollection *symbolTables) {
+  FuncOp func;
+  if (symbolTables) {
+    func = symbolTables->lookupSymbolIn<FuncOp>(
+        symTable, StringAttr::get(symTable->getContext(), name));
+  } else {
+    func = llvm::dyn_cast_or_null<FuncOp>(
+        SymbolTable::lookupSymbolIn(symTable, name));
+  }
+
+  if (!func)
+    return func;
+
+  mlir::FunctionType foundFuncT = func.getFunctionType();
+  // Assert the signature of the found function is same as expected
+  if (funcT != foundFuncT) {
+    return func.emitError("matched function '")
+           << name << "' but with different type: " << foundFuncT
+           << " (expected " << funcT << ")";
+  }
+  return func;
+}
+
+func::FuncOp func::createFnDecl(OpBuilder &b, SymbolOpInterface symTable,
+                                StringRef name, FunctionType funcT,
+                                bool setPrivate,
+                                SymbolTableCollection *symbolTables) {
+  OpBuilder::InsertionGuard g(b);
+  assert(!symTable->getRegion(0).empty() && "expected non-empty region");
+  b.setInsertionPointToStart(&symTable->getRegion(0).front());
+  func::FuncOp funcOp =
+      func::FuncOp::create(b, symTable->getLoc(), name, funcT);
+  if (setPrivate)
+    funcOp.setPrivate();
+  if (symbolTables) {
+    SymbolTable &symbolTable = symbolTables->getSymbolTable(symTable);
+    symbolTable.insert(funcOp, symTable->getRegion(0).front().begin());
+  }
+  return funcOp;
+}
+
+FailureOr<func::FuncOp>
+func::lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable,
+                           StringRef funcName, TypeRange paramTypes,
+                           SymbolTableCollection *symbolTables,
+                           Type resultType) {
+  if (!resultType)
+    resultType = IntegerType::get(symTable->getContext(), 64);
+  auto funcT = FunctionType::get(b.getContext(), paramTypes, {resultType});
+  FailureOr<func::FuncOp> func =
+      lookupFnDecl(symTable, funcName, funcT, symbolTables);
+  // Failed due to type mismatch.
+  if (failed(func))
+    return func;
+  // Successfully matched existing decl.
+  if (*func)
+    return *func;
+
+  return createFnDecl(b, symTable, funcName, funcT,
+                      /*setPrivate=*/true, symbolTables);
+}

@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mincore.h"
 #include "src/sys/mman/mlock.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
+#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -20,8 +22,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcMincoreTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-// TODO: Replace with sysconf call once the function is properly implemented.
-constexpr size_t PAGE_SIZE = 4096;
+const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
 
 TEST_F(LlvmLibcMincoreTest, UnMappedMemory) {
   unsigned char vec;
@@ -35,7 +36,14 @@ TEST_F(LlvmLibcMincoreTest, UnalignedAddr) {
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU user space emulation returns EFAULT instead of EINVAL because it
+  // validates the pointer parameters first.
+  unsigned char vec;
+  int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, &vec);
+#else
   int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, nullptr);
+#endif
   EXPECT_THAT(res, Fails(EINVAL, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }

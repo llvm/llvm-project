@@ -1,54 +1,74 @@
 ! Test the MLIR pass pipeline
 
-! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -o /dev/null %s 2>&1 | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline -o /dev/null %s 2>&1 | FileCheck --check-prefixes=ALL,O0 %s
 ! -O0 is the default:
-! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O0 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL %s
+! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O0 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,O0 %s
 ! RUN: %flang_fc1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -O2 -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,O2 %s
 
 ! REQUIRES: asserts
 
 end program
 
+! At -O0 on the host (no OpenMP target-device compilation), InlineHLFIRAssign
+! is no longer scheduled. See PR #197092 follow-up restricting the -O0 pass
+! to OpenMP target-device compilation.
+! O0-NOT: InlineHLFIRAssign
+
 ! ALL: Pass statistics report
 ! ALL: Fortran::lower::VerifierPass
 
 ! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
-! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! O2-NEXT: 'fir.global' Pipeline
 ! O2-NEXT:   ExpressionSimplification
 ! O2-NEXT: 'func.func' Pipeline
+! O2-NEXT:   ExpressionSimplification
+! O2-NEXT: 'omp.declare_mapper' Pipeline
 ! O2-NEXT:   ExpressionSimplification
 ! O2-NEXT: 'omp.declare_reduction' Pipeline
 ! O2-NEXT:   ExpressionSimplification
 ! O2-NEXT: 'omp.private' Pipeline
 ! O2-NEXT:   ExpressionSimplification
 ! O2-NEXT: Canonicalizer
-! ALL:     Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL:     Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:'fir.global' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'func.func' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
+! ALL-NEXT:  SeparateAllocatableAssign
+! ALL-NEXT:'omp.declare_mapper' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! ALL:       InlineElementals
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'omp.declare_reduction' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
+! ALL-NEXT:  SeparateAllocatableAssign
 ! ALL-NEXT:'omp.private' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
+! ALL-NEXT:  SeparateAllocatableAssign
 ! O2-NEXT: Canonicalizer
 ! O2-NEXT: CSE
 ! O2-NEXT: (S) {{.*}} num-cse'd
 ! O2-NEXT: (S) {{.*}} num-dce'd
-! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! O2-NEXT: 'fir.global' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! O2-NEXT:   PropagateFortranVariableAttributes
 ! O2-NEXT:   OptimizedBufferization
 ! O2-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: 'func.func' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
+! O2-NEXT:   PropagateFortranVariableAttributes
+! O2-NEXT:   OptimizedBufferization
+! O2-NEXT:   InlineHLFIRAssign
+! O2-NEXT: 'omp.declare_mapper' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! O2-NEXT:   PropagateFortranVariableAttributes
 ! O2-NEXT:   OptimizedBufferization
@@ -66,10 +86,12 @@ end program
 ! ALL: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
-! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! O2-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! O2-NEXT:   'fir.global' Pipeline
 ! O2-NEXT:     InlineHLFIRAssign
 ! O2-NEXT:   'func.func' Pipeline
+! O2-NEXT:     InlineHLFIRAssign
+! O2-NEXT:   'omp.declare_mapper' Pipeline
 ! O2-NEXT:     InlineHLFIRAssign
 ! O2-NEXT:   'omp.declare_reduction' Pipeline
 ! O2-NEXT:     InlineHLFIRAssign
@@ -84,11 +106,13 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   ArrayValueCopy
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   CharacterConversion
@@ -119,11 +143,14 @@ end program
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:    'fir.global' Pipeline
 ! ALL-NEXT:      StackReclaim
 ! ALL-NEXT:      CFGConversion
 ! ALL-NEXT:    'func.func' Pipeline
+! ALL-NEXT:      StackReclaim
+! ALL-NEXT:      CFGConversion
+! ALL-NEXT:   'omp.declare_mapper' Pipeline
 ! ALL-NEXT:      StackReclaim
 ! ALL-NEXT:      CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
@@ -142,20 +169,24 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! O2-NEXT:  'func.func' Pipeline
 ! O2-NEXT:    SetRuntimeCallAttributes
+! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: BoxedProcedurePass
 ! O2-NEXT:  AddAliasTags
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'func.func' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:    RematerializeFIRBoxOpsPass
 ! ALL-NEXT:  'gpu.module' Pipeline
-! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
-! ALL-NEXT:   'func.func' Pipeline 
+! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
+! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:   AbstractResultOpt
-! ALL-NEXT:   'gpu.func' Pipeline 
+! ALL-NEXT:   'gpu.func' Pipeline
 ! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:  'omp.declare_mapper' Pipeline
+! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'omp.declare_reduction' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'omp.private' Pipeline

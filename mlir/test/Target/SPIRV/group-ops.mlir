@@ -1,11 +1,13 @@
-// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
+// RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip --split-input-file %s | FileCheck %s
 
 // RUN: %if spirv-tools %{ rm -rf %t %}
 // RUN: %if spirv-tools %{ mkdir %t %}
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, SubgroupBallotKHR, Groups, SubgroupBufferBlockIOINTEL, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_storage_buffer_storage_class, SPV_KHR_shader_ballot, SPV_INTEL_subgroups, SPV_KHR_uniform_group_instructions]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.3,
+  [Shader, Linkage, SubgroupBallotKHR, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR],
+  [SPV_KHR_storage_buffer_storage_class, SPV_KHR_shader_ballot, SPV_KHR_uniform_group_instructions]> {
   // CHECK-LABEL: @subgroup_ballot
   spirv.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> "None" {
     // CHECK: %{{.*}} = spirv.KHR.SubgroupBallot %{{.*}}: vector<4xi32>
@@ -23,30 +25,6 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, Subgrou
     // CHECK: spirv.GroupBroadcast <Workgroup> %{{.*}}, %{{.*}} : f32, vector<3xi32>
     %0 = spirv.GroupBroadcast <Workgroup> %value, %localid : f32, vector<3xi32>
     spirv.ReturnValue %0: f32
-  }
-  // CHECK-LABEL: @subgroup_block_read_intel
-  spirv.func @subgroup_block_read_intel(%ptr : !spirv.ptr<i32, StorageBuffer>) -> i32 "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : !spirv.ptr<i32, StorageBuffer> -> i32
-    %0 = spirv.INTEL.SubgroupBlockRead %ptr : !spirv.ptr<i32, StorageBuffer> -> i32
-    spirv.ReturnValue %0: i32
-  }
-  // CHECK-LABEL: @subgroup_block_read_intel_vector
-  spirv.func @subgroup_block_read_intel_vector(%ptr : !spirv.ptr<i32, StorageBuffer>) -> vector<3xi32> "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockRead %{{.*}} : !spirv.ptr<i32, StorageBuffer> -> vector<3xi32>
-    %0 = spirv.INTEL.SubgroupBlockRead %ptr : !spirv.ptr<i32, StorageBuffer> -> vector<3xi32>
-    spirv.ReturnValue %0: vector<3xi32>
-  }
-  // CHECK-LABEL: @subgroup_block_write_intel
-  spirv.func @subgroup_block_write_intel(%ptr : !spirv.ptr<i32, StorageBuffer>, %value: i32) -> () "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockWrite %{{.*}}, %{{.*}} : i32
-    spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : i32
-    spirv.Return
-  }
-  // CHECK-LABEL: @subgroup_block_write_intel_vector
-  spirv.func @subgroup_block_write_intel_vector(%ptr : !spirv.ptr<i32, StorageBuffer>, %value: vector<3xi32>) -> () "None" {
-    // CHECK: spirv.INTEL.SubgroupBlockWrite %{{.*}}, %{{.*}} : vector<3xi32>
-    spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : vector<3xi32>
-    spirv.Return
   }
   // CHECK-LABEL: @group_iadd
   spirv.func @group_iadd(%value: i32) -> i32 "None" {

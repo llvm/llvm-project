@@ -14,8 +14,8 @@
 
 #include <__cxx03/__config>
 #include <__cxx03/cstring>
-#include <__cxx03/stddef.h>
 #include <__cxx03/string>
+#include <stddef.h>
 
 namespace __gnu_cxx {
 

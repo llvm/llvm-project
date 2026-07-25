@@ -36,6 +36,8 @@ public:
     return *this;
   }
 
+  CodePtr operator+(int32_t Offset) { return CodePtr(Ptr + Offset); }
+
   int32_t operator-(const CodePtr &RHS) const {
     assert(Ptr != nullptr && RHS.Ptr != nullptr && "Invalid code pointer");
     return Ptr - RHS.Ptr;
@@ -51,6 +53,7 @@ public:
   explicit operator bool() const { return Ptr; }
   bool operator<=(const CodePtr &RHS) const { return Ptr <= RHS.Ptr; }
   bool operator>=(const CodePtr &RHS) const { return Ptr >= RHS.Ptr; }
+  bool operator==(const CodePtr RHS) const { return Ptr == RHS.Ptr; }
 
   /// Reads data and advances the pointer.
   template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {

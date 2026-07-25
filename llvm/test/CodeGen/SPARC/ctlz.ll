@@ -156,8 +156,7 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-LABEL: i64_nopoison:
 ; SPARC:       ! %bb.0:
 ; SPARC-NEXT:    save %sp, -96, %sp
-; SPARC-NEXT:    or %i1, %i0, %i2
-; SPARC-NEXT:    cmp %i2, 0
+; SPARC-NEXT:    orcc %i1, %i0, %g0
 ; SPARC-NEXT:    be .LBB2_4
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:  ! %bb.1: ! %cond.false
@@ -182,8 +181,7 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-POPC-LABEL: i64_nopoison:
 ; SPARC-POPC:       ! %bb.0:
 ; SPARC-POPC-NEXT:    save %sp, -96, %sp
-; SPARC-POPC-NEXT:    or %i1, %i0, %i2
-; SPARC-POPC-NEXT:    cmp %i2, 0
+; SPARC-POPC-NEXT:    orcc %i1, %i0, %g0
 ; SPARC-POPC-NEXT:    be .LBB2_4
 ; SPARC-POPC-NEXT:    nop
 ; SPARC-POPC-NEXT:  ! %bb.1: ! %cond.false

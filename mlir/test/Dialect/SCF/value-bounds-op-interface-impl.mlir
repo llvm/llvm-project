@@ -379,3 +379,12 @@ func.func @scf_for_result_infer_dynamic_init_big_step(%i : index) {
   "test.compare"(%0, %7) {cmp = "LE"} : (index, index) -> ()
   return
 }
+
+func.func @scf_forall_computed_upper_bound(%x: index) {
+  %c6 = arith.constant 6 : index
+  scf.forall (%iv) = (0) to (8) step (3) {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %c6) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}

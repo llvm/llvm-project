@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s android-cloexec-socket %t
+// RUN: %check_clang_tidy %s android-cloexec-socket %t
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2
@@ -17,25 +17,25 @@ extern "C" int socket(int domain, int type, int protocol);
 void a() {
   socket(0, SOCK_STREAM, 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: 'socket' should use SOCK_CLOEXEC where possible [android-cloexec-socket]
-  // CHECK-FIXES: socket(0, SOCK_STREAM | SOCK_CLOEXEC, 0)
+  // CHECK-FIXES: socket(0, SOCK_STREAM | SOCK_CLOEXEC, 0);
   TEMP_FAILURE_RETRY(socket(0, SOCK_STREAM, 0));
   // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: 'socket'
-  // CHECK-FIXES: TEMP_FAILURE_RETRY(socket(0, SOCK_STREAM | SOCK_CLOEXEC, 0))
+  // CHECK-FIXES: TEMP_FAILURE_RETRY(socket(0, SOCK_STREAM | SOCK_CLOEXEC, 0));
   socket(0, SOCK_STREAM | SOCK_DGRAM, 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: 'socket'
-  // CHECK-FIXES: socket(0, SOCK_STREAM | SOCK_DGRAM | SOCK_CLOEXEC, 0)
+  // CHECK-FIXES: socket(0, SOCK_STREAM | SOCK_DGRAM | SOCK_CLOEXEC, 0);
   TEMP_FAILURE_RETRY(socket(0, SOCK_STREAM | SOCK_DGRAM, 0));
   // CHECK-MESSAGES: :[[@LINE-1]]:56: warning: 'socket'
-  // CHECK-FIXES: TEMP_FAILURE_RETRY(socket(0, SOCK_STREAM | SOCK_DGRAM | SOCK_CLOEXEC, 0))
+  // CHECK-FIXES: TEMP_FAILURE_RETRY(socket(0, SOCK_STREAM | SOCK_DGRAM | SOCK_CLOEXEC, 0));
 }
 
 void f() {
   socket(0, 3, 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: 'socket'
-  // CHECK-FIXES: socket(0, 3 | SOCK_CLOEXEC, 0)
+  // CHECK-FIXES: socket(0, 3 | SOCK_CLOEXEC, 0);
   TEMP_FAILURE_RETRY(socket(0, 3, 0));
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: 'socket'
-  // CHECK-FIXES: TEMP_FAILURE_RETRY(socket(0, 3 | SOCK_CLOEXEC, 0))
+  // CHECK-FIXES: TEMP_FAILURE_RETRY(socket(0, 3 | SOCK_CLOEXEC, 0));
 
   int flag = 3;
   socket(0, flag, 0);

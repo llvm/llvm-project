@@ -10,6 +10,8 @@
 // munlock, and munlockall should have separate test files which only need to
 // check our code paths (succeeds and errors).
 
+#include "hdr/sys_mman_macros.h"
+#include "hdr/sys_resource_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/libc_errno.h"
 #include "src/sys/mman/madvise.h"
@@ -22,14 +24,14 @@
 #include "src/sys/mman/munlockall.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/resource/getrlimit.h"
+#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/syscall.h>
 
-// TODO: Replace with sysconf call once the function is properly implemented.
-constexpr size_t PAGE_SIZE = 4096;
+const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -74,7 +76,8 @@ TEST_F(LlvmLibcMlockTest, Overflow) {
               Fails(EINVAL));
 }
 
-#ifdef SYS_mlock2
+// QEMU user space emulation does not support mlock2 and returns ENOSYS.
+#if defined(SYS_mlock2) && !defined(LIBC_TEST_UNDER_EMULATOR)
 TEST_F(LlvmLibcMlockTest, MLock2) {
   PageHolder holder;
   EXPECT_TRUE(holder.is_valid());
@@ -99,8 +102,11 @@ TEST_F(LlvmLibcMlockTest, MLock2) {
   EXPECT_EQ(vec & 1, 1);
   EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, holder.size), Succeeds());
 }
-#endif
+#endif // defined(SYS_mlock2) && !defined(LIBC_TEST_UNDER_EMULATOR)
 
+// QEMU user space emulation stubs mlockall to return 0 instead of EINVAL on
+// invalid flags.
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST_F(LlvmLibcMlockTest, InvalidFlag) {
   size_t alloc_size = 128; // page size
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
@@ -123,6 +129,7 @@ TEST_F(LlvmLibcMlockTest, InvalidFlag) {
 
   LIBC_NAMESPACE::munmap(addr, alloc_size);
 }
+#endif // LIBC_TEST_UNDER_EMULATOR
 
 TEST_F(LlvmLibcMlockTest, MLockAll) {
   {

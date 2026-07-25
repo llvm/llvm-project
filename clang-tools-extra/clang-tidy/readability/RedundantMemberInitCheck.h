@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTMEMBERINITCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTMEMBERINITCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -23,7 +23,8 @@ public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         IgnoreBaseInCopyConstructors(
-            Options.get("IgnoreBaseInCopyConstructors", false)) {}
+            Options.get("IgnoreBaseInCopyConstructors", false)),
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", false)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -36,8 +37,9 @@ public:
 
 private:
   bool IgnoreBaseInCopyConstructors;
+  bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTMEMBERINITCHECK_H

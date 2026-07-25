@@ -72,6 +72,8 @@ std::string toString(wasm::Symbol::Kind kind) {
     return "SharedFunctionKind";
   case wasm::Symbol::SharedDataKind:
     return "SharedDataKind";
+  case wasm::Symbol::SharedTagKind:
+    return "SharedTagSymbol";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -95,7 +97,7 @@ WasmSymbolType Symbol::getWasmType() const {
 }
 
 const WasmSignature *Symbol::getSignature() const {
-  if (auto* f = dyn_cast<FunctionSymbol>(this))
+  if (auto *f = dyn_cast<FunctionSymbol>(this))
     return f->signature;
   if (auto *t = dyn_cast<TagSymbol>(this))
     return t->signature;
@@ -223,9 +225,7 @@ bool Symbol::isExportedExplicit() const {
   return forceExport || flags & WASM_SYMBOL_EXPORTED;
 }
 
-bool Symbol::isNoStrip() const {
-  return flags & WASM_SYMBOL_NO_STRIP;
-}
+bool Symbol::isNoStrip() const { return flags & WASM_SYMBOL_NO_STRIP; }
 
 uint32_t FunctionSymbol::getFunctionIndex() const {
   if (const auto *u = dyn_cast<UndefinedFunction>(this))
@@ -413,7 +413,7 @@ void LazySymbol::setWeak() {
   flags |= (flags & ~WASM_SYMBOL_BINDING_MASK) | WASM_SYMBOL_BINDING_WEAK;
 }
 
-void printTraceSymbolUndefined(StringRef name, const InputFile* file) {
+void printTraceSymbolUndefined(StringRef name, const InputFile *file) {
   message(toString(file) + ": reference to " + name);
 }
 

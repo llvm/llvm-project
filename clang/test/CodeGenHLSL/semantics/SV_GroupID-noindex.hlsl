@@ -4,6 +4,11 @@
 [shader("compute")]
 [numthreads(8,8,1)]
 void foo(uint Idx : SV_GroupID1) {
-  // expected-error@-1 {{semantic SV_GroupID does not allow indexing}}
+  // expected-error@-1 {{semantic 'SV_GroupID' does not allow indexing}}
 }
 
+[shader("compute")]
+[numthreads(8,8,1)]
+void bar(uint Idx : SV_GROUPID1) {
+  // expected-error@-1 {{semantic 'SV_GROUPID' does not allow indexing}}
+}

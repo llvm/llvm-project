@@ -14,10 +14,10 @@ __int128 Exp __attribute__((aligned(16)));
 __int128 Des __attribute__((aligned(16)));
 
 // CHECK-LABEL: define dso_local void @f1(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load atomic i128, ptr @Ptr seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP0]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2:![0-9]+]]
+// CHECK-NEXT:    store i128 [[TMP0]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 __int128 f1() {
@@ -25,11 +25,11 @@ __int128 f1() {
 }
 
 // CHECK-LABEL: define dso_local void @f2(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load atomic i128, ptr @Ptr seq_cst, align 16
 // CHECK-NEXT:    store i128 [[TMP0]], ptr @Ret, align 16
-// CHECK-NEXT:    store i128 [[TMP0]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP0]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f2() {
@@ -38,9 +38,9 @@ __int128 f2() {
 }
 
 // CHECK-LABEL: define dso_local void @f3(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    store atomic i128 [[TMP0]], ptr @Ptr seq_cst, align 16
 // CHECK-NEXT:    ret void
 //
@@ -49,7 +49,7 @@ void f3() {
 }
 
 // CHECK-LABEL: define dso_local void @f4(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16
 // CHECK-NEXT:    store atomic i128 [[TMP0]], ptr @Ptr seq_cst, align 16
@@ -60,11 +60,11 @@ void f4() {
 }
 
 // CHECK-LABEL: define dso_local void @f5(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f5() {
@@ -72,12 +72,12 @@ __int128 f5() {
 }
 
 // CHECK-LABEL: define dso_local void @f6(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    store i128 [[TMP1]], ptr @Ret, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f6() {
@@ -86,9 +86,9 @@ __int128 f6() {
 }
 
 // CHECK-LABEL: define dso_local noundef zeroext i1 @f7(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Des, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Des, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr @Exp, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg ptr @Ptr, i128 [[TMP1]], i128 [[TMP0]] seq_cst seq_cst, align 16
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1
@@ -106,7 +106,7 @@ _Bool f7() {
 }
 
 // CHECK-LABEL: define dso_local noundef zeroext i1 @f8(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Exp, align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr @Des, align 16
@@ -126,12 +126,12 @@ _Bool f8() {
 }
 
 // CHECK-LABEL: define dso_local void @f9(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = add i128 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f9() {
@@ -139,12 +139,12 @@ __int128 f9() {
 }
 
 // CHECK-LABEL: define dso_local void @f10(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw sub ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = sub i128 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f10() {
@@ -152,12 +152,12 @@ __int128 f10() {
 }
 
 // CHECK-LABEL: define dso_local void @f11(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw and ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = and i128 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f11() {
@@ -165,12 +165,12 @@ __int128 f11() {
 }
 
 // CHECK-LABEL: define dso_local void @f12(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xor ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = xor i128 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f12() {
@@ -178,12 +178,12 @@ __int128 f12() {
 }
 
 // CHECK-LABEL: define dso_local void @f13(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw or ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = or i128 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f13() {
@@ -191,13 +191,13 @@ __int128 f13() {
 }
 
 // CHECK-LABEL: define dso_local void @f14(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw nand ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = and i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    [[TMP3:%.*]] = xor i128 [[TMP2]], -1
-// CHECK-NEXT:    store i128 [[TMP3]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP3]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f14() {
@@ -205,11 +205,11 @@ __int128 f14() {
 }
 
 // CHECK-LABEL: define dso_local void @f15(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f15() {
@@ -217,11 +217,11 @@ __int128 f15() {
 }
 
 // CHECK-LABEL: define dso_local void @f16(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw sub ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f16() {
@@ -229,11 +229,11 @@ __int128 f16() {
 }
 
 // CHECK-LABEL: define dso_local void @f17(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw and ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f17() {
@@ -241,11 +241,11 @@ __int128 f17() {
 }
 
 // CHECK-LABEL: define dso_local void @f18(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xor ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f18() {
@@ -253,11 +253,11 @@ __int128 f18() {
 }
 
 // CHECK-LABEL: define dso_local void @f19(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw or ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f19() {
@@ -265,19 +265,19 @@ __int128 f19() {
 }
 
 // CHECK-LABEL: define dso_local void @f20(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias nofree writable writeonly sret(i128) align 8 captures(none) initializes((0, 16)) [[AGG_RESULT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 16, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw nand ptr @Ptr, i128 [[TMP0]] seq_cst, align 16
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA2]]
+// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT]], align 8, !tbaa [[__INT128_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 __int128 f20() {
   return __atomic_fetch_nand(&Ptr, Val, memory_order_seq_cst);
 }
 //.
-// CHECK: [[__INT128_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"__int128", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[__INT128_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+// CHECK: [[META6]] = !{!"__int128", [[META3]], i64 0}
 //.

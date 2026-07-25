@@ -608,6 +608,8 @@ template <class T>
 #  include <__atomic/atomic_init.h>
 #  include <__atomic/atomic_lock_free.h>
 #  include <__atomic/atomic_sync.h>
+#  include <__atomic/atomic_sync_timed.h>
+#  include <__atomic/atomic_waitable_traits.h>
 #  include <__atomic/check_memory_order.h>
 #  include <__atomic/contention_t.h>
 #  include <__atomic/fence.h>
@@ -624,11 +626,7 @@ template <class T>
 #    pragma GCC system_header
 #  endif
 
-#  if !_LIBCPP_HAS_ATOMIC_HEADER
-#    error <atomic> is not implemented
-#  endif
-
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <cmath>
 #    include <compare>
 #    include <cstddef>

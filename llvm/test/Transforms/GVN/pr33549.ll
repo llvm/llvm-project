@@ -4,9 +4,9 @@
 @Data = common local_unnamed_addr global [32 x i32] zeroinitializer, align 4
 
 ; Function Attrs: norecurse nounwind
-define void @testshl() local_unnamed_addr #0 {
+define void @testshl() local_unnamed_addr {
 ; CHECK-LABEL: define void @testshl(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -77,8 +77,6 @@ for.inc8:                                         ; preds = %for.body3, %for.bod
 for.end10:                                        ; preds = %for.inc8
   ret void
 }
-
-attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m7" "target-features"="+d16,+dsp,+fp-armv8,+hwdiv,+strict-align,+thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

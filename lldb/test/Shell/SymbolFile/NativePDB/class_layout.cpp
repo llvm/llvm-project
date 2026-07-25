@@ -34,9 +34,6 @@
 // CHECK-NEXT:           s4 = {
 // CHECK-NEXT:             x = ([0] = 67, [1] = 68, [2] = 99)
 // CHECK-NEXT:           }
-// CHECK-NEXT:           s1 = {
-// CHECK-NEXT:             x = ([0] = 69, [1] = 70, [2] = 71)
-// CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
@@ -46,6 +43,9 @@
 // CHECK-NEXT:       }
 // CHECK-NEXT:       c2 = 'D'
 // CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   s1 = {
+// CHECK-NEXT:     x = ([0] = 69, [1] = 70, [2] = 71)
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup C
@@ -63,7 +63,6 @@
 // CHECK-NEXT:                 struct {
 // CHECK-NEXT:                     char c4;
 // CHECK-NEXT:                     S3 s4;
-// CHECK-NEXT:                     S3 s1;
 // CHECK-NEXT:                 };
 // CHECK-NEXT:             };
 // CHECK-NEXT:         };
@@ -72,6 +71,7 @@
 // CHECK-NEXT:             char c2;
 // CHECK-NEXT:         };
 // CHECK-NEXT:     };
+// CHECK-NEXT:     S3 s1;
 // CHECK-NEXT: }
 
 

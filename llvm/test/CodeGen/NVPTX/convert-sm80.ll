@@ -198,6 +198,71 @@ declare bfloat @llvm.nvvm.f2bf16.rn.relu(float)
 declare bfloat @llvm.nvvm.f2bf16.rz(float)
 declare bfloat @llvm.nvvm.f2bf16.rz.relu(float)
 
+define half @cvt_rn_f16_f32(float %f1) {
+; CHECK-LABEL: cvt_rn_f16_f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [cvt_rn_f16_f32_param_0];
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ret;
+  %val = call half @llvm.nvvm.f2f16.rn(float %f1)
+  ret half %val
+}
+
+define half @cvt_rn_relu_f16_f32(float %f1) {
+; CHECK-LABEL: cvt_rn_relu_f16_f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [cvt_rn_relu_f16_f32_param_0];
+; CHECK-NEXT:    cvt.rn.relu.f16.f32 %rs1, %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ret;
+  %val = call half @llvm.nvvm.f2f16.rn.relu(float %f1)
+  ret half %val
+}
+
+define half @cvt_rz_f16_f32(float %f1) {
+; CHECK-LABEL: cvt_rz_f16_f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [cvt_rz_f16_f32_param_0];
+; CHECK-NEXT:    cvt.rz.f16.f32 %rs1, %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ret;
+  %val = call half @llvm.nvvm.f2f16.rz(float %f1)
+  ret half %val
+}
+
+define half @cvt_rz_relu_f16_f32(float %f1) {
+; CHECK-LABEL: cvt_rz_relu_f16_f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [cvt_rz_relu_f16_f32_param_0];
+; CHECK-NEXT:    cvt.rz.relu.f16.f32 %rs1, %r1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ret;
+  %val = call half @llvm.nvvm.f2f16.rz.relu(float %f1)
+  ret half %val
+}
+
+declare half @llvm.nvvm.f2f16.rn(float)
+declare half @llvm.nvvm.f2f16.rn.relu(float)
+declare half @llvm.nvvm.f2f16.rz(float)
+declare half @llvm.nvvm.f2f16.rz.relu(float)
+
 define i32 @cvt_rna_tf32_f32(float %f1) {
 ; CHECK-LABEL: cvt_rna_tf32_f32(
 ; CHECK:       {

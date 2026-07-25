@@ -173,7 +173,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
           // `enum x : int;' is not formally an incomplete type.
           // We may need a full definition anyway.
           if (auto * ET = llvm::dyn_cast<EnumType>(T))
-            if (!ET->getOriginalDecl()->getDefinition())
+            if (!ET->getDecl()->getDefinition())
               return fixIncompleteType(*T);
         }
       }
@@ -613,13 +613,6 @@ IncludeFixer::lookupCached(const SymbolID &ID) const {
   Index.lookup(Req, [&](const Symbol &Sym) { Matches.insert(Sym); });
   auto Syms = std::move(Matches).build();
 
-  std::vector<Fix> Fixes;
-  if (!Syms.empty()) {
-    auto &Matched = *Syms.begin();
-    if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
-        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
-      Fixes = fixesForSymbols(Syms);
-  }
   auto E = LookupCache.try_emplace(ID, std::move(Syms));
   return &E.first->second;
 }

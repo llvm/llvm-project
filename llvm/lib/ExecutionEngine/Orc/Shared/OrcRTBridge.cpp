@@ -23,10 +23,12 @@ const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
 const char *SimpleExecutorMemoryManagerReserveWrapperName =
     "__llvm_orc_SimpleExecutorMemoryManager_reserve_wrapper";
-const char *SimpleExecutorMemoryManagerFinalizeWrapperName =
-    "__llvm_orc_SimpleExecutorMemoryManager_finalize_wrapper";
-const char *SimpleExecutorMemoryManagerDeallocateWrapperName =
-    "__llvm_orc_SimpleExecutorMemoryManager_deallocate_wrapper";
+const char *SimpleExecutorMemoryManagerInitializeWrapperName =
+    "__llvm_orc_SimpleExecutorMemoryManager_initialize_wrapper";
+const char *SimpleExecutorMemoryManagerDeinitializeWrapperName =
+    "__llvm_orc_SimpleExecutorMemoryManager_deinitialize_wrapper";
+const char *SimpleExecutorMemoryManagerReleaseWrapperName =
+    "__llvm_orc_SimpleExecutorMemoryManager_release_wrapper";
 
 const char *ExecutorSharedMemoryMapperServiceInstanceName =
     "__llvm_orc_ExecutorSharedMemoryMapperService_Instance";
@@ -72,11 +74,35 @@ const char *RegisterEHFrameSectionAllocActionName =
 const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
+const char *RegisterJITLoaderGDBAllocActionName =
+    "llvm_orc_registerJITLoaderGDBAllocAction";
+
 const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
 const char *RunAsVoidFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_void_function_wrapper";
 const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
+
+const SimpleExecutorMemoryManagerSymbolNames
+    orc_rt_SimpleNativeMemoryMapSPSSymbols = {
+        "orc_rt_ci_SimpleNativeMemoryMap_Instance",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
+};
+
+const SimpleExecutorDylibManagerSymbolNames
+    orc_rt_NativeDylibManagerSPSSymbols = {
+        "orc_rt_ci_NativeDylibManager_Instance",
+        "orc_rt_ci_sps_NativeDylibManager_load",
+        "orc_rt_ci_sps_NativeDylibManager_lookup",
+};
+
+const MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections"};
 
 } // end namespace rt
 namespace rt_alt {
@@ -84,6 +110,7 @@ const char *UnwindInfoManagerRegisterActionName =
     "orc_rt_alt_UnwindInfoManager_register";
 const char *UnwindInfoManagerDeregisterActionName =
     "orc_rt_alt_UnwindInfoManager_deregister";
+
 } // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

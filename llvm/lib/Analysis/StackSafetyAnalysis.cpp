@@ -30,7 +30,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <memory>
 #include <tuple>
 
 using namespace llvm;
@@ -900,7 +899,7 @@ const StackSafetyInfo::InfoTy &StackSafetyInfo::getInfo() const {
 }
 
 void StackSafetyInfo::print(raw_ostream &O) const {
-  getInfo().Info.print(O, F->getName(), dyn_cast<Function>(F));
+  getInfo().Info.print(O, F->getName(), F);
   O << "\n";
 }
 
@@ -1069,14 +1068,17 @@ AnalysisKey StackSafetyGlobalAnalysis::Key;
 
 StackSafetyGlobalInfo
 StackSafetyGlobalAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  // FIXME: Lookup Module Summary.
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const ModuleSummaryIndex *Index = nullptr;
+  if (auto *IndexPass =
+          AM.getCachedResult<ImmutableModuleSummaryIndexAnalysis>(M))
+    Index = IndexPass->getIndex();
   return {&M,
           [&FAM](Function &F) -> const StackSafetyInfo & {
             return FAM.getResult<StackSafetyAnalysis>(F);
           },
-          nullptr};
+          Index};
 }
 
 PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
@@ -1136,7 +1138,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     if (!AreStatisticsEnabled())
       return;
     for (auto &GVS : Index)
-      for (auto &GV : GVS.second.SummaryList)
+      for (auto &GV : GVS.second.getSummaryList())
         if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
           Stat += FS->paramAccesses().size();
   };
@@ -1147,7 +1149,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
 
   // Convert the ModuleSummaryIndex to a FunctionMap
   for (auto &GVS : Index) {
-    for (auto &GV : GVS.second.SummaryList) {
+    for (auto &GV : GVS.second.getSummaryList()) {
       FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get());
       if (!FS || FS->paramAccesses().empty())
         continue;

@@ -10,7 +10,7 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -75,6 +75,7 @@ CSKYToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
 
 void CSKYToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                           llvm::opt::ArgStringList &CC1Args,
+                                          BoundArch BA,
                                           Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }

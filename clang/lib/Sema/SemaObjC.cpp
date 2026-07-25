@@ -1407,7 +1407,7 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
   int NoIntegrals = 0, NoObjCIdPointers = 0;
   SmallVector<CXXConversionDecl *, 4> ConversionDecls;
 
-  for (NamedDecl *D : cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
+  for (NamedDecl *D : cast<CXXRecordDecl>(RecordTy->getDecl())
                           ->getDefinitionOrSelf()
                           ->getVisibleConversionFunctions()) {
     if (CXXConversionDecl *Conversion =
@@ -1468,7 +1468,7 @@ bool SemaObjC::isCFError(RecordDecl *RD) {
   // declared with "objc_bridge_mutable", so look for either one of the two
   // attributes.
   if (RD->getTagKind() == TagTypeKind::Struct) {
-    IdentifierInfo *bridgedType = nullptr;
+    const IdentifierInfo *bridgedType = nullptr;
     if (auto bridgeAttr = RD->getAttr<ObjCBridgeAttr>())
       bridgedType = bridgeAttr->getBridgedType();
     else if (auto bridgeAttr = RD->getAttr<ObjCBridgeMutableAttr>())
@@ -1511,7 +1511,7 @@ bool SemaObjC::isCFStringType(QualType T) {
   if (!RT)
     return false;
 
-  const RecordDecl *RD = RT->getOriginalDecl();
+  const RecordDecl *RD = RT->getDecl();
   if (RD->getTagKind() != TagTypeKind::Struct)
     return false;
 
@@ -1708,6 +1708,33 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
   BlocksAttr::BlockType type;
   if (!BlocksAttr::ConvertStrToBlockType(II->getName(), type)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
+    return;
+  }
+
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->getStorageClass() == SC_Register) {
+      Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+          << diag::NotAllowedBlockVarReason::RegisterVariable;
+      return;
+    }
+
+    if (!VD->hasLocalStorage()) {
+      if (VD->isStaticLocal())
+        Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+            << diag::NotAllowedBlockVarReason::StaticLocalVariable;
+      else if (VD->isStaticDataMember())
+        Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+            << diag::NotAllowedBlockVarReason::CppStaticDataMember;
+      else
+        Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+            << diag::NotAllowedBlockVarReason::NonlocalVariable;
+      return;
+    }
+  }
+
+  if (isa<ObjCIvarDecl>(D)) {
+    Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::ObjCInstanceVariable;
     return;
   }
 

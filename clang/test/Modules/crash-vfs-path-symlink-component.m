@@ -1,9 +1,5 @@
 // Needs symlinks
 // UNSUPPORTED: system-windows
-// env -u is not supported on AIX.
-// TODO(boomanaiden154): Remove this once we have switched over to lit's
-// internal shell which does support env -u.
-// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
@@ -30,7 +26,7 @@
 
 #include "usr/x/../stdio.h"
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 

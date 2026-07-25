@@ -5,21 +5,6 @@
 ; The following tests check whether inserting VSETVLI avoids inserting
 ; unneeded vsetvlis across basic blocks.
 
-declare i64 @llvm.riscv.vsetvli(i64, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-declare <vscale x 2 x float> @llvm.riscv.vfadd.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfsub.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double>, double, i64)
-declare <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32( <vscale x 2 x float>, float, i64)
-
-declare void @llvm.riscv.vse.nxv1f64(<vscale x 1 x double>, ptr nocapture, i64)
-declare void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float>, ptr nocapture, i64)
-
 define <vscale x 1 x double> @test1(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
@@ -447,13 +432,13 @@ define void @saxpy_vec(i64 %n, float %a, ptr nocapture readonly %x, ptr nocaptur
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vle32.v v16, (a2)
-; CHECK-NEXT:    slli a4, a3, 2
-; CHECK-NEXT:    sub a0, a0, a3
-; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
 ; CHECK-NEXT:    vfmacc.vf v16, fa0, v8
+; CHECK-NEXT:    slli a4, a3, 2
+; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    vse32.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a3, a0, e32, m8, ta, ma
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    bnez a3, .LBB8_1
 ; CHECK-NEXT:  .LBB8_2: # %for.end
@@ -495,13 +480,13 @@ define void @saxpy_vec_demanded_fields(i64 %n, float %a, ptr nocapture readonly 
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vle32.v v16, (a2)
-; CHECK-NEXT:    slli a4, a3, 2
-; CHECK-NEXT:    sub a0, a0, a3
-; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
 ; CHECK-NEXT:    vfmacc.vf v16, fa0, v8
+; CHECK-NEXT:    slli a4, a3, 2
+; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    vse32.v v16, (a2)
 ; CHECK-NEXT:    vsetvli a3, a0, e16, m4, ta, ma
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    bnez a3, .LBB9_1
 ; CHECK-NEXT:  .LBB9_2: # %for.end
@@ -532,11 +517,6 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
-
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-declare <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float>, ptr nocapture, i64)
-declare <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float>, float, <vscale x 16 x float>, i64, i64, i64)
-declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, ptr nocapture, i64)
 
 ; We need a vsetvli in the last block because the predecessors have different
 ; VTYPEs. The AVL is the same and the SEW/LMUL ratio implies the same VLMAX so
@@ -570,10 +550,6 @@ if.end:
   %e = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, <vscale x 2 x i32> %d, i64 %vl)
   ret <vscale x 2 x i32> %e
 }
-declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32(<vscale x 2 x i32>, ptr, i64)
-declare <vscale x 2 x i16> @llvm.riscv.vle.nxv2i16(<vscale x 2 x i16>, ptr, i64)
-declare <vscale x 2 x i32> @llvm.riscv.vwadd.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i16>, i16, i64)
-declare <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, i64)
 
 ; We can use X0, X0 vsetvli in if2 and if2.end. The merge point as if.end will
 ; see two different vtypes with the same SEW/LMUL ratio. At if2.end we will only
@@ -625,7 +601,6 @@ if2.end:
   %h = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %g, <vscale x 2 x i32> %w, i64 %vl)
   ret <vscale x 2 x i32> %h
 }
-declare <vscale x 2 x i32> @llvm.riscv.vwadd.w.nxv2i32.nxv2i16(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i16>, i64)
 
 ; We should only need 1 vsetvli for this code.
 define void @vlmax(i64 %N, ptr %c, ptr %a, ptr %b) {
@@ -634,18 +609,18 @@ define void @vlmax(i64 %N, ptr %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    blez a0, .LBB12_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, ma
-; CHECK-NEXT:    slli a5, a6, 3
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
+; CHECK-NEXT:    slli a6, a5, 3
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    vle64.v v9, (a3)
-; CHECK-NEXT:    add a4, a4, a6
-; CHECK-NEXT:    add a3, a3, a5
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    add a4, a4, a5
 ; CHECK-NEXT:    vse64.v v8, (a1)
-; CHECK-NEXT:    add a1, a1, a5
-; CHECK-NEXT:    add a2, a2, a5
+; CHECK-NEXT:    add a1, a1, a6
+; CHECK-NEXT:    add a3, a3, a6
+; CHECK-NEXT:    add a2, a2, a6
 ; CHECK-NEXT:    blt a4, a0, .LBB12_2
 ; CHECK-NEXT:  .LBB12_3: # %for.end
 ; CHECK-NEXT:    ret
@@ -682,12 +657,12 @@ define void @vector_init_vlmax(i64 %N, ptr %c) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
-; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    blt a2, a0, .LBB13_2
 ; CHECK-NEXT:  .LBB13_3: # %for.end
@@ -718,12 +693,12 @@ define void @vector_init_vsetvli_N(i64 %N, ptr %c) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetvli a3, a0, e64, m1, ta, ma
-; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:  .LBB14_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    blt a2, a0, .LBB14_2
 ; CHECK-NEXT:  .LBB14_3: # %for.end
@@ -752,12 +727,12 @@ define void @vector_init_vsetvli_fv(i64 %N, ptr %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetivli a3, 4, e64, m1, ta, ma
-; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:  .LBB15_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    blt a2, a0, .LBB15_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
@@ -784,13 +759,13 @@ for.end:                                          ; preds = %for.body
 define void @vector_init_vsetvli_fv2(i64 %N, ptr %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:  .LBB16_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a2, a2, 4
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a1, a1, 32
 ; CHECK-NEXT:    blt a2, a0, .LBB16_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
@@ -817,13 +792,13 @@ for.end:                                          ; preds = %for.body
 define void @vector_init_vsetvli_fv3(i64 %N, ptr %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:  .LBB17_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a2, a2, 4
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a1, a1, 32
 ; CHECK-NEXT:    blt a2, a0, .LBB17_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
@@ -872,10 +847,10 @@ fallthrough:
 define <vscale x 2 x i32> @pre_lmul(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i1 %cond) nounwind {
 ; CHECK-LABEL: pre_lmul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -897,9 +872,9 @@ if.end:
 define <vscale x 1 x double> @compat_store_consistency(i1 %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b, ptr %p1, <vscale x 1 x float> %c, ptr %p2) {
 ; CHECK-LABEL: compat_store_consistency:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vs1r.v v8, (a1)
 ; CHECK-NEXT:    beqz a0, .LBB20_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
@@ -1018,18 +993,6 @@ exit:
   ret void
 }
 
-declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
-declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, ptr nocapture, i64)
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-declare void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double>, ptr nocapture, i64)
-declare <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  <vscale x 4 x i1>,
-  i64,
-  i64);
-
 ; Normally a pseudo's AVL is already live in its block, so it will already be
 ; live where we're inserting the vsetvli, before the pseudo.  In some cases the
 ; AVL can be from a predecessor block, so make sure we extend its live range
@@ -1125,8 +1088,8 @@ exit:
 define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
 ; CHECK-LABEL: clobbered_forwarded_avl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:  .LBB27_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi a0, a0, 1

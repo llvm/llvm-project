@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr7 < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
-; RUN:   -mcpu=pwr7 < %s | FileCheck %s --check-prefix=CHECK-AIX64
+; RUN:   -mcpu=pwr7 --code-model=small < %s | FileCheck %s --check-prefix=CHECK-AIX64
 
 declare i64 @llvm.ppc.mfspr.i64(i32 immarg)
 declare void @llvm.ppc.mtspr.i64(i32 immarg, i64)

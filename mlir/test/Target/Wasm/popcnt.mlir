@@ -14,12 +14,12 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func @popcnt_i32() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @popcnt_i32() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.popcnt %[[VAL_0]] : i32
 // CHECK:           wasmssa.return %[[VAL_1]] : i32
 
-// CHECK-LABEL:   wasmssa.func @popcnt_i64() -> i64 {
+// CHECK-LABEL:   wasmssa.func exported @popcnt_i64() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.popcnt %[[VAL_0]] : i64
 // CHECK:           wasmssa.return %[[VAL_1]] : i64

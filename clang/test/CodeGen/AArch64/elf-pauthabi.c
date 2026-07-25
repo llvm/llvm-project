@@ -13,6 +13,18 @@
 // RUN:   -fptrauth-function-pointer-type-discrimination %s | \
 // RUN:   FileCheck %s --check-prefix=ALL
 
+// RUN: %clang_cc1 -triple aarch64-freebsd -emit-llvm -o - \
+// RUN:   %s | FileCheck %s --check-prefix=ABSENT
+
+// RUN: %clang_cc1 -triple aarch64-darwin -emit-llvm -o - \
+// RUN:   %s | FileCheck %s --check-prefix=ABSENT
+
+// RUN: %clang_cc1 -triple aarch64-windows -emit-llvm -o - \
+// RUN:   %s | FileCheck %s --check-prefix=ABSENT
+
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
+// RUN:   %s | FileCheck %s --check-prefix=NONE
+
 // RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-intrinsics %s | FileCheck %s --check-prefix=INTRIN
 
@@ -57,6 +69,11 @@
 
 // ALL: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
 // ALL: !{i32 1, !"aarch64-elf-pauthabi-version", i32 4095}
+
+// ABSENT-NOT: aarch64-elf-pauthabi
+
+// NONE: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// NONE: !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
 
 // INTRIN: !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
 // INTRIN: !{i32 1, !"aarch64-elf-pauthabi-version", i32 1}

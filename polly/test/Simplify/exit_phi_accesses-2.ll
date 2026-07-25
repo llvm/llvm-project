@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>,scop(print<polly-simplify>)' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -polly-print-scops -polly-print-simplify -disable-output < %s | FileCheck %s
 ;
 ; The use of %sum.next by %phi counts as an escaping use.
 ; Don't remove the scalar write of %sum.next.

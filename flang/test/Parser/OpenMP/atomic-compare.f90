@@ -20,7 +20,7 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Compare
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> IfStmt
 !PARSE-TREE: | | | Scalar -> Logical -> Expr = 'x<a'
@@ -58,7 +58,7 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Compare
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> IfConstruct
 !PARSE-TREE: | | | IfThenStmt
@@ -112,7 +112,7 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Compare
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> IfConstruct
 !PARSE-TREE: | | | IfThenStmt
@@ -150,7 +150,7 @@ end
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Capture
 !PARSE-TREE: | | OmpClause -> Compare
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'v=x'
 !PARSE-TREE: | | | Variable = 'v'
@@ -172,7 +172,7 @@ end
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 
 subroutine g01(a, b)
   integer :: a, b
@@ -202,7 +202,7 @@ end
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Capture
 !PARSE-TREE: | | OmpClause -> Compare
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'v=x'
 !PARSE-TREE: | | | Variable = 'v'
@@ -227,7 +227,7 @@ end
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 
 subroutine g02(a, b)
   integer :: a, b
@@ -259,7 +259,7 @@ end
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Update ->
 !PARSE-TREE: | | OmpClause -> Capture
 !PARSE-TREE: | | OmpClause -> Compare
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> IfConstruct
 !PARSE-TREE: | | | IfThenStmt
@@ -287,4 +287,4 @@ end
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = atomic
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}

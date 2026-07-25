@@ -5,8 +5,8 @@ bugprone-unchecked-string-to-number-conversion
 
 This check flags calls to string-to-number conversion functions that do not
 verify the validity of the conversion, such as ``atoi()`` or ``scanf()``. It
-does not flag calls to ``strtol()``, or other, related conversion functions that
-do perform better error checking.
+does not flag calls to ``strtol()``, or other, related conversion functions
+that do perform better error checking.
 
 .. code-block:: c
 
@@ -28,4 +28,4 @@ References
 
 This check corresponds to the CERT C Coding Standard rule
 `ERR34-C. Detect errors when converting a string to a number
-<https://www.securecoding.cert.org/confluence/display/c/ERR34-C.+Detect+errors+when+converting+a+string+to+a+number>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/error-handling-err/err34-c/>`_.

@@ -18,85 +18,10 @@
 #include <functional>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "../types.h"
-
-template <class Base = int*>
-struct convertible_forward_sized_iterator {
-  Base it_ = nullptr;
-
-  using iterator_category = std::forward_iterator_tag;
-  using value_type        = int;
-  using difference_type   = std::intptr_t;
-
-  convertible_forward_sized_iterator() = default;
-  constexpr convertible_forward_sized_iterator(Base it) : it_(it) {}
-
-  template <std::convertible_to<Base> U>
-  constexpr convertible_forward_sized_iterator(const convertible_forward_sized_iterator<U>& it) : it_(it.it_) {}
-
-  constexpr decltype(*Base{}) operator*() const { return *it_; }
-
-  constexpr convertible_forward_sized_iterator& operator++() {
-    ++it_;
-    return *this;
-  }
-  constexpr convertible_forward_sized_iterator operator++(int) { return forward_sized_iterator(it_++); }
-
-  friend constexpr bool
-  operator==(const convertible_forward_sized_iterator&, const convertible_forward_sized_iterator&) = default;
-
-  friend constexpr difference_type
-  operator-(const convertible_forward_sized_iterator& x, const convertible_forward_sized_iterator& y) {
-    return x.it_ - y.it_;
-  }
-};
-static_assert(std::forward_iterator<convertible_forward_sized_iterator<>>);
-
-template <class Base>
-struct convertible_sized_sentinel {
-  Base base_;
-  explicit convertible_sized_sentinel() = default;
-  constexpr convertible_sized_sentinel(const Base& it) : base_(it) {}
-
-  template <std::convertible_to<Base> U>
-  constexpr convertible_sized_sentinel(const convertible_sized_sentinel<U>& other) : base_(other.base_) {}
-
-  template <class U>
-    requires(std::convertible_to<Base, U> || std::convertible_to<U, Base>)
-  friend constexpr bool operator==(const convertible_sized_sentinel& s, const U& base) {
-    return s.base_ == base;
-  }
-  template <class U>
-    requires(std::convertible_to<Base, U> || std::convertible_to<U, Base>)
-  friend constexpr auto operator-(const convertible_sized_sentinel& s, const U& i) {
-    return s.base_ - i;
-  }
-
-  template <class U>
-    requires(std::convertible_to<Base, U> || std::convertible_to<U, Base>)
-  friend constexpr auto operator-(const U& i, const convertible_sized_sentinel& s) {
-    return i - s.base_;
-  }
-};
-static_assert(std::sized_sentinel_for<convertible_sized_sentinel<convertible_forward_sized_iterator<>>,
-                                      convertible_forward_sized_iterator<>>);
-static_assert(std::sized_sentinel_for<convertible_sized_sentinel<convertible_forward_sized_iterator<const int*>>,
-                                      convertible_forward_sized_iterator<int*>>);
-static_assert(std::sized_sentinel_for<convertible_sized_sentinel<convertible_forward_sized_iterator<int*>>,
-                                      convertible_forward_sized_iterator<const int*>>);
-
-struct ConstCompatibleForwardSized : IntBufferView {
-  using IntBufferView::IntBufferView;
-
-  using iterator       = convertible_forward_sized_iterator<int*>;
-  using const_iterator = convertible_forward_sized_iterator<const int*>;
-
-  constexpr iterator begin() { return {buffer_}; }
-  constexpr const_iterator begin() const { return {buffer_}; }
-  constexpr convertible_sized_sentinel<iterator> end() { return iterator{buffer_ + size_}; }
-  constexpr convertible_sized_sentinel<const_iterator> end() const { return const_iterator{buffer_ + size_}; }
-};
+#include "../../range_adaptor_types.h"
 
 template <class T, class U>
 concept HasMinus = std::invocable<std::minus<>, const T&, const U&>;

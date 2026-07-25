@@ -104,8 +104,8 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types1, TypeRange types2) {
 LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
   if (dims.empty())
     return success();
-  auto staticDim = std::accumulate(
-      dims.begin(), dims.end(), dims.front(), [](auto fold, auto dim) {
+  auto staticDim =
+      llvm::accumulate(dims, dims.front(), [](auto fold, auto dim) {
         return ShapedType::isDynamic(dim) ? fold : dim;
       });
   return success(llvm::all_of(dims, [&](auto dim) {
@@ -118,8 +118,7 @@ LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
 /// have compatible dimensions. Dimensions are compatible if all non-dynamic
 /// dims are equal. The element type does not matter.
 LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
-  auto shapedTypes = llvm::map_to_vector<8>(
-      types, [](auto type) { return llvm::dyn_cast<ShapedType>(type); });
+  auto shapedTypes = llvm::map_to_vector<8>(types, llvm::DynCastTo<ShapedType>);
   // Return failure if some, but not all are not shaped. Return early if none
   // are shaped also.
   if (llvm::none_of(shapedTypes, [](auto t) { return t; }))

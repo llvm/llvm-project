@@ -9,10 +9,13 @@
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Path.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <optional>
+#include <string>
 
 namespace clang {
 
@@ -29,7 +32,8 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
                                : llvm::AMDGPU::getArchAttrR600(ProcKind);
   if (Features & llvm::AMDGPU::FEATURE_SRAMECC)
     Ret.push_back("sramecc");
-  if (Features & llvm::AMDGPU::FEATURE_XNACK)
+  // Only allow xnack in target ID if the processor supports on/off modes.
+  if (Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES)
     Ret.push_back("xnack");
   return Ret;
 }
@@ -86,6 +90,8 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
 
   while (!Features.empty()) {
     auto Splits = Features.split(':');
+    if (Splits.first.empty())
+      return std::nullopt;
     auto Sign = Splits.first.back();
     auto Feature = Splits.first.drop_back();
     if (Sign != '+' && Sign != '-')
@@ -181,6 +187,13 @@ bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested) {
       return false;
   }
   return true;
+}
+
+std::string sanitizeTargetIDInFileName(llvm::StringRef TargetID) {
+  std::string FileName = TargetID.str();
+  if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
+    llvm::replace(FileName, ':', '@');
+  return FileName;
 }
 
 } // namespace clang

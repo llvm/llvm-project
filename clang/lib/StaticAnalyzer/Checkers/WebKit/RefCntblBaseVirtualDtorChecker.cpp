@@ -121,13 +121,13 @@ public:
                 return true;
             }
           } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
-            if (declaresSameEntity(RD->getOriginalDecl(), ClassDecl))
+            if (declaresSameEntity(RD->getDecl(), ClassDecl))
               return true;
           } else if (auto *ST =
                          dyn_cast<SubstTemplateTypeParmType>(PointeeType)) {
             auto Type = ST->getReplacementType();
             if (auto *RD = dyn_cast<RecordType>(Type)) {
-              if (declaresSameEntity(RD->getOriginalDecl(), ClassDecl))
+              if (declaresSameEntity(RD->getDecl(), ClassDecl))
                 return true;
             }
           }

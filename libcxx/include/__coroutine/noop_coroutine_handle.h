@@ -35,7 +35,7 @@ public:
 
   // [coroutine.handle.noop.observers], observers
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI constexpr bool done() const noexcept { return false; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool done() const noexcept { return false; }
 
   // [coroutine.handle.noop.resumption], resumption
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()() const noexcept {}
@@ -43,13 +43,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void destroy() const noexcept {}
 
   // [coroutine.handle.noop.promise], promise access
-  _LIBCPP_HIDE_FROM_ABI noop_coroutine_promise& promise() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI noop_coroutine_promise& promise() const noexcept {
     return *static_cast<noop_coroutine_promise*>(
         __builtin_coro_promise(this->__handle_, alignof(noop_coroutine_promise), false));
   }
 
   // [coroutine.handle.noop.address], address
-  _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
 
 private:
   _LIBCPP_HIDE_FROM_ABI friend coroutine_handle<noop_coroutine_promise> noop_coroutine() noexcept;
@@ -86,7 +86,9 @@ inline noop_coroutine_handle::__noop_coroutine_frame_ty_ noop_coroutine_handle::
 #  endif
 
 // [coroutine.noop.coroutine]
-inline _LIBCPP_HIDE_FROM_ABI noop_coroutine_handle noop_coroutine() noexcept { return noop_coroutine_handle(); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI noop_coroutine_handle noop_coroutine() noexcept {
+  return noop_coroutine_handle();
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

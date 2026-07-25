@@ -42,7 +42,7 @@ struct SourceLocation {
       : FileName(FileNameRef.str()), Line(Line) {}
 
   // Empty constructor is used in yaml conversion.
-  SourceLocation() {}
+  SourceLocation() = default;
   /// The filename where the data is located.
   std::string FileName;
   /// The line number in the source code.

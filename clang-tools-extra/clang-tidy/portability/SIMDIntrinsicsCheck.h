@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_SIMDINTRINSICSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_SIMDINTRINSICSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -31,10 +31,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  llvm::SmallString<32> Std;
+  SmallString<32> Std;
   const bool Suggest;
 };
 
 } // namespace clang::tidy::portability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SIMD_INTRINSICS_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_SIMDINTRINSICSCHECK_H

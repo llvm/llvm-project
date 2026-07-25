@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace ento;
@@ -245,8 +246,9 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
 /// that would leak.
 class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
   CheckerContext &Ctxt;
-  const StackFrameContext *PoppedStackFrame;
+  const StackFrame *PoppedStackFrame;
   SmallVectorImpl<const MemRegion *> &EscapingStackRegions;
+  llvm::SmallPtrSet<const MemRegion *, 16> VisitedRegions;
 
 public:
   explicit FindStackRegionsSymbolVisitor(
@@ -258,6 +260,9 @@ public:
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
   bool VisitMemRegion(const MemRegion *MR) override {
+    if (!VisitedRegions.insert(MR).second)
+      return true;
+
     SaveIfEscapes(MR);
 
     if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>())
@@ -273,9 +278,9 @@ private:
     if (!SSR)
       return;
 
-    const StackFrameContext *CapturedSFC = SSR->getStackFrame();
-    if (CapturedSFC == PoppedStackFrame ||
-        PoppedStackFrame->isParentOf(CapturedSFC))
+    const StackFrame *CapturedSF = SSR->getStackFrame();
+    if (CapturedSF == PoppedStackFrame ||
+        PoppedStackFrame->isParentOf(CapturedSF))
       EscapingStackRegions.push_back(MR);
   }
 
@@ -452,8 +457,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
   ExplodedNode *Node = Ctx.getPredecessor();
 
-  bool ExitingTopFrame =
-      Ctx.getPredecessor()->getLocationContext()->inTopFrame();
+  bool ExitingTopFrame = Ctx.getPredecessor()->getStackFrame()->inTopFrame();
 
   if (ExitingTopFrame &&
       Node->getLocation().getTag() == ExprEngine::cleanupNodeTag() &&
@@ -471,7 +475,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   private:
     CheckerContext &Ctx;
     ProgramStateRef State;
-    const StackFrameContext *PoppedFrame;
+    const StackFrame *PoppedFrame;
     const bool TopFrame;
 
     /// Look for stack variables referring to popped stack variables.
@@ -623,3 +627,5 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
 REGISTER_CHECKER(StackAddrEscape)
 REGISTER_CHECKER(StackAddrAsyncEscape)
+
+#undef REGISTER_CHECKER

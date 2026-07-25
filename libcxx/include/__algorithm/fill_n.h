@@ -9,11 +9,14 @@
 #ifndef _LIBCPP___ALGORITHM_FILL_N_H
 #define _LIBCPP___ALGORITHM_FILL_N_H
 
-#include <__algorithm/min.h>
+#include <__algorithm/for_each_n_segment.h>
+#include <__algorithm/specialized_algorithms.h>
 #include <__config>
-#include <__fwd/bit_reference.h>
-#include <__memory/pointer_traits.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/segmented_iterator.h>
+#include <__type_traits/enable_if.h>
 #include <__utility/convert_to_integral.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,54 +29,37 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // fill_n isn't specialized for std::memset, because the compiler already optimizes the loop to a call to std::memset.
 
-template <class _OutputIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
-
-template <bool _FillVal, class _Cp>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-__fill_n_bool(__bit_iterator<_Cp, false> __first, typename __size_difference_type_traits<_Cp>::size_type __n) {
-  using _It            = __bit_iterator<_Cp, false>;
-  using __storage_type = typename _It::__storage_type;
-
-  const int __bits_per_word = _It::__bits_per_word;
-  // do first partial word
-  if (__first.__ctz_ != 0) {
-    __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
-    __storage_type __dn    = std::min(__clz_f, __n);
-    std::__fill_masked_range(std::__to_address(__first.__seg_), __clz_f - __dn, __first.__ctz_, _FillVal);
-    __n -= __dn;
-    ++__first.__seg_;
-  }
-  // do middle whole words
-  __storage_type __nw = __n / __bits_per_word;
-  std::__fill_n(std::__to_address(__first.__seg_), __nw, _FillVal ? static_cast<__storage_type>(-1) : 0);
-  __n -= __nw * __bits_per_word;
-  // do last partial word
-  if (__n > 0) {
-    __first.__seg_ += __nw;
-    std::__fill_masked_range(std::__to_address(__first.__seg_), __bits_per_word - __n, 0u, _FillVal);
-  }
-}
-
-template <class _Cp, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, false>
-__fill_n(__bit_iterator<_Cp, false> __first, _Size __n, const bool& __value) {
-  if (__n > 0) {
-    if (__value)
-      std::__fill_n_bool<true>(__first, __n);
-    else
-      std::__fill_n_bool<false>(__first, __n);
-  }
-  return __first + __n;
-}
-
-template <class _OutputIterator, class _Size, class _Tp>
+template <
+    class _OutputIterator,
+    class _Size,
+    class _Tp,
+    __enable_if_t<!__specialized_algorithm<_Algorithm::__fill_n, __single_iterator<_OutputIterator> >::__has_algorithm,
+                  int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (__is_segmented_iterator_v<_OutputIterator>) {
+    using __local_iterator = typename __segmented_iterator_traits<_OutputIterator>::__local_iterator;
+    if constexpr (__has_random_access_iterator_category<__local_iterator>::value) {
+      return std::__for_each_n_segment(__first, __n, [&](__local_iterator __lfirst, __local_iterator __llast) {
+        std::__fill_n(__lfirst, __llast - __lfirst, __value);
+      });
+    }
+  }
+#endif
   for (; __n > 0; ++__first, (void)--__n)
     *__first = __value;
   return __first;
+}
+
+template <class _OutIter,
+          class _Size,
+          class _Tp,
+          __enable_if_t<__specialized_algorithm<_Algorithm::__fill_n, __single_iterator<_OutIter> >::__has_algorithm,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutIter __fill_n(_OutIter __first, _Size __n, const _Tp& __value) {
+  return __specialized_algorithm<_Algorithm::__fill_n, __single_iterator<_OutIter> >()(
+      std::move(__first), __n, __value);
 }
 
 template <class _OutputIterator, class _Size, class _Tp>

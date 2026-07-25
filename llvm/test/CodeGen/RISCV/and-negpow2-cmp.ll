@@ -7,8 +7,8 @@ define i1 @test1(i64 %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a2, a1, 2
 ; RV32-NEXT:    srli a0, a0, 30
-; RV32-NEXT:    srai a1, a1, 30
 ; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    srai a1, a1, 30
 ; RV32-NEXT:    xori a0, a0, -2
 ; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    or a0, a0, a1
@@ -221,8 +221,8 @@ define i64 @test12(i64 %0) #0 {
 ;
 ; RV64-LABEL: test12:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addiw a0, a0, -16
-; RV64-NEXT:    addi a0, a0, 13
+; RV64-NEXT:    addi a0, a0, -16
+; RV64-NEXT:    addiw a0, a0, 13
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
 entry:

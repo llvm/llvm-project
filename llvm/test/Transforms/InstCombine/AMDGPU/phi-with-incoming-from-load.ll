@@ -27,7 +27,7 @@ entry:
   %coerce = alloca %double_double, align 8, addrspace(5)
   %alpha_union = addrspacecast ptr addrspace(5) %coerce to ptr
   call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 %coerce, ptr addrspace(4) align 8 %in, i64 16, i1 false)
-  %load1 = load i8, ptr addrspace(5) null, align 1
+  %load1 = load i8, ptr addrspace(5) zeroinitializer, align 1
   %loadedv = trunc i8 %load1 to i1
   br i1 %loadedv, label %cond.end, label %cond.false
 

@@ -111,9 +111,6 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     if (!isValidKind(isInt, scanOp.getKind()))
       return failure();
 
-    VectorType resType = VectorType::get(destShape, elType);
-    Value result = arith::ConstantOp::create(rewriter, loc, resType,
-                                             rewriter.getZeroAttr(resType));
     int64_t reductionDim = scanOp.getReductionDim();
     bool inclusive = scanOp.getInclusive();
     int64_t destRank = destType.getRank();
@@ -121,8 +118,24 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     int64_t initialValueRank = initialValueType.getRank();
 
     SmallVector<int64_t> reductionShape(destShape);
+    SmallVector<bool> reductionScalableDims(destType.getScalableDims());
+
+    // Check before creating any IR so that returning failure() does not
+    // violate the pattern API contract.
+    if (reductionScalableDims[reductionDim])
+      return rewriter.notifyMatchFailure(
+          scanOp, "Trying to reduce scalable dimension - not yet supported!");
+
+    VectorType resType = destType;
+    Value result = arith::ConstantOp::create(rewriter, loc, resType,
+                                             rewriter.getZeroAttr(resType));
+
+    // The reduction dimension, after reducing, becomes 1. It's a fixed-width
+    // dimension - no need to touch the scalability flag.
     reductionShape[reductionDim] = 1;
-    VectorType reductionType = VectorType::get(reductionShape, elType);
+    VectorType reductionType =
+        VectorType::get(reductionShape, elType, reductionScalableDims);
+
     SmallVector<int64_t> offsets(destRank, 0);
     SmallVector<int64_t> strides(destRank, 1);
     SmallVector<int64_t> sizes(destShape);

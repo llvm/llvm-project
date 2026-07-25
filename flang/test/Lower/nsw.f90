@@ -77,14 +77,15 @@ end subroutine
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_25:.*]] = arith.addi %[[VAL_14]], %[[VAL_5]] overflow<nsw> : i32
-! CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i32) -> index
-! CHECK:           %[[VAL_27:.*]] = arith.subi %[[VAL_16]], %[[VAL_5]] overflow<nsw> : i32
-! CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (i32) -> index
-! CHECK:           %[[VAL_29:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
-! CHECK:           %[[VAL_30:.*]] = arith.muli %[[VAL_29]], %[[VAL_4]] overflow<nsw> : i32
-! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i32) -> index
-! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_26]] : (index) -> i32
-! CHECK:           %[[VAL_33:.*]] = fir.do_loop %[[VAL_34:.*]] = %[[VAL_26]] to %[[VAL_28]] step %[[VAL_31]] iter_args(%[[VAL_35:.*]] = %[[VAL_32]]) -> (i32) {
+! CHECK:           %[[VAL_26:.*]] = arith.subi %[[VAL_16]], %[[VAL_5]] overflow<nsw> : i32
+! CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
+! CHECK:           %[[VAL_28:.*]] = arith.muli %[[VAL_27]], %[[VAL_4]] overflow<nsw> : i32
+! CHECK:           fir.do_loop %[[VAL_29:.*]] = %[[VAL_25]] to %[[VAL_26]] step %[[VAL_28]] : i32 {
+! CHECK:             fir.store %[[VAL_29]] to %[[VAL_12]] : !fir.ref<i32>
+! CHECK:           }
+! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_25]] : (i32) -> index
+! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (i32) -> index
+! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_28]] : (i32) -> index
 
 subroutine loop_params2(a,lb,ub,st)
   integer :: i, lb, ub, st
@@ -106,15 +107,16 @@ end subroutine
 ! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_16:.*]] = fir.declare %{{.*}}ii"} : (!fir.ref<f32>) -> !fir.ref<f32>
 ! CHECK:           %[[VAL_17:.*]] = fir.declare %{{.*}}st"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
-! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
-! CHECK:           %[[VAL_29:.*]] = arith.addi %[[VAL_18]], %[[VAL_5]] overflow<nsw> : i32
-! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> f32
-! CHECK:           %[[VAL_31:.*]] = arith.subi %[[VAL_20]], %[[VAL_5]] overflow<nsw> : i32
-! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> f32
-! CHECK:           %[[VAL_33:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
-! CHECK:           %[[VAL_34:.*]] = arith.muli %[[VAL_33]], %[[VAL_4]] overflow<nsw> : i32
-! CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (i32) -> f32
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
+! CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_18]], %[[VAL_5]] overflow<nsw> : i32
+! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i32) -> f32
+! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
+! CHECK:             %[[VAL_31:.*]] = arith.subi %[[VAL_20]], %[[VAL_5]] overflow<nsw> : i32
+! CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> f32
+! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
+! CHECK:             %[[VAL_34:.*]] = arith.muli %[[VAL_33]], %[[VAL_4]] overflow<nsw> : i32
+! CHECK:             %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (i32) -> f32
 ! CHECK:           fir.store %[[VAL_35]] to %[[VAL_9]] : !fir.ref<f32>
 ! CHECK:           %[[VAL_36:.*]] = arith.subf %[[VAL_32]], %[[VAL_30]] fastmath<contract> : f32
 ! CHECK:           %[[VAL_37:.*]] = arith.addf %[[VAL_36]], %[[VAL_35]] fastmath<contract> : f32

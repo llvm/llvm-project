@@ -1,0 +1,11 @@
+executable("clangd-remap") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clangd",
+    "//clang-tools-extra/clangd/support",
+    "//clang/lib/Basic",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ ".." ]
+  sources = [ "RemapMain.cpp" ]
+}

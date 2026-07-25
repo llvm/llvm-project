@@ -20,7 +20,6 @@
 //===----------------------------------------------------------------------===//
 //
 #include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
@@ -41,6 +40,10 @@ using namespace llvm;
 
 #include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-dependence"
+
+namespace polly {
+Dependences::AnalysisLevel OptAnalysisLevel;
+}
 
 static cl::opt<int> OptComputeOut(
     "polly-dependences-computeout",
@@ -69,9 +72,10 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
                           "Overapproximation of dependences")),
     cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::cat(PollyCategory));
 
-static cl::opt<Dependences::AnalysisLevel> OptAnalysisLevel(
+static cl::opt<Dependences::AnalysisLevel, true> XOptAnalysisLevel(
     "polly-dependences-analysis-level",
     cl::desc("The level of dependence analysis"),
+    cl::location(OptAnalysisLevel),
     cl::values(clEnumValN(Dependences::AL_Statement, "statement-wise",
                           "Statement-level analysis"),
                clEnumValN(Dependences::AL_Reference, "reference-wise",
@@ -708,51 +712,58 @@ bool Dependences::isValidSchedule(
 // dimension, then the loop is parallel. The distance is zero in the current
 // dimension if it is a subset of a map with equal values for the current
 // dimension.
-bool Dependences::isParallel(__isl_keep isl_union_map *Schedule,
-                             __isl_take isl_union_map *Deps,
-                             __isl_give isl_pw_aff **MinDistancePtr) const {
-  isl_set *Deltas, *Distance;
-  isl_map *ScheduleDeps;
-  unsigned Dimension;
-  bool IsParallel;
+isl::boolean Dependences::isKnownParallel(isl::union_map Schedule,
+                                          isl::union_map Deps,
+                                          isl::pw_aff *MinDistancePtr) const {
+  // A null input means an upstream ISL operation failed (e.g. the operation
+  // quota was exhausted). We cannot compute a result, so report the error
+  // state rather than silently propagating the null through the computation.
+  if (Schedule.is_null() || Deps.is_null())
+    return isl::boolean::error();
 
-  Deps = isl_union_map_apply_range(Deps, isl_union_map_copy(Schedule));
-  Deps = isl_union_map_apply_domain(Deps, isl_union_map_copy(Schedule));
+  Deps = Deps.apply_range(Schedule);
+  Deps = Deps.apply_domain(Schedule);
 
-  if (isl_union_map_is_empty(Deps)) {
-    isl_union_map_free(Deps);
+  isl::boolean UnionMapIsEmpty = Deps.is_empty();
+  if (UnionMapIsEmpty.is_error())
+    return isl::boolean::error();
+  if (UnionMapIsEmpty.is_true())
     return true;
-  }
 
-  ScheduleDeps = isl_map_from_union_map(Deps);
-  Dimension = isl_map_dim(ScheduleDeps, isl_dim_out) - 1;
+  isl::map ScheduleDeps = isl::map::from_union_map(Deps);
+  isl::size NumberOfDimensions = ScheduleDeps.dim(isl::dim::out);
+  if (NumberOfDimensions.is_error())
+    return isl::boolean::error();
+  if (unsigned(NumberOfDimensions) == 0)
+    return false;
+  unsigned Dimension = unsigned(NumberOfDimensions) - 1;
 
   for (unsigned i = 0; i < Dimension; i++)
-    ScheduleDeps = isl_map_equate(ScheduleDeps, isl_dim_out, i, isl_dim_in, i);
+    ScheduleDeps = ScheduleDeps.equate(isl::dim::out, i, isl::dim::in, i);
 
-  Deltas = isl_map_deltas(ScheduleDeps);
-  Distance = isl_set_universe(isl_set_get_space(Deltas));
+  isl::set Deltas = ScheduleDeps.deltas();
+  isl::set Distance = isl::set::universe(Deltas.get_space());
 
   // [0, ..., 0, +] - All zeros and last dimension larger than zero
   for (unsigned i = 0; i < Dimension; i++)
-    Distance = isl_set_fix_si(Distance, isl_dim_set, i, 0);
+    Distance = Distance.fix_si(isl::dim::set, i, 0);
 
-  Distance = isl_set_lower_bound_si(Distance, isl_dim_set, Dimension, 1);
-  Distance = isl_set_intersect(Distance, Deltas);
+  Distance = Distance.lower_bound_si(isl::dim::set, Dimension, 1);
+  Distance = Distance.intersect(Deltas);
 
-  IsParallel = isl_set_is_empty(Distance);
-  if (IsParallel || !MinDistancePtr) {
-    isl_set_free(Distance);
+  isl::boolean IsParallel = Distance.is_empty();
+  if (IsParallel.is_error())
+    return isl::boolean::error();
+  if (IsParallel.is_true() || !MinDistancePtr)
     return IsParallel;
-  }
 
-  Distance = isl_set_project_out(Distance, isl_dim_set, 0, Dimension);
-  Distance = isl_set_coalesce(Distance);
+  Distance = Distance.project_out(isl::dim::set, 0, Dimension);
+  Distance = Distance.coalesce();
 
   // This last step will compute a expression for the minimal value in the
   // distance polyhedron Distance with regards to the first (outer most)
   // dimension.
-  *MinDistancePtr = isl_pw_aff_coalesce(isl_set_dim_min(Distance, 0));
+  *MinDistancePtr = Distance.dim_min(0).coalesce();
 
   return false;
 }
@@ -854,240 +865,7 @@ void DependenceAnalysis::Result::abandonDependences() {
     Deps.release();
 }
 
-DependenceAnalysis::Result
-DependenceAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
-                        ScopStandardAnalysisResults &SAR) {
-  return {S, {}};
+DependenceAnalysis::Result polly::runDependenceAnalysis(Scop &S) {
+  DependenceAnalysis::Result Result{S, {}};
+  return Result;
 }
-
-AnalysisKey DependenceAnalysis::Key;
-
-PreservedAnalyses
-DependenceInfoPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                               ScopStandardAnalysisResults &SAR,
-                               SPMUpdater &U) {
-  auto &DI = SAM.getResult<DependenceAnalysis>(S, SAR);
-
-  if (auto d = DI.D[OptAnalysisLevel].get()) {
-    d->print(OS);
-    return PreservedAnalyses::all();
-  }
-
-  // Otherwise create the dependences on-the-fly and print them
-  Dependences D(S.getSharedIslCtx(), OptAnalysisLevel);
-  D.calculateDependences(S);
-  D.print(OS);
-
-  return PreservedAnalyses::all();
-}
-
-const Dependences &
-DependenceInfo::getDependences(Dependences::AnalysisLevel Level) {
-  if (Dependences *d = D[Level].get())
-    return *d;
-
-  return recomputeDependences(Level);
-}
-
-const Dependences &
-DependenceInfo::recomputeDependences(Dependences::AnalysisLevel Level) {
-  D[Level].reset(new Dependences(S->getSharedIslCtx(), Level));
-  D[Level]->calculateDependences(*S);
-  return *D[Level];
-}
-
-void DependenceInfo::abandonDependences() {
-  for (std::unique_ptr<Dependences> &Deps : D)
-    Deps.release();
-}
-
-bool DependenceInfo::runOnScop(Scop &ScopVar) {
-  S = &ScopVar;
-  return false;
-}
-
-/// Print the dependences for the given SCoP to @p OS.
-
-void polly::DependenceInfo::printScop(raw_ostream &OS, Scop &S) const {
-  if (auto d = D[OptAnalysisLevel].get()) {
-    d->print(OS);
-    return;
-  }
-
-  // Otherwise create the dependences on-the-fly and print it
-  Dependences D(S.getSharedIslCtx(), OptAnalysisLevel);
-  D.calculateDependences(S);
-  D.print(OS);
-}
-
-void DependenceInfo::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequiredTransitive<ScopInfoRegionPass>();
-  AU.setPreservesAll();
-}
-
-char DependenceInfo::ID = 0;
-
-Pass *polly::createDependenceInfoPass() { return new DependenceInfo(); }
-
-INITIALIZE_PASS_BEGIN(DependenceInfo, "polly-dependences",
-                      "Polly - Calculate dependences", false, false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
-INITIALIZE_PASS_END(DependenceInfo, "polly-dependences",
-                    "Polly - Calculate dependences", false, false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from DependenceAnalysis.
-class DependenceInfoPrinterLegacyPass final : public ScopPass {
-public:
-  static char ID;
-
-  DependenceInfoPrinterLegacyPass() : DependenceInfoPrinterLegacyPass(outs()) {}
-
-  explicit DependenceInfoPrinterLegacyPass(llvm::raw_ostream &OS)
-      : ScopPass(ID), OS(OS) {}
-
-  bool runOnScop(Scop &S) override {
-    DependenceInfo &P = getAnalysis<DependenceInfo>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for "
-       << "region: '" << S.getRegion().getNameStr() << "' in function '"
-       << S.getFunction().getName() << "':\n";
-    P.printScop(OS, S);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-    AU.addRequired<DependenceInfo>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char DependenceInfoPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createDependenceInfoPrinterLegacyPass(raw_ostream &OS) {
-  return new DependenceInfoPrinterLegacyPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(DependenceInfoPrinterLegacyPass,
-                      "polly-print-dependences", "Polly - Print dependences",
-                      false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_END(DependenceInfoPrinterLegacyPass, "polly-print-dependences",
-                    "Polly - Print dependences", false, false)
-
-//===----------------------------------------------------------------------===//
-
-const Dependences &
-DependenceInfoWrapperPass::getDependences(Scop *S,
-                                          Dependences::AnalysisLevel Level) {
-  auto It = ScopToDepsMap.find(S);
-  if (It != ScopToDepsMap.end())
-    if (It->second) {
-      if (It->second->getDependenceLevel() == Level)
-        return *It->second;
-    }
-  return recomputeDependences(S, Level);
-}
-
-const Dependences &DependenceInfoWrapperPass::recomputeDependences(
-    Scop *S, Dependences::AnalysisLevel Level) {
-  std::unique_ptr<Dependences> D(new Dependences(S->getSharedIslCtx(), Level));
-  D->calculateDependences(*S);
-  auto Inserted = ScopToDepsMap.insert(std::make_pair(S, std::move(D)));
-  return *Inserted.first->second;
-}
-
-bool DependenceInfoWrapperPass::runOnFunction(Function &F) {
-  auto &SI = *getAnalysis<ScopInfoWrapperPass>().getSI();
-  for (auto &It : SI) {
-    assert(It.second && "Invalid SCoP object!");
-    recomputeDependences(It.second.get(), Dependences::AL_Access);
-  }
-  return false;
-}
-
-void DependenceInfoWrapperPass::print(raw_ostream &OS, const Module *M) const {
-  for (auto &It : ScopToDepsMap) {
-    assert((It.first && It.second) && "Invalid Scop or Dependence object!\n");
-    It.second->print(OS);
-  }
-}
-
-void DependenceInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequiredTransitive<ScopInfoWrapperPass>();
-  AU.setPreservesAll();
-}
-
-char DependenceInfoWrapperPass::ID = 0;
-
-Pass *polly::createDependenceInfoWrapperPassPass() {
-  return new DependenceInfoWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(
-    DependenceInfoWrapperPass, "polly-function-dependences",
-    "Polly - Calculate dependences for all the SCoPs of a function", false,
-    false)
-INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass);
-INITIALIZE_PASS_END(
-    DependenceInfoWrapperPass, "polly-function-dependences",
-    "Polly - Calculate dependences for all the SCoPs of a function", false,
-    false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from DependenceInfoWrapperPass.
-class DependenceInfoPrinterLegacyFunctionPass final : public FunctionPass {
-public:
-  static char ID;
-
-  DependenceInfoPrinterLegacyFunctionPass()
-      : DependenceInfoPrinterLegacyFunctionPass(outs()) {}
-
-  explicit DependenceInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS)
-      : FunctionPass(ID), OS(OS) {}
-
-  bool runOnFunction(Function &F) override {
-    DependenceInfoWrapperPass &P = getAnalysis<DependenceInfoWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for function '"
-       << F.getName() << "':\n";
-    P.print(OS);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<DependenceInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char DependenceInfoPrinterLegacyFunctionPass::ID = 0;
-} // namespace
-
-Pass *polly::createDependenceInfoPrinterLegacyFunctionPass(raw_ostream &OS) {
-  return new DependenceInfoPrinterLegacyFunctionPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(
-    DependenceInfoPrinterLegacyFunctionPass, "polly-print-function-dependences",
-    "Polly - Print dependences for all the SCoPs of a function", false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfoWrapperPass);
-INITIALIZE_PASS_END(DependenceInfoPrinterLegacyFunctionPass,
-                    "polly-print-function-dependences",
-                    "Polly - Print dependences for all the SCoPs of a function",
-                    false, false)

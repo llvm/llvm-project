@@ -27,6 +27,7 @@
 // eagerly scheduled, and a module pass can use MachineBlockFrequencyInfo.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/StaticDataAnnotator.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -42,16 +43,11 @@ using namespace llvm;
 
 /// A module pass which iterates global variables in the module and annotates
 /// their section prefixes based on profile-driven analysis.
-class StaticDataAnnotator : public ModulePass {
+class StaticDataAnnotatorLegacy : public ModulePass {
 public:
   static char ID;
 
-  StaticDataProfileInfo *SDPI = nullptr;
-  const ProfileSummaryInfo *PSI = nullptr;
-
-  StaticDataAnnotator() : ModulePass(ID) {
-    initializeStaticDataAnnotatorPass(*PassRegistry::getPassRegistry());
-  }
+  StaticDataAnnotatorLegacy() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<StaticDataProfileInfoWrapperPass>();
@@ -65,43 +61,47 @@ public:
   bool runOnModule(Module &M) override;
 };
 
-bool StaticDataAnnotator::runOnModule(Module &M) {
-  SDPI = &getAnalysis<StaticDataProfileInfoWrapperPass>()
-              .getStaticDataProfileInfo();
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-
-  if (!PSI->hasProfileSummary())
+static bool annotateModule(Module &M, StaticDataProfileInfo *SDPI,
+                           ProfileSummaryInfo *PSI) {
+  if (!PSI || !PSI->hasProfileSummary())
     return false;
 
   bool Changed = false;
   for (auto &GV : M.globals()) {
-    if (GV.isDeclarationForLinker())
+    if (!llvm::memprof::IsAnnotationOK(GV))
       continue;
-
-    // The implementation below assumes prior passes don't set section prefixes,
-    // and specifically do 'assign' rather than 'update'. So report error if a
-    // section prefix is already set.
-    if (auto maybeSectionPrefix = GV.getSectionPrefix();
-        maybeSectionPrefix && !maybeSectionPrefix->empty())
-      llvm::report_fatal_error("Global variable " + GV.getName() +
-                               " already has a section prefix " +
-                               *maybeSectionPrefix);
 
     StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
-    if (SectionPrefix.empty())
-      continue;
-
+    // setSectionPrefix returns true if the section prefix is updated.
     Changed |= GV.setSectionPrefix(SectionPrefix);
   }
 
   return Changed;
 }
 
-char StaticDataAnnotator::ID = 0;
+bool StaticDataAnnotatorLegacy::runOnModule(Module &M) {
+  StaticDataProfileInfo *SDPI = &getAnalysis<StaticDataProfileInfoWrapperPass>()
+                                     .getStaticDataProfileInfo();
+  ProfileSummaryInfo *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  return annotateModule(M, SDPI, PSI);
+}
 
-INITIALIZE_PASS(StaticDataAnnotator, DEBUG_TYPE, "Static Data Annotator", false,
-                false)
+char StaticDataAnnotatorLegacy::ID = 0;
 
-ModulePass *llvm::createStaticDataAnnotatorPass() {
-  return new StaticDataAnnotator();
+INITIALIZE_PASS(StaticDataAnnotatorLegacy, DEBUG_TYPE, "Static Data Annotator",
+                false, false)
+
+ModulePass *llvm::createStaticDataAnnotatorLegacyPass() {
+  return new StaticDataAnnotatorLegacy();
+}
+
+PreservedAnalyses StaticDataAnnoatorPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  StaticDataProfileInfo *SDPI = &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                                     .getStaticDataProfileInfo();
+  ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
+  return annotateModule(M, SDPI, PSI)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

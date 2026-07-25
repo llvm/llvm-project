@@ -16,6 +16,7 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/AllocToken.h"
 #include <optional>
 
 namespace llvm {
@@ -23,7 +24,8 @@ namespace llvm {
 class Module;
 
 struct AllocTokenOptions {
-  std::optional<uint64_t> MaxTokens;
+  AllocTokenMode Mode = DefaultAllocTokenMode;
+  uint64_t MaxTokens = 0;
   bool FastABI = false;
   bool Extended = false;
   AllocTokenOptions() = default;
@@ -31,11 +33,10 @@ struct AllocTokenOptions {
 
 /// A module pass that rewrites heap allocations to use token-enabled
 /// allocation functions based on various source-level properties.
-class AllocTokenPass : public PassInfoMixin<AllocTokenPass> {
+class AllocTokenPass : public RequiredPassInfoMixin<AllocTokenPass> {
 public:
   LLVM_ABI explicit AllocTokenPass(AllocTokenOptions Opts = {});
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static bool isRequired() { return true; }
 
 private:
   const AllocTokenOptions Options;

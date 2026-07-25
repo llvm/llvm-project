@@ -21,7 +21,6 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 
 namespace llvm {
 

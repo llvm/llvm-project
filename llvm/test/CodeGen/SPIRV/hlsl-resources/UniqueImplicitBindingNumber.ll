@@ -1,4 +1,4 @@
-; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not --crash llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; CHECK-ERROR: LLVM ERROR: Implicit binding calls with the same order ID must have the same descriptor set
 
 @.str = private unnamed_addr constant [2 x i8] c"b\00", align 1

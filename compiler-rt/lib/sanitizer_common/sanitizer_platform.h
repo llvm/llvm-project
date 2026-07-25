@@ -15,7 +15,8 @@
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
     !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__) &&      \
-    !defined(__wasi__)
+    !defined(__wasi__) && !defined(__NVPTX__) && !defined(__AMDGPU__) &&    \
+    !defined(__SPIRV__) && !defined(_AIX)
 #  error "This operating system is not supported"
 #endif
 
@@ -30,6 +31,12 @@
 #  define SANITIZER_LINUX 1
 #else
 #  define SANITIZER_LINUX 0
+#endif
+
+#if defined(_AIX)
+#  define SANITIZER_AIX 1
+#else
+#  define SANITIZER_AIX 0
 #endif
 
 #if defined(__GLIBC__)
@@ -151,7 +158,7 @@
 
 #define SANITIZER_POSIX                                       \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE || \
-   SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU)
+   SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU || SANITIZER_AIX)
 
 #if __LP64__ || defined(_WIN64)
 #  define SANITIZER_WORDSIZE 64
@@ -302,6 +309,30 @@
 #  define SANITIZER_LOONGARCH64 0
 #endif
 
+#if defined(__alpha__)
+#  define SANITIZER_ALPHA 1
+#else
+#  define SANITIZER_ALPHA 0
+#endif
+
+#if defined(__AMDGPU__)
+#  define SANITIZER_AMDGPU 1
+#else
+#  define SANITIZER_AMDGPU 0
+#endif
+
+#if defined(__NVPTX__)
+#  define SANITIZER_NVPTX 1
+#else
+#  define SANITIZER_NVPTX 0
+#endif
+
+#if defined(__SPIRV__)
+#  define SANITIZER_SPIRV 1
+#else
+#  define SANITIZER_SPIRV 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases SizeClassAllocator64 does not work well and we need to
 // fallback to SizeClassAllocator32.
@@ -319,7 +350,11 @@
 #endif
 
 // The first address that can be returned by mmap.
-#define SANITIZER_MMAP_BEGIN 0
+#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+#  define SANITIZER_MMAP_BEGIN 0x0a00'0000'0000'0000ULL
+#else
+#  define SANITIZER_MMAP_BEGIN 0
+#endif
 
 // The range of addresses which can be returned my mmap.
 // FIXME: this value should be different on different platforms.  Larger values
@@ -495,6 +530,13 @@
 #  else
 #    define SANITIZER_TERMIOS_IOCTL_CONSTANTS 1
 #  endif
+#endif
+
+#if SANITIZER_APPLE && SANITIZER_WORDSIZE == 64
+// MTE uses the lower half of the top byte.
+#  define STRIP_MTE_TAG(addr) ((addr) & ~((uptr)0x0f << 56))
+#else
+#  define STRIP_MTE_TAG(addr) (addr)
 #endif
 
 #endif  // SANITIZER_PLATFORM_H

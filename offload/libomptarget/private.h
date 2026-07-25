@@ -17,6 +17,7 @@
 #include "Shared/SourceInfo.h"
 
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/omp.h"
 
 #include "device.h"
 #include "omptarget.h"
@@ -27,14 +28,17 @@ extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
 extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
-                              void *ReqAddr, bool isRecord, bool SaveOutput,
-                              uint64_t &ReqPtrArgOffset);
+                              void *ReqAddr, bool IsRecord, bool SaveOutput,
+                              bool EmitReport, const char *OutputDirPath);
 
-extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                         void *DeviceMemory, int64_t DeviceMemorySize,
-                         void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
-                         int32_t NumTeams, int32_t ThreadLimit,
-                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+extern int
+target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr, void *DeviceMemory,
+              int64_t DeviceMemorySize, void *ReuseDeviceAlloc,
+              const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+              void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+              int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
+              uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo,
+              KernelReplayOutcomeTy *ReplayOutcome);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 
@@ -80,6 +84,16 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%" PRId64 "] %s\n", Type,
          getNameFromMapping(VarName).c_str(), ArgSizes[I], Implicit);
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Checks if the passed device is the initial device (i.e., host device)
+/// While the device number is defined as the value of the total number of
+/// host devices (i.e. omp_get_initial_device()), the alias omp_initial_device
+/// can be used as well (Ref. OpenMP v5.2, p.23 l.33 - p.24 l.6).
+static inline bool isInitialDevice(const int &DeviceNum) {
+  return DeviceNum == omp_get_initial_device() ||
+         DeviceNum == omp_initial_device;
 }
 
 #endif

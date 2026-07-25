@@ -2,9 +2,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME STREQUAL Wind
 
   add_clang_unittest(DirectoryWatcherTests
     DirectoryWatcherTest.cpp
+    CLANG_LIBS
+    clangDirectoryWatcher
     LINK_LIBS
     LLVMTestingSupport
-    clangDirectoryWatcher
     LLVM_COMPONENTS
     Support
     )

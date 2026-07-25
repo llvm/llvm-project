@@ -8,17 +8,16 @@ endif()
 
 add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
+  BacktraceTools.cpp
   COFF.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
-  DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
-  EPCDebugObjectRegistrar.cpp
   EPCGenericDylibManager.cpp
   EPCGenericJITLinkMemoryManager.cpp
   EPCGenericRTDyldMemoryManager.cpp
@@ -26,8 +25,8 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutionUtils.cpp
   ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
-  GetDylibInterface.cpp
   IndirectionUtils.cpp
+  InProcessEPC.cpp
   InProcessMemoryAccess.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
@@ -56,6 +55,7 @@ add_llvm_component_library(LLVMOrcJIT
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
   SimpleRemoteEPC.cpp
+  SimpleRemoteMemoryMapper.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
   ExecutorProcessControl.cpp

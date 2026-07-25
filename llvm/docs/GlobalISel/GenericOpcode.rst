@@ -341,6 +341,15 @@ These each perform their respective integer arithmetic on a scalar.
 
 The above example adds %src1 to %src0 and stores the result in %dst.
 
+G_CLMUL
+^^^^^^^
+
+Perform integer carry-less multiplication.
+
+.. code-block:: none
+
+  %dst:_(s32) = G_CLMUL %src_0:_(s32), %src1:_(32)
+
 G_SDIVREM, G_UDIVREM
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -486,30 +495,54 @@ Count leading zeros, trailing zeros, or number of set bits.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
-  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTLZ_ZERO_POISON %1
+  %2:_(s33) = G_CTTZ_ZERO_POISON %1
   %2:_(s33) = G_CTPOP %1
 
-G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Count leading zeros or trailing zeros. If the value is zero then the result is
-undefined.
+poison.
 
 .. code-block:: none
 
-  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
-  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTLZ_ZERO_POISON %1
+  %2:_(s33) = G_CTTZ_ZERO_POISON %1
+
+G_CTLS
+^^^^^^
+
+Count leading redundant sign bits. If the value is positive then the result is
+the number of extra leading zeros. If the value is negative then the result is
+the number of extra leading ones.
+
+.. code-block:: none
+
+  %2:_(s32) = G_CTLS %1
 
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
 
 .. code-block:: none
 
   %0:_(s33) = G_ABDS %2, %3
   %1:_(s33) = G_ABDU %4, %5
+
+G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Computes the average of corresponding elements in two vectors (signed and unsigned).
+Resulting vector contains values that are either rounded or truncated. e.g. trunc(shr(add(ext(a),ext(b)),1)).
+
+.. code-block:: none
+
+  %0:_(<4 x i16>) = G_UAVGFLOOR %4:_(<4 x i16>), %5:_(<4 x i16>)
+  %1:_(<4 x i16>) = G_UAVGCEIL %6:_(<4 x i16>), %7:_(<4 x i16>)
+  %2:_(<4 x i16>) = G_SAVGFLOOR %8:_(<4 x i16>), %9:_(<4 x i16>)
+  %3:_(<4 x i16>) = G_SAVGCEIL %10:_(<4 x i16>), %11:_(<4 x i16>)
 
 Floating Point Operations
 -------------------------
@@ -735,6 +768,9 @@ the runtime scaling factor. The indices inserted in the source vector must be
 valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
+This operation supports inserting a fixed vector into a scalable vector, but not
+the other way around.
+
 .. code-block:: none
 
   %2:_(<vscale x 4 x i64>) = G_INSERT_SUBVECTOR %0:_(<vscale x 4 x i64>), %1:_(<vscale x 2 x i64>), 0
@@ -746,18 +782,19 @@ Extract a vector of destination type from the source vector. The index operand
 represents the starting index from which a subvector is extracted from
 the source vector.
 
-The index must be a constant multiple of the source vector's minimum vector
+The index must be a constant multiple of the destination vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
 vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
-Mixing scalable vectors and fixed vectors are not allowed.
+This operation supports extracting a fixed vector from a scalable vector, but
+not the other way around.
 
 .. code-block:: none
 
-  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
+  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 4
 
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
@@ -906,6 +943,21 @@ Unlike in SelectionDAG, atomic loads are expressed with the same
 opcodes as regular loads. G_LOAD, G_SEXTLOAD and G_ZEXTLOAD may all
 have atomic memory operands.
 
+G_FPEXTLOAD
+^^^^^^^^^^^
+
+Generic floating-point extending load. Expects a MachineMemOperand in addition
+to explicit operands. Loads a floating-point value from memory and extends it
+to a larger floating-point type.
+
+The memory size must be smaller than the result type. For example, loading an
+f32 value from memory and extending it to f64, or loading an f16 value and
+extending it to f32.
+
+.. code-block:: none
+
+  %1:_(s64) = G_FPEXTLOAD %0:_(p0) :: (load (s32))
+
 G_INDEXED_LOAD
 ^^^^^^^^^^^^^^
 
@@ -931,6 +983,21 @@ operands. If the stored value size is greater than the memory size,
 the high bits are implicitly truncated. If this is a vector store, the
 high elements are discarded (i.e. this does not function as a per-lane
 vector, truncating store)
+
+G_FPTRUNCSTORE
+^^^^^^^^^^^^^^
+
+Generic floating-point truncating store. Expects a MachineMemOperand in
+addition to explicit operands. Truncates a floating-point value to a smaller
+floating-point type and stores it to memory.
+
+The memory size must be smaller than the source value type. For example,
+truncating an f64 value to f32 and storing it, or truncating an f32 value
+to f16 and storing it.
+
+.. code-block:: none
+
+  G_FPTRUNCSTORE %0:_(s64), %1:_(p0) :: (store (s32))
 
 G_INDEXED_STORE
 ^^^^^^^^^^^^^^^

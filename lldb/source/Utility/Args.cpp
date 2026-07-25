@@ -407,7 +407,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
   // safe minimal set
   llvm::StringRef escapables = " '\"";
 
-  auto basename = shell.GetFilename().GetStringRef();
+  auto basename = shell.GetFilename();
   if (!basename.empty()) {
     for (const auto &Shell : g_Shells) {
       if (Shell.m_basename == basename) {
@@ -445,7 +445,7 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
                         .Case("pc", LLDB_REGNUM_GENERIC_PC)
                         .Case("sp", LLDB_REGNUM_GENERIC_SP)
                         .Case("fp", LLDB_REGNUM_GENERIC_FP)
-                        .Cases("ra", "lr", LLDB_REGNUM_GENERIC_RA)
+                        .Cases({"ra", "lr"}, LLDB_REGNUM_GENERIC_RA)
                         .Case("flags", LLDB_REGNUM_GENERIC_FLAGS)
                         .Case("arg1", LLDB_REGNUM_GENERIC_ARG1)
                         .Case("arg2", LLDB_REGNUM_GENERIC_ARG2)

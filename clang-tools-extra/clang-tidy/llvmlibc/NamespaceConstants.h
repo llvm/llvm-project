@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_NAMESPACECONSTANTS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_NAMESPACECONSTANTS_H
+
 #include "llvm/ADT/StringRef.h"
 
 namespace clang::tidy::llvm_libc {
@@ -18,3 +21,5 @@ const static llvm::StringRef RequiredNamespaceDeclMacroName =
     "LIBC_NAMESPACE_DECL";
 
 } // namespace clang::tidy::llvm_libc
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_NAMESPACECONSTANTS_H

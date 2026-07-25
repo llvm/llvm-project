@@ -9,6 +9,7 @@
 #include "UnwindWasm.h"
 #include "Plugins/Process/gdb-remote/ThreadGDBRemote.h"
 #include "ProcessWasm.h"
+#include "RegisterContextWasm.h"
 #include "ThreadWasm.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -18,20 +19,10 @@ using namespace lldb_private;
 using namespace process_gdb_remote;
 using namespace wasm;
 
-class WasmGDBRemoteRegisterContext : public GDBRemoteRegisterContext {
-public:
-  WasmGDBRemoteRegisterContext(ThreadGDBRemote &thread,
-                               uint32_t concrete_frame_idx,
-                               GDBRemoteDynamicRegisterInfoSP &reg_info_sp,
-                               uint64_t pc)
-      : GDBRemoteRegisterContext(thread, concrete_frame_idx, reg_info_sp, false,
-                                 false) {
-    // Wasm does not have a fixed set of registers but relies on a mechanism
-    // named local and global variables to store information such as the stack
-    // pointer. The only actual register is the PC.
-    PrivateSetRegisterValue(0, pc);
-  }
-};
+/// Base for synthesized Wasm frame call frame addresses. It sits above any
+/// call depth a Wasm stack can reach and clear of zero and the invalid-address
+/// sentinel, so the derived addresses stay distinct and valid.
+static constexpr lldb::addr_t kWasmSyntheticCFABase = 0x40000000;
 
 lldb::RegisterContextSP
 UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
@@ -43,9 +34,9 @@ UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   ProcessWasm *wasm_process =
       static_cast<ProcessWasm *>(thread->GetProcess().get());
 
-  return std::make_shared<WasmGDBRemoteRegisterContext>(
-      *gdb_thread, frame->GetConcreteFrameIndex(),
-      wasm_process->GetRegisterInfo(), m_frames[frame->GetFrameIndex()]);
+  return std::make_shared<RegisterContextWasm>(*gdb_thread,
+                                               frame->GetConcreteFrameIndex(),
+                                               wasm_process->GetRegisterInfo());
 }
 
 uint32_t UnwindWasm::DoGetFrameCount() {
@@ -79,7 +70,13 @@ bool UnwindWasm::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
     return false;
 
   behaves_like_zeroth_frame = (frame_idx == 0);
-  cfa = 0;
+  // StackID orders frames by call frame address, expecting a younger frame to
+  // sit below its caller. Wasm has no in-memory frame address to read, so
+  // derive one from the frame's distance to the outermost frame, which stays
+  // fixed as frames are pushed and popped above it, inverted so younger frames
+  // compare lower.
+  const size_t depth_from_outermost = m_frames.size() - 1 - frame_idx;
+  cfa = kWasmSyntheticCFABase - depth_from_outermost;
   pc = m_frames[frame_idx];
   return true;
 }

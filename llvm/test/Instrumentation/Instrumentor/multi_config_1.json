@@ -1,0 +1,12 @@
+{
+  "configuration": {
+    "runtime_prefix": "__c1_",
+    "function_regex": "foo"
+  },
+  "instruction_pre": {
+    "load": {
+      "enabled": true,
+      "id": true
+    }
+  }
+}

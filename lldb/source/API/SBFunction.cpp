@@ -57,7 +57,7 @@ const char *SBFunction::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetName().AsCString();
+    return m_opaque_ptr->GetName().AsCString(nullptr);
 
   return nullptr;
 }
@@ -66,7 +66,8 @@ const char *SBFunction::GetDisplayName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
+    return m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString(
+        nullptr);
 
   return nullptr;
 }
@@ -75,7 +76,7 @@ const char *SBFunction::GetMangledName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetMangled().GetMangledName().AsCString();
+    return m_opaque_ptr->GetMangled().GetMangledName().AsCString(nullptr);
   return nullptr;
 }
 
@@ -85,7 +86,7 @@ const char *SBFunction::GetBaseName() const {
   if (!m_opaque_ptr)
     return nullptr;
 
-  return m_opaque_ptr->GetMangled().GetBaseName().AsCString();
+  return m_opaque_ptr->GetMangled().GetBaseName().AsCString(nullptr);
 }
 
 bool SBFunction::operator==(const SBFunction &rhs) const {
@@ -105,10 +106,10 @@ bool SBFunction::GetDescription(SBStream &s) {
 
   if (m_opaque_ptr) {
     s.Printf("SBFunction: id = 0x%8.8" PRIx64 ", name = %s",
-             m_opaque_ptr->GetID(), m_opaque_ptr->GetName().AsCString());
+             m_opaque_ptr->GetID(), m_opaque_ptr->GetName().AsCString(""));
     Type *func_type = m_opaque_ptr->GetType();
     if (func_type)
-      s.Printf(", type = %s", func_type->GetName().AsCString());
+      s.Printf(", type = %s", func_type->GetName().AsCString(""));
     return true;
   }
   s.Printf("No value");

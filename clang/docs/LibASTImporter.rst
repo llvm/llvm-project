@@ -35,12 +35,12 @@ Importing one AST node copies that node into the destination ``ASTContext``.
 Why do we have to copy the node?
 Isn't enough to insert the pointer to that node into the destination context?
 One reason is that the "from" context may outlive the "to" context.
-Also, the Clang AST consider nodes (or certain properties of nodes) equivalent if they have the same address!
+Also, the Clang AST considers nodes (or certain properties of nodes) equivalent if they have the same address!
 
 The import algorithm has to ensure that the structurally equivalent nodes in the different translation units are not getting duplicated in the merged AST.
 E.g. if we include the definition of the vector template (``#include <vector>``) in two translation units, then their merged AST should have only one node which represents the template.
 Also, we have to discover *one definition rule* (ODR) violations.
-For instance, if there is a class definition with the same name in both translation units, but one of the definition contains a different number of fields.
+For instance, if there is a class definition with the same name in both translation units, but one of the definitions contains a different number of fields.
 So, we look up existing definitions, and then we check the structural equivalency on those nodes.
 The following pseudo-code demonstrates the basics of the import mechanism:
 
@@ -502,7 +502,7 @@ The ``-ast-merge <pch-file>`` command-line switch can be used to merge from the 
 This file represents the source context.
 When this switch is present then each top-level AST node of the source context is being merged into the destination context.
 If the merge was successful then ``ASTConsumer::HandleTopLevelDecl`` is called for the Decl.
-This results that we can execute the original front-end action on the extended AST.
+This means that we can execute the original front-end action on the extended AST.
 
 Example for C
 ^^^^^^^^^^^^^

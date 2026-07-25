@@ -40,8 +40,8 @@ static_assert(__builtin_structured_binding_size(S5) == 2);
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(S5) == 2'}} \
 // expected-note@-1 {{expression evaluates to '1 == 2'}}
 static_assert(__builtin_structured_binding_size(S6) == 2);
-// expected-error@-1 {{cannot decompose class type 'S6' because it has an anonymous union member}} \
-// expected-error@-1 {{type 'S6' cannot be decomposed}} \
+// expected-error@-1 {{cannot bind class type 'S6' because it has an anonymous union member}} \
+// expected-error@-1 {{type 'S6' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}} \
 // expected-note@#note-anon-union {{declared here}}
 static_assert(__builtin_structured_binding_size(S7) == 1);
@@ -49,15 +49,15 @@ static_assert(__builtin_structured_binding_size(S7) == 1);
 
 static_assert(__builtin_structured_binding_size(SD) == 1);
 static_assert(__builtin_structured_binding_size(SE1) == 1);
-// expected-error@-1 {{cannot decompose class type 'SE1': both it and its base class 'S1' have non-static data members}} \
-// expected-error@-1 {{type 'SE1' cannot be decomposed}} \
+// expected-error@-1 {{cannot bind class type 'SE1': both it and its base class 'S1' have non-static data members}} \
+// expected-error@-1 {{type 'SE1' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
 static_assert(__builtin_structured_binding_size(U1) == 0);
-// expected-error@-1 {{type 'U1' cannot be decomposed}} \
+// expected-error@-1 {{type 'U1' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_structured_binding_size(U2) == 0);
-// expected-error@-1 {{type 'U2' cannot be decomposed}} \
+// expected-error@-1 {{type 'U2' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
 
@@ -75,7 +75,7 @@ static_assert(__builtin_structured_binding_size(decltype(__builtin_complex(0., 0
 
 int VLASize; // expected-note {{declared here}}
 static_assert(__builtin_structured_binding_size(int[VLASize]) == 42);
-// expected-error@-1 {{type 'int[VLASize]' cannot be decomposed}} \
+// expected-error@-1 {{type 'int[VLASize]' cannot be bound}} \
 // expected-warning@-1 {{variable length arrays in C++ are a Clang extension}} \
 // expected-note@-1 {{read of non-const variable 'VLASize' is not allowed in a constant expression}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
@@ -84,10 +84,10 @@ static_assert(__builtin_structured_binding_size(int[VLASize]) == 42);
 struct Incomplete; // expected-note {{forward declaration of 'Incomplete'}}
 static_assert(__builtin_structured_binding_size(Incomplete) == 1);
 // expected-error@-1 {{incomplete type 'Incomplete' where a complete type is required}} \
-// expected-error@-1 {{type 'Incomplete' cannot be decomposed}} \
+// expected-error@-1 {{type 'Incomplete' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_structured_binding_size(Incomplete[]) == 1);
-// expected-error@-1 {{type 'Incomplete[]' cannot be decomposed}} \
+// expected-error@-1 {{type 'Incomplete[]' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_structured_binding_size(Incomplete[0]) == 0);
 static_assert(__builtin_structured_binding_size(Incomplete[1]) == 1);
@@ -97,12 +97,12 @@ static_assert(__builtin_structured_binding_size(Incomplete[42]) == 42);
 static_assert(__builtin_structured_binding_size(P1) == 0);
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(P1) == 0'}} \
 // expected-note@-1 {{expression evaluates to '1 == 0'}} \
-// expected-error@-1 {{cannot decompose private member 'a' of 'P1}} \
+// expected-error@-1 {{cannot bind private member 'a' of 'P1}} \
 // expected-note@#note-private {{implicitly declared private here}}
 
 
 void func(int array[14], int x = __builtin_structured_binding_size(decltype(array)));
-//expected-error@-1 {{type 'decltype(array)' (aka 'int *') cannot be decomposed}}
+//expected-error@-1 {{type 'decltype(array)' (aka 'int *') cannot be bound}}
 
 struct SM {
     static int array[14];
@@ -115,7 +115,7 @@ struct T {
 };
 
 T<int> t1;
-// expected-error@#tpl-1 {{type 'int' cannot be decomposed}} \
+// expected-error@#tpl-1 {{type 'int' cannot be bound}} \
 // expected-error@#tpl-1 {{non-type template argument is not a constant expression}} \
 // expected-note@-1 {{in instantiation of default argument for 'T<int>' required here}} \
 // expected-note@-1 {{while checking a default template argument used here}} \
@@ -183,8 +183,8 @@ static_assert(!is_destructurable<T0&>);
 static_assert(__builtin_structured_binding_size(T1) == 1);
 static_assert(__builtin_structured_binding_size(T42) == 42);
 static_assert(__builtin_structured_binding_size(TSizeError) == 42);
-// expected-error@-1 {{cannot decompose this type; 'std::tuple_size<TSizeError>::value' is not a valid integral constant expression}} \
-// expected-error@-1 {{type 'TSizeError' cannot be decomposed}} \
+// expected-error@-1 {{cannot bind this type; 'std::tuple_size<TSizeError>::value' is not a valid integral constant expression}} \
+// expected-error@-1 {{type 'TSizeError' cannot be bound}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(!is_destructurable<TSizeError>);
 }
@@ -195,7 +195,7 @@ struct S {
   int y;
   static_assert(__builtin_structured_binding_size(S) == 2);
   //expected-error@-1 {{incomplete type 'S' where a complete type is required}} \
-  // expected-error@-1 {{type 'S' cannot be decomposed}} \
+  // expected-error@-1 {{type 'S' cannot be bound}} \
   // expected-error@-1 {{static assertion expression is not an integral constant expression}} \
   // expected-note@-4 {{definition of 'S' is not complete until the closing '}'}}
 };
@@ -228,20 +228,20 @@ static_assert(__is_same_as(tag_of_t<S1>, int));
 
 static_assert(__is_same_as(tag_of_t<int>, int)); // error
 // expected-error@-1 {{constraints not satisfied for alias template 'tag_of_t' [with T = int]}}
-// expected-note@#tag-of-constr {{because substituted constraint expression is ill-formed: type 'int' cannot be decomposed}}
+// expected-note@#tag-of-constr {{because substituted constraint expression is ill-formed: type 'int' cannot be bound}}
 
 struct MinusOne;
 template <> struct ::std::tuple_size<MinusOne> {
   static constexpr int value = -1;
 };
 int minus_one = __builtin_structured_binding_size(MinusOne);
-// expected-error@-1 {{cannot decompose this type; 'std::tuple_size<MinusOne>::value' is not a valid size: -1}}
-// expected-error@-2 {{type 'MinusOne' cannot be decomposed}}
+// expected-error@-1 {{cannot bind this type; 'std::tuple_size<MinusOne>::value' is not a valid size: -1}}
+// expected-error@-2 {{type 'MinusOne' cannot be bound}}
 
 struct UintMax;
 template <> struct ::std::tuple_size<UintMax> {
   static constexpr unsigned value = -1;
 };
 int uint_max = __builtin_structured_binding_size(UintMax);
-// expected-error@-1 {{cannot decompose this type; 'std::tuple_size<UintMax>::value' is not a valid size: 4294967295}}
-// expected-error@-2 {{type 'UintMax' cannot be decomposed}}
+// expected-error@-1 {{cannot bind this type; 'std::tuple_size<UintMax>::value' is not a valid size: 4294967295}}
+// expected-error@-2 {{type 'UintMax' cannot be bound}}

@@ -8,7 +8,19 @@ macros:
   - macro_name: roundfx
     macro_header: stdfix-macros.h
 types:
-  - type_name: stdfix-types
+  - type_name: int_hk_t
+  - type_name: int_hr_t
+  - type_name: int_k_t
+  - type_name: int_lk_t
+  - type_name: int_lr_t
+  - type_name: int_r_t
+  - type_name: uint_uhk_t
+  - type_name: uint_uhr_t
+  - type_name: uint_uk_t
+  - type_name: uint_ulk_t
+  - type_name: uint_ulr_t
+  - type_name: uint_ur_t
+
 enums: []
 objects: []
 functions:
@@ -423,7 +435,8 @@ functions:
       - type: unsigned accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
   - name: sqrtulk
-    standards: llvm_libc_stdfix_ext
+    standards:
+      - llvm_libc_stdfix_ext
     return_type: unsigned long accum
     arguments:
       - type: unsigned long accum
@@ -551,4 +564,68 @@ functions:
     arguments:
       - type: int
       - type: int
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: divir
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: int
+      - type: fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: divilr
+    standards:
+      - stdc_ext
+    return_type: long int
+    arguments:
+      - type: long int
+      - type: long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: divik
+    standards:
+      - stdc_ext
+    return_type: int
+    arguments:
+      - type: int
+      - type: accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: divilk
+    standards:
+      - stdc_ext
+    return_type: long int
+    arguments:
+      - type: long int
+      - type: long accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: diviur
+    standards:
+      - stdc_ext
+    return_type: unsigned int
+    arguments:
+      - type: unsigned int
+      - type: unsigned fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: diviulr
+    standards:
+      - stdc_ext
+    return_type: unsigned long int
+    arguments:
+      - type: unsigned long int
+      - type: unsigned long fract
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: diviuk
+    standards:
+      - stdc_ext
+    return_type: unsigned int
+    arguments:
+      - type: unsigned int
+      - type: unsigned accum
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: diviulk
+    standards:
+      - stdc_ext
+    return_type: unsigned long int
+    arguments:
+      - type: unsigned long int
+      - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT

@@ -523,9 +523,10 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
         ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
     List.Clear();
-    lldb_private::Module::LookupInfo lookup_info(
-        ConstString(Name), getFunctionNameFlags(), eLanguageTypeUnknown);
-    Symfile.FindFunctions(lookup_info, ContextPtr, true, List);
+    std::vector<lldb_private::Module::LookupInfo> lookup_infos =
+        lldb_private::Module::LookupInfo::MakeLookupInfos(
+            ConstString(Name), getFunctionNameFlags(), eLanguageTypeUnknown);
+    Symfile.FindFunctions(lookup_infos, ContextPtr, true, List);
   }
   outs() << formatv("Found {0} functions:\n", List.GetSize());
   StreamString Stream;
@@ -664,8 +665,7 @@ Error opts::symbols::findVariables(lldb_private::Module &Module) {
     CompUnitSP CU;
     for (size_t Ind = 0; !CU && Ind < Module.GetNumCompileUnits(); ++Ind) {
       CompUnitSP Candidate = Module.GetCompileUnitAtIndex(Ind);
-      if (!Candidate ||
-          Candidate->GetPrimaryFile().GetFilename().GetStringRef() != File)
+      if (!Candidate || Candidate->GetPrimaryFile().GetFilename() != File)
         continue;
       if (CU)
         return make_string_error("Multiple compile units for file `{0}` found.",
@@ -766,8 +766,7 @@ Error opts::symbols::verify(lldb_private::Module &Module) {
     if (!comp_unit)
       return make_string_error("Cannot parse compile unit {0}.", i);
 
-    outs() << "Processing '"
-           << comp_unit->GetPrimaryFile().GetFilename().AsCString()
+    outs() << "Processing '" << comp_unit->GetPrimaryFile().GetFilename()
            << "' compile unit.\n";
 
     LineTable *lt = comp_unit->GetLineTable();
@@ -1006,7 +1005,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     AutoIndent Indent(Printer, 2);
     Printer.formatLine("Index: {0}", I);
     Printer.formatLine("ID: {0:x}", S->GetID());
-    Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+    Printer.formatLine("Name: {0}", S->GetName());
     Printer.formatLine("Type: {0}", S->GetTypeAsCString());
     Printer.formatLine("Permissions: {0}", GetPermissionsAsCString(S->GetPermissions()));
     Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());
@@ -1253,8 +1252,7 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  auto TerminateDebugger =
-      llvm::make_scope_exit([&] { DebuggerLifetime.Terminate(); });
+  llvm::scope_exit TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
   ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);
@@ -1270,7 +1268,10 @@ int main(int argc, const char *argv[]) {
       /*add_to_history*/ eLazyBoolNo, Result);
 
   if (!opts::Log.empty())
-    Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, eLogHandlerStream, errs());
+    if (llvm::Error e =
+            Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, 0, eLogHandlerStream))
+      WithColor::error() << "failed to enable logs: " << toString(std::move(e))
+                         << '\n';
 
   if (opts::BreakpointSubcommand)
     return opts::breakpoint::evaluateBreakpoints(*Dbg);

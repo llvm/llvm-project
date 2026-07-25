@@ -121,6 +121,11 @@ namespace mlir {
 class MLIRContextImpl {
 public:
   //===--------------------------------------------------------------------===//
+  // Remark
+  //===--------------------------------------------------------------------===//
+  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
+
+  //===--------------------------------------------------------------------===//
   // Debugging
   //===--------------------------------------------------------------------===//
 
@@ -133,11 +138,6 @@ public:
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
-
-  //===--------------------------------------------------------------------===//
-  // Remark
-  //===--------------------------------------------------------------------===//
-  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -357,7 +357,10 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->affineUniquer.registerParametricStorageType<IntegerSetStorage>();
 }
 
-MLIRContext::~MLIRContext() = default;
+MLIRContext::~MLIRContext() {
+  // finalize remark engine before destroying anything else.
+  impl->remarkEngine.reset();
+}
 
 /// Copy the specified array of elements into memory managed by the provided
 /// bump pointer allocator.  This assumes the elements are all PODs.
@@ -375,6 +378,14 @@ static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
 
 void MLIRContext::registerActionHandler(HandlerTy handler) {
   getImpl().actionHandler = std::move(handler);
+}
+
+const MLIRContext::HandlerTy &MLIRContext::getActionHandler() const {
+  return getImpl().actionHandler;
+}
+
+MLIRContext::HandlerTy &MLIRContext::getActionHandler() {
+  return getImpl().actionHandler;
 }
 
 /// Dispatch the provided action to the handler if any, or just execute it.
@@ -441,7 +452,7 @@ std::vector<Dialect *> MLIRContext::getLoadedDialects() {
 }
 std::vector<StringRef> MLIRContext::getAvailableDialects() {
   std::vector<StringRef> result;
-  for (auto dialect : impl->dialectsRegistry.getDialectNames())
+  for (auto dialect : impl->dialectsRegistry.getRegisteredDialectNames())
     result.push_back(dialect);
   return result;
 }
@@ -706,20 +717,21 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 /// Return information for registered operations by dialect.
 ArrayRef<RegisteredOperationName>
 MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
-  auto lowerBound = llvm::lower_bound(
-      impl->sortedRegisteredOperations, dialectName, [](auto &lhs, auto &rhs) {
-        return lhs.getDialect().getNamespace().compare(rhs);
-      });
+  auto *lowerBound =
+      llvm::lower_bound(impl->sortedRegisteredOperations, dialectName,
+                        [](const RegisteredOperationName &lhs, StringRef rhs) {
+                          return lhs.getDialect().getNamespace() < rhs;
+                        });
 
   if (lowerBound == impl->sortedRegisteredOperations.end() ||
       lowerBound->getDialect().getNamespace() != dialectName)
     return ArrayRef<RegisteredOperationName>();
 
-  auto upperBound =
-      std::upper_bound(lowerBound, impl->sortedRegisteredOperations.end(),
-                       dialectName, [](auto &lhs, auto &rhs) {
-                         return lhs.compare(rhs.getDialect().getNamespace());
-                       });
+  auto *upperBound = std::upper_bound(
+      lowerBound, impl->sortedRegisteredOperations.end(), dialectName,
+      [](StringRef lhs, const RegisteredOperationName &rhs) {
+        return lhs < rhs.getDialect().getNamespace();
+      });
 
   size_t count = std::distance(lowerBound, upperBound);
   return ArrayRef(&*lowerBound, count);
@@ -898,20 +910,20 @@ LogicalResult OperationName::UnregisteredOpModel::verifyInherentAttrs(
 int OperationName::UnregisteredOpModel::getOpPropertyByteSize() {
   return sizeof(Attribute);
 }
-void OperationName::UnregisteredOpModel::initProperties(
-    OperationName opName, OpaqueProperties storage, OpaqueProperties init) {
+void OperationName::UnregisteredOpModel::initProperties(OperationName opName,
+                                                        PropertyRef storage,
+                                                        PropertyRef init) {
   new (storage.as<Attribute *>()) Attribute();
   if (init)
     *storage.as<Attribute *>() = *init.as<Attribute *>();
 }
-void OperationName::UnregisteredOpModel::deleteProperties(
-    OpaqueProperties prop) {
+void OperationName::UnregisteredOpModel::deleteProperties(PropertyRef prop) {
   prop.as<Attribute *>()->~Attribute();
 }
 void OperationName::UnregisteredOpModel::populateDefaultProperties(
-    OperationName opName, OpaqueProperties properties) {}
+    OperationName opName, PropertyRef properties) {}
 LogicalResult OperationName::UnregisteredOpModel::setPropertiesFromAttr(
-    OperationName opName, OpaqueProperties properties, Attribute attr,
+    OperationName opName, PropertyRef properties, Attribute attr,
     function_ref<InFlightDiagnostic()> emitError) {
   *properties.as<Attribute *>() = attr;
   return success();
@@ -920,16 +932,16 @@ Attribute
 OperationName::UnregisteredOpModel::getPropertiesAsAttr(Operation *op) {
   return *op->getPropertiesStorage().as<Attribute *>();
 }
-void OperationName::UnregisteredOpModel::copyProperties(OpaqueProperties lhs,
-                                                        OpaqueProperties rhs) {
+void OperationName::UnregisteredOpModel::copyProperties(PropertyRef lhs,
+                                                        PropertyRef rhs) {
   *lhs.as<Attribute *>() = *rhs.as<Attribute *>();
 }
-bool OperationName::UnregisteredOpModel::compareProperties(
-    OpaqueProperties lhs, OpaqueProperties rhs) {
+bool OperationName::UnregisteredOpModel::compareProperties(PropertyRef lhs,
+                                                           PropertyRef rhs) {
   return *lhs.as<Attribute *>() == *rhs.as<Attribute *>();
 }
 llvm::hash_code
-OperationName::UnregisteredOpModel::hashProperties(OpaqueProperties prop) {
+OperationName::UnregisteredOpModel::hashProperties(PropertyRef prop) {
   return llvm::hash_combine(*prop.as<Attribute *>());
 }
 
@@ -995,8 +1007,8 @@ void RegisteredOperationName::insert(
   ctxImpl.sortedRegisteredOperations.insert(
       llvm::upper_bound(ctxImpl.sortedRegisteredOperations, value,
                         [](auto &lhs, auto &rhs) {
-                          return lhs.getIdentifier().compare(
-                              rhs.getIdentifier());
+                          return lhs.getIdentifier().strref() <
+                                 rhs.getIdentifier().strref();
                         }),
       value);
 }
@@ -1201,7 +1213,7 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
 /// present in result expressions is less than `dimCount` and the highest index
 /// of symbolic identifier present in result expressions is less than
 /// `symbolCount`.
-LLVM_ATTRIBUTE_UNUSED static bool
+[[maybe_unused]] static bool
 willBeValidAffineMap(unsigned dimCount, unsigned symbolCount,
                      ArrayRef<AffineExpr> results) {
   int64_t maxDimPosition = -1;

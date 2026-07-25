@@ -86,8 +86,6 @@ define half @fneg(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.fabs.f16(half)
-
 define half @fabs(half %a) nounwind {
 ; RV32I-LABEL: fabs:
 ; RV32I:       # %bb.0:
@@ -153,8 +151,6 @@ define half @fabs(half %a) nounwind {
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.copysign.f16(half, half)
 
 ; DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN will convert to bitwise
 ; operations if half precision floating point isn't supported. A combine could

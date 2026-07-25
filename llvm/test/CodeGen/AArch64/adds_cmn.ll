@@ -22,10 +22,8 @@ entry:
 define { i32, i32 } @adds_cmn_c(i32 noundef %x, i32 noundef %y) {
 ; CHECK-LABEL: adds_cmn_c:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w0, w1
-; CHECK-NEXT:    add w1, w1, w0
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    adds w1, w0, w1
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)

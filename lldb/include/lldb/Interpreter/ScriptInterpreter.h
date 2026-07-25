@@ -16,10 +16,12 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -28,6 +30,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -36,6 +39,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 #include <optional>
 
@@ -167,6 +171,25 @@ public:
 
   virtual StructuredData::DictionarySP GetInterpreterInfo();
 
+  /// Describes one extension to emit into the generated template file.
+  ///
+  /// `full_name` is the dotted extension name as the user typed it (e.g.
+  /// `"ScriptedProcess"` or a nested `"...ChildKind"`), used to name the
+  /// generated class. `path` is the same name split on `.`; its last element
+  /// selects the ScriptedExtension kind and everything before it is treated
+  /// as a subclass discriminator. Both StringRefs must outlive the call to
+  /// GenerateExtensionTemplate; the implementation stores them, not copies.
+  struct ExtensionTemplateRequest {
+    llvm::StringRef full_name;
+    llvm::SmallVector<llvm::StringRef> path;
+  };
+
+  virtual llvm::Expected<FileSpec>
+  GenerateExtensionTemplate(const std::string &name,
+                            std::vector<ExtensionTemplateRequest> &extensions,
+                            bool generate_non_abstract_methods,
+                            std::string output_file);
+
   ~ScriptInterpreter() override = default;
 
   virtual bool Interrupt() { return false; }
@@ -243,22 +266,6 @@ public:
   virtual StructuredData::GenericSP
   CreateScriptCommandObject(const char *class_name) {
     return StructuredData::GenericSP();
-  }
-
-  virtual StructuredData::GenericSP
-  CreateFrameRecognizer(const char *class_name) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual lldb::ValueObjectListSP GetRecognizedArguments(
-      const StructuredData::ObjectSP &implementor,
-      lldb::StackFrameSP frame_sp) {
-    return lldb::ValueObjectListSP();
-  }
-
-  virtual bool ShouldHide(const StructuredData::ObjectSP &implementor,
-                          lldb::StackFrameSP frame_sp) {
-    return false;
   }
 
   virtual StructuredData::ObjectSP
@@ -352,7 +359,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<int>
+  virtual llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -523,6 +530,16 @@ public:
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
 
+  virtual llvm::Expected<std::string>
+  ExtensionToImportPath(lldb::ScriptedExtension extension) {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  static llvm::StringLiteral
+  ExtensionToString(lldb::ScriptedExtension extension);
+
+  static lldb::ScriptedExtension StringToExtension(llvm::StringRef string);
+
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
@@ -534,6 +551,11 @@ public:
   }
 
   virtual lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() {
     return {};
   }
 
@@ -550,7 +572,7 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
+  virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
     return {};
   }
 
@@ -559,10 +581,60 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedStackFrameRecognizerInterfaceSP
+  CreateScriptedStackFrameRecognizerInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
   }
+
+  /// Holds an lldb_private::Module name and a "sanitized" version
+  /// of it for the purposes of loading a script of that name by
+  /// the relevant ScriptInterpreter.
+  ///
+  /// E.g., for Python the sanitized name can't include:
+  /// * Special characters: '-', ' ', '.'
+  /// * Python keywords
+  class SanitizedScriptingModuleName {
+  public:
+    SanitizedScriptingModuleName(std::string name, std::string sanitized_name,
+                                 std::string conflicting_keyword)
+        : m_original_name(std::move(name)),
+          m_sanitized_name(std::move(sanitized_name)),
+          m_conflicting_keyword(std::move(conflicting_keyword)) {}
+
+    /// Returns \c true if this name is a keyword in the associated scripting
+    /// language.
+    bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
+
+    /// Returns \c true if the original name has been sanitized (i.e., required
+    /// changes).
+    bool RequiredSanitization() const {
+      return m_sanitized_name != m_original_name;
+    }
+
+    llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
+    llvm::StringRef GetOriginalName() const { return m_original_name; }
+    llvm::StringRef GetConflictingKeyword() const {
+      return m_conflicting_keyword;
+    }
+
+  private:
+    std::string m_original_name;
+    std::string m_sanitized_name;
+
+    /// If the m_sanitized_name conflicts with a keyword for the
+    /// ScriptInterpreter language associated with this
+    /// SanitizedScriptingModuleName, is set to the conflicting keyword. Empty
+    /// otherwise.
+    std::string m_conflicting_keyword;
+  };
+
+  virtual SanitizedScriptingModuleName
+  GetSanitizedScriptingModuleName(llvm::StringRef name);
 
   lldb::DataExtractorSP
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
@@ -572,6 +644,8 @@ public:
   Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
+
+  lldb::ThreadSP GetOpaqueTypeFromSBThread(const lldb::SBThread &exe_ctx) const;
 
   lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
 
@@ -595,6 +669,14 @@ public:
 
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;
+
+  lldb::StackFrameListSP
+  GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
+
+  lldb::ValueObjectSP
+  GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
+
+  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
 
 protected:
   Debugger &m_debugger;

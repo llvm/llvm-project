@@ -32,10 +32,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP27:%.*]] = add nsw i32 [[TMP24]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = sub nsw i32 [[TMP18]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [4 x [4 x i32]], ptr undef, i64 0, i64 1, i64 0
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, i32 [[TMP25]], i32 0
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP26]], i32 1
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, i32 [[TMP27]], i32 2
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP28]], i32 3
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, i32 [[TMP25]], i64 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP26]], i64 1
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, i32 [[TMP27]], i64 2
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP28]], i64 3
 ; CHECK-NEXT:    [[TMP34:%.*]] = sub nsw <4 x i32> [[TMP31]], [[TMP33]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP34]], ptr [[TMP29]], align 16
 ; CHECK-NEXT:    ret void

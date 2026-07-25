@@ -53,7 +53,7 @@ void AArch64WinCOFFStreamer::emitWindowsUnwindTables() {
 }
 
 void AArch64WinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
   emitWindowsUnwindTables();
 
   MCWinCOFFStreamer::finishImpl();

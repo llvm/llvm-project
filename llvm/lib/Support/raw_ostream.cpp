@@ -20,6 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Process.h"
@@ -60,17 +61,6 @@
 #endif
 
 using namespace llvm;
-
-constexpr raw_ostream::Colors raw_ostream::BLACK;
-constexpr raw_ostream::Colors raw_ostream::RED;
-constexpr raw_ostream::Colors raw_ostream::GREEN;
-constexpr raw_ostream::Colors raw_ostream::YELLOW;
-constexpr raw_ostream::Colors raw_ostream::BLUE;
-constexpr raw_ostream::Colors raw_ostream::MAGENTA;
-constexpr raw_ostream::Colors raw_ostream::CYAN;
-constexpr raw_ostream::Colors raw_ostream::WHITE;
-constexpr raw_ostream::Colors raw_ostream::SAVEDCOLOR;
-constexpr raw_ostream::Colors raw_ostream::RESET;
 
 raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
@@ -304,44 +294,38 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   OutBufCur += Size;
 }
 
-// Formatted output.
-raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
+// Formatted output. Snprint returns the snprintf-style length the output
+// needs, excluding the '\0'. A negative value is a genuine error, which a
+// larger buffer can't fix, so give up and print nothing.
+raw_ostream &
+raw_ostream::operator<<(function_ref<int(char *, size_t)> Snprint) {
   // If we have more than a few bytes left in our output buffer, try
   // formatting directly onto its end.
-  size_t NextBufferSize = 127;
+  size_t Size = 128;
   size_t BufferBytesLeft = OutBufEnd - OutBufCur;
   if (BufferBytesLeft > 3) {
-    size_t BytesUsed = Fmt.print(OutBufCur, BufferBytesLeft);
-
+    int N = Snprint(OutBufCur, BufferBytesLeft);
+    if (N < 0)
+      return *this;
     // Common case is that we have plenty of space.
-    if (BytesUsed <= BufferBytesLeft) {
-      OutBufCur += BytesUsed;
+    if (size_t(N) < BufferBytesLeft) {
+      OutBufCur += N;
       return *this;
     }
-
-    // Otherwise, we overflowed and the return value tells us the size to try
-    // again with.
-    NextBufferSize = BytesUsed;
+    // N excludes the '\0', so N + 1 bytes are exactly enough.
+    Size = size_t(N) + 1;
   }
 
-  // If we got here, we didn't have enough space in the output buffer for the
-  // string.  Try printing into a SmallVector that is resized to have enough
-  // space.  Iterate until we win.
+  // Otherwise format into a SmallVector resized to fit.
   SmallVector<char, 128> V;
-
-  while (true) {
-    V.resize(NextBufferSize);
-
-    // Try formatting into the SmallVector.
-    size_t BytesUsed = Fmt.print(V.data(), NextBufferSize);
-
-    // If BytesUsed fit into the vector, we win.
-    if (BytesUsed <= NextBufferSize)
-      return write(V.data(), BytesUsed);
-
-    // Otherwise, try again with a new size.
-    assert(BytesUsed > NextBufferSize && "Didn't grow buffer!?");
-    NextBufferSize = BytesUsed;
+  for (;;) {
+    V.resize(Size);
+    int N = Snprint(V.data(), Size);
+    if (N < 0)
+      return *this;
+    if (size_t(N) < Size)
+      return write(V.data(), N);
+    Size = size_t(N) + 1;
   }
 }
 
@@ -551,20 +535,15 @@ raw_ostream &raw_ostream::reverseColor() {
 void raw_ostream::anchor() {}
 
 //===----------------------------------------------------------------------===//
-//  Formatted Output
-//===----------------------------------------------------------------------===//
-
-// Out of line virtual method.
-void format_object_base::home() {
-}
-
-//===----------------------------------------------------------------------===//
 //  raw_fd_ostream
 //===----------------------------------------------------------------------===//
 
 static int getFD(StringRef Filename, std::error_code &EC,
                  sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access,
                  sys::fs::OpenFlags Flags) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert((Access & sys::fs::FA_Write) &&
          "Cannot make a raw_ostream from a read-only descriptor!");
 
@@ -617,6 +596,9 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
                                OStreamKind K)
     : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   if (FD < 0 ) {
     ShouldClose = false;
     return;
@@ -1011,12 +993,20 @@ void buffer_ostream::anchor() {}
 
 void buffer_unique_ostream::anchor() {}
 
+static bool isNullDeviceName(StringRef OutputFileName) {
+#ifdef _WIN32
+  if (OutputFileName.equals_insensitive("NUL"))
+    return true;
+#endif
+  return OutputFileName == "/dev/null";
+}
+
 Error llvm::writeToOutput(StringRef OutputFileName,
                           std::function<Error(raw_ostream &)> Write) {
   if (OutputFileName == "-")
     return Write(outs());
 
-  if (OutputFileName == "/dev/null") {
+  if (isNullDeviceName(OutputFileName)) {
     raw_null_ostream Out;
     return Write(Out);
   }
@@ -1026,6 +1016,16 @@ Error llvm::writeToOutput(StringRef OutputFileName,
       sys::fs::TempFile::create(OutputFileName + ".temp-stream-%%%%%%", Mode);
   if (!Temp)
     return createFileError(OutputFileName, Temp.takeError());
+
+#if defined(__MVS__)
+  // The file tag needs to be set before any output can be written to the file.
+  // Do this before creating the raw_fd_ostream to ensure the correct
+  // sequence.
+  if (auto EC = llvm::copyFileTagAttributes(OutputFileName.str(), Temp->FD)) {
+    if (EC != std::errc::no_such_file_or_directory)
+      return createFileError(OutputFileName, EC);
+  }
+#endif
 
   raw_fd_ostream Out(Temp->FD, false);
 

@@ -40,16 +40,14 @@ _mm_macc_pd(__m128d __A, __m128d __B, __m128d __C) {
                                             (__v2df)__C);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_macc_ss(__m128 __A, __m128 __B, __m128 __C)
-{
-  return (__m128)__builtin_ia32_vfmaddss((__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_macc_ss(__m128 __A, __m128 __B, __m128 __C) {
+  return _mm_set_ss(__builtin_elementwise_fma(__A[0], __B[0], __C[0]));
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_macc_sd(__m128d __A, __m128d __B, __m128d __C)
-{
-  return (__m128d)__builtin_ia32_vfmaddsd((__v2df)__A, (__v2df)__B, (__v2df)__C);
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_macc_sd(__m128d __A, __m128d __B, __m128d __C) {
+  return _mm_set_sd(__builtin_elementwise_fma(__A[0], __B[0], __C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
@@ -64,16 +62,14 @@ _mm_msub_pd(__m128d __A, __m128d __B, __m128d __C) {
                                             -(__v2df)__C);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_msub_ss(__m128 __A, __m128 __B, __m128 __C)
-{
-  return (__m128)__builtin_ia32_vfmaddss((__v4sf)__A, (__v4sf)__B, -(__v4sf)__C);
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_msub_ss(__m128 __A, __m128 __B, __m128 __C) {
+  return _mm_set_ss(__builtin_elementwise_fma(__A[0], __B[0], -__C[0]));
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_msub_sd(__m128d __A, __m128d __B, __m128d __C)
-{
-  return (__m128d)__builtin_ia32_vfmaddsd((__v2df)__A, (__v2df)__B, -(__v2df)__C);
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_msub_sd(__m128d __A, __m128d __B, __m128d __C) {
+  return _mm_set_sd(__builtin_elementwise_fma(__A[0], __B[0], -__C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
@@ -88,16 +84,14 @@ _mm_nmacc_pd(__m128d __A, __m128d __B, __m128d __C) {
                                             (__v2df)__C);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_nmacc_ss(__m128 __A, __m128 __B, __m128 __C)
-{
-  return (__m128)__builtin_ia32_vfmaddss(-(__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_nmacc_ss(__m128 __A, __m128 __B, __m128 __C) {
+  return _mm_set_ss(__builtin_elementwise_fma(-__A[0], __B[0], __C[0]));
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_nmacc_sd(__m128d __A, __m128d __B, __m128d __C)
-{
-  return (__m128d)__builtin_ia32_vfmaddsd(-(__v2df)__A, (__v2df)__B, (__v2df)__C);
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_nmacc_sd(__m128d __A, __m128d __B, __m128d __C) {
+  return _mm_set_sd(__builtin_elementwise_fma(-__A[0], __B[0], __C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
@@ -112,16 +106,14 @@ _mm_nmsub_pd(__m128d __A, __m128d __B, __m128d __C) {
                                             -(__v2df)__C);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
-_mm_nmsub_ss(__m128 __A, __m128 __B, __m128 __C)
-{
-  return (__m128)__builtin_ia32_vfmaddss(-(__v4sf)__A, (__v4sf)__B, -(__v4sf)__C);
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_nmsub_ss(__m128 __A, __m128 __B, __m128 __C) {
+  return _mm_set_ss(__builtin_elementwise_fma(-__A[0], __B[0], -__C[0]));
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
-_mm_nmsub_sd(__m128d __A, __m128d __B, __m128d __C)
-{
-  return (__m128d)__builtin_ia32_vfmaddsd(-(__v2df)__A, (__v2df)__B, -(__v2df)__C);
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_nmsub_sd(__m128d __A, __m128d __B, __m128d __C) {
+  return _mm_set_sd(__builtin_elementwise_fma(-__A[0], __B[0], -__C[0]));
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS128

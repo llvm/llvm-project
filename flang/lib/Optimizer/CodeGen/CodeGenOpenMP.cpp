@@ -13,16 +13,11 @@
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -242,10 +237,11 @@ struct TargetAllocMemOpConversion
         loc, llvmObjectTy, ity, rewriter, lowerTy().getDataLayout());
     if (auto scaleSize = fir::genAllocationScaleSize(
             loc, allocmemOp.getInType(), ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands().drop_front())
-      size = rewriter.create<mlir::LLVM::MulOp>(
-          loc, ity, size, integerCast(lowerTy(), loc, rewriter, ity, opnd));
+      size = mlir::LLVM::MulOp::create(
+          rewriter, loc, ity, size,
+          integerCast(lowerTy(), loc, rewriter, ity, opnd));
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
@@ -259,6 +255,21 @@ struct TargetAllocMemOpConversion
     return mlir::success();
   }
 };
+
+struct DeclareMapperOpConversion
+    : public OpenMPFIROpConversion<mlir::omp::DeclareMapperOp> {
+  using OpenMPFIROpConversion::OpenMPFIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(mlir::omp::DeclareMapperOp curOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.startOpModification(curOp);
+    curOp.setType(convertObjectType(lowerTy(), curOp.getType()));
+    rewriter.finalizeOpModification(curOp);
+    return mlir::success();
+  }
+};
+
 } // namespace
 
 void fir::populateOpenMPFIRToLLVMConversionPatterns(
@@ -266,4 +277,5 @@ void fir::populateOpenMPFIRToLLVMConversionPatterns(
   patterns.add<MapInfoOpConversion>(converter);
   patterns.add<PrivateClauseOpConversion>(converter);
   patterns.add<TargetAllocMemOpConversion>(converter);
+  patterns.add<DeclareMapperOpConversion>(converter);
 }

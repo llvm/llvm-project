@@ -3,17 +3,18 @@
 bugprone-suspicious-realloc-usage
 =================================
 
-This check finds usages of ``realloc`` where the return value is assigned to the
-same expression as passed to the first argument:
+This check finds usages of ``realloc`` where the return value is assigned to
+the same expression as passed to the first argument:
 ``p = realloc(p, size);``
 The problem with this construct is that if ``realloc`` fails it returns a
 null pointer but does not deallocate the original memory. If no other variable
 is pointing to it, the original memory block is not available any more for the
 program to use or free. In either case ``p = realloc(p, size);`` indicates bad
-coding style and can be replaced by ``q = realloc(p, size);``. 
+coding style and can be replaced by ``q = realloc(p, size);``.
 
-The pointer expression (used at ``realloc``) can be a variable or a field member
-of a data structure, but can not contain function calls or unresolved types.
+The pointer expression (used at ``realloc``) can be a variable or a field
+member of a data structure, but can not contain function calls or unresolved
+types.
 
 In obvious cases when the pointer used at realloc is assigned to another
 variable before the ``realloc`` call, no warning is emitted. This happens only

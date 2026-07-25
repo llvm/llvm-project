@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   using namespace time_units;
-  struct timespec ts;
+  timespec ts;
   auto result = internal::clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
   if (!result.has_value()) {
     libc_errno = result.error();

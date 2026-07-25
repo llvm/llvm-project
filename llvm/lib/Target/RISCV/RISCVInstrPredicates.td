@@ -12,11 +12,20 @@
 
 // This predicate is true when the rs2 operand of vlse or vsse is x0, false
 // otherwise.
-def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+// Note: in our pseudo RVV MachinInstr, rs2 is the fourth operand. However,
+// it's the third operand of its MCInst form, so this predicate will not
+// be triggered by llvm-mca, which checks against MCInst.
+def VLDSX0Pred
+    : AllOfSchedPreds<[FeatureSchedPredicate<TuneOptimizedZeroStrideLoad>,
+                       MCSchedPredicate<CheckRegOperand<3, X0>>]>;
 
 // This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
 // is enabled.
 def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
+
+// This scheduling predicate is true when the subtarget is RV32 (i.e. Feature64Bit
+// is not enabled).
+def RV32SchedPred : NotSchedPred<FeatureSchedPredicate<Feature64Bit>>;
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
@@ -78,7 +87,41 @@ def isVectorConfigInstr
                        PseudoVSETVLI,
                        PseudoVSETVLIX0,
                        PseudoVSETVLIX0X0,
-                       PseudoVSETIVLI
+                       PseudoVSETIVLI,
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
+                     ]>>>;
+
+// Returns true if this is a PseudoSF_VSETTNT* instructions.
+def isXSfmmVectorConfigTNInstr
+    : TIIPredicate<"isXSfmmVectorConfigTNInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
+                     ]>>>;
+
+// Returns true if this is PseudoSF_VSETTM or PseudoSF_VSETTK.
+def isXSfmmVectorConfigTMTKInstr
+    : TIIPredicate<"isXSfmmVectorConfigTMTKInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTM,
+                       PseudoSF_VSETTK
+                     ]>>>;
+
+// Returns true if this is a XSfmm vector configuration instruction.
+def isXSfmmVectorConfigInstr
+    : TIIPredicate<"isXSfmmVectorConfigInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0,
+                       PseudoSF_VSETTM,
+                       PseudoSF_VSETTK
                      ]>>>;
 
 // Return true if this is 'vsetvli x0, x0, vtype' which preserves
@@ -102,12 +145,6 @@ def isScalarExtractInstr
                       !instances<Pseudo>("^PseudoVMV_X_S.*"),
                       !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
                      ])>>>;
-
-def isVExtractInstr
-    : TIIPredicate<"isVExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<
-                      !instances<Instruction>("^PseudoRI_VEXTRACT.*")>>>;
 
 def isScalarInsertInstr
     : TIIPredicate<"isScalarInsertInstr",
@@ -143,6 +180,15 @@ def isFaultOnlyFirstLoad
                        !instances<Pseudo>(
                           "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>>>;
 
+def isLoadImmediate
+    : TIIPredicate<"isLoadImmediate",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckIsRegOperand<1>,
+                     CheckRegOperand<1, X0>,
+                     CheckIsImmOperand<2>
+                   ]>>>;
+
 def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
@@ -171,3 +217,50 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : TIIPredicate<"isBaseLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       LD,
+                       LW,
+                       LWU,
+                       LH,
+                       LHU,
+                       LB,
+                       LBU
+                     ]>>>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : TIIPredicate<"isBaseStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       SD,
+                       SW,
+                       SH,
+                       SB,
+                     ]>>>;
+
+// Xqcilo 26-bit offset Loads (qc.e.lb, qc.e.lbu, qc.e.lh, qc.e.lhu, qc.e.lw)
+def isBaseQCLoad
+    : TIIPredicate<"isBaseQCLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_LB,
+                       QC_E_LBU,
+                       QC_E_LH,
+                       QC_E_LHU,
+                       QC_E_LW
+                     ]>>>;
+
+// Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
+def isBaseQCStore
+    : TIIPredicate<"isBaseQCStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_SB,
+                       QC_E_SH,
+                       QC_E_SW
+                     ]>>>;

@@ -12,9 +12,9 @@ swapped (or badly ordered) arguments.
     void drawPoint(int X, int Y) { /* ... */ }
     FILE *open(const char *Dir, const char *Name, Flags Mode) { /* ... */ }
 
-A potential call like ``drawPoint(-2, 5)`` or ``openPath("a.txt", "tmp", Read)``
-is perfectly legal from the language's perspective, but might not be what the
-developer of the function intended.
+A potential call like ``drawPoint(-2, 5)`` or
+``openPath("a.txt", "tmp", Read)`` is perfectly legal from the language's
+perspective, but might not be what the developer of the function intended.
 
 More elaborate and type-safe constructs, such as opaque typedefs or strong
 types should be used instead, to prevent a mistaken order of arguments.

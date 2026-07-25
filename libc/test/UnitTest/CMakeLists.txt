@@ -3,7 +3,7 @@ function(add_unittest_framework_library name)
     "TEST_LIB"
     "" # No optional arguments
     "" # No single value arguments
-    "SRCS;HDRS;DEPENDS" # Multi value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
   if(NOT TEST_LIB_SRCS)
@@ -30,12 +30,15 @@ function(add_unittest_framework_library name)
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
     set(LLVM_LIBC_FULL_BUILD "")
     _get_common_test_compile_options(compile_options "" "")
-    target_compile_options(${name}.unit PRIVATE ${compile_options})
     set(LLVM_LIBC_FULL_BUILD ON)
   else()
     _get_common_test_compile_options(compile_options "" "")
-    target_compile_options(${name}.unit PRIVATE ${compile_options})
   endif()
+
+  if (TEST_LIB_COMPILE_OPTIONS)
+    list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
+  endif()
+  target_compile_options(${name}.unit PRIVATE ${compile_options})
 
   _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
@@ -57,6 +60,15 @@ function(add_unittest_framework_library name)
   endif()
 endfunction()
 
+if (NOT TARGET libc.src.__support.OSUtil.osutil OR NOT LLVM_LIBC_FULL_BUILD)
+  message(STATUS "TestLogger will use system libc's stdio to print.")
+  set(test_logger_compile_options "-DLIBC_TEST_USE_SYSTEM_PRINTF")
+  set(test_logger_osutil "")
+else()
+  set(test_logger_compile_options "")
+  set(test_logger_osutil "libc.src.__support.OSUtil.osutil")
+endif()
+
 add_unittest_framework_library(
   LibcTest
   SRCS
@@ -68,6 +80,8 @@ add_unittest_framework_library(
     LibcTest.h
     Test.h
     TestLogger.h
+  COMPILE_OPTIONS
+    ${test_logger_compile_options}
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.big_int
@@ -78,13 +92,24 @@ add_unittest_framework_library(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.types
-    libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
+    ${test_logger_osutil}
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
-if(${LIBC_TARGET_OS} STREQUAL "linux")
+if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
+endif()
+set(libc_death_tess_deps libc.hdr.stdint_proxy)
+if (LLVM_LIBC_FULL_BUILD)
+  list(APPEND libc_death_tess_deps
+    libc.include.llvm-libc-macros.poll-macros
+    libc.include.llvm-libc-macros.signal_macros
+    libc.include.llvm-libc-macros.sys_wait_macros
+    libc.include.llvm-libc-types.pid_t
+    libc.include.llvm-libc-types.struct_pollfd
+    libc.src.__support.libc_assert
+  )
 endif()
 
 add_unittest_framework_library(
@@ -94,7 +119,7 @@ add_unittest_framework_library(
   HDRS
     ExecuteFunction.h
   DEPENDS
-    libc.hdr.stdint_proxy
+    ${libc_death_tess_deps}
 )
 
 add_unittest_framework_library(
@@ -170,6 +195,7 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.printf_config
     libc.test.UnitTest.string_utils
 )
 
@@ -204,5 +230,16 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
+)
+
+add_header_library(
+  ConstraintHandlerCheckingTest
+  HDRS
+    ConstraintHandlerCheckingTest.h
+  DEPENDS
+    libc.hdr.types.constraint_handler_t
+    libc.hdr.types.errno_t
+    libc.src.stdlib.set_constraint_handler_s
 )

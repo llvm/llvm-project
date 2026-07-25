@@ -20,7 +20,7 @@
 #include "tsan_rtl.h"
 #include "ubsan/ubsan_flags.h"
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
 namespace __sanitizer {
 
 template <>
@@ -37,7 +37,7 @@ inline bool FlagHandler<LockDuringWriteSetting>::Parse(const char *value) {
     *t_ = kNoLockDuringWritesAllProcesses;
     return true;
   }
-  Printf("ERROR: Invalid value for signal handler option: '%s'\n", value);
+  Printf("ERROR: Invalid value for lock_during_write option: '%s'\n", value);
   return false;
 }
 
@@ -55,7 +55,7 @@ inline bool FlagHandler<LockDuringWriteSetting>::Format(char *buffer,
 }
 
 }  // namespace __sanitizer
-#endif
+#endif  // SANITIZER_APPLE && !SANITIZER_GO
 
 namespace __tsan {
 

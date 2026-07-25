@@ -51,6 +51,8 @@ public:
 
 class NextAccessAnalysis : public DenseBackwardDataFlowAnalysis<NextAccess> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(NextAccessAnalysis)
+
   NextAccessAnalysis(DataFlowSolver &solver, SymbolTableCollection &symbolTable,
                      bool assumeFuncReads = false)
       : DenseBackwardDataFlowAnalysis(solver, symbolTable),
@@ -66,7 +68,7 @@ public:
 
   void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface branch,
                                             RegionBranchPoint regionFrom,
-                                            RegionBranchPoint regionTo,
+                                            RegionSuccessor regionTo,
                                             const NextAccess &after,
                                             NextAccess *before) override;
 
@@ -240,19 +242,19 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
 
 void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
     RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-    RegionBranchPoint regionTo, const NextAccess &after, NextAccess *before) {
+    RegionSuccessor regionTo, const NextAccess &after, NextAccess *before) {
   LDBG() << "visitRegionBranchControlFlowTransfer: "
          << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   LDBG() << "  regionFrom: " << (regionFrom.isParent() ? "parent" : "region");
-  LDBG() << "  regionTo: " << (regionTo.isParent() ? "parent" : "region");
+  LDBG() << "  regionTo: " << (regionTo.isOperation() ? "operation" : "region");
 
   auto testStoreWithARegion =
       dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
 
-  if (testStoreWithARegion &&
-      ((regionTo.isParent() && !testStoreWithARegion.getStoreBeforeRegion()) ||
-       (regionFrom.isParent() &&
-        testStoreWithARegion.getStoreBeforeRegion()))) {
+  if (testStoreWithARegion && ((regionTo.isOperation() &&
+                                !testStoreWithARegion.getStoreBeforeRegion()) ||
+                               (regionFrom.isParent() &&
+                                testStoreWithARegion.getStoreBeforeRegion()))) {
     LDBG() << "  Handling TestStoreWithARegion with special logic";
     (void)visitOperation(branch, static_cast<const NextAccess &>(after),
                          static_cast<NextAccess *>(before));
@@ -373,7 +375,7 @@ struct TestNextAccessPass
       SmallVector<RegionSuccessor> regionSuccessors;
       iface.getSuccessorRegions(RegionBranchPoint::parent(), regionSuccessors);
       for (const RegionSuccessor &successor : regionSuccessors) {
-        if (!successor.getSuccessor() || successor.getSuccessor()->empty())
+        if (successor.isOperation() || successor.getSuccessor()->empty())
           continue;
         Block &successorBlock = successor.getSuccessor()->front();
         ProgramPoint *successorPoint =

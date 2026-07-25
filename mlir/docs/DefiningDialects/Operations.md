@@ -287,6 +287,11 @@ like `"0.5f"`, and an integer array default value should be specified as like
 The generated operation printing function will not print default-valued
 attributes when the attribute value is equal to the default.
 
+For enum attributes, you can use `DefaultValuedEnumAttr<EnumAttr, EnumCase>`
+instead of `DefaultValuedAttr`. This allows specifying the default value using a
+TableGen `EnumCase` variable instead of a raw string. For example 
+`DefaultValuedEnumAttr<SomeI64Enum, I64Case5>`.
+
 #### Confining attributes
 
 `ConfinedAttr` is provided as a general mechanism to help modelling further
@@ -343,6 +348,10 @@ If the property's storage data type is different from its interface type,
 for example, in the case of array properties (which are stored as `SmallVector`s
 but use `ArrayRef` as an interface type), add the storage-type equivalent
 of the default value as the third argument.
+
+When using the `prop-dict` directive in an assembly format, the generated
+operation printing function will not print default-valued properties when the
+property value is equal to the default.
 
 To declare an optional property, use `OptionalProp<...>`.
 This wraps the underlying property in an `std::optional` and gives it a
@@ -1558,14 +1567,6 @@ namespace llvm {
 template<> struct DenseMapInfo<Outer::Inner::MyIntEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
 
-  static inline Outer::Inner::MyIntEnum getEmptyKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline Outer::Inner::MyIntEnum getTombstoneKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Outer::Inner::MyIntEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
   }
@@ -1687,14 +1688,6 @@ inline ::std::optional<MyBitEnum> symbolizeEnum<MyBitEnum>(::llvm::StringRef str
 namespace llvm {
 template<> struct DenseMapInfo<::MyBitEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
-
-  static inline ::MyBitEnum getEmptyKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline ::MyBitEnum getTombstoneKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const ::MyBitEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));

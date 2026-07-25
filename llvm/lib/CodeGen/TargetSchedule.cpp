@@ -25,7 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <numeric>
 
 using namespace llvm;
 
@@ -172,7 +171,8 @@ unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
   const unsigned InstrLatency = computeInstrLatency(DefMI);
-  const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+  const unsigned DefaultDefLatency =
+      TII->defaultDefLatency(*STI, SchedModel, *DefMI);
 
   if (!hasInstrSchedModel() && !hasInstrItineraries())
     return DefaultDefLatency;
@@ -264,7 +264,7 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
     if (SCDesc->isValid())
       return computeInstrLatency(*SCDesc);
   }
-  return TII->defaultDefLatency(SchedModel, *MI);
+  return TII->defaultDefLatency(*STI, SchedModel, *MI);
 }
 
 unsigned TargetSchedModel::
@@ -294,7 +294,7 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
     if (SCDesc->isValid()) {
       for (const MCWriteProcResEntry *PRI = STI->getWriteProcResBegin(SCDesc),
              *PRE = STI->getWriteProcResEnd(SCDesc); PRI != PRE; ++PRI) {
-        if (!SchedModel.getProcResource(PRI->ProcResourceIdx)->BufferSize)
+        if (!SchedModel.getResourceBufferSize(PRI->ProcResourceIdx))
           return 1;
       }
     }

@@ -31,6 +31,8 @@
 // FreeBSD / OpenBSD default to aapcs-linux
 // RUN: %clang -target arm--freebsd- %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
+// RUN: %clang -target arm--fuchsia- %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 // RUN: %clang -target arm--openbsd- %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 // RUN: %clang -target arm--haiku- %s -### -o %t.o 2>&1 \

@@ -50,7 +50,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                        CSharp: .cs
                                        Java: .java
                                        JavaScript: .js .mjs .cjs .ts
-                                       Json: .json .ipynb
+                                       JSON: .json .ipynb
                                        Objective-C: .m .mm
                                        Proto: .proto .protodevel
                                        TableGen: .td

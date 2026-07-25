@@ -51,7 +51,8 @@ TEST_F(FortranVariableTest, SimpleScalar) {
       /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
       /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -78,7 +79,8 @@ TEST_F(FortranVariableTest, CharacterScalar) {
       /*shape=*/mlir::Value{}, typeParams, /*dummy_scope=*/nullptr,
       /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -110,7 +112,8 @@ TEST_F(FortranVariableTest, SimpleArray) {
       shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
       /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());
@@ -142,7 +145,8 @@ TEST_F(FortranVariableTest, CharacterArray) {
       shape, typeParams, /*dummy_scope=*/nullptr, /*storage=*/nullptr,
       /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
-      /*data_attr=*/cuf::DataAttributeAttr{});
+      /*data_attr=*/cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());

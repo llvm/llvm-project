@@ -7,8 +7,8 @@ target triple = "aarch64-linux"
 define void @f(ptr %p, i64 %i) optsize {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1, asr #32
-; CHECK-NEXT:    strb wzr, [x8]
+; CHECK-NEXT:    asr x8, x1, #32
+; CHECK-NEXT:    strb wzr, [x0, x8]
 ; CHECK-NEXT:    ret
 	%d = ashr i64 %i, 32
 	%a = getelementptr i8, ptr %p, i64 %d

@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
+; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s
 
 ; Check that resources are emitted to the object in the order that matches what
 ; the DXIL validator expects: CBuffers, Samplers, SRVs, and then UAVs.
@@ -18,7 +18,7 @@ define void @main() #0 {
   %srv0 = call target("dx.RawBuffer", i8, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, ptr null)
-  %cbuf = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+  %cbuf = call target("dx.CBuffer", <{ float }>)
       @llvm.dx.resource.handlefrombinding(i32 3, i32 2, i32 1, i32 0, ptr null)
   ret void
 }

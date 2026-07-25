@@ -25,9 +25,9 @@ EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
   if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
-           {SAs.Deallocate,
-            rt::SimpleExecutorMemoryManagerDeallocateWrapperName},
+           {SAs.Initialize,
+            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
+           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName},
            {SAs.RegisterEHFrame, rt::RegisterEHFrameSectionAllocActionName},
            {SAs.DeregisterEHFrame,
             rt::DeregisterEHFrameSectionAllocActionName}}))
@@ -48,7 +48,7 @@ EPCGenericRTDyldMemoryManager::~EPCGenericRTDyldMemoryManager() {
 
   Error Err = Error::success();
   if (auto Err2 = EPC.callSPSWrapper<
-                  rt::SPSSimpleExecutorMemoryManagerDeallocateSignature>(
+                  rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
           SAs.Reserve, Err, SAs.Instance, FinalizedAllocs)) {
     // FIXME: Report errors through EPC once that functionality is available.
     logAllUnhandledErrors(std::move(Err2), errs(), "");
@@ -267,10 +267,10 @@ bool EPCGenericRTDyldMemoryManager::finalizeMemory(std::string *ErrMsg) {
 
     // We'll also need to make an extra allocation for the eh-frame wrapper call
     // arguments.
-    Error FinalizeErr = Error::success();
+    Expected<ExecutorAddr> InitializeKey((ExecutorAddr()));
     if (auto Err = EPC.callSPSWrapper<
-                   rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>(
-            SAs.Finalize, FinalizeErr, SAs.Instance, std::move(FR))) {
+                   rt::SPSSimpleExecutorMemoryManagerInitializeSignature>(
+            SAs.Initialize, InitializeKey, SAs.Instance, std::move(FR))) {
       std::lock_guard<std::mutex> Lock(M);
       this->ErrMsg = toString(std::move(Err));
       dbgs() << "Serialization error: " << this->ErrMsg << "\n";
@@ -278,9 +278,9 @@ bool EPCGenericRTDyldMemoryManager::finalizeMemory(std::string *ErrMsg) {
         *ErrMsg = this->ErrMsg;
       return true;
     }
-    if (FinalizeErr) {
+    if (!InitializeKey) {
       std::lock_guard<std::mutex> Lock(M);
-      this->ErrMsg = toString(std::move(FinalizeErr));
+      this->ErrMsg = toString(InitializeKey.takeError());
       dbgs() << "Finalization error: " << this->ErrMsg << "\n";
       if (ErrMsg)
         *ErrMsg = this->ErrMsg;

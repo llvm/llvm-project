@@ -50,7 +50,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
+[[maybe_unused]] std::string nodeToString(const DynTypedNode &N) {
   std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);
@@ -366,7 +366,7 @@ public:
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
       void VisitTagType(const TagType *TT) {
-        Outer.add(cast<TagType>(TT)->getOriginalDecl(), Flags);
+        Outer.add(cast<TagType>(TT)->getDecl(), Flags);
       }
 
       void VisitUsingType(const UsingType *ET) {
@@ -552,6 +552,10 @@ allTargetDecls(const DynTypedNode &N, const HeuristicResolver *Resolver) {
     Finder.add(PL->getProtocol(), Flags);
   else if (const ConceptReference *CR = N.get<ConceptReference>())
     Finder.add(CR, Flags);
+  else if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
+    if (OON->getKind() == OffsetOfNode::Field)
+      Finder.add(OON->getField(), Flags);
+  }
   return Finder.takeDecls();
 }
 
@@ -845,14 +849,14 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
 
     void VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc L) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
-                                  L.getLocalSourceRange().getBegin(),
+                                  L.getNameLoc(),
                                   /*IsDecl=*/false,
                                   {L.getDecl()}});
     }
 
     void VisitUsingTypeLoc(UsingTypeLoc L) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
-                                  L.getLocalSourceRange().getBegin(),
+                                  L.getNameLoc(),
                                   /*IsDecl=*/false,
                                   {L.getDecl()}});
     }
@@ -861,7 +865,7 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getOriginalDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc L) {
@@ -1019,6 +1023,11 @@ public:
     return true;
   }
 
+  bool VisitOffsetOfNode(const OffsetOfNode *N) {
+    visitNode(DynTypedNode::create(*N));
+    return true;
+  }
+
 private:
   /// Obtain information about a reference directly defined in \p N. Does not
   /// recurse into child nodes, e.g. do not expect references for constructor
@@ -1040,16 +1049,11 @@ private:
     if (auto *S = N.get<Stmt>())
       return refInStmt(S, Resolver);
     if (auto *NNSL = N.get<NestedNameSpecifierLoc>()) {
+      if (TypeLoc TL = NNSL->getAsTypeLoc())
+        return refInTypeLoc(TL, Resolver);
       // (!) 'DeclRelation::Alias' ensures we do not lose namespace aliases.
-      NestedNameSpecifierLoc Qualifier;
-      SourceLocation NameLoc;
-      if (auto TL = NNSL->getAsTypeLoc()) {
-        Qualifier = TL.getPrefix();
-        NameLoc = TL.getNonPrefixBeginLoc();
-      } else {
-        Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
-        NameLoc = NNSL->getLocalBeginLoc();
-      }
+      NestedNameSpecifierLoc Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
+      SourceLocation NameLoc = NNSL->getLocalBeginLoc();
       return {
           ReferenceLoc{Qualifier, NameLoc, false,
                        explicitReferenceTargets(
@@ -1078,6 +1082,14 @@ private:
                            CR->getConceptNameLoc(),
                            /*IsDecl=*/false,
                            {CR->getNamedConcept()}}};
+    if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Field)
+        return {ReferenceLoc{NestedNameSpecifierLoc(),
+                             OON->getEndLoc(),
+                             /*IsDecl=*/false,
+                             {OON->getField()}}};
+      return {};
+    }
 
     // We do not have location information for other nodes (QualType, etc)
     return {};

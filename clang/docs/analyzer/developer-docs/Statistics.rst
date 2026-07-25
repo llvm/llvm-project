@@ -22,7 +22,7 @@ However, note that with ``LLVM_ENABLE_STATS`` disabled, only storage of the valu
 If you want to define a statistic only for entry point, EntryPointStats.h has four classes at your disposal:
 
 
-- ``UnsignedEPStat`` - an unsigned value assigned at most once per entry point. For example: "the number of source characters in an entry-point body".
+- ``UnsignedEPStat`` - an unsigned value assigned at most once per entry point. For example: "the number of source characters in an entry-point body". If no value is assigned during analysis of an entry point, the corresponding CSV cell will be empty.
 - ``CounterEPStat`` - an additive statistic. It starts with 0 and you can add to it as many times as needed. For example: "the number of bugs discovered".
 - ``UnsignedMaxEPStat`` - a maximizing statistic. It starts with 0 and when you join it with a value, it picks the maximum of the previous value and the new one. For example, "the longest execution path of a bug".
 

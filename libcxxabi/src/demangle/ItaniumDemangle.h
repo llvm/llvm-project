@@ -1366,7 +1366,7 @@ public:
   template <typename Fn> void match(Fn F) const { F(Name, Params, Requires); }
 
   void printLeft(OutputBuffer &OB) const override {
-    ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+    ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
     OB += "template<";
     Params.printWithComma(OB);
     OB += "> typename ";
@@ -1537,6 +1537,27 @@ public:
   }
 };
 
+class PackIndexing final : public Node {
+  const Node *Pattern;
+  const Node *Index;
+
+public:
+  PackIndexing(const Node *Pattern_, const Node *Index_)
+      : Node(KPackIndexing), Pattern(Pattern_), Index(Index_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Pattern, Index); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB.printOpen('(');
+    ParameterPackExpansion PPE(Pattern);
+    PPE.printLeft(OB);
+    OB.printClose(')');
+    OB.printOpen('[');
+    OB.printLeft(*Index);
+    OB.printClose(']');
+  }
+};
+
 class TemplateArgs final : public Node {
   NodeArray Params;
   Node *Requires;
@@ -1550,7 +1571,7 @@ public:
   NodeArray getParams() { return Params; }
 
   void printLeft(OutputBuffer &OB) const override {
-    ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+    ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
     OB += "<";
     Params.printWithComma(OB);
     OB += ">";
@@ -1824,7 +1845,7 @@ public:
 
   void printDeclarator(OutputBuffer &OB) const {
     if (!TemplateParams.empty()) {
-      ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+      ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
       OB += "<";
       TemplateParams.printWithComma(OB);
       OB += ">";
@@ -1885,7 +1906,9 @@ public:
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    bool ParenAll = OB.isGtInsideTemplateArgs() &&
+    // If we're printing a '<' inside of a template argument, and we haven't
+    // yet parenthesized the expression, do so now.
+    bool ParenAll = !OB.isInParensInTemplateArgs() &&
                     (InfixOperator == ">" || InfixOperator == ">>");
     if (ParenAll)
       OB.printOpen();
@@ -2061,7 +2084,7 @@ public:
   void printLeft(OutputBuffer &OB) const override {
     OB += CastKind;
     {
-      ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+      ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
       OB += "<";
       OB.printLeft(*To);
       OB += ">";
@@ -4529,6 +4552,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       Result = make<ParameterPackExpansion>(Child);
       break;
     }
+    //           ::= Dy <type> <expression> # pack indexing (C++26)
+    case 'y': {
+      First += 2;
+      Node *Pattern = getDerived().parseType();
+      if (!Pattern)
+        return nullptr;
+      Node *Index = getDerived().parseExpr();
+      if (!Index)
+        return nullptr;
+      Result = make<PackIndexing>(Pattern, Index);
+      break;
+    }
     // Exception specifier on a function type.
     case 'o':
     case 'O':
@@ -5373,6 +5408,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       return nullptr;
     return make<ParameterPackExpansion>(Child);
   }
+  if (consumeIf("sy")) {
+    Node *Pattern = look() == 'T' ? getDerived().parseTemplateParam()
+                                  : getDerived().parseFunctionParam();
+    if (Pattern == nullptr)
+      return nullptr;
+    Node *Index = getDerived().parseExpr();
+    if (Index == nullptr)
+      return nullptr;
+    return make<PackIndexing>(Pattern, Index);
+  }
   if (consumeIf("sZ")) {
     if (look() == 'T') {
       Node *R = getDerived().parseTemplateParam();
@@ -6155,8 +6200,17 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
+// extension      ::= __alloc_token__Z <encoding>
+// extension      ::= __alloc_token_<decimal-digit>+__Z <encoding>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
+  bool AllocToken = consumeIf("__alloc_token_");
+  if (AllocToken) {
+    const char *Saved = First;
+    if (parseNumber().empty() || !consumeIf('_'))
+      First = Saved;
+  }
+
   if (consumeIf("_Z") || consumeIf("__Z")) {
     Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr)
@@ -6166,6 +6220,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
           make<DotSuffix>(Encoding, std::string_view(First, Last - First));
       First = Last;
     }
+    if (AllocToken)
+      Encoding = make<DotSuffix>(Encoding, ".alloc_token");
     if (numLeft() != 0)
       return nullptr;
     return Encoding;

@@ -116,7 +116,7 @@ extern Local<ThreadStateTy **> ThreadStates;
 
 /// Initialize the state machinery. Must be called by all threads.
 void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
-          KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
+          KernelLaunchEnvironmentTy *KernelLaunchEnvironment);
 
 /// Return the kernel and kernel launch environment associated with the current
 /// kernel. The former is static and contains compile time information that
@@ -219,7 +219,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   __builtin_unreachable();
 }
 
-[[gnu::always_inline, gnu::flatten]] inline void *&
+[[gnu::always_inline, gnu::flatten]] inline FnPtrTy &
 lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_ParallelRegionFn:

@@ -21,9 +21,9 @@
 
 namespace llvm {
 
-/// ImutKeyValueInfo -Traits class used by ImmutableMap.  While both the first
-/// and second elements in a pair are used to generate profile information,
-/// only the first element (the key) is used by isEqual and isLess.
+/// Traits class used by ImmutableMap. While both the first and second elements
+/// in a pair are used to generate profile information, only the first element
+/// (the key) is used by isEqual and isLess.
 template <typename T, typename S>
 struct ImutKeyValueInfo {
   using value_type = const std::pair<T,S>;
@@ -59,7 +59,8 @@ struct ImutKeyValueInfo {
 };
 
 template <typename KeyT, typename ValT,
-          typename ValInfo = ImutKeyValueInfo<KeyT,ValT>>
+          typename ValInfo = ImutKeyValueInfo<KeyT, ValT>,
+          bool Canonicalize = true>
 class ImmutableMap {
 public:
   using value_type = typename ValInfo::value_type;
@@ -68,7 +69,7 @@ public:
   using key_type_ref = typename ValInfo::key_type_ref;
   using data_type = typename ValInfo::data_type;
   using data_type_ref = typename ValInfo::data_type_ref;
-  using TreeTy = ImutAVLTree<ValInfo>;
+  using TreeTy = ImutAVLTree<ValInfo, Canonicalize>;
 
 protected:
   IntrusiveRefCntPtr<TreeTy> Root;
@@ -82,13 +83,11 @@ public:
 
   class Factory {
     typename TreeTy::Factory F;
-    const bool Canonicalize;
 
   public:
-    Factory(bool canonicalize = true) : Canonicalize(canonicalize) {}
+    Factory() = default;
 
-    Factory(BumpPtrAllocator &Alloc, bool canonicalize = true)
-        : F(Alloc), Canonicalize(canonicalize) {}
+    Factory(BumpPtrAllocator &Alloc) : F(Alloc) {}
 
     Factory(const Factory &) = delete;
     Factory &operator=(const Factory &) = delete;
@@ -98,12 +97,18 @@ public:
     [[nodiscard]] ImmutableMap add(ImmutableMap Old, key_type_ref K,
                                    data_type_ref D) {
       TreeTy *T = F.add(Old.Root.get(), std::pair<key_type, data_type>(K, D));
-      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
+      if constexpr (Canonicalize)
+        return ImmutableMap(F.getCanonicalTree(T));
+      else
+        return ImmutableMap(T);
     }
 
     [[nodiscard]] ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
       TreeTy *T = F.remove(Old.Root.get(), K);
-      return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
+      if constexpr (Canonicalize)
+        return ImmutableMap(F.getCanonicalTree(T));
+      else
+        return ImmutableMap(T);
     }
 
     typename TreeTy::Factory *getTreeFactory() const {
@@ -115,13 +120,24 @@ public:
     return Root ? Root->contains(K) : false;
   }
 
+  /// Compares two maps for equality. For a canonicalizing factory, maps with
+  /// equal contents share the same tree, so this is an O(1) pointer comparison
+  /// (like ImmutableList); only maps created by the same factory may be
+  /// compared. Otherwise it is a structural comparison.
   [[nodiscard]] bool operator==(const ImmutableMap &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
+    if constexpr (Canonicalize)
+      return Root == RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isEqual(*RHS.Root.get())
+                              : Root == RHS.Root;
   }
 
   [[nodiscard]] bool operator!=(const ImmutableMap &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
-                            : Root != RHS.Root;
+    if constexpr (Canonicalize)
+      return Root != RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
+                              : Root != RHS.Root;
   }
 
   [[nodiscard]] TreeTy *getRoot() const {
@@ -175,9 +191,9 @@ public:
     return nullptr;
   }
 
-  /// getMaxElement - Returns the <key,value> pair in the ImmutableMap for
-  ///  which key is the highest in the ordering of keys in the map.  This
-  ///  method returns NULL if the map is empty.
+  /// Returns the <key,value> pair in the ImmutableMap for which key is the
+  /// highest in the ordering of keys in the map. This method returns NULL if
+  /// the map is empty.
   [[nodiscard]] value_type *getMaxElement() const {
     return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }
@@ -307,9 +323,9 @@ public:
     return nullptr;
   }
 
-  /// getMaxElement - Returns the <key,value> pair in the ImmutableMap for
-  ///  which key is the highest in the ordering of keys in the map.  This
-  ///  method returns NULL if the map is empty.
+  /// Returns the <key,value> pair in the ImmutableMap for which key is the
+  /// highest in the ordering of keys in the map.  This method returns NULL if
+  /// the map is empty.
   [[nodiscard]] value_type *getMaxElement() const {
     return Root ? &(Root->getMaxElement()->getValue()) : nullptr;
   }

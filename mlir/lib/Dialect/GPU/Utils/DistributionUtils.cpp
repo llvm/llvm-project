@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <numeric>
 
@@ -118,8 +119,7 @@ bool WarpDistributionPattern::delinearizeLaneId(
       return false;
     sizes.push_back(large / small);
   }
-  if (std::accumulate(sizes.begin(), sizes.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
+  if (llvm::product_of(sizes) != warpSize)
     return false;
 
   AffineExpr s0, s1;

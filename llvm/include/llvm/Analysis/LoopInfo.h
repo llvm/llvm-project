@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
+#include "llvm/Support/GenericLoopInfo.h"
 #include <optional>
 #include <utility>
 
@@ -288,7 +288,7 @@ public:
   ///   br ExitSucc
   /// ExitSucc:
   /// \endcode
-  BranchInst *getLoopGuardBranch() const;
+  CondBrInst *getLoopGuardBranch() const;
 
   /// Return true iff the loop is
   /// - in simplify rotated form, and
@@ -367,6 +367,24 @@ public:
 
   /// Add llvm.loop.mustprogress to this loop's loop id metadata.
   void setLoopMustProgress();
+
+  /// Add a string-only metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode containing just \p Name (no value operand) and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  void addStringLoopAttribute(StringRef Name,
+                              ArrayRef<StringRef> RemovePrefixes = {}) const;
+
+  /// Add an integer metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode of the form { Name, ConstantInt(Value) } and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  void addIntLoopAttribute(StringRef Name, unsigned Value,
+                           ArrayRef<StringRef> RemovePrefixes = {}) const;
 
   void dump() const;
   void dumpVerbose() const;
@@ -577,19 +595,17 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.
@@ -617,7 +633,7 @@ public:
 };
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
-LLVM_ABI void printLoop(Loop &L, raw_ostream &OS,
+LLVM_ABI void printLoop(const Loop &L, raw_ostream &OS,
                         const std::string &Banner = "");
 
 /// Find and return the loop attribute node for the attribute @p Name in

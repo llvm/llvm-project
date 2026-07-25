@@ -43,7 +43,7 @@ void RedundantAccessSpecifiersCheck::check(
       LastASDecl = ASDecl;
 
       if (CheckFirstDeclaration) {
-        AccessSpecifier DefaultSpecifier =
+        const AccessSpecifier DefaultSpecifier =
             MatchedDecl->isClass() ? AS_private : AS_public;
         if (ASDecl->getAccess() == DefaultSpecifier) {
           diag(ASDecl->getLocation(),

@@ -275,6 +275,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FMAX_F32] = f32_func_f32_f32;
     Table[RTLIB::FMAX_F64] = f64_func_f64_f64;
     Table[RTLIB::FMAX_F128] = i64_i64_func_i64_i64_i64_i64;
+    // wasi-libc and emscripten do not yet have these symbols.
+    // We currently expand them in performMinMaxF128Combine.
+    // Table[RTLIB::FMINIMUM_F128] = i64_i64_func_i64_i64_i64_i64;
+    // Table[RTLIB::FMAXIMUM_F128] = i64_i64_func_i64_i64_i64_i64;
+    // Table[RTLIB::FMINIMUM_NUM_F128] = i64_i64_func_i64_i64_i64_i64;
+    // Table[RTLIB::FMAXIMUM_NUM_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::LDEXP_F32] = f32_func_f32_i32;
     Table[RTLIB::LDEXP_F64] = f64_func_f64_i32;
     Table[RTLIB::LDEXP_F128] = i64_i64_func_i64_i64_i32;
@@ -532,13 +538,19 @@ struct StaticLibcallNameMap {
     // FIXME: This is broken if there are ever different triples compiled with
     // different libcalls.
     RTLIB::RuntimeLibcallsInfo RTCI(TT);
-    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      StringRef NameLibcall = RTCI.getLibcallName(LC);
-      if (!NameLibcall.empty() &&
-          getRuntimeLibcallSignatures().Table[LC] != unsupported) {
-        assert(!Map.contains(NameLibcall) &&
-               "duplicate libcall names in name map");
-        Map[NameLibcall] = LC;
+
+    ArrayRef<RuntimeLibcallSignature> Table =
+        getRuntimeLibcallSignatures().Table;
+    for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+      if (!RTCI.isAvailable(Impl))
+        continue;
+      RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+      if (Table[LC] != unsupported) {
+        StringRef NameLibcall =
+            RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Impl);
+        // FIXME: Map should be to LibcallImpl
+        if (!Map.insert({NameLibcall, LC}).second)
+          llvm_unreachable("duplicate libcall names in name map");
       }
     }
   }
