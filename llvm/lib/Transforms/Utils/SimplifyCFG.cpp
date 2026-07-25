@@ -2139,6 +2139,21 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
     Locs.push_back(OtherSuccTI->getDebugLoc());
   NT->setDebugLoc(DebugLoc::getMergedLocations(Locs));
 
+  // Merge !prof metadata (e.g. branch_weights) across the identical terminators.
+  for (Instruction *OtherSuccTI : OtherSuccTIs) {
+    MDNode *NProf = NT->getMetadata(LLVMContext::MD_prof);
+    MDNode *OProf = OtherSuccTI->getMetadata(LLVMContext::MD_prof);
+    if (!NProf && !OProf)
+      continue;
+    MDNode *Merged =
+        MDNode::getMergedProfMetadata(NProf, OProf, NT, OtherSuccTI);
+    // getMergedProfMetadata returns null when both profiles are present but
+    // cannot be combined (e.g. differing branch_weights).
+    NT->setMetadata(LLVMContext::MD_prof, Merged);
+    if (!Merged)
+      break;
+  }
+
   // PHIs created below will adopt NT's merged DebugLoc.
   IRBuilder<NoFolder> Builder(NT);
 
@@ -2853,6 +2868,19 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
 
     return MergedInvoke;
   }();
+
+  // Merge !prof metadata across the merged invokes.
+  for (InvokeInst *II : drop_begin(Invokes)) {
+    MDNode *NProf = MergedInvoke->getMetadata(LLVMContext::MD_prof);
+    MDNode *OProf = II->getMetadata(LLVMContext::MD_prof);
+    if (!NProf && !OProf)
+      continue;
+    MDNode *Merged = MDNode::getMergedProfMetadata(NProf, OProf, MergedInvoke, II);
+
+    MergedInvoke->setMetadata(LLVMContext::MD_prof, Merged);
+    if (!Merged)
+      break;
+  }
 
   if (DTU) {
     // Predecessor blocks that contained these invokes will now branch to
