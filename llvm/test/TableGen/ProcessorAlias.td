@@ -28,4 +28,5 @@ def : ProcessorAlias<"zzz-of-a", "cpu-a">;
 // to subtype index 0 (cpu-a).
 // CHECK:      { sizeof(SubtargetSubTypeAliasKV) * 2 + {{[0-9]+}}, 0 },
 // CHECK-NEXT: { sizeof(SubtargetSubTypeAliasKV) * 1 + {{[0-9]+}}, 0 },
-// CHECK: "\000cpu-a\000cpu-b\000alias-of-a\000zzz-of-a\000"
+// The string blob is sorted, independent of either table's order.
+// CHECK: "\000alias-of-a\000cpu-a\000cpu-b\000zzz-of-a\000"

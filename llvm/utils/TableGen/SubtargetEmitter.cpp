@@ -337,11 +337,18 @@ SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
     return LHS.Name < RHS.Name;
   });
 
-  StringToOffsetTable StrTab;
+  // Sort all names together so the emitted string blob is sorted.
+  SmallVector<StringRef> Names;
+  Names.reserve(ProcessorList.size() + AliasEntries.size());
   for (const Record *Processor : ProcessorList)
-    StrTab.GetOrAddStringOffset(Processor->getValueAsString("Name"));
+    Names.push_back(Processor->getValueAsString("Name"));
   for (const AliasEntry &Entry : AliasEntries)
-    StrTab.GetOrAddStringOffset(Entry.Name);
+    Names.push_back(Entry.Name);
+  llvm::sort(Names);
+
+  StringToOffsetTable StrTab;
+  for (StringRef Name : Names)
+    StrTab.GetOrAddStringOffset(Name);
 
   // Note that unlike `FeatureKeyValues`, here we do not need to check for
   // duplicate processors, since that is already done when the SubtargetEmitter
