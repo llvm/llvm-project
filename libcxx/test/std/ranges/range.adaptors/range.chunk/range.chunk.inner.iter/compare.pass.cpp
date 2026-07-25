@@ -10,8 +10,8 @@
 
 // <ranges>
 
-// V models only input_range:
-//   friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t);
+//   V models only input_range:
+//     friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t);
 
 #include <cassert>
 #include <iterator>

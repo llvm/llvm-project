@@ -10,10 +10,10 @@
 
 // <ranges>
 
-// V models only input_range:
-//   friend constexpr void iter_swap(const inner_iterator& x, const inner_iterator& y)
-//     noexcept(noexcept(ranges::iter_swap(x.parent_->current_.value(), y.parent_->current_.value())))
-//     requires indirectly_swappable<iterator_t<V>>;
+//   V models only input_range:
+//     friend constexpr void iter_swap(const inner_iterator& x, const inner_iterator& y)
+//       noexcept(noexcept(ranges::iter_swap(x.parent_->current_.value(), y.parent_->current_.value())))
+//       requires indirectly_swappable<iterator_t<V>>;
 
 #include <cassert>
 #include <ranges>

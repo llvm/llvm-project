@@ -10,9 +10,9 @@
 
 // <ranges>
 
-// V models only input_range:
-//   constexpr auto outer_iterator::value_type::size() const
-//     requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
+//   V models only input_range:
+//     constexpr auto outer_iterator::value_type::size() const
+//       requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
 
 #include <cassert>
 #include <ranges>

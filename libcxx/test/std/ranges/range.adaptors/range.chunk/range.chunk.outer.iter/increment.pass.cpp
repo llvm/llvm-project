@@ -10,9 +10,9 @@
 
 // <ranges>
 
-// V models only input_range:
-//   constexpr outer_iterator& operator++();
-//   constexpr void operator++(int);
+//   V models only input_range:
+//     constexpr outer_iterator& operator++();
+//     constexpr void operator++(int);
 
 #include <algorithm>
 #include <cassert>

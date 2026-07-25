@@ -10,13 +10,13 @@
 
 // <ranges>
 
-// V models forward_range:
-//   class iterator;
+//   V models forward_range:
+//     class iterator;
 
-//   using iterator::iterator_category = input_iterator_tag;
-//   using iterator::iterator_concept = see below;
-//   using iterator::value_type = decltype(views::take(subrange(current_, end_), n_));
-//   using iterator::difference_type = range_difference_t<Base>;
+//     using iterator::iterator_category = input_iterator_tag;
+//     using iterator::iterator_concept = see below;
+//     using iterator::value_type = decltype(views::take(subrange(current_, end_), n_));
+//     using iterator::difference_type = range_difference_t<Base>;
 
 #include <concepts>
 #include <iterator>

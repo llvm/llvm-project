@@ -10,11 +10,11 @@
 
 // <ranges>
 
-// V models only input_range:
-//   friend constexpr difference_type operator-(default_sentinel_t y, const inner_iterator& x)
-//     requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
-//   friend constexpr difference_type operator-(const inner_iterator& x, default_sentinel_t y)
-//     requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
+//   V models only input_range:
+//     friend constexpr difference_type operator-(default_sentinel_t y, const inner_iterator& x)
+//       requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
+//     friend constexpr difference_type operator-(const inner_iterator& x, default_sentinel_t y)
+//       requires sized_sentinel_for<sentinel_t<V>, iterator_t<V>>;
 
 #include <cassert>
 #include <iterator>

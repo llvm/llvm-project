@@ -10,9 +10,9 @@
 
 // <ranges>
 
-// V models only input_range:
-//   outer_iterator(outer_iterator&&) = default;
-//   outer_iterator& operator=(outer_iterator&&) = default;
+//   V models only input_range:
+//     outer_iterator(outer_iterator&&) = default;
+//     outer_iterator& operator=(outer_iterator&&) = default;
 
 #include <concepts>
 #include <ranges>
