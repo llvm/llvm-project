@@ -1936,7 +1936,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY $q1
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[COPY]](<2 x p0>), [[COPY1]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x p0>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x p0>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[BITCAST]](<2 x i64>), [[BITCAST1]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
     ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
