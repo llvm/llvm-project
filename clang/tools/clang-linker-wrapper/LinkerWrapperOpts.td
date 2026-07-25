@@ -20,6 +20,15 @@ def host_triple_EQ : Joined<["--"], "host-triple=">,
                      Flags<[WrapperOnlyOption]>,
                      MetaVarName<"<triple>">,
                      HelpText<"Triple to use for the host compilation">;
+def host_cpu_EQ : Joined<["--"], "host-cpu=">,
+                  Flags<[WrapperOnlyOption]>,
+                  MetaVarName<"<cpu>">,
+                  HelpText<"CPU name to use for the host compilation">;
+def host_features_EQ
+    : Joined<["--"], "host-features=">,
+      Flags<[WrapperOnlyOption]>,
+      MetaVarName<"<features>">,
+      HelpText<"Target features to use for the host compilation">;
 def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device linker invocation">;
