@@ -5481,8 +5481,7 @@ recurse:
       // and __addrspaceof((x)) can have different values. Record whether the
       // operand uses the entity form before mangling the operand itself.
       mangleVendorType(getTraitSpelling(SAE->getKind()));
-      bool IsEntity =
-          isUnparenthesizedIdOrMemberExpr(SAE->getArgumentExpr());
+      bool IsEntity = isUnparenthesizedIdOrMemberExpr(SAE->getArgumentExpr());
       Out << (IsEntity ? "Lb1E" : "Lb0E");
       mangleTemplateArgExpr(SAE->getArgumentExpr());
       Out << 'E';
