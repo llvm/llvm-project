@@ -558,6 +558,7 @@ namespace {
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitMHISTOGRAM(SDNode *N);
     SDValue visitPARTIAL_REDUCE_MLA(SDNode *N);
+    SDValue visitLOOP_DEPENDENCE_MASK(SDNode *N);
     SDValue visitVPGATHER(SDNode *N);
     SDValue visitVPSCATTER(SDNode *N);
     SDValue visitVP_STRIDED_LOAD(SDNode *N);
@@ -2116,6 +2117,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return visitPARTIAL_REDUCE_MLA(N);
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+                                return visitLOOP_DEPENDENCE_MASK(N);
   case ISD::VECTOR_COMPRESS:    return visitVECTOR_COMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
@@ -6308,6 +6312,58 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
       DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N0), NewVT, N0.getOperand(0),
                   DAG.getValueType(NewVT.getScalarType()));
   return DAG.getZExtOrTrunc(Sat, SDLoc(N0), N3.getValueType());
+}
+
+// Fold a NaN-guard select of fp_to_sint/fp_to_uint into the saturating
+// variant, which returns 0 for NaN.
+static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Match an isnan-guarded select, requiring the compare to be single-use.
+  // The guarded value is fp_to_sint/fp_to_uint of X, optionally masked by an
+  // AND:
+  //   select (setcc X, 0.0, uno), 0, (fp_to_sint/uint X)
+  //   select (setcc X, 0.0, ord), (fp_to_sint/uint X), 0
+  //   select (setcc X, 0.0, uno), 0, (and (fp_to_sint/uint X), M)
+  //   select (setcc X, 0.0, ord), (and (fp_to_sint/uint X), M), 0
+  SDValue X, GuardedVal;
+  if (!sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETUO))),
+                             m_Zero(), m_Value(GuardedVal))) &&
+      !sd_match(N,
+                m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
+                                              m_SpecificCondCode(ISD::SETO))),
+                             m_Value(GuardedVal), m_Zero())))
+    return SDValue();
+
+  // The guarded value must be fp_to_sint/fp_to_uint of the same X, optionally
+  // masked by a (commutative) AND.
+  SDValue Mask;
+  unsigned NewOpc;
+  if (sd_match(GuardedVal, m_FPToSI(m_Specific(X))) ||
+      sd_match(GuardedVal, m_And(m_FPToSI(m_Specific(X)), m_Value(Mask))))
+    NewOpc = ISD::FP_TO_SINT_SAT;
+  else if (sd_match(GuardedVal, m_FPToUI(m_Specific(X))) ||
+           sd_match(GuardedVal, m_And(m_FPToUI(m_Specific(X)), m_Value(Mask))))
+    NewOpc = ISD::FP_TO_UINT_SAT;
+  else
+    return SDValue();
+
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(NewOpc,
+                                                        X.getValueType(), VT))
+    return SDValue();
+
+  SDValue Sat =
+      DAG.getNode(NewOpc, DL, VT, X, DAG.getValueType(VT.getScalarType()));
+  if (Mask) {
+    // For NaN inputs the saturating conversion yields 0, so (and 0, Mask) must
+    // stay 0 to match the original select. A poison Mask would make it poison,
+    // so freeze Mask to guarantee a defined value.
+    Sat = DAG.getNode(ISD::AND, DL, VT, Sat, DAG.getFreeze(Mask));
+  }
+  return Sat;
 }
 
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
@@ -13447,6 +13503,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       }
     }
 
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
+      return S;
+
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
         (!LegalOperations &&
          TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))) {
@@ -14185,6 +14244,19 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
                : DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
 }
 
+SDValue DAGCombiner::visitLOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  unsigned LaneOffset = N->getConstantOperandVal(3);
+
+  // The first lane is always active, so v1i1 => true.
+  if (LaneOffset == 0 &&
+      VT.getVectorElementCount() == ElementCount::getFixed(1))
+    return DAG.getBoolConstant(true, DL, VT, VT);
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
   auto *SLD = cast<VPStridedLoadSDNode>(N);
   EVT EltVT = SLD->getValueType(0).getVectorElementType();
@@ -14467,6 +14539,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     if (SDValue S = PerformMinMaxFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
     if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
+      return S;
+    if (SDValue S = performNanGuardFpToSatCombine(N, DAG))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the

@@ -100,7 +100,7 @@ jobs:
             echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
             echo "man-page-upload=$UPLOAD_MAN_PAGES"
             echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
-          } >> "$GITHUB_OUT"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -141,7 +141,7 @@ jobs:
         env:
           TARBALL_NAME: ${{ steps.vars.outputs.man-page-tarball-name }}
         run: |
-            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUT
+            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -199,6 +199,13 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
+     - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+       with:
+         persist-credentials: false
+         sparse-checkout: |
+           .github/workflows/upload-release-artifact
+         sparse-checkout-cone-mode: false
+
      - name: Upload Man Page Artifacts
        id: man-page-artifact-upload
        uses: ./.github/workflows/upload-release-artifact

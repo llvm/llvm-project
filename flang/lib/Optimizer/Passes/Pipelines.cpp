@@ -464,6 +464,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createEmitMIFGlobalCtors());
 
   if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
+    // Since some math operations may be converted to function calls by the
+    // ConvertMathToFuncs pass, we need to mark them with the omp.declare_target
+    // attribute if they're called from a target region.
+    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+
     // Remove all non target-related operations from host functions still
     // remaining at this point, if compiling for an OpenMP target device. This
     // is required before translating 'omp' dialect operations to LLVM IR.

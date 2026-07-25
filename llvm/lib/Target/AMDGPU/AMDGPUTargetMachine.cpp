@@ -2497,11 +2497,6 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
     flushFPMsToMPM(PMW);
     addModulePass(AMDGPUPerfHintAnalysisPass(TM), PMW);
   }
-
-  // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
-  // isn't this in addInstSelector?
-  addFunctionPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>(), PMW,
-                  /*Force=*/true);
 }
 
 void AMDGPUCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {

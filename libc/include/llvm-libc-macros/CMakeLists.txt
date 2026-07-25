@@ -407,6 +407,14 @@ add_macro_header(
 )
 
 add_macro_header(
+  langinfo_macros
+  HDR
+    langinfo-macros.h
+  DEPENDS
+    .locale_macros
+)
+
+add_macro_header(
   nl_types_macros
   HDR
     nl_types-macros.h

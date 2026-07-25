@@ -207,6 +207,10 @@ As a result, alignment is mandatory for atomic loads and stores.
     effort, but the later is fairly fundamental to their designed purpose. If
     you are creating a non-terminator unreachable instruction or passing a false
     value, use the `store i1 true, ptr poison, align 1` canonical form.
+12. Avoid extremely deep loop nesting. Several loop transformations have cubic
+    complexity in the loop nesting depth (and `Loop::contains` is linear in it).
+    Generating code that remains deeply nested after transformations (e.g. more
+    than a few hundred levels) is strongly discouraged.
 
 ## Describing Language Specific Properties
 
