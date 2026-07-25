@@ -24,6 +24,52 @@ size_t newRecord(std::vector<char> &Data) {
   return Pos;
 }
 
+void addEsdRecord(std::vector<char> &GOFFData, uint8_t Type, uint8_t ESDID,
+                  const std::vector<uint8_t> &Name, uint8_t ParentESDID = 0,
+                  uint8_t BindingScope = 0, uint8_t NameSpaceID = 0,
+                  uint8_t AdditionalFlags = 0,
+                  uint8_t BehavioralAttributes[10] = nullptr,
+                  uint32_t Length = 0) {
+  size_t Pos = GOFFData.size();
+  GOFFData.resize(GOFFData.size() + GOFF::RecordLength);
+
+  GOFFData[Pos] = (char)0x03;
+  GOFFData[Pos + 3] = (char)Type;
+  GOFFData[Pos + 7] = (char)ESDID;          // ESDID.
+  GOFFData[Pos + 11] = (char)ParentESDID;   // Parent ESDID.
+  GOFFData[Pos + 24] = (char)(Length >> 24); // Length (big-endian).
+  GOFFData[Pos + 25] = (char)(Length >> 16);
+  GOFFData[Pos + 26] = (char)(Length >> 8);
+  GOFFData[Pos + 27] = (char)(Length);
+  GOFFData[Pos + 40] = (char)NameSpaceID;   // Name Space ID
+  GOFFData[Pos + 41] = (char)AdditionalFlags; // Additional Flags
+
+  if (BehavioralAttributes) {
+    for (size_t Offset=0; Offset < 10; Offset++)
+      GOFFData[Pos + 60 + Offset] = (char)BehavioralAttributes[Offset];
+  }
+
+  GOFFData[Pos + 71] = (char)(Name.size()); // Size of symbol name.
+  size_t StringOffset = Pos + 72; // Start of Symbol name
+  for (uint8_t C : Name) {
+    GOFFData[StringOffset] = (char)C;
+    StringOffset++;
+
+    if (StringOffset == Pos + GOFF::RecordLength) {
+      // If we reach the end of the current record, we need to start a new one.
+      GOFFData[Pos + 1] |= 0x01; // set continuation bit in the current record.
+
+      // start a new continuation record
+      Pos = GOFFData.size();
+      GOFFData.resize(GOFFData.size() + GOFF::RecordLength);
+      GOFFData[Pos] = (char)0x03;
+      GOFFData[Pos + 1] = (char)0x02; // continuation record
+
+      StringOffset = Pos + 3;
+    }
+  }
+}
+
 void constructValidGOFF(const char *Data, size_t Size) {
   StringRef ValidSize(Data, Size);
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
@@ -151,18 +197,14 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 1] = (char)0xF0;
 
-  // ESD record.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 3] = (char)0x02;
-  GOFFData[Pos + 7] = (char)0x01;
-  GOFFData[Pos + 11] = (char)0x01;
-  GOFFData[Pos + 71] = (char)0x05; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xC8; // Symbol name is Hello.
-  GOFFData[Pos + 73] = (char)0x85;
-  GOFFData[Pos + 74] = (char)0x93;
-  GOFFData[Pos + 75] = (char)0x93;
-  GOFFData[Pos + 76] = (char)0x96;
+  // ESD record. Symbol name is Hello.
+  addEsdRecord(GOFFData, 0x02, 0x01,
+               {0xC8, // H
+                0x85, // e
+                0x93, // l
+                0x93, // l
+                0x96},// o
+               0x01);
 
   // END record.
   Pos = newRecord(GOFFData);
@@ -231,29 +273,19 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0xF0;
 
-  // ESD record.
-  Pos = newRecord(GOFFContData);
-  GOFFContData[Pos] = (char)0x03;
-  GOFFContData[Pos + 1] = (char)0x01;
-  GOFFContData[Pos + 3] = (char)0x02;
-  GOFFContData[Pos + 7] = (char)0x01;
-  GOFFContData[Pos + 11] = (char)0x01;
-  GOFFContData[Pos + 71] = (char)0x0A; // Size of symbol name.
-  GOFFContData[Pos + 72] = (char)0xC8; // Symbol name is HelloWorld.
-  GOFFContData[Pos + 73] = (char)0x85;
-  GOFFContData[Pos + 74] = (char)0x93;
-  GOFFContData[Pos + 75] = (char)0x93;
-  GOFFContData[Pos + 76] = (char)0x96;
-  GOFFContData[Pos + 77] = (char)0xA6;
-  GOFFContData[Pos + 78] = (char)0x96;
-  GOFFContData[Pos + 79] = (char)0x99;
-
-  // ESD continuation record.
-  Pos = newRecord(GOFFContData);
-  GOFFContData[Pos] = (char)0x03;
-  GOFFContData[Pos + 1] = (char)0x02; // No further continuations.
-  GOFFContData[Pos + 3] = (char)0x93;
-  GOFFContData[Pos + 4] = (char)0x84;
+  // ESD record with continuation. Symbol name is Helloworld.
+  addEsdRecord(GOFFContData, 0x02, 0x01,
+               {0xC8, // H
+                0x85, // e
+                0x93, // l
+                0x93, // l
+                0x96, // o
+                0xA6, // w
+                0x96, // o
+                0x99, // r
+                0x93, // l
+                0x84},// d
+               0x01);
 
   // END record.
   Pos = newRecord(GOFFContData);
@@ -456,26 +488,18 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 1] = (char)0xF0;
 
-  // ESD record 1.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 3] = (char)0x00;
-  GOFFData[Pos + 7] = (char)0x01;  // ESDID.
-  GOFFData[Pos + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xa7; // Symbol name is x.
+  // ESD record 1. Symbol name is x.
+  addEsdRecord(GOFFData, 0x00, 0x01,
+               {0xa7}); // x
 
-  // ESD record 2.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 3] = (char)0x03;
-  GOFFData[Pos + 7] = (char)0x02;  // ESDID.
-  GOFFData[Pos + 11] = (char)0x01; // Parent ESDID.
-  GOFFData[Pos + 71] = (char)0x05; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xC8; // Symbol name is Hello.
-  GOFFData[Pos + 73] = (char)0x85;
-  GOFFData[Pos + 74] = (char)0x93;
-  GOFFData[Pos + 75] = (char)0x93;
-  GOFFData[Pos + 76] = (char)0x96;
+  // ESD record 2. Symbol name is Hello.
+  addEsdRecord(GOFFData, 0x03, 0x02,
+               {0xC8, // H
+                0x85, // e
+                0x93, // l
+                0x93, // l
+                0x96},// o
+               0x01);
 
   // END record.
   Pos = newRecord(GOFFData);
@@ -508,14 +532,10 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 1] = (char)0xF0;
 
-  // ESD record.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 3] = (char)0x05;
-  GOFFData[Pos + 7] = (char)0x01;
-  GOFFData[Pos + 11] = (char)0x01;
-  GOFFData[Pos + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xC8; // Symbol name.
+  // ESD record with invalid symbol type 0x05.
+  addEsdRecord(GOFFData, 0x05, 0x01,
+               {0xC8}, // H
+               0x01);
 
   // END record.
   Pos = newRecord(GOFFData);
@@ -596,52 +616,37 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
   GOFFData[Pos + 1] = (char)0xF0;
   GOFFData[Pos + 50] = (char)0x01;
 
-  // ESD record.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 7] = (char)0x01;  // ESDID.
-  GOFFData[Pos + 71] = (char)0x05; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xa5; // Symbol name is v.
-  GOFFData[Pos + 73] = (char)0x81; // Symbol name is a.
-  GOFFData[Pos + 74] = (char)0x99; // Symbol name is r.
-  GOFFData[Pos + 75] = (char)0x7b; // Symbol name is #.
-  GOFFData[Pos + 76] = (char)0x83; // Symbol name is c.
+  // ESD record. Symbol name is var#c.
+  addEsdRecord(GOFFData, 0x00, 0x01,
+               {0xa5, // v
+                0x81, // a
+                0x99, // r
+                0x7b, // #
+                0x83});// c
 
-  // ESD record.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 3] = (char)0x01;
-  GOFFData[Pos + 7] = (char)0x02;  // ESDID.
-  GOFFData[Pos + 11] = (char)0x01; // Parent ESDID.
-  GOFFData[Pos + 27] = (char)0x08; // Length.
-  GOFFData[Pos + 40] = (char)0x01; // Name Space ID.
-  GOFFData[Pos + 41] = (char)0x80;
-  GOFFData[Pos + 60] = (char)0x04; // Size of symbol name.
-  GOFFData[Pos + 61] = (char)0x04; // Size of symbol name.
-  GOFFData[Pos + 63] = (char)0x0a; // Size of symbol name.
-  GOFFData[Pos + 66] = (char)0x03; // Size of symbol name.
-  GOFFData[Pos + 71] = (char)0x08; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xc3; // Symbol name is c.
-  GOFFData[Pos + 73] = (char)0x6d; // Symbol name is _.
-  GOFFData[Pos + 74] = (char)0xc3; // Symbol name is c.
-  GOFFData[Pos + 75] = (char)0xd6; // Symbol name is o.
-  GOFFData[Pos + 76] = (char)0xc4; // Symbol name is D.
-  GOFFData[Pos + 77] = (char)0xc5; // Symbol name is E.
-  GOFFData[Pos + 78] = (char)0xf6; // Symbol name is 6.
-  GOFFData[Pos + 79] = (char)0xf4; // Symbol name is 4.
+  // ESD record. Symbol name is c_CoDE64.
+  uint8_t BehavioralAttributes[] = {0x04, 0x04, 0x00, 0x0a,
+                                     0x00, 0x00, 0x03, 0x00,
+                                     0x00, 0x00};
+  addEsdRecord(GOFFData, 0x01, 0x02,
+               {0xc3, // c
+                0x6d, // _
+                0xc3, // c
+                0xd6, // o
+                0xc4, // D
+                0xc5, // E
+                0xf6, // 6
+                0xf4},// 4
+               0x01, 0x00, 0x01, 0x80, BehavioralAttributes, 0x08);
 
-  // ESD record.
-  Pos = newRecord(GOFFData);
-  GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 3] = (char)0x02;
-  GOFFData[Pos + 7] = (char)0x03;  // ESDID.
-  GOFFData[Pos + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[Pos + 71] = (char)0x05; // Size of symbol name.
-  GOFFData[Pos + 72] = (char)0xa5; // Symbol name is v.
-  GOFFData[Pos + 73] = (char)0x81; // Symbol name is a.
-  GOFFData[Pos + 74] = (char)0x99; // Symbol name is r.
-  GOFFData[Pos + 75] = (char)0x7b; // Symbol name is #.
-  GOFFData[Pos + 76] = (char)0x83; // Symbol name is c.
+  // ESD record. Symbol name is var#c.
+  addEsdRecord(GOFFData, 0x02, 0x03,
+               {0xa5, // v
+                0x81, // a
+                0x99, // r
+                0x7b, // #
+                0x83},// c
+               0x02);
 
   // TXT record.
   Pos = newRecord(GOFFData);
