@@ -156,7 +156,12 @@ getSharedStringStartOffset(Process &process, lldb::addr_t storageAddress) {
   // In the new layout first_word is `start`, always a non-null pointer to the
   // code units. In the old layout it is `_owner`, always null. So a null value
   // uniquely means the old layout, where `start` is one pointer further.
-  return first_word ? header_size : header_size + ptr_size;
+  uint64_t offset = first_word ? header_size : header_size + ptr_size;
+  LLDB_LOGV(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+            "SwiftFormatters: __SharedStringStorage `start` field at offset {0} "
+            "(detected {1} layout)",
+            offset, first_word ? "current" : "legacy (with _owner)");
+  return offset;
 }
 
 static bool makeStringGutsSummary(
