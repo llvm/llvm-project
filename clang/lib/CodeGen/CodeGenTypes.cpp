@@ -121,6 +121,19 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 
+  // Convert constant arrays element-wise so that sugar on the element type that
+  // affects the in-memory layout is preserved.
+  if (const ConstantArrayType *CAT = Context.getAsConstantArrayType(T)) {
+    llvm::Type *EltTy = ConvertTypeForMem(CAT->getElementType());
+    // Lower arrays of undefined struct type to arrays of i8, matching
+    // ConvertType.
+    if (!EltTy->isSized()) {
+      SkippedLayout = true;
+      EltTy = llvm::Type::getInt8Ty(getLLVMContext());
+    }
+    return llvm::ArrayType::get(EltTy, CAT->getZExtSize());
+  }
+
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.
