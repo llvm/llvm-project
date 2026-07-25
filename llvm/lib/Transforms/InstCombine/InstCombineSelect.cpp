@@ -5314,7 +5314,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                 OldLoad->getParamAlign(0).valueOrOne(),
                 CondVal, FalseVal);
     In->copyMetadata(*OldLoad);
-    return replaceInstUsesWith(SI, In);}
+    static const unsigned IDs[] = {LLVMContext::MD_range,
+                                   LLVMContext::MD_nonnull,
+                                   LLVMContext::MD_dereferenceable,
+                                   LLVMContext::MD_dereferenceable_or_null,
+                                   LLVMContext::MD_align,
+                                   LLVMContext::MD_noundef,
+                                   LLVMContext::MD_nofree,
+                                   LLVMContext::MD_nofpclass};
+    for (unsigned ID : IDs)
+      In->setMetadata(ID, nullptr);
+    return replaceInstUsesWith(SI, In);
+  }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
   // bitwidth-1, 1 -> scmp(X, 0)
