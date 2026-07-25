@@ -2333,13 +2333,11 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   // expression already ends in DW_OP_stack_value.
   std::optional<uint64_t> LastValueOp;
   for (auto Op : Expr->expr_ops()) {
-    if (Op.isNonEmitting() ||
-        Op.getOp() == dwarf::DW_OP_LLVM_fragment)
+    if (Op.isNonEmitting() || Op.getOp() == dwarf::DW_OP_LLVM_fragment)
       continue;
     LastValueOp = Op.getOp();
   }
-  bool NeedsDeref =
-      LastValueOp && *LastValueOp != dwarf::DW_OP_stack_value;
+  bool NeedsDeref = LastValueOp && *LastValueOp != dwarf::DW_OP_stack_value;
   bool NeedsStackValue = NeedsDeref || !LastValueOp;
 
   // Append a DW_OP_deref after Expr's current op list if needed, then append
