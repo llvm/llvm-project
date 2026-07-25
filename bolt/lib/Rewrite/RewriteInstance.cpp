@@ -1451,6 +1451,10 @@ void RewriteInstance::discoverFileObjects() {
   FileSymRefs.clear();
 
   discoverBOLTReserved();
+
+  // The name resolver is only needed while discovering and disambiguating file
+  // objects. Release its memory now that all names have been uniquified.
+  NR.clear();
 }
 
 void RewriteInstance::discoverBOLTReserved() {
