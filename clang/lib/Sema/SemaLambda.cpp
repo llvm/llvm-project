@@ -1436,7 +1436,6 @@ void Sema::ActOnLambdaClosureParameters(
         TemplateParams->containsUnexpandedParameterPack();
   }
   LSI->AfterParameterList = true;
-  LSI->BeforeCompoundStatement = true;
 }
 
 void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,

@@ -879,7 +879,7 @@ public:
   /// is known.
   bool AfterParameterList = true;
 
-  bool BeforeCompoundStatement = false;
+  bool BeforeCompoundStatement = true;
 
   ParmVarDecl *ExplicitObjectParameter = nullptr;
 
