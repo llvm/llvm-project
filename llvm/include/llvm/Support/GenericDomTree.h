@@ -399,17 +399,6 @@ private:
     return GraphTraits<const NodeT *>::getNumber(BB) + IsPostDom;
   }
 
-  unsigned getNodeIndexForInsert(const NodeT *BB) {
-    unsigned Idx = getNodeIndex(BB);
-    if (Idx >= DomTreeNodes.size()) {
-      // Add 1 for post-dominator trees, 0 is nullptr block.
-      unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent) + IsPostDom;
-      assert(Idx < Max && "getMaxNumber returned too small value");
-      DomTreeNodes.resize(Max + IsPostDom);
-    }
-    return Idx;
-  }
-
 public:
   /// getNode - return the (Post)DominatorTree node for the specified basic
   /// block.  This is the same as using operator[] on this class.  The result
@@ -879,15 +868,10 @@ public:
 
     unsigned MaxNumber = GraphTraits<ParentPtr>::getMaxNumber(Parent);
     DomTreeNodeStorageTy NewVector;
-    NewVector.resize(MaxNumber + 1); // +1, because index 0 is for nullptr
-    for (auto &Node : DomTreeNodes) {
-      if (!Node)
-        continue;
-      unsigned Idx = getNodeIndex(Node->getBlock());
-      // getMaxNumber is not necessarily supported
-      if (Idx >= NewVector.size())
-        NewVector.resize(Idx + 1);
-      NewVector[Idx] = std::move(Node);
+    NewVector.resize(MaxNumber + IsPostDom); // index 0 is for nullptr
+    for (DomTreeNodeBase<NodeT> *Node : DomTreeNodes) {
+      if (Node)
+        NewVector[getNodeIndex(Node->getBlock())] = Node;
     }
     DomTreeNodes = std::move(NewVector);
   }
@@ -927,8 +911,14 @@ protected:
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {
     static_assert(std::is_trivially_destructible_v<DomTreeNodeBase<NodeT>>);
     auto *Node = new (NodeAllocator) DomTreeNodeBase<NodeT>(BB, IDom);
-    unsigned NodeIdx = getNodeIndexForInsert(BB);
-    DomTreeNodes[NodeIdx] = Node;
+    unsigned Idx = getNodeIndex(BB);
+    if (Idx >= DomTreeNodes.size()) {
+      // Add 1 for post-dominator trees, 0 is nullptr block.
+      unsigned Max = GraphTraits<ParentPtr>::getMaxNumber(Parent) + IsPostDom;
+      assert(Idx < Max && "getMaxNumber returned too small value");
+      DomTreeNodes.resize(Max);
+    }
+    DomTreeNodes[Idx] = Node;
     if (IDom)
       IDom->addChild(Node);
     return Node;
