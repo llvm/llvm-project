@@ -29,8 +29,10 @@ let people know you are working on it.
 Then try to reproduce and fix the bug with upstream LLVM. Start by building
 LLVM from source as described in {doc}`GettingStarted` and
 use the built binaries to reproduce the failure described in the bug. Use
-a debug build (`-DCMAKE_BUILD_TYPE=Debug`) or a build with assertions
-(`-DLLVM_ENABLE_ASSERTIONS=On`, enabled for Debug builds).
+a build with assertions (`-DLLVM_ENABLE_ASSERTIONS=On`). If you want to build
+LLVM in Debug mode, consider using `LLVM_PARALLEL_LINK_JOBS` and set the linker
+to anything other than GNU `ld` (e.g. `lld` or `mold`); otherwise, you'll likely
+run out of memory unless you have a lot of RAM.
 
 ### Reporting a Security Issue
 
@@ -51,7 +53,12 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the {doc}`CodingStandards`. You can use the [clang-format-diff.py] or [git-clang-format] tools to automatically format your patch properly.
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* have a single commit, up-to-date with the upstream `origin/main` branch, and don't have merges.
+
+```{note}
+It's ok for a patch to contain multiple commits; we use the 'Squash and Merge'
+button on GitHub when merging PRs, i.e. all commits will be combined into a
+single one by GitHub at merge time.
+```
 
 (format patches)=
 
