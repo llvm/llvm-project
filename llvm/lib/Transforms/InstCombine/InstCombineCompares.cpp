@@ -6548,6 +6548,8 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
 
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
+  // TODO: for icmp (ptrtoaddr), (ptrtoaddr), we don't need this check;
+  // currently it is always false if the pointer has non-address bits.
   auto CompatibleSizes = [&](Type *PtrTy, Type *IntTy) {
     if (isa<VectorType>(PtrTy)) {
       PtrTy = cast<VectorType>(PtrTy)->getElementType();

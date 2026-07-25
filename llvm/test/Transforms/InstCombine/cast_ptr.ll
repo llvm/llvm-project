@@ -47,6 +47,17 @@ define i1 @test2_ptrtoaddr(ptr %a, ptr %b) {
   ret i1 %r
 }
 
+define i1 @test2_ptrtoaddr_ptrtoint(ptr %a, ptr %b) {
+; CHECK-LABEL: @test2_ptrtoaddr_ptrtoint(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq ptr [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoint ptr %a to i32
+  %tb = ptrtoaddr ptr %b to i32
+  %r = icmp eq i32 %ta, %tb
+  ret i1 %r
+}
+
 ; These casts should be folded away.
 
 define i1 @test2_as2_same_int(ptr addrspace(2) %a, ptr addrspace(2) %b) {
@@ -67,6 +78,17 @@ define i1 @test2_as2_same_int_ptrtoaddr(ptr addrspace(2) %a, ptr addrspace(2) %b
 ;
   %ta = ptrtoaddr ptr addrspace(2) %a to i16
   %tb = ptrtoaddr ptr addrspace(2) %b to i16
+  %r = icmp eq i16 %ta, %tb
+  ret i1 %r
+}
+
+define i1 @test2_as2_same_int_ptrtoint(ptr addrspace(2) %a, ptr addrspace(2) %b) {
+; CHECK-LABEL: @test2_as2_same_int_ptrtoint(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq ptr addrspace(2) [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoaddr ptr addrspace(2) %a to i16
+  %tb = ptrtoint ptr addrspace(2) %b to i16
   %r = icmp eq i16 %ta, %tb
   ret i1 %r
 }
@@ -112,6 +134,19 @@ define i1 @test2_diff_as_ptrtoaddr(ptr %p, ptr addrspace(1) %q) {
   ret i1 %r0
 }
 
+define i1 @test2_diff_as_ptrtoaddr_ptrtoint(ptr %p, ptr addrspace(1) %q) {
+; CHECK-LABEL: @test2_diff_as_ptrtoaddr_ptrtoint(
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P:%.*]] to i32
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoaddr ptr addrspace(1) [[Q:%.*]] to i32
+; CHECK-NEXT:    [[R0:%.*]] = icmp sge i32 [[I0]], [[I1]]
+; CHECK-NEXT:    ret i1 [[R0]]
+;
+  %i0 = ptrtoint ptr %p to i32
+  %i1 = ptrtoaddr ptr addrspace(1) %q to i32
+  %r0 = icmp sge i32 %i0, %i1
+  ret i1 %r0
+}
+
 ; These casts should not be folded away.
 
 define i1 @test2_diff_as_global(ptr addrspace(1) %q) {
@@ -138,6 +173,18 @@ define i1 @test2_diff_as_global_ptrtoaddr(ptr addrspace(1) %q) {
   ret i1 %r0
 }
 
+define i1 @test2_diff_as_global_ptrtoaddr_ptrtoint(ptr addrspace(1) %q) {
+; CHECK-LABEL: @test2_diff_as_global_ptrtoaddr_ptrtoint(
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr addrspace(1) [[Q:%.*]] to i32
+; CHECK-NEXT:    [[R0:%.*]] = icmp sge i32 [[I1]], ptrtoaddr (ptr @global to i32)
+; CHECK-NEXT:    ret i1 [[R0]]
+;
+  %i0 = ptrtoaddr ptr @global to i32
+  %i1 = ptrtoint ptr addrspace(1) %q to i32
+  %r0 = icmp sge i32 %i1, %i0
+  ret i1 %r0
+}
+
 ; These casts should also be folded away.
 
 define i1 @test3(ptr %a) {
@@ -157,6 +204,16 @@ define i1 @test3_ptrtoaddr(ptr %a) {
 ;
   %ta = ptrtoaddr ptr %a to i32
   %r = icmp eq i32 %ta, ptrtoaddr (ptr @global to i32)
+  ret i1 %r
+}
+
+define i1 @test3_ptrtoaddr_ptrtoint(ptr %a) {
+; CHECK-LABEL: @test3_ptrtoaddr_ptrtoint(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq ptr [[A:%.*]], @global
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoaddr ptr %a to i32
+  %r = icmp eq i32 %ta, ptrtoint (ptr @global to i32)
   ret i1 %r
 }
 
