@@ -1074,15 +1074,8 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
     // __has_include(__has_include))
     if (CurPPLexer->ParsingFilename)
       LexUnexpandedToken(FilenameTok);
-    else if ((getLangOpts().CPlusPlusModules &&
-              isImportingCXXNamedModules()) || // C++ import already checked in
-                                               // HandleModuleContextualKeyword,
-                                               // avoid duplicate check in
-                                               // LexHeaderName.
-             isNextPPTokenHeaderNameOrOneOf(tok::less))
-      CurPPLexer->LexIncludeFilename(FilenameTok);
     else
-      Lex(FilenameTok);
+      CurPPLexer->LexIncludeFilename(FilenameTok);
   } else {
     Lex(FilenameTok);
   }
@@ -1376,11 +1369,19 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
     return false;
   }
 
-  if (II->isImportKeyword() &&
-      isNextPPTokenHeaderNameOrOneOf(tok::identifier, tok::colon, tok::less)) {
-    Result.setKind(tok::kw_import);
-    ModuleImportLoc = Result.getLocation();
-    return true;
+  if (II->isImportKeyword()) {
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::header_name, tok::identifier, tok::colon, tok::less)) {
+        Result.setKind(tok::kw_import);
+        ModuleImportLoc = Result.getLocation();
+        return true;
+      }
+    }
+    return false;
   }
 
   // Ok, it's an identifier.
