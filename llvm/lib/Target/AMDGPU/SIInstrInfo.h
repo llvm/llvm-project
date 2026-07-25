@@ -1490,9 +1490,10 @@ public:
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.
-  bool isLegalGFX12PlusWidePackedOperand(const MachineRegisterInfo &MRI,
-                                         const MachineInstr &MI, unsigned SrcN,
-                                         const MachineOperand *MO = nullptr) const;
+  bool
+  isLegalGFX12PlusWidePackedOperand(const MachineRegisterInfo &MRI,
+                                    const MachineInstr &MI, unsigned SrcN,
+                                    const MachineOperand *MO = nullptr) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
