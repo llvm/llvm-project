@@ -53,10 +53,10 @@ constexpr bool test() {
     static_assert(noexcept((inner.end())));
   }
 
-  // Test `constexpr value_type iterator::operator*() const`
+  // Test `constexpr range_reference_v<V> inner_iterator::operator*() const`
   {
     /*chunk_view::__inner_iterator*/ std::input_iterator auto it = (*input_chunked.begin()).begin();
-    std::same_as<int> decltype(auto) v                           = *it;
+    std::same_as<int&> decltype(auto) v                          = *it;
     assert(v == 1);
   }
 
