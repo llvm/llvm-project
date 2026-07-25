@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   AffineDataCopyGeneration.cpp
   AffineExpandIndexOps.cpp
   AffineExpandIndexOpsAsAffine.cpp
+  AffineLoopConstantizeBounds.cpp
   AffineLoopInvariantCodeMotion.cpp
   AffineLoopNormalize.cpp
   AffineParallelize.cpp

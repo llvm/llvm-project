@@ -465,4 +465,17 @@ def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
+def AffineLoopConstantizeBounds : Pass<"affine-loop-constantize-bounds"> {
+  let summary = "Constantize affine loop bounds using range analysis";
+  let description = [{
+    The pass leverages value range analysis (e.g., via the Presburger library)
+    to transform affine loops with dynamic symbolic bounds into a static-trip-count
+    main loop and a residual tail loop.
+
+    By rewriting the main loop to have strict compile-time constant bounds
+    (typically normalized to `0` to `TC_safe` with step `1`), it exposes the loop
+    body to downstream affine optimization pipelines.
+  }];
+}
+
 #endif // MLIR_DIALECT_AFFINE_PASSES
