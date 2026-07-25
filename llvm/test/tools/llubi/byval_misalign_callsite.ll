@@ -11,8 +11,8 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0xC [alloc]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @callee(ptr byval(i32) align 16 %alloc) at @main <stdin>:10
-; CHECK-NEXT: Immediate UB detected: Misaligned memory access. Address: 0x8, Required alignment: 16.
+; CHECK-NEXT: Immediate UB detected: Misaligned memory access. Address: 0xc, Required alignment: 16.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

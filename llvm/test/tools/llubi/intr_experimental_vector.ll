@@ -23,7 +23,7 @@ define void @main() {
   %match = call <4 x i1> @llvm.experimental.vector.match.v4i1.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 4, i8 2, i8 9>, <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
   %match_poison_needles = call <4 x i1> @llvm.experimental.vector.match.v4i1.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 poison, i8 3, i8 9>, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 
-  %buckets = alloca [8 x i32], align 4
+  %buckets = alloca [8 x i32], align 8
   %b0 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 0
   %b1 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 1
   %b2 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 2
@@ -92,7 +92,7 @@ define void @main() {
 ; CHECK-NEXT:   %compress_poison = call <4 x i32> @llvm.experimental.vector.compress.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 false, i1 poison, i1 false, i1 false>, <4 x i32> zeroinitializer) => { poison, poison, poison, poison }
 ; CHECK-NEXT:   %match = call <4 x i1> @llvm.experimental.vector.match.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 4, i8 2, i8 9>, <4 x i1> <i1 true, i1 true, i1 false, i1 true>) => { F, T, F, T }
 ; CHECK-NEXT:   %match_poison_needles = call <4 x i1> @llvm.experimental.vector.match.v4i8.v3i8(<4 x i8> <i8 1, i8 2, i8 3, i8 4>, <3 x i8> <i8 poison, i8 3, i8 9>, <4 x i1> <i1 true, i1 true, i1 true, i1 false>) => { poison, poison, poison, F }
-; CHECK-NEXT:   %buckets = alloca [8 x i32], align 4 => ptr 0x8 [buckets]
+; CHECK-NEXT:   %buckets = alloca [8 x i32], align 8 => ptr 0x8 [buckets]
 ; CHECK-NEXT:   %b0 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 0 => ptr 0x8 [buckets]
 ; CHECK-NEXT:   %b1 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 1 => ptr 0xC [buckets + 4]
 ; CHECK-NEXT:   %b2 = getelementptr inbounds [8 x i32], ptr %buckets, i64 0, i64 2 => ptr 0x10 [buckets + 8]

@@ -85,7 +85,7 @@ define void @main() {
   %nofpclass_callsite_invalid_output = call nofpclass(norm) half @identity_nofpclass(half 1.0)
   %nofpclass_agg = call {<2 x half>, <2 x half>} @identity_nofpclass_agg({<2 x half>, <2 x half>} {<2 x half> <half 1.0, half poison>, <2 x half> <half 0xH7C00, half 0xH7E00>})
 
-  %alloc = alloca i32
+  %alloc = alloca i64
   %ptr_one = getelementptr i8, ptr null, i32 1
   %nonnull_valid = call ptr @gep_nonnull(ptr %alloc)
   %nonnull_invalid_input = call ptr @gep_nonnull(ptr null)
@@ -196,7 +196,7 @@ define void @main() {
 ; CHECK-NEXT:   ret { <2 x half>, <2 x half> } %x
 ; CHECK-NEXT: Exiting function: identity_nofpclass_agg
 ; CHECK-NEXT:   %nofpclass_agg = call { <2 x half>, <2 x half> } @identity_nofpclass_agg({ <2 x half>, <2 x half> } { <2 x half> <half 1.000000e+00, half poison>, <2 x half> <half +inf, half +qnan> }) => { { half 1.000000e+00, poison }, { poison, poison } }
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i64, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %ptr_one = getelementptr i8, ptr null, i32 1 => ptr 0x1 [nullary]
 ; CHECK-NEXT: Entering function: gep_nonnull
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [alloc]
@@ -320,7 +320,7 @@ define void @main() {
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity_dereferenceable_or_null
 ; CHECK-NEXT:   %deref_or_null_mixed = call dereferenceable(1) dereferenceable_or_null(1) ptr @identity_dereferenceable_or_null(ptr dereferenceable(1) dereferenceable_or_null(1) %alloc) => ptr 0x8 [alloc]
-; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xD [fmt_n_out]
+; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0x11 [fmt_n_out]
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
 ; CHECK-NEXT: N=6
 ; CHECK-NEXT:   %res = call noundef range(i32 0, 15) i32 (ptr, ...) @printf(ptr noundef nonnull %fmt_n_out, i32 noundef range(i32 0, 15) 6) => i32 4

@@ -996,6 +996,9 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
   if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
+  // We always use the minimal alignment to catch more UBs.
+  if (countr_zero(AlignedAddr) != countr_zero(Align))
+    AlignedAddr += Align;
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
       AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;

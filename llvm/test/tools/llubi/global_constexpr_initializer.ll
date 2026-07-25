@@ -3,7 +3,7 @@
 
 target datalayout = "p:64:64:64"
 
-@value = global i32 0
+@value = global i32 0, align 8
 @aggregate = global [1 x ptr] [ptr getelementptr (i32, ptr @value, i64 1)]
 @trunc = global i8 trunc (i64 ptrtoaddr (ptr @value to i64) to i8)
 @bitcast = global double bitcast (i64 ptrtoaddr (ptr @value to i64) to double)

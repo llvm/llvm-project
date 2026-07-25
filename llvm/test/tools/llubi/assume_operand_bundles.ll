@@ -9,7 +9,7 @@ define void @assume_align_dynamic(ptr %p, i32 %align) {
 }
 
 define void @main() {
-  %alloc = alloca i32
+  %alloc = alloca i64
   call void @llvm.assume(i1 true) ["nonnull"(ptr %alloc)]
   call void @llvm.assume(i1 true) ["cold"(), "nonnull"(ptr %alloc), "cold"()]
   call void @assume_align_dynamic(ptr %alloc, i32 8)
@@ -23,7 +23,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i64, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "nonnull"(ptr %alloc) ]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "cold"(), "nonnull"(ptr %alloc), "cold"() ]
 ; CHECK-NEXT: Entering function: assume_align_dynamic

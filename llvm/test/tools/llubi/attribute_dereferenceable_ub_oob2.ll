@@ -6,13 +6,13 @@ define void @callee(ptr dereferenceable(2) %x) {
 }
 
 define void @main() {
-  %alloc = alloca i32
+  %alloc = alloca i64
   %gep = getelementptr i8, ptr %alloc, i32 -1
   call void @callee(ptr %gep)
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i64, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %gep = getelementptr i8, ptr %alloc, i32 -1 => ptr 0x7 [alloc + -1]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @callee(ptr %gep) at @main <stdin>:11

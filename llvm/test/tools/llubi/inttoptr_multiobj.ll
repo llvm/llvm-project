@@ -4,8 +4,8 @@
 target datalayout = "e-p:64:64:64"
 
 define void @main() {
-  %alloc1 = alloca i32
-  %alloc2 = alloca i32
+  %alloc1 = alloca i32, align 8
+  %alloc2 = alloca i32, align 16
 
   %addr1 = ptrtoint ptr %alloc1 to i64
   %addr2 = ptrtoint ptr %alloc2 to i64
@@ -25,8 +25,8 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc1 = alloca i32, align 4 => ptr 0x8 [alloc1]
-; CHECK-NEXT:   %alloc2 = alloca i32, align 4 => ptr 0x10 [alloc2]
+; CHECK-NEXT:   %alloc1 = alloca i32, align 8 => ptr 0x8 [alloc1]
+; CHECK-NEXT:   %alloc2 = alloca i32, align 16 => ptr 0x10 [alloc2]
 ; CHECK-NEXT:   %addr1 = ptrtoint ptr %alloc1 to i64 => i64 8
 ; CHECK-NEXT:   %addr2 = ptrtoint ptr %alloc2 to i64 => i64 16
 ; CHECK-NEXT:   %ptrdiff = sub i64 %addr2, %addr1 => i64 8
