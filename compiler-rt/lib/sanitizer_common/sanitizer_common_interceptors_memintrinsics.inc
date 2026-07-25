@@ -92,14 +92,17 @@
   }
 #endif
 
-// By default the fortified _chk variants behave like their plain counterparts;
-// the fortification bound (dst_size) is unused because the tool's own bounds
-// checking already covers the access. A tool may override these to preserve the
-// libc _FORTIFY_SOURCE semantics (e.g. by calling REAL(__memset_chk)).
+// __{memset,memmove,memcpy}_chk(dst, ..., size, dst_size) is defined as:
+// abort via __chk_fail() when size > dst_size, and otherwise behave exactly
+// like the corresponding plain function. So the overflow case is forwarded to
+// the real fortified function, which keeps the _FORTIFY_SOURCE check intact,
+// and every other case is handled by the tool's normal implementation, which
+// is semantically identical and applies the usual instrumentation.
 #ifndef COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size) \
     {                                                                     \
-      (void)dst_size;                                                     \
+      if (UNLIKELY(size > dst_size))                                      \
+        return REAL(__memset_chk)(dst, v, size, dst_size);                \
       COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size);                  \
     }
 #endif
@@ -107,7 +110,8 @@
 #ifndef COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size) \
     {                                                                        \
-      (void)dst_size;                                                        \
+      if (UNLIKELY(size > dst_size))                                         \
+        return REAL(__memmove_chk)(dst, src, size, dst_size);                \
       COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);                  \
     }
 #endif
@@ -115,7 +119,8 @@
 #ifndef COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size) \
     {                                                                       \
-      (void)dst_size;                                                       \
+      if (UNLIKELY(size > dst_size))                                        \
+        return REAL(__memcpy_chk)(dst, src, size, dst_size);                \
       COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);                  \
     }
 #endif
