@@ -313,7 +313,6 @@ template <typename IRUnitT, typename PassT, typename InvalidatorT,
           typename... ExtraArgTs>
 class AnalysisPassModel final
     : public AnalysisPassConcept<IRUnitT, InvalidatorT, ExtraArgTs...> {
-private:
   using AnalysisPassConceptT =
       AnalysisPassConcept<IRUnitT, InvalidatorT, ExtraArgTs...>;
   using ResultModelT =
