@@ -402,6 +402,12 @@ fpclassify(double __x) _NOEXCEPT {
 fpclassify(long double __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
+
+template <class _A1, std::__enable_if_t<std::is_integral<_A1>::value, int> = 0>
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD int
+fpclassify(_A1 __x) _NOEXCEPT {
+  return __x == 0 ? FP_ZERO : FP_NORMAL;
+}
 #      else
 
 // template on non-double overloads to make them weaker than same overloads from MSVC runtime
