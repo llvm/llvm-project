@@ -1000,8 +1000,6 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
           State = State->assume(*dSymVal, true);
   }
 
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-
   SVal Result = symVal;
 
   if (CNE->isArray()) {
@@ -1024,23 +1022,21 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       // If the array is list initialized, we bind the initializer list to the
       // memory region here, otherwise we would lose it.
       if (isInitList) {
-        Bldr.takeNodes(Pred);
-        Pred = Bldr.generateNode(CNE, Pred, State);
+        Pred = Engine.makePostStmtNode(CNE, State, Pred);
 
         SVal V = State->getSVal(Init, SF);
         ExplodedNodeSet evaluated;
         evalBind(evaluated, CNE, Pred, Result, V, true);
 
-        Bldr.takeNodes(Pred);
-        Bldr.addNodes(evaluated);
+        Dst.insert(evaluated);
 
         Pred = *evaluated.begin();
         State = Pred->getState();
       }
     }
 
-    State = State->BindExpr(CNE, Pred->getStackFrame(), Result);
-    Bldr.generateNode(CNE, Pred, State);
+    Dst.erase(Pred);
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CNE, Result, State));
     return;
   }
 
@@ -1056,8 +1052,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   }
 
   // Bind the address of the object, then check to see if we cached out.
-  State = State->BindExpr(CNE, SF, Result);
-  ExplodedNode *NewN = Bldr.generateNode(CNE, Pred, State);
+  ExplodedNode *NewN = Engine.makeNodeWithBinding(Pred, CNE, Result, State);
+  Dst.insert(NewN);
   if (!NewN)
     return;
 
@@ -1065,8 +1061,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // initializer. Copy the value over.
   if (const Expr *Init = CNE->getInitializer()) {
     if (!isa<CXXConstructExpr>(Init)) {
-      assert(Bldr.getResults().size() == 1);
-      Bldr.takeNodes(NewN);
+      assert(Dst.size() == 1);
+      Dst.erase(NewN);
       evalBind(Dst, CNE, NewN, Result, State->getSVal(Init, SF),
                /*FirstInit=*/IsStandardGlobalOpNewFunction);
     }
