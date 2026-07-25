@@ -25320,41 +25320,51 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return DAG.getNode(AArch64ISD::ASRD_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_cmphs:
-    if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
-                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
-                         N->getOperand(3), DAG.getCondCode(ISD::SETUGE));
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                       N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3), DAG.getCondCode(ISD::SETUGE));
     break;
   case Intrinsic::aarch64_sve_cmphi:
-    if (!N->getOperand(2).getValueType().isFloatingPoint())
-      return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
-                         N->getValueType(0), N->getOperand(1), N->getOperand(2),
-                         N->getOperand(3), DAG.getCondCode(ISD::SETUGT));
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                       N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3), DAG.getCondCode(ISD::SETUGT));
     break;
-  case Intrinsic::aarch64_sve_fcmpge:
   case Intrinsic::aarch64_sve_cmpge:
     return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
                        N->getValueType(0), N->getOperand(1), N->getOperand(2),
                        N->getOperand(3), DAG.getCondCode(ISD::SETGE));
     break;
-  case Intrinsic::aarch64_sve_fcmpgt:
   case Intrinsic::aarch64_sve_cmpgt:
     return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
                        N->getValueType(0), N->getOperand(1), N->getOperand(2),
                        N->getOperand(3), DAG.getCondCode(ISD::SETGT));
     break;
-  case Intrinsic::aarch64_sve_fcmpeq:
   case Intrinsic::aarch64_sve_cmpeq:
     return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
                        N->getValueType(0), N->getOperand(1), N->getOperand(2),
                        N->getOperand(3), DAG.getCondCode(ISD::SETEQ));
     break;
-  case Intrinsic::aarch64_sve_fcmpne:
   case Intrinsic::aarch64_sve_cmpne:
     return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
                        N->getValueType(0), N->getOperand(1), N->getOperand(2),
                        N->getOperand(3), DAG.getCondCode(ISD::SETNE));
     break;
+  case Intrinsic::aarch64_sve_fcmpeq:
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                       N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3), DAG.getCondCode(ISD::SETOEQ));
+  case Intrinsic::aarch64_sve_fcmpge:
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                       N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3), DAG.getCondCode(ISD::SETOGE));
+  case Intrinsic::aarch64_sve_fcmpgt:
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                       N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3), DAG.getCondCode(ISD::SETOGT));
+  case Intrinsic::aarch64_sve_fcmpne:
+    return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
+                       N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                       N->getOperand(3), DAG.getCondCode(ISD::SETUNE));
   case Intrinsic::aarch64_sve_fcmpuo:
     return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
                        N->getValueType(0), N->getOperand(1), N->getOperand(2),

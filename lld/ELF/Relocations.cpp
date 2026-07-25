@@ -1968,10 +1968,9 @@ bool ThunkCreator::createThunks(uint32_t pass,
           }
 
         for (auto &p : isd->thunkSections) {
-          // Sort in pass 0, which creates most thunks. Sorting in later passes
-          // could oscillate: the sort keys are derived from the very layout
-          // being recomputed. Prefix thunk sections hold alternative entry
-          // points whose order is meaningful and must not be reordered.
+          // Sort in pass 0, which creates most thunks. Prefix thunk sections
+          // hold alternative entry points whose order is meaningful and must
+          // not be reordered.
           if (pass == 0 && ctx.arg.zSortThunks && !p.first->isPrefix)
             p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();

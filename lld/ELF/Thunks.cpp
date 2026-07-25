@@ -635,15 +635,10 @@ uint64_t Thunk::getDestVA() const {
 }
 
 // AArch64 Thunk base class.
-static uint64_t getAArch64ThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
-  uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(ctx, a);
-  return v;
-}
-
 bool AArch64Thunk::getMayUseShortThunk() {
   if (!mayUseShortThunk)
     return false;
-  uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   mayUseShortThunk = llvm::isInt<28>(s - p);
   if (!mayUseShortThunk)
@@ -656,7 +651,7 @@ void AArch64Thunk::writeTo(uint8_t *buf) {
     writeLong(buf);
     return;
   }
-  uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   write32(ctx, buf, 0x14000000); // b S
   ctx.target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
@@ -679,9 +674,7 @@ void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 8, R_AARCH64_ABS64, s);
 }
@@ -712,9 +705,7 @@ void AArch64ABSXOLongThunk::writeLong(uint8_t *buf) {
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 0, R_AARCH64_MOVW_UABS_G0_NC, s);
   ctx.target->relocateNoSym(buf + 4, R_AARCH64_MOVW_UABS_G1_NC, s);
@@ -742,9 +733,7 @@ void AArch64ADRPThunk::writeLong(uint8_t *buf) {
   // if mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,

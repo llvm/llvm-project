@@ -27,7 +27,7 @@
 
 ## getDestVA keys a PLT-routed thunk on the PLT entry, not the symbol value. bar's thunk sorts after
 ## the backward thunk to local cbwd; the symbol value 0 would place it backward and flip the order.
-# RUN: llvm-mc -filetype=obj -triple=aarch64 b.s -o b.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared.s -o b.o
 # RUN: ld.lld -shared b.o -o b.so
 # RUN: llvm-mc -filetype=obj -triple=aarch64 c.s -o c.o
 # RUN: ld.lld -T lds2 c.o b.so -z sort-thunks -o out2
@@ -36,6 +36,8 @@
 # PLT:      <__AArch64AbsLongThunk_bar>:
 
 #--- a.s
+n = 44
+
 .section .low,"ax",%progbits
 .rept 3
 .globl lo\+
@@ -50,13 +52,13 @@ _start:
 .rept 3
   bl lo\+
 .endr
-.rept 44
+.rept n
   bl hi\+
   .space 12
 .endr
 
 .section .high,"ax",%progbits
-.rept 44
+.rept n
   .globl hi\+
 hi\+:
   ret
@@ -65,20 +67,15 @@ hi\+:
 
 #--- lds
 ## .low sits far below .text, so lo<n> calls need (always long) backward thunks.
-## .high follows a gap tuned (688 = 44*16 - 16 + 12) so that, once the thunk
+## .high follows a gap tuned (44 matches n in a.s) so that, once the thunk
 ## section shifts .high, only the farthest hi<i> is out of range; in creation
 ## order each promotion then pushes out exactly one more.
 SECTIONS {
   .low 0x10000 : { *(.low) }
   .text 0x10000000 : { *(.text) }
-  . = . + 0x8000000 - 688;
+  . = . + 0x8000000 - (44 - 1) * 16;
   .high : { *(.high) }
 }
-
-#--- b.s
-.globl bar
-bar:
-  ret
 
 #--- c.s
 .section .cbwd,"ax",%progbits
