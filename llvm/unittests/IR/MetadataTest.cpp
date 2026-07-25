@@ -4269,6 +4269,7 @@ TEST_F(DIExpressionTest, isValid) {
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
+  EXPECT_VALID(dwarf::DW_OP_constu, 5, dwarf::DW_OP_swap);
   EXPECT_VALID(dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
@@ -4283,6 +4284,7 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus, 0);
   EXPECT_INVALID(dwarf::DW_OP_plus_uconst);
+  EXPECT_INVALID(dwarf::DW_OP_swap);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus_uconst, 3);
@@ -5215,24 +5217,13 @@ TEST_F(FunctionAttachmentTest, Verifier) {
   EXPECT_FALSE(verifyFunction(*F));
 }
 
-TEST_F(FunctionAttachmentTest, RealEntryCount) {
+TEST_F(FunctionAttachmentTest, EntryCount) {
   Function *F = getFunction("foo");
   EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(12304, Function::PCT_Real);
+  F->setEntryCount(12304);
   auto Count = F->getEntryCount();
   EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(12304u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Real, Count->getType());
-}
-
-TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
-  Function *F = getFunction("bar");
-  EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(123, Function::PCT_Synthetic);
-  auto Count = F->getEntryCount(true /*allow synthetic*/);
-  EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(123u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
+  EXPECT_EQ(12304u, *Count);
 }
 
 TEST_F(FunctionAttachmentTest, SubprogramAttachment) {

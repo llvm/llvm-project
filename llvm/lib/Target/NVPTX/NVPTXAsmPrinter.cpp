@@ -32,6 +32,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -44,6 +48,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -87,9 +92,12 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <map>
+#include <set>
 #include <string>
 
 using namespace llvm;
@@ -135,50 +143,171 @@ static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
   (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
 }
 
-/// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
-/// depends.
+namespace {
+
+/// Return a list of GlobalVariables on which \p V depends.
 static void
 discoverDependentGlobals(const Value *V,
-                         DenseSet<const GlobalVariable *> &Globals) {
+                         SmallVectorImpl<const GlobalVariable *> &Globals,
+                         SmallPtrSetImpl<const GlobalVariable *> &Seen) {
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V)) {
-    Globals.insert(GV);
+    if (Seen.insert(GV).second)
+      Globals.push_back(GV);
+    return;
+  }
+
+  // Global values are emitted as symbols. Their operands do not contribute to
+  // the initializer expression that refers to that symbol.
+  if (isa<GlobalValue>(V))
+    return;
+
+  // lowerConstantForGV emits a GEP as its base symbol plus a constant byte
+  // offset. Symbols used to compute an index are not part of that expression.
+  if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    discoverDependentGlobals(GEP->getPointerOperand(), Globals, Seen);
     return;
   }
 
   if (const User *U = dyn_cast<User>(V))
     for (const auto &O : U->operands())
-      discoverDependentGlobals(O, Globals);
+      discoverDependentGlobals(O, Globals, Seen);
 }
 
-/// VisitGlobalVariableForEmission - Add \p GV to the list of GlobalVariable
-/// instances to be emitted, but only after any dependents have been added
-/// first.s
-static void
-VisitGlobalVariableForEmission(const GlobalVariable *GV,
-                               SmallVectorImpl<const GlobalVariable *> &Order,
-                               DenseSet<const GlobalVariable *> &Visited,
-                               DenseSet<const GlobalVariable *> &Visiting) {
-  // Have we already visited this one?
-  if (Visited.count(GV))
-    return;
+struct GlobalVariableDependencyNode {
+  const GlobalVariable *GV = nullptr;
+  unsigned ModuleOrder = 0;
+  SmallVector<const GlobalVariableDependencyNode *, 4> Dependencies;
+};
 
-  // Do we have a circular dependency?
-  if (!Visiting.insert(GV).second)
+class GlobalVariableDependencyGraph {
+  // scc_iterator needs a single entry node. Global initializer dependencies
+  // may be disconnected, so use a synthetic root with an edge to every global.
+  GlobalVariableDependencyNode SyntheticRoot;
+  // Edges store pointers into Nodes, so node addresses must remain stable while
+  // the graph is constructed.
+  std::map<const GlobalVariable *, GlobalVariableDependencyNode> Nodes;
+
+public:
+  explicit GlobalVariableDependencyGraph(const Module &M) {
+    unsigned ModuleOrder = 0;
+    for (const GlobalVariable &GV : M.globals()) {
+      GlobalVariableDependencyNode &Node = Nodes.try_emplace(&GV).first->second;
+      Node.GV = &GV;
+      Node.ModuleOrder = ModuleOrder++;
+      SyntheticRoot.Dependencies.push_back(&Node);
+    }
+
+    for (auto &[GV, Node] : Nodes) {
+      SmallVector<const GlobalVariable *, 4> Dependencies;
+      SmallPtrSet<const GlobalVariable *, 4> Seen;
+      for (const Use &Operand : GV->operands())
+        discoverDependentGlobals(Operand, Dependencies, Seen);
+
+      for (const GlobalVariable *Dependency : Dependencies) {
+        auto It = Nodes.find(Dependency);
+        if (It != Nodes.end())
+          Node.Dependencies.push_back(&It->second);
+      }
+    }
+  }
+
+  const GlobalVariableDependencyNode *getEntryNode() const {
+    return &SyntheticRoot;
+  }
+};
+
+struct GlobalVariableDependencyGraphTraits {
+  using NodeRef = const GlobalVariableDependencyNode *;
+  using ChildIteratorType =
+      SmallVectorImpl<const GlobalVariableDependencyNode *>::const_iterator;
+
+  static NodeRef getEntryNode(NodeRef Node) { return Node; }
+  static ChildIteratorType child_begin(NodeRef Node) {
+    return Node->Dependencies.begin();
+  }
+  static ChildIteratorType child_end(NodeRef Node) {
+    return Node->Dependencies.end();
+  }
+};
+
+using GlobalVariableSCCIterator =
+    scc_iterator<const GlobalVariableDependencyNode *,
+                 GlobalVariableDependencyGraphTraits>;
+
+static bool shouldSkipModuleLevelGlobal(const GlobalVariable &GV) {
+  if (GV.hasSection() && GV.getSection() == "llvm.metadata")
+    return true;
+  return GV.getName().starts_with("llvm.") || GV.getName().starts_with("nvvm.");
+}
+
+static bool isForwardDeclarableGlobal(const GlobalVariable *GVar) {
+  if (shouldSkipModuleLevelGlobal(*GVar) || GVar->isDeclaration() ||
+      getPTXOpaqueType(*GVar) != PTXOpaqueType::None)
+    return false;
+
+  // A PTX .extern declaration can be resolved by a later .visible, .weak, or
+  // .common definition, but not by a static definition.
+  if (GVar->hasExternalLinkage())
+    return GVar->hasInitializer();
+
+  if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
+      GVar->hasAvailableExternallyLinkage() || GVar->hasCommonLinkage())
+    return true;
+
+  return false;
+}
+
+/// Order definitions after treating references to forward-declared globals as
+/// already satisfied. A remaining cycle cannot be emitted portably because it
+/// requires an undeclared forward reference.
+static SmallVector<const GlobalVariable *, 4> orderDefinitionsInSCC(
+    ArrayRef<const GlobalVariableDependencyNode *> SCC,
+    const DenseSet<const GlobalVariableDependencyNode *> &ForwardDeclared) {
+  using Node = GlobalVariableDependencyNode;
+
+  DenseSet<const Node *> SCCSet;
+  SCCSet.insert_range(SCC);
+
+  DenseMap<const Node *, unsigned> DependencyCount;
+  DenseMap<const Node *, SmallVector<const Node *, 4>> Dependents;
+  std::set<std::pair<unsigned, const Node *>> Ready;
+
+  // Dependencies outside this SCC have already been emitted. Forward-declared
+  // dependencies are also satisfied, so only count the remaining SCC edges.
+  for (const Node *N : SCC) {
+    unsigned &Count = DependencyCount[N];
+    for (const Node *Dependency : N->Dependencies) {
+      if (!SCCSet.count(Dependency) || ForwardDeclared.count(Dependency))
+        continue;
+      ++Count;
+      Dependents[Dependency].push_back(N);
+    }
+    if (Count == 0)
+      Ready.emplace(N->ModuleOrder, N);
+  }
+
+  SmallVector<const GlobalVariable *, 4> Order;
+  while (!Ready.empty()) {
+    const Node *N = Ready.begin()->second;
+    Ready.erase(Ready.begin());
+    Order.push_back(N->GV);
+
+    auto It = Dependents.find(N);
+    if (It == Dependents.end())
+      continue;
+    for (const Node *Dependent : It->second) {
+      assert(DependencyCount[Dependent] && "Dependency already satisfied");
+      if (--DependencyCount[Dependent] == 0)
+        Ready.emplace(Dependent->ModuleOrder, Dependent);
+    }
+  }
+
+  if (Order.size() != SCC.size())
     report_fatal_error("Circular dependency found in global variable set");
-
-  // Make sure we visit all dependents first
-  DenseSet<const GlobalVariable *> Others;
-  for (const auto &O : GV->operands())
-    discoverDependentGlobals(O, Others);
-
-  for (const GlobalVariable *GV : Others)
-    VisitGlobalVariableForEmission(GV, Order, Visited, Visiting);
-
-  // Now we can visit ourself
-  Order.push_back(GV);
-  Visited.insert(GV);
-  Visiting.erase(GV);
+  return Order;
 }
+
+} // namespace
 
 void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   NVPTX_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -191,14 +320,6 @@ void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   OutMI.setOpcode(MI->getOpcode());
-  // Special: Do not mangle symbol operand of CALL_PROTOTYPE
-  if (MI->getOpcode() == NVPTX::CALL_PROTOTYPE) {
-    const MachineOperand &MO = MI->getOperand(0);
-    OutMI.addOperand(GetSymbolRef(
-      OutContext.getOrCreateSymbol(Twine(MO.getSymbolName()))));
-    return;
-  }
-
   for (const auto MO : MI->operands())
     OutMI.addOperand(lowerOperand(MO));
 }
@@ -216,6 +337,11 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext));
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
+  case MachineOperand::MO_JumpTableIndex:
+    // The jump table index names the .branchtargets list emitted for a brx.idx
+    // (see emitFunctionBodyStart); reference it by that label.
+    return GetSymbolRef(
+        OutContext.getOrCreateSymbol("$L_brx_" + Twine(MO.getIndex())));
   case MachineOperand::MO_GlobalAddress:
     return GetSymbolRef(getSymbol(MO.getGlobal()));
   case MachineOperand::MO_FPImmediate: {
@@ -290,7 +416,9 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
-  if (Ty->getTypeID() == Type::VoidTyID)
+  // A void or zero-sized return type (e.g. an empty struct) produces no return
+  // parameter.
+  if (Ty->isVoidTy() || Ty->isEmptyTy())
     return;
   O << " (";
 
@@ -300,7 +428,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
     const Align RetAlignment =
-        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
+        getPTXParamAlign(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -318,6 +446,118 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
                                         raw_ostream &O) {
   const Function &F = MF.getFunction();
   printReturnValStr(&F, O);
+}
+
+void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
+                                        unsigned UniqueCallSite,
+                                        raw_ostream &O) const {
+  const DataLayout &DL = getDataLayout();
+  const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
+  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
+  const auto PtrVT = TLI->getPointerTy(DL);
+  Type *RetTy = CB.getFunctionType()->getReturnType();
+
+  O << "prototype_" << UniqueCallSite << " : .callprototype ";
+
+  if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
+    O << "()";
+  } else {
+    O << "(";
+    if (shouldPassAsArray(RetTy)) {
+      const Align RetAlign =
+          getPTXParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
+      O << ".param .align " << RetAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(RetTy) << "]";
+    } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
+      unsigned size = 0;
+      if (auto *ITy = dyn_cast<IntegerType>(RetTy)) {
+        size = ITy->getBitWidth();
+      } else {
+        assert(RetTy->isFloatingPointTy() &&
+               "Floating point type expected here");
+        size = RetTy->getPrimitiveSizeInBits();
+      }
+      // PTX ABI requires all scalar return values to be at least 32
+      // bits in size.  fp16 normally uses .b16 as its storage type in
+      // PTX, so its size must be adjusted here, too.
+      size = promoteScalarArgumentSize(size);
+
+      O << ".param .b" << size << " _";
+    } else if (isa<PointerType>(RetTy)) {
+      O << ".param .b" << PtrVT.getSizeInBits() << " _";
+    } else {
+      llvm_unreachable("Unknown return type");
+    }
+    O << ") ";
+  }
+  O << "_ (";
+
+  auto MakeArg = [&](const unsigned I) {
+    Type *Ty = CB.getArgOperand(I)->getType();
+
+    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+      Type *ETy = CB.getParamByValType(I);
+      Align ParamByValAlign = getDeviceByValParamAlign(
+          &CB, ETy, I + AttributeList::FirstArgIndex, DL);
+
+      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(ETy) << "]";
+      return;
+    }
+
+    if (shouldPassAsArray(Ty)) {
+      Align ParamAlign =
+          getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+      O << ".param .align " << ParamAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(Ty) << "]";
+      return;
+    }
+    // scalar type
+    unsigned sz = 0;
+    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
+      sz = promoteScalarArgumentSize(ITy->getBitWidth());
+    } else if (isa<PointerType>(Ty)) {
+      sz = PtrVT.getSizeInBits();
+    } else {
+      sz = Ty->getPrimitiveSizeInBits();
+    }
+    O << ".param .b" << sz << " _";
+  };
+
+  const FunctionType *FTy = CB.getFunctionType();
+  const unsigned NumArgs = FTy->getNumParams();
+
+  // Zero-sized arguments (e.g. empty structs) are not passed and so do not
+  // appear in the prototype.
+  const auto NonEmptyArgs = make_filter_range(seq(NumArgs), [&](unsigned I) {
+    return !CB.getArgOperand(I)->getType()->isEmptyTy();
+  });
+
+  interleave(NonEmptyArgs, O, MakeArg, ", ");
+
+  if (FTy->isVarArg() && CB.arg_size() > NumArgs)
+    O << (NonEmptyArgs.empty() ? "" : ",") << " .param .align "
+      << STI.getMaxRequiredAlignment() << " .b8 _[]";
+
+  O << ")";
+  if (shouldEmitPTXNoReturn(&CB, TM))
+    O << " .noreturn";
+  O << ";\n";
+}
+
+void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
+                                    unsigned MJTI, raw_ostream &O) const {
+  O << "$L_brx_" << MJTI << ":\n";
+
+  if (MJT.MBBs.empty())
+    return;
+
+  O << "\t.branchtargets\n\t\t";
+  interleave(
+      MJT.MBBs, O,
+      [&](const MachineBasicBlock *MBB) { MBB->getSymbol()->print(O, MAI); },
+      ",\n\t\t");
+  O << ";\n";
 }
 
 // Return true if MBB is the header of a loop marked with
@@ -417,6 +657,15 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
+
+  const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
+  for (const auto &[Id, CB] : MFI->getCallPrototypes())
+    emitCallPrototype(*CB, Id, O);
+
+  if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
+    for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
+      emitJumpTable(JT, Idx, O);
+
   OutStreamer->emitRawText(O.str());
 }
 
@@ -744,28 +993,55 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
 
   emitDeclarations(M, OS2);
 
-  // As ptxas does not support forward references of globals, we need to first
-  // sort the list of module-level globals in def-use order. We visit each
-  // global variable in order, and ensure that we emit it *after* its dependent
-  // globals. We use a little extra memory maintaining both a set and a list to
-  // have fast searches while maintaining a strict ordering.
-  SmallVector<const GlobalVariable *, 8> Globals;
-  DenseSet<const GlobalVariable *> GVVisited;
-  DenseSet<const GlobalVariable *> GVVisiting;
-
-  // Visit each global variable, in order
-  for (const GlobalVariable &I : M.globals())
-    VisitGlobalVariableForEmission(&I, Globals, GVVisited, GVVisiting);
-
-  assert(GVVisited.size() == M.global_size() && "Missed a global variable");
-  assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
-
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
 
-  // Print out module-level global variables in proper order
-  for (const GlobalVariable *GV : Globals)
-    printModuleLevelGV(GV, OS2, /*ProcessDemoted=*/false, STI);
+  // ptxas requires global symbols referenced by initializers to be known
+  // before use. Acyclic dependencies can be handled by dependency-first
+  // emission. Cyclic SCCs need compatible .extern declarations first.
+  // Edges point from each global to the globals used by its initializer.
+  // Reverse-topological SCC iteration therefore emits dependencies first.
+  GlobalVariableDependencyGraph DependencyGraph(M);
+  for (GlobalVariableSCCIterator I =
+           GlobalVariableSCCIterator::begin(DependencyGraph.getEntryNode());
+       !I.isAtEnd(); ++I) {
+    SmallVector<const GlobalVariableDependencyNode *, 4> SCC(I->begin(),
+                                                             I->end());
+
+    // Nothing points to the synthetic root, so it is always in its own SCC.
+    if (!SCC.front()->GV) {
+      assert(SCC.size() == 1 && "Synthetic root must be in its own SCC");
+      continue;
+    }
+
+    llvm::sort(SCC, [](const auto *LHS, const auto *RHS) {
+      return LHS->ModuleOrder < RHS->ModuleOrder;
+    });
+
+    const bool IsCyclic = I.hasCycle();
+    DenseSet<const GlobalVariableDependencyNode *> ForwardDeclared;
+    if (IsCyclic)
+      for (const auto *Node : SCC)
+        if (isForwardDeclarableGlobal(Node->GV))
+          ForwardDeclared.insert(Node);
+
+    // Check that declarations break every cycle before writing any output.
+    SmallVector<const GlobalVariable *, 4> OrderedGlobals =
+        IsCyclic ? orderDefinitionsInSCC(SCC, ForwardDeclared)
+                 : SmallVector<const GlobalVariable *, 4>{SCC.front()->GV};
+
+    for (const auto *Node : SCC) {
+      if (!ForwardDeclared.count(Node))
+        continue;
+      OS2 << ".extern ";
+      emitPTXGlobalVariableDefinition(Node->GV, OS2, STI,
+                                      /*EmitInitializer=*/false);
+      OS2 << ";\n";
+    }
+
+    for (const GlobalVariable *GV : OrderedGlobals)
+      printModuleLevelGV(GV, OS2, /*ProcessDemoted=*/false, STI);
+  }
 
   OS2 << '\n';
 
@@ -882,20 +1158,9 @@ void NVPTXAsmPrinter::emitLinkageDirective(const GlobalValue *V,
 void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
                                          raw_ostream &O, bool ProcessDemoted,
                                          const NVPTXSubtarget &STI) {
-  // Skip meta data
-  if (GVar->hasSection())
-    if (GVar->getSection() == "llvm.metadata")
-      return;
-
-  // Skip LLVM intrinsic global variables
-  if (GVar->getName().starts_with("llvm.") ||
-      GVar->getName().starts_with("nvvm."))
+  // Skip metadata and LLVM intrinsic global variables.
+  if (shouldSkipModuleLevelGlobal(*GVar))
     return;
-
-  const DataLayout &DL = getDataLayout();
-
-  // GlobalVariables are always constant pointers themselves.
-  Type *ETy = GVar->getValueType();
 
   if (GVar->hasExternalLinkage()) {
     if (GVar->hasInitializer())
@@ -1011,6 +1276,17 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     return;
   }
 
+  emitPTXGlobalVariableDefinition(GVar, O, STI, /*EmitInitializer=*/true);
+  O << ";\n";
+}
+
+void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
+    const GlobalVariable *GVar, raw_ostream &O, const NVPTXSubtarget &STI,
+    bool EmitInitializer) {
+  const DataLayout &DL = getDataLayout();
+
+  Type *ETy = GVar->getValueType();
+
   O << ".";
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
@@ -1037,7 +1313,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
 
     // Ptx allows variable initilization only for constant and global state
     // spaces.
-    if (GVar->hasInitializer()) {
+    if (EmitInitializer && GVar->hasInitializer()) {
       if ((GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
           (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) {
         const Constant *Initializer = GVar->getInitializer();
@@ -1091,22 +1367,31 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
                     "' requires at least PTX ISA version 7.1");
               O << " .u8 ";
               getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize << "] = {";
-              aggBuffer.printBytes(O);
-              O << "}";
+              O << "[" << ElementSize << "]";
+              if (EmitInitializer) {
+                O << " = {";
+                aggBuffer.printBytes(O);
+                O << "}";
+              }
             } else {
               O << " .u" << ptrSize * 8 << " ";
               getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize / ptrSize << "] = {";
-              aggBuffer.printWords(O);
-              O << "}";
+              O << "[" << ElementSize / ptrSize << "]";
+              if (EmitInitializer) {
+                O << " = {";
+                aggBuffer.printWords(O);
+                O << "}";
+              }
             }
           } else {
             O << " .b8 ";
             getSymbol(GVar)->print(O, MAI);
-            O << "[" << ElementSize << "] = {";
-            aggBuffer.printBytes(O);
-            O << "}";
+            O << "[" << ElementSize << "]";
+            if (EmitInitializer) {
+              O << " = {";
+              aggBuffer.printBytes(O);
+              O << "}";
+            }
           }
         } else {
           O << " .b8 ";
@@ -1126,7 +1411,6 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       llvm_unreachable("type not supported yet");
     }
   }
-  O << ";\n";
 }
 
 void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
@@ -1363,16 +1647,25 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  if (F->arg_empty() && !F->isVarArg()) {
+  // Zero-sized arguments (e.g. empty structs) do not produce a parameter.
+  // Number the emitted parameters contiguously, skipping the zero-sized ones,
+  // so that the names match those used in LowerFormalArguments and the
+  // contiguous numbering used by callers (see LowerCall).
+  const auto NonEmptyArgs =
+      make_filter_range(F->args(), [](const Argument &Arg) {
+        return !Arg.getType()->isEmptyTy();
+      });
+
+  if (NonEmptyArgs.empty() && !F->isVarArg()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  for (const Argument &Arg : F->args()) {
+  for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
     Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
+    const std::string ParamSym = TLI->getParamName(F, ParamIndex);
 
     if (!IsFirst)
       O << ",\n";
@@ -1406,17 +1699,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
-      if (MaybeAlign StackAlign =
-              getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
-        return StackAlign.value();
-
-      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
-      MaybeAlign ParamAlign =
-          Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
-      return std::max(TypeAlign, ParamAlign.valueOrOne());
-    };
-
     if (Arg.hasByValAttr()) {
       // param has byVal attribute.
       Type *ETy = Arg.getParamByValType();
@@ -1426,10 +1708,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
+      const unsigned ParamIdx = Arg.getArgNo() + AttributeList::FirstArgIndex;
       const Align OptimalAlign =
-          IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : getFunctionByValParamAlign(
-                             F, ETy, Arg.getParamAlign().valueOrOne(), DL);
+          IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
+                       : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
@@ -1441,7 +1723,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
-      Align OptimalAlign = GetOptimalAlignForParam(Ty);
+      Align OptimalAlign = getPTXParamAlign(
+          F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(Ty) << "]";
@@ -1531,13 +1814,12 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
-    if (static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit()) {
-      O << "\t.reg .b64 \t%SP;\n"
-        << "\t.reg .b64 \t%SPL;\n";
-    } else {
-      O << "\t.reg .b32 \t%SP;\n"
-        << "\t.reg .b32 \t%SPL;\n";
-    }
+    const bool Is64Bit =
+        static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit();
+    const bool IsLocal64 =
+        MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_LOCAL) == 64;
+    O << "\t.reg .b" << (Is64Bit ? 64 : 32) << " \t%SP;\n"
+      << "\t.reg .b" << (IsLocal64 ? 64 : 32) << " \t%SPL;\n";
   }
 
   // Go through all virtual registers to establish the mapping between the
@@ -1554,13 +1836,13 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit declaration of the virtual registers or 'physical' registers for
   // each register class
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    const unsigned N = VRegMapping[RC].size();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    const unsigned N = VRegMapping[&RC].size();
 
     // Only declare those registers that may be used.
     if (N) {
-      const StringRef RCName = getNVPTXRegClassName(RC);
-      const StringRef RCStr = getNVPTXRegClassStr(RC);
+      const StringRef RCName = getNVPTXRegClassName(&RC);
+      const StringRef RCStr = getNVPTXRegClassStr(&RC);
       O << "\t.reg " << RCName << " \t" << RCStr << "<" << (N + 1) << ">;\n";
     }
   }

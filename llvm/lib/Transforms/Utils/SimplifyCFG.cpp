@@ -1174,6 +1174,11 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     if (BonusInst.isTerminator())
       continue;
 
+    // Skip cloning pseudo probes into the predecessor, as it would overcount
+    // otherwise.
+    if (isa<PseudoProbeInst>(BonusInst))
+      continue;
+
     Instruction *NewBonusInst = BonusInst.clone();
 
     if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
@@ -1524,6 +1529,9 @@ enum SkipFlags {
 };
 
 static unsigned skippedInstrFlags(Instruction *I) {
+  // Pseudo probes don't constrain reordering of other instructions.
+  if (isa<PseudoProbeInst>(I))
+    return 0;
   unsigned Flags = 0;
   if (I->mayReadFromMemory())
     Flags |= SkipReadMem;
@@ -1996,6 +2004,18 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
           });
     }
 
+    // A musttail call must be immediately followed by a ret, so hoisting is
+    // only legal if its ret is hoisted with it on the next iteration. That is,
+    // no instruction has been skipped (the entire successor can be hoisted into
+    // the predecessor) and the call is directly followed by a ret.
+    if (auto *CI = dyn_cast<CallInst>(I1);
+        AllInstsAreIdentical && CI && CI->isMustTailCall()) {
+      AllInstsAreIdentical =
+          NumSkipped == 0 && all_of(SuccIterPairs, [](const SuccIterPair &P) {
+            return isa<ReturnInst>(*std::next(P.first));
+          });
+    }
+
     if (AllInstsAreIdentical) {
       BB1ItrPair.first++;
       // For a normal instruction, we just move one to right before the
@@ -2158,9 +2178,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   SmallVector<DominatorTree::UpdateType, 4> Updates;
 
   // Update any PHI nodes in our new successors.
+  SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
   for (BasicBlock *Succ : successors(BB1)) {
     addPredecessorToBlock(Succ, TIParent, BB1);
-    if (DTU)
+
+    if (DTU && VisitedSuccs.insert(Succ).second)
       Updates.push_back({DominatorTree::Insert, TIParent, Succ});
   }
 
@@ -3073,13 +3095,16 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
+        // The dereferenceability query here is only required to satisfy the
+        // writable contract, actual dereferenceability is proven by the
+        // presence of an access. As such, we can ignore frees.
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
                 PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
                     .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
-             isDereferenceablePointer(StorePtr, StoreTy,
-                                      LI->getDataLayout()))) {
+             isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
+                                      /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
           return LI;
         }
@@ -4013,12 +4038,15 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
-  IRBuilder<> Builder(PBI);
-  // The builder is used to create instructions to eliminate the branch in BB.
-  // If BB's terminator has !annotation metadata, add it to the new
-  // instructions.
-  Builder.CollectMetadataToCopy(BB->getTerminator(),
-                                {LLVMContext::MD_annotation});
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      BB->getContext(), ConstantFolder{},
+      IRBuilderCallbackInserter([&BB](Instruction *I) {
+        // The builder is used to create instructions to eliminate the branch in
+        // BB. If BB's terminator has !annotation metadata, add it to the new
+        // instructions.
+        I->copyMetadata(*BB->getTerminator(), LLVMContext::MD_annotation);
+      }));
+  Builder.SetInsertPoint(PBI);
 
   // If we need to invert the condition in the pred block to match, do so now.
   if (InvertPredCond) {
@@ -4124,6 +4152,7 @@ static bool isVectorOp(Instruction &I) {
 bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
+                                  AssumptionCache *AC,
                                   unsigned BonusInstThreshold) {
   BasicBlock *BB = BI->getParent();
   TargetTransformInfo::TargetCostKind CostKind =
@@ -4191,6 +4220,10 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
   unsigned NumBonusInsts = 0;
   bool SawVectorOp = false;
   const unsigned PredCount = Preds.size();
+  // Speculated instructions will be inserted before the terminator of the
+  // predecessor. Only handle the simple case of one predecessor.
+  const Instruction *CxtI =
+      PredCount == 1 ? Preds[0]->getTerminator() : nullptr;
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
     if (&I == Cond)
@@ -4198,8 +4231,11 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     // Ignore the terminator.
     if (isa<UncondBrInst, CondBrInst>(I))
       continue;
+    // Pseudo probes aren't speculatable but can be dropped on fold.
+    if (isa<PseudoProbeInst>(I))
+      continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I))
+    if (!isSafeToSpeculativelyExecute(&I, CxtI, AC))
       return false;
     SawVectorOp |= isVectorOp(I);
 
@@ -6108,13 +6144,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (!HasDefault)
     createUnreachableSwitchDefault(SI, DTU);
 
-  auto *UnreachableDefault = SI->getDefaultDest();
-
   // Drop the switch.
   SI->eraseFromParent();
 
-  if (!HasDefault && DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, UnreachableDefault}});
+  if (DTU && isa<UncondBrInst>(NewBI))
+    DTU->applyUpdates({{DominatorTree::Delete, BB, OtherDest}});
 
   return true;
 }
@@ -6780,7 +6814,8 @@ public:
   SwitchReplacement(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-      Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName);
+      Constant *DefaultValue, const DataLayout &DL,
+      const TargetTransformInfo &TTI, const StringRef &FuncName);
 
   /// Build instructions with Builder to retrieve values using Index
   /// and replace the switch.
@@ -6850,7 +6885,8 @@ private:
 SwitchReplacement::SwitchReplacement(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName)
+    Constant *DefaultValue, const DataLayout &DL,
+    const TargetTransformInfo &TTI, const StringRef &FuncName)
     : DefaultValue(DefaultValue) {
   assert(Values.size() && "Can't build lookup table without values!");
   assert(TableSize >= Values.size() && "Can't fit values in table!");
@@ -6977,7 +7013,8 @@ SwitchReplacement::SwitchReplacement(
         Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
     // TODO: handle sign extension as well?
     unsigned NeededBitWidth =
-        std::max(8u, unsigned(PowerOf2Ceil(Range.getActiveBits())));
+        std::max(TTI.getMinimumLookupTableEntryBitWidth(),
+                 unsigned(PowerOf2Ceil(Range.getActiveBits())));
     if (NeededBitWidth < IT->getBitWidth()) {
       IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
       for (Constant *&Value : TableContents)
@@ -7132,6 +7169,41 @@ static bool isSwitchDense(ArrayRef<int64_t> Values, bool OptSize) {
     return false; // Overflow.
 
   return isSwitchDense(Values.size(), Range, OptSize);
+}
+
+static std::optional<unsigned>
+getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base,
+                                  bool OptSize) {
+  assert(Values.size() > 1 && "expected multiple switch cases");
+  if (!llvm::all_of(Values, [Base](int64_t V) { return V >= Base; }))
+    return std::nullopt;
+
+  // First, transform the values by subtracting Base.
+  SmallVector<int64_t, 4> ReducedValues(Values);
+  uint64_t ReducedValuesOr = 0;
+  for (auto &V : ReducedValues) {
+    uint64_t Reduced = (uint64_t)V - (uint64_t)Base;
+    ReducedValuesOr |= Reduced;
+    V = (int64_t)Reduced;
+  }
+
+  // Conceptually, the reduced values are non-negative distances from Base.
+  // Since the rest of the transform is bitwise only, treat them as unsigned
+  // bit patterns from here.
+
+  // countr_zero(0) returns 64. As Values is guaranteed to have more than
+  // one element and LLVM disallows duplicate cases, ReducedValuesOr will
+  // have at least one bit set, so Shift will be less than 64.
+  unsigned Shift = llvm::countr_zero(ReducedValuesOr);
+  assert(Shift < 64);
+  if (Shift > 0)
+    for (auto &V : ReducedValues)
+      V = (int64_t)((uint64_t)V >> Shift);
+
+  if (!isSwitchDense(ReducedValues, OptSize))
+    return std::nullopt;
+
+  return Shift;
 }
 
 /// Determine whether a lookup table should be built for this switch, based on
@@ -7439,7 +7511,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
         AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
-                                  ResultList, DefaultVal, DL, FuncName);
+                                  ResultList, DefaultVal, DL, TTI, FuncName);
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 
@@ -7656,34 +7728,27 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   llvm::sort(Values);
 
   // If the switch is already dense, there's nothing useful to do here.
-  if (isSwitchDense(Values, SI->getFunction()->hasOptSize()))
+  bool OptSize = SI->getFunction()->hasOptSize();
+  if (isSwitchDense(Values, OptSize))
     return false;
 
-  // First, transform the values such that they start at zero and ascend.
+  // Find a Base and corresponding Shift that results in a dense switch range.
+  // Values[0] is the local minimum.
   int64_t Base = Values[0];
-  for (auto &V : Values)
-    V -= (uint64_t)(Base);
+  std::optional<unsigned> Shift;
+  // Prefer Base=0 when shifting out common low zero bits still produces a dense
+  // range, as this avoids an unnecessary `(condition - local_min)` expression.
+  // However, avoiding the subtract can leave a wider reduced range than using
+  // the local minimum, so require Base=0 to satisfy the stricter optsize
+  // density threshold before falling back to the normal density policy for
+  // local-min.
+  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0,
+                                                 /*OptSize=*/true)))
+    Base = 0;
+  else if (Base != 0)
+    Shift = getDenseSwitchRangeReductionShift(Values, Base, OptSize);
 
-  // Now we have signed numbers that have been shifted so that, given enough
-  // precision, there are no negative values. Since the rest of the transform
-  // is bitwise only, we switch now to an unsigned representation.
-
-  // This transform can be done speculatively because it is so cheap - it
-  // results in a single rotate operation being inserted.
-
-  // countTrailingZeros(0) returns 64. As Values is guaranteed to have more than
-  // one element and LLVM disallows duplicate cases, Shift is guaranteed to be
-  // less than 64.
-  unsigned Shift = 64;
-  for (auto &V : Values)
-    Shift = std::min(Shift, (unsigned)llvm::countr_zero((uint64_t)V));
-  assert(Shift < 64);
-  if (Shift > 0)
-    for (auto &V : Values)
-      V = (int64_t)((uint64_t)V >> Shift);
-
-  if (!isSwitchDense(Values, SI->getFunction()->hasOptSize()))
-    // Transform didn't create a dense switch.
+  if (!Shift)
     return false;
 
   // The obvious transform is to shift the switch condition right and emit a
@@ -7695,20 +7760,24 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // shift and puts the shifted-off bits in the uppermost bits. If any of these
   // are nonzero then the switch condition will be very large and will hit the
   // default case.
+  //
+  // This transform can be done speculatively because it is so cheap - it
+  // results in a single rotate operation being inserted.
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  Value *Sub =
-      Builder.CreateSub(SI->getCondition(), ConstantInt::getSigned(Ty, Base));
+  Value *Sub = SI->getCondition();
+  if (Base != 0)
+    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
-      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - *Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
     auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
-    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(*Shift))));
   }
   return true;
 }
@@ -7785,6 +7854,50 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   if (DTU)
     DTU->applyUpdates(Updates);
 
+  return true;
+}
+
+static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
+                                        const DataLayout &DL,
+                                        AssumptionCache *AC) {
+  assert(SI);
+  if (SI->defaultDestUnreachable())
+    return false;
+
+  // If it can be proved that the switch condition takes some concrete value
+  // in the default block, we can make some nice simplifications to the
+  // switch.
+  BasicBlock *Default = SI->getDefaultDest();
+  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  const KnownBits Known = computeKnownBits(
+      SI->getCondition(),
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
+  if (!Known.isConstant())
+    return false;
+
+  // At this point, we know that only one value can be mapped to the
+  // default block. So, if a case doesn't exist for it already, we
+  // can create one pointing to the default block.
+  ConstantInt *CaseVal =
+      ConstantInt::get(SI->getContext(), Known.getConstant());
+  const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
+  if (CaseIt == SI->case_default()) {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
+    SIW.setSuccessorWeight(0, 0);
+  } else {
+    // On the other hand, if there is a pre-existing case for the
+    // constant, the default branch will be removed rather than being
+    // moved. Thus, we are removing an edge in the CFG, and need to
+    // update any PHIs in the default block.
+    Default->removePredecessor(SI->getParent());
+  }
+  createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+
+  assert(SI->getNumCases() > 0 && "Switch should have at least one case");
+  assert(SI->findCaseValue(CaseVal) != SI->case_default() &&
+         "Proven value should have a dedicated case");
+  assert(SI->defaultDestUnreachable());
   return true;
 }
 
@@ -8328,6 +8441,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifySwitchWhenUMin(SI, DTU))
     return requestResimplify();
 
+  if (simplifySwitchDefaultBranch(SI, DTU, DL, Options.AC))
+    return requestResimplify();
+
   return false;
 }
 
@@ -8669,7 +8785,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
   if (Options.SpeculateBlocks &&
-      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI,
+      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI, Options.AC,
                              Options.BonusInstThreshold))
     return requestResimplify();
 
@@ -8877,7 +8993,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (isa<ConstantPointerNull>(C) &&
+        if (isa<ConstantPointerNull>(C) && C->getType()->isPointerTy() &&
             CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.

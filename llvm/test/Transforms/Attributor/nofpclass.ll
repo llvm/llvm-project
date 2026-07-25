@@ -573,7 +573,7 @@ define float @is_fpclass_assume_arg_return(float %arg) {
 ; CHECK-LABEL: define nofpclass(nan pinf pzero sub nnorm) float @is_fpclass_assume_arg_return
 ; CHECK-SAME: (float returned nofpclass(nan pinf pzero sub nnorm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CLASS_TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan pinf pzero sub nnorm) [[ARG]], i32 noundef 292) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS_TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan pinf pzero sub nnorm) [[ARG]], /* (ninf nzero pnorm) */ i32 noundef 292) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS_TEST]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use(float nofpclass(nan pinf pzero sub nnorm) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
@@ -642,34 +642,6 @@ entry:
   call void @extern.use.f16(half %arg)
   call void @extern.use.f16(half %fabs)
   ret half %arg
-}
-
-define float @assume_bundles(i1 %c, float %ret) {
-; CHECK-LABEL: define float @assume_bundles
-; CHECK-SAME: (i1 noundef [[C:%.*]], float returned [[RET:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]] [ "nofpclass"(float [[RET]], i32 3) ]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(nan) [[RET]])
-; CHECK-NEXT:    ret float [[RET]]
-; CHECK:       B:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofpclass"(float [[RET]], i32 12) ]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(ninf nnorm) [[RET]])
-; CHECK-NEXT:    ret float [[RET]]
-;
-entry:
-  br i1 %c, label %A, label %B
-
-A:
-  call void @llvm.assume(i1 true) [ "nofpclass"(float %ret, i32 3) ]
-  call void @extern.use(float %ret)
-  ret float %ret
-
-B:
-  call void @llvm.assume(i1 true) [ "nofpclass"(float %ret, i32 12) ]
-  call void @extern.use(float %ret)
-  ret float %ret
 }
 
 define float @returned_load(ptr %ptr) {
@@ -1402,9 +1374,9 @@ define float @assume_intersection_class(float %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @assume_intersection_class
 ; CHECK-SAME: (float returned nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], i32 noundef 384) #[[ATTR24]]
+; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], /* (psub pnorm) */ i32 noundef 384) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[POS_NORMAL_OR_POS_SUBNORMAL]]) #[[ATTR22]]
-; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], i32 noundef 264) #[[ATTR24]]
+; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], /* (norm) */ i32 noundef 264) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NORMAL]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use(float nofpclass(nan inf zero sub nnorm) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
@@ -1423,9 +1395,9 @@ define float @assume_intersection_none(float %arg) {
 ; CHECK-LABEL: define nofpclass(all) float @assume_intersection_none
 ; CHECK-SAME: (float returned nofpclass(all) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 682) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], /* (qnan pinf nzero psub nnorm) */ i32 noundef 682) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS1]]) #[[ATTR22]]
-; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 341) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], /* (snan ninf pzero nsub pnorm) */ i32 noundef 341) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS2]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use(float nofpclass(all) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]

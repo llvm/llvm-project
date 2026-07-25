@@ -582,6 +582,18 @@ public:
     return true;
   }
 
+  bool VisitImportDecl(const ImportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    for (const auto ModuleLoc : D->getIdentifierLocs()) {
+      H.addToken(ModuleLoc, HighlightingKind::Namespace);
+    }
+    return true;
+  }
+  bool VisitExportDecl(const ExportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    return true;
+  }
+
   bool VisitTagDecl(TagDecl *D) {
     for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
@@ -590,28 +602,28 @@ public:
 
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
-    if (const auto *Info = D->getExplicitInstantiationInfo()) {
-      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
-                              Info->TemplateArgsAsWritten->getRAngleLoc());
-    } else if (const auto *Info = D->getExplicitSpecializationInfo()) {
-      H.addAngleBracketTokens(Info->TemplateParams->getLAngleLoc(),
-                              Info->TemplateParams->getRAngleLoc());
-      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
-                              Info->TemplateArgsAsWritten->getRAngleLoc());
-    }
+    if (auto *Args = D->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     return true;
   }
 
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (const auto *Info = D->getExplicitInstantiationInfo()) {
-      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
-                              Info->TemplateArgsAsWritten->getRAngleLoc());
-    } else if (const auto *Info = D->getExplicitSpecializationInfo()) {
-      H.addAngleBracketTokens(Info->TemplateParams->getLAngleLoc(),
-                              Info->TemplateParams->getRAngleLoc());
-      H.addAngleBracketTokens(Info->TemplateArgsAsWritten->getLAngleLoc(),
-                              Info->TemplateArgsAsWritten->getRAngleLoc());
-    }
+    if (auto *Args = D->getTemplateArgsAsWritten())
+      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
+    return true;
+  }
+
+  bool VisitVarTemplatePartialSpecializationDecl(
+      VarTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     return true;
   }
 
@@ -625,9 +637,6 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *D) {
-    if (const TemplateParameterList *TPL =
-            D->getTemplateSpecializationParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     if (D->isOverloadedOperator()) {
       const auto AddOpDeclToken = [&](SourceLocation Loc) {
         auto &Token = H.addToken(Loc, HighlightingKind::Operator)
@@ -836,8 +845,10 @@ public:
     auto *TSI = D->getTypeSourceInfo();
     if (!TSI)
       return true;
-    SourceLocation StartLoc =
-        TSI->getTypeLoc().getContainedAutoTypeLoc().getNameLoc();
+    auto ATL = TSI->getTypeLoc().getContainedAutoTypeLoc();
+    if (!ATL)
+      return true;
+    SourceLocation StartLoc = ATL.getNameLoc();
     // The AutoType may not have a corresponding token, e.g. in the case of
     // init-captures. In this case, StartLoc overlaps with the location
     // of the decl itself, and producing a token for the type here would result

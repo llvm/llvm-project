@@ -17,7 +17,8 @@ define i32 @first_order_recurrence(ptr nocapture readonly %a, ptr nocapture %b, 
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[B1]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP4]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], 3

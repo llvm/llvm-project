@@ -2294,9 +2294,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
 
     const Init *A = StringInit::get(Records, Lex.getCurStrVal());
     if (CurRec && CurRec->getValue(A)) {
-      TokError((Twine("left !foldl variable '") + A->getAsString() +
-                "' already defined")
-                   .str());
+      TokError(Twine("left !foldl variable '") + A->getAsString() +
+               "' already defined");
       return nullptr;
     }
 
@@ -2312,9 +2311,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
 
     const Init *B = StringInit::get(Records, Lex.getCurStrVal());
     if (CurRec && CurRec->getValue(B)) {
-      TokError((Twine("right !foldl variable '") + B->getAsString() +
-                "' already defined")
-                   .str());
+      TokError(Twine("right !foldl variable '") + B->getAsString() +
+               "' already defined");
       return nullptr;
     }
 
@@ -2600,9 +2598,8 @@ const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
   Lex.Lex(); // eat the ID.
 
   if (CurRec && CurRec->getValue(LHS)) {
-    TokError((Twine("iteration variable '") + LHS->getAsString() +
-              "' is already defined")
-                 .str());
+    TokError(Twine("iteration variable '") + LHS->getAsString() +
+             "' is already defined");
     return nullptr;
   }
 
@@ -2753,9 +2750,7 @@ TGParser::resolveInitTypes(ArrayRef<const Init *> Inits, const Twine &ErrCtx) {
     if (isa<UnsetInit>(V))
       continue;
 
-    const RecTy *VTy = nullptr;
-    if (const auto *Vt = dyn_cast<TypedInit>(V))
-      VTy = Vt->getType();
+    const RecTy *VTy = cast<TypedInit>(V)->getType();
 
     if (!Type) {
       Type = VTy;
@@ -2865,10 +2860,12 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
 
     // Parse the mandatory default value.
     if (consume(tgtok::r_paren)) {
-      // The default value was parsed without the ItemType hint. Coerce it now
-      // to match case-value parses.
-      if (const Init *Coerced = V->convertInitializerTo(ItemType))
-        V = Coerced;
+      if (ItemType) {
+        // The default value was parsed without the ItemType hint. Coerce it now
+        // to match case-value parses.
+        if (const Init *Coerced = V->convertInitializerTo(ItemType))
+          V = Coerced;
+      }
       // Push the default value as the last element of the vector for
       // type-checking.
       Vals.push_back(V);

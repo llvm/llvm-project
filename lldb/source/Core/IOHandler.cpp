@@ -134,9 +134,9 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
   StreamString prompt_stream;
   prompt_stream.PutCString(prompt);
   if (m_default_response)
-    prompt_stream.Printf(": [Y/n] ");
+    prompt_stream.PutCString(": [Y/n] ");
   else
-    prompt_stream.Printf(": [y/N] ");
+    prompt_stream.PutCString(": [y/N] ");
 
   SetPrompt(prompt_stream.GetString());
 }
@@ -266,7 +266,7 @@ IOHandlerEditline::IOHandlerEditline(
     });
     m_editline_up->SetRedrawCallback([this]() { this->RedrawCallback(); });
 
-    if (debugger.GetUseAutosuggestion()) {
+    if (debugger.GetAutosuggestionMode() != eAutosuggestionOff) {
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
         return this->SuggestionCallback(line);
       });
@@ -359,7 +359,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
     if (prompt && prompt[0]) {
       if (m_output_sp) {
         LockedStreamFile locked_stream = m_output_sp->Lock();
-        locked_stream.Printf("%s", prompt);
+        locked_stream.PutCString(prompt);
       }
     }
   }
@@ -440,6 +440,20 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
 
 std::optional<std::string>
 IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
+  // In tab-mode, we just display what tab would complete if the user
+  // would tab.
+  if (m_debugger.GetAutosuggestionMode() == eAutosuggestionTabMode) {
+    CompletionResult result;
+    CompletionRequest request(line, line.size(), result);
+    m_delegate.IOHandlerComplete(*this, request);
+    StringList matches;
+    result.GetMatches(matches);
+    std::string longest_prefix = matches.LongestCommonPrefix();
+    llvm::StringRef cursor_arg_prefix = request.GetCursorArgumentPrefix();
+    if (longest_prefix.size() > cursor_arg_prefix.size())
+      return longest_prefix.substr(cursor_arg_prefix.size());
+    return std::nullopt;
+  }
   return m_delegate.IOHandlerSuggestion(*this, line);
 }
 

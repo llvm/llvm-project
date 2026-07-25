@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgpu9.00 %s -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // 'null' operand is not supported on this GPU

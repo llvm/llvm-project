@@ -23,13 +23,13 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw ir<%ee.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-active-lane ir<%ee.cond>
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%st.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP7]]>, vp<%uncountable.exit.mask>
 ; CHECK-NEXT:      WIDEN ir<%inc> = add nsw ir<%data>, ir<1>
@@ -197,13 +197,13 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw ir<%ee.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-active-lane ir<%ee.cond>
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%st.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP7]]>, vp<%uncountable.exit.mask>
 ; CHECK-NEXT:      WIDEN ir<%inc> = add nsw ir<%data>, ir<1>
@@ -267,4 +267,27 @@ for.inc:
 
 exit:
   ret i16 %data
+}
+
+define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
+  %data = load i32, ptr %src.ptr, align 4
+  %add = add nsw i32 %data, 1
+  %dst.ptr = getelementptr inbounds nuw [4 x i8], ptr %dst, i64 %iv
+  store i32 %add, ptr %dst.ptr, align 4
+  %ee.ptr = getelementptr inbounds nuw [4 x i8], ptr %pred, i64 %iv
+  %ee.val = load i32, ptr %ee.ptr, align 4
+  %ee.cmp = icmp ne i32 %ee.val, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cmp = icmp eq i64 %iv.next, 20
+  %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
+  br i1 %combined.cond, label %exit, label %for.body
+
+exit:
+  ret void
 }

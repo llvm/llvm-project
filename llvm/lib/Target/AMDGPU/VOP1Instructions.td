@@ -401,15 +401,6 @@ def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)
 def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
 
-def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
-             (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
-             (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
-             (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
-             (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
 // Restrict src0 to be VGPR
@@ -542,12 +533,9 @@ defm V_CVT_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_u16_f16",
 defm V_CVT_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_i16_f16",
   VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16, fp_to_sint>;
 
-
-let HasClamp = 0, HasOMod = 0 in {
 def V_TRANS_BF16_Profile :  VOPProfile <[bf16, bf16, untyped, untyped]>;
 def V_TRANS_BF16_t16_Profile :  VOPProfile_True16 <VOP_BF16_BF16>;
 def V_TRANS_BF16_fake16_Profile :  VOPProfile_Fake16 <VOP_BF16_BF16>;
-}
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {
 defm V_RCP_F16 : VOP1Inst_t16 <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
@@ -637,11 +625,6 @@ multiclass fp16_fp_to_int_sat_Pats<Instruction cvt_u16_f16_inst_e64,
   def : GCNPat<(i16 (fp_to_uint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
                (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
   def : GCNPat<(i16 (fp_to_sint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
-               (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
-
-  def : GCNPat<(i16 (fp_to_uint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
-               (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
-  def : GCNPat<(i16 (fp_to_sint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
                (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
 }
 
@@ -1183,6 +1166,14 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<
        VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
 }
 
+multiclass VOP1_Real_FULL_t16_and_fake16_gfx13<
+    bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {
+  defm opName#"_t16" :
+       VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_t16", asmName>;
+  defm opName#"_fake16":
+       VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
+}
+
 multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<bits<9> op, string opName,
                                                                   string asmName> :
   VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
@@ -1194,6 +1185,36 @@ multiclass VOP1_Real_OpSelIsDPP<GFXGen Gen, bits<9> op> : VOP1_Real_e32<Gen, op>
    def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
+}
+
+let HasClamp = 0 in {
+class VOP1_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOPProfile<[i16, v2f16, untyped, untyped]> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+class VOP1_CVT_PK_F8_F16_True16_Profile<RegisterOperand RC> : VOPProfile_True16<VOP_I16_V2F16> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+class VOP1_CVT_PK_F8_F16_Fake16_Profile<RegisterOperand RC> : VOPProfile_Fake16<VOP_I16_V2F16> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+}
+
+let SubtargetPredicate = isGFX1250Plus in {
+let ReadsModeReg = 0 in {
+  defm V_CVT_PK_FP8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_fp8_f16",
+                                                      VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                                      int_amdgcn_cvt_pk_fp8_f16>;
+  defm V_CVT_PK_BF8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_bf8_f16",
+                                                      VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                                      int_amdgcn_cvt_pk_bf8_f16>;
+}
 }
 
 multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
@@ -1285,6 +1306,9 @@ defm V_LOG_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07c
 defm V_EXP_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07d>;
 defm V_SIN_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07e>;
 defm V_COS_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07f>;
+
+defm V_CVT_PK_FP8_F16        : VOP1_Real_FULL_t16_and_fake16_gfx13<0x2c>;
+defm V_CVT_PK_BF8_F16        : VOP1_Real_FULL_t16_and_fake16_gfx13<0x2d>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

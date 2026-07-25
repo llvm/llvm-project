@@ -70,6 +70,7 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
+struct LateParsedTypeAttribute;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -2798,8 +2799,10 @@ public:
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLResourceRecordArray() const;
-  bool isHLSLIntangibleType()
-      const; // Any HLSL intangible type (builtin, array, class)
+  // Any HLSL intangible type (builtin, array, class)
+  bool isHLSLIntangibleType() const;
+  // User-defined HLSL records or arrays of such records in standard layout
+  bool isHLSLStandardLayoutRecordOrArrayOf() const;
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -3543,6 +3546,40 @@ public:
   }
 
   StringRef getAttributeName(bool WithMacroPrefix) const;
+};
+
+/// Represents a placeholder type for late-parsed type attributes.
+/// This type wraps another type and holds an opaque pointer to a
+/// LateParsedTypeAttribute that will be parsed later (e.g., in ActOnFields).
+/// Once parsed, this type is replaced with the appropriate attributed type
+/// (e.g., CountAttributedType for `__counted_by`).
+///
+/// Its canonical type is that of the wrapped type, so a consumer walking the
+/// AST during late parsing must treat this as "attribute unresolved", not "no
+/// attribute here".
+class LateParsedAttrType : public Type {
+  friend class ASTContext; // ASTContext creates these.
+
+  QualType WrappedTy;
+  LateParsedTypeAttribute *LateParsedTypeAttr;
+
+  LateParsedAttrType(QualType Wrapped, QualType Canon,
+                     LateParsedTypeAttribute *Attr)
+      : Type(LateParsedAttr, Canon, Wrapped->getDependence()),
+        WrappedTy(Wrapped), LateParsedTypeAttr(Attr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedTy; }
+  LateParsedTypeAttribute *getLateParsedAttribute() const {
+    return LateParsedTypeAttr;
+  }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return WrappedTy; }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == LateParsedAttr;
+  }
 };
 
 /// Represents a type which was implicitly adjusted by the semantic
@@ -6463,7 +6500,7 @@ class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   };
 
 private:
@@ -6842,12 +6879,20 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsCounter : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsArray : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsMultiSampled : 1;
+
     Attributes(llvm::dxil::ResourceClass ResourceClass,
                llvm::dxil::ResourceDimension ResourceDimension,
                bool IsROV = false, bool RawBuffer = false,
-               bool IsCounter = false)
+               bool IsCounter = false, bool IsArray = false,
+               bool IsMultiSampled = false)
         : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
-          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
+          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter),
+          IsArray(IsArray), IsMultiSampled(IsMultiSampled) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
         : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
@@ -6855,13 +6900,15 @@ public:
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
                      llvm::dxil::ResourceDimension::Unknown, false, false,
-                     false) {}
+                     false, false, false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
-                      LHS.RawBuffer, LHS.IsCounter) ==
+                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArray,
+                      LHS.IsMultiSampled) ==
              std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
-                      RHS.RawBuffer, RHS.IsCounter);
+                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArray,
+                      RHS.IsMultiSampled);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6906,6 +6953,8 @@ public:
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
     ID.AddBoolean(Attrs.IsCounter);
+    ID.AddBoolean(Attrs.IsArray);
+    ID.AddBoolean(Attrs.IsMultiSampled);
   }
 
   static bool classof(const Type *T) {

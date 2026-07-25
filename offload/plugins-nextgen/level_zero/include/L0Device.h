@@ -22,6 +22,8 @@
 #include "L0Program.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
+#include <cstdint>
+#include <limits>
 
 namespace llvm::omp::target::plugin {
 
@@ -74,6 +76,26 @@ struct L0DeviceIdTy {
       : zeId(Device), RootId(RootId), SubId(SubId), CCSId(CCSId) {}
 };
 
+/// Properties of a compute command queue group.
+struct ComputeQueueGroupInfoTy {
+  /// Command queue group ordinal.
+  uint32_t Ordinal = std::numeric_limits<uint32_t>::max();
+  /// Number of queues in the group.
+  uint32_t NumQueues = 0;
+  /// Maximum pattern size accepted by zeCommandListMemoryFill for this device.
+  /// 0 means value is unavailable.
+  size_t MaxMemFillPatternSize = 0;
+};
+
+/// Results of scanning a device's command queue groups.
+struct DeviceQueueConfigInfoTy {
+  /// The compute command queue group selected as the device default.
+  ComputeQueueGroupInfoTy DefaultCmdQueueGroup;
+  /// Whether any command queue group on this device supports cooperative
+  /// kernels.
+  bool SupportsCooperativeKernels = false;
+};
+
 class L0DeviceTy final : public GenericDeviceTy {
   // Level Zero Context for this Device.
   L0ContextTy &l0Context;
@@ -103,16 +125,12 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// L0 Device ID as string.
   std::string zeId;
 
-  /// Command queue group ordinals for each device.
-  static constexpr uint32_t MaxOrdinal =
-      std::numeric_limits<decltype(MaxOrdinal)>::max();
-  std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
+  /// Command queue group info for this device. Value is unspecified unless the
+  /// device reached a valid initialized state.
+  DeviceQueueConfigInfoTy QueueConfig;
 
   /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
-
-  /// Whether the device supports cooperative kernels.
-  bool SupportsCooperativeKernels = false;
 
   /// Lock for this device.
   std::mutex Mutex;
@@ -132,15 +150,14 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   DeviceArchTy computeArch() const;
 
-  /// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
-  std::pair<uint32_t, uint32_t> findComputeOrdinal();
+  /// Scan the device's command queue groups, selecting the default compute
+  /// group and detecting cooperative kernel support. Returns an Error if the
+  /// device exposes no compute queue group.
+  Expected<DeviceQueueConfigInfoTy> scanQueueGroups();
 
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
                                  bool IsCtor);
-
-  /// Check if device supports cooperative kernels.
-  bool checkCooperativeKernelSupport();
 
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
@@ -173,7 +190,9 @@ public:
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
-  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
+  bool supportsCooperativeKernels() const {
+    return QueueConfig.SupportsCooperativeKernels;
+  }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
@@ -337,8 +356,16 @@ public:
 
   const std::string_view getUuid() const { return DeviceUuid; }
 
-  uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
-  uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
+  uint32_t getComputeEngine() const {
+    return QueueConfig.DefaultCmdQueueGroup.Ordinal;
+  }
+  uint32_t getNumComputeQueues() const {
+    return QueueConfig.DefaultCmdQueueGroup.NumQueues;
+  }
+
+  size_t getMaxMemFillPatternSize() {
+    return QueueConfig.DefaultCmdQueueGroup.MaxMemFillPatternSize;
+  }
 
   void reportDeviceInfo() const;
 
@@ -361,7 +388,7 @@ public:
     auto CmdListOrErr = createImmCmdList(InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr);
+    return new L0CmdListManagerTy(*CmdListOrErr, l0Context);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -484,8 +511,8 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                  int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -506,6 +533,9 @@ public:
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
@@ -522,10 +552,7 @@ public:
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
-                            AsyncInfoWrapperTy &AsyncInfo) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "enqueueHostCallImpl not implemented yet");
-  }
+                            AsyncInfoWrapperTy &AsyncInfo) override;
 
   Expected<bool> isEventCompleteImpl(void *EventPtr,
                                      AsyncInfoWrapperTy &) override;

@@ -38,6 +38,7 @@ public:
   bool checkAtomicOrderingCABIArg(Expr *E, bool MayLoad, bool MayStore);
 
   bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
+  bool checkAVLoadStore(CallExpr *TheCall, bool IsStore);
   bool checkAtomicMonitorLoad(CallExpr *TheCall);
 
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,

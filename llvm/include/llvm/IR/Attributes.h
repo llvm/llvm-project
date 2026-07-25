@@ -447,7 +447,8 @@ public:
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  AttributeSet addAttributes(LLVMContext &C, const AttrBuilder &B) const;
+  LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
+                                      const AttrBuilder &B) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
@@ -527,8 +528,7 @@ public:
 /// Provide DenseMapInfo for AttributeSet.
 template <> struct DenseMapInfo<AttributeSet, void> {
   static unsigned getHashValue(AttributeSet AS) {
-    return (unsigned((uintptr_t)AS.SetNode) >> 4) ^
-           (unsigned((uintptr_t)AS.SetNode) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.SetNode);
   }
 
   static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
@@ -579,9 +579,6 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
-  AttributeList setAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                     AttributeSet Attrs) const;
-
 public:
   AttributeList() = default;
 
@@ -603,6 +600,11 @@ public:
                                     AttributeSet Attrs);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     const AttrBuilder &B);
+
+  /// Set the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList setAttributesAtIndex(
+      LLVMContext &C, unsigned Index, AttributeSet Attrs) const;
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
@@ -1090,8 +1092,7 @@ public:
 /// Provide DenseMapInfo for AttributeList.
 template <> struct DenseMapInfo<AttributeList, void> {
   static unsigned getHashValue(AttributeList AS) {
-    return (unsigned((uintptr_t)AS.pImpl) >> 4) ^
-           (unsigned((uintptr_t)AS.pImpl) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.pImpl);
   }
 
   static bool isEqual(AttributeList LHS, AttributeList RHS) {
@@ -1391,6 +1392,11 @@ LLVM_ABI AttributeMask getUBImplyingAttributes();
 /// attributes for inlining purposes.
 LLVM_ABI bool areInlineCompatible(const Function &Caller,
                                   const Function &Callee);
+
+/// \returns Return false if callee is strictfp and caller is not. Return true
+/// otherwise.
+LLVM_ABI bool isStrictFPInlineCompatible(const Function &Caller,
+                                         const Function &Callee);
 
 /// Checks  if there are any incompatible function attributes between
 /// \p A and \p B.

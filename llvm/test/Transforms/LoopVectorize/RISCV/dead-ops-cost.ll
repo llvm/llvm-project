@@ -91,9 +91,10 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <vscale x 16 x i32> [[VEC_IND]] to <vscale x 16 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP5]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP6]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP12]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], <vscale x 16 x i64> [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> align 1 [[TMP7]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP2]], [[INDEX]]
@@ -149,7 +150,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[UMAX3:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP0]], i32 111)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 770, [[UMAX3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 770, [[UMAX3]]
 ; CHECK-NEXT:    [[SMAX4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[SMAX4]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 19
@@ -362,10 +363,13 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[EVL_BASED_IV]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP11]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[TMP22]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> align 1 [[BROADCAST_SPLAT2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <vscale x 4 x i8> [[TMP17]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP22]], i32 -1
+; CHECK-NEXT:    [[INTERLEAVE_EVL:%.*]] = mul nuw nsw i32 [[TMP10]], 2
+; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP13]], <vscale x 8 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.vector.deinterleave2.nxv8i8(<vscale x 8 x i8> [[WIDE_VP_LOAD]])
+; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x i8>, <vscale x 4 x i8> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[TMP18:%.*]] = zext <vscale x 4 x i8> [[TMP12]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[DST]], <vscale x 4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP18]], <vscale x 4 x ptr> align 4 [[TMP19]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP16]], [[EVL_BASED_IV]]

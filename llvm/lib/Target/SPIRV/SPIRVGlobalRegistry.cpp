@@ -818,6 +818,8 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     GVar = M->getGlobalVariable(Name);
     if (GVar == nullptr) {
       const Type *Ty = getTypeForSPIRVType(BaseType); // TODO: check type.
+      if (auto *TPTy = dyn_cast<TypedPointerType>(Ty))
+        Ty = PointerType::get(M->getContext(), TPTy->getAddressSpace());
       // Module takes ownership of the global var.
       GVar = new GlobalVariable(*M, const_cast<Type *>(Ty), false,
                                 GlobalValue::ExternalLinkage, nullptr,
@@ -993,7 +995,7 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeOpaque(const StructType *Ty,
                                      MachineIRBuilder &MIRBuilder) {
   assert(Ty->hasName());
-  const StringRef Name = Ty->hasName() ? Ty->getName() : "";
+  StringRef Name = Ty->hasName() ? Ty->getName() : "";
   Register ResVReg = createTypeVReg(MIRBuilder);
   return createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
@@ -1202,6 +1204,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
   if (Ty->isFloatingPointTy()) {
+    if (Ty->isFP128Ty() || Ty->isPPC_FP128Ty())
+      llvm::reportFatalUsageError("fp128 is not supported in SPIR-V");
     if (Ty->isBFloatTy()) {
       return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder,
                             SPIRV::FPEncoding::BFloat16KHR);
@@ -1996,6 +2000,16 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
+  if (BaseType->isFunctionTy() &&
+      !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
+           .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
+    const Function &F = MIRBuilder.getMF().getFunction();
+    F.getContext().diagnose(
+        DiagnosticInfoUnsupported(F,
+                                  "Function used as a data pointer requires "
+                                  "SPV_INTEL_function_pointers extension",
+                                  DebugLoc(), DS_Error));
+  }
   // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
@@ -2229,7 +2243,7 @@ void SPIRVGlobalRegistry::buildAssignType(IRBuilder<> &B, Type *Ty,
         MDString::get(Ctx, Arg->getName())};
     B.CreateIntrinsic(Intrinsic::spv_value_md,
                       {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
-    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {Arg});
+    AssignCI = B.CreateIntrinsicWithoutFolding(Intrinsic::fake_use, {Arg});
   } else {
     AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
                                OfType, Arg, {}, B);
@@ -2280,7 +2294,7 @@ void SPIRVGlobalRegistry::addStructOffsetDecorations(
 
 void SPIRVGlobalRegistry::addArrayStrideDecorations(
     Register Reg, Type *ElementType, MachineIRBuilder &MIRBuilder) {
-  uint32_t SizeInBytes = DL.getTypeSizeInBits(ElementType) / 8;
+  uint32_t SizeInBytes = DL.getTypeAllocSize(ElementType);
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
 }
