@@ -3730,7 +3730,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
     // which foldShuffleToIdentity then re-matches as the same superfluous
     // identity - an infinite loop between the two folds.
-    if (!isa<BitCastInst>(I))
+    if (!isa<BitCastInst>(I) &&
+        !(isa<BinaryOperator>(I) && isa<BitCastInst>(Ops[Idx])))
       WorkList.pushValue(Ops[Idx]);
   }
 
