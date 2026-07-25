@@ -307,7 +307,7 @@ jobs:
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && always()
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
