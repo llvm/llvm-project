@@ -72,14 +72,23 @@ static cl::opt<unsigned> MaxInstrsToScan(
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
 namespace {
+// Defer instructions created by regular builders so they do not occupy the
+// worklist before explicit pushValue calls establish their relative LIFO order.
+static IRBuilderCallbackInserter
+getWorklistInserter(InstructionWorklist &Worklist) {
+  return IRBuilderCallbackInserter(
+      [&Worklist](Instruction *I) { Worklist.add(I); });
+}
+
 class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
-      : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+      : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL),
+                      getWorklistInserter(Worklist)),
+        TTI(TTI), DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
@@ -87,7 +96,8 @@ public:
 
 private:
   Function &F;
-  IRBuilder<InstSimplifyFolder> Builder;
+  InstructionWorklist Worklist;
+  IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
@@ -98,8 +108,6 @@ private:
   /// If true, only perform beneficial early IR transforms. Do not introduce new
   /// vector operations.
   bool TryEarlyFoldsOnly;
-
-  InstructionWorklist Worklist;
 
   /// Next instruction to iterate. It will be updated when it is erased by
   /// RecursivelyDeleteTriviallyDeadInstructions.
@@ -348,7 +356,9 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
-  IRBuilder<> Builder(Load);
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Load->getContext(), ConstantFolder(), getWorklistInserter(Worklist));
+  Builder.SetInsertPoint(Load);
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
@@ -410,7 +420,9 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   if (OldCost < NewCost || !NewCost.isValid())
     return false;
 
-  IRBuilder<> Builder(Load);
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Load->getContext(), ConstantFolder(), getWorklistInserter(Worklist));
+  Builder.SetInsertPoint(Load);
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
@@ -3954,10 +3966,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
-  Builder.SetInsertPoint(&I);
+  // This fold controls its worklist insertion explicitly because re-queueing
+  // the operand of a regenerated bitcast can cycle with foldBitcastShuffle.
+  IRBuilder<InstSimplifyFolder> TreeBuilder(I.getContext(),
+                                            InstSimplifyFolder(*DL));
+  TreeBuilder.SetInsertPoint(&I);
+  TreeBuilder.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
   Value *V =
       generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs, SplatLeafs,
-                          ConcatLeafs, Builder, Worklist, &TTI);
+                          ConcatLeafs, TreeBuilder, Worklist, &TTI);
   replaceValue(I, *V);
   return true;
 }
@@ -5929,7 +5946,9 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   auto *NewSplat = ConstantVector::getSplat(
       ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
 
-  IRBuilder<> Builder(&I);
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      I.getContext(), ConstantFolder(), getWorklistInserter(Worklist));
+  Builder.SetInsertPoint(&I);
   replaceValue(I, *Builder.CreateBitCast(NewSplat, I.getType()));
   return true;
 }
@@ -6052,7 +6071,9 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   }
 
   // Do the replacement.
-  IRBuilder<> Builder(&I);
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      I.getContext(), ConstantFolder(), getWorklistInserter(Worklist));
+  Builder.SetInsertPoint(&I);
   Value *NewVecCast = Builder.CreateBitCast(DeinterleavedVal, NewVecTy);
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
@@ -6264,7 +6285,9 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
     if (NewNumElements < OldNumElements) {
-      IRBuilder Builder(&I);
+      IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+          I.getContext(), ConstantFolder(), getWorklistInserter(Worklist));
+      Builder.SetInsertPoint(&I);
       Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
       // Calculate costs of old and new ops.
@@ -6417,11 +6440,12 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
     return false;
 
   // Create new shuffles and narrowed phi.
-  auto Builder = IRBuilder(Shuf);
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Shuf->getContext(), ConstantFolder(), getWorklistInserter(Worklist));
+  Builder.SetInsertPoint(Shuf);
   Builder.SetCurrentDebugLocation(Shuf->getDebugLoc());
   auto *PoisonVal = PoisonValue::get(InputVT);
   auto *NewShuf0 = Builder.CreateShuffleVector(Op, PoisonVal, NewMask);
-  Worklist.push(cast<Instruction>(NewShuf0));
 
   Builder.SetInsertPoint(Phi);
   Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
@@ -6643,6 +6667,12 @@ bool VectorCombine::run() {
   NextInst = nullptr;
 
   while (!Worklist.isEmpty()) {
+    // Move builder-created instructions onto the stack in reverse order so
+    // they are visited in insertion order. Instructions explicitly pushed by
+    // a fold retain their relative LIFO order.
+    while (Instruction *I = Worklist.popDeferred())
+      Worklist.push(I);
+
     Instruction *I = Worklist.removeOne();
     if (!I)
       continue;
