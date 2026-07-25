@@ -1033,11 +1033,25 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   // dead-ends.
   bool FoundSuitable = false;
   RegSubRegPair SuitablePair = RegSubReg;
+  // Fall back to the last suitable (sub)register source we remembered while
+  // trying to reach a deeper one. Drop the speculative map edge leaving it so
+  // getNewSource() terminates exactly at the fallback, and stop exploring any
+  // remaining (PHI) work items.
+  auto FallBackToSuitable = [&]() {
+    CurSrcPair = SuitablePair;
+    RewriteMap.erase(SuitablePair);
+    SrcToLook.clear();
+  };
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
-    if (CurSrcPair.Reg.isPhysical())
+    if (CurSrcPair.Reg.isPhysical()) {
+      if (FoundSuitable) {
+        FallBackToSuitable();
+        break;
+      }
       return false;
+    }
 
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
 
@@ -1054,7 +1068,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
                      << "EXP fallback "
                      << printReg(SuitablePair.Reg, TRI, SuitablePair.SubReg)
                      << " (orig " << printReg(Reg, TRI) << ")\n");
-          CurSrcPair = SuitablePair;
+          FallBackToSuitable();
           break;
         }
         return false;
@@ -1072,6 +1086,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         if (CurSrcRes.getNumSources() > 1) {
           LLVM_DEBUG(dbgs()
                      << "findNextSource: found PHI cycle, aborting...\n");
+          if (FoundSuitable) {
+            FallBackToSuitable();
+            break;
+          }
           return false;
         }
         break;
@@ -1084,6 +1102,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         PHICount++;
         if (PHICount >= RewritePHILimit) {
           LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
+          if (FoundSuitable) {
+            FallBackToSuitable();
+            break;
+          }
           return false;
         }
 
@@ -1097,8 +1119,13 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // constraints to the register allocator. Moreover, if we want to extend
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
-      if (CurSrcPair.Reg.isPhysical())
+      if (CurSrcPair.Reg.isPhysical()) {
+        if (FoundSuitable) {
+          FallBackToSuitable();
+          break;
+        }
         return false;
+      }
 
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
