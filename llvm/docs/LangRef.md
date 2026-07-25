@@ -4208,11 +4208,11 @@ monotonic modification order with other operations that are not marked
 ### Elementwise Atomic Operations
 
 Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
-and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
-must then be a fixed vector type whose total bit width is a power of two and
-whose element type is supported by the corresponding scalar atomic instruction.
-The {ref}`ordering <ordering>` of an `elementwise` instruction may not be
-`seq_cst`.
+{ref}`atomic load <i_load>`, and {ref}`atomic store <i_store>`, may be marked
+`elementwise`. The access type must then be a fixed vector type whose total bit
+width is a power of two and whose element type is supported by the corresponding
+scalar atomic instruction. The {ref}`ordering <ordering>` of an `elementwise`
+instruction may not be `seq_cst`.
 
 An `elementwise` atomic instruction behaves as if it were expanded into one
 scalar version of that instruction for each vector element. Each resulting
