@@ -20,14 +20,14 @@ struct DefUseInstrumentationPass
 
     LLVMContext& Ctx = M.getContext();
     IRBuilder<> Builder(Ctx);
+    FunctionType* HookType = FunctionType::get(Type::getVoidTy(Ctx), false);
+    FunctionCallee Hook =  M.getOrInsertFunction("__def_use_trace_enter", HookType);
 
     for (Function &F : M) {
       if (F.isDeclaration()) {
-        return PreservedAnalyses::all();
+        continue;
       }
       Builder.SetInsertPointPastAllocas(&F);
-      FunctionType* HookType = FunctionType::get(Type::getVoidTy(Ctx), false);
-      FunctionCallee Hook =  M.getOrInsertFunction("__def_use_trace_enter", HookType);
       Builder.CreateCall(Hook);
     }
     
