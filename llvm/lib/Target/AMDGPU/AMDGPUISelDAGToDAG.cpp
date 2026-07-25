@@ -2138,8 +2138,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
     }
   }
 
-  if (Addr->isDivergent() || Addr.getOpcode() == ISD::UNDEF ||
-      isa<ConstantSDNode>(Addr))
+  if (Addr->isDivergent() || Addr.isUndef() || isa<ConstantSDNode>(Addr))
     return false;
 
   // It's cheaper to materialize a single 32-bit zero for vaddr than the two
