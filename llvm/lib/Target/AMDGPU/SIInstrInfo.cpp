@@ -5939,10 +5939,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  // See SIInstrInfo::isLegalWidePackedOperand for more information.
+  // See SIInstrInfo::isLegalGFX12PlusWidePackedOperand for more information.
   if (AMDGPU::isGFX12Plus(ST) && AMDGPU::isWidePackedInst(Opcode)) {
     for (unsigned I = 0; I < 3; ++I) {
-      if (!isLegalWidePackedOperand(MRI, MI, I))
+      if (!isLegalGFX12PlusWidePackedOperand(MRI, MI, I))
         return false;
     }
   }
@@ -6300,14 +6300,14 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
   DebugLoc DL = MBB->findDebugLoc(I);
 
   if (Size == 128 && AMDGPU::isPacked64BitInst(MI.getOpcode()) &&
-      isLegalWidePackedOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx))) {
+      isLegalGFX12PlusWidePackedOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx))) {
     // Special case for V_PK_*64 instructions: these do not have OPSEL but SGPR
     // sources behave like OPSEL is set replicating low 64-bits into high. VGPR
     // sources in turn read actual 4 registers. To move operand from an SGPR to
     // a VGPR we need to replicate low half.
     // We also do not select immediates for these instructions so it always has
     // to be an SGPR register here.
-    // Operands which are not legal as per isLegalWidePackedOperand() sent
+    // Operands which are not legal as per isLegalGFX12PlusWidePackedOperand() sent
     // here specifically to fix a non-splat SGPR and shall perform a full copy.
 
     const TargetRegisterClass *VRC64 = RI.getVGPRClassForBitWidth(64);
@@ -6401,10 +6401,10 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   const MCOperandInfo OpInfo = MI.getDesc().operands()[OpIdx];
   unsigned Opc = MI.getOpcode();
 
-  // See SIInstrInfo::isLegalWidePackedOperand for more information.
+  // See SIInstrInfo::isLegalGFX12PlusWidePackedOperand for more information.
   if (AMDGPU::isGFX12Plus(ST) && MO.isReg() && RI.isSGPRReg(MRI, MO.getReg()) &&
       AMDGPU::isWidePackedInst(MI.getOpcode()) &&
-      !isLegalWidePackedOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx), &MO))
+      !isLegalGFX12PlusWidePackedOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx), &MO))
     return false;
 
   if (!isLegalRegOperand(MRI, OpInfo, MO))
@@ -6470,10 +6470,10 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
   return true;
 }
 
-bool SIInstrInfo::isLegalWidePackedOperand(const MachineRegisterInfo &MRI,
-                                           const MachineInstr &MI,
-                                           unsigned SrcN,
-                                           const MachineOperand *MO) const {
+bool SIInstrInfo::isLegalGFX12PlusWidePackedOperand(const MachineRegisterInfo &MRI,
+                                                    const MachineInstr &MI,
+                                                    unsigned SrcN,
+                                                    const MachineOperand *MO) const {
   constexpr unsigned NumOps = 3;
   constexpr AMDGPU::OpName OpNames[NumOps * 2] = {
       AMDGPU::OpName::src0,           AMDGPU::OpName::src1,
@@ -6894,10 +6894,10 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
 
   // Fix the register class of 64-bit or wider packed instructions on target
   // that reads a sigle sgpr from a tuple.
-  // Ser SIInstrInfo::isLegalWidePackedOperand for more information.
+  // Ser SIInstrInfo::isLegalGFX12PlusWidePackedOperand for more information.
   if (AMDGPU::isGFX12Plus(ST) && AMDGPU::isWidePackedInst(Opc)) {
     for (unsigned I = 0; I < 3; ++I) {
-      if (!isLegalWidePackedOperand(MRI, MI, /*SrcN=*/I))
+      if (!isLegalGFX12PlusWidePackedOperand(MRI, MI, /*SrcN=*/I))
         legalizeOpWithMove(MI, VOP3Idx[I]);
     }
   }
