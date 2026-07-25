@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include <optional>
 #include <string>
@@ -78,6 +79,14 @@ bool allConstant(ArrayRef<Value *> VL);
 /// \returns True if all of the values in \p VL are identical or some of them
 /// are UndefValue.
 bool isSplat(ArrayRef<Value *> VL);
+
+/// Checks if \p LHS and \p RHS are the same intrinsic, or one is llvm.fma
+/// and the other is llvm.fmuladd, since both lower to the same fused
+/// vector operation.
+/// \returns the intrinsic ID to use for the pair (\p RHS if the IDs match,
+/// otherwise Intrinsic::fma), or Intrinsic::not_intrinsic if they are not
+/// equivalent.
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS);
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
@@ -287,6 +296,11 @@ SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
 
 /// Replicates the given \p Val \p VF times.
 SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
+
+/// \returns the masked division/remainder intrinsic corresponding to \p
+/// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
+/// unlike the plain opcode.
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 
 } // namespace llvm::slpvectorizer
 

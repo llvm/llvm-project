@@ -1085,6 +1085,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
+    libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
@@ -1129,6 +1130,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_spin_unlock
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
+    libc.src.pthread.pthread_setschedparam
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints

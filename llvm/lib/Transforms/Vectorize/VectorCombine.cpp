@@ -125,6 +125,7 @@ private:
   bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitOpOfCastops(Instruction &I);
   bool foldBitOpOfCastConstant(Instruction &I);
+  bool foldBinopOfShuffles(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -295,9 +296,10 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       return false;
 
     // If we load MinVecNumElts, will our target element still be loaded?
-    OffsetEltIndex = Offset.udiv(ScalarSizeInBytes).getZExtValue();
-    if (OffsetEltIndex >= MinVecNumElts)
+    APInt OffsetEltIndexAP = Offset.udiv(ScalarSizeInBytes);
+    if (OffsetEltIndexAP.uge(MinVecNumElts))
       return false;
+    OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
                                      SQ.AC, SQ.DT))
@@ -2442,6 +2444,70 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   return true;
 }
 
+/// Fold binop(shuffle(V0, Mask), shuffle(V1, Mask))
+/// --> shuffle(binop(V0, V1), Mask)
+bool VectorCombine::foldBinopOfShuffles(Instruction &I) {
+  // It is not safe to transform things like div, urem, etc. because we may
+  // create undefined behavior when executing those on unknown vector elements.
+  if (!isSafeToSpeculativelyExecute(&I))
+    return false;
+
+  // If both arguments of the binary operation are shuffles that use the same
+  // mask and shuffle within a single vector, move the shuffle after the binop.
+  ArrayRef<int> Mask;
+  Value *LHS, *RHS, *V0, *V1;
+  if (!match(&I, m_BinOp(m_Value(LHS), m_Value(RHS))) ||
+      !match(LHS, m_Shuffle(m_Value(V0), m_Poison(), m_Mask(Mask))) ||
+      !match(RHS, m_Shuffle(m_Value(V1), m_Poison(), m_SpecificMask(Mask))))
+    return false;
+
+  if (V0->getType() != V1->getType())
+    return false;
+
+  auto *BO = cast<BinaryOperator>(&I);
+  auto *OpTy = cast<VectorType>(V0->getType());
+  auto *DstTy = cast<VectorType>(I.getType());
+  Instruction::BinaryOps Opcode = BO->getOpcode();
+
+  InstructionCost OldCost;
+  OldCost += TTI.getInstructionCost(&I, CostKind);
+  OldCost += TTI.getInstructionCost(cast<Instruction>(LHS), CostKind);
+  if (LHS != RHS)
+    OldCost += TTI.getInstructionCost(cast<Instruction>(RHS), CostKind);
+
+  InstructionCost NewCost;
+  NewCost += TTI.getArithmeticInstrCost(Opcode, OpTy, CostKind,
+                                        TTI::getOperandInfo(V0),
+                                        TTI::getOperandInfo(V1), {V0, V1});
+  NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DstTy,
+                                OpTy, Mask, CostKind);
+
+  // Add multiple use costs (assuming the multiple use isn't just the BinOp).
+  if (!(LHS == RHS && LHS->hasOneUser())) {
+    if (!LHS->hasOneUse())
+      NewCost += TTI.getInstructionCost(cast<Instruction>(LHS), CostKind);
+    if (LHS != RHS && !RHS->hasOneUse())
+      NewCost += TTI.getInstructionCost(cast<Instruction>(RHS), CostKind);
+  }
+
+  LLVM_DEBUG(dbgs() << "Found a binop of matching shuffles: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  // TODO: When to allow equal costs (as we reduce instruction count)?
+  if (!NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  Value *NewBO = Builder.CreateBinOp(Opcode, V0, V1);
+  Value *NewShuffle = Builder.CreateShuffleVector(NewBO, Mask);
+  if (auto *NewInst = dyn_cast<Instruction>(NewBO))
+    NewInst->copyIRFlags(BO);
+
+  Worklist.pushValue(NewBO);
+  replaceValue(I, *NewShuffle);
+  return true;
+}
+
 /// Try to convert "shuffle (binop (shuffle, shuffle)), undef"
 ///           -->  "binop (shuffle), (shuffle)".
 bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
@@ -3569,7 +3635,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
                     const DenseSet<std::pair<Value *, Use *>> &IdentityLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &SplatLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &ConcatLeafs,
-                    IRBuilderBase &Builder, const TargetTransformInfo *TTI) {
+                    IRBuilderBase &Builder, InstructionWorklist &WorkList,
+                    const TargetTransformInfo *TTI) {
   auto [FrontV, FrontLane] = Item.front();
 
   if (IdentityLeafs.contains(std::make_pair(FrontV, From))) {
@@ -3641,7 +3708,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
       }
       Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0),
                                       IdentityLeafs, SplatLeafs, ConcatLeafs,
-                                      Builder, TTI);
+                                      Builder, WorkList, TTI);
+      WorkList.pushValue(Op);
       return Builder.CreateBitCast(
           Op, FixedVectorType::get(BCDstTy->getScalarType(), Item.size()));
     }
@@ -3655,9 +3723,15 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
       Ops[Idx] = II->getOperand(Idx);
       continue;
     }
-    Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
-                                   &I->getOperandUse(Idx), IdentityLeafs,
-                                   SplatLeafs, ConcatLeafs, Builder, TTI);
+    Ops[Idx] = generateNewInstTree(
+        generateInstLaneVectorFromOperand(Item, Idx), &I->getOperandUse(Idx),
+        IdentityLeafs, SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
+    // Don't re-queue the operand of a bitcast we just regenerated. Doing so
+    // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
+    // which foldShuffleToIdentity then re-matches as the same superfluous
+    // identity - an infinite loop between the two folds.
+    if (!isa<BitCastInst>(I))
+      WorkList.pushValue(Ops[Idx]);
   }
 
   SmallVector<Value *, 8> ValueList;
@@ -3712,17 +3786,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
     Start[M] = lookThroughShuffles(&I, M);
 
-  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Worklist;
-  Worklist.push_back(std::make_pair(Start, &*I.use_begin()));
+  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Candidates;
+  Candidates.push_back(std::make_pair(Start, &*I.use_begin()));
   DenseSet<std::pair<Value *, Use *>> IdentityLeafs, SplatLeafs, ConcatLeafs;
   unsigned NumVisited = 0;
   bool TraversedElCountChangingBitcast = false;
 
-  while (!Worklist.empty()) {
+  while (!Candidates.empty()) {
     if (++NumVisited > MaxInstrsToScan)
       return false;
 
-    auto ItemFrom = Worklist.pop_back_val();
+    auto ItemFrom = Candidates.pop_back_val();
     auto Item = ItemFrom.first;
     auto From = ItemFrom.second;
     auto [FrontV, FrontLane] = Item.front();
@@ -3810,15 +3884,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         if (auto *BO = dyn_cast<BinaryOperator>(FrontV);
             BO && BO->isIntDivRem())
           return false;
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &cast<Instruction>(FrontV)->getOperandUse(1));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &cast<Instruction>(FrontV)->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                                &cast<Instruction>(FrontV)->getOperandUse(1));
         continue;
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst, FPToSIInst,
                      FPToUIInst, SIToFPInst, UIToFPInst>(FrontV)) {
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &cast<Instruction>(FrontV)->getOperandUse(0));
         continue;
       } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontV)) {
         auto *BCDstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
@@ -3828,8 +3902,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           ElementCount SrcEC = BCSrcTy->getElementCount();
           if (DstEC == SrcEC) {
             // Same element count - simple pass-through.
-            Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                                  &BitCast->getOperandUse(0));
+            Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                    &BitCast->getOperandUse(0));
             continue;
           }
           unsigned DstElts = DstEC.getFixedValue();
@@ -3871,7 +3945,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             }
             if (Valid) {
               TraversedElCountChangingBitcast = true;
-              Worklist.emplace_back(NItem, &BitCast->getOperandUse(0));
+              Candidates.emplace_back(NItem, &BitCast->getOperandUse(0));
               continue;
             }
           } else if (SrcElts > DstElts && SrcElts % DstElts == 0) {
@@ -3889,17 +3963,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
                 NItem.push_back(lookThroughShuffles(Op, Lane * R + J));
             }
             TraversedElCountChangingBitcast = true;
-            Worklist.emplace_back(NItem, &BitCast->getOperandUse(0));
+            Candidates.emplace_back(NItem, &BitCast->getOperandUse(0));
             continue;
           }
         }
       } else if (auto *Sel = dyn_cast<SelectInst>(FrontV)) {
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &Sel->getOperandUse(0));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &Sel->getOperandUse(1));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
-                              &Sel->getOperandUse(2));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &Sel->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                                &Sel->getOperandUse(1));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
+                                &Sel->getOperandUse(2));
         continue;
       } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                  II && isTriviallyVectorizable(II->getIntrinsicID()) &&
@@ -3916,8 +3990,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
               return false;
             continue;
           }
-          Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, Op),
-                                &cast<Instruction>(FrontV)->getOperandUse(Op));
+          Candidates.emplace_back(
+              generateInstLaneVectorFromOperand(Item, Op),
+              &cast<Instruction>(FrontV)->getOperandUse(Op));
         }
         continue;
       }
@@ -3945,8 +4020,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
   Builder.SetInsertPoint(&I);
-  Value *V = generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs,
-                                 SplatLeafs, ConcatLeafs, Builder, &TTI);
+  Value *V =
+      generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs, SplatLeafs,
+                          ConcatLeafs, Builder, Worklist, &TTI);
   replaceValue(I, *V);
   return true;
 }
@@ -6553,12 +6629,16 @@ bool VectorCombine::run() {
           return true;
         if (foldBitOpOfCastConstant(I))
           return true;
+        if (foldBinopOfShuffles(I))
+          return true;
         break;
       case Instruction::PHI:
         if (shrinkPhiOfShuffles(I))
           return true;
         break;
       default:
+        if (foldBinopOfShuffles(I))
+          return true;
         if (shrinkType(I))
           return true;
         break;

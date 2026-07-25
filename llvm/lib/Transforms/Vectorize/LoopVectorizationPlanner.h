@@ -402,14 +402,13 @@ public:
     return RuntimeEC;
   }
 
-  /// Convert the input value \p Current to the corresponding value of an
-  /// induction with \p Start and \p Step values, using \p Start + \p Current *
-  /// \p Step.
+  /// Convert \p Current to \p Start + \p Current * \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPValue *Current, VPValue *Step) {
+                                     VPValue *Current, VPValue *Step,
+                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
@@ -751,6 +750,13 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const TargetTransformInfo &getTTI() const { return TTI; }
+
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
+  /// \return The loop being analyzed.
+  const Loop *getLoop() const { return TheLoop; }
 
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;

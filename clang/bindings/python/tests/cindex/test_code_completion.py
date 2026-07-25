@@ -3,7 +3,6 @@ from clang.cindex import (
     CompletionChunk,
     CompletionChunkKind,
     CompletionString,
-    SPELLING_CACHE,
     TranslationUnit,
 )
 
@@ -19,7 +18,7 @@ class TestCodeCompletion(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as log:
             completions = [str(c) for c in cr]
-            self.assertEqual(len(log), 2)
+            self.assertEqual(len(log), 1)
             for warning in log:
                 self.assertIsInstance(warning.message, DeprecationWarning)
 
@@ -28,7 +27,7 @@ class TestCodeCompletion(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as log:
             completions_deprecated = [str(c) for c in cr.results]
-            self.assertEqual(len(log), 3)
+            self.assertEqual(len(log), 2)
             for warning in log:
                 self.assertIsInstance(warning.message, DeprecationWarning)
 
@@ -65,9 +64,9 @@ void f() {
         )
 
         expected = [
-            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
-            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'int', CompletionChunkKind.RESULT_TYPE} | {'test1', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
+            "{'void', CompletionChunkKind.RESULT_TYPE} | {'test2', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
+            "{'return', CompletionChunkKind.TYPED_TEXT} | {';', CompletionChunkKind.SEMI_COLON} || Priority: 40 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -105,9 +104,9 @@ void f() {
         )
 
         expected = [
-            "{'int', ResultType} | {'test1', TypedText} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
-            "{'void', ResultType} | {'test2', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
-            "{'return', TypedText} | {';', SemiColon} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'int', CompletionChunkKind.RESULT_TYPE} | {'test1', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: Available || Brief comment: Aaa.",
+            "{'void', CompletionChunkKind.RESULT_TYPE} | {'test2', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 50 || Availability: Available || Brief comment: Bbb.",
+            "{'return', CompletionChunkKind.TYPED_TEXT} | {';', CompletionChunkKind.SEMI_COLON} || Priority: 40 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -141,20 +140,20 @@ void f(P x, Q y) {
         cr = tu.codeComplete("fake.cpp", 12, 5, unsaved_files=files)
 
         expected = [
-            "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: ",
-            "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
-            "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'const', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'volatile', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'operator', CompletionChunkKind.TYPED_TEXT} || Priority: 40 || Availability: Available || Brief comment: ",
+            "{'P', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: Available || Brief comment: ",
+            "{'Q', CompletionChunkKind.TYPED_TEXT} || Priority: 50 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
         cr = tu.codeComplete("fake.cpp", 13, 5, unsaved_files=files)
         expected = [
-            "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: ",
-            "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
-            "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: ",
-            "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
+            "{'P', CompletionChunkKind.TYPED_TEXT} | {'::', CompletionChunkKind.TEXT} || Priority: 75 || Availability: Available || Brief comment: ",
+            "{'P &', CompletionChunkKind.RESULT_TYPE} | {'operator=', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {'const P &', CompletionChunkKind.PLACEHOLDER} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 79 || Availability: Available || Brief comment: ",
+            "{'int', CompletionChunkKind.RESULT_TYPE} | {'member', CompletionChunkKind.TYPED_TEXT} || Priority: 35 || Availability: NotAccessible || Brief comment: ",
+            "{'void', CompletionChunkKind.RESULT_TYPE} | {'~P', CompletionChunkKind.TYPED_TEXT} | {'(', CompletionChunkKind.LEFT_PAREN} | {')', CompletionChunkKind.RIGHT_PAREN} || Priority: 79 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
 
@@ -198,68 +197,3 @@ void f(P x, Q y) {
                 self.assertEqual(str(kind), string)
                 self.assertEqual(len(log), 1)
                 self.assertIsInstance(log[0].message, DeprecationWarning)
-
-    def test_completion_chunk_kind_compatibility(self):
-        value_to_old_str = {
-            0: "Optional",
-            1: "TypedText",
-            2: "Text",
-            3: "Placeholder",
-            4: "Informative",
-            5: "CurrentParameter",
-            6: "LeftParen",
-            7: "RightParen",
-            8: "LeftBracket",
-            9: "RightBracket",
-            10: "LeftBrace",
-            11: "RightBrace",
-            12: "LeftAngle",
-            13: "RightAngle",
-            14: "Comma",
-            15: "ResultType",
-            16: "Colon",
-            17: "SemiColon",
-            18: "Equal",
-            19: "HorizontalSpace",
-            20: "VerticalSpace",
-        }
-
-        # Check that all new kinds correspond to an old kind
-        for new_kind in CompletionChunkKind:
-            old_str = value_to_old_str[new_kind.value]
-            with warnings.catch_warnings(record=True) as log:
-                self.assertEqual(old_str, str(new_kind))
-                self.assertEqual(len(log), 1)
-                self.assertIsInstance(log[0].message, DeprecationWarning)
-
-        # Check that all old kinds correspond to a new kind
-        for value, old_str in value_to_old_str.items():
-            new_kind = CompletionChunkKind.from_id(value)
-            with warnings.catch_warnings(record=True) as log:
-                self.assertEqual(old_str, str(new_kind))
-                self.assertEqual(len(log), 1)
-                self.assertIsInstance(log[0].message, DeprecationWarning)
-
-    def test_spelling_cache_missing_attribute(self):
-        # Test that accessing missing attributes on SpellingCacheAlias raises
-        # during the transitionary period
-        with self.assertRaises(AttributeError, msg=SPELLING_CACHE.deprecation_message):
-            SPELLING_CACHE.keys()
-
-    def test_spelling_cache_alias(self):
-        kind_keys = list(CompletionChunk.SPELLING_CACHE)
-        self.assertEqual(len(kind_keys), 13)
-        for kind_key in kind_keys:
-            with warnings.catch_warnings(record=True) as log:
-                self.assertEqual(
-                    SPELLING_CACHE[kind_key.value],
-                    CompletionChunk.SPELLING_CACHE[kind_key],
-                )
-                self.assertEqual(len(log), 1)
-                self.assertIsInstance(log[0].message, DeprecationWarning)
-
-    def test_spelling_cache_missing_attribute(self):
-        # Test that accessing missing attributes on SpellingCacheAlias raises
-        # during the transitionary period
-        with self.assertRaises(AttributeError, msg=SPELLING_CACHE.deprecation_message):
-            SPELLING_CACHE.keys()

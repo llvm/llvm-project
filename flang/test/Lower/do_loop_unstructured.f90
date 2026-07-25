@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
+! RUN: %flang_fc1 -emit-hlfir -mmlir --wrap-unstructured-constructs-in-execute-region -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fwrapv -mmlir --wrap-unstructured-constructs-in-execute-region -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! Tests for unstructured loops.
 

@@ -288,7 +288,7 @@ private:
   /// entry in maps below, and provides the storage for the actual result
   /// concept.
   using AnalysisResultListT =
-      std::list<std::pair<AnalysisKey *, std::unique_ptr<ResultConceptT>>>;
+      std::list<std::pair<AnalysisKey *, typename ResultConceptT::unique_ptr>>;
 
   /// Map type from IRUnitT pointer to our custom list type.
   using AnalysisResultListMapT = DenseMap<IRUnitT *, AnalysisResultListT>;

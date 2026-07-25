@@ -8830,7 +8830,7 @@ SITargetLowering::lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op,
     return expandFMINIMUMNUM_FMAXIMUMNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
-      VT == MVT::v16bf16)
+      VT == MVT::v32f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -15967,6 +15967,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1) &&
            isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1);
   }
+  case ISD::POISON:
+    return true;
   case ISD::UNDEF:
     // Could be anything.
     return false;

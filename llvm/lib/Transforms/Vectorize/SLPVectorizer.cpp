@@ -423,6 +423,51 @@ getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
   return (Sz / RegVF) * RegVF;
 }
 
+/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
+/// padded full-register vector type if padding is structurally possible, or
+/// nullptr if the vector already fills a register or the opcode is not
+/// div/rem. Does not check profitability; see getMaskedDivRemCost for that.
+static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
+                                            unsigned Opcode, Type *ScalarTy,
+                                            unsigned NumElts) {
+  if (!Instruction::isIntDivRem(Opcode) || has_single_bit(NumElts))
+    return nullptr;
+  unsigned PaddedNumElts =
+      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts);
+  if (PaddedNumElts == NumElts)
+    return nullptr;
+  return cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedNumElts));
+}
+
+/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
+/// padding to a full register and using the masked div/rem intrinsic is
+/// cheaper than the direct vector op. Returns the cost of the masked
+/// alternative, or an invalid cost if it is not applicable or not cheaper.
+static InstructionCost
+getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
+                    Type *ScalarTy, unsigned NumElts,
+                    TTI::TargetCostKind CostKind,
+                    FixedVectorType **PaddedTy = nullptr) {
+  FixedVectorType *PaddedVecTy =
+      getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts);
+  if (!PaddedVecTy)
+    return InstructionCost::getInvalid();
+  // One mask bit per element of the padded vector, not per padded lane.
+  auto *MaskTy =
+      FixedVectorType::get(IntegerType::getInt1Ty(ScalarTy->getContext()),
+                           PaddedVecTy->getNumElements());
+  InstructionCost DirectCost = TTI.getArithmeticInstrCost(
+      Opcode, getWidenedType(ScalarTy, NumElts), CostKind);
+  IntrinsicCostAttributes ICA(getMaskedDivRemIntrinsic(Opcode), PaddedVecTy,
+                              {PaddedVecTy, PaddedVecTy, MaskTy});
+  InstructionCost MaskedCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+  if (!MaskedCost.isValid() || MaskedCost >= DirectCost)
+    return InstructionCost::getInvalid();
+  if (PaddedTy)
+    *PaddedTy = PaddedVecTy;
+  return MaskedCost;
+}
+
 /// Checks if the vector of instructions can be represented as a shuffle, like:
 /// %x0 = extractelement <4 x i8> %x, i32 0
 /// %x3 = extractelement <4 x i8> %x, i32 3
@@ -590,7 +635,10 @@ public:
     const auto *II = dyn_cast<IntrinsicInst>(I);
     const auto *IOp = dyn_cast<IntrinsicInst>(Op);
     if (II || IOp)
-      return II && IOp && II->getIntrinsicID() == IOp->getIntrinsicID();
+      return II && IOp &&
+             isEquivalentIntrinsicID(II->getIntrinsicID(),
+                                     IOp->getIntrinsicID()) !=
+                 Intrinsic::not_intrinsic;
     return true;
   }
 
@@ -1004,7 +1052,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
         auto *CallBase = cast<CallInst>(MainOp);
-        if (Call->getCalledFunction() != CallBase->getCalledFunction())
+        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
+        Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, BaseID);
+        if (Call->getCalledFunction() != CallBase->getCalledFunction() &&
+            isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
+                Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (Call->hasOperandBundles() &&
             (!CallBase->hasOperandBundles() ||
@@ -1013,8 +1065,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                          CallBase->op_begin() +
                              CallBase->getBundleOperandsStartIndex())))
           return InstructionsState::invalid();
-        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
-        if (ID != BaseID)
+        if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
@@ -1041,6 +1092,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     assert(MainOp && "Cannot find MainOp with Opcode from BinOpHelper.");
     AltOp = findInstructionWithOpcode(VL, BinOpHelper.getAltOpcode());
     assert(AltOp && "Cannot find AltOp with Opcode from BinOpHelper.");
+  } else if (auto *CB = dyn_cast<CallInst>(MainOp);
+             CB &&
+             getVectorIntrinsicIDForCall(CB, &TLI) == Intrinsic::fmuladd) {
+    // fma and fmuladd share a single vector fma node; use the fma as the
+    // representative so the fused form is not weakened to fmuladd.
+    auto *It = find_if(VL, [&](Value *V) {
+      auto *CI = dyn_cast<CallInst>(V);
+      return CI && getVectorIntrinsicIDForCall(CI, &TLI) == Intrinsic::fma;
+    });
+    if (It != VL.end())
+      MainOp = AltOp = cast<Instruction>(*It);
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");
@@ -9908,6 +9970,8 @@ static std::pair<size_t, size_t> generateKeySubkey(
     } else if (auto *Call = dyn_cast<CallInst>(I)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, TLI);
       if (isTriviallyVectorizable(ID)) {
+        if (ID == Intrinsic::fmuladd)
+          ID = Intrinsic::fma;
         SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(ID));
       } else if (!VFDatabase(*Call).getMappings(*Call).empty()) {
         SubKey = hash_combine(hash_value(I->getOpcode()),
@@ -10658,8 +10722,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (S.isCopyableElement(V))
         continue;
       CallInst *CI2 = dyn_cast<CallInst>(V);
-      if (!CI2 || CI2->getCalledFunction() != F ||
-          getVectorIntrinsicIDForCall(CI2, TLI) != ID ||
+      Intrinsic::ID ID2 = CI2 ? getVectorIntrinsicIDForCall(CI2, TLI)
+                              : Intrinsic::not_intrinsic;
+      Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, ID2);
+      if (!CI2 ||
+          (CI2->getCalledFunction() != F &&
+           isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
+               Intrinsic::not_intrinsic) ||
+          (ID != ID2 && Equivalent == Intrinsic::not_intrinsic) ||
           (VecFunc &&
            VecFunc != VFDatabase(*CI2).getVectorizedFunction(Shape)) ||
           !CI->hasIdenticalOperandBundleSchema(*CI2)) {
@@ -17223,6 +17293,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return CommonCost;
         }
       }
+      // Masked path ignores Op1Info/Op2Info like its codegen does; keep it
+      // out of the operand-aware cost comparison below.
+      if (InstructionCost MaskedCost = getMaskedDivRemCost(
+              *TTI, ShuffleOrOp, ScalarTy, VL.size(), CostKind);
+          MaskedCost.isValid())
+        return MaskedCost + CommonCost;
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
@@ -23427,9 +23503,36 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           RHS = Builder.CreateIntCast(RHS, VecTy, GetOperandSignedness(1));
       }
 
-      Value *V = Builder.CreateBinOp(
-          static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
-          RHS);
+      // Structural padding does not imply profitability; re-check the cost
+      // here so codegen matches the earlier cost-based decision.
+      Value *V = nullptr;
+      unsigned NumElts = E->Scalars.size();
+      FixedVectorType *PaddedVecTy = nullptr;
+      if (getMaskedDivRemCost(*TTI, ShuffleOrOp, ScalarTy, NumElts,
+                              TTI::TCK_RecipThroughput, &PaddedVecTy)
+              .isValid()) {
+        assert(PaddedVecTy && "Expected padded type for masked div/rem.");
+        // Scale the lane count up to elements for REVEC, where each lane
+        // is itself a vector.
+        unsigned NumActiveElts = NumElts * getNumElements(ScalarTy);
+        Value *WidenedLHS =
+            createInsertVector(Builder, PoisonValue::get(PaddedVecTy), LHS, 0);
+        Value *WidenedRHS =
+            createInsertVector(Builder, PoisonValue::get(PaddedVecTy), RHS, 0);
+        SmallVector<Constant *> MaskValues(
+            PaddedVecTy->getNumElements(),
+            ConstantInt::getFalse(Builder.getContext()));
+        std::fill_n(MaskValues.begin(), NumActiveElts,
+                    ConstantInt::getTrue(Builder.getContext()));
+        Value *DivRemMask = ConstantVector::get(MaskValues);
+        Value *MaskedV = Builder.CreateIntrinsic(
+            getMaskedDivRemIntrinsic(ShuffleOrOp), {PaddedVecTy},
+            {WidenedLHS, WidenedRHS, DivRemMask});
+        V = createExtractVector(Builder, MaskedV, NumActiveElts, 0);
+      }
+      if (!V)
+        V = Builder.CreateBinOp(
+            static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
       V = PropagateIRFlags(V);
 
       V = FinalShuffle(V, E);
@@ -24432,7 +24535,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
         {DominatorTree::Insert, BB, ScalarBB},
         {DominatorTree::Insert, VecBB, Tail},
         {DominatorTree::Insert, ScalarBB, Tail}};
+    // Term (e.g. a switch) may have multiple edges to the same successor;
+    // dedupe so each distinct successor gets exactly one Insert/Delete pair.
+    SmallPtrSet<BasicBlock *, 4> UniqueSuccs;
     for (BasicBlock *Succ : successors(Term)) {
+      if (!UniqueSuccs.insert(Succ).second)
+        continue;
       Updates.push_back({DominatorTree::Insert, Tail, Succ});
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
@@ -30674,8 +30782,8 @@ public:
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for ordered reduction\n");
-      if (Cost > -SLPCostThreshold/* ||
-          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)*/) {
+      if (Cost > -SLPCostThreshold ||
+          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)) {
         if (Cost.isValid())
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",

@@ -5184,6 +5184,10 @@ public:
 
   ArrayRef<Expr *> getInitExprs() const { return getTrailingObjects(NumExprs); }
 
+  MutableArrayRef<Expr *> getUserSpecifiedInitExprs() {
+    return getTrailingObjects(NumUserSpecifiedExprs);
+  }
+
   ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
     return getTrailingObjects(NumUserSpecifiedExprs);
   }
