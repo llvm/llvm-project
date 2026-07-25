@@ -9,8 +9,8 @@
 define i64 @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, x1+16
-; CHECK-NEXT:    ldr x0, [x8, :lo12:x1+16]
+; CHECK-NEXT:    adrp x8, "x1"+16
+; CHECK-NEXT:    ldr x0, [x8, :lo12:"x1"+16]
 ; CHECK-NEXT:    ret
   %l = load i64, ptr getelementptr ([2 x i64], ptr @x1, i64 0, i64 2)
   ret i64 %l
@@ -19,8 +19,8 @@ define i64 @f1() {
 define i64 @f2() {
 ; CHECK-LABEL: f2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, x1
-; CHECK-NEXT:    add x8, x8, :lo12:x1
+; CHECK-NEXT:    adrp x8, "x1"
+; CHECK-NEXT:    add x8, x8, :lo12:"x1"
 ; CHECK-NEXT:    ldr x0, [x8, #24]
 ; CHECK-NEXT:    ret
 
@@ -31,8 +31,8 @@ define i64 @f2() {
 define i64 @f3() {
 ; CHECK-LABEL: f3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, x1+1
-; CHECK-NEXT:    add x8, x8, :lo12:x1+1
+; CHECK-NEXT:    adrp x8, "x1"+1
+; CHECK-NEXT:    add x8, x8, :lo12:"x1"+1
 ; CHECK-NEXT:    ldr x0, [x8]
 ; CHECK-NEXT:    ret
   %l = load i64, ptr getelementptr (i8, ptr @x1, i64 1)
@@ -44,17 +44,17 @@ define [2 x i64] @f4() {
 ;
 ; CHECK-SD-LABEL: f4:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, x2+8
-; CHECK-SD-NEXT:    add x8, x8, :lo12:x2+8
+; CHECK-SD-NEXT:    adrp x8, "x2"+8
+; CHECK-SD-NEXT:    add x8, x8, :lo12:"x2"+8
 ; CHECK-SD-NEXT:    ldp x0, x1, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: f4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, x2+8
-; CHECK-GI-NEXT:    adrp x9, x2+8
-; CHECK-GI-NEXT:    add x9, x9, :lo12:x2+8
-; CHECK-GI-NEXT:    ldr x0, [x8, :lo12:x2+8]
+; CHECK-GI-NEXT:    adrp x8, "x2"+8
+; CHECK-GI-NEXT:    adrp x9, "x2"+8
+; CHECK-GI-NEXT:    add x9, x9, :lo12:"x2"+8
+; CHECK-GI-NEXT:    ldr x0, [x8, :lo12:"x2"+8]
 ; CHECK-GI-NEXT:    ldr x1, [x9, #8]
 ; CHECK-GI-NEXT:    ret
   %l = load [2 x i64], ptr getelementptr (i8, ptr @x2, i64 8)
@@ -64,8 +64,8 @@ define [2 x i64] @f4() {
 define i64 @f5() {
 ; CHECK-LABEL: f5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, x2+1048568
-; CHECK-NEXT:    ldr x0, [x8, :lo12:x2+1048568]
+; CHECK-NEXT:    adrp x8, "x2"+1048568
+; CHECK-NEXT:    ldr x0, [x8, :lo12:"x2"+1048568]
 ; CHECK-NEXT:    ret
   %l = load i64, ptr getelementptr ([16777216 x i64], ptr @x2, i64 0, i64 131071)
   ret i64 %l
@@ -75,8 +75,8 @@ define i64 @f6() {
 ; CHECK-LABEL: f6:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1048576 // =0x100000
-; CHECK-NEXT:    adrp x9, x2
-; CHECK-NEXT:    add x9, x9, :lo12:x2
+; CHECK-NEXT:    adrp x9, "x2"
+; CHECK-NEXT:    add x9, x9, :lo12:"x2"
 ; CHECK-NEXT:    ldr x0, [x9, x8]
 ; CHECK-NEXT:    ret
   %l = load i64, ptr getelementptr ([16777216 x i64], ptr @x2, i64 0, i64 131072)
@@ -86,8 +86,8 @@ define i64 @f6() {
 define i32 @f7() {
 ; CHECK-LABEL: f7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, x3+108
-; CHECK-NEXT:    ldr w0, [x8, :lo12:x3+108]
+; CHECK-NEXT:    adrp x8, "x3"+108
+; CHECK-NEXT:    ldr w0, [x8, :lo12:"x3"+108]
 ; CHECK-NEXT:    ret
 
 entry:

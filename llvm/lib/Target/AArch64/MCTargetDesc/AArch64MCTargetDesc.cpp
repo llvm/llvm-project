@@ -18,6 +18,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "TargetInfo/AArch64TargetInfo.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -344,21 +345,42 @@ static MCRegisterInfo *createAArch64MCRegisterInfo(const Triple &Triple) {
   return X;
 }
 
+// Populate the set of reserved identifiers (register names) that should be
+// quoted when used as symbol names in assembly output.
+static void populateAArch64ReservedIdentifiers(StringSet<> &Set,
+                                                const MCRegisterInfo &MRI) {
+  for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i) {
+    if (const char *Name = MRI.getName(i)) {
+      if (Name[0])
+        Set.insert(StringRef(Name).lower());
+    }
+  }
+}
+
 static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TheTriple,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
-  if (TheTriple.isOSBinFormatMachO())
-    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32,
-                                     Options);
-  else if (TheTriple.isOSBinFormatELF())
-    MAI = new AArch64MCAsmInfoELF(TheTriple, Options);
-  else if (TheTriple.isWindowsMSVCEnvironment())
-    MAI = new AArch64MCAsmInfoMicrosoftCOFF(Options);
-  else if (TheTriple.isOSBinFormatCOFF())
-    MAI = new AArch64MCAsmInfoGNUCOFF(Options);
-  else
+  if (TheTriple.isOSBinFormatMachO()) {
+    auto *DarwinMAI = new AArch64MCAsmInfoDarwin(
+        TheTriple.getArch() == Triple::aarch64_32, Options);
+    populateAArch64ReservedIdentifiers(DarwinMAI->ReservedIdentifiers, MRI);
+    MAI = DarwinMAI;
+  } else if (TheTriple.isOSBinFormatELF()) {
+    auto *ELFMAI = new AArch64MCAsmInfoELF(TheTriple, Options);
+    populateAArch64ReservedIdentifiers(ELFMAI->ReservedIdentifiers, MRI);
+    MAI = ELFMAI;
+  } else if (TheTriple.isWindowsMSVCEnvironment()) {
+    auto *COFFMAI = new AArch64MCAsmInfoMicrosoftCOFF(Options);
+    populateAArch64ReservedIdentifiers(COFFMAI->ReservedIdentifiers, MRI);
+    MAI = COFFMAI;
+  } else if (TheTriple.isOSBinFormatCOFF()) {
+    auto *GNUCOFFMAI = new AArch64MCAsmInfoGNUCOFF(Options);
+    populateAArch64ReservedIdentifiers(GNUCOFFMAI->ReservedIdentifiers, MRI);
+    MAI = GNUCOFFMAI;
+  } else {
     reportFatalUsageError("unsupported object format");
+  }
 
   // Initial state of the frame pointer is SP.
   unsigned Reg = MRI.getDwarfRegNum(AArch64::SP, true);
