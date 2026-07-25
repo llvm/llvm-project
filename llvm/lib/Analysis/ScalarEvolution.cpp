@@ -8098,7 +8098,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       // Try to use ptrtoaddr for subtracts with at least one ptrtoint
       // operand. While we don't model ptrtoint directly in SCEV, the
       // difference between two pointer addresses is well-defined.
-      Value *PtrLHS, *PtrRHS;
+      Value *PtrLHS = nullptr, *PtrRHS = nullptr;
       bool HasPtrLHS = match(BO->LHS, m_PtrToInt(m_Value(PtrLHS)));
       bool HasPtrRHS = match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)));
       if (HasPtrLHS || HasPtrRHS) {
