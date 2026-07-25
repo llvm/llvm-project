@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple amdgcn -target-cpu gfx90a -verify=device,both %s -fcuda-is-device
+// RUN: %clang_cc1 -fsyntax-only -triple amdgpu9.0a -verify=device,both %s -fcuda-is-device
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgcn -verify=host,both %s
 
 #define __device__ __attribute__((device))
