@@ -393,6 +393,27 @@ Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
   return WideValue;
 }
 
+void VPTransformState::fixupHeaderPhis() {
+  for (VPBlockBase *VPB : vp_depth_first_shallow(Plan->getEntry())) {
+    if (!VPBlockUtils::isHeader(VPB, VPDT))
+      continue;
+    auto *Header = cast<VPBasicBlock>(VPB);
+    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+    BasicBlock *VectorLatchBB = CFG.VPBB2IRBB[LatchVPBB];
+
+    for (VPRecipeBase &R : Header->phis()) {
+      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
+                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+
+      Value *Phi = get(PhiR, NeedsScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
+  }
+}
+
 BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
   auto &CFG = State.CFG;
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
@@ -1032,24 +1053,7 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.DTU.flush();
 
   // Fix the latch (backedge) value of all header phis in all loop headers.
-  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry())) {
-    if (!VPBlockUtils::isHeader(VPB, State->VPDT))
-      continue;
-    auto *Header = cast<VPBasicBlock>(VPB);
-    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
-    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-    for (VPRecipeBase &R : Header->phis()) {
-      auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
-          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
-                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-
-      Value *Phi = State->get(PhiR, NeedsScalar);
-      Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
-      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
-    }
-  }
+  State->fixupHeaderPhis();
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {

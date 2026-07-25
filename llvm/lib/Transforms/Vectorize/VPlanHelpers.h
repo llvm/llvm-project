@@ -274,6 +274,11 @@ struct VPTransformState {
   Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
                                        const VPLane &Lane);
 
+  /// Add the backedge (latch) incoming value to the canonical, reduction and
+  /// first-order recurrence phis in all loop headers state's plan, after
+  /// the loop body has been generated.
+  void fixupHeaderPhis();
+
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
   struct CFGState {
