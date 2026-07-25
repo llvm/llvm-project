@@ -30920,23 +30920,31 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
 
   // Fold select(cond, binop(x, y), binop(z, y))
   //  --> binop(select(cond, x, z), y)
+  // unless x or z are legal immediate operands for binop, in which case
+  // executing the binops first is faster
   if (N1.getOperand(1) == N2.getOperand(1)) {
     SDValue N10 = N1.getOperand(0);
     SDValue N20 = N2.getOperand(0);
-    SDValue NewSel = DAG.getSelect(DL, N10.getValueType(), N0, N10, N20);
-    SDNodeFlags Flags = N1->getFlags() & N2->getFlags();
-    SDValue NewBinOp =
-        DAG.getNode(BinOpc, DL, OpVTs, {NewSel, N1.getOperand(1)}, Flags);
-    return SDValue(NewBinOp.getNode(), N1.getResNo());
+    if (!TLI.isLegalImmediate(BinOpc, N10) &&
+        !TLI.isLegalImmediate(BinOpc, N20)) {
+      SDValue NewSel = DAG.getSelect(DL, N10.getValueType(), N0, N10, N20);
+      SDNodeFlags Flags = N1->getFlags() & N2->getFlags();
+      SDValue NewBinOp =
+          DAG.getNode(BinOpc, DL, OpVTs, {NewSel, N1.getOperand(1)}, Flags);
+      return SDValue(NewBinOp.getNode(), N1.getResNo());
+    }
   }
 
   // Fold select(cond, binop(x, y), binop(x, z))
   //  --> binop(x, select(cond, y, z))
+  // unless y or z are legal immediate operands for binop
   if (N1.getOperand(0) == N2.getOperand(0)) {
     SDValue N11 = N1.getOperand(1);
     SDValue N21 = N2.getOperand(1);
     // Second op VT might be different (e.g. shift amount type)
-    if (N11.getValueType() == N21.getValueType()) {
+    if (N11.getValueType() == N21.getValueType() &&
+        !TLI.isLegalImmediate(BinOpc, N11) &&
+        !TLI.isLegalImmediate(BinOpc, N21)) {
       SDValue NewSel = DAG.getSelect(DL, N11.getValueType(), N0, N11, N21);
       SDNodeFlags Flags = N1->getFlags() & N2->getFlags();
       SDValue NewBinOp =

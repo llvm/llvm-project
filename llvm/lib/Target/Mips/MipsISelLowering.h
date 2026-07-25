@@ -496,6 +496,7 @@ using TargetRegisterClass = MCRegisterClass;
 
     bool isLegalICmpImmediate(int64_t Imm) const override;
     bool isLegalAddImmediate(int64_t Imm) const override;
+    bool isLegalImmediate(unsigned Opc, const SDValue Value) const override;
 
     unsigned getJumpTableEncoding() const override;
     SDValue getPICJumpTableRelocBase(SDValue Table,

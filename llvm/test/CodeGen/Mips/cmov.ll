@@ -1,9 +1,10 @@
-; RUN: llc -mtriple=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -mtriple=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -mtriple=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -mtriple=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV,32-CPIC
+; RUN: llc -mtriple=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV,32-CPIC
+; RUN: llc -mtriple=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV,32-CPIC
+; RUN: llc -mtriple=mips     -mcpu=mips32                 -relocation-model=static -mgpopt -mattr=+noabicalls < %s | FileCheck %s -check-prefixes=ALL,32-CMOV,32-CGP
 ; RUN: llc -mtriple=mips     -mcpu=mips32r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMP
-; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV,64-CPIC
+; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV,64-CPIC
 ; RUN: llc -mtriple=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
@@ -11,10 +12,15 @@
 
 ; ALL-LABEL: cmov1:
 
-; 32-CMOV-DAG:  lw $[[R0:[0-9]+]], %got(i3)
-; 32-CMOV-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
-; 32-CMOV-DAG:  movn $[[R0]], $[[R1]], $4
-; 32-CMOV-DAG:  lw $2, 0($[[R0]])
+; 32-CPIC-DAG:  lw $[[R0:[0-9]+]], %got(i3)
+; 32-CPIC-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
+; 32-CPIC-DAG:  movn $[[R0]], $[[R1]], $4
+; 32-CPIC-DAG:  lw $2, 0($[[R0]])
+
+; 32-CGP-DAG:   lui $[[R1:[0-9]+]], %hi(i1)
+; 32-CGP-DAG:   addiu $[[R1]], $[[R1]], %lo(i1)
+; 32-CGP-DAG:   lw $[[R0:[0-9]+]], %gp_rel(i3)($gp)
+; 32-CGP-DAG:   movn $[[R0]], $[[R1]], $4
 
 ; 32-CMP-DAG:   lw $[[R0:[0-9]+]], %got(i3)
 ; 32-CMP-DAG:   addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
@@ -23,9 +29,9 @@
 ; 32-CMP-DAG:   or $[[T2:[0-9]+]], $[[T0]], $[[T1]]
 ; 32-CMP-DAG:   lw $2, 0($[[T2]])
 
-; 64-CMOV-DAG:  ldr $[[R0:[0-9]+]]
-; 64-CMOV-DAG:  ld $[[R1:[0-9]+]], %got_disp(i1)
-; 64-CMOV-DAG:  movn $[[R0]], $[[R1]], $4
+; 64-CPIC-DAG:  ldr $[[R0:[0-9]+]]
+; 64-CPIC-DAG:  ld $[[R1:[0-9]+]], %got_disp(i1)
+; 64-CPIC-DAG:  movn $[[R0]], $[[R1]], $4
 
 ; 64-CMP-DAG:   ld $[[R0:[0-9]+]], %got_disp(i3)(
 ; 64-CMP-DAG:   daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(i1)
@@ -51,10 +57,14 @@ entry:
 
 ; ALL-LABEL: cmov2:
 
-; 32-CMOV-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
-; 32-CMOV-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
-; 32-CMOV-DAG:  movn  $[[R1]], $[[R0]], $4
-; 32-CMOV-DAG:  lw $2, 0($[[R0]])
+; 32-CPIC-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
+; 32-CPIC-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
+; 32-CPIC-DAG:  movn  $[[R1]], $[[R0]], $4
+; 32-CPIC-DAG:  lw $2, 0($[[R0]])
+
+; 32-CGP-DAG:  addiu $[[R1:[0-9]+]], $gp, %gp_rel(d)
+; 32-CGP-DAG:  addiu $[[R0:[0-9]+]], $gp, %gp_rel(c)
+; 32-CGP-DAG:  movn $[[R1]], $[[R0]], $4
 
 ; 32-CMP-DAG:   addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
 ; 32-CMP-DAG:   addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)

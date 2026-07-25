@@ -4501,6 +4501,29 @@ bool MipsTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return isInt<16>(Imm);
 }
 
+bool MipsTargetLowering::isLegalImmediate(unsigned Opc,
+                                          const SDValue Val) const {
+  switch (Opc) {
+  case ISD::ADD:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SETCC:
+    switch (Val.getNode()->getOpcode()) {
+    case MipsISD::Lo:
+    case MipsISD::GPRel:
+      return true;
+    default:
+      if (auto Const = dyn_cast<ConstantSDNode>(Val)) {
+        return isInt<16>(Const->getSExtValue());
+      }
+    }
+    break;
+  }
+
+  return false;
+}
+
 unsigned MipsTargetLowering::getJumpTableEncoding() const {
   if (!isPositionIndependent())
     return MachineJumpTableInfo::EK_BlockAddress;

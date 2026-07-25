@@ -3064,6 +3064,14 @@ public:
     return Value == 0;
   }
 
+  /// Return true if the specified immediate is legal immediate operation,
+  /// that is the target has instructions which can perform the operation
+  /// with the immediate without having to materialize the immediate into a
+  /// register.
+  virtual bool isLegalImmediate(unsigned Opc, const SDValue Val) const {
+    return false;
+  }
+
   /// Given a shuffle vector SVI representing a vector splat, return a new
   /// scalar type of size equal to SVI's scalar type if the new type is more
   /// profitable. Returns nullptr otherwise. For example under MVE float splats
