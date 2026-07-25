@@ -17,10 +17,8 @@ using namespace llvm::object;
 using namespace llvm::GOFF;
 
 namespace {
-char GOFFData[GOFF::RecordLength * 3] = {0x00};
-
-void constructValidGOFF(size_t Size) {
-  StringRef ValidSize(GOFFData, Size);
+void constructValidGOFF(const char *Data, size_t Size) {
+  StringRef ValidSize(Data, Size);
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
           MemoryBufferRef(ValidSize, "dummyGOFF"));
@@ -28,9 +26,9 @@ void constructValidGOFF(size_t Size) {
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 }
 
-void constructInvalidGOFF(size_t Size) {
+void constructInvalidGOFF(const char *Data, size_t Size) {
   // Construct GOFFObject with record of length != multiple of 80.
-  StringRef InvalidData(GOFFData, Size);
+  StringRef InvalidData(Data, Size);
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
           MemoryBufferRef(InvalidData, "dummyGOFF"));
@@ -69,18 +67,20 @@ TEST(GOFFObjectFileTest, createObjectFile) {
 }
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectValidSize) {
+  char GOFFData[GOFF::RecordLength * 3] = {0x00};
   GOFFData[0] = (char)0x03;
   GOFFData[1] = (char)0xF0;
   GOFFData[80] = (char)0x03;
   GOFFData[81] = (char)0x40;
-  constructValidGOFF(160);
-  constructValidGOFF(0);
+  constructValidGOFF(GOFFData, 160);
+  constructValidGOFF(GOFFData, 0);
 }
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectInvalidSize) {
-  constructInvalidGOFF(70);
-  constructInvalidGOFF(79);
-  constructInvalidGOFF(81);
+  char GOFFData[GOFF::RecordLength * 3] = {0x00};
+  constructInvalidGOFF(GOFFData, 70);
+  constructInvalidGOFF(GOFFData, 79);
+  constructInvalidGOFF(GOFFData, 81);
 }
 
 TEST(GOFFObjectFileTest, MissingHDR) {
