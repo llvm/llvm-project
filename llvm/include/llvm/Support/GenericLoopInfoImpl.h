@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_GENERICLOOPINFOIMPL_H
 #define LLVM_SUPPORT_GENERICLOOPINFOIMPL_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -465,8 +466,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     return GraphTraits<const BlockT *>::getNumber(BB);
   };
 
-  const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
-  ParentPtr = DomRoot->getBlock()->getParent();
+  ParentPtr = DomTree.getRootNode()->getBlock()->getParent();
   BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
   unsigned MaxNumber = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
 
@@ -491,8 +491,9 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   SmallVector<BlockInfo, 32> Info(MaxNumber);
   // The loop headers, repeated once per backedge.
   SmallVector<unsigned, 4> Headers;
-  // The headers of the loops that an edge re-enters, likewise repeated.
-  SmallVector<unsigned, 0> Reentries;
+  // The headers of the loops that an edge re-enters. They mark irreducible
+  // loops that need to be reduced to natural loop subsets.
+  DenseSet<unsigned> Reentries;
 
   // Weave loop header \p H (and its own header chain) into the loop header
   // chain of \p B, keeping the chain ordered from innermost to outermost by
@@ -531,7 +532,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   };
   SmallVector<Frame, 8> Stack;
   unsigned Counter = FirstOnPath;
-  auto push = [&](BlockT *BB) {
+  auto open = [&](BlockT *BB) {
     unsigned B = num(BB);
     Info[B].Pos = Counter++;
     Info[B].LoopHeader = NoBlock;
@@ -539,7 +540,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
         {BB, BlockTraits::child_begin(BB), BlockTraits::child_end(BB)});
   };
 
-  push(DomRoot->getBlock());
+  open(GraphTraits<ParentT>::getEntryNode(ParentPtr));
   while (!Stack.empty()) {
     Frame &Top = Stack.back();
     if (Top.Cur == Top.End) {
@@ -557,23 +558,23 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     unsigned B1 = num(B1P);
     if (Info[B1].Pos == Unvisited) {
       // Tree edge; the weaving happens when B1's frame is popped.
-      push(B1P);
+      open(B1P);
     } else if (Info[B1].Pos >= FirstOnPath) {
       // Retreating edge, including a self edge: B1 heads a loop.
       Headers.push_back(B1);
       tagLoopHeader(num(B0P), B1);
     } else {
-      // Cross or forward edge. Tagging B1's innermost header adds B0 to that
-      // loop and, through its chain, to the ones enclosing it. A header that
-      // has left the search path heads a loop this edge re-enters at a block
-      // other than its header, so record it and keep looking outwards.
+      // Climb B1's header chain: each enclosing header still off the DFS path
+      // heads a closed cycle this edge re-enters, so B1 is a non-header entry
+      // of it (and it is irreducible). Stop at the first on-path header and
+      // attribute B0 to it.
       for (unsigned H = Info[B1].LoopHeader; H != NoBlock;
            H = Info[H].LoopHeader) {
         if (Info[H].Pos >= FirstOnPath) {
           tagLoopHeader(num(B0P), H);
           break;
         }
-        Reentries.push_back(H);
+        Reentries.insert(H);
       }
     }
   }
@@ -588,19 +589,21 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   if (!Reentries.empty()) {
     // A re-entered loop has more than one entry, so it is not a natural loop.
     // Reduce it, innermost first, to the natural loop of its header's
-    // backedges by splicing the header out of the chain of every block that
-    // loop excludes.
+    // backedges: a backward search from the latches finds the blocks to keep;
+    // splice the header out of the chain of every other block.
     for (unsigned H : Reentries)
       Info[H].Pos = IsReentered;
     DomTree.updateDFSNumbers();
     SmallVector<unsigned, 0> Mark(MaxNumber, NoBlock);
     SmallVector<BlockT *, 8> Worklist;
-    // The blocks of each chain, so that a header visits only its own instead
-    // of searching every block for them.
+    // Invert the chains into the loop forest, so that a header visits only its
+    // own blocks.
     SmallVector<unsigned, 0> FirstChild(MaxNumber, NoBlock);
     SmallVector<unsigned, 0> NextSibling(MaxNumber, NoBlock);
+    SmallVector<BlockT *, 0> Blocks(MaxNumber);
     for (BlockT *BB : Postorder) {
       unsigned B = num(BB);
+      Blocks[B] = BB;
       if (unsigned P = Info[B].LoopHeader; P != NoBlock) {
         NextSibling[B] = FirstChild[P];
         FirstChild[P] = B;
@@ -613,9 +616,18 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
       Mark[H] = H;
       Worklist.clear();
       auto enqueue = [&](BlockT *Pred) {
-        if (Mark[num(Pred)] == H)
+        unsigned P = num(Pred);
+        // If Pred is in a natural loop, mark its header and skip interior
+        // blocks.
+        for (unsigned A = P; A != NoBlock; A = Info[A].LoopHeader)
+          if (Info[A].LoopHeader == H) {
+            P = A;
+            Pred = Blocks[A];
+            break;
+          }
+        if (Mark[P] == H)
           return;
-        Mark[num(Pred)] = H;
+        Mark[P] = H;
         Worklist.push_back(Pred);
       };
       // Place the latches, the predecessors the header dominates, into a
