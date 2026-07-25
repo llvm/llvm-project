@@ -1569,6 +1569,66 @@ float c11_atomic_fetch_max_fp(_Atomic(float) *ptr, float value) {
   // OGCG-NEXT: store float %[[RES]], ptr %{{.+}}, align 4
 }
 
+float atomic_fetch_fminimum_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fminimum_fp
+  // LLVM-LABEL: @atomic_fetch_fminimum_fp
+  // OGCG-LABEL: @atomic_fetch_fminimum_fp
+
+  return __atomic_fetch_fminimum(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}}, align 4
+}
+
+float atomic_fetch_fmaximum_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fmaximum_fp
+  // LLVM-LABEL: @atomic_fetch_fmaximum_fp
+  // OGCG-LABEL: @atomic_fetch_fmaximum_fp
+
+  return __atomic_fetch_fmaximum(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+}
+
+float atomic_fetch_fminimum_num_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fminimum_num_fp
+  // LLVM-LABEL: @atomic_fetch_fminimum_num_fp
+  // OGCG-LABEL: @atomic_fetch_fminimum_num_fp
+
+  return __atomic_fetch_fminimum_num(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+}
+
+float atomic_fetch_fmaximum_num_fp(float *ptr, float value) {
+  // CIR-LABEL: @atomic_fetch_fmaximum_num_fp
+  // LLVM-LABEL: @atomic_fetch_fmaximum_num_fp
+  // OGCG-LABEL: @atomic_fetch_fmaximum_num_fp
+
+  return __atomic_fetch_fmaximum_num(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM:      %[[RES:.+]] = atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store float %[[RES]], ptr %{{.+}} align 4
+}
+
 int atomic_fetch_and(int *ptr, int value) {
   // CIR-LABEL: @atomic_fetch_and
   // LLVM-LABEL: @atomic_fetch_and

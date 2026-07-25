@@ -8375,7 +8375,14 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Max", 6, "max">,
     I32EnumAttrCase<"Min", 7, "min">,
     I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
-    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">
+    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">,
+    // The primary difference between Max, Maximum, and MaximumNum is primarily
+    // about how they handle floating-point inputs. See the description of the
+    // CIR_AtomicFetchOp for more information.
+    I32EnumAttrCase<"Maximum", 10, "maximum">,
+    I32EnumAttrCase<"Minimum", 11, "minimum">,
+    I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
+    I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -8389,7 +8396,8 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
     `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
     opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, `min`,
-    `uinc_wrap`, and `udec_wrap`.
+    `uinc_wrap`, `udec_wrap`, `maximum`, `minimum`, `maximum_num`, and
+    `minimum_num`.
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation
@@ -8402,6 +8410,20 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     of this operation is the old value loaded from `ptr` before the binary
     operation. Otherwise, the result of this operation is the result of the
     binary operation.
+
+    The primary difference between `max`, `maximum`, and `maximum_num` is how
+    they handle floating-point inputs:
+
+    - `max` on floating-point inputs corresponds to the `atomicrmw fmax` LLVM
+      instruction.
+    - `maximum` corresponds to the `atomicrmw fmaximum` LLVM instruction.
+    - `maximum_num` corresponds to the `atomicrmw fmaximumnum` LLVM instruction.
+
+    Similar rules apply to `min`, `minimum`, and `minimum_num`. See the
+    reference for the LLVM instruction `atomicrmw` for more information.
+
+    The operation `maximum`, `minimum`, `maximum_num`, and `minimum_num` only
+    accept floating-point inputs.
 
     Example:
     %res = cir.atomic.fetch add seq_cst %ptr, %val

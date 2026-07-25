@@ -1138,7 +1138,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPReplicateSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorEndPointerSC ||
            R->getVPRecipeID() == VPRecipeBase::VPVectorPointerSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC;
+           R->getVPRecipeID() == VPRecipeBase::VPWidenCanonicalIVSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPDerivedIVSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -4154,10 +4155,10 @@ protected:
 #endif
 };
 
-/// A recipe for converting the input value \p IV value to the corresponding
-/// value of an IV with different start and step values, using Start + IV *
-/// Step.
-class VPDerivedIVRecipe : public VPSingleDefRecipe {
+/// A recipe for converting \p Current into \p Start + \p Current * \p Step.
+/// FastMathFlags are derived from the \p FPBinOp in the case of FP inductions,
+/// and the passed NoWrap \p Flags apply in the case of Ptr and Int inductions.
+class VPDerivedIVRecipe : public VPRecipeWithIRFlags {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -4166,17 +4167,18 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
-                    VPValue *Step)
-      : VPSingleDefRecipe(VPRecipeBase::VPDerivedIVSC, {Start, IV, Step},
-                          Start->getScalarType(), nullptr),
+                    const FPMathOperator *FPBinOp, VPValue *Start,
+                    VPValue *Current, VPValue *Step,
+                    const VPIRFlags::WrapFlagsTy &Flags = {})
+      : VPRecipeWithIRFlags(VPRecipeBase::VPDerivedIVSC, {Start, Current, Step},
+                            Start->getScalarType(), Flags),
         Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
-                                 getStepValue());
+                                 getStepValue(), getNoWrapFlags());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)
