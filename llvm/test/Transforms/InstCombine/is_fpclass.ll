@@ -3956,12 +3956,15 @@ entry:
 
 ; --------------------------------------------------------------------
 ; x87 pseudo-NaN / unsupported encodings (explicit integer bit clear)
+; Do not fold fcSNan/fcQNan via APFloat::isSignaling()/classify().
+; fcNan may still fold to true (value is a NaN).
 ; --------------------------------------------------------------------
 
 ; 0xK7FFF3FFFFFFFFFFFFFFF - exp all-ones, integer/J-bit = 0, payload != 0
 define i1 @test_constant_class_f80_pseudo_nan_snan() {
 ; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_snan(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 +snan(0x3FFFFFFFFFFFFFFF), /* (snan) */ i32 1)
+; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF3FFFFFFFFFFFFFFF, i32 1)
   ret i1 %val
@@ -3969,7 +3972,8 @@ define i1 @test_constant_class_f80_pseudo_nan_snan() {
 
 define i1 @test_constant_class_f80_pseudo_nan_qnan() {
 ; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_qnan(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 +snan(0x3FFFFFFFFFFFFFFF), /* (qnan) */ i32 2)
+; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF3FFFFFFFFFFFFFFF, i32 2)
   ret i1 %val
@@ -3986,7 +3990,8 @@ define i1 @test_constant_class_f80_pseudo_nan_nan() {
 ; Quiet bit clear (would look like SNaN if the integer bit were ignored).
 define i1 @test_constant_class_f80_pseudo_nan_quiet_bit_clear_snan() {
 ; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_quiet_bit_clear_snan(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 +snan(0x1FFFFFFFFFFFFFFF), /* (snan) */ i32 1)
+; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF1FFFFFFFFFFFFFFF, i32 1)
   ret i1 %val
@@ -4003,7 +4008,8 @@ define i1 @test_constant_class_f80_pseudo_nan_quiet_bit_clear_nan() {
 ; Pseudo-infinity: exp all-ones, integer bit 0, significand 0.
 define i1 @test_constant_class_f80_pseudo_inf_snan() {
 ; CHECK-LABEL: @test_constant_class_f80_pseudo_inf_snan(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 +snan(0x0), /* (snan) */ i32 1)
+; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF0000000000000000, i32 1)
   ret i1 %val
