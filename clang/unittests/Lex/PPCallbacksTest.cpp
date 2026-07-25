@@ -473,7 +473,8 @@ TEST_F(PPCallbacksTest, EmbedFileNotFoundChained) {
       llvm::MemoryBuffer::getMemBuffer(SourceText);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
-  unsigned int NumCalls = 0;
+  unsigned int NumNotFoundCalls = 0;
+  unsigned int NumDirectiveCalls = 0;
   HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
   PreprocessorOptions PPOpts;
@@ -488,26 +489,40 @@ TEST_F(PPCallbacksTest, EmbedFileNotFoundChained) {
 
   class EmbedFileNotFoundCallbacks : public PPCallbacks {
   public:
-    unsigned int &NumCalls;
+    unsigned int &NumNotFoundCalls;
+    unsigned int &NumDirectiveCalls;
 
-    EmbedFileNotFoundCallbacks(unsigned int &NumCalls) : NumCalls(NumCalls) {}
+    EmbedFileNotFoundCallbacks(unsigned int &NumNotFoundCalls,
+                               unsigned int &NumDirectiveCalls)
+        : NumNotFoundCalls(NumNotFoundCalls),
+          NumDirectiveCalls(NumDirectiveCalls) {}
 
     bool EmbedFileNotFound(StringRef FileName) override {
-      NumCalls++;
+      NumNotFoundCalls++;
       return true;
+    }
+
+    void EmbedDirective(SourceLocation, StringRef, bool,
+                        OptionalFileEntryRef File,
+                        const LexEmbedParametersResult &) override {
+      EXPECT_FALSE(File);
+      NumDirectiveCalls++;
     }
   };
 
   // Add two instances of `EmbedFileNotFoundCallbacks` to ensure the
   // preprocessor is using an instance of `PPChainedCallbaks`.
-  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(NumCalls));
-  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(NumCalls));
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(
+      NumNotFoundCalls, NumDirectiveCalls));
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>(
+      NumNotFoundCalls, NumDirectiveCalls));
 
   // Lex source text.
   PP.EnterMainSourceFile();
   PP.LexTokensUntilEOF();
 
-  ASSERT_EQ(2u, NumCalls);
+  ASSERT_EQ(2u, NumNotFoundCalls);
+  ASSERT_EQ(2u, NumDirectiveCalls);
   ASSERT_EQ(0u, DiagConsumer->getNumErrors());
 }
 

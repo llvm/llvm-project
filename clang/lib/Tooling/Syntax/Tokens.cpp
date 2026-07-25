@@ -15,6 +15,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/PPEmbedParameters.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -658,9 +659,36 @@ public:
     Collector->Expansions[Range.getBegin()] = Range.getEnd();
     LastExpansionEnd = Range.getEnd();
   }
+
+  void EmbedDirective(SourceLocation, StringRef, bool,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override {
+    if (!Collector || !File)
+      return;
+    auto Record = [&](const auto &Param) {
+      if (!Param)
+        return;
+      for (const clang::Token &T : Param->Tokens)
+        ++EmbedTokensToIgnore[T.getLocation()];
+    };
+    Record(Params.MaybeIfEmptyParam);
+    Record(Params.MaybePrefixParam);
+    Record(Params.MaybeSuffixParam);
+  }
+
+  bool consumeIgnoredEmbedToken(const clang::Token &T) {
+    auto It = EmbedTokensToIgnore.find(T.getLocation());
+    if (It == EmbedTokensToIgnore.end())
+      return false;
+    if (--It->second == 0)
+      EmbedTokensToIgnore.erase(It);
+    return true;
+  }
+
   // FIXME: handle directives like #pragma, #include, etc.
 private:
   TokenCollector *Collector;
+  llvm::DenseMap<SourceLocation, unsigned> EmbedTokensToIgnore;
   /// Used to detect recursive macro expansions.
   SourceLocation LastExpansionEnd;
 };
@@ -681,6 +709,8 @@ private:
 TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
   // Collect the expanded token stream during preprocessing.
   PP.setTokenWatcher([this](const clang::Token &T) {
+    if (Collector->consumeIgnoredEmbedToken(T))
+      return;
     if (T.is(tok::annot_module_name)) {
       auto &SM = this->PP.getSourceManager();
       StringRef Text = Lexer::getSourceText(

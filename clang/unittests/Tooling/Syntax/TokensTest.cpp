@@ -1201,4 +1201,34 @@ TEST_F(TokenCollectorTest, CXX20ModuleImportPartition) {
                           Kind(tok::annot_module_name), Kind(tok::semi),
                           Kind(tok::eof)));
 }
+
+TEST_F(TokenCollectorTest, CXX26Embed) {
+  LangStandard = "-std=c++26";
+  addFile("./data.bin", "a");
+  recordTokens(R"cpp(
+    #define ONE 1
+    #define TWO 2
+    struct S {
+    unsigned char data[3] = {
+    #embed "data.bin" suffix(, TWO) prefix(ONE,)
+    };
+    unsigned char empty[2] = {
+    #embed "data.bin" limit(0) if_empty(ONE, TWO)
+    };
+    };
+  )cpp");
+
+  EXPECT_THAT(
+      Buffer.expandedTokens(),
+      ElementsAre(
+          Kind(tok::kw_struct), Kind(tok::identifier), Kind(tok::l_brace),
+          Kind(tok::kw_unsigned), Kind(tok::kw_char), Kind(tok::identifier),
+          Kind(tok::l_square), Kind(tok::numeric_constant), Kind(tok::r_square),
+          Kind(tok::equal), Kind(tok::l_brace), Kind(tok::r_brace),
+          Kind(tok::semi), Kind(tok::kw_unsigned), Kind(tok::kw_char),
+          Kind(tok::identifier), Kind(tok::l_square),
+          Kind(tok::numeric_constant), Kind(tok::r_square), Kind(tok::equal),
+          Kind(tok::l_brace), Kind(tok::r_brace), Kind(tok::semi),
+          Kind(tok::r_brace), Kind(tok::semi), Kind(tok::eof)));
+}
 } // namespace

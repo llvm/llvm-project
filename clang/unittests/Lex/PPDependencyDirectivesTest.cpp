@@ -80,7 +80,8 @@ public:
   void EmbedDirective(SourceLocation, StringRef, bool,
                       OptionalFileEntryRef File,
                       const LexEmbedParametersResult &) override {
-    assert(File && "expected to only be called when the file is found");
+    if (!File)
+      return;
     StringRef Filename =
         llvm::sys::path::remove_leading_dotslash(File->getName());
     EmbeddedFiles.push_back(Filename);

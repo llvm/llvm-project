@@ -66,7 +66,8 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   void EmbedDirective(SourceLocation, StringRef, bool,
                       OptionalFileEntryRef File,
                       const LexEmbedParametersResult &) override {
-    assert(File && "expected to only be called when the file is found");
+    if (!File)
+      return;
     StringRef FileName =
         llvm::sys::path::remove_leading_dotslash(File->getName());
     DepCollector.maybeAddDependency(FileName,

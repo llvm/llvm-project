@@ -1116,6 +1116,9 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
   for (const auto &M : AST.getMacros().UnknownMacros)
     AddMacro(M);
 
+  for (const Range &R : AST.getMacros().EmbedDirectiveTokens)
+    Builder.addToken(R, HighlightingKind::Keyword);
+
   return std::move(Builder).collect(AST);
 }
 
@@ -1169,6 +1172,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Bracket";
   case HighlightingKind::Label:
     return OS << "Label";
+  case HighlightingKind::Keyword:
+    return OS << "Keyword";
   case HighlightingKind::InactiveCode:
     return OS << "InactiveCode";
   }
@@ -1200,6 +1205,7 @@ highlightingKindFromString(llvm::StringRef Name) {
       {"Modifier", HighlightingKind::Modifier},
       {"Operator", HighlightingKind::Operator},
       {"Bracket", HighlightingKind::Bracket},
+      {"Keyword", HighlightingKind::Keyword},
       {"InactiveCode", HighlightingKind::InactiveCode},
   };
 
@@ -1370,6 +1376,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "bracket";
   case HighlightingKind::Label:
     return "label";
+  case HighlightingKind::Keyword:
+    return "keyword";
   case HighlightingKind::InactiveCode:
     return "comment";
   }

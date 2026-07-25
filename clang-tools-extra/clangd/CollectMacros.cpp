@@ -11,6 +11,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include <cstddef>
@@ -93,6 +94,25 @@ void CollectMainFileMacros::Defined(const Token &MacroName,
                                     SourceRange Range) {
   add(MacroName, MD.getMacroInfo(), /*IsDefinition=*/false,
       /*InConditionalDirective=*/true);
+}
+
+void CollectMainFileMacros::EmbedDirective(SourceLocation HashLoc, StringRef,
+                                           bool, OptionalFileEntryRef,
+                                           const LexEmbedParametersResult &) {
+  if (!InMainFile)
+    return;
+  auto Embed = Lexer::findNextToken(HashLoc, SM, PP.getLangOpts());
+  if (!Embed)
+    return;
+
+  SourceLocation HashEnd =
+      Lexer::getLocForEndOfToken(HashLoc, 0, SM, PP.getLangOpts());
+  if (HashEnd.isValid())
+    Out.EmbedDirectiveTokens.push_back(
+        halfOpenToRange(SM, CharSourceRange::getCharRange(HashLoc, HashEnd)));
+  Out.EmbedDirectiveTokens.push_back(
+      halfOpenToRange(SM, CharSourceRange::getCharRange(Embed->getLocation(),
+                                                        Embed->getEndLoc())));
 }
 
 void CollectMainFileMacros::SourceRangeSkipped(SourceRange R,

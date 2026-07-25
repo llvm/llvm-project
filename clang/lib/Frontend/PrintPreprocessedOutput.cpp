@@ -465,17 +465,19 @@ void PrintPPOutputPPCallbacks::EmbedDirective(
     *OS << " prefix(";
     PrintToks(Params.MaybePrefixParam->Tokens);
     *OS << ")";
-    NumToksToSkip += Params.MaybePrefixParam->Tokens.size();
+    if (File)
+      NumToksToSkip += Params.MaybePrefixParam->Tokens.size();
   }
   if (Params.MaybeSuffixParam) {
     *OS << " suffix(";
     PrintToks(Params.MaybeSuffixParam->Tokens);
     *OS << ")";
-    NumToksToSkip += Params.MaybeSuffixParam->Tokens.size();
+    if (File)
+      NumToksToSkip += Params.MaybeSuffixParam->Tokens.size();
   }
 
   // We may need to skip the annotation token.
-  if (SkipAnnotToks)
+  if (File && SkipAnnotToks)
     NumToksToSkip++;
 
   *OS << " /* clang -E -dE */";
