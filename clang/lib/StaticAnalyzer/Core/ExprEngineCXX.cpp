@@ -541,11 +541,10 @@ void ExprEngine::handleConstructor(const Expr *E,
       // it in fact constructs into the correct target. This constructor can
       // therefore be skipped.
       Target = *ElidedTarget;
-      NodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
       State = finishObjectConstruction(State, CE, SF);
       if (auto L = Target.getAs<Loc>())
         State = State->BindExpr(CE, SF, State->getSVal(*L, CE->getType()));
-      Bldr.generateNode(CE, Pred, State);
+      destNodes.insert(Engine.makePostStmtNode(CE, State, Pred));
       return;
     }
   }
@@ -582,10 +581,11 @@ void ExprEngine::handleConstructor(const Expr *E,
 
       // No element construction will happen in a 0 size array.
       if (isZeroSizeArray()) {
-        NodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
         static SimpleProgramPointTag T{"ExprEngine",
                                        "Skipping 0 size array construction"};
-        Bldr.generateNode(CE, Pred, State, &T);
+        const ProgramPoint &P = ProgramPoint::getProgramPoint(
+            CE, ProgramPoint::PostStmtKind, Pred->getStackFrame(), &T);
+        destNodes.insert(Engine.makeNode(P, State, Pred));
         return;
       }
 
@@ -663,10 +663,9 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (State != Pred->getState()) {
     static SimpleProgramPointTag T("ExprEngine",
                                    "Prepare for object construction");
-    ExplodedNodeSet DstPrepare;
-    NodeBuilder BldrPrepare(Pred, DstPrepare, *currBldrCtx);
-    Pred =
-        BldrPrepare.generateNode(E, Pred, State, &T, ProgramPoint::PreStmtKind);
+    const ProgramPoint &P = ProgramPoint::getProgramPoint(
+        E, ProgramPoint::PreStmtKind, Pred->getStackFrame(), &T);
+    Pred = Engine.makeNode(P, State, Pred);
     if (!Pred)
       return;
   }
@@ -685,7 +684,6 @@ void ExprEngine::handleConstructor(const Expr *E,
   ExplodedNodeSet PreInitialized;
   if (CE) {
     // FIXME: Is it possible and/or useful to do this before PreStmt?
-    NodeBuilder Bldr(DstPreVisit, PreInitialized, *currBldrCtx);
     for (ExplodedNode *N : DstPreVisit) {
       ProgramStateRef State = N->getState();
       if (CE->requiresZeroInitialization()) {
@@ -708,8 +706,9 @@ void ExprEngine::handleConstructor(const Expr *E,
           State = State->bindDefaultZero(Target, SF);
       }
 
-      Bldr.generateNode(CE, N, State, /*tag=*/nullptr,
-                        ProgramPoint::PreStmtKind);
+      const ProgramPoint &P = ProgramPoint::getProgramPoint(
+          CE, ProgramPoint::PreStmtKind, N->getStackFrame(), /*tag=*/nullptr);
+      PreInitialized.insert(Engine.makeNode(P, State, N));
     }
   } else {
     PreInitialized = DstPreVisit;
@@ -742,7 +741,6 @@ void ExprEngine::handleConstructor(const Expr *E,
   // later (for life-time extended temporaries) -- but avoids infeasible
   // paths when no-return temporary destructors are used for assertions.
   ExplodedNodeSet DstEvaluatedPostProcessed;
-  NodeBuilder Bldr(DstEvaluated, DstEvaluatedPostProcessed, *currBldrCtx);
   const AnalysisDeclContext *ADC = SF->getAnalysisDeclContext();
   if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
     if (llvm::isa_and_nonnull<CXXTempObjectRegion,
@@ -762,7 +760,8 @@ void ExprEngine::handleConstructor(const Expr *E,
              "We should not have inlined this constructor!");
 
       for (ExplodedNode *N : DstEvaluated) {
-        Bldr.generateSink(E, N, N->getState());
+        DstEvaluatedPostProcessed.insert(Engine.makePostStmtNode(
+            E, N->getState(), N, /* MarkAsSink */ true));
       }
 
       // There is no need to run the PostCall and PostStmt checker
@@ -772,6 +771,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     }
   }
 
+  DstEvaluatedPostProcessed.insert(DstEvaluated);
   ExplodedNodeSet DstPostArgumentCleanup;
   for (ExplodedNode *I : DstEvaluatedPostProcessed)
     finishArgumentConstruction(DstPostArgumentCleanup, I, *Call);
