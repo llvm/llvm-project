@@ -6142,13 +6142,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (!HasDefault)
     createUnreachableSwitchDefault(SI, DTU);
 
-  auto *UnreachableDefault = SI->getDefaultDest();
-
   // Drop the switch.
   SI->eraseFromParent();
 
-  if (!HasDefault && DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, UnreachableDefault}});
+  if (DTU && isa<UncondBrInst>(NewBI))
+    DTU->applyUpdates({{DominatorTree::Delete, BB, OtherDest}});
 
   return true;
 }

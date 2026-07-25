@@ -122,6 +122,13 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     return true;
   }
 
+  // The frame register is referenced through DW_OP_fbreg relative to
+  // DW_AT_frame_base, so it needs no DWARF register number of its own.
+  if (isFrameRegister(TRI, MachineReg)) {
+    DwarfRegs.push_back(Register::createRegister(-1, nullptr));
+    return true;
+  }
+
   // Walk up the super-register chain until we find a valid number.
   // For example, EAX on x86_64 is a 32-bit fragment of RAX with offset 0.
   for (MCPhysReg SR : TRI.superregs(MachineReg)) {

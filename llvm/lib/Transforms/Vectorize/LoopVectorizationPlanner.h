@@ -402,14 +402,13 @@ public:
     return RuntimeEC;
   }
 
-  /// Convert the input value \p Current to the corresponding value of an
-  /// induction with \p Start and \p Step values, using \p Start + \p Current *
-  /// \p Step.
+  /// Convert \p Current to \p Start + \p Current * \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPValue *Current, VPValue *Step) {
+                                     VPValue *Current, VPValue *Step,
+                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
@@ -799,10 +798,12 @@ public:
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
-  /// Returns true if the target machine supports masked loads or stores
-  /// for \p I's data type and alignment. The caller must ensure the access is
-  /// consecutive or part of an interleave group.
-  bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
+  /// Returns true if the target machine supports a masked load (if \p IsLoad)
+  /// or masked store of scalar type \p ScalarTy with \p Alignment in address
+  /// space \p AddressSpace. The caller must ensure the access is consecutive or
+  /// part of an interleave group.
+  bool isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy, Align Alignment,
+                                unsigned AddressSpace) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather
   /// or scatter operation.

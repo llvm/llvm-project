@@ -1058,6 +1058,11 @@ public:
   /// and shuffles.
   bool interleavedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
 
+  /// Returns true if the target machine supports masked loads or stores
+  /// for \p I's data type and alignment. The caller must ensure the access is
+  /// consecutive or part of an interleave group.
+  bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
+
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) const {
     return InterleaveInfo.isInterleaved(Instr);
@@ -2394,6 +2399,14 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   Scalars[VF].insert_range(Worklist);
 }
 
+bool LoopVectorizationCostModel::isLegalMaskedLoadOrStore(
+    Instruction *I, ElementCount VF) const {
+  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  return Config.isLegalMaskedLoadOrStore(isa<LoadInst>(I), getLoadStoreType(I),
+                                         getLoadStoreAlignment(I),
+                                         getLoadStoreAddressSpace(I));
+}
+
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2416,7 +2429,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   case Instruction::Store: {
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
                                                  getLoadStorePointerOperand(I));
-    return !(IsConsecutive && Config.isLegalMaskedLoadOrStore(I, VF)) &&
+    return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
            !Config.isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
@@ -2643,7 +2656,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (VF.isScalable() && NeedsMaskForGaps)
     return false;
 
-  return Config.isLegalMaskedLoadOrStore(I, VF);
+  return isLegalMaskedLoadOrStore(I, VF);
 }
 
 std::optional<LoopVectorizationCostModel::InstWidening>
@@ -5590,7 +5603,8 @@ VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
                              LoopVectorizationCostModel &CM,
                              VFSelectionContext &Config)
     : TTI(Config.getTTI()), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
-      CostKind(Config.CostKind), PSE(Config.getPSE()), L(Config.getLoop()) {}
+      Config(Config), CostKind(Config.CostKind), PSE(Config.getPSE()),
+      L(Config.getLoop()) {}
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
