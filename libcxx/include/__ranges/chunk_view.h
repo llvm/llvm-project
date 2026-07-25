@@ -134,7 +134,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
   operator==(const __outer_iterator& __i, default_sentinel_t) {
     return *__i.__parent_->__current_ == ranges::end(__i.__parent_->__base_) && __i.__parent_->__remainder_ != 0;
   }
@@ -219,7 +219,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
   operator==(const __inner_iterator& __i, default_sentinel_t) {
     return __i.__parent_->__remainder_ == 0;
   }
@@ -342,7 +342,7 @@ class chunk_view<_View>::__iterator {
       _Parent* __parent, iterator_t<_Base> __current, range_difference_t<_Base> __missing = 0)
       : __current_(__current), __end_(ranges::end(__parent->__base_)), __n_(__parent->__n_), __missing_(__missing) {}
 
-  [[nodiscard]] static consteval auto __get_iterator_concept() {
+  static consteval auto __get_iterator_concept() {
     if constexpr (random_access_range<_Base>)
       return random_access_iterator_tag{};
     else if constexpr (bidirectional_range<_Base>)
@@ -429,39 +429,39 @@ public:
     return *this += -__x;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
     return __x.__current_ == __y.__current_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, default_sentinel_t) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, default_sentinel_t) {
     return __x.__current_ == __x.__end_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return __x.__current_ < __y.__current_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return __y < __x;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return !(__y < __x);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return !(__x < __y);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
   {
     return __x.__current_ <=> __y.__current_;
