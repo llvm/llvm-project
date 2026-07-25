@@ -6404,7 +6404,8 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   // See SIInstrInfo::isLegalGFX12PlusWidePackedOperand for more information.
   if (AMDGPU::isGFX12Plus(ST) && MO.isReg() && RI.isSGPRReg(MRI, MO.getReg()) &&
       AMDGPU::isWidePackedInst(MI.getOpcode()) &&
-      !isLegalGFX12PlusWidePackedOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx), &MO))
+      !isLegalGFX12PlusWidePackedOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx),
+                                         &MO))
     return false;
 
   if (!isLegalRegOperand(MRI, OpInfo, MO))
@@ -6470,10 +6471,9 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
   return true;
 }
 
-bool SIInstrInfo::isLegalGFX12PlusWidePackedOperand(const MachineRegisterInfo &MRI,
-                                                    const MachineInstr &MI,
-                                                    unsigned SrcN,
-                                                    const MachineOperand *MO) const {
+bool SIInstrInfo::isLegalGFX12PlusWidePackedOperand(
+    const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
+    const MachineOperand *MO) const {
   constexpr unsigned NumOps = 3;
   constexpr AMDGPU::OpName OpNames[NumOps * 2] = {
       AMDGPU::OpName::src0,           AMDGPU::OpName::src1,
