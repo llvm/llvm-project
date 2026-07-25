@@ -170,3 +170,23 @@ func.func @negative_scalable(%pad: f32) -> vector<[4]xf32> {
   %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<4xf32>, vector<[4]xf32>
   return %r : vector<[4]xf32>
 }
+
+// -----
+
+// The buffer has a use (subview) that mem2reg does not recognize as a
+// removable load or store, so the slot is left untouched: must NOT be promoted.
+
+// CHECK-LABEL: func.func @negative_subview
+//        CHECK:   memref.alloca
+//        CHECK:   vector.transfer_write
+//        CHECK:   memref.subview
+//        CHECK:   vector.transfer_read
+func.func @negative_subview(%pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<1.0> : vector<8xf32>
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %cst, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %sv = memref.subview %a[0] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1]>>
+  %r = vector.transfer_read %sv[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1]>>, vector<4xf32>
+  return %r : vector<4xf32>
+}
