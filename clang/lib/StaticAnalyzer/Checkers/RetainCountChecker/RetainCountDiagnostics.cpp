@@ -501,9 +501,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
       // Iterate through the parameter expressions and see if the symbol
       // was ever passed as an argument.
-      unsigned i = 0;
-
-      for (auto AI=CE->arg_begin(), AE=CE->arg_end(); AI!=AE; ++AI, ++i) {
+      for (auto AI=CE->arg_begin(), AE=CE->arg_end(); AI!=AE; ++AI) {
 
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
