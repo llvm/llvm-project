@@ -1001,9 +1001,10 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
 
     if (!getRowMajorMatmulBatchRank(contractOp.getIndexingMapsAttr()))
       return rewriter.notifyMatchFailure(
-          contractOp, "Expects a (batched) row-major matmul: leading dims must "
-                      "be batch dims shared by lhs, rhs, and acc; innermost two "
-                      "dims must be (M, K), (K, N), and (M, N)");
+          contractOp,
+          "Expects a (batched) row-major matmul: leading dims must "
+          "be batch dims shared by lhs, rhs, and acc; innermost two "
+          "dims must be (M, K), (K, N), and (M, N)");
 
     // xegpu.dpas operands are limited to rank 4 (2 batch + 2 core dims).
     if (accType.getRank() > 4)
