@@ -143,9 +143,9 @@ define void @cmpxchg_acq_rel_arg(ptr %x) {
 }
 
 define void @cmpxchg_monotonic_acquire_arg(ptr %x) {
-; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn
 ; CHECK-LABEL: define void @cmpxchg_monotonic_acquire_arg(
-; CHECK-SAME: ptr nofree captures(none) [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr nofree captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i32 0, i32 1 monotonic acquire, align 4
 ; CHECK-NEXT:    ret void
 ;
