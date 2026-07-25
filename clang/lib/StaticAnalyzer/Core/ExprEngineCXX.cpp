@@ -820,8 +820,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
     // FIXME: PostImplicitCall with a null decl may crash elsewhere anyway.
     PostImplicitCall PP(/*Decl=*/nullptr, S->getEndLoc(), SF,
                         getCFGElementRef(), &T);
-    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-    Bldr.generateNode(PP, Pred->getState(), Pred);
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
     return;
   }
 
@@ -836,9 +835,9 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
       Dest = MRMgr.getCXXTempObjectRegion(E, Pred->getStackFrame());
     } else {
       static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
-      NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-      Bldr.generateSink(Pred->getLocation().withTag(&T),
-                        Pred->getState(), Pred);
+      Dst.insert(Engine.makeNode(Pred->getLocation().withTag(&T),
+                                 Pred->getState(), Pred,
+                                 /* MarkAsSink */ true));
       return;
     }
   }
