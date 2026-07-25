@@ -77,11 +77,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // Map a 0-based DFS number to the node. 0 is the DFS root, or the virtual
   // root for postdominators.
   SmallVector<NodePtr, 32> NumToNode;
-  // If blocks have numbers (e.g., BasicBlock, MachineBasicBlock), store node
-  // infos in a vector. Otherwise, store them in a map.
-  std::conditional_t<GraphHasNodeNumbers<NodePtr>, SmallVector<InfoRec, 32>,
-                     DenseMap<NodePtr, InfoRec>>
-      NodeInfos;
+  SmallVector<InfoRec, 32> NodeInfos;
 
   /// Reverse children of nodes; pairs of (DFSNum (predecessor), next-or-zero);
   /// forms a linked list in this vector.
@@ -108,19 +104,14 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
   // If BUI is a nullptr, then there's no batch update in progress.
   SemiNCAInfo(const DomTreeT &DT, BatchUpdatePtr BUI) : BatchUpdates(BUI) {
-    if constexpr (GraphHasNodeNumbers<NodePtr>) {
-      unsigned MaxNodeNumber =
-          GraphTraits<typename DomTreeT::ParentPtr>::getMaxNumber(DT.Parent);
-      NodeInfos.resize(MaxNodeNumber + 1); // nullptr block is zero.
-    }
+    unsigned MaxNodeNumber =
+        GraphTraits<typename DomTreeT::ParentPtr>::getMaxNumber(DT.Parent);
+    NodeInfos.resize(MaxNodeNumber + IsPostDom); // post-dom null block is zero.
   }
 
   void clear() {
     NumToNode.clear();
-    if constexpr (GraphHasNodeNumbers<NodePtr>)
-      NodeInfos.assign(NodeInfos.size(), InfoRec{});
-    else
-      NodeInfos.clear();
+    NodeInfos.assign(NodeInfos.size(), InfoRec{});
     ReverseChildren.clear();
     // Don't reset the pointer to BatchUpdateInfo here -- if there's an update
     // in progress, we need this information to continue it.
@@ -143,12 +134,10 @@ template <typename DomTreeT> struct SemiNCAInfo {
   }
 
   InfoRec &getNodeInfo(NodePtr BB) {
-    if constexpr (GraphHasNodeNumbers<NodePtr>) {
-      unsigned Idx = BB ? GraphTraits<NodePtr>::getNumber(BB) + 1 : 0;
-      return NodeInfos[Idx];
-    } else {
-      return NodeInfos[BB];
-    }
+    // For post-dominator trees, index 0 is the null block.
+    if constexpr (IsPostDom)
+      return NodeInfos[BB ? GraphTraits<NodePtr>::getNumber(BB) + 1 : 0];
+    return NodeInfos[GraphTraits<NodePtr>::getNumber(BB)];
   }
 
   NodePtr getIDom(NodePtr BB) { return getNodeInfo(BB).IDom; }
