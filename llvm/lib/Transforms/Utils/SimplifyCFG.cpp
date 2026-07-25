@@ -6139,8 +6139,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       PHI.removeIncomingValue(SI->getParent());
   }
 
-  // Clean up the default block - it may have phis or other instructions before
-  // the unreachable terminator.
+  // Clean up the default block.
   SmallVector<DominatorTree::UpdateType, 2> Updates;
   if (!HasDefault) {
     BasicBlock *OrigDefaultBlock = SI->getDefaultDest();
