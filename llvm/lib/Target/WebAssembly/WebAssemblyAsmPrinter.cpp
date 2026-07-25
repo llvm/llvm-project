@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -185,6 +186,26 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   return WasmSym;
 }
 
+static std::optional<uint64_t> getWasmGlobalInitBits(const Constant *C) {
+  // Sub-i32 ints and half/bfloat legalize to a single i32/f32 MVT and so pass
+  // wasmSymbolSetType(), but their bits are not an i32/f32 init value; gate on
+  // the exact IR type so they fall back to the default 0 rather than emit a
+  // garbage init expr.
+  if (const auto *CI = dyn_cast<ConstantInt>(C)) {
+    unsigned BW = CI->getType()->getIntegerBitWidth();
+    if (BW == 32 || BW == 64)
+      return CI->getValue().getZExtValue();
+    return std::nullopt;
+  }
+  if (const auto *CF = dyn_cast<ConstantFP>(C)) {
+    Type *T = CF->getType();
+    if (T->isFloatTy() || T->isDoubleTy())
+      return CF->getValueAPF().bitcastToAPInt().getZExtValue();
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->hasCommonLinkage()) {
     OutContext.reportError(SMLoc(),
@@ -217,13 +238,20 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   }
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
+
+  // WasmObjectWriter reads these init bits back off the symbol to emit the init
+  // expression instead of the type's default 0.
+  if (GV->hasInitializer() && Sym->isGlobal()) {
+    if (std::optional<uint64_t> Bits =
+            getWasmGlobalInitBits(GV->getInitializer()))
+      Sym->setGlobalInitValue(*Bits);
+  }
+
   emitSymbolType(Sym);
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
     OutStreamer->emitLabel(Sym);
-    // TODO: Actually emit the initializer value.  Otherwise the global has the
-    // default value for its type (0, ref.null, etc).
     OutStreamer->addBlankLine();
   }
 }

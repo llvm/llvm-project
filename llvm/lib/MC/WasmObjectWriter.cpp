@@ -919,16 +919,16 @@ void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
       W->OS << char(Global.InitExpr.Inst.Opcode);
       switch (Global.Type.Type) {
       case wasm::WASM_TYPE_I32:
-        encodeSLEB128(0, W->OS);
+        encodeSLEB128(Global.InitExpr.Inst.Value.Int32, W->OS);
         break;
       case wasm::WASM_TYPE_I64:
-        encodeSLEB128(0, W->OS);
+        encodeSLEB128(Global.InitExpr.Inst.Value.Int64, W->OS);
         break;
       case wasm::WASM_TYPE_F32:
-        writeI32(0);
+        writeI32(Global.InitExpr.Inst.Value.Float32);
         break;
       case wasm::WASM_TYPE_F64:
-        writeI64(0);
+        writeI64(Global.InitExpr.Inst.Value.Float64);
         break;
       case wasm::WASM_TYPE_EXTERNREF:
         writeValueType(wasm::ValType::EXTERNREF);
@@ -1652,18 +1652,24 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           Global.Type = WS.getGlobalType();
           Global.Index = NumGlobalImports + Globals.size();
           Global.InitExpr.Extended = false;
+          uint64_t Bits = WS.hasGlobalInitValue() ? WS.getGlobalInitValue() : 0;
           switch (Global.Type.Type) {
           case wasm::WASM_TYPE_I32:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
+            Global.InitExpr.Inst.Value.Int32 =
+                static_cast<int32_t>(static_cast<uint32_t>(Bits));
             break;
           case wasm::WASM_TYPE_I64:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_I64_CONST;
+            Global.InitExpr.Inst.Value.Int64 = static_cast<int64_t>(Bits);
             break;
           case wasm::WASM_TYPE_F32:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_F32_CONST;
+            Global.InitExpr.Inst.Value.Float32 = static_cast<uint32_t>(Bits);
             break;
           case wasm::WASM_TYPE_F64:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_F64_CONST;
+            Global.InitExpr.Inst.Value.Float64 = Bits;
             break;
           case wasm::WASM_TYPE_EXTERNREF:
             Global.InitExpr.Inst.Opcode = wasm::WASM_OPCODE_REF_NULL;
