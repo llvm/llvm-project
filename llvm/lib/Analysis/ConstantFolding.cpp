@@ -3728,17 +3728,37 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
+        bool IsNaN = Op1V.isNaN();
+        bool IsSNan = false;
+        bool IsQNan = false;
+        if (IsNaN) {
+          // x87 unsupported encodings (pseudo-NaN/infinity, unnormal) are
+          // NaNs in APFloat, but expandIS_FPCLASS treats them as neither
+          // signaling nor quiet. A clear explicit integer bit identifies
+          // them so constant folding matches that runtime behavior.
+          const fltSemantics &Sem = Op1V.getSemantics();
+          bool IsUnsupportedX87NaN =
+              Sem.hasExplicitIntegerBit &&
+              !Op1V.bitcastToAPInt()[Sem.precision - 1];
+          if (!IsUnsupportedX87NaN) {
+            IsSNan = Op1V.isSignaling();
+            IsQNan = !IsSNan;
+          }
+        }
         bool Result =
-          ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
-          ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||
-          ((Mask & fcNegInf) && Op1V.isNegInfinity()) ||
-          ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
-          ((Mask & fcNegSubnormal) && Op1V.isDenormal() && Op1V.isNegative()) ||
-          ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
-          ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
-          ((Mask & fcPosSubnormal) && Op1V.isDenormal() && !Op1V.isNegative()) ||
-          ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
-          ((Mask & fcPosInf) && Op1V.isPosInfinity());
+            ((Mask & fcSNan) && IsSNan) || ((Mask & fcQNan) && IsQNan) ||
+            // Neither SNaN nor QNaN, but still a NaN (x87 unsupported).
+            ((Mask & fcNan) == fcNan && IsNaN && !IsSNan && !IsQNan) ||
+            ((Mask & fcNegInf) && Op1V.isNegInfinity()) ||
+            ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
+            ((Mask & fcNegSubnormal) && Op1V.isDenormal() &&
+             Op1V.isNegative()) ||
+            ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
+            ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
+            ((Mask & fcPosSubnormal) && Op1V.isDenormal() &&
+             !Op1V.isNegative()) ||
+            ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
+            ((Mask & fcPosInf) && Op1V.isPosInfinity());
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {

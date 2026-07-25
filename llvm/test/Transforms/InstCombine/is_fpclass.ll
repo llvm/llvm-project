@@ -3954,8 +3954,97 @@ entry:
   ret i1 %test
 }
 
+; --------------------------------------------------------------------
+; x87 pseudo-NaN / unsupported encodings (explicit integer bit clear)
+; --------------------------------------------------------------------
+
+; 0xK7FFF3FFFFFFFFFFFFFFF - exp all-ones, integer/J-bit = 0, payload != 0
+define i1 @test_constant_class_f80_pseudo_nan_snan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_snan(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF3FFFFFFFFFFFFFFF, i32 1)
+  ret i1 %val
+}
+
+define i1 @test_constant_class_f80_pseudo_nan_qnan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_qnan(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF3FFFFFFFFFFFFFFF, i32 2)
+  ret i1 %val
+}
+
+define i1 @test_constant_class_f80_pseudo_nan_nan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_nan(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF3FFFFFFFFFFFFFFF, i32 3)
+  ret i1 %val
+}
+
+; Quiet bit clear (would look like SNaN if the integer bit were ignored).
+define i1 @test_constant_class_f80_pseudo_nan_quiet_bit_clear_snan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_quiet_bit_clear_snan(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF1FFFFFFFFFFFFFFF, i32 1)
+  ret i1 %val
+}
+
+define i1 @test_constant_class_f80_pseudo_nan_quiet_bit_clear_nan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_nan_quiet_bit_clear_nan(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF1FFFFFFFFFFFFFFF, i32 3)
+  ret i1 %val
+}
+
+; Pseudo-infinity: exp all-ones, integer bit 0, significand 0.
+define i1 @test_constant_class_f80_pseudo_inf_snan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_inf_snan(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF0000000000000000, i32 1)
+  ret i1 %val
+}
+
+define i1 @test_constant_class_f80_pseudo_inf_nan() {
+; CHECK-LABEL: @test_constant_class_f80_pseudo_inf_nan(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF0000000000000000, i32 3)
+  ret i1 %val
+}
+
+; Genuine f80 SNaN / QNaN with the integer bit set must still fold correctly.
+define i1 @test_constant_class_f80_snan_snan() {
+; CHECK-LABEL: @test_constant_class_f80_snan_snan(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFF8000000000000001, i32 1)
+  ret i1 %val
+}
+
+define i1 @test_constant_class_f80_qnan_qnan() {
+; CHECK-LABEL: @test_constant_class_f80_qnan_qnan(
+; CHECK-NEXT:    ret i1 true
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFFC000000000000000, i32 2)
+  ret i1 %val
+}
+
+define i1 @test_constant_class_f80_qnan_snan() {
+; CHECK-LABEL: @test_constant_class_f80_qnan_snan(
+; CHECK-NEXT:    ret i1 false
+;
+  %val = call i1 @llvm.is.fpclass.f80(x86_fp80 0xK7FFFC000000000000000, i32 1)
+  ret i1 %val
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare i1 @llvm.is.fpclass.f64(double, i32 immarg)
+declare i1 @llvm.is.fpclass.f80(x86_fp80, i32 immarg)
 declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)
 declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
