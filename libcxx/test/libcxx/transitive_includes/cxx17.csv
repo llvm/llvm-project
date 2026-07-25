@@ -143,6 +143,7 @@ barrier iterator
 barrier limits
 barrier memory
 barrier new
+barrier optional
 barrier ratio
 barrier stdexcept
 barrier tuple
@@ -1389,7 +1390,9 @@ memory initializer_list
 memory iosfwd
 memory iterator
 memory limits
+memory memory
 memory new
+memory optional
 memory ratio
 memory stdexcept
 memory tuple
@@ -1550,6 +1553,7 @@ optional iterator
 optional limits
 optional memory
 optional new
+optional optional
 optional ratio
 optional stdexcept
 optional tuple
@@ -1855,6 +1859,7 @@ scoped_allocator iterator
 scoped_allocator limits
 scoped_allocator memory
 scoped_allocator new
+scoped_allocator optional
 scoped_allocator ratio
 scoped_allocator stdexcept
 scoped_allocator tuple
@@ -2120,8 +2125,19 @@ stdexcept new
 stdexcept type_traits
 stdexcept typeinfo
 stdexcept version
+stop_token atomic
+stop_token climits
+stop_token cmath
+stop_token compare
 stop_token cstddef
+stop_token cstdint
+stop_token cstdlib
+stop_token cstring
+stop_token ctime
 stop_token iosfwd
+stop_token limits
+stop_token ratio
+stop_token type_traits
 stop_token version
 streambuf algorithm
 streambuf atomic
