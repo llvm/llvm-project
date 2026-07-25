@@ -1039,7 +1039,6 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   unsigned ExtraCondLat = Cond.size() != 1;
 
   // GPRs are handled by csel.
-  // FIXME: Fold in x+1, -x, and ~x when applicable.
   if (AArch64::GPR64allRegClass.hasSubClassEq(RC) ||
       AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
     // Single-cycle csel, csinc, csinv, and csneg.
@@ -1047,7 +1046,7 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
     TrueCycles = FalseCycles = 1;
     if (canFoldIntoCSel(MRI, TrueReg))
       TrueCycles = 0;
-    else if (canFoldIntoCSel(MRI, FalseReg))
+    if (canFoldIntoCSel(MRI, FalseReg))
       FalseCycles = 0;
     return true;
   }
@@ -1291,22 +1290,39 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   // Try folding simple instructions into the csel.
   if (TryFold) {
-    unsigned NewReg = 0;
-    unsigned FoldedOpc = canFoldIntoCSel(MRI, TrueReg, &NewReg);
-    if (FoldedOpc) {
-      // The folded opcodes csinc, csinc and csneg apply the operation to
-      // FalseReg, so we need to invert the condition.
+    unsigned NewTrueReg = 0, NewFalseReg = 0;
+    unsigned TrueFoldOpc = canFoldIntoCSel(MRI, TrueReg, &NewTrueReg);
+    unsigned FalseFoldOpc = canFoldIntoCSel(MRI, FalseReg, &NewFalseReg);
+
+    if (TrueFoldOpc && FalseFoldOpc) {
+      // Both sides are foldable --> Emit two chained CSEL-family instructions:
+      //   TmpReg = TrueFoldOpc(FalseReg, NewTrueReg, InvCC) --> folds TrueReg
+      //   DstReg = FalseFoldOpc(TmpReg,  NewFalseReg, CC)   --> folds FalseReg
+      Register TmpReg = MRI.createVirtualRegister(RC);
+      AArch64CC::CondCode InvCC = AArch64CC::getInvertedCondCode(CC);
+      BuildMI(MBB, I, DL, get(TrueFoldOpc), TmpReg)
+          .addReg(FalseReg)
+          .addReg(NewTrueReg)
+          .addImm(InvCC);
+      MRI.clearKillFlags(NewTrueReg);
+      // Set up the second instruction to fold FalseReg.
+      TrueReg = TmpReg;
+      FalseReg = NewFalseReg;
+      Opc = FalseFoldOpc;
+      MRI.clearKillFlags(NewFalseReg);
+    } else if (TrueFoldOpc) {
+      // Only TrueReg is foldable. The fold operation applies to Rm (slot 2),
+      // so invert the condition and swap Rn/Rm to place it correctly.
       CC = AArch64CC::getInvertedCondCode(CC);
       TrueReg = FalseReg;
-    } else
-      FoldedOpc = canFoldIntoCSel(MRI, FalseReg, &NewReg);
-
-    // Fold the operation. Leave any dead instructions for DCE to clean up.
-    if (FoldedOpc) {
-      FalseReg = NewReg;
-      Opc = FoldedOpc;
-      // Extend the live range of NewReg.
-      MRI.clearKillFlags(NewReg);
+      FalseReg = NewTrueReg;
+      Opc = TrueFoldOpc;
+      MRI.clearKillFlags(NewTrueReg);
+    } else if (FalseFoldOpc) {
+      // Only FalseReg is foldable. Direct fold into Rm, no swap needed.
+      FalseReg = NewFalseReg;
+      Opc = FalseFoldOpc;
+      MRI.clearKillFlags(NewFalseReg);
     }
   }
 
