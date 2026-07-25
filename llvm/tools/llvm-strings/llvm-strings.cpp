@@ -95,6 +95,7 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 
 static void strings(raw_ostream &OS, StringRef FileName, std::istream &IS) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
+  Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
   auto print = [&OS, FileName](unsigned Offset, StringRef L) {
     if (L.size() < static_cast<size_t>(MinLength))
       return;
