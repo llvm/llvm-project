@@ -128,8 +128,7 @@ func.func @extf_truncf(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor
   %3 = arith.truncf %2 : vector<16x16xf32> to vector<16x16xf16>
   %4 = xegpu.dpas %0, %3 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
     %5 = xegpu.convert_layout %4
-     <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
+     <{target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
      : vector<8x16xf32>
   return %4 : vector<8x16xf32>
 }

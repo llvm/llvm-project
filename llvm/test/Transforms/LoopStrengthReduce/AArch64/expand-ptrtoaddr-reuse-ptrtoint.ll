@@ -7,8 +7,8 @@ define i64 @expand_reuses_existing_ptrtoint(ptr %begin, ptr %end, ptr %cap) {
 ; CHECK-LABEL: define i64 @expand_reuses_existing_ptrtoint(
 ; CHECK-SAME: ptr [[BEGIN:%.*]], ptr [[END:%.*]], ptr [[CAP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BEGIN2:%.*]] = ptrtoint ptr [[BEGIN]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[BEGIN2:%.*]] = ptrtoaddr ptr [[BEGIN]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq ptr [[BEGIN]], [[END]]
 ; CHECK-NEXT:    br i1 [[C0]], label %[[DONE:.*]], label %[[COUNT_PH:.*]]
 ; CHECK:       [[COUNT_PH]]:

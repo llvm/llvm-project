@@ -88,11 +88,42 @@ AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
     return true;
   });
 }
+
+// Matches a cast whose previously-bound BaseID node is a class template
+// specialization and whose previously-bound DerivedID node is one of that
+// specialization's type template arguments, i.e. the CRTP pattern
+// `class Derived : Base<Derived>`.
+AST_MATCHER_P2(Expr, isCRTPCast, std::string, BaseID, std::string, DerivedID) {
+  return Builder->removeBindings([this](const BoundNodesMap &Nodes) {
+    const auto *Base = Nodes.getNodeAs<CXXRecordDecl>(this->BaseID);
+    const auto *Derived = Nodes.getNodeAs<CXXRecordDecl>(this->DerivedID);
+    const auto *CTSD =
+        Base ? dyn_cast<ClassTemplateSpecializationDecl>(Base) : nullptr;
+    if (!CTSD || !Derived)
+      return true;
+    for (const TemplateArgument &Arg : CTSD->getTemplateArgs().asArray()) {
+      if (Arg.getKind() != TemplateArgument::Type)
+        continue;
+      QualType ArgType = Arg.getAsType();
+      if (!ArgType.isNull() && ArgType->getAsCXXRecordDecl() == Derived)
+        return false;
+    }
+    return true;
+  });
+}
 } // end namespace ast_matchers
 } // end namespace clang
 
 static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
+}
+
+// Matches `this` or `*this`, but not member accesses like `this->m_field`.
+static decltype(auto) isThisOrDerefThis() {
+  return ignoringParenImpCasts(anyOf(
+      cxxThisExpr(),
+      unaryOperator(hasOperatorName("*"),
+                    hasUnaryOperand(ignoringParenImpCasts(cxxThisExpr())))));
 }
 
 void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
@@ -106,8 +137,9 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
       hasSourceExpression(hasTypePointingTo(cxxRecordDecl().bind(BaseNode))),
       hasTypePointingTo(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
                             .bind(DerivedNode)),
-      unless(anyOf(hasSourceExpression(cxxThisExpr()),
-                   hasTypePointingTo(templateTypeParmDecl()))));
+      unless(anyOf(hasTypePointingTo(templateTypeParmDecl()),
+                   allOf(hasSourceExpression(cxxThisExpr()),
+                         isCRTPCast(BaseNode, DerivedNode)))));
   auto MatchExprPtrObjC = allOf(
       hasSourceExpression(ignoringImpCasts(hasType(objcObjectPointerType(
           pointee(hasDeclaration(objcInterfaceDecl().bind(BaseNode))))))),
@@ -120,8 +152,9 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
             hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
                 decl(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
                          .bind(DerivedNode)))))),
-            unless(anyOf(hasSourceExpression(hasDescendant(cxxThisExpr())),
-                         hasType(templateTypeParmDecl()))));
+            unless(anyOf(hasType(templateTypeParmDecl()),
+                         allOf(hasSourceExpression(isThisOrDerefThis()),
+                               isCRTPCast(BaseNode, DerivedNode)))));
   auto MatchExprPtrVoidCast = allOf(
       anyOf(hasSourceExpression(explicitCastExpr(
                 hasType(pointerType(pointee(voidType()))),

@@ -637,6 +637,69 @@ def testExtDialectWithRegion():
             print(e)
 
 
+# CHECK: TEST: testIsIsolatedFromAboveTrait
+@run
+def testIsIsolatedFromAboveTrait():
+    class TestIsolated(Dialect, name="ext_isolated"):
+        pass
+
+    class UseOp(TestIsolated.Operation, name="use"):
+        value: Operand[Any]
+
+    class NotIsolatedOp(
+        TestIsolated.Operation, name="not_isolated", traits=[NoTerminatorTrait]
+    ):
+        body: Region
+
+    class IsolatedOp(
+        TestIsolated.Operation,
+        name="isolated",
+        traits=[NoTerminatorTrait, IsIsolatedFromAboveTrait],
+    ):
+        body: Region
+
+    with Context(), Location.unknown():
+        TestIsolated.load()
+
+        # CHECK: not isolated has trait: False
+        print(
+            "not isolated has trait:",
+            NotIsolatedOp.has_trait(IsIsolatedFromAboveTrait),
+        )
+        # CHECK: isolated has trait: True
+        print("isolated has trait:", IsolatedOp.has_trait(IsIsolatedFromAboveTrait))
+
+        not_isolated_module = Module.create()
+        with InsertionPoint(not_isolated_module.body):
+            i32 = IntegerType.get_signless(32)
+            value = arith.constant(i32, 0)
+            not_isolated = NotIsolatedOp()
+            not_isolated.body.blocks.append()
+            with InsertionPoint(not_isolated.body.blocks[0]):
+                UseOp(value)
+
+        assert not_isolated_module.operation.verify()
+        # CHECK: not isolated: verification succeeded
+        print("not isolated: verification succeeded")
+
+        isolated_module = Module.create()
+        with InsertionPoint(isolated_module.body):
+            value = arith.constant(i32, 0)
+            isolated = IsolatedOp()
+            isolated.body.blocks.append()
+            with InsertionPoint(isolated.body.blocks[0]):
+                UseOp(value)
+
+        try:
+            isolated_module.operation.verify()
+        except MLIRError as e:
+            # CHECK: isolated: Verification failed:
+            # CHECK: using value defined outside the region
+            print("isolated:", e)
+        else:
+            raise AssertionError("expected IsIsolatedFromAbove verification to fail")
+
+
 # CHECK: TEST: testExtDialectWithType
 @run
 def testExtDialectWithType():

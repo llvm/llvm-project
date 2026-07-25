@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEMCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
@@ -18,22 +19,23 @@
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {VE::S_HI32, "hi"},
-    {VE::S_LO32, "lo"},
-    {VE::S_PC_HI32, "pc_hi"},
-    {VE::S_PC_LO32, "pc_lo"},
-    {VE::S_GOT_HI32, "got_hi"},
-    {VE::S_GOT_LO32, "got_lo"},
-    {VE::S_GOTOFF_HI32, "gotoff_hi"},
-    {VE::S_GOTOFF_LO32, "gotoff_lo"},
-    {VE::S_PLT_HI32, "plt_hi"},
-    {VE::S_PLT_LO32, "plt_lo"},
-    {VE::S_TLS_GD_HI32, "tls_gd_hi"},
-    {VE::S_TLS_GD_LO32, "tls_gd_lo"},
-    {VE::S_TPOFF_HI32, "tpoff_hi"},
-    {VE::S_TPOFF_LO32, "tpoff_lo"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"hi"}, VE::S_HI32},
+    {{"lo"}, VE::S_LO32},
+    {{"pc_hi"}, VE::S_PC_HI32},
+    {{"pc_lo"}, VE::S_PC_LO32},
+    {{"got_hi"}, VE::S_GOT_HI32},
+    {{"got_lo"}, VE::S_GOT_LO32},
+    {{"gotoff_hi"}, VE::S_GOTOFF_HI32},
+    {{"gotoff_lo"}, VE::S_GOTOFF_LO32},
+    {{"plt_hi"}, VE::S_PLT_HI32},
+    {{"plt_lo"}, VE::S_PLT_LO32},
+    {{"tls_gd_hi"}, VE::S_TLS_GD_HI32},
+    {{"tls_gd_lo"}, VE::S_TLS_GD_LO32},
+    {{"tpoff_hi"}, VE::S_TPOFF_HI32},
+    {{"tpoff_lo"}, VE::S_TPOFF_LO32},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 VE::Fixups VE::getFixupKind(uint8_t S) {
   switch (S) {

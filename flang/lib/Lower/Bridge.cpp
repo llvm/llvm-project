@@ -5590,9 +5590,22 @@ private:
           if (lhs.getDefiningOp())
             attachInlineAttributes(*lhs.getDefiningOp(), dirs);
         }
-        hlfir::AssignOp::create(builder, loc, rhs, lhs,
-                                isWholeAllocatableAssignment,
-                                keepLhsLengthInAllocatableAssignment);
+        if (isCUDATransfer && hasCUDAImplicitTransfer &&
+            Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs)) {
+          auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, lhs);
+          hlfir::AssignOp::create(builder, loc, rhs, temp,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+          auto transferKindAttr = cuf::DataTransferKindAttr::get(
+              builder.getContext(), cuf::DataTransferKind::HostDevice);
+          cuf::DataTransferOp::create(builder, loc, temp, lhs,
+                                      /*shape=*/mlir::Value{},
+                                      transferKindAttr);
+        } else {
+          hlfir::AssignOp::create(builder, loc, rhs, lhs,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+        }
       }
       if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();

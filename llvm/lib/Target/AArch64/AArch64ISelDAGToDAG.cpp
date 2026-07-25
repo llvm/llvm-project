@@ -217,6 +217,7 @@ public:
   bool SelectDupZeroOrUndef(SDValue N) {
     switch(N->getOpcode()) {
     case ISD::UNDEF:
+    case ISD::POISON:
       return true;
     case AArch64ISD::DUP:
     case ISD::SPLAT_VECTOR: {

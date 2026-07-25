@@ -2663,6 +2663,28 @@ void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
       nb::arg("op_name"), nb::arg("context").none() = nb::none());
 }
 
+bool PyDynamicOpTraits::IsIsolatedFromAbove::attach(const nb::object &opName,
+                                                    PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitIsIsolatedFromAboveCreate();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::IsIsolatedFromAbove::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::IsIsolatedFromAbove, PyDynamicOpTrait> cls(
+      m, "IsIsolatedFromAboveTrait");
+  cls.attr(typeIDAttr) =
+      PyTypeID(mlirDynamicOpTraitIsIsolatedFromAboveGetTypeID());
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::IsIsolatedFromAbove::attach(opName,
+                                                              *context.get());
+      },
+      "Attach IsIsolatedFromAbove trait to the given operation name.",
+      nb::arg("cls"), nb::arg("op_name"),
+      nb::arg("context").none() = nb::none());
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -5297,6 +5319,7 @@ void populateIRCore(nb::module_ &m) {
   PyDynamicOpTrait::bind(m);
   PyDynamicOpTraits::IsTerminator::bind(m);
   PyDynamicOpTraits::NoTerminator::bind(m);
+  PyDynamicOpTraits::IsIsolatedFromAbove::bind(m);
 
   // MLIRError exception.
   MLIRError::bind(m);

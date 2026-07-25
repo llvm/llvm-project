@@ -30,7 +30,7 @@ SCRAPE_INTERVAL_SECONDS = 5 * 60
 # This metric name is also used as a key in the job->name map.
 GITHUB_WORKFLOW_TO_TRACK = {
     "CI Checks": "github_llvm_premerge_checks",
-    "Build and Test libc++": "github_libcxx_premerge_checks",
+    "[libc++] Conformance tests": "github_libcxx_premerge_checks",
 }
 
 # Lists the Github jobs to track for a given workflow. The key is the stable
@@ -175,7 +175,7 @@ def create_and_append_libcxx_aggregates(workflow_metrics: list[JobMetrics]):
         if not isinstance(job, JobMetrics):
             continue
         # Only want libc++ jobs.
-        if job.workflow_name != "Build and Test libc++":
+        if job.workflow_name != "[libc++] Conformance tests":
             continue
         if job.workflow_id not in aggregate_data.keys():
             aggregate_data[job.workflow_id] = [job]
@@ -312,7 +312,7 @@ def github_get_metrics(
             continue
 
         libcxx_testing = False
-        if task.name == "Build and Test libc++":
+        if task.name == "[libc++] Conformance tests":
             libcxx_testing = True
 
         if task.status == "completed":

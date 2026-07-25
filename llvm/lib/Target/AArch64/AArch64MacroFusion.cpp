@@ -605,6 +605,48 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
+// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
+static bool isFMinFMax(unsigned Opcode) {
+  switch (Opcode) {
+  // Scalar.
+  case AArch64::FMAXHrr:
+  case AArch64::FMAXSrr:
+  case AArch64::FMAXDrr:
+  case AArch64::FMINHrr:
+  case AArch64::FMINSrr:
+  case AArch64::FMINDrr:
+  // Vector.
+  case AArch64::FMAXv4f16:
+  case AArch64::FMAXv8f16:
+  case AArch64::FMAXv2f32:
+  case AArch64::FMAXv4f32:
+  case AArch64::FMAXv2f64:
+  case AArch64::FMINv4f16:
+  case AArch64::FMINv8f16:
+  case AArch64::FMINv2f32:
+  case AArch64::FMINv4f32:
+  case AArch64::FMINv2f64:
+    return true;
+  }
+  return false;
+}
+
+// FMIN + FMAX.
+static bool isFMinFMaxPair(const MachineInstr *FirstMI,
+                           const MachineInstr &SecondMI) {
+  if (!isFMinFMax(SecondMI.getOpcode()))
+    return false;
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  if (!isFMinFMax(FirstMI->getOpcode()))
+    return false;
+
+  return mayHaveWAWDependency(*FirstMI, SecondMI);
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
@@ -647,6 +689,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
   if (ST.hasFuseAppleSMECompute() &&
       isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI))
+    return true;
+  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI))
     return true;
 
   return false;

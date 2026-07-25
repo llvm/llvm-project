@@ -95,6 +95,9 @@ static enum class OptParsingState {
 
 static LLVMContext *LTOContext = nullptr;
 
+// Records -mllvm arguments parsed through the legacy debug-option APIs.
+static std::vector<std::string> ThinLTOMllvmArgs;
+
 struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
     if (DI.getSeverity() != DS_Error) {
@@ -554,6 +557,7 @@ lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
   ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
+  CodeGen->setMllvmArgs(ThinLTOMllvmArgs);
   CodeGen->setTargetOptions(
       codegen::InitTargetOptionsFromCodeGenFlags(Triple()));
   CodeGen->setFreestanding(EnableFreestanding);
@@ -630,11 +634,12 @@ void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
 }
 
 void thinlto_debug_options(const char *const *options, int number) {
-  // if options were requested, set them
+  // If options were requested, parse and retain them.
   if (number && options) {
     std::vector<const char *> CodegenArgv(1, "libLTO");
     append_range(CodegenArgv, ArrayRef<const char *>(options, number));
     cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+    ThinLTOMllvmArgs.assign(options, options + number);
   }
 }
 

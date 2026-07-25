@@ -1,0 +1,148 @@
+# RUN: llc -march=hexagon -run-pass=pipeliner -debug-only=pipeliner %s -o - 2>&1 > /dev/null | FileCheck %s
+
+# Test that the phi in the epilog block generated for an existing phi
+# in the loop, obtains loop value from phi generated in the kernel block.
+# Phis generated in kernel for non-phi instructions in the loop are stored
+# in separate data structure and need to be used during existing phi generation
+# in epilog.
+
+# CHECK: prolog:
+# CHECK: bb.[[BB0:([0-9]+)]]
+# CHECK: %[[REG0:([0-9]+)]]:intregs = L2_loadri_io %{{.*}}%ir.a
+# CHECK: New block
+# CHECK: bb.[[BB1:([0-9]+)]]
+# CHECK: %[[REG1:([0-9]+)]]:intregs = PHI %[[REG0]]:intregs, %{{.*}}
+# CHECK: epilog:
+# CHECK: %{{[0-9]+}}:intregs = PHI %{{[0-9]+}}:intregs, %bb.[[BB0]], %[[REG1]]:intregs, %bb.[[BB1]]
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon"
+
+  define dso_local void @bar(ptr nocapture noundef readonly %i, ptr nocapture noundef readonly %j, ptr nocapture noundef writeonly %k, i32 noundef %l, i32 noundef %m, i32 noundef %n) local_unnamed_addr #0 {
+  entry:
+    %a = getelementptr i8, ptr %i, i32 4
+    %b = getelementptr i8, ptr %i, i32 16
+    %c = getelementptr i8, ptr %k, i32 4
+    %d = getelementptr i8, ptr %k, i32 16
+    ret void
+  }
+
+  attributes #0 = { nofree nosync nounwind memory(readwrite, inaccessiblemem: none) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv69" "target-features"="+v69,-long-calls" }
+
+  !0 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            bar
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+isOutlined:      false
+failsVerification: false
+registers:
+  - { id: 0, class: doubleregs, preferred-register: '' }
+  - { id: 1, class: doubleregs, preferred-register: '' }
+  - { id: 2, class: intregs, preferred-register: '' }
+  - { id: 3, class: intregs, preferred-register: '' }
+  - { id: 4, class: intregs, preferred-register: '' }
+  - { id: 5, class: intregs, preferred-register: '' }
+  - { id: 6, class: intregs, preferred-register: '' }
+  - { id: 7, class: intregs, preferred-register: '' }
+  - { id: 8, class: intregs, preferred-register: '' }
+  - { id: 9, class: intregs, preferred-register: '' }
+  - { id: 10, class: intregs, preferred-register: '' }
+  - { id: 11, class: doubleregs, preferred-register: '' }
+  - { id: 12, class: doubleregs, preferred-register: '' }
+  - { id: 13, class: intregs, preferred-register: '' }
+  - { id: 14, class: intregs, preferred-register: '' }
+  - { id: 15, class: intregs, preferred-register: '' }
+  - { id: 16, class: intregs, preferred-register: '' }
+  - { id: 17, class: intregs, preferred-register: '' }
+  - { id: 18, class: doubleregs, preferred-register: '' }
+  - { id: 19, class: intregs, preferred-register: '' }
+  - { id: 20, class: intregs, preferred-register: '' }
+  - { id: 21, class: doubleregs, preferred-register: '' }
+  - { id: 22, class: doubleregs, preferred-register: '' }
+  - { id: 23, class: intregs, preferred-register: '' }
+  - { id: 24, class: doubleregs, preferred-register: '' }
+  - { id: 25, class: intregs, preferred-register: '' }
+  - { id: 26, class: intregs, preferred-register: '' }
+  - { id: 27, class: intregs, preferred-register: '' }
+  - { id: 28, class: doubleregs, preferred-register: '' }
+  - { id: 29, class: intregs, preferred-register: '' }
+  - { id: 30, class: intregs, preferred-register: '' }
+  - { id: 31, class: doubleregs, preferred-register: '' }
+  - { id: 32, class: intregs, preferred-register: '' }
+  - { id: 33, class: intregs, preferred-register: '' }
+  - { id: 34, class: intregs, preferred-register: '' }
+  - { id: 35, class: predregs, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+  - { reg: '$r2', virtual-reg: '%2' }
+  - { reg: '$r3', virtual-reg: '%3' }
+  - { reg: '$r4', virtual-reg: '%4' }
+  - { reg: '$r5', virtual-reg: '%5' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.3
+    liveins: $r0, $r1, $r2, $r3, $r4, $r5
+
+    %5:intregs = COPY $r5
+    %4:intregs = COPY $r4
+    %3:intregs = COPY $r3
+    %2:intregs = COPY $r2
+    %1:doubleregs = COPY $r1
+    %0:doubleregs = COPY $r0
+    %6:intregs, %7:intregs = L2_loadri_pi %3, 12
+    %8:intregs, %9:intregs = L2_loadri_pi %4, 12
+    %35:predregs = C2_cmpgti %8, 0
+    J2_jumpf %35, %bb.3, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.2
+
+    J2_loop0r %bb.2, %8, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.2, implicit-def $pc
+
+  bb.2:
+    successors: %bb.3, %bb.2
+
+    %10:intregs = PHI %7, %bb.1, %25, %bb.2
+    %11:doubleregs = PHI %0, %bb.1, %18, %bb.2
+    %12:doubleregs = PHI %1, %bb.1, %21, %bb.2
+    %13:intregs = PHI %2, %bb.1, %17, %bb.2
+    %14:intregs = PHI %9, %bb.1, %26, %bb.2
+    %15:intregs = PHI %5, %bb.1, %20, %bb.2
+    %16:intregs = PHI %6, %bb.1, %19, %bb.2
+    %22:doubleregs = M2_cmacs_s1 %12, %15, %13, implicit-def dead $usr_ovf
+    %17:intregs = L2_loadri_io %14, 4 :: (load (s32) from %ir.a + 8, !tbaa !0)
+    %23:intregs, %26:intregs = L2_loadri_pi %14, 8 :: (load (s32) from %ir.b + 8, !tbaa !0)
+    %24:doubleregs = M2_cmacs_s1 %11, %16, %13, implicit-def dead $usr_ovf
+    %18:doubleregs = M2_cmacs_s1 %24, %15, %23, implicit-def dead $usr_ovf
+    %19:intregs = L2_loadri_io %10, -4 :: (load (s32) from %ir.c + 8, !tbaa !0)
+    %20:intregs, %25:intregs = L2_loadri_pi %10, 8 :: (load (s32) from %ir.d + 8, !tbaa !0)
+    %21:doubleregs = M2_cmacs_s1 %22, %19, %23, implicit-def dead $usr_ovf
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3:
+    %27:intregs = PHI %2, %bb.0, %17, %bb.2
+    %28:doubleregs = PHI %0, %bb.0, %18, %bb.2
+    %29:intregs = PHI %6, %bb.0, %19, %bb.2
+    %30:intregs = PHI %5, %bb.0, %20, %bb.2
+    %31:doubleregs = PHI %1, %bb.0, %21, %bb.2
+    %32:intregs = PHI %9, %bb.0, %26, %bb.2
+    %33:intregs = A2_add %27, %29
+    S2_storerd_io %33, 0, %28
+    %34:intregs = A2_add %30, %32
+    S2_storerd_io %34, 0, %31
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

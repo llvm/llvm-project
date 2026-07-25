@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu tahiti -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK-AMDGCN,CHECK %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu6.00-unknown-unknown -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK-AMDGCN,CHECK %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck -enable-var-scope --check-prefixes=CHECK,CHECK-SPIRV %s
 
 

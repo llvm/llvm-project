@@ -325,6 +325,7 @@ struct VPCostContext {
   const TargetLibraryInfo &TLI;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
+  const VFSelectionContext &Config;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
   PredicatedScalarEvolution &PSE;

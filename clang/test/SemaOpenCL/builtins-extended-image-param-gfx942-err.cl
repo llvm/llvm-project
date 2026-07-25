@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx942 -verify=GFX94 -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.42-- -verify=GFX94 -S -o - %s
 // REQUIRES: amdgpu-registered-target
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

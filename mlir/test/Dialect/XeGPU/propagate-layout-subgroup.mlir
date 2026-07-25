@@ -373,8 +373,7 @@ gpu.module @test {
     // CHECK-SAME: layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>
     %1 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<32x128xf32>, index, index -> vector<32x128xf32>
     %2 = xegpu.convert_layout %1
-       <{input_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>,
-        target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
+       <{target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
        : vector<32x128xf32>
     gpu.return
   }

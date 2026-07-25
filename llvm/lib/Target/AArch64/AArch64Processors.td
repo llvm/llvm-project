@@ -453,7 +453,9 @@ def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                     [FeatureFuseAppleSMECompute])>;
 
 def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
-                                    "Apple M5", TuneAppleM4.Implies>;
+                                    "Apple M5",
+                                    !listconcat(TuneAppleM4.Implies,
+                                    [FeatureFuseFMinFMax])>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",

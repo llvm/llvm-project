@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple amdgcn -target-cpu gfx90a -verify %s -fcuda-is-device
+// RUN: %clang_cc1 -fsyntax-only -triple amdgpu9.0a -verify %s -fcuda-is-device
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgcn -verify %s
 
 typedef _Float16 __attribute__((ext_vector_type(2))) float16x2_t;
