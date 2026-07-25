@@ -291,31 +291,31 @@ bool RecurrenceInfo::matchConditionalRecurrence(
     return false;
 
   for (unsigned Idx = 0; Idx != 2; ++Idx) {
-    Value *FoundStep = Phi->getIncomingValue(Idx);
-    Value *FoundStart = Phi->getIncomingValue(!Idx);
+  Value *FoundStep = Phi->getIncomingValue(Idx);
+  Value *FoundStart = Phi->getIncomingValue(!Idx);
 
-    Instruction *TV, *FV;
-    if (!match(FoundStep,
-               m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
-      continue;
+  Instruction *TV, *FV;
+  if (!match(FoundStep,
+             m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
+    continue;
 
-    // For a conditional recurrence, both the true and false values of the
-    // select must ultimately end up in the same recurrent BinOp.
-    BinaryOperator *FoundBO = digRecurrence(TV, BOWithConstOpToMatch);
-    BinaryOperator *AltBO = digRecurrence(FV, BOWithConstOpToMatch);
-    if (!FoundBO || FoundBO != AltBO)
-      return false;
+  // For a conditional recurrence, both the true and false values of the
+  // select must ultimately end up in the same recurrent BinOp.
+  BinaryOperator *FoundBO = digRecurrence(TV, BOWithConstOpToMatch);
+  BinaryOperator *AltBO = digRecurrence(FV, BOWithConstOpToMatch);
+  if (!FoundBO || FoundBO != AltBO)
+    return false;
 
-    if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
-      LLVM_DEBUG(dbgs() << "HashRecognize: Unable to match single BinaryOp "
-                           "with constant in conditional recurrence\n");
-      return false;
-    }
+  if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
+    LLVM_DEBUG(dbgs() << "HashRecognize: Unable to match single BinaryOp "
+                         "with constant in conditional recurrence\n");
+    return false;
+  }
 
-    BO = FoundBO;
-    Start = FoundStart;
-    Step = FoundStep;
-    return true;
+  BO = FoundBO;
+  Start = FoundStart;
+  Step = FoundStep;
+  return true;
   }
   return false;
 }
