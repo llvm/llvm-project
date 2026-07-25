@@ -2247,6 +2247,11 @@ const SCEV *ScalarEvolution::getCastExpr(SCEVTypes Kind, const SCEV *Op,
     return getZeroExtendExpr(Op, Ty);
   case scSignExtend:
     return getSignExtendExpr(Op, Ty);
+  case scPtrToAddr: {
+    const SCEV *Expr = getPtrToAddrExpr(Op);
+    assert(Expr->getType() == Ty && "requested type must match");
+    return Expr;
+  }
   case scPtrToInt:
     return getPtrToIntExpr(Op, Ty);
   default:

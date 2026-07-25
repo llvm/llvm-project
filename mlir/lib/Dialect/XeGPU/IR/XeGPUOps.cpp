@@ -854,12 +854,10 @@ LogicalResult DpasOp::verify() {
 // XeGPU_ConvertLayoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult ConvertLayoutOp::verify() {
-  auto srcLayout = getInputLayout();
   auto resLayout = getTargetLayout();
-  if (!srcLayout)
-    return emitOpError("expected input layout.");
   if (!resLayout)
     return emitOpError("expected target layout.");
+  auto srcLayout = getEffectiveInputLayout();
 
   // both input and target layouts should be WgLayout or SgLayout at the same
   // time.
