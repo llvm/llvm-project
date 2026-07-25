@@ -89,6 +89,9 @@ class MemCmpExpansion {
   PHINode *PhiRes = nullptr;
   const bool IsUsedForZeroCmp;
   const DataLayout &DL;
+  const TargetTransformInfo &TTI;
+  // The known common alignment of the two source pointers.
+  const Align CommonAlign;
   DomTreeUpdater *DTU = nullptr;
   IRBuilder<> Builder;
   // Represents the decomposition in blocks of the expansion. For example,
@@ -127,30 +130,68 @@ class MemCmpExpansion {
   LoadPair getLoadPair(Type *LoadSizeType, Type *BSwapSizeType,
                        Type *CmpSizeType, unsigned OffsetBytes);
 
+  // Return true if a load of `LoadSize` bytes at `Offset` from the base
+  // pointers is accessible on the target: either it is naturally aligned given
+  // the known common base alignment, or the target allows a misaligned access
+  // of that width.
+  bool isAccessAllowed(unsigned LoadSize, uint64_t Offset) const;
+
   static LoadEntryVector
   computeGreedyLoadSequence(uint64_t Size, llvm::ArrayRef<unsigned> LoadSizes,
                             unsigned MaxNumLoads, unsigned &NumLoadsNonOneByte);
-  static LoadEntryVector
+  LoadEntryVector
   computeOverlappingLoadSequence(uint64_t Size, unsigned MaxLoadSize,
                                  unsigned MaxNumLoads,
-                                 unsigned &NumLoadsNonOneByte);
+                                 unsigned &NumLoadsNonOneByte) const;
 
-  static void optimiseLoadSequence(
+  void optimiseLoadSequence(
       LoadEntryVector &LoadSequence,
       const TargetTransformInfo::MemCmpExpansionOptions &Options,
-      bool IsUsedForZeroCmp);
+      bool IsUsedForZeroCmp) const;
 
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size,
                   const TargetTransformInfo::MemCmpExpansionOptions &Options,
                   const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
-                  DomTreeUpdater *DTU);
+                  DomTreeUpdater *DTU, const TargetTransformInfo &TTI,
+                  Align CommonAlign);
 
   unsigned getNumBlocks();
   uint64_t getNumLoads() const { return LoadSequence.size(); }
 
   Value *getMemCmpExpansion();
 };
+
+// Return true if a load of `LoadSize` bytes at `Offset` from the base pointers
+// is accessible on the target: either it is naturally aligned given the known
+// common base alignment, or the target allows a misaligned access of that
+// width. We query whether the access is *allowed*, not whether it is *fast*,
+// matching the historical behavior of forming unaligned loads whenever the
+// target permits them.
+static bool isAccessAllowed(const CallInst *CI, const TargetTransformInfo &TTI,
+                            Align CommonAlign, unsigned LoadSize,
+                            uint64_t Offset) {
+  // The access is naturally aligned when the known alignment is at least the
+  // load width. LoadSize is not necessarily a power of two here: some targets
+  // like RISC-V add non-power-of-two load sizes for vector memcmp, so compare
+  // against the raw width rather than constructing an Align, which would
+  // require a power of two.
+  Align AccessAlign = commonAlignment(CommonAlign, Offset);
+  if (AccessAlign.value() >= LoadSize)
+    return true;
+  unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
+  return TTI.allowsMisalignedMemoryAccesses(CI->getContext(), LoadSize * 8, AS,
+                                            AccessAlign);
+}
+
+// Return true if a load of `LoadSize` bytes at `Offset` from the base pointers
+// is accessible on the target given the known common base alignment. This gates
+// the (power-of-two) overlapping loads; tail expansions are always legalized by
+// the backend and skip this check.
+bool MemCmpExpansion::isAccessAllowed(unsigned LoadSize,
+                                      uint64_t Offset) const {
+  return ::isAccessAllowed(CI, TTI, CommonAlign, LoadSize, Offset);
+}
 
 MemCmpExpansion::LoadEntryVector MemCmpExpansion::computeGreedyLoadSequence(
     uint64_t Size, llvm::ArrayRef<unsigned> LoadSizes,
@@ -183,10 +224,9 @@ MemCmpExpansion::LoadEntryVector MemCmpExpansion::computeGreedyLoadSequence(
 }
 
 MemCmpExpansion::LoadEntryVector
-MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
-                                                const unsigned MaxLoadSize,
-                                                const unsigned MaxNumLoads,
-                                                unsigned &NumLoadsNonOneByte) {
+MemCmpExpansion::computeOverlappingLoadSequence(
+    uint64_t Size, const unsigned MaxLoadSize, const unsigned MaxNumLoads,
+    unsigned &NumLoadsNonOneByte) const {
   // These are already handled by the greedy approach.
   if (Size < 2 || MaxLoadSize < 2)
     return {};
@@ -215,9 +255,14 @@ MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
     Offset += MaxLoadSize;
   }
 
-  // Add the last overlapping load.
+  // Add the last overlapping load. Its offset is not a multiple of the load
+  // size, so it may be misaligned; bail if the target cannot access it.
   assert(Size > 0 && Size < MaxLoadSize && "broken invariant");
-  LoadSequence.push_back({MaxLoadSize, Offset - (MaxLoadSize - Size)});
+  uint64_t OverlapOffset = Offset - (MaxLoadSize - Size);
+  if (!isAccessAllowed(MaxLoadSize, OverlapOffset))
+    return {};
+
+  LoadSequence.push_back({MaxLoadSize, OverlapOffset});
   NumLoadsNonOneByte = 1;
   return LoadSequence;
 }
@@ -225,7 +270,7 @@ MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
 void MemCmpExpansion::optimiseLoadSequence(
     LoadEntryVector &LoadSequence,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
-    bool IsUsedForZeroCmp) {
+    bool IsUsedForZeroCmp) const {
   // This part of code attempts to optimize the LoadSequence by merging allowed
   // subsequences into single loads of allowed sizes from
   // `MemCmpExpansionOptions::AllowedTailExpansions`. If it is for zero
@@ -246,10 +291,19 @@ void MemCmpExpansion::optimiseLoadSequence(
         Options.AllowedTailExpansions.end())
       break;
 
+    // A merged load wider than MaxLoadSize can only be emitted when it is the
+    // sole load (getMemCmpOneBlock); in a multi-block expansion
+    // emitLoadCompareBlock requires every load to fit in MaxLoadSize (the
+    // result-block phis are sized to it). The per-call-site alignment filter
+    // can shrink MaxLoadSize, so stop merging when the result would still be
+    // multi-block and the merged load exceeds it.
+    if (LoadSize > MaxLoadSize && LoadSequence.size() > 2)
+      break;
+
     // Remove the last two sequences and replace with the combined sequence
     LoadSequence.pop_back();
     LoadSequence.pop_back();
-    LoadSequence.emplace_back(PreLast.Offset, LoadSize);
+    LoadSequence.emplace_back(LoadSize, PreLast.Offset);
   }
 }
 
@@ -265,10 +319,10 @@ MemCmpExpansion::MemCmpExpansion(
     CallInst *const CI, uint64_t Size,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
     const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
-    DomTreeUpdater *DTU)
+    DomTreeUpdater *DTU, const TargetTransformInfo &TTI, Align CommonAlign)
     : CI(CI), Size(Size), NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
-      IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), DTU(DTU),
-      Builder(CI) {
+      IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), TTI(TTI),
+      CommonAlign(CommonAlign), DTU(DTU), Builder(CI) {
   assert(Size > 0 && "zero blocks");
   // Scale the max size down if the target can load more bytes than we need.
   llvm::ArrayRef<unsigned> LoadSizes(Options.LoadSizes);
@@ -870,29 +924,19 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmp;
 
-  // Keep only the load sizes the target can actually access given the
-  // statically known common alignment of both pointers: either the access is
-  // naturally aligned, or the target allows a misaligned access of that width.
-  // This lets strict-alignment targets expand compares whose pointers happen to
-  // be sufficiently aligned, while still falling back to the libcall when no
-  // load size fits. Because the greedy load sequence only places a load of size
-  // S at an offset that is a multiple of S, a load that does not exceed the
-  // base alignment is guaranteed to be naturally aligned.
-  //
-  // Note we query whether the access is *allowed*, not whether it is *fast*:
-  // this matches the historical behavior of forming unaligned loads whenever
-  // the target permits them, so it is a no-op for targets that allow unaligned
-  // access even when it is slow.
-  const Align LhsAlign = getMemCmpArgAlignment(CI, 0, *DL);
-  const Align RhsAlign = getMemCmpArgAlignment(CI, 1, *DL);
-  const Align MinAlign = std::min(LhsAlign, RhsAlign);
-  LLVMContext &Context = CI->getContext();
-  unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
+  // Keep only the load sizes the target can access at the base alignment:
+  // either the access is naturally aligned, or the target allows a misaligned
+  // access of that width. This lets strict-alignment targets expand compares
+  // whose pointers happen to be sufficiently aligned, while still falling back
+  // to the libcall when no load size fits. Because the greedy load sequence
+  // only places a load of size S at an offset that is a multiple of S, a size
+  // kept here is always accessible in that sequence; overlapping loads and
+  // merged tail expansions are checked separately against their actual offsets
+  // in MemCmpExpansion.
+  const Align CommonAlign = std::min(getMemCmpArgAlignment(CI, 0, *DL),
+                                     getMemCmpArgAlignment(CI, 1, *DL));
   llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
-    if (MinAlign >= LoadSize)
-      return false;
-    return !TTI->allowsMisalignedMemoryAccesses(Context, LoadSize * 8, AS,
-                                                MinAlign);
+    return !isAccessAllowed(CI, *TTI, CommonAlign, LoadSize, /*Offset=*/0);
   });
   // If the filter removed every load size, bail out to the libcall: the
   // MemCmpExpansion constructor asserts that at least one load size remains.
@@ -901,7 +945,8 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   if (Options.LoadSizes.empty())
     return false;
 
-  MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU);
+  MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU,
+                            *TTI, CommonAlign);
 
   // Don't expand if this will require more loads than desired by the target.
   if (Expansion.getNumLoads() == 0) {

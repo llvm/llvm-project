@@ -2518,9 +2518,10 @@ public:
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+    Type *ValTy = RMWI->getValOperand()->getType();
     if (RMWI->getOperation() == AtomicRMWInst::Xchg &&
-        (RMWI->getValOperand()->getType()->isFloatingPointTy() ||
-         RMWI->getValOperand()->getType()->isPointerTy()))
+        (ValTy->isFloatingPointTy() || ValTy->isPointerTy() ||
+         ValTy->isVectorTy()))
       return AtomicExpansionKind::CastToInteger;
 
     return AtomicExpansionKind::None;
@@ -3623,8 +3624,9 @@ public:
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
-  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
-  /// from min(max(fptoi)) saturation patterns.
+  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type
+  /// VT. Used when folding idioms into a saturating fp-to-int conversion, such
+  /// as min(max(fptoi)) clamps or NaN-guarded selects.
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
   }

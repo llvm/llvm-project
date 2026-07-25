@@ -83,7 +83,10 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_WGP = 1 << 9,
 
   // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 10
+  FEATURE_XNACK_ON_OFF_MODES = 1 << 10,
+
+  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
+  FEATURE_SGPR_INIT_BUG = 1 << 11
 };
 
 enum FeatureError : uint32_t {
@@ -146,6 +149,17 @@ LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 LLVM_ABI IsaVersion getIsaVersion(Triple::SubArchType SubArch);
+
+enum { FIXED_NUM_SGPRS_FOR_INIT_BUG = 96 };
+
+LLVM_ABI unsigned getTotalNumSGPRs(GPUKind AK);
+LLVM_ABI unsigned getTotalNumSGPRs(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getAddressableNumSGPRs(GPUKind AK);
+LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
@@ -227,8 +241,6 @@ public:
     SramEccSetting = NewSramEccSetting;
   }
 
-  void setTargetIDFromTargetIDStream(StringRef TargetID);
-
   GPUKind getGPUKind() const { return Arch; }
 
   StringRef getTargetTripleString() const { return TargetTripleString; }
@@ -236,6 +248,15 @@ public:
   /// \returns True if this is an AMDHSA target.
   bool isAMDHSA() const { return IsAMDHSA; }
 
+  /// Parse and validate a TargetID for triple \p TT from the processor+features
+  /// string \p ProcAndFeatures (e.g. "gfx90a", "gfx90a:xnack+:sramecc-", "").
+  /// Returns std::nullopt if the triple is not AMDGCN, the processor is
+  /// unrecognized, or a feature modifier is invalid for the processor.
+  static std::optional<TargetID> parse(const Triple &TT,
+                                       StringRef ProcAndFeatures);
+
+  /// Parse and validate a TargetID from a full
+  /// "<triple>-<processor>:<features>" directive string.
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
 
@@ -252,6 +273,16 @@ public:
   void print(raw_ostream &OS) const;
 
   std::string toString() const;
+
+  /// Print the canonical processor name followed by any explicit xnack and
+  /// sramecc feature modifiers (e.g. "gfx908:sramecc-:xnack+"), without the
+  /// triple prefix.
+  void printCanonicalTargetIDString(raw_ostream &OS) const;
+
+  /// \returns the canonical processor name followed by any explicit xnack and
+  /// sramecc feature modifiers order (e.g.  "gfx908:sramecc-:xnack+"), without
+  /// the triple prefix.
+  std::string getCanonicalFeatureString() const;
 
   bool operator==(const TargetID &Other) const;
   bool operator!=(const TargetID &Other) const { return !(*this == Other); }

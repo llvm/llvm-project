@@ -1042,8 +1042,6 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
     if (!CapturedOriginList)
       continue;
-    if (!CapturedOriginList)
-      continue;
     for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||

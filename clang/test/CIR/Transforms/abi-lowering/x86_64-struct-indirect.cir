@@ -1,0 +1,51 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_NoRegs = !cir.struct<"NoRegs" {!s32i, !s32i}>
+
+module attributes {
+  cir.record_layouts = {NoRegs = #cir.record_layout<
+    arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+    record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A 24-byte struct does not fit in registers: passed byval.  The body reads
+  // a field, so the load the rewriter inserts at entry (turning the byval
+  // pointer back into the record value) is visible.
+  cir.func @take_big(%arg0: !rec_Big) -> !s64i {
+    %0 = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.get_member %0[2] {name = "c"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+    %2 = cir.load %1 : !cir.ptr<!s64i>, !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s64i
+  // CHECK:   %[[VAL:.*]] = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:   %[[LOCAL:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_Big>
+  // CHECK:   cir.store %[[VAL]], %[[LOCAL]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:   %[[FLD:.*]] = cir.get_member %[[LOCAL]][2] {name = "c"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
+  // CHECK:   %{{.*}} = cir.load %[[FLD]] : !cir.ptr<!s64i>, !s64i
+
+  // A 24-byte struct return uses an sret pointer argument.
+  cir.func @ret_big() -> !rec_Big {
+    %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable})
+
+  // A small struct that cannot pass in registers (non-trivial for ABI) is
+  // passed indirectly even though its size would otherwise fit a register.
+  cir.func @take_noregs(%arg0: !rec_NoRegs) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_NoRegs})
+}

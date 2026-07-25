@@ -449,7 +449,7 @@ private:
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.
   std::optional<AvailableValue>
-  AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
+  analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                           Value *Address);
 
   /// Given a select-dependency for the load (the load address is a select of
@@ -457,13 +457,13 @@ private:
   /// value is available by finding dominating values for both addresses.  If
   /// so, the load can be rematerialized as a select of those two values.
   std::optional<AvailableValue>
-  AnalyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+  analyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
                             Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
   /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
-  void AnalyzeLoadAvailability(LoadInst *Load,
+  void analyzeLoadAvailability(LoadInst *Load,
                                SmallVectorImpl<ReachingMemVal> &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
@@ -473,7 +473,7 @@ private:
   LoadInst *findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
                                     LoadInst *Load);
 
-  bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
+  bool performLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
   /// Try to replace a load which executes on each loop iteraiton with Phi
@@ -492,7 +492,6 @@ private:
   // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
-  void dump(DenseMap<uint32_t, Value *> &Map) const;
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);

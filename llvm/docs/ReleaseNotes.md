@@ -75,6 +75,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AMDGPU Backend
 
+* Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
+  and `amdgpu.sramecc` module flags.
+
 ### Changes to the ARM Backend
 
 ### Changes to the AVR Backend
@@ -110,6 +113,8 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
 
