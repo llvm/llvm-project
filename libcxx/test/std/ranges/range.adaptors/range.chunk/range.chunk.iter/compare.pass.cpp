@@ -46,6 +46,7 @@ constexpr bool test() {
   // Test `friend constexpr bool opreator==(const outer_iterator& x, default_sentinel_t)`
   {
     /*chunk_view::__outer_iterator*/ std::input_iterator auto it = input_chunked.begin();
+    assert(it != std::default_sentinel);
     std::ranges::advance(it, 4);
     assert(it == std::default_sentinel);
   }
@@ -53,7 +54,9 @@ constexpr bool test() {
   // Test `friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t)`
   {
     /*chunk_view::__inner_iterator*/ std::input_iterator auto it = (*input_chunked.begin()).begin();
-    std::ranges::advance(it, 3);
+    std::ranges::advance(it, 2);
+    assert(it != std::default_sentinel);
+    ++it;
     assert(it == std::default_sentinel);
   }
 
