@@ -775,6 +775,9 @@ static std::optional<int64_t> getUpperBound(Value iv) {
 static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
                                             unsigned numSymbols,
                                             ArrayRef<Value> operands) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
+    return constExpr.getValue();
+
   // Get the constant lower or upper bounds on the operands.
   SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
   constLowerBounds.reserve(operands.size());
@@ -783,9 +786,6 @@ static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
     constLowerBounds.push_back(getLowerBound(operand));
     constUpperBounds.push_back(getUpperBound(operand));
   }
-
-  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
-    return constExpr.getValue();
 
   return getBoundForAffineExpr(expr, numDims, numSymbols, constLowerBounds,
                                constUpperBounds,
@@ -798,6 +798,9 @@ static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
 static std::optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
                                             unsigned numSymbols,
                                             ArrayRef<Value> operands) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
+    return constExpr.getValue();
+
   // Get the constant lower or upper bounds on the operands.
   SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
   constLowerBounds.reserve(operands.size());
@@ -807,15 +810,9 @@ static std::optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
     constUpperBounds.push_back(getUpperBound(operand));
   }
 
-  std::optional<int64_t> lowerBound;
-  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
-    lowerBound = constExpr.getValue();
-  } else {
-    lowerBound = getBoundForAffineExpr(expr, numDims, numSymbols,
-                                       constLowerBounds, constUpperBounds,
-                                       /*isUpper=*/false);
-  }
-  return lowerBound;
+  return getBoundForAffineExpr(expr, numDims, numSymbols, constLowerBounds,
+                               constUpperBounds,
+                               /*isUpper=*/false);
 }
 
 /// Simplify `expr` while exploiting information from the values in `operands`.
