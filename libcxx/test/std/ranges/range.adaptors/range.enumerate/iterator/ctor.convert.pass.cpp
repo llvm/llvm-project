@@ -43,6 +43,7 @@ constexpr void test() {
   };
 
   static_assert(std::is_convertible_v<EnumerateIterator, EnumerateConstIterator>);
+  static_assert(std::convertible_to<EnumerateIterator, EnumerateConstIterator>);
 
   std::array array{0, 84, 2, 3, 4};
   auto view = make_enumerate_view(array.begin(), array.end());
