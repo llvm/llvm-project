@@ -226,6 +226,8 @@
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
 #include "llvm/ADT/Eytzinger.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -395,14 +397,39 @@ public:
   virtual size_t size() const = 0;
   bool empty() const { return size() == 0; }
   virtual FunctionId operator[](size_t Idx) const = 0;
+  virtual bool contains(StringRef Key) const {
+    return contains(FunctionId(Key).getHashCode());
+  }
+  virtual bool contains(uint64_t GUID) const = 0;
 
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, size()); }
+
+protected:
+  static constexpr auto GetFunctionIdHash = [](FunctionId F) {
+    return F.getHashCode();
+  };
+  static constexpr auto GetFunctionIdString = [](FunctionId F) {
+    return F.stringRef();
+  };
+
+  template <typename SetT, typename RangeT, typename ProjT = llvm::identity>
+  static const SetT &getOrCreateSet(std::optional<SetT> &Set,
+                                    const RangeT &Range, ProjT Proj = ProjT()) {
+    if (!Set) {
+      Set.emplace();
+      Set->reserve(Range.size());
+      for (const auto &Item : Range)
+        Set->insert(Proj(Item));
+    }
+    return *Set;
+  }
 };
 
 class LazySampleProfileNameTable final : public SampleProfileNameTable {
   const uint8_t *Start = nullptr;
   size_t Size = 0;
+  mutable std::optional<DenseSet<uint64_t>> GUIDSet;
 
 public:
   LazySampleProfileNameTable(const uint8_t *Start, size_t Size)
@@ -416,10 +443,18 @@ public:
     return FunctionId(endian::read<uint64_t, unaligned>(
         Start + Idx * sizeof(uint64_t), endianness::little));
   }
+
+  bool contains(uint64_t GUID) const override {
+    ArrayRef<support::ulittle64_t> Table(
+        reinterpret_cast<const support::ulittle64_t *>(Start), Size);
+    return getOrCreateSet(GUIDSet, Table).contains(GUID);
+  }
 };
 
 class StringSampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
+  mutable std::optional<DenseSet<StringRef>> NameSet;
+  mutable std::optional<DenseSet<uint64_t>> GUIDSet;
 
 public:
   explicit StringSampleProfileNameTable(std::vector<FunctionId> &&Vec)
@@ -433,10 +468,19 @@ public:
     assert(Idx < Vec.size() && "Index out of bounds");
     return Vec[Idx];
   }
+
+  bool contains(StringRef Key) const override {
+    return getOrCreateSet(NameSet, Vec, GetFunctionIdString).contains(Key);
+  }
+
+  bool contains(uint64_t GUID) const override {
+    return getOrCreateSet(GUIDSet, Vec, GetFunctionIdHash).contains(GUID);
+  }
 };
 
 class MD5SampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
+  mutable std::optional<DenseSet<uint64_t>> MD5Set;
 
 public:
   explicit MD5SampleProfileNameTable(std::vector<FunctionId> &&Vec)
@@ -450,21 +494,36 @@ public:
     assert(Idx < Vec.size() && "Index out of bounds");
     return Vec[Idx];
   }
+
+  bool contains(uint64_t GUID) const override {
+    return getOrCreateSet(MD5Set, Vec, GetFunctionIdHash).contains(GUID);
+  }
 };
 
 class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
   ArrayRef<support::ulittle64_t> Array;
+  std::array<EytzingerTableSpan<support::ulittle64_t>,
+             static_cast<size_t>(EytzingerSpan::NumSpans)>
+      Spans;
 
 public:
   EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
                                   uint64_t NumCS, uint64_t NumFlat,
                                   uint64_t NumInlinees)
-      : Array(Data, NumCS + NumFlat + NumInlinees) {}
+      : Array(Data, NumCS + NumFlat + NumInlinees),
+        Spans{{{Data, NumCS},
+               {Data + NumCS, NumFlat},
+               {Data + NumCS + NumFlat, NumInlinees}}} {}
 
   size_t size() const override { return Array.size(); }
 
   FunctionId operator[](size_t Idx) const override {
     return FunctionId(Array[Idx]);
+  }
+
+  bool contains(uint64_t GUID) const override {
+    return llvm::any_of(Spans,
+                        [&](const auto &Span) { return Span.contains(GUID); });
   }
 };
 
@@ -630,6 +689,8 @@ public:
             SampleProfileNameTable::iterator()};
   }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
+  virtual bool contains(StringRef Key) const { return false; }
+  virtual bool contains(uint64_t GUID) const { return false; }
 
   /// Return whether names in the profile are all MD5 numbers.
   bool useMD5() const { return ProfileIsMD5; }
@@ -791,6 +852,14 @@ public:
       return {SampleProfileNameTable::iterator(),
               SampleProfileNameTable::iterator()};
     return {NameTable->begin(), NameTable->end()};
+  }
+
+  bool contains(StringRef Key) const override {
+    return NameTable && NameTable->contains(Key);
+  }
+
+  bool contains(uint64_t GUID) const override {
+    return NameTable && NameTable->contains(GUID);
   }
 
 protected:
@@ -1189,23 +1258,6 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
-};
-
-/// A helper class that wraps a local set of string names from NameTable.
-class SampleProfileNameSet {
-  const SampleProfileReader &Reader;
-  StringSet<> NamesInProfile;
-
-public:
-  explicit SampleProfileNameSet(const SampleProfileReader &R) : Reader(R) {
-    for (FunctionId Name : Reader.getNameTable())
-      NamesInProfile.insert(Name.stringRef());
-  }
-
-  /// Check if a canonical function name exists in the profile name table.
-  bool contains(StringRef CanonName) const {
-    return NamesInProfile.contains(CanonName);
-  }
 };
 
 } // end namespace sampleprof
