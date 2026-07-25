@@ -555,13 +555,13 @@ int main(int argc, char **argv) {
 
     Expected<const mca::InstrumentRegions &> InstrumentRegionsOrErr =
         IRG->parseInstrumentRegions(std::move(IPtemp),
-                                   shouldSkip(SkipType::PARSE_FAILURE));
+                                    shouldSkip(SkipType::PARSE_FAILURE));
 
     if (!InstrumentRegionsOrErr) {
-      if (auto Err = handleErrors(InstrumentRegionsOrErr.takeError(),
-                                  [](const StringError &E) {
-                                    WithColor::error() << E.getMessage() << '\n';
-                                  })) {
+      if (auto Err = handleErrors(
+              InstrumentRegionsOrErr.takeError(), [](const StringError &E) {
+                WithColor::error() << E.getMessage() << '\n';
+              })) {
         // Default case.
         WithColor::error() << toString(std::move(Err)) << '\n';
       }
