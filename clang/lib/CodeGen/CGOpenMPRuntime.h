@@ -1702,7 +1702,7 @@ public:
   /// Updates the dependency kind in the specified depobj object.
   /// \param DepobjLVal LValue for the main depobj object.
   /// \param NewDepKind New dependency kind.
-  void emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
+  void emitUpdateDependObjectsClause(CodeGenFunction &CGF, LValue DepobjLVal,
                         OpenMPDependClauseKind NewDepKind, SourceLocation Loc);
 
   /// Initializes user defined allocators specified in the uses_allocators

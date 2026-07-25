@@ -5286,17 +5286,13 @@ void OmpStructureChecker::CheckStructureComponent(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::UpdateDependObjects &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  const parser::OmpDependenceType *depType{nullptr};
-  const parser::OmpTaskDependenceType *taskType{nullptr};
-  if (auto &maybeUpdate{x.v}) {
-    depType = std::get_if<parser::OmpDependenceType>(&maybeUpdate->u);
-    taskType = std::get_if<parser::OmpTaskDependenceType>(&maybeUpdate->u);
-  }
-
+  auto *depType = std::get_if<parser::OmpDependenceType>(&x.v.u);
+  auto *taskType = std::get_if<parser::OmpTaskDependenceType>(&x.v.u);
   if (!depType && !taskType) {
     assert(dir == llvm::omp::Directive::OMPD_atomic &&
         "Unexpected alternative in update clause");
