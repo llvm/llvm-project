@@ -3161,6 +3161,10 @@ bool VectorCombine::compactShuffleOperands(Instruction &I) {
   unsigned CompactedWidth =
       std::max(LHSCompact.CompactedWidth, RHSCompact.CompactedWidth);
 
+  // Bail out if the mask references no element, leaving nothing to compact.
+  if (CompactedWidth == 0)
+    return false;
+
   // Check total cost: compacting operands + change to outer shuffle.
   if (LHSCompact.Apply || RHSCompact.Apply) {
     auto *ShuffleDstTy = cast<FixedVectorType>(I.getType());

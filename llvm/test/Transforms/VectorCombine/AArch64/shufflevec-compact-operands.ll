@@ -165,6 +165,16 @@ define <8 x i8> @interleave_shuffle_bitcast_constant(<4 x i8> %x, <4 x i8> %y) {
   ret <8 x i8> %2
 }
 
+; Mask references no element of either operand - does NOT compact
+define <4 x i8> @all_poison_mask_constants() {
+; CHECK-LABEL: @all_poison_mask_constants(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> <i8 0, i8 1, i8 2, i8 3>, <4 x i8> <i8 4, i8 5, i8 6, i8 7>, <4 x i32> poison
+; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+;
+  %1 = shufflevector <4 x i8> <i8 0, i8 1, i8 2, i8 3>, <4 x i8> <i8 4, i8 5, i8 6, i8 7>, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 poison>
+  ret <4 x i8> %1
+}
+
 ; Randomly shuffle non-compactible operand with constant operand - SHOULD compact
 define <8 x i8> @shuffle_argument_constant(<8 x i8> %x) {
 ; CHECK-LABEL: @shuffle_argument_constant(
