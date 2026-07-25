@@ -34,6 +34,7 @@
 //     friend constexpr difference_type operator-(const iterator& x, default_sentinel_t y)
 //       requires sized_sentinel_for<sentinel_t<Base>, iterator_t<Base>>;
 
+#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <ranges>
@@ -95,6 +96,21 @@ constexpr bool test() {
   // Test `friend constexpr difference_type operator-(const iterator& x, default_sentinel_t y)`
   {
     assert(chunked.begin() - std::default_sentinel == -4);
+  }
+
+  // Test `operator+=`/`operator-=` moving back and forth across a partial final chunk, when the range is
+  // not evenly divisible by the chunk size.
+  {
+    std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> uneven_chunked = vector | std::views::chunk(5);
+
+    auto it = uneven_chunked.begin();
+    assert(std::ranges::equal(*it, std::vector{1, 2, 3, 4, 5}));
+
+    it += 2;
+    assert(std::ranges::equal(*it, std::vector{11, 12}));
+
+    it -= 1;
+    assert(std::ranges::equal(*it, std::vector{6, 7, 8, 9, 10}));
   }
 
   return true;
