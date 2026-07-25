@@ -1897,8 +1897,8 @@ def : Proc<"i486",            [FeatureX87],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : Proc<"i586",            [FeatureX87, FeatureCX8],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"pentium",         [FeatureX87, FeatureCX8],
-                              [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+def : ProcessorAlias<"pentium", "i586">;
+
 def : Proc<"pentium-mmx", [FeatureX87, FeatureCX8, FeatureMMX],
                           [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : ProcessorAlias<"pentium_mmx", "pentium-mmx">;
