@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -std=hlsl202x \
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -std=hlsl202x \
 // RUN:   -finclude-default-header -ast-dump -ast-dump-filter=get00 %s | FileCheck %s
 
 template <typename T>

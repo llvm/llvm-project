@@ -1814,6 +1814,16 @@ SDValue SelectionDAGBuilder::getValue(const Value *V) {
   return Val;
 }
 
+void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
+  if (V->getType()->isVoidTy())
+    return;
+
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                  V->getType(), ValueVTs);
+  setValue(V, DAG.getErrorMergeValues(ValueVTs, SDValue(), dl));
+}
+
 /// getNonRegisterValue - Return an SDValue for the given Value, but
 /// don't look in FuncInfo.ValueMap for a virtual register.
 SDValue SelectionDAGBuilder::getNonRegisterValue(const Value *V) {
@@ -2869,7 +2879,7 @@ void SelectionDAGBuilder::visitCondBr(const CondBrInst &I) {
         !shouldKeepJumpConditionsTogether(
             FuncInfo, I, Opcode, BOp0, BOp1,
             DAG.getTargetLoweringInfo().getJumpConditionMergingParams(
-                Opcode, BOp0, BOp1))) {
+                Opcode, BOp0, BOp1, FuncInfo.Fn))) {
       FindMergedConditions(BOp, Succ0MBB, Succ1MBB, BrMBB, BrMBB, Opcode,
                            getEdgeProbability(BrMBB, Succ0MBB),
                            getEdgeProbability(BrMBB, Succ1MBB),
@@ -5566,15 +5576,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     if (HasChain && !OnlyLoad)
       DAG.setRoot(getRoot());
 
-    if (!I.getType()->isVoidTy()) {
-      SmallVector<EVT, 4> ValueVTs;
-      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                      I.getType(), ValueVTs);
-      SmallVector<SDValue, 4> Results;
-      for (EVT VT : ValueVTs)
-        Results.push_back(DAG.getPOISON(VT));
-      setValue(&I, DAG.getMergeValues(Results, DL));
-    }
+    setValueToPoison(&I, DL);
     return;
   }
 
@@ -7729,9 +7731,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
   case Intrinsic::type_test:
   case Intrinsic::public_type_test:
-    reportFatalUsageError("llvm.type.test intrinsic must be lowered by the "
-                          "LowerTypeTests pass before code generation");
+  case Intrinsic::type_checked_load:
+  case Intrinsic::type_checked_load_relative: {
+    // These intrinsics are expected to be lowered by the LowerTypeTests pass
+    // before code generation. Surviving until here usually indicates a
+    // misconfiguration, for instance when devirtualization is enabled but LTO
+    // does not actually run.
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        *I.getFunction(),
+        Intrinsic::getBaseName(Intrinsic) +
+            " intrinsic must be lowered by the LowerTypeTests pass "
+            "before code generation",
+        sdl.getDebugLoc()));
+
+    // Lower the result to poison so that compilation can continue and collect
+    // any further diagnostics.
+    setValueToPoison(&I, sdl);
     return;
+  }
 
   case Intrinsic::assume:
   case Intrinsic::experimental_noalias_scope_decl:

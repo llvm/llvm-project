@@ -407,29 +407,26 @@ namespace cwg638 { // cwg638: no
   };
 
   class X {
-    typedef int type; // #cwg638-X-type
+    typedef int type;
     template<class T> friend struct A<T>::B;
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
   };
 
   template<> struct A<int> {
-    X::type a;
-    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
+    X::type a; // FIXME: private
     struct B {
       X::type b; // ok
     };
-    int f() { X::type c; }
-    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
+    int f() { X::type c; } // FIXME: private
     void g() { X::type d; } // ok
     struct D {
-      void h() { X::type e; }
-      // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-      //   expected-note@#cwg638-X-type {{implicitly declared private here}}
+      void h() { X::type e; } // FIXME: private
     };
   };
 } // namespace cwg638
@@ -537,10 +534,18 @@ namespace cwg644 { // cwg644: partial
   static_assert(__is_literal_type(B), "");
 
   struct C : virtual A {};
+#if __cplusplus >= 202400L
+  static_assert(__is_literal_type(C), "");
+#else
   static_assert(!__is_literal_type(C), "");
+#endif
 
   struct D { C c; };
+#if __cplusplus >= 202400L
+  static_assert(__is_literal_type(D), "");
+#else
   static_assert(!__is_literal_type(D), "");
+#endif
 
   // FIXME: According to CWG644, E<C> is a literal type despite having virtual
   // base classes. This appears to be a wording defect.
@@ -548,7 +553,11 @@ namespace cwg644 { // cwg644: partial
   struct E : T {
     constexpr E() = default;
   };
+#if __cplusplus >= 202400L
+  static_assert(__is_literal_type(E<C>), "");
+#else
   static_assert(!__is_literal_type(E<C>), "");
+#endif
 #endif
 } // namespace cwg644
 

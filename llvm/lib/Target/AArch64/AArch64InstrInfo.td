@@ -2267,6 +2267,8 @@ let Predicates = [HasPAuth] in {
                (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2274,6 +2276,29 @@ let Predicates = [HasPAuth] in {
     let Size = 48;
     let Defs = [X16,X17,NZCV];
     let Uses = [X16];
+  }
+
+  // AUT a pointer using a PC-blended discriminator and re-PAC with different
+  // keys/data. This directly manipulates x16/x17, which are the only registers
+  // certain OSs guarantee are safe to use for sensitive operations.
+  // Additionally, it uses fixed implicit registers x15/x16/x17 for the AUT as
+  // AUTI[AB]171615 is the only instruction that can do the three-input-operand
+  // AUT, unlike the other PAuth-related pseudos (AUTx16x17, AUTPAC) where
+  // the register operands are structurally necessary.
+  def AUTPCPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
+               []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X17 which is
+    // early-clobbered.
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 48;
+    let Defs = [X17,X15,X16,NZCV];
+    let Uses = [X15,X16,X17];
   }
 
   // Similiar to AUTPAC, except a 32bit value is loaded at Addend offset from
@@ -2287,6 +2312,8 @@ let Predicates = [HasPAuth] in {
                    i64imm:$Addend),
                []>,
         Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2823,6 +2850,17 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+def negate_imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), N->getValueType(0));
+}]>;
+def neg_cheaper_imm32 : PatLeaf<(i32 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+def neg_cheaper_imm64 : PatLeaf<(i64 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+
+// Prefer (sub x, -c) over (add x, c) if -c is cheaper to materialise than c.
+def : Pat<(add GPR32:$Rn, neg_cheaper_imm32:$imm),
+          (SUBSWrr GPR32:$Rn, (MOVi32imm neg_cheaper_imm32:$imm))>;
+def : Pat<(add GPR64:$Rn, neg_cheaper_imm64:$imm),
+          (SUBSXrr GPR64:$Rn, (MOVi64imm neg_cheaper_imm64:$imm))>;
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];

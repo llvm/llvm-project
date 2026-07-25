@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rcp.f32(float) #0
 declare double @llvm.amdgcn.rcp.f64(double) #0
@@ -18,20 +18,46 @@ define amdgpu_kernel void @rcp_undef_f32(ptr addrspace(1) %out) #1 {
   ret void
 }
 
+; 1/2 = 0.5 is exact, but the instruction is only guaranteed to be exact for
+; zero, infinity, NaN, or +/-1, so the call is left in place.
 ; FUNC-LABEL: {{^}}rcp_2_f32:
-; SI-NOT: v_rcp_f32
-; SI: v_mov_b32_e32 v{{[0-9]+}}, 0.5
+; SI: v_rcp_f32_e32
 define amdgpu_kernel void @rcp_2_f32(ptr addrspace(1) %out) #1 {
   %rcp = call float @llvm.amdgcn.rcp.f32(float 2.0)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
 
+; 1/10 is not exactly representable, so the instruction's approximation need
+; not match the exact division result. The call is left in place.
 ; FUNC-LABEL: {{^}}rcp_10_f32:
-; SI-NOT: v_rcp_f32
-; SI: v_mov_b32_e32 v{{[0-9]+}}, 0x3dcccccd
+; SI: v_rcp_f32_e32
 define amdgpu_kernel void @rcp_10_f32(ptr addrspace(1) %out) #1 {
   %rcp = call float @llvm.amdgcn.rcp.f32(float 10.0)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; 1.0 / 2^127 = 2^-127, a denormal f32 result. v_rcp_f32 always flushes a
+; denormal result to zero (preserving sign), so this folds to +0 rather
+; than the exact reciprocal.
+; FUNC-LABEL: {{^}}rcp_denormal_result_f32:
+; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+define amdgpu_kernel void @rcp_denormal_result_f32(ptr addrspace(1) %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float 0x47E0000000000000)
+  store float %rcp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; 2^-127 is a denormal f32 input. v_rcp_f32 always flushes a denormal input
+; to zero (preserving sign) before reciprocating, so this folds to
+; rcp(+0) = +Inf rather than the exact reciprocal of 2^-127.
+; FUNC-LABEL: {{^}}rcp_denormal_input_f32:
+; SI-NOT: v_rcp_f32
+; SI: v_mov_b32_e32 v{{[0-9]+}}, 0x7f800000
+define amdgpu_kernel void @rcp_denormal_input_f32(ptr addrspace(1) %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float 0x3800000000000000)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
