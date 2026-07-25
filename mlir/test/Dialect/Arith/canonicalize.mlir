@@ -4019,6 +4019,81 @@ func.func @andand3(%a : i32, %b : i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL: @addi_of_not
+//       CHECK:   %[[CM1:.+]] = arith.constant -1 : i32
+//       CHECK:   return %[[CM1]]
+func.func @addi_of_not(%arg0 : i32) -> i32 {
+  %cm1 = arith.constant -1 : i32
+  %not = arith.xori %arg0, %cm1 : i32
+  %res = arith.addi %arg0, %not : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @addi_of_not_swapped
+//       CHECK:   %[[CM1:.+]] = arith.constant -1 : i32
+//       CHECK:   return %[[CM1]]
+func.func @addi_of_not_swapped(%arg0 : i32) -> i32 {
+  %cm1 = arith.constant -1 : i32
+  %not = arith.xori %arg0, %cm1 : i32
+  %res = arith.addi %not, %arg0 : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @addi_of_not_vector
+//       CHECK:   %[[CM1:.+]] = arith.constant dense<-1> : vector<4xi32>
+//       CHECK:   return %[[CM1]]
+func.func @addi_of_not_vector(%arg0 : vector<4xi32>) -> vector<4xi32> {
+  %cm1 = arith.constant dense<-1> : vector<4xi32>
+  %not = arith.xori %arg0, %cm1 : vector<4xi32>
+  %res = arith.addi %arg0, %not : vector<4xi32>
+  return %res : vector<4xi32>
+}
+
+// The negated addend may be a compound expression.
+// CHECK-LABEL: @addi_of_not_compound
+//       CHECK:   %[[CM1:.+]] = arith.constant -1 : i32
+//       CHECK:   return %[[CM1]]
+func.func @addi_of_not_compound(%arg0 : i32, %arg1 : i32) -> i32 {
+  %a = arith.xori %arg0, %arg1 : i32
+  %cm1 = arith.constant -1 : i32
+  %not = arith.xori %a, %cm1 : i32
+  %res = arith.addi %a, %not : i32
+  return %res : i32
+}
+
+// The all-ones constant may be either xori operand (xori is commutative).
+// CHECK-LABEL: @addi_of_not_const_first
+//       CHECK:   %[[CM1:.+]] = arith.constant -1 : i32
+//       CHECK:   return %[[CM1]]
+func.func @addi_of_not_const_first(%arg0 : i32) -> i32 {
+  %cm1 = arith.constant -1 : i32
+  %not = arith.xori %cm1, %arg0 : i32
+  %res = arith.addi %arg0, %not : i32
+  return %res : i32
+}
+
+// The xori must be a NOT of the other addend, not of an unrelated value.
+// CHECK-LABEL: @addi_of_not_distinct_no_fold
+//       CHECK:   arith.addi
+func.func @addi_of_not_distinct_no_fold(%arg0 : i32, %arg1 : i32) -> i32 {
+  %cm1 = arith.constant -1 : i32
+  %not = arith.xori %arg1, %cm1 : i32
+  %res = arith.addi %arg0, %not : i32
+  return %res : i32
+}
+
+// A non-all-ones xori constant is not a NOT, so it must not fold.
+// CHECK-LABEL: @addi_of_xori_non_all_ones_no_fold
+//       CHECK:   arith.addi
+func.func @addi_of_xori_non_all_ones_no_fold(%arg0 : i32) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %xor = arith.xori %arg0, %c5 : i32
+  %res = arith.addi %arg0, %xor : i32
+  return %res : i32
+}
+
+// -----
+
 // CHECK-LABEL: @truncIShrSIToTrunciShrUI
 //  CHECK-SAME:   (%[[A:.+]]: i64)
 //  CHECK-NEXT:   %[[C32:.+]] = arith.constant 32 : i64

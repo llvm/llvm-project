@@ -191,6 +191,21 @@ static Attribute getIntegerAttrOfType(Type type, int64_t value) {
   return DenseElementsAttr::get(shapedType, scalarAttr);
 }
 
+/// If `value` is a bitwise NOT (an xori with an all-ones constant operand),
+/// return the negated operand; otherwise return a null Value. The xori is
+/// commutative, so either operand may hold the constant.
+static Value matchBitwiseNot(Value value) {
+  auto xorOp = value.getDefiningOp<XOrIOp>();
+  if (!xorOp)
+    return {};
+  APInt cst;
+  if (matchPattern(xorOp.getRhs(), m_ConstantInt(&cst)) && cst.isAllOnes())
+    return xorOp.getLhs();
+  if (matchPattern(xorOp.getLhs(), m_ConstantInt(&cst)) && cst.isAllOnes())
+    return xorOp.getRhs();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
@@ -443,6 +458,14 @@ OpFoldResult arith::AddIOp::fold(FoldAdaptor adaptor) {
   if (auto sub = getRhs().getDefiningOp<SubIOp>())
     if (getLhs() == sub.getRhs())
       return sub.getLhs();
+
+  // addi(x, not(x)) -> -1 and addi(not(x), x) -> -1, where not(x) is
+  // xori(x, -1). For any N-bit integer, ~x == (2^N - 1) - x, so
+  // x + ~x == 2^N - 1: the all-ones bit pattern, which is -1. This is
+  // independent of bit width and sign interpretation and needs no flags.
+  if (matchBitwiseNot(getRhs()) == getLhs() ||
+      matchBitwiseNot(getLhs()) == getRhs())
+    return getIntegerAttrOfType(getType(), -1);
 
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
