@@ -670,7 +670,39 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   for (MCRegister Reg : GPRsToZero.set_bits())
     TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
-  // Zero out the remaining registers.
+  // Coalesce the aliasing XMM/YMM/ZMM views of each vector register so a lane
+  // is cleared only once, mirroring the GPR handling above.
+  auto getVectorClearReg = [&](MCRegister Reg) -> MCRegister {
+    if (!X86::VR128RegClass.contains(Reg) &&
+        !X86::VR128XRegClass.contains(Reg) &&
+        !X86::VR256RegClass.contains(Reg) &&
+        !X86::VR256XRegClass.contains(Reg) && !X86::VR512RegClass.contains(Reg))
+      return MCRegister();
+
+    // Clearing the XMM zeroes the whole lane. XMM0-15 use the compact VEX form;
+    // XMM16-31 are EVEX-only, reachable only via the ZMM form.
+    MCRegister Xmm = TRI->getSubReg(Reg, X86::sub_xmm);
+    if (!Xmm)
+      Xmm = Reg;
+    if (X86::VR128RegClass.contains(Xmm))
+      return Xmm;
+    MCRegister Zmm =
+        TRI->getMatchingSuperReg(Xmm, X86::sub_xmm, &X86::VR512RegClass);
+    assert(Zmm && "XMM16-31 must have an enclosing ZMM to clear through");
+    return Zmm;
+  };
+
+  BitVector VecRegsToZero(TRI->getNumRegs());
+  for (MCRegister Reg : RegsToZero.set_bits())
+    if (MCRegister Clear = getVectorClearReg(Reg)) {
+      VecRegsToZero.set(Clear.id());
+      RegsToZero.reset(Reg);
+    }
+
+  for (MCRegister Reg : VecRegsToZero.set_bits())
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
+
+  // Zero out the remaining registers (e.g. mask registers).
   for (MCRegister Reg : RegsToZero.set_bits())
     TII.buildClearRegister(Reg, MBB, MBBI, DL);
 }
