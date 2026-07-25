@@ -49,7 +49,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
