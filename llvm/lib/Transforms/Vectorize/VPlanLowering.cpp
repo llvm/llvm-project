@@ -416,7 +416,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   VPValue *Index = R->getIndex();
   Type *StepTy = Step->getScalarType();
   Index = StepTy->isIntegerTy()
-              ? Builder.createScalarSExtOrTrunc(
+              ? Builder.createScalarZExtOrTrunc(
                     Index, StepTy, DebugLoc::getCompilerGenerated())
               : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());

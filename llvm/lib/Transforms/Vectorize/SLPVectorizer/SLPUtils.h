@@ -80,6 +80,14 @@ bool allConstant(ArrayRef<Value *> VL);
 /// are UndefValue.
 bool isSplat(ArrayRef<Value *> VL);
 
+/// Checks if \p LHS and \p RHS are the same intrinsic, or one is llvm.fma
+/// and the other is llvm.fmuladd, since both lower to the same fused
+/// vector operation.
+/// \returns the intrinsic ID to use for the pair (\p RHS if the IDs match,
+/// otherwise Intrinsic::fma), or Intrinsic::not_intrinsic if they are not
+/// equivalent.
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS);
+
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
 /// patterns that make it effectively commutative (like equality comparisons

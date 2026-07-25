@@ -261,10 +261,9 @@ define <8 x half> @splatandidentity(<8 x half> %a, <8 x half> %b) {
 
 define <8 x half> @splattwice(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @splattwice(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <8 x half> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP1:%.*]], [[TMP2:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x half> [[R]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x half> [[R1]]
 ;
   %as = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> zeroinitializer
   %bs = shufflevector <8 x half> %b, <8 x half> poison, <4 x i32> zeroinitializer
@@ -743,8 +742,7 @@ define <4 x i64> @zext_add_chain(<4 x i32> %x) {
 
 define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @intrinsics_minmax(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]])
-; CHECK-NEXT:    ret <8 x i8> [[B]]
+; CHECK-NEXT:    ret <8 x i8> [[B:%.*]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -emit-llvm %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -fopenmp -emit-llvm %s -o - | FileCheck %s
 
 ! Combinational testing of control flow graph and builder insertion points
 ! in mlir-to-llvm conversion:

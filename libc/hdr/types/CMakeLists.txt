@@ -334,6 +334,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_t
+  HDRS
+    pthread_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_t
+    libc.include.pthread
+)
+
+add_proxy_header_library(
   atexithandler_t
   HDRS
     atexithandler_t.h

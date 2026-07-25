@@ -80,6 +80,9 @@ protected:
   // Instruction cache line size in bytes; set from TableGen subtarget features.
   unsigned InstCacheLineSize = 0;
 
+  // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
+  unsigned DataCacheLineSize = 0;
+
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
@@ -198,6 +201,10 @@ public:
 
   /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
   unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
+
+  /// Data (VMEM) cache line size in bytes (128 for gfx12), has no use before
+  /// GFX12.
+  unsigned getDataCacheLineSize() const { return DataCacheLineSize; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize

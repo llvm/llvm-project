@@ -447,8 +447,10 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
 
 def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                     "Apple M4",
+                                    !listconcat(
                                     !listremove(TuneAppleA17.Implies,
-                                    [FeatureStorePairSuppress])>;
+                                    [FeatureStorePairSuppress]),
+                                    [FeatureFuseAppleSMECompute])>;
 
 def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
                                     "Apple M5", TuneAppleM4.Implies>;

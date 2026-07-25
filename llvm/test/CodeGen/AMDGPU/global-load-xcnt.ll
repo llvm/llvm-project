@@ -474,7 +474,7 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2, ptr addrspace(1) %out) {
 ; GCN-SDAG-LABEL: test_v7i16_load_store_kernel:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    global_wb
+; GCN-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GCN-SDAG-NEXT:    v_nop
 ; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
@@ -504,7 +504,7 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ;
 ; GCN-GISEL-LABEL: test_v7i16_load_store_kernel:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    global_wb
+; GCN-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GCN-GISEL-NEXT:    v_nop
 ; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv

@@ -380,11 +380,10 @@ static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
 
 static void PutOpenMPRequirements(
     llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
   unsigned version{semaCtx.langOptions().OpenMPVersion};
 
   if (const auto *decls{GetOmpDeclarative(symbol)}) {
-    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+    if (const llvm::omp::ClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
@@ -396,12 +395,12 @@ static void PutOpenMPRequirements(
 
 static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
     const SymbolVector &symbols, SemanticsContext &semaCtx) {
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
   unsigned version{semaCtx.langOptions().OpenMPVersion};
 
   for (const Symbol &symbol : symbols) {
     if (const auto *decls{GetOmpDeclarative(symbol)}) {
-      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+      if (const llvm::omp::ClauseSet &dtgt{decls->ompDeclTarget()};
+          dtgt.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_declare_target, version))
@@ -413,7 +412,8 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
       // this module recovers the directive from the .mod file. Common-block
       // names must be wrapped in slashes when reparsed.
-      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+      if (const llvm::omp::ClauseSet &gp{decls->ompGroupprivate()};
+          gp.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_groupprivate, version))

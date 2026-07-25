@@ -198,13 +198,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          xcode-version: 26.5
+          xcode-version: '26.5'
         - config: generic-cxx23
-          xcode-version: 26.5
+          xcode-version: '26.5'
         - config: generic-modules
-          xcode-version: 26.5
+          xcode-version: '26.5'
         - config: apple-configuration
-          xcode-version: 26.5
+          xcode-version: '26.5'
         # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
         #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
         #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
@@ -216,9 +216,9 @@ jobs:
         #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
         #       coverage.
         - config: apple-system
-          xcode-version: 26.5
+          xcode-version: '26.5'
         - config: apple-system-hardened
-          xcode-version: 26.5
+          xcode-version: '26.5'
     runs-on: ["self-hosted", "macOS", "apple-runners"]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -228,6 +228,7 @@ jobs:
         run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
       - name: Install Ninja and CMake
         run: |
+          brew update
           brew install ninja cmake
       - name: Build and test
         run: |

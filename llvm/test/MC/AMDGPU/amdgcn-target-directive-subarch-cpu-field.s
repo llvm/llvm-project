@@ -1,13 +1,13 @@
 // RUN: split-file %s %t
-// RUN: llvm-mc -triple amdgpu12.50-amd-amdhsa %t/amdhsa.s | FileCheck --check-prefix=AMDHSA %s
-// RUN: not llvm-mc -triple amdgpu12.5-amd-amdhsa --amdhsa-code-object-version=6 %t/amdhsa-generic-subarch-cpu.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDHSA-GENERIC-SUBARCH %s
-// RUN: llvm-mc -triple amdgpu12.50-amd-amdpal %t/amdpal.s | FileCheck --check-prefix=AMDPAL %s
-// RUN: not llvm-mc -triple amdgpu12.5-amd-amdpal --amdhsa-code-object-version=6 %t/amdpal-generic-subarch-cpu.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDPAL-GENERIC-SUBARCH %s
-// RUN: llvm-mc -triple amdgpu12.50-amd-amdhsa %t/cpu.s | FileCheck --check-prefix=AMDHSA %s
-// RUN: not llvm-mc -triple amdgpu12.50-amd-amdhsa %t/subarch-mismatch.s -filetype=null 2>&1 | FileCheck --check-prefix=ERR %s
-// RUN: not llvm-mc -triple amdgpu12.50-amd-amdhsa %t/cpu-not-covered.s -filetype=null 2>&1 | FileCheck --check-prefix=NOTCOVERED %s
-// RUN: not llvm-mc -triple amdgpu12.50-amd-amdhsa %t/cpu-not-covered-same-major.s -filetype=null 2>&1 | FileCheck --check-prefix=NOTCOVERED-SAME-MAJOR %s
-// RUN: not llvm-mc -triple amdgpu12.50-amd-amdpal %t/isa-cpu-not-covered.s -filetype=null 2>&1 | FileCheck --check-prefix=ISA-NOTCOVERED %s
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdhsa %t/amdhsa.s | FileCheck --check-prefix=AMDHSA %s
+// RUN: not llvm-mc -triple=amdgpu12.5-amd-amdhsa --amdhsa-code-object-version=6 %t/amdhsa-generic-subarch-cpu.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDHSA-GENERIC-SUBARCH %s
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdpal %t/amdpal.s | FileCheck --check-prefix=AMDPAL %s
+// RUN: not llvm-mc -triple=amdgpu12.5-amd-amdpal --amdhsa-code-object-version=6 %t/amdpal-generic-subarch-cpu.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDPAL-GENERIC-SUBARCH %s
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdhsa %t/cpu.s | FileCheck --check-prefix=AMDHSA %s
+// RUN: not llvm-mc -triple=amdgpu12.50-amd-amdhsa %t/subarch-mismatch.s -filetype=null 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgpu12.50-amd-amdhsa %t/cpu-not-covered.s -filetype=null 2>&1 | FileCheck --check-prefix=NOTCOVERED %s
+// RUN: not llvm-mc -triple=amdgpu12.50-amd-amdhsa %t/cpu-not-covered-same-major.s -filetype=null 2>&1 | FileCheck --check-prefix=NOTCOVERED-SAME-MAJOR %s
+// RUN: not llvm-mc -triple=amdgpu12.50-amd-amdpal %t/isa-cpu-not-covered.s -filetype=null 2>&1 | FileCheck --check-prefix=ISA-NOTCOVERED %s
 
 // Check how the CPU field is validated against the triple
 // subarch. The processor name field may be empty, but if it's not it

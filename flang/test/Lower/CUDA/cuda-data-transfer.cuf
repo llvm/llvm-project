@@ -560,9 +560,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub28
 ! CHECK: fir.call @_QP__sum
-! CHECK-NOT: cuf.data_transfer
-! CHECK: hlfir.assign
-! CHECK-NOT: cuf.data_transfer
+! CHECK: cuf.data_transfer
 
 ! Data transfer with conversion with more complex elemental
 ! Check that the data transfer is placed before the elemental op.
@@ -655,8 +653,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub35()
 ! CHECK-NOT: cuf.data_transfer
 
-! Test that host_var = managed_module_var does NOT generate cuf.data_transfer
-! (managed memory is host-accessible, so direct assignment suffices).
+! Test that host_var = managed_module_var generates a cuf.data_transfer:
+! reading a whole managed array variable is a synchronous data transfer.
 subroutine sub36()
   use managed_mod
   integer :: host_arr(10)
@@ -664,7 +662,7 @@ subroutine sub36()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub36()
-! CHECK-NOT: cuf.data_transfer
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_host>}
 
 ! Test that device_var = managed_module_var DOES generate cuf.data_transfer
 ! (device memory requires explicit cudaMemcpy).

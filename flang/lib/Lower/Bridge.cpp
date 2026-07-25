@@ -5270,13 +5270,44 @@ private:
     return false;
   }
 
+  // Return true if the right-hand side of the assignment is a reference to a
+  // function whose result carries a managed, unified, or device CUDA data
+  // attribute. Such a result may be produced by an asynchronous kernel, so
+  // consuming it in an assignment must be a synchronizing data transfer rather
+  // than a plain host assignment. A whole-allocatable left-hand side is
+  // excluded: it has reallocation semantics and is performed on the host.
+  bool
+  isCUDAFunctionResultTransfer(const Fortran::evaluate::Assignment &assign) {
+    if (Fortran::evaluate::IsAllocatableDesignator(assign.lhs))
+      return false;
+    const Fortran::evaluate::ProcedureRef *procRef =
+        Fortran::evaluate::UnwrapProcedureRef(assign.rhs);
+    if (!procRef)
+      return false;
+    auto procedure =
+        Fortran::evaluate::characteristics::Procedure::Characterize(
+            procRef->proc(), getFoldingContext(), /*emitError=*/false);
+    if (!procedure || !procedure->functionResult ||
+        !procedure->functionResult->cudaDataAttr)
+      return false;
+    Fortran::common::CUDADataAttr attr =
+        *procedure->functionResult->cudaDataAttr;
+    return attr == Fortran::common::CUDADataAttr::Managed ||
+           attr == Fortran::common::CUDADataAttr::Unified ||
+           attr == Fortran::common::CUDADataAttr::Device;
+  }
+
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
                            hlfir::Entity &lhs, hlfir::Entity &rhs,
                            bool isWholeAllocatableAssignment,
                            bool keepLhsLengthInAllocatableAssignment) {
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
-    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
+    // A managed/unified/device function result is not visible to the symbol
+    // collection used by HasCUDADeviceAttrs (a ProcedureRef contributes no
+    // symbols), so treat such a result as a device side for transfer direction.
+    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs) ||
+                       isCUDAFunctionResultTransfer(assign);
     mlir::UnitAttr hasManagedOrUnifedSymbols =
         (Fortran::evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign.lhs) >
              0 ||
@@ -5459,8 +5490,9 @@ private:
         getFoldingContext().languageFeatures().IsEnabled(
             Fortran::common::LanguageFeature::DoConcurrentOffload));
 
-    bool isCUDATransfer =
-        IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;
+    bool isCUDATransfer = (IsCUDADataTransfer(assign.lhs, assign.rhs) ||
+                           isCUDAFunctionResultTransfer(assign)) &&
+                          !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         isCUDATransfer &&
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
