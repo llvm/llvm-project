@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -3590,8 +3589,8 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
 
   // For non-shader targets without the Intel extension, emit OpLoopMerge
   // using spv_loop_merge intrinsics, mirroring the structurizer approach.
-  DominatorTree DT(F);
-  LoopInfo LI(DT);
+  LoopInfo LI;
+  LI.analyze(&F);
   if (LI.empty())
     return;
 
