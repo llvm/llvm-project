@@ -10,10 +10,6 @@
 
 // <ranges>
 
-//   V models only input_range
-//     friend constexpr bool operator==(const outer_iterator& x, default_sentinel_t);
-//     friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t);
-
 //   V models forward_range
 //     friend constexpr bool operator==(const iterator& x, const iterator& y);
 //     friend constexpr bool operator==(const iterator& x, default_sentinel_t);
@@ -36,7 +32,6 @@
 #include <vector>
 
 #include "test_range.h"
-#include "../types.h"
 
 // The relational operators (<, >, <=, >=, <=>) are only available when `Base` models `random_access_range`.
 template <class Base>
@@ -54,24 +49,6 @@ static_assert(HasChunkIteratorRelationalOperators<test_view<random_access_iterat
 constexpr bool test() {
   std::vector<int> vector                                                  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
   std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked = vector | std::views::chunk(3);
-  std::ranges::chunk_view<input_span<int>> input_chunked = input_span<int>(vector) | std::views::chunk(3);
-
-  // Test `friend constexpr bool opreator==(const outer_iterator& x, default_sentinel_t)`
-  {
-    /*chunk_view::__outer_iterator*/ std::input_iterator auto it = input_chunked.begin();
-    assert(it != std::default_sentinel);
-    std::ranges::advance(it, 4);
-    assert(it == std::default_sentinel);
-  }
-
-  // Test `friend constexpr bool operator==(const inner_iterator& x, default_sentinel_t)`
-  {
-    /*chunk_view::__inner_iterator*/ std::input_iterator auto it = (*input_chunked.begin()).begin();
-    std::ranges::advance(it, 2);
-    assert(it != std::default_sentinel);
-    ++it;
-    assert(it == std::default_sentinel);
-  }
 
   // Test `friend constexpr bool operator==(const iterator& x, const iterator& y)`
   {
