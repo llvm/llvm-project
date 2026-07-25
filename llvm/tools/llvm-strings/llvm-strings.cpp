@@ -27,7 +27,10 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
 #include <cctype>
+#include <fstream>
+#include <iostream>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -90,8 +93,7 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
-static void strings(raw_ostream &OS, StringRef FileName,
-                    sys::fs::file_t FileHandle) {
+static void strings(raw_ostream &OS, StringRef FileName, std::istream &IS) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
   auto print = [&OS, FileName](unsigned Offset, StringRef L) {
     if (L.size() < static_cast<size_t>(MinLength))
@@ -114,38 +116,28 @@ static void strings(raw_ostream &OS, StringRef FileName,
     OS << L << '\n';
   };
 
-  unsigned Offset = 0, LocalOffset = 0, CurSize = 0;
-  Buffer.resize(sys::fs::DefaultReadChunkSize);
-  auto FillBuffer = [&Buffer, FileHandle, &FileName]() -> unsigned {
-    Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
-        FileHandle,
-        MutableArrayRef(Buffer.begin(), sys::fs::DefaultReadChunkSize));
-    if (!ReadBytesOrErr) {
-      errs() << FileName << ": "
-             << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
-      return 0;
-    }
-    return *ReadBytesOrErr;
-  };
   std::string StringBuffer;
+  unsigned Offset = 0;
   while (true) {
-    if (LocalOffset == CurSize) {
-      CurSize = FillBuffer();
-      if (CurSize == 0)
-        break;
-      LocalOffset = 0;
+    IS.read(Buffer.data(), Buffer.size());
+    std::streamsize CurSize = IS.gcount();
+    if (CurSize <= 0)
+      break;
+    for (std::streamsize I = 0; I != CurSize; ++I) {
+      char C = Buffer[I];
+      if (isPrint(C) || C == '\t') {
+        StringBuffer.push_back(C);
+      } else if (StringBuffer.size()) {
+        print(Offset, StringRef(StringBuffer.c_str(), StringBuffer.size()));
+        Offset += StringBuffer.size();
+        StringBuffer.clear();
+        ++Offset;
+      } else {
+        ++Offset;
+      }
     }
-    char C = Buffer[LocalOffset++];
-    if (isPrint(C) || C == '\t') {
-      StringBuffer.push_back(C);
-    } else if (StringBuffer.size()) {
-      print(Offset, StringRef(StringBuffer.c_str(), StringBuffer.size()));
-      Offset += StringBuffer.size();
-      StringBuffer.clear();
-      ++Offset;
-    } else {
-      ++Offset;
-    }
+    if (!IS)
+      break;
   }
 
   if (StringBuffer.size())
@@ -201,22 +193,16 @@ int main(int argc, char **argv) {
     InputFileNames.push_back("-");
 
   for (const auto &File : InputFileNames) {
-    sys::fs::file_t FD;
     if (File == "-") {
-      FD = sys::fs::getStdinHandle();
+      strings(llvm::outs(), "{standard input}", std::cin);
     } else {
-      Expected<sys::fs::file_t> FDOrErr =
-          sys::fs::openNativeFileForRead(File, sys::fs::OF_None);
-      ;
-      if (!FDOrErr) {
-        errs() << File << ": "
-               << errorToErrorCode(FDOrErr.takeError()).message() << '\n';
+      std::ifstream IS(File, std::ios::in | std::ios::binary);
+      if (!IS) {
+        errs() << File << ": " << sys::StrError(errno) << '\n';
         continue;
       }
-      FD = *FDOrErr;
+      strings(llvm::outs(), File, IS);
     }
-
-    strings(llvm::outs(), File == "-" ? "{standard input}" : File, FD);
   }
 
   return EXIT_SUCCESS;
