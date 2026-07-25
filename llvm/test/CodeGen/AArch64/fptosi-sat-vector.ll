@@ -2365,7 +2365,7 @@ define <2 x i1> @test_signed_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-GI-NEXT:    cmlt v1.2d, v0.2d, #0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    movi v1.2d, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    cmge v2.2d, v0.2d, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
