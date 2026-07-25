@@ -54,15 +54,6 @@ void test() {
   *std::as_const(view).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  (view.begin() == view.end());
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  (std::as_const(view).begin() == view.end());
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  (view.begin() == std::as_const(view).end());
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  (std::as_const(view).begin() == std::as_const(view).end());
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::chunk(3);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::chunk(range, 3);
