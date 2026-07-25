@@ -269,9 +269,8 @@ template <typename NodeT> struct DomTreeNodeTraits {
 ///
 /// This class is a generic template over graph nodes. It is instantiated for
 /// various graphs in the LLVM IR or in the code generator.
-template <typename NodeT, bool IsPostDom>
-class DominatorTreeBase {
- public:
+template <typename NodeT, bool IsPostDom> class DominatorTreeBase {
+public:
   static_assert(GraphHasNodeNumbers<NodeT *>,
                 "DominatorTreeBase requires graphs with numbered nodes");
   static_assert(std::is_pointer_v<typename GraphTraits<NodeT *>::NodeRef>,
@@ -390,8 +389,7 @@ private:
   }
 
   unsigned getNodeIndex(const NodeT *BB) const {
-    assert(BlockNumberEpoch ==
-               GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
+    assert(BlockNumberEpoch == GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
            "dominator tree used with outdated block numbers");
     if constexpr (IsPostDom) {
       if (!BB)
