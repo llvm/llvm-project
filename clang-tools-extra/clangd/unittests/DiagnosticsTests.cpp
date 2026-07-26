@@ -1560,7 +1560,7 @@ TEST(IncludeFixerTest, NoCrashMemberAccess) {
       UnorderedElementsAre(Diag(Test.range(), "no member named 'xy' in 'X'")));
 }
 
-TEST(IncludeFixerTest, IgnoreSpecialDeclarationName) {
+TEST(IncludeFixerTest, NoCrashOnQualifiedConversionFunctionName) {
   auto TU = TestTU::withCode(R"cpp(// error-ok
 namespace std {}
 void f() { operator new[](0, operator::align_val_t{}); }
@@ -1571,6 +1571,30 @@ void f() { operator new[](0, operator::align_val_t{}); }
   TU.ExternalIndex = Index.get();
 
   EXPECT_THAT(TU.build().getDiagnostics(), Not(IsEmpty()));
+}
+
+TEST(IncludeFixerTest, FixConversionFunctionTargetType) {
+  Annotations Test(R"cpp(// error-ok
+$insert[[]]struct Wrapper {
+  template <typename T>
+  operator T() const { return T(); }
+};
+
+void f() {
+  Wrapper W;
+  auto V = W.operator::$target[[Something]]();
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"Something", "unittest:///test.h", "\"test.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              Contains(Field(
+                  &Diag::Fixes,
+                  Contains(Fix(Test.range("insert"), "#include \"test.h\"\n",
+                               "Include \"test.h\" for symbol Something")))));
 }
 
 TEST(IncludeFixerTest, UseCachedIndexResults) {
