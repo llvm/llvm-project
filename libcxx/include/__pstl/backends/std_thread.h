@@ -112,7 +112,7 @@ struct __cpu_traits<__std_thread_backend_tag> {
 
   template <class _RandomAccessIterator1, class _RandomAccessIterator2, class _RandomAccessIteratorOut>
   struct __merge_range {
-    __merge_range(_RandomAccessIterator1 __mid1, _RandomAccessIterator2 __mid2, _RandomAccessIteratorOut __result)
+    _LIBCPP_HIDE_FROM_ABI __merge_range(_RandomAccessIterator1 __mid1, _RandomAccessIterator2 __mid2, _RandomAccessIteratorOut __result)
         : __mid1_(__mid1), __mid2_(__mid2), __result_(__result) {}
 
     _RandomAccessIterator1 __mid1_;

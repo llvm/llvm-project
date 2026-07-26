@@ -27,7 +27,7 @@ int fibb(int n) {
   struct Ctx {
     int n;
     int n12[2];
-  } ctx{.n = n};
+  } ctx{.n = n, .n12 = {0, 0}};
   std::__pstl::__std_thread::__apply(2, &ctx, [](void* ctxt, std::size_t i) {
     auto& c  = *static_cast<Ctx*>(ctxt);
     c.n12[i] = fibb(c.n - 1 - i);
