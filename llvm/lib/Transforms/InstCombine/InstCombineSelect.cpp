@@ -5306,20 +5306,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
-                                           m_Specific(CondVal), m_Value())))){
-
-    llvm::IntrinsicInst *OldLoad = cast<IntrinsicInst>(TrueVal);
-    Instruction* In = Builder.CreateMaskedLoad(
-                TrueVal->getType(), MaskedLoadPtr,
-                OldLoad->getParamAlign(0).valueOrOne(),
-                CondVal, FalseVal);
-
-    llvm::SmallVector<std::pair<unsigned, llvm::MDNode *>> Metadata;
-    llvm::getMetadataToPropagate(OldLoad, Metadata);
-    for (auto &[Kind, Node] : Metadata)
-      In->setMetadata(Kind, Node);
-    In->setDebugLoc(OldLoad->getDebugLoc());
-
+                                           m_Specific(CondVal), m_Value())))) {
+    llvm::IntrinsicInst *LoadInst = cast<IntrinsicInst>(TrueVal);
+    Instruction *In = Builder.CreateMaskedLoad(
+        TrueVal->getType(), MaskedLoadPtr,
+        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+    In->setAAMetadata(LoadInst->getAAMetadata());
     return replaceInstUsesWith(SI, In);
   }
 
