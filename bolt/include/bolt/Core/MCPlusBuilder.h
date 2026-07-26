@@ -1403,6 +1403,16 @@ public:
 
   virtual bool isTOCRestoreAfterCall(const MCInst &Inst) const { return false; }
 
+  /// Return true if \p Instruction is an indirect branch that dispatches a
+  /// PIC jump table on PPC64 ELFv2 (bctr preceded by mtctr and lwax).
+  /// Used during disassembly to mark the jump table data as a constant island
+  /// before the disassembler decodes it as instructions.
+  virtual bool isPICJumpTableBctr(const MCInst &Instruction,
+                                  InstructionIterator Begin,
+                                  InstructionIterator End) const {
+    return false;
+  }
+
   /// Return true if \p Inst is an instruction that potentially traps when
   /// working with addresses not aligned to the size of the operand.
   virtual bool requiresAlignedAddress(const MCInst &Inst) const {

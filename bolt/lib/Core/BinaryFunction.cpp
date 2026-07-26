@@ -37,6 +37,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/GraphWriter.h"
@@ -884,6 +885,17 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     return IndirectBranchType::UNKNOWN;
   }
 
+  // PPC64 ELFv2: GCC emits PIC switch tables as an array of signed 32-bit
+  // word offsets embedded inside the function body immediately after bctr.
+  // analyzeMemoryAt() is x86-only so the normal jump table discovery path
+  // cannot be used. Return UNKNOWN to skip full JT processing.
+  // The data island is marked early in disassemble() so the disassembler
+  // skips the data bytes before CFI attachment runs.
+  if (BC.isPPC64() &&
+      BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE) {
+    return IndirectBranchType::UNKNOWN;
+  }
+
   auto getExprValue = [&](const MCExpr *Expr) {
     const MCSymbol *TargetSym;
     uint64_t TargetOffset;
@@ -1378,6 +1390,65 @@ Error BinaryFunction::disassemble() {
     if (BC.isPPC64() && (MIB->isReturn(Instruction) ||
                          MIB->isUnconditionalBranch(Instruction))) {
       SeenTerminator = true;
+
+      // PPC64 ELFv2: GCC embeds PIC switch jump table data immediately after
+      // a bctr instruction. Detect the pattern here, during the byte-by-byte
+      // disassembly scan, and mark the next offset as a data island so the
+      // loop skips it instead of decoding data words as instructions.
+      // This must be done here (not in scanExternalRefs) because by the time
+      // scanExternalRefs runs, the data has already been decoded as
+      // instructions and CFI attachment will assert on the spurious offsets.
+      if (MIB->isIndirectBranch(Instruction) &&
+          MIB->isPICJumpTableBctr(Instruction, Instructions.begin(),
+                                  Instructions.end())) {
+        const uint64_t DataStart = Offset + Size;
+        const uint64_t FuncSize = getSize();
+        const llvm::endianness Endian = BC.AsmInfo->isLittleEndian()
+                                            ? llvm::endianness::little
+                                            : llvm::endianness::big;
+        // Scan forward through raw function bytes to find where the PIC jump
+        // table ends. Each entry is a signed 32-bit word offset, loaded by
+        // lwax, which sign-extends: a switch case that jumps backwards is a
+        // legal negative entry, so read the word signed and range-check its
+        // magnitude. Reading it unsigned would make such an entry look
+        // enormous and end the table here, leaving the rest of it to be
+        // decoded as instructions.
+        //
+        // This is a heuristic, not a proof: an entry is accepted while it is
+        // non-zero, 4-byte aligned (instructions are word-aligned on PPC64)
+        // and small enough to stay inside this function. The first word that
+        // fails marks the code resume point. Nothing cross-checks the range
+        // against relocations or the symbol table.
+        uint64_t CodeResume = DataStart;
+        for (uint64_t ScanOff = DataStart; ScanOff + 4 <= FuncSize;
+             ScanOff += 4) {
+          const int32_t Entry = static_cast<int32_t>(
+              support::endian::read32(FunctionData.data() + ScanOff, Endian));
+          if (Entry == 0 || (Entry & 3) != 0)
+            break;
+          const uint64_t Magnitude =
+              Entry < 0 ? -static_cast<int64_t>(Entry) : Entry;
+          if (Magnitude >= FuncSize)
+            break;
+          CodeResume = ScanOff + 4;
+        }
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: PPC64 PIC jump table in " << *this
+                          << ": data island [0x" << Twine::utohexstr(DataStart)
+                          << ", 0x" << Twine::utohexstr(CodeResume)
+                          << "), code resumes at 0x"
+                          << Twine::utohexstr(CodeResume) << "\n");
+        markDataAtOffset(DataStart);
+        if (CodeResume > DataStart && CodeResume < FuncSize) {
+          markCodeAtOffset(CodeResume);
+          // Register a local label where code resumes. buildCFG() starts a new
+          // basic block at every label, which is what CFI attachment and
+          // control flow reconstruction need here. Note this is deliberately
+          // not addEntryPointAtOffset(): nothing outside the function branches
+          // to this offset, and declaring an entry point would also affect
+          // symbol emission, PatchEntries and ELFv2 local entry points.
+          getOrCreateLocalLabel(getAddress() + CodeResume);
+        }
+      }
     }
 
     // Check integrity of LLVM assembler/disassembler.

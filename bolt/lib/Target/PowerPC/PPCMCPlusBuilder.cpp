@@ -245,12 +245,42 @@ const MCInst *PPCMCPlusBuilder::getConditionalTailCall(const MCInst &) const {
   return nullptr;
 }
 
+bool PPCMCPlusBuilder::isPICJumpTableBctr(const MCInst &Instruction,
+                                          InstructionIterator Begin,
+                                          InstructionIterator End) const {
+  // Detect the PPC64 ELFv2 GCC PIC switch pattern:
+  //   lwax  rDst, rBase, rIndex   (signed 32-bit table entry load)
+  //   ...
+  //   mtctr rDst
+  //   bctr                        <- Instruction
+  if (Instruction.getOpcode() != PPC::BCTR)
+    return false;
+
+  bool FoundMtctr = false;
+  for (auto It = End; It != Begin;) {
+    --It;
+    const MCInst &Prev = *It;
+    if (&Prev == &Instruction)
+      continue;
+    if (!FoundMtctr) {
+      if (Prev.getOpcode() == PPC::MTCTR8 || Prev.getOpcode() == PPC::MTCTR) {
+        FoundMtctr = true;
+        continue;
+      }
+      return false; // First instruction before bctr must be mtctr
+    }
+    if (Prev.getOpcode() == PPC::LWAX)
+      return true;
+  }
+  return false;
+}
+
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
     MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
     const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
     unsigned &IndexRegNumOut, int64_t &DispValueOut, const MCExpr *&DispExprOut,
     MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInstr) const {
-  (void)Instruction;
+  // Initialize all output parameters to safe defaults.
   MemLocInstrOut = nullptr;
   BaseRegNumOut = 0;
   IndexRegNumOut = 0;
@@ -258,6 +288,77 @@ IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
   DispExprOut = nullptr;
   PCRelBaseOut = nullptr;
   FixedEntryLoadInstr = nullptr;
+
+  // On PPC64 ELFv2, GCC emits PIC-style switch jump tables with this pattern:
+  //
+  //   addis  r8, r2, offset@ha       ; base = TOC + table offset
+  //   addi   r8, r8, offset@l        ;
+  //   rldic  r9, r9, 2, 54           ; index <<= 2  (scale by sizeof(int))
+  //   lwax   r9, r8, r9              ; load signed 32-bit table entry
+  //   add    r9, r9, r8              ; entry += base  (PIC-relative delta)
+  //   mtctr  r9                      ; move target into CTR
+  //   bctr                           ; <-- Instruction (the bctr we're called
+  //   on)
+  //
+  // The data words immediately following bctr are the jump table entries.
+  // We scan backwards from End (exclusive) to find the mtctr, then the lwax.
+  // If found, we return POSSIBLE_PIC_JUMP_TABLE so BOLT treats the
+  // post-bctr data as a constant island (jump table) rather than code.
+
+  // Instruction is the bctr. Scan backwards through the basic block.
+  // End points one past bctr, so we start from the instruction before it.
+  if (Begin == End)
+    return IndirectBranchType::UNKNOWN;
+
+  // Walk backwards looking for mtctr, then lwax.
+  MCInst *MtCtrInstr = nullptr;
+  MCInst *LwaxInstr = nullptr;
+
+  // Use reverse iteration over [Begin, End).
+  // End currently points past the bctr (i.e. past Instruction).
+  // We want to scan instructions that precede bctr.
+  auto It = End;
+  while (It != Begin) {
+    --It;
+    MCInst &Prev = *It;
+
+    // Skip the bctr itself.
+    if (&Prev == &Instruction)
+      continue;
+
+    // Step 1: Find mtctr (MTCTR or MTCTR8) immediately before bctr.
+    if (MtCtrInstr == nullptr) {
+      if (Prev.getOpcode() == PPC::MTCTR8 || Prev.getOpcode() == PPC::MTCTR) {
+        MtCtrInstr = &Prev;
+        LLVM_DEBUG(dbgs() << "PPC analyzeIndirectBranch: found mtctr\n");
+        continue;
+      }
+      // If the first non-bctr instruction is not mtctr, not our pattern.
+      return IndirectBranchType::UNKNOWN;
+    }
+
+    // Step 2: Find lwax which loads the jump table entry.
+    // lwax  rDst, rBase, rIndex  -- signed 32-bit load indexed
+    if (LwaxInstr == nullptr) {
+      if (Prev.getOpcode() == PPC::LWAX) {
+        LwaxInstr = &Prev;
+        MemLocInstrOut = LwaxInstr;
+        // Operand layout for LWAX: dst, base, index
+        if (LwaxInstr->getNumOperands() >= 3) {
+          BaseRegNumOut = LwaxInstr->getOperand(1).getReg();
+          IndexRegNumOut = LwaxInstr->getOperand(2).getReg();
+        }
+        LLVM_DEBUG(dbgs() << "PPC analyzeIndirectBranch: found lwax, "
+                          << "base=" << BaseRegNumOut
+                          << " index=" << IndexRegNumOut << "\n");
+        // Found enough to identify the pattern.
+        return IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE;
+      }
+      // Allow a few intervening instructions (add, rldic, etc.) before lwax.
+      continue;
+    }
+  }
+
   return IndirectBranchType::UNKNOWN;
 }
 
