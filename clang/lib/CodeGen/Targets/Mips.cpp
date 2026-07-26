@@ -26,6 +26,18 @@ class MipsABIInfo : public ABIInfo {
   llvm::Type* HandleAggregates(QualType Ty, uint64_t TySize) const;
   llvm::Type* returnAggregateInRegs(QualType RetTy, uint64_t Size) const;
   llvm::Type* getPaddingType(uint64_t Align, uint64_t Offset) const;
+
+  /// Whether `_Complex` values with an integer element type are returned the
+  /// way GCC returns them. Clang 23 and earlier returned the real and the
+  /// imaginary part in two separate GPRs, later versions match GCC and pack
+  /// them into one when possible.
+  bool isComplexGnuABI() const {
+    return !getContext().getLangOpts().isCompatibleWith(
+        LangOptions::ClangABI::Ver23);
+  }
+
+  ABIArgInfo classifyComplexReturnType(QualType RetTy, uint64_t Size) const;
+
 public:
   MipsABIInfo(CodeGenTypes &CGT, bool _IsO32) :
     ABIInfo(CGT), IsO32(_IsO32), MinABIStackAlignInBytes(IsO32 ? 4 : 8),
@@ -301,6 +313,20 @@ MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
   return llvm::StructType::get(getVMContext(), RTList);
 }
 
+ABIArgInfo MipsABIInfo::classifyComplexReturnType(QualType RetTy,
+                                                  uint64_t Size) const {
+  // A `_Complex` value with a floating-point element type is returned in FPRs,
+  // `_Complex long long` is returned in 2 GPRs. For older ABI versions all
+  // `_Complex {integer}` types are returned in 2 GPRs.
+  uint64_t RegisterWidth = MinABIStackAlignInBytes * 8;
+  if (!isComplexGnuABI() || RetTy->isFloatingType() || Size > RegisterWidth)
+    return ABIArgInfo::getDirect();
+
+  // Match GCC for `_Complex int`, `_Complex short` and `_Complex char` by
+  // packing the real and imaginary field into one GPR.
+  return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
+}
+
 ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   uint64_t Size = getContext().getTypeSize(RetTy);
 
@@ -315,7 +341,7 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
   if (isAggregateTypeForABI(RetTy) || RetTy->isVectorType()) {
     if (Size <= 128) {
       if (RetTy->isAnyComplexType())
-        return ABIArgInfo::getDirect();
+        return classifyComplexReturnType(RetTy, Size);
 
       // O32 returns integer vectors in registers and N32/N64 returns all small
       // aggregates in registers.

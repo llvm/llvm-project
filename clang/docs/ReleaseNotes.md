@@ -62,6 +62,12 @@ honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
+- On MIPS, a `_Complex` value with an integer element type is now returned in
+  a single GPR if possible, matching GCC. A `_Complex char` or `_Complex short` (and,
+  on N32/N64, a `_Complex int`) fits in a single GPR and is no longer returned
+  using one GPR per part. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
