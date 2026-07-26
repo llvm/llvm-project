@@ -29,8 +29,8 @@ class Instruction;
 /// \p Targets is replaced with the discovered targets on success and is empty
 /// on failure.
 LLVM_ABI bool
-getStaticIndirectCallTargets(const CallBase &CB,
-                             SmallVectorImpl<Function *> &Targets);
+collectStaticIndirectCallTargets(const CallBase &CB,
+                                 SmallVectorImpl<Function *> &Targets);
 
 // Class for identifying profitable indirect call promotion candidates when
 // the indirect-call value profile metadata is available.

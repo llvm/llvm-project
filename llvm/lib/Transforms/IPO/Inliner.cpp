@@ -157,7 +157,7 @@ promoteInlineableIndirectCall(CallBase &CB, InlineAdvisor &Advisor,
                               bool OnlyMandatory,
                               SmallVectorImpl<CallBase *> &PromotedCalls) {
   SmallVector<Function *> Targets;
-  if (!getStaticIndirectCallTargets(CB, Targets))
+  if (!collectStaticIndirectCallTargets(CB, Targets))
     return false;
 
   // A singleton target needs no call-site versioning, so promote it directly

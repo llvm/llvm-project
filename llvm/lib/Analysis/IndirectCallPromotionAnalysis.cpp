@@ -66,9 +66,16 @@ cl::opt<unsigned> MaxNumVTableAnnotations(
 
 } // end namespace llvm
 
-static bool
-collectStaticIndirectCallTargets(Value *Root,
-                                 SmallVectorImpl<Function *> &Targets) {
+bool llvm::collectStaticIndirectCallTargets(
+    const CallBase &CB, SmallVectorImpl<Function *> &Targets) {
+  assert(!CB.getCalledFunction() && "expected an indirect call");
+  Targets.clear();
+
+  auto Fail = [&]() {
+    Targets.clear();
+    return false;
+  };
+
   SmallPtrSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
   unsigned NumEnqueued = 0;
@@ -83,8 +90,8 @@ collectStaticIndirectCallTargets(Value *Root,
     return true;
   };
 
-  if (!Enqueue(Root))
-    return false;
+  if (!Enqueue(CB.getCalledOperand()))
+    return Fail();
 
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
@@ -101,39 +108,29 @@ collectStaticIndirectCallTargets(Value *Root,
       if (!is_contained(Targets, F))
         Targets.push_back(F);
       if (Targets.size() > MaxNumPromotions)
-        return false;
+        return Fail();
       continue;
     }
 
     if (auto *SI = dyn_cast<SelectInst>(V)) {
       if (!Enqueue(SI->getFalseValue()) || !Enqueue(SI->getTrueValue()))
-        return false;
+        return Fail();
       continue;
     }
 
     if (auto *PN = dyn_cast<PHINode>(V)) {
       for (Value *Incoming : reverse(PN->incoming_values()))
         if (!Enqueue(Incoming))
-          return false;
+          return Fail();
       continue;
     }
 
-    return false;
+    return Fail();
   }
 
+  if (Targets.empty())
+    return Fail();
   return true;
-}
-
-bool llvm::getStaticIndirectCallTargets(const CallBase &CB,
-                                        SmallVectorImpl<Function *> &Targets) {
-  assert(!CB.getCalledFunction() && "expected an indirect call");
-  Targets.clear();
-  bool Success =
-      collectStaticIndirectCallTargets(CB.getCalledOperand(), Targets) &&
-      !Targets.empty();
-  if (!Success)
-    Targets.clear();
-  return Success;
 }
 
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
