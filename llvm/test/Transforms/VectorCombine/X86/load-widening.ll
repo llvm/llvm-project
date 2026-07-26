@@ -288,7 +288,6 @@ define <4 x ptr> @load_v16ptr(ptr %p) {
   ret <4 x ptr> %s
 }
 
-
 ; Load the 128-bit vector because there is no additional cost.
 
 define <4 x float> @load_v1f32_v4f32(ptr dereferenceable(16) %p) {
