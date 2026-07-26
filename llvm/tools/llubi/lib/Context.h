@@ -19,6 +19,7 @@
 #include <map>
 #include <optional>
 #include <random>
+#include <string>
 
 namespace llvm::ubi {
 
@@ -101,6 +102,8 @@ struct ProgramExitInfo {
   }
 };
 
+enum class NoAliasAccessKind { Read, Write };
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -178,6 +181,7 @@ public:
     return true;
   }
   virtual void onProgramExit(const ProgramExitInfo &ExitInfo) {}
+  virtual bool onNoAliasEvent(StringRef Msg) { return true; }
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
     outs().flush();
@@ -233,6 +237,7 @@ class Context {
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
   NaNPropagationBehavior NaNBehavior = NaNPropagationBehavior::NonDeterministic;
   bool FusedMultiplyAdd = false;
+  bool ExperimentalNoAlias = false;
 
   std::mt19937_64 Rng;
   /// Always returns a random APInt value. It is not controlled by
@@ -287,6 +292,53 @@ class Context {
 
   /// Get the tag for the given pointer provenance.
   APInt getTag(uint32_t BitWidth, Provenance &Prov);
+
+  /// Summary of the access classes that touched a byte range during one
+  /// dynamic function activation. Multiple access classes are permitted only
+  /// while every access is a read.
+  struct NoAliasAccessSummary {
+    uint64_t AccessClass = 0;
+    bool MultipleClasses = false;
+    bool HasWrite = false;
+
+    bool operator==(const NoAliasAccessSummary &Other) const {
+      return AccessClass == Other.AccessClass &&
+             MultipleClasses == Other.MultipleClasses &&
+             HasWrite == Other.HasWrite;
+    }
+  };
+
+  struct NoAliasAccessRun {
+    uint64_t Begin;
+    uint64_t End;
+    NoAliasAccessSummary Summary;
+  };
+
+  /// A noalias access class created by retagging a function argument. Parent is
+  /// another node, or 0 for the raw/root parent. Nodes carry no memory state;
+  /// they are used only to classify accesses in active function activations.
+  struct NoAliasNode {
+    uint64_t Parent = 0;
+    MemoryObject *Object = nullptr;
+    bool Active = false;
+  };
+
+  struct NoAliasActivation {
+    SmallVector<uint64_t, 4> Nodes;
+    DenseMap<MemoryObject *, SmallVector<NoAliasAccessRun, 1>> Accesses;
+  };
+
+  // ID 0 is reserved for the raw/root access class and for no activation.
+  uint64_t NextNoAliasNode = 1;
+  uint64_t NextNoAliasActivation = 1;
+  DenseMap<uint64_t, NoAliasNode> NoAliasNodes;
+  DenseMap<uint64_t, NoAliasActivation> NoAliasActivations;
+  DenseMap<MemoryObject *, SmallVector<uint64_t, 2>> NoAliasActivationsByObject;
+
+  // noalias-related diagnostics
+  std::string LastNoAliasError;
+  SmallVector<std::string, 4> NoAliasEvents;
+
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
@@ -299,6 +351,24 @@ class Context {
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
                                AnyValue &AccumulatedOffset);
+
+  /// Return whether \p Ancestor is on \p Descendant's noalias parent chain.
+  /// This relation defines whether an access is local to a protected node.
+  bool isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const;
+  bool hasActiveNoAliasDescendant(uint64_t NodeID) const;
+  /// Try to erase the node if it is inactive and has no active descendant.
+  void tryEraseInactiveNoAliasNode(uint64_t NodeID);
+  static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
+  static std::string getNoAliasNodeName(uint64_t NodeID);
+  static std::string getNoAliasActivationName(uint64_t ActivationID);
+  static std::string getNoAliasObjectName(const MemoryObject &MO);
+  void appendNoAliasEvent(std::string Msg);
+  uint64_t classifyNoAliasAccess(const NoAliasActivation &Activation,
+                                 const MemoryObject &MO,
+                                 uint64_t AccessNode) const;
+  bool updateNoAliasAccesses(NoAliasActivation &Activation, MemoryObject &MO,
+                             uint64_t Begin, uint64_t End, uint64_t AccessClass,
+                             NoAliasAccessKind Kind, uint64_t ActivationID);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -337,6 +407,7 @@ public:
   void setMaxSteps(uint32_t MS) { MaxSteps = MS; }
   void setMaxStackDepth(uint32_t Depth) { MaxStackDepth = Depth; }
   void setFusedMultiplyAdd(bool F) { FusedMultiplyAdd = F; }
+  void setExperimentalNoAlias(bool Enabled) { ExperimentalNoAlias = Enabled; }
   uint64_t getMemoryLimit() const { return MaxMem; }
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
@@ -347,6 +418,7 @@ public:
   UndefValueBehavior getEffectiveUndefValueBehavior() const;
   NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
   bool fuseMultiplyAdd() const { return FusedMultiplyAdd; }
+  bool isExperimentalNoAliasEnabled() const { return ExperimentalNoAlias; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
     NaNBehavior = NaNBehav;
@@ -433,6 +505,20 @@ public:
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
+
+  /// Begin one dynamic function activation containing noalias parameters.
+  uint64_t beginNoAliasActivation();
+  /// Create an access class for a noalias parameter in \p ActivationID.
+  Pointer createNoAliasPointer(const Pointer &Ptr, uint64_t ActivationID);
+  /// Apply an access to every active activation protecting \p MO.
+  bool accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
+                     uint64_t AccessNode, NoAliasAccessKind Kind);
+  /// End an activation and discard its access summaries.
+  void endNoAliasActivation(uint64_t ActivationID);
+  StringRef getLastNoAliasError() const { return LastNoAliasError; }
+  SmallVector<std::string, 4> takeNoAliasEvents();
+  /// Drop noalias state for an object \p MO that is no longer usable.
+  void clearNoAliasState(const MemoryObject &MO);
 
   /// Initialize global variables and function/block objects. This function
   /// should be called before executing any function. Returns false if the

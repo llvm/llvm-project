@@ -13,18 +13,30 @@
 #include "ExecutorBase.h"
 
 namespace llvm::ubi {
-Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
-             ArrayRef<AnyValue> Args, AnyValue &RetVal,
-             const TargetLibraryInfoImpl &TLIImpl)
+Frame::Frame(Context &Ctx, Function &F, CallBase *CallSite, Frame *LastFrame,
+             ArrayRef<AnyValue> Args, AnyValue &RetVal)
     : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-      RetVal(RetVal), TLI(TLIImpl, &F) {
+      RetVal(RetVal), TLI(Ctx.getTLIImpl(), &F) {
   assert((Args.size() == F.arg_size() ||
           (F.isVarArg() && Args.size() >= F.arg_size())) &&
          "Expected enough arguments to call the function.");
   BB = &Func.getEntryBlock();
   PC = BB->begin();
-  for (Argument &Arg : F.args())
-    ValueMap[&Arg] = Args[Arg.getArgNo()];
+  for (Argument &Arg : F.args()) {
+    AnyValue ArgValue = Args[Arg.getArgNo()];
+    // Retag only callee-visible noalias pointer parameters. This creates the
+    // protected node for the dynamic call frame without changing the normal
+    // provenance carried by the pointer.
+    if (Ctx.isExperimentalNoAliasEnabled() && Arg.hasNoAliasAttr() &&
+        Arg.getType()->isPointerTy() && !ArgValue.isPoison() &&
+        ArgValue.asPointer().getMemoryObject()) {
+      if (!NoAliasActivation)
+        NoAliasActivation = Ctx.beginNoAliasActivation();
+      ArgValue =
+          Ctx.createNoAliasPointer(ArgValue.asPointer(), NoAliasActivation);
+    }
+    ValueMap[&Arg] = std::move(ArgValue);
+  }
 }
 
 DiagnosticReporter ExecutorBase::reportImmediateUB() {
@@ -33,6 +45,11 @@ DiagnosticReporter ExecutorBase::reportImmediateUB() {
 
 DiagnosticReporter ExecutorBase::reportError() {
   return DiagnosticReporter(*this, DiagnosticKind::Error);
+}
+
+void ExecutorBase::flushNoAliasEvents() {
+  for (const std::string &Msg : Ctx.takeNoAliasEvents())
+    Handler.onNoAliasEvent(Msg);
 }
 
 void ExecutorBase::reportImmediateUBString(StringRef Msg) {
@@ -131,6 +148,18 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
                             NoUndef ? &ContainsUndefinedBits : nullptr);
     if (NoUndef && ContainsUndefinedBits)
       reportImmediateUB() << "The value loaded contains undefined bits.";
+
+    // Run noalias after ordinary memory validity checks so diagnostics report
+    // aliasing only for otherwise valid concrete accesses.
+    if (const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ValTy);
+        !Ctx.accessNoAlias(*MO, Offset, AccessSize, PtrVal.getNoAliasNodeID(),
+                           NoAliasAccessKind::Read)) {
+      flushNoAliasEvents();
+      reportImmediateUB() << Ctx.getLastNoAliasError();
+      return AnyValue::getPoisonValue(Ctx, ValTy);
+    }
+    flushNoAliasEvents();
+
     return Res;
   }
   return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -146,8 +175,17 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/true);
-      MO)
+      MO) {
+    if (const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ValTy);
+        !Ctx.accessNoAlias(*MO, Offset, AccessSize, PtrVal.getNoAliasNodeID(),
+                           NoAliasAccessKind::Write)) {
+      flushNoAliasEvents();
+      reportImmediateUB() << Ctx.getLastNoAliasError();
+      return;
+    }
+    flushNoAliasEvents();
     Ctx.store(*MO, Offset, Val, ValTy);
+  }
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
