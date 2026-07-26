@@ -453,6 +453,8 @@ features cannot lower the translation-unit ABI level;
 
 ### libclang
 
+- Implemented `clang_getAtomicUnqualifiedType` for unsugaring `_Atomic` qualified types. (#GH175534)
+
 ### Code Completion
 
 ### Static Analyzer
@@ -484,6 +486,8 @@ features cannot lower the translation-unit ABI level;
 ### Sanitizers
 
 ### Python Binding Changes
+
+- Exposed `clang_getNonReferenceType`, `clang_getUnqualifiedType` and `clang_getAtomicUnqualifiedType` via `Type.get_non_reference()`, `Type.get_unqualified()` and `Type.get_atomic_unqualified()` respectively. (#GH175534)
 
 ### OpenMP Support
 

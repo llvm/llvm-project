@@ -518,6 +518,10 @@ CXType clang_getUnqualifiedType(CXType CT) {
   return MakeCXType(GetQualType(CT).getUnqualifiedType(), GetTU(CT));
 }
 
+CXType clang_getAtomicUnqualifiedType(CXType CT) {
+  return MakeCXType(GetQualType(CT).getAtomicUnqualifiedType(), GetTU(CT));
+}
+
 CXType clang_getNonReferenceType(CXType CT) {
   return MakeCXType(GetQualType(CT).getNonReferenceType(), GetTU(CT));
 }
