@@ -26,6 +26,7 @@ namespace ento {
 class SMTConv {
 public:
   static inline uint64_t getSMTBitWidth(ASTContext &Ctx, QualType Ty) {
+    Ty = getSymbolicValueType(Ty);
     if (Ty->isIntegralOrEnumerationType())
       return Ctx.getIntWidth(Ty);
     return Ctx.getTypeSize(Ty);
