@@ -345,6 +345,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed USR generation for declarations whose signature mentions a class-type
+  non-type template parameter. (#GH212351)
 
 #### Bug Fixes to Compiler Builtins
 
