@@ -140,8 +140,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
       auto rootName = lld::utils::getRootSymbol(sym->getName());
       rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
-      if (auto linkageName =
-              BPOrdererMachO::getResolvedLinkageName(rootName))
+      if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
         rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
     }
   };
