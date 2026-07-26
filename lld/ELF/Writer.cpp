@@ -1788,6 +1788,10 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
         if ((sec->getParent() && sec->isNeeded()) || mayGrowLate(ctx, sec))
           return false;
         unused.insert(sec);
+        // LinkerScript::discard clears the parent. Losing later additions to
+        // such a section is intended.
+        if (sec->getParent())
+          ctx.removedSyntheticSections.push_back(sec);
         return true;
       });
   ctx.inputSections.erase(end, ctx.inputSections.end());
@@ -2120,6 +2124,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
+
+  // A section dropped as unneeded must have stayed unneeded.
+  assert(llvm::none_of(ctx.removedSyntheticSections,
+                       [](SyntheticSection *sec) { return sec->isNeeded(); }));
 
   // All information needed for OutputSection part of Map file is available.
   if (errCount(ctx))
