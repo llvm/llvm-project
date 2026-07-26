@@ -19,11 +19,14 @@ defvar ArchFeaturesW32Wgp = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32,
 
 // The code produced for "generic" is only useful for tests and cannot
 // be expected to execute on any target.
-def : ProcessorModel<"generic", NoSchedModel, []>;
+def : AMDGPUProcessorModel<"generic", NoSchedModel, [], [6, 0, 0]> {
+  let IsPseudoTarget = true;
+}
 
-def : ProcessorModel<"generic-hsa", NoSchedModel,
-  [FeatureFlatAddressSpace]
->;
+def : AMDGPUProcessorModel<"generic-hsa", NoSchedModel,
+  [FeatureFlatAddressSpace], [7, 0, 0]> {
+  let IsPseudoTarget = true;
+}
 
 //===------------------------------------------------------------===//
 // GCN GFX6 (Southern Islands (SI)).

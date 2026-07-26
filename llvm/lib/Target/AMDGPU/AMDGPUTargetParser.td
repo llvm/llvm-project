@@ -43,6 +43,10 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   // should be used for a "gfxN-generic" targets only, and empty for
   // individual GPUs.
   list<Processor> CoveredGPUs = [];
+
+  // A pseudo target ("generic"/"generic-hsa") that represents no
+  // hardware.
+  bit IsPseudoTarget = false;
 }
 
 // An R600 processor that is also a canonical TargetParser GPU.
