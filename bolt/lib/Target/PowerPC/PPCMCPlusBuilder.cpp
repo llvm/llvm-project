@@ -378,6 +378,12 @@ void PPCMCPlusBuilder::createNoop(MCInst &Nop) const {
   Nop.addOperand(MCOperand::createImm(0));       // imm
 }
 
+void PPCMCPlusBuilder::createReturn(MCInst &Inst) const {
+  // On PPC64 ELFv2, the standard function return is 'blr' (branch to LR).
+  Inst.clear();
+  Inst.setOpcode(PPC::BLR);
+}
+
 bool PPCMCPlusBuilder::analyzeBranch(InstructionIterator Begin,
                                      InstructionIterator End,
                                      const MCSymbol *&Tgt,
