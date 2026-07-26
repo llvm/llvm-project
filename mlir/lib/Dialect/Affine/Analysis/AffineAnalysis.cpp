@@ -721,7 +721,7 @@ LogicalResult mlir::affine::getDependenceComponents(
             &depComps);
         if (result.value == DependenceResult::Failure)
           return failure();
-        if (hasDependence(result))
+        if (mustHaveDependence(result))
           depCompsVec->push_back(depComps);
       }
     }

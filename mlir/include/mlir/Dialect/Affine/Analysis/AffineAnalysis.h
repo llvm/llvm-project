@@ -176,10 +176,16 @@ DependenceResult checkMemrefAccessDependence(
     SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr,
     bool allowRAR = false);
 
-/// Utility function that returns true if the provided DependenceResult
-/// corresponds to a dependence result.
-inline bool hasDependence(DependenceResult result) {
+/// Returns true if the provided DependenceResult proves that a dependence
+/// exists.
+inline bool mustHaveDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
+}
+
+/// Returns true unless the provided DependenceResult proves that no dependence
+/// exists.
+inline bool mayHaveDependence(DependenceResult result) {
+  return result.value != DependenceResult::NoDependence;
 }
 
 /// Returns true if the provided DependenceResult corresponds to the absence of

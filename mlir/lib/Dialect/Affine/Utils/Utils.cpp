@@ -646,7 +646,7 @@ static bool mustReachAtInnermost(const MemRefAccess &srcAccess,
       getNumCommonSurroundingLoops(*srcAccess.opInst, *destAccess.opInst);
   DependenceResult result =
       checkMemrefAccessDependence(srcAccess, destAccess, nsLoops + 1);
-  return hasDependence(result);
+  return mustHaveDependence(result);
 }
 
 /// Returns true if `srcMemOp` may have an effect on `destMemOp` within the
