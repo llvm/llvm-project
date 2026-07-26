@@ -35,6 +35,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Interpreter/ErrorRecovery.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
@@ -553,6 +554,39 @@ size_t Interpreter::getEffectivePTUSize() const {
 
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
+  class PTUSlabRollback {
+  public:
+    explicit PTUSlabRollback(Sema &S)
+        : Ctx(S.getASTContext()), ASTCtxState(Ctx), SemaState(S),
+          CheckPoint(Ctx.getAllocator().checkPoint()) {
+            SemaState.stash(SemaCheckPoint);
+            ASTCtxState.stash(CtxCheckPoint);
+          }
+
+    ~PTUSlabRollback() {
+      if (!Committed) {
+        SemaState.restore(SemaCheckPoint, CheckPoint);
+        ASTCtxState.restore(CtxCheckPoint, CheckPoint);
+        Ctx.getAllocator().restoreToCheckPoint(CheckPoint);
+      }
+    }
+
+    void commit(PartialTranslationUnit &PTU) {
+      ASTCtxState.commit();
+      PTU.SlabCheckPoint = CheckPoint;
+      Committed = true;
+    }
+
+  private:
+    ASTContext &Ctx;
+    ASTContextStateStash ASTCtxState;
+    SemaStateStash SemaState;
+    llvm::SlabCheckPoint CheckPoint;
+    bool Committed = false;
+    StashCheckPoint CtxCheckPoint;
+    SemaStashCheckPoint SemaCheckPoint;
+  };
+
   // If we have a device parser, parse it first. The generated code will be
   // included in the host compilation
   if (DeviceParser) {
@@ -576,6 +610,8 @@ Interpreter::Parse(llvm::StringRef Code) {
   getCompilerInstance()->getDiagnostics().setSeverity(
       clang::diag::warn_unused_expr, diag::Severity::Ignored, SourceLocation());
 
+  PTUSlabRollback Rollback(CI->getSema());
+
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
   if (!TuOrErr)
     return TuOrErr.takeError();
@@ -588,6 +624,7 @@ Interpreter::Parse(llvm::StringRef Code) {
           frontend::EmitLLVM)
     LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
+  Rollback.commit(LastPTU);
   return LastPTU;
 }
 

@@ -2203,6 +2203,9 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
   }
 
   DeclNameEntries.addOrReplaceDecl(D);
+
+  if (getParentASTContext().isIncrementalErrorRecoveryMode())
+    getParentASTContext().PendingDCMutations.insert(this);
 }
 
 UsingDirectiveDecl *DeclContext::udir_iterator::operator*() const {

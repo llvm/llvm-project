@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_INTERPRETER_PARTIALTRANSLATIONUNIT_H
 #define LLVM_CLANG_INTERPRETER_PARTIALTRANSLATIONUNIT_H
 
+#include "llvm/Support/Allocator.h"
+
 #include <memory>
 
 namespace llvm {
@@ -28,6 +30,7 @@ class TranslationUnitDecl;
 /// incremental inputs.
 struct PartialTranslationUnit {
   TranslationUnitDecl *TUPart = nullptr;
+  llvm::SlabCheckPoint SlabCheckPoint;
 
   /// The llvm IR produced for the input.
   std::unique_ptr<llvm::Module> TheModule;

@@ -3644,9 +3644,12 @@ public:
   static bool classofKind(Kind K) { return K == IndirectField; }
 };
 
+class ASTContextStateStash;
+
 /// Represents a declaration of a type.
 class TypeDecl : public NamedDecl {
   friend class ASTContext;
+  friend class ASTContextStateStash;
   friend class ASTReader;
 
   /// This indicates the Type object that represents

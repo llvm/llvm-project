@@ -76,6 +76,8 @@ enum AvailabilityResult {
   AR_Unavailable
 };
 
+class ASTContextStateStash;
+
 /// Decl - This represents one declaration (or definition), e.g. a variable,
 /// typedef, function, struct, etc.
 ///
@@ -258,6 +260,7 @@ protected:
 
 private:
   friend class DeclContext;
+  friend class ASTContextStateStash;
 
   struct MultipleDC {
     DeclContext *SemanticDC;
@@ -1446,6 +1449,8 @@ enum class OMPDeclareReductionInitKind;
 enum class ObjCImplementationControl;
 enum class LinkageSpecLanguageIDs;
 
+class ASTContextStateStash;
+
 /// DeclContext - This is used only as base class of specific decl types that
 /// can act as declaration contexts. These decls are (only the top classes
 /// that directly derive from DeclContext are mentioned, not their subclasses):
@@ -1464,6 +1469,7 @@ enum class LinkageSpecLanguageIDs;
 ///   BlockDecl
 ///   CapturedDecl
 class DeclContext {
+  friend class ASTContextStateStash;
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;
   /// For checking the new bits in the Serialization part.
