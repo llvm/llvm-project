@@ -4,19 +4,17 @@
 // REQUIRES: z3
 // expected-no-diagnostics
 
-// no-crash
 void atomic_bool(_Bool input) {
   _Atomic(_Bool) value = input;
-  if (value) {
+  if (value) { // no-crash
   }
 }
 
 typedef _Bool B1;
 typedef _Bool B2;
 
-// no-crash
 void atomic_bool_typedef(B1 input) {
   _Atomic(B2) value = input;
-  if (value) {
+  if (value) { // no-crash
   }
 }
