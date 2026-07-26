@@ -271,3 +271,4 @@ char member_subregion_dangling_deref_increment() {
   // expected-warning@-1 {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
   // expected-note@-2    {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
 }
+
