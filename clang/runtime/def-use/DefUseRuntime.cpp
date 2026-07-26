@@ -4,6 +4,8 @@
 #include <map>
 #include <utility>
 #include <unordered_map>
+#include <cstdlib>
+#include <fstream>
 
 namespace {
 
@@ -18,6 +20,26 @@ std::map<std::pair<uint64_t, uint64_t>, uint64_t>
 std::map<std::pair<uint64_t, uint64_t>, uint64_t>
     LastStoreEvent;
 
+
+std::ostream &Trace() {
+  struct TraceOutput {
+    std::ofstream File;
+
+    TraceOutput() {
+      const char *Path = std::getenv("DEF_USE_TRACE");
+      File.open(Path ? Path : "defuse.trace");
+    }
+  };
+
+  static TraceOutput Output;
+
+  if (!Output.File.is_open()) {
+    return std::cerr;
+  }
+
+  return Output.File;
+}
+
 } // namespace
 
 extern "C" void __def_use_trace_inst(uint64_t ModuleToken,
@@ -26,7 +48,7 @@ extern "C" void __def_use_trace_inst(uint64_t ModuleToken,
 
   LastEventByInstruction[{ModuleToken, InstID}] = CurrentEventID;
 
-  std::cerr << "EVENT "
+  Trace()   << "EVENT "
             << CurrentEventID
             << " MODULE 0x"
             << std::hex
@@ -48,7 +70,7 @@ extern "C" void __def_use_trace_ssa_use(uint64_t ModuleToken,
 
   uint64_t DefEventID = It->second;
 
-  std::cerr << "EDGE "
+  Trace() << "EDGE "
             << DefEventID
             << " -> "
             << CurrentEventID
@@ -57,7 +79,7 @@ extern "C" void __def_use_trace_ssa_use(uint64_t ModuleToken,
 
 extern "C" void __def_use_trace_store(uint64_t Address,
                                       uint64_t Size) {
-  std::cerr << "STORE 0x"
+  Trace()   << "STORE 0x"
             << std::hex
             << Address
             << std::dec
@@ -72,7 +94,7 @@ extern "C" void __def_use_trace_store(uint64_t Address,
 
 extern "C" void __def_use_trace_load(uint64_t Address,
                                      uint64_t Size) {
-  std::cerr << "LOAD 0x"
+  Trace()   << "LOAD 0x"
             << std::hex
             << Address
             << std::dec
@@ -90,7 +112,7 @@ extern "C" void __def_use_trace_load(uint64_t Address,
 
   uint64_t StoreEventID = It->second;
 
-  std::cerr << "MEM_EDGE "
+  Trace()   << "MEM_EDGE "
             << StoreEventID
             << " -> "
             << CurrentEventID
