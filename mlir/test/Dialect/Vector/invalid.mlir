@@ -2268,10 +2268,6 @@ func.func @load_non_unit_stride(%src : memref<?xi8, strided<[2], offset: ?>>) {
 
 // -----
 
-// Unlike vector.maskedload/maskedstore/expandload/compressstore, a dynamic
-// (unprovable) stride is rejected here too: vector.load/store require a
-// statically known unit stride, with no exception for strides that merely
-// aren't provably non-unit.
 func.func @load_dynamic_stride(%src : memref<?xi8, strided<[?], offset: ?>>) {
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.load' op most minor memref dim must have unit stride}}
@@ -2317,8 +2313,6 @@ func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%va
 
 // -----
 
-// See load_dynamic_stride above: vector.store also rejects a dynamic stride,
-// unlike vector.maskedstore.
 func.func @store_dynamic_stride(%src : memref<?xi8, strided<[?], offset: ?>>, %val : vector<16xi8>, %c0: index) {
   // expected-error @below {{'vector.store' op most minor memref dim must have unit stride}}
   vector.store %val, %src[%c0] : memref<?xi8, strided<[?], offset: ?>>, vector<16xi8>
