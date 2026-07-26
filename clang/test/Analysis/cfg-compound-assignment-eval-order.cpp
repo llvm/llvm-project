@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++17 %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++11 %s 2>&1 | FileCheck %s
 
 // RUN: %clang_analyze_cc1 -std=c++17 -analyzer-checker=core,cplusplus.Move \
 // RUN:   -analyzer-output=text -verify %s
