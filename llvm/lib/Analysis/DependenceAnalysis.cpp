@@ -1972,7 +1972,7 @@ static BanerjeeInterval intersectIntervals(const BanerjeeInterval &A,
   return BanerjeeInterval(Lower, Upper);
 }
 
-/// Return the singleton interval containing C.
+/// Return the singleton interval containing \p C.
 static BanerjeeInterval constantInterval(const SCEV *C) {
   return BanerjeeInterval(C, C);
 }
@@ -1982,7 +1982,7 @@ static BanerjeeInterval emptyInterval(Type *Ty, ScalarEvolution &SE) {
   return BanerjeeInterval(SE.getOne(Ty), SE.getZero(Ty));
 }
 
-/// Compute the range of Coeff * X for Lower <=s X <=s Upper.
+/// Compute the range of \p Coeff * X for \p Lower <=s X <=s \p Upper.
 static BanerjeeInterval signedRangeInterval(const SCEV *Coeff,
                                             const SCEV *Lower,
                                             const SCEV *Upper,
@@ -2015,6 +2015,15 @@ static BanerjeeInterval variableInterval(const SCEV *Coeff, const SCEV *Upper,
 
 /// Compute any finite one-sided bound available when the iteration index is
 /// unbounded for a strict (< or >) direction.
+///
+/// For SrcIndex < DstIndex, write DstIndex = SrcIndex + D, where D >= 1:
+///
+///   A * SrcIndex - B * DstIndex = (A - B) * SrcIndex - B * D.
+///
+/// If both coefficients on the right are nonnegative, the expression is
+/// bounded below by -B. If both are nonpositive, it is bounded above by -B.
+/// The SrcIndex > DstIndex case is symmetric: writing
+/// SrcIndex = DstIndex + D gives a boundary value of A.
 static BanerjeeInterval
 unboundedStrictDirectionInterval(const SCEV *ACoeff, const SCEV *BCoeff,
                                  unsigned char Direction, ScalarEvolution &SE) {
@@ -2124,22 +2133,14 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   Type *WideType = IntegerType::get(F->getContext(), WideBits);
   const SCEV *Zero = SE->getZero(WideType);
 
-  CoefficientInfo EmptyCoeff{Zero, nullptr};
-  SmallVector<CoefficientInfo, 4> A(MaxLevels + 1, EmptyCoeff);
-  SmallVector<CoefficientInfo, 4> B(MaxLevels + 1, EmptyCoeff);
+  CoefficientInfo EmptyCoeff{Zero, Zero, nullptr};
+  SmallVector<CoefficientInfo, 4> CI(MaxLevels + 1, EmptyCoeff);
   assert(Loops.size() > MaxLevels && "loop bit vector is too small");
   assert(Result.Levels >= CommonLevels &&
          "direction vector is too small for common levels");
 
-  const SCEV *A0 = collectCoeffInfo(Src, true, WideType, A);
-  if (!A0)
-    return false;
-  const SCEV *B0 = collectCoeffInfo(Dst, false, WideType, B);
-  if (!B0)
-    return false;
-
-  A0 = SE->getNoopOrSignExtend(A0, WideType);
-  B0 = SE->getNoopOrSignExtend(B0, WideType);
+  const SCEV *A0 = collectCoeffInfo(Src, true, WideType, CI);
+  const SCEV *B0 = collectCoeffInfo(Dst, false, WideType, CI);
   const SCEV *Delta = SE->getMinusSCEV(B0, A0);
   LLVM_DEBUG(dbgs() << "\tDelta = " << *Delta << '\n');
 
@@ -2149,10 +2150,10 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
     Bound[K].DirSet = Dependence::DVEntry::NONE;
   }
   for (unsigned K = 1; K <= MaxLevels; ++K) {
-    findBoundsALL(A, B, Bound, K);
-    findBoundsLT(A, B, Bound, K);
-    findBoundsEQ(A, B, Bound, K);
-    findBoundsGT(A, B, Bound, K);
+    findBoundsALL(CI, Bound, K);
+    findBoundsLT(CI, Bound, K);
+    findBoundsEQ(CI, Bound, K);
+    findBoundsGT(CI, Bound, K);
   }
 
   if (!testBounds(Dependence::DVEntry::ALL, 0, Bound, Delta)) {
@@ -2184,9 +2185,10 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   return false;
 }
 
-/// Walks through the subscript and collects the coefficient and maximum
-/// iteration index associated with each loop level. Both are extended to the
-/// widened analysis type before Banerjee arithmetic.
+/// Walks through the subscript and collects its coefficient at each loop
+/// level. Each level has one maximum iteration index shared by the source and
+/// destination coefficients. All collected values and the returned constant
+/// term are extended to the widened analysis type before Banerjee arithmetic.
 const SCEV *
 DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                  Type *WideType,
@@ -2200,7 +2202,9 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
     SeenLevels.set(K);
 
     const SCEV *Step = AddRec->getStepRecurrence(*SE);
-    CI[K].Coeff = SE->getNoopOrSignExtend(Step, WideType);
+    const SCEV *&Coeff = SrcFlag ? CI[K].SrcCoeff : CI[K].DstCoeff;
+    Coeff = SE->getNoopOrSignExtend(Step, WideType);
+
     const SCEV *MaxIterIndex = SE->getBackedgeTakenCount(AddRec->getLoop());
     if (!isa<SCEVCouldNotCompute>(MaxIterIndex)) {
       // A backedge-taken count is semantically an unsigned, nonnegative
@@ -2215,7 +2219,7 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
 
     Subscript = AddRec->getStart();
   }
-  return Subscript;
+  return SE->getNoopOrSignExtend(Subscript, WideType);
 }
 
 /// Looks through all the bounds info and computes the selected lower bound.
@@ -2315,14 +2319,13 @@ unsigned DependenceInfo::exploreDirections(unsigned Level,
 ///   UB^*_k = (A^+_k - B^-_k) U,
 ///
 /// where X^+ = max(X, 0) and X^- = min(X, 0).
-void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> A,
-                                   ArrayRef<CoefficientInfo> B,
+void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> CI,
                                    MutableArrayRef<BoundInfo> Bound,
                                    unsigned K) const {
   BanerjeeInterval SrcInterval =
-      variableInterval(A[K].Coeff, A[K].MaxIterIndex, *SE);
-  BanerjeeInterval DstInterval =
-      variableInterval(SE->getNegativeSCEV(B[K].Coeff), B[K].MaxIterIndex, *SE);
+      variableInterval(CI[K].SrcCoeff, CI[K].MaxIterIndex, *SE);
+  BanerjeeInterval DstInterval = variableInterval(
+      SE->getNegativeSCEV(CI[K].DstCoeff), CI[K].MaxIterIndex, *SE);
   BanerjeeInterval Interval = addIntervals(SrcInterval, DstInterval, *SE);
   Bound[K].Lower[Dependence::DVEntry::ALL] = Interval.Lower;
   Bound[K].Upper[Dependence::DVEntry::ALL] = Interval.Upper;
@@ -2336,18 +2339,12 @@ void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> A,
 ///
 ///   LB^=_k = (A_k - B_k)^- U
 ///   UB^=_k = (A_k - B_k)^+ U.
-void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> A,
-                                  ArrayRef<CoefficientInfo> B,
+void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> CI,
                                   MutableArrayRef<BoundInfo> Bound,
                                   unsigned K) const {
-  const SCEV *MaxIterIndex = nullptr;
-  if (A[K].MaxIterIndex && B[K].MaxIterIndex)
-    MaxIterIndex = SE->getUMinExpr(A[K].MaxIterIndex, B[K].MaxIterIndex);
-  else
-    MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
-
-  BanerjeeInterval Interval = variableInterval(
-      SE->getMinusSCEV(A[K].Coeff, B[K].Coeff), MaxIterIndex, *SE);
+  BanerjeeInterval Interval =
+      variableInterval(SE->getMinusSCEV(CI[K].SrcCoeff, CI[K].DstCoeff),
+                       CI[K].MaxIterIndex, *SE);
   Bound[K].Lower[Dependence::DVEntry::EQ] = Interval.Lower;
   Bound[K].Upper[Dependence::DVEntry::EQ] = Interval.Upper;
 }
@@ -2365,20 +2362,12 @@ void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> A,
 /// If U is zero the domain is empty. If no common upper bound is known, the
 /// implementation computes any finite one-sided bound it can prove and leaves
 /// the other side unbounded.
-void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
-                                  ArrayRef<CoefficientInfo> B,
+void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> CI,
                                   MutableArrayRef<BoundInfo> Bound,
                                   unsigned K) const {
-  const SCEV *ACoeff = A[K].Coeff;
-  const SCEV *BCoeff = B[K].Coeff;
-  const SCEV *MaxIterIndex = nullptr;
-  if (A[K].MaxIterIndex && B[K].MaxIterIndex) {
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].MaxIterIndex,
-                             B[K].MaxIterIndex))
-      MaxIterIndex = A[K].MaxIterIndex;
-  } else {
-    MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
-  }
+  const SCEV *ACoeff = CI[K].SrcCoeff;
+  const SCEV *BCoeff = CI[K].DstCoeff;
+  const SCEV *MaxIterIndex = CI[K].MaxIterIndex;
 
   BanerjeeInterval Interval = unboundedStrictDirectionInterval(
       ACoeff, BCoeff, Dependence::DVEntry::LT, *SE);
@@ -2415,20 +2404,12 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
 /// If U is zero the domain is empty. If no common upper bound is known, the
 /// implementation computes any finite one-sided bound it can prove and leaves
 /// the other side unbounded.
-void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
-                                  ArrayRef<CoefficientInfo> B,
+void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> CI,
                                   MutableArrayRef<BoundInfo> Bound,
                                   unsigned K) const {
-  const SCEV *ACoeff = A[K].Coeff;
-  const SCEV *BCoeff = B[K].Coeff;
-  const SCEV *MaxIterIndex = nullptr;
-  if (A[K].MaxIterIndex && B[K].MaxIterIndex) {
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].MaxIterIndex,
-                             B[K].MaxIterIndex))
-      MaxIterIndex = A[K].MaxIterIndex;
-  } else {
-    MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
-  }
+  const SCEV *ACoeff = CI[K].SrcCoeff;
+  const SCEV *BCoeff = CI[K].DstCoeff;
+  const SCEV *MaxIterIndex = CI[K].MaxIterIndex;
 
   BanerjeeInterval Interval = unboundedStrictDirectionInterval(
       ACoeff, BCoeff, Dependence::DVEntry::GT, *SE);

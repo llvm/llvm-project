@@ -348,7 +348,8 @@ private:
   };
 
   struct CoefficientInfo {
-    const SCEV *Coeff;
+    const SCEV *SrcCoeff;
+    const SCEV *DstCoeff;
     const SCEV *MaxIterIndex;
   };
 
@@ -608,7 +609,7 @@ private:
 
   /// collectCoeffInfo - Walks through the subscript, collecting each
   /// coefficient and the associated maximum iteration index in the
-  /// widened analysis type.
+  /// widened analysis type. Returns the widened constant term.
   const SCEV *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                Type *WideType,
                                MutableArrayRef<CoefficientInfo> CI) const;
@@ -658,22 +659,22 @@ private:
 
   /// findBoundsALL - Computes the upper and lower bounds for level K
   /// using the * direction. Records them in Bound.
-  void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsALL(ArrayRef<CoefficientInfo> CI,
                      MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsLT - Computes the upper and lower bounds for level K
   /// using the < direction. Records them in Bound.
-  void findBoundsLT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsLT(ArrayRef<CoefficientInfo> CI,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsGT - Computes the upper and lower bounds for level K
   /// using the > direction. Records them in Bound.
-  void findBoundsGT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsGT(ArrayRef<CoefficientInfo> CI,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsEQ - Computes the upper and lower bounds for level K
   /// using the = direction. Records them in Bound.
-  void findBoundsEQ(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsEQ(ArrayRef<CoefficientInfo> CI,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// Given a linear access function, tries to recover subscripts
