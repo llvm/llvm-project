@@ -16,7 +16,6 @@ define i16 @csh_16(i16 %a, i16 %b) {
 ; GISEL-LABEL: csh_16:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GISEL-NEXT:    v_lshlrev_b16_e32 v2, v1, v0
 ; GISEL-NEXT:    v_lshrrev_b16_e32 v3, v1, v0
 ; GISEL-NEXT:    v_ashrrev_i16_e32 v0, v1, v0
@@ -45,7 +44,6 @@ define i32 @csh_32(i32 %a, i32 %b) {
 ; GISEL-LABEL: csh_32:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v1, 31, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, v1, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v3, v1, v0
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v0, v1, v0
@@ -246,12 +244,11 @@ define i64 @csh_64(i64 %a, i64 %b) {
 ; GISEL-LABEL: csh_64:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v6, 63, v2
-; GISEL-NEXT:    v_lshlrev_b64 v[2:3], v6, v[0:1]
-; GISEL-NEXT:    v_lshrrev_b64 v[4:5], v6, v[0:1]
-; GISEL-NEXT:    v_ashrrev_i64 v[0:1], v6, v[0:1]
-; GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
-; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
+; GISEL-NEXT:    v_lshlrev_b64 v[3:4], v2, v[0:1]
+; GISEL-NEXT:    v_lshrrev_b64 v[5:6], v2, v[0:1]
+; GISEL-NEXT:    v_ashrrev_i64 v[0:1], v2, v[0:1]
+; GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v3, v5
+; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v4, v6, vcc
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -336,7 +333,6 @@ define i32 @cshl_or(i32 %a, i32 %b) {
 ; GISEL-LABEL: cshl_or:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v1, 31, v1
 ; GISEL-NEXT:    v_lshl_or_b32 v0, v0, v1, v0
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %and = and i32 %b, 31
@@ -355,7 +351,6 @@ define i32 @cshl_add(i32 %a, i32 %b, i32 %c) {
 ; GISEL-LABEL: cshl_add:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v1, 31, v1
 ; GISEL-NEXT:    v_lshl_add_u32 v0, v0, v1, v2
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %and = and i32 %b, 31
@@ -374,8 +369,7 @@ define i32 @add_cshl(i32 %a, i32 %b) {
 ; GISEL-LABEL: add_cshl:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v2, 31, v1
-; GISEL-NEXT:    v_add_lshl_u32 v0, v0, v1, v2
+; GISEL-NEXT:    v_add_lshl_u32 v0, v0, v1, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %add = add i32 %a, %b
   %and = and i32 %b, 31

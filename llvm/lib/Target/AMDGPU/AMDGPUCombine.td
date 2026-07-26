@@ -165,6 +165,28 @@ def zext_of_shift_amount_combines : GICombineGroup<[
   canonicalize_zext_lshr, canonicalize_zext_ashr, canonicalize_zext_shl
 ]>;
 
+// A scalar shift only consumes the low log2(bitwidth) bits of its amount, so an
+// explicit (and amt, mask) is redundant when mask covers those low bits.
+// (shift x, (and amt, mask)) -> (shift x, amt)
+//
+// This must run after legalization: it assumes the shift instruction masks the
+// amount with the shifted type's width, which only holds once the shift has
+// been legalized to a width the hardware implements (s16/s32/s64).
+class redundant_shift_amount_mask_opcode<Instruction shiftOpc> : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $masked_amt, $amt, $mask),
+         (shiftOpc $dst, $src, $masked_amt),
+         [{ return isRedundantShiftAmountMask(${dst}.getReg(), ${mask}.getReg()); }]),
+  (apply (shiftOpc $dst, $src, $amt))>;
+
+def redundant_shl_amount_mask : redundant_shift_amount_mask_opcode<G_SHL>;
+def redundant_lshr_amount_mask : redundant_shift_amount_mask_opcode<G_LSHR>;
+def redundant_ashr_amount_mask : redundant_shift_amount_mask_opcode<G_ASHR>;
+
+def redundant_shift_amount_mask : GICombineGroup<[
+  redundant_shl_amount_mask, redundant_lshr_amount_mask, redundant_ashr_amount_mask
+]>;
+
 def minmax3_matchdata : GIDefMatchData<"MinMaxToMinMax3MatchInfo">;
 
 class minmax_to_minmax3_opcodes<Instruction minmaxOpcode> : GICombineRule<
@@ -256,7 +278,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
-   sign_extension_in_reg, smulu64,
+   sign_extension_in_reg, smulu64, redundant_shift_amount_mask,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }

@@ -113,6 +113,8 @@ public:
   // bits are zero extended.
   bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
+  bool isRedundantShiftAmountMask(Register Dst, Register Mask) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #define AMDGPUSubtarget GCNSubtarget
@@ -437,6 +439,27 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     return true;
   }
   return false;
+}
+
+// A shift of Dst's type only reads the low log2(bitwidth) bits of its amount,
+// so masking the amount with Mask is redundant whenever Mask has all of those
+// low bits set.
+bool AMDGPUPostLegalizerCombinerImpl::isRedundantShiftAmountMask(
+    Register Dst, Register Mask) const {
+  LLT DstTy = MRI.getType(Dst);
+  // Per-element masking for vectors is not handled here.
+  if (DstTy.isVector())
+    return false;
+  unsigned Size = DstTy.getScalarSizeInBits();
+  if (!isPowerOf2_32(Size))
+    return false;
+
+  auto MaybeMask = getIConstantVRegValWithLookThrough(Mask, MRI);
+  if (!MaybeMask)
+    return false;
+
+  uint64_t ModuloMask = Size - 1;
+  return (MaybeMask->Value.getZExtValue() & ModuloMask) == ModuloMask;
 }
 
 // Pass boilerplate
