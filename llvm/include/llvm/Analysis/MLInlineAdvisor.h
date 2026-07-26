@@ -111,6 +111,7 @@ public:
   void recordInliningWithCalleeDeletedImpl() override;
   void recordUnsuccessfulInliningImpl(const InlineResult &Result) override;
   void recordUnattemptedInliningImpl() override;
+  void recordCallPromotionQueryImpl() override;
 
   Function *getCaller() const { return Caller; }
   Function *getCallee() const { return Callee; }

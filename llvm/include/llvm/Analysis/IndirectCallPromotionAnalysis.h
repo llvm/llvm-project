@@ -13,11 +13,24 @@
 #ifndef LLVM_ANALYSIS_INDIRECTCALLPROMOTIONANALYSIS_H
 #define LLVM_ANALYSIS_INDIRECTCALLPROMOTIONANALYSIS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/InstrProf.h"
 
 namespace llvm {
 
+class CallBase;
+class Function;
 class Instruction;
+
+/// Find all possible function targets of an indirect call whose called operand
+/// is formed entirely from selects, phis, and function constants. Returns
+/// false if the target set is not exhaustive, exceeds the configured target
+/// limit, or requires more than the configured traversal budget.
+/// \p Targets is replaced with the discovered targets on success and is empty
+/// on failure.
+LLVM_ABI bool
+getStaticIndirectCallTargets(const CallBase &CB,
+                             SmallVectorImpl<Function *> &Targets);
 
 // Class for identifying profitable indirect call promotion candidates when
 // the indirect-call value profile metadata is available.

@@ -13,7 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -52,11 +55,86 @@ static cl::opt<unsigned>
                      cl::desc("Max number of promotions for a single indirect "
                               "call callsite"));
 
+static cl::opt<unsigned> MaxStaticTargetTraversal(
+    "icp-max-static-target-traversal", cl::init(64), cl::Hidden,
+    cl::desc("Max number of values traversed when collecting static indirect "
+             "call targets"));
+
 cl::opt<unsigned> MaxNumVTableAnnotations(
     "icp-max-num-vtables", cl::init(6), cl::Hidden,
     cl::desc("Max number of vtables annotated for a vtable load instruction."));
 
 } // end namespace llvm
+
+static bool
+collectStaticIndirectCallTargets(Value *Root,
+                                 SmallVectorImpl<Function *> &Targets) {
+  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Value *, 16> Worklist;
+  unsigned NumEnqueued = 0;
+
+  // Count queued operands, including duplicates, so a PHI with arbitrarily
+  // many incoming edges cannot consume unbounded time or worklist storage.
+  auto Enqueue = [&](Value *V) {
+    if (NumEnqueued >= MaxStaticTargetTraversal)
+      return false;
+    ++NumEnqueued;
+    Worklist.push_back(V);
+    return true;
+  };
+
+  if (!Enqueue(Root))
+    return false;
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+
+    // Call promotion compares the indirect callee with the function symbol
+    // after converting them to the same pointer type. Do not look through
+    // address-space casts that may change the pointer representation, since the
+    // function symbol cannot then safely stand in for the original value.
+    V = V->stripPointerCastsSameRepresentation();
+    if (!Visited.insert(V).second)
+      continue;
+
+    if (auto *F = dyn_cast<Function>(V)) {
+      if (!is_contained(Targets, F))
+        Targets.push_back(F);
+      if (Targets.size() > MaxNumPromotions)
+        return false;
+      continue;
+    }
+
+    if (auto *SI = dyn_cast<SelectInst>(V)) {
+      if (!Enqueue(SI->getFalseValue()) || !Enqueue(SI->getTrueValue()))
+        return false;
+      continue;
+    }
+
+    if (auto *PN = dyn_cast<PHINode>(V)) {
+      for (Value *Incoming : reverse(PN->incoming_values()))
+        if (!Enqueue(Incoming))
+          return false;
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
+bool llvm::getStaticIndirectCallTargets(const CallBase &CB,
+                                        SmallVectorImpl<Function *> &Targets) {
+  assert(!CB.getCalledFunction() && "expected an indirect call");
+  Targets.clear();
+  bool Success =
+      collectStaticIndirectCallTargets(CB.getCalledOperand(), Targets) &&
+      !Targets.empty();
+  if (!Success)
+    Targets.clear();
+  return Success;
+}
 
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
                                                    uint64_t TotalCount,

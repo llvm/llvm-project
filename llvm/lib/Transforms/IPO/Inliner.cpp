@@ -27,6 +27,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
+#include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -49,6 +50,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -98,7 +100,6 @@ static cl::opt<bool> KeepAdvisorForPrinting("keep-inline-advisor-for-printing",
 static cl::opt<bool>
     EnablePostSCCAdvisorPrinting("enable-scc-inline-advisor-printing",
                                  cl::init(false), cl::Hidden);
-
 
 static cl::opt<std::string> CGSCCInlineReplayFile(
     "cgscc-inline-replay", cl::init(""), cl::value_desc("filename"),
@@ -150,6 +151,40 @@ static cl::opt<CallSiteFormat::Format> CGSCCInlineReplayFormat(
                    "LineColumnDiscriminator",
                    "<Line Number>:<Column Number>.<Discriminator> (default)")),
     cl::desc("How cgscc inline replay file is formatted"), cl::Hidden);
+
+static bool
+promoteInlineableIndirectCall(CallBase &CB, InlineAdvisor &Advisor,
+                              bool OnlyMandatory,
+                              SmallVectorImpl<CallBase *> &PromotedCalls) {
+  SmallVector<Function *> Targets;
+  if (!getStaticIndirectCallTargets(CB, Targets) || Targets.size() < 2)
+    return false;
+
+  // This advice only gates the all-or-nothing indirect-to-direct promotion.
+  // The promoted direct calls are distinct call sites and will get fresh advice
+  // before InlineFunction processes them. Thus, this is a promotion heuristic,
+  // not a guarantee that every promoted call will subsequently be inlined.
+  for (Function *Target : Targets) {
+    if (Target->isDeclaration() || !isLegalToPromote(CB, Target))
+      return false;
+
+    Value *IndirectCallee = CB.getCalledOperand();
+    CB.setCalledOperand(Target);
+    std::unique_ptr<InlineAdvice> Advice = Advisor.getAdvice(CB, OnlyMandatory);
+    CB.setCalledOperand(IndirectCallee);
+    if (!Advice)
+      return false;
+    bool ShouldPromote = Advice->isInliningRecommended();
+    Advice->recordCallPromotionQuery();
+    if (!ShouldPromote)
+      return false;
+  }
+
+  for (Function *Target : ArrayRef(Targets).drop_back())
+    PromotedCalls.push_back(&promoteCallWithIfThenElse(CB, Target));
+  PromotedCalls.push_back(&promoteCall(CB, Targets.back()));
+  return true;
+}
 
 InlineAdvisor &
 InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
@@ -240,7 +275,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // this model, but it is uniformly spread across all the functions in the SCC
   // and eventually they all become too large to inline, rather than
   // incrementally making a single function grow in a super linear fashion.
-  SmallVector<CallBase *, 16> Calls;
+  //
+  // Promotion and inlining can delete later calls already queued here. Use
+  // weak handles so those entries become null instead of dangling pointers.
+  SmallVector<WeakTrackingVH, 16> Calls;
 
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
@@ -252,7 +290,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // FIXME: Using instructions sequence is a really bad way to do this.
     // Instead we should do an actual RPO walk of the function body.
     for (Instruction &I : instructions(N.getFunction()))
-      if (auto *CB = dyn_cast<CallBase>(&I))
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (Function *Callee = CB->getCalledFunction()) {
           if (!Callee->isDeclaration())
             Calls.push_back(CB);
@@ -267,7 +305,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                      << setIsVerbose();
             });
           }
-        }
+        } else if (isa<CallInst, InvokeInst>(CB))
+          Calls.push_back(CB);
+      }
   }
 
   // Capture updatable variable for the current SCC.
@@ -294,11 +334,15 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // Loop forward over all of the calls. Note that we cannot cache the size as
   // inlining can introduce new calls that need to be processed.
   for (int I = 0; I < (int)Calls.size(); ++I) {
+    auto *FirstCB = dyn_cast_or_null<CallBase>(Calls[I]);
+    if (!FirstCB)
+      continue;
+
     // We expect the calls to typically be batched with sequences of calls that
     // have the same caller, so we first set up some shared infrastructure for
     // this caller. We also do any pruning we can at this layer on the caller
     // alone.
-    Function &F = *Calls[I]->getCaller();
+    Function &F = *FirstCB->getCaller();
     LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C)
       continue;
@@ -315,24 +359,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // We bail out as soon as the caller has to change so we can update the
     // call graph and prepare the context of that new caller.
     bool DidInline = false;
-    for (; I < (int)Calls.size() && Calls[I]->getCaller() == &F; ++I) {
-      CallBase *CB = Calls[I];
-      Function &Callee = *CB->getCalledFunction();
-
-      // Check if this inlining may repeat breaking an SCC apart that has
-      // already been split once before. In that case, inlining here may
-      // trigger infinite inlining, much like is prevented within the inliner
-      // itself by the InlineHistory above, but spread across CGSCC iterations
-      // and thus hidden from the full inline history.
-      LazyCallGraph::Node &CalleeN = *CG.lookup(Callee);
-      LazyCallGraph::SCC *CalleeSCC = CG.lookupSCC(CalleeN);
-      if (CalleeSCC == C && UR.InlinedInternalEdges.count({&N, C})) {
-        LLVM_DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
-                             "previously split out of this SCC by inlining: "
-                          << F.getName() << " -> " << Callee.getName() << "\n");
-        setInlineRemark(*CB, "recursive SCC split");
+    bool DidPromote = false;
+    for (; I < (int)Calls.size(); ++I) {
+      auto *CB = dyn_cast_or_null<CallBase>(Calls[I]);
+      if (!CB)
         continue;
-      }
+      if (CB->getCaller() != &F)
+        break;
 
       // Store-to-load forwarding, loads can be sometimes simplified to
       // constants from stores introduced by previous inlining
@@ -360,6 +393,46 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           LI->replaceAllUsesWith(C);
           LI->eraseFromParent();
         }
+      }
+
+      if (!CB->getCalledFunction()) {
+        SmallVector<CallBase *> PromotedCalls;
+        if (promoteInlineableIndirectCall(*CB, Advisor, OnlyMandatory,
+                                          PromotedCalls)) {
+          Calls.insert(Calls.begin() + I + 1, PromotedCalls.size(),
+                       WeakTrackingVH());
+          for (auto [Index, PromotedCall] : llvm::enumerate(PromotedCalls))
+            Calls[I + 1 + Index] = PromotedCall;
+          DidPromote = true;
+          FAM.invalidate(F, PreservedAnalyses::none());
+          // Stop processing this caller so the newly created direct call
+          // edges are reflected in the lazy call graph before they reach
+          // InlineFunction. Advance past the original indirect call; after
+          // the adjustment below, the outer loop resumes at the first
+          // promoted call.
+          ++I;
+          break;
+        }
+        continue;
+      }
+
+      assert(CB->getCalledFunction() &&
+             "expected a direct call after indirect-call handling");
+      Function &Callee = *CB->getCalledFunction();
+
+      // Check if this inlining may repeat breaking an SCC apart that has
+      // already been split once before. In that case, inlining here may
+      // trigger infinite inlining, much like is prevented within the inliner
+      // itself by the InlineHistory above, but spread across CGSCC iterations
+      // and thus hidden from the full inline history.
+      LazyCallGraph::Node &CalleeN = *CG.lookup(Callee);
+      LazyCallGraph::SCC *CalleeSCC = CG.lookupSCC(CalleeN);
+      if (CalleeSCC == C && UR.InlinedInternalEdges.count({&N, C})) {
+        LLVM_DEBUG(dbgs() << "Skipping inlining internal SCC edge from a node "
+                             "previously split out of this SCC by inlining: "
+                          << F.getName() << " -> " << Callee.getName() << "\n");
+        setInlineRemark(*CB, "recursive SCC split");
+        continue;
       }
 
       std::unique_ptr<InlineAdvice> Advice =
@@ -466,8 +539,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           !CG.isLibFunction(Callee)) {
         if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
           Calls.erase(std::remove_if(Calls.begin() + I + 1, Calls.end(),
-                                     [&](const CallBase *CB) {
-                                       return CB->getCaller() == &Callee;
+                                     [&](const WeakTrackingVH &Call) {
+                                       auto *CB =
+                                           dyn_cast_or_null<CallBase>(Call);
+                                       return !CB || CB->getCaller() == &Callee;
                                      }),
                       Calls.end());
 
@@ -493,7 +568,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // the outer loop.
     --I;
 
-    if (!DidInline)
+    if (!DidInline && !DidPromote)
       continue;
     Changed = true;
 
