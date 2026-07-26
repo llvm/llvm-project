@@ -4263,3 +4263,37 @@ func.func @convertf_fold_f8() -> f8E5M2 {
   return %result : f8E5M2
 }
 
+
+// -----
+
+// Self-identity folds and patterns must not build a constant of a dynamic
+// shape (which would assert); they must leave the op unfolded.
+// CHECK-LABEL: func @xori_self_dynamic
+//       CHECK:   arith.xori
+func.func @xori_self_dynamic(%arg0 : tensor<?xi32>) -> tensor<?xi32> {
+  %0 = arith.xori %arg0, %arg0 : tensor<?xi32>
+  return %0 : tensor<?xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @subui_extended_self_dynamic
+//       CHECK:   arith.subui_extended
+func.func @subui_extended_self_dynamic(%arg0 : tensor<?xi32>)
+    -> (tensor<?xi32>, tensor<?xi1>) {
+  %low, %bo = arith.subui_extended %arg0, %arg0
+      : tensor<?xi32>, tensor<?xi1>
+  return %low, %bo : tensor<?xi32>, tensor<?xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func @subi_subi_lhs_rhs_lhs_dynamic
+//       CHECK:   arith.subi
+//       CHECK:   arith.subi
+func.func @subi_subi_lhs_rhs_lhs_dynamic(%a : tensor<?xi32>, %b : tensor<?xi32>)
+    -> tensor<?xi32> {
+  %0 = arith.subi %a, %b : tensor<?xi32>
+  %1 = arith.subi %0, %a : tensor<?xi32>
+  return %1 : tensor<?xi32>
+}
