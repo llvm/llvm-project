@@ -2668,7 +2668,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // fshl(0, X, C) --> lshr X, (BW-C)
       // fshl(undef, X, C) --> lshr X, (BW-C)
-      if (match(Op0, m_ZeroInt()) || match(Op0, m_Undef()))
+      // Similar to fshr -> fshl fold above, this is only valid if C is not zero
+      if ((match(Op0, m_ZeroInt()) || match(Op0, m_Undef())) &&
+          isKnownNonZero(ShAmtC, SQ.getWithInstruction(II)))
         return BinaryOperator::CreateLShr(Op1,
                                           ConstantExpr::getSub(WidthC, ShAmtC));
 

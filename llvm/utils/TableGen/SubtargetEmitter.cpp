@@ -55,6 +55,8 @@ class SubtargetEmitter : TargetFeaturesEmitter {
     std::vector<MCWriteLatencyEntry> WriteLatencies;
     std::vector<std::string> WriterNames;
     std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
+    size_t MaxWriteProcResEntries = 0;
+    size_t MaxWriteLatencyEntries = 0;
 
     // Reserve an invalid entry at index 0
     SchedClassTables() {
@@ -1293,6 +1295,8 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
     // WritePrecRes entries are sorted by ProcResIdx.
     llvm::sort(WriteProcResources, LessWriteProcResources());
 
+    SchedTables.MaxWriteProcResEntries =
+        std::max(SchedTables.MaxWriteProcResEntries, WriteProcResources.size());
     SCDesc.NumWriteProcResEntries = WriteProcResources.size();
     std::vector<MCWriteProcResEntry>::iterator WPRPos =
         std::search(SchedTables.WriteProcResources.begin(),
@@ -1306,6 +1310,8 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
                                             WriteProcResources.end());
     }
     // Latency entries must remain in operand order.
+    SchedTables.MaxWriteLatencyEntries =
+        std::max(SchedTables.MaxWriteLatencyEntries, WriteLatencies.size());
     SCDesc.NumWriteLatencyEntries = WriteLatencies.size();
     std::vector<MCWriteLatencyEntry>::iterator WLPos = std::search(
         SchedTables.WriteLatencies.begin(), SchedTables.WriteLatencies.end(),
@@ -1341,6 +1347,11 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
 // Emit SchedClass tables for all processors and associated global tables.
 void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
                                             raw_ostream &OS) {
+  OS << "\nstatic_assert(" << SchedTables.MaxWriteProcResEntries
+     << " <= UINT8_MAX, \"NumWriteProcResEntries does not fit in uint8_t\");\n"
+     << "static_assert(" << SchedTables.MaxWriteLatencyEntries
+     << " <= UINT8_MAX, \"NumWriteLatencyEntries does not fit in uint8_t\");\n";
+
   // Emit global WriteProcResTable.
   OS << "\n// {ProcResourceIdx, ReleaseAtCycle, AcquireAtCycle}\n"
      << "extern const llvm::MCWriteProcResEntry " << Target
@@ -1404,7 +1415,9 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
         SchedTables.ProcSchedClasses[1 + Idx];
 
     OS << "\n// {Name, NumMicroOps, BeginGroup, EndGroup, RetireOOO,"
-       << " WriteProcResIdx,#, WriteLatencyIdx,#, ReadAdvanceIdx,#}\n";
+       << " ReadAdvanceIdx, WriteProcResIdx, WriteLatencyIdx,"
+       << " NumReadAdvanceEntries, NumWriteProcResEntries,"
+       << " NumWriteLatencyEntries}\n";
     OS << "static const llvm::MCSchedClassDesc " << Proc.ModelName
        << "SchedClasses[] = {\n";
 
@@ -1426,12 +1439,13 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
       OS << MCDesc.NumMicroOps << ", " << (MCDesc.BeginGroup ? "true" : "false")
          << ", " << (MCDesc.EndGroup ? "true" : "false") << ", "
          << (MCDesc.RetireOOO ? "true" : "false") << ", "
-         << format("%2d", MCDesc.WriteProcResIdx) << ", "
-         << MCDesc.NumWriteProcResEntries << ", "
-         << format("%2d", MCDesc.WriteLatencyIdx) << ", "
-         << MCDesc.NumWriteLatencyEntries << ", "
          << format("%2d", MCDesc.ReadAdvanceIdx) << ", "
-         << MCDesc.NumReadAdvanceEntries << "}, // #" << SCIdx << '\n';
+         << format("%2d", MCDesc.WriteProcResIdx) << ", "
+         << format("%2d", MCDesc.WriteLatencyIdx) << ", "
+         << MCDesc.NumReadAdvanceEntries << ", "
+         << static_cast<unsigned>(MCDesc.NumWriteProcResEntries) << ", "
+         << static_cast<unsigned>(MCDesc.NumWriteLatencyEntries) << "}, // #"
+         << SCIdx << '\n';
     }
     OS << "}; // " << Proc.ModelName << "SchedClasses\n";
   }

@@ -15,6 +15,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Common/Strings.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -242,10 +243,24 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
     if (ver.name != verstr)
       continue;
 
-    if (isDefault)
-      versionId = ver.id;
+    // Like GNU ld, localize a versioned symbol (foo@v1 or foo@@v1) if a
+    // local: pattern in its own node v1 matches foo and no global: pattern
+    // does.
+    StringRef base = s.take_front(pos);
+    std::string demangled = demangle(base);
+    auto matches = [&](ArrayRef<SymbolVersion> pats) {
+      for (const SymbolVersion &pat : pats) {
+        StringRef name = pat.isExternCpp ? StringRef(demangled) : base;
+        if (pat.hasWildcard ? SingleStringMatcher(pat.name).match(name)
+                            : pat.name == name)
+          return true;
+      }
+      return false;
+    };
+    if (!matches(ver.nonLocalPatterns) && matches(ver.localPatterns))
+      versionId = VER_NDX_LOCAL;
     else
-      versionId = ver.id | VERSYM_HIDDEN;
+      versionId = isDefault ? ver.id : ver.id | VERSYM_HIDDEN;
     return;
   }
 

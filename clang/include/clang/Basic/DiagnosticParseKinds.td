@@ -463,6 +463,12 @@ def err_expansion_stmt_requires_cxx2c : Error<
   "expansion statements are only supported in C++2c">;
 def err_for_template : Error<
   "'for template' is invalid; use 'template for' instead">;
+def ext_expansion_stmt_body_not_compound_stmt : Extension<
+  "ISO C++ requires the body of an expansion statement to be a compound statement">,
+  InGroup<ExpansionStmtBody>;
+def ext_expansion_stmt_body_attr : Extension<
+  "ISO C++ forbids attributes before the compound statement of an expansion statement">,
+  InGroup<ExpansionStmtBody>;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;

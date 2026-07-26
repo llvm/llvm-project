@@ -46,6 +46,15 @@ static cl::opt<unsigned>
                                  "added. For testing purposes only."),
                         cl::ReallyHidden, cl::init(0));
 
+void AMDGPUTargetStreamer::initializeTargetID(const MCSubtargetInfo &STI,
+                                              bool ApplyFeatureString) {
+  assert(TargetID == std::nullopt && "TargetID can only be initialized once");
+  // Apply xnack/sramecc from subtarget features only in MC contexts
+  // (assembler), not in codegen where they come from module flags
+  TargetID = AMDGPU::createAMDGPUTargetID(
+      STI, ApplyFeatureString ? STI.getFeatureString() : "");
+}
+
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
   msgpack::Document HSAMetadataDoc;
   if (!HSAMetadataDoc.fromYAML(HSAMetadataString))
@@ -554,9 +563,11 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     break;
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
-    if (getTargetID()->isXnackSupported())
-      OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny()
-         << '\n';
+    if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK)) {
+      bool XnackOn = getTargetID()->isXnackOnOrAny() ||
+                     STI.hasFeature(AMDGPU::FeatureXNACK);
+      OS << "\t\t.amdhsa_reserve_xnack_mask " << XnackOn << '\n';
+    }
     break;
   }
 

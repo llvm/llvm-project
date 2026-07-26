@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -386,6 +387,79 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   NativeRegUnits = RegUnits;
 
   return SubRegs;
+}
+
+// Verify that a register's explicit sub-registers fit within it. A SubRegIndex
+// whose offset+size runs past the register's own size gives that sub-register
+// an oversized lane mask, which silently corrupts sub-register liveness and
+// spilling and is not otherwise diagnosed. (This was found via a real
+// wrong-code bug in a downstream target, where a 64-bit exponent sub-register
+// index was mistakenly declared with size 576.) The check is limited to
+// registers whose explicit sub-registers tile a contiguous bit range:
+// strided/spaced register tuples (e.g. ARM's Tuples3DSpc,
+// [dsub_0, dsub_2, dsub_4]) deliberately place sub-registers at non-adjacent
+// offsets that extend past the nominal size, and are not bugs.
+void CodeGenRegister::checkSubRegIndexSizes(CodeGenRegBank &RegBank) const {
+  // Only registers that are covered by their sub-registers promise to be fully
+  // tiled by them; for those an explicit SubRegIndex extending past the
+  // register is a genuine bug. A register that is not covered by its
+  // sub-registers makes no such promise, so don't second-guess its layout.
+  if (!CoveredBySubRegs)
+    return;
+
+  // This register's own bit size is the largest register class containing it.
+  unsigned ParentSize = 0;
+  for (const auto &RC : RegBank.getRegClasses()) {
+    if (!RC.contains(this) || !RC.RSI.hasDefault())
+      continue;
+    // Only trust a register-class size that is backed by a real value type.
+    // An 'untyped' class carries a placeholder size, not the register's bit
+    // width, so its size cannot be compared against sub-register extents.
+    // getValueTypes() is indexed by HwMode; DefaultMode is the first entry.
+    ArrayRef<ValueTypeByHwMode> VTs = RC.getValueTypes();
+    if (VTs.empty())
+      continue;
+    const ValueTypeByHwMode &VT = VTs[DefaultMode];
+    if (!VT.isSimple() || VT.getSimple() == MVT::Untyped)
+      continue;
+    ParentSize = std::max(ParentSize, RC.RSI.get(DefaultMode).RegSize);
+  }
+  if (!ParentSize)
+    return;
+
+  // Collect the explicit sub-register (offset, size) ranges. Bail on any
+  // register with incomplete or non-contiguous range info.
+  SmallVector<std::pair<unsigned, unsigned>> Ranges;
+  for (const CodeGenSubRegIndex *Idx : ExplicitSubRegIndices) {
+    if (!Idx->Range.hasDefault())
+      return;
+    const SubRegRange &R = Idx->Range.get(DefaultMode);
+    if (R.Size == static_cast<uint32_t>(-1) ||
+        R.Offset == static_cast<uint32_t>(-1))
+      return; // tuple sub-index with no contiguous bit range (e.g. X86 KPAIRS,
+              // ARM strided NEON tuples)
+    Ranges.emplace_back(R.Offset, R.Size);
+  }
+  if (Ranges.empty())
+    return;
+
+  // ExplicitSubRegIndices is in .td declaration order, not offset order, so
+  // sort by offset before scanning. Only a contiguous tiling is a dense bit
+  // container; anything left with a gap or overlap is a strided/spaced tuple
+  // (also covered-by-subregs), which is allowed to exceed the nominal size.
+  llvm::sort(Ranges);
+  unsigned Pos = 0;
+  for (auto [Off, Sz] : Ranges) {
+    if (Off != Pos)
+      return; // gap or overlap -> strided/sparse, skip
+    Pos += Sz;
+  }
+
+  if (Pos > ParentSize)
+    PrintFatalError(TheDef,
+                    formatv("register '{}' has size {} but its explicit "
+                            "sub-registers cover {} bits",
+                            getName(), ParentSize, Pos));
 }
 
 // In a register that is covered by its sub-registers, try to find redundant
@@ -1280,6 +1354,11 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
   // Read in the register category definitions.
   for (const Record *R : Records.getAllDerivedDefinitions("RegisterCategory"))
     RegCategories.emplace_back(*this, R);
+
+  // Now that register classes (and their sizes) are built, check that no
+  // explicit SubRegIndex makes a sub-register overflow its register.
+  for (const auto &Reg : Registers)
+    Reg.checkSubRegIndexSizes(*this);
 }
 
 // Create a synthetic CodeGenSubRegIndex without a corresponding Record.

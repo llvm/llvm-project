@@ -3742,23 +3742,24 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {
+        // Square-and-multiply using the operand's own semantics, matching
+        // the multiply sequence ExpandPowI builds in SelectionDAG.
         int Exp = static_cast<int>(Op2C->getSExtValue());
-        switch (Ty->getTypeID()) {
-        case Type::HalfTyID:
-        case Type::FloatTyID: {
-          APFloat Res(static_cast<float>(std::pow(Op1V.convertToFloat(), Exp)));
-          if (Ty->isHalfTy()) {
-            bool Unused;
-            Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
-                        &Unused);
-          }
-          return ConstantFP::get(Ty, Res);
+        unsigned UExp = static_cast<unsigned>(Exp);
+        if (Exp < 0)
+          UExp = -UExp;
+        const fltSemantics &Semantics = Op1V.getSemantics();
+        APFloat Res = APFloat::getOne(Semantics);
+        APFloat CurSquare = Op1V;
+        while (UExp) {
+          if (UExp & 1)
+            Res = Res * CurSquare;
+          CurSquare = CurSquare * CurSquare;
+          UExp >>= 1;
         }
-        case Type::DoubleTyID:
-          return ConstantFP::get(Ty, std::pow(Op1V.convertToDouble(), Exp));
-        default:
-          return nullptr;
-        }
+        if (Exp < 0)
+          Res = APFloat::getOne(Semantics) / Res;
+        return ConstantFP::get(Ty, Res);
       }
       default:
         break;

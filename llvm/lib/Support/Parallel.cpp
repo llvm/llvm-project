@@ -28,13 +28,7 @@ llvm::ThreadPoolStrategy parallel::strategy;
 
 #if LLVM_ENABLE_THREADS
 
-#ifdef _WIN32
 static thread_local unsigned threadIndex = UINT_MAX;
-
-unsigned parallel::getThreadIndex() { GET_THREAD_INDEX_IMPL; }
-#else
-thread_local unsigned parallel::threadIndex = UINT_MAX;
-#endif
 
 namespace {
 
@@ -284,9 +278,12 @@ void llvm::parallelFor(size_t Begin, size_t End,
       }
     };
 
+    // Run one worker on the calling thread: starts working immediately and
+    // avoids an idle thread.
     TaskGroup TG;
-    for (size_t I = 0; I != NumWorkers; ++I)
+    while (--NumWorkers)
       TG.spawn(Worker);
+    Worker();
     return;
   }
 #endif

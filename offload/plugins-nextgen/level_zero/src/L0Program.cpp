@@ -174,7 +174,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   auto ExpectedNewE =
       ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
   if (!ExpectedNewE) {
-    ODBG(OLDT_Module) << "Warning: unable to get ELF handle!";
+    std::string ErrMsg = toString(ExpectedNewE.takeError());
+    ODBG(OLDT_Module) << "Warning: unable to get ELF handle: " << ErrMsg;
     return false;
   }
   bool Res = false;
@@ -186,7 +187,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     const auto &ELFF = ELFObjF->getELFFile();
     auto Sections = ELFF.sections();
     if (!Sections) {
-      ODBG(OLDT_Module) << "Warning: unable to get ELF sections!";
+      std::string ErrMsg = toString(Sections.takeError());
+      ODBG(OLDT_Module) << "Warning: unable to get ELF sections: " << ErrMsg;
       return false;
     }
     bool SeenOffloadSection = false;
@@ -196,7 +198,9 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       Error Err = Plugin::success();
       for (auto Note : ELFF.notes(Sec, Err)) {
         if (Err) {
-          ODBG(OLDT_Module) << "Warning: unable to get ELF notes handle!";
+          std::string ErrMsg = toString(std::move(Err));
+          ODBG(OLDT_Module)
+              << "Warning: unable to get ELF notes handle: " << ErrMsg;
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
@@ -549,7 +553,7 @@ Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
 
 Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
                                      size_t *SizePtr) const {
-  if (!Name)
+  if (!Name || !AddrPtr || !SizePtr)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Invalid arguments to getSymbolDeviceAddr");
 
@@ -560,10 +564,14 @@ Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
     CALL_ZE(RC, zeModuleGetGlobalPointer, Module, Name, &SymbolSize,
             &SymbolAddr);
     if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
-      if (AddrPtr)
-        *AddrPtr = SymbolAddr;
-      if (SizePtr)
-        *SizePtr = SymbolSize;
+      *AddrPtr = SymbolAddr;
+      *SizePtr = SymbolSize;
+      return Plugin::success();
+    }
+    CALL_ZE(RC, zeModuleGetFunctionPointer, Module, Name, &SymbolAddr);
+    if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
+      *AddrPtr = SymbolAddr;
+      *SizePtr = 0;
       return Plugin::success();
     }
   }

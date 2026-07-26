@@ -92,11 +92,12 @@ namespace __pstl {
 //
 // transform and transform_binary family
 // -------------------------------------
-// - replace_copy_if
-// - replace_copy
-// - move
+// - adjacent_difference
 // - copy
 // - copy_n
+// - move
+// - replace_copy
+// - replace_copy_if
 // - reverse_copy
 // - rotate_copy
 //
@@ -572,6 +573,34 @@ struct __reverse_copy<__default_backend_tag, _ExecutionPolicy> {
                    std::reverse_iterator<_BidirectionalIterator>(std::move(__last)),
                    std::reverse_iterator<_BidirectionalIterator>(std::move(__first)),
                    std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __result,
+             _BinaryOperation&& __op) const noexcept {
+    using _TransformBinary = __dispatch<__transform_binary, __current_configuration, _ExecutionPolicy>;
+    if (__first1 == __last1)
+      return __result; // edge case: empty input range, just return the output iterator
+    *__result = *__first1;
+    ++__result;
+    _ForwardIterator1 __first2 = std::next(__first1);
+    if (__first2 == __last1)
+      return __result; // edge case: not enough elements to perform adjacent difference, just return the output iterator
+    // Process as a binary transform of two iterator ranges: [__first1 + 1, __last1) and [__first1, __last1 - 1)
+    return _TransformBinary()(
+        __policy,
+        std::move(__first2),
+        std::move(__last1),
+        std::move(__first1),
+        std::move(__result),
+        std::forward<_BinaryOperation>(__op));
   }
 };
 
