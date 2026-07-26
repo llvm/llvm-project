@@ -6197,6 +6197,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_separate_named_sections);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
                     options::OPT_fno_unique_internal_linkage_names);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_finsert_def_use,
+                    options::OPT_fno_insert_def_use);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
   Args.addOptInFlag(CmdArgs, options::OPT_fconvergent_functions,

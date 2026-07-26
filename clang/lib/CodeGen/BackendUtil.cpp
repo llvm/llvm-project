@@ -69,6 +69,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
+#include "llvm/Transforms/Instrumentation/DefUseInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -1037,6 +1038,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       MPM.addPass(PB.buildPerModuleDefaultPipeline(Level));
     }
   }
+
+  if (CodeGenOpts.InsertDefUse)
+    MPM.addPass(llvm::DefUseInstrumentationPass());
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
   if (CodeGenOpts.LinkBitcodePostopt)

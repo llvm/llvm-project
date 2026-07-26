@@ -50,7 +50,6 @@ def NoArgumentUnused : OptionFlag;
 // Unsupported - The option is unsupported, and the driver will reject command
 // lines that use it.
 def Unsupported : OptionFlag;
-
 // Ignored - The option is unsupported, and the driver will silently ignore it.
 def Ignored : OptionFlag;
 
@@ -4176,6 +4175,12 @@ defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
   NegFlag<SetTrue, [], [ClangOption, CC1Option],
           "Don't place zero initialized data in BSS">,
   PosFlag<SetFalse>>;
+defm insert_def_use : BoolFOption<"insert-def-use",
+  CodeGenOpts<"InsertDefUse">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable dynamic def-use instrumentation">,
+  NegFlag<SetFalse>>;
+
 defm function_sections : BoolFOption<"function-sections",
   CodeGenOpts<"FunctionSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
