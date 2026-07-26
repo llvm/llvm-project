@@ -37,6 +37,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2940,6 +2941,22 @@ SmallVector<utils::IteratorType> SoftmaxOp::getLoopIteratorTypes() {
   return iteratorTypes;
 }
 
+static bool isFullSoftmaxDimensionTile(OpFoldResult offset, OpFoldResult size,
+                                       Value source, int64_t dimension) {
+  // Softmax cannot be computed independently on parts of its reduction
+  // dimension without combining their maxima and normalization factors.
+  FailureOr<int64_t> constantOffset =
+      ValueBoundsConstraintSet::computeConstantBound(
+          presburger::BoundType::EQ,
+          ValueBoundsConstraintSet::Variable(offset));
+  if (failed(constantOffset) || *constantOffset != 0)
+    return false;
+  FailureOr<bool> isFullDimension = ValueBoundsConstraintSet::areEqual(
+      ValueBoundsConstraintSet::Variable(size),
+      ValueBoundsConstraintSet::Variable(source, dimension));
+  return succeeded(isFullDimension) && *isFullDimension;
+}
+
 /// The inner tile alignment hint is only used by `linalg.pack` and
 /// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
 /// overload.
@@ -2953,6 +2970,12 @@ FailureOr<TilingResult>
 SoftmaxOp::getTiledImplementation(OpBuilder &builder,
                                   ArrayRef<OpFoldResult> offsets,
                                   ArrayRef<OpFoldResult> sizes) {
+  int64_t reductionDimension = getDimension();
+  if (!isFullSoftmaxDimensionTile(offsets[reductionDimension],
+                                  sizes[reductionDimension], getInput(),
+                                  reductionDimension))
+    return failure();
+
   int64_t rank = getInputOperandRank();
   auto oneAttr = builder.getI64IntegerAttr(1);
   SmallVector<OpFoldResult> strides(rank, oneAttr);
