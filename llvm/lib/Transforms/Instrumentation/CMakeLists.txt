@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMInstrumentation
   CGProfile.cpp
   ControlHeightReduction.cpp
   DataFlowSanitizer.cpp
+  DefUseInstrumentation.cpp
   GCOVProfiling.cpp
   BlockCoverageInference.cpp
   MemProfiler.cpp
