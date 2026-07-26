@@ -298,15 +298,18 @@ TEST(LlvmLibcStringTest, SelfAssignAtCapacityTest) {
 
   // Append until the string is at its capacity
   // to exercise assigning past capacity.
-  while (s.size() + 1 < s.capacity())
+  while (s.size() < s.capacity())
     s += 'a';
-  ASSERT_EQ(s.capacity(), s.size() + 1);
+  ASSERT_EQ(s.capacity(), s.size());
+  size_t cap_before_append = s.capacity();
 
   // Force a resize by assigning to a longer string.
   string longer_string(s.size() + 1, 'b');
   s = string_view(longer_string);
 
+  size_t cap_after_append = s.capacity();
   ASSERT_EQ(s, longer_string);
+  ASSERT_GT(cap_after_append, cap_before_append);
 }
 
 TEST(LlvmLibcStringTest, SelfMoveAssign) {
@@ -321,15 +324,18 @@ TEST(LlvmLibcStringTest, SelfAppendAtCapacityTest) {
 
   // Append until the string is at its capacity
   // to exercise self-appending past capacity.
-  while (s.size() + 1 < s.capacity())
+  while (s.size() < s.capacity())
     s += 'a';
-  ASSERT_EQ(s.capacity(), s.size() + 1);
+  ASSERT_EQ(s.capacity(), s.size());
 
   string_view view = string_view(s).substr(0, 3);
   size_t expected_size = s.size() + view.size();
+  size_t cap_before_append = s.capacity();
 
   s += view;
 
+  size_t cap_after_append = s.capacity();
   string expected(expected_size, 'a');
   ASSERT_EQ(s, expected);
+  ASSERT_GT(cap_after_append, cap_before_append);
 }
