@@ -13,7 +13,7 @@
 #include "Symbols.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
@@ -121,7 +121,6 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
-  DenseSet<InputSection *> seenSections;
   auto addSection = [&](InputSection *isec) {
     if (!isec || isec->data.empty() || !isec->data.data())
       return;
@@ -132,8 +131,6 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     // ConcatInputSections are entirely live or dead, so the offset is
     // irrelevant.
     if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
-      return;
-    if (!seenSections.insert(isec).second)
       return;
     size_t idx = sections.size();
     sections.emplace_back(isec);
@@ -154,10 +151,13 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
   // ICF safe thunks are linker-created after the input-file section graph is
-  // built. Include them (and any other synthetic concat sections) so temporal
-  // profile names resolve to the sections that are actually emitted.
-  for (auto *isec : inputSections)
-    addSection(isec);
+  // built. Include them so profile names resolve to the emitted thunks.
+  for (auto *isec : inputSections) {
+    if (llvm::any_of(isec->symbols, [](Defined *sym) {
+          return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
+        }))
+      addSection(isec);
+  }
 
   auto result = BPOrdererMachO().computeOrder(
       profilePath, compressionSortSpecs, forFunctionCompression,
