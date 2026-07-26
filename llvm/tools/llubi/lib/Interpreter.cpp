@@ -2608,7 +2608,8 @@ public:
           ResVec.push_back(FV[I]);
           break;
         case BooleanKind::Poison:
-          ResVec.push_back(AnyValue::poison());
+          ResVec.push_back(
+              AnyValue::getPoisonValue(Ctx, SI.getType()->getScalarType()));
           break;
         }
       }
@@ -2779,7 +2780,8 @@ public:
     for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
       for (int Idx : SVI.getShuffleMask()) {
         if (Idx == PoisonMaskElem)
-          Res.push_back(AnyValue::poison());
+          Res.push_back(
+              AnyValue::getPoisonValue(Ctx, SVI.getType()->getScalarType()));
         else if (Idx < static_cast<int>(Size))
           Res.push_back(LHSVec[Idx]);
         else

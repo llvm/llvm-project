@@ -273,7 +273,8 @@ AnyValue AnyValue::getPoisonValue(Context &Ctx, Type *Ty) {
                              Ctx.getDataLayout().isLittleEndian());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
-    return AnyValue(std::vector<AnyValue>(NumElements, AnyValue::poison()));
+    return AnyValue(std::vector<AnyValue>(
+        NumElements, getPoisonValue(Ctx, VecTy->getScalarType())));
   }
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
     uint64_t NumElements = ArrTy->getNumElements();

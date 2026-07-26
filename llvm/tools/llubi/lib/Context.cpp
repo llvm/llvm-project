@@ -269,7 +269,8 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
       for (int Idx : CE->getShuffleMask()) {
         if (Idx == PoisonMaskElem)
-          Res.push_back(AnyValue::poison());
+          Res.push_back(
+              AnyValue::getPoisonValue(*this, CE->getType()->getScalarType()));
         else if (Idx < static_cast<int>(Size))
           Res.push_back(LHSVec[Idx]);
         else
