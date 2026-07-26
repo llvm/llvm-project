@@ -419,9 +419,6 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
-- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
-  now uses the B-key by default.
-
 #### Android Support
 
 #### Windows Support
