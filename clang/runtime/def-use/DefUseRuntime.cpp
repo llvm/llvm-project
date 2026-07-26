@@ -10,32 +10,39 @@ namespace {
 uint64_t NextEventID = 0;
 uint64_t CurrentEventID = 0;
 
-// Статический InstID -> последнее динамическое событие этой инструкции.
-std::unordered_map<uint64_t, uint64_t> LastEventByInstID;
+// Теперь инструкция определяется парой ModuleToken, InstID -> последнее динамическое событие.
+std::map<std::pair<uint64_t, uint64_t>, uint64_t>
+    LastEventByInstruction;
 
-// Пока учитываем только полное совпадение адреса и размера:
-//
 // (Address, Size) -> EventID последнего store.
-std::map<std::pair<uint64_t, uint64_t>, uint64_t> LastStoreEvent;
+std::map<std::pair<uint64_t, uint64_t>, uint64_t>
+    LastStoreEvent;
 
 } // namespace
 
-extern "C" void __def_use_trace_inst(uint64_t InstID) {
+extern "C" void __def_use_trace_inst(uint64_t ModuleToken,
+                                     uint64_t InstID) {
   CurrentEventID = NextEventID++;
 
-  LastEventByInstID[InstID] = CurrentEventID;
+  LastEventByInstruction[{ModuleToken, InstID}] = CurrentEventID;
 
   std::cerr << "EVENT "
             << CurrentEventID
+            << " MODULE 0x"
+            << std::hex
+            << ModuleToken
+            << std::dec
             << " INST "
             << InstID
             << '\n';
 }
 
-extern "C" void __def_use_trace_ssa_use(uint64_t DefInstID) {
-  auto It = LastEventByInstID.find(DefInstID);
+extern "C" void __def_use_trace_ssa_use(uint64_t ModuleToken,
+                                        uint64_t DefInstID) {
+  auto It =
+      LastEventByInstruction.find({ModuleToken, DefInstID});
 
-  if (It == LastEventByInstID.end()) {
+  if (It == LastEventByInstruction.end()) {
     return;
   }
 

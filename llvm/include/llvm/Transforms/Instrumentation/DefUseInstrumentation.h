@@ -22,6 +22,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 
+#include "llvm/IR/GlobalVariable.h"
 
 #include <cstdint>
 
@@ -38,7 +39,7 @@ struct DefUseInstrumentationPass
     DenseMap<Instruction*, uint64_t> InstIDs;           // Мапа, для того чтоб повторный вызов инструкции вспоминался и айдишник ёё брался
     SmallVector<Instruction *> Instructions;            // Чтоб модуль заново не обходить, а по вектору пробежаться
 
-    FunctionType* HookType = FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt64Ty(Ctx)}, false);
+    FunctionType *HookType = FunctionType::get(Type::getVoidTy(Ctx),{Type::getInt64Ty(Ctx), Type::getInt64Ty(Ctx)}, false);
     FunctionCallee Hook_inst =  M.getOrInsertFunction("__def_use_trace_inst", HookType);
     FunctionCallee Hook_use =  M.getOrInsertFunction("__def_use_trace_ssa_use", HookType);
 
@@ -48,13 +49,35 @@ struct DefUseInstrumentationPass
 
     const DataLayout &DL = M.getDataLayout(); // DataLayout::getTypeStoreSize()  чтоб получить размер значения в памяти
 
+    GlobalVariable *ModuleTokenGV = M.getGlobalVariable("__def_use_module_token", true);
+
+    if (!ModuleTokenGV) {
+      ModuleTokenGV = new GlobalVariable(
+          M,
+          Type::getInt8Ty(Ctx),
+          false,
+          GlobalValue::InternalLinkage,
+          ConstantInt::get(Type::getInt8Ty(Ctx), 0),
+          "__def_use_module_token");
+    }
+
+    Constant *ModuleToken = ConstantExpr::getPtrToInt(ModuleTokenGV,Type::getInt64Ty(Ctx));
+
     // первый обход заполняет мапу инструкция - ID
     uint64_t CallID = 0;
 
     for (Function &F : M) {
       if (F.isDeclaration()) {
         continue;
+      } 
+      
+      StringRef Name = F.getName();
+
+      if (Name.starts_with("__cxx_global_var_init") ||
+          Name.starts_with("_GLOBAL__sub_I_")) {
+        continue;
       }
+
       for (BasicBlock &BB : F) {
         for (Instruction &I : BB) {
           Instructions.push_back(&I);
@@ -68,7 +91,7 @@ struct DefUseInstrumentationPass
     for (Instruction *I : Instructions) {
       uint64_t UseID = InstIDs.lookup(I);
       Builder.SetInsertPoint(I);
-      Builder.CreateCall(Hook_inst, Builder.getInt64(UseID));
+      Builder.CreateCall(Hook_inst,  {ModuleToken,Builder.getInt64(UseID)});
 
       // Load и Store отельно обрабатываем
       if (auto *LI = dyn_cast<LoadInst>(I)) {
@@ -85,7 +108,7 @@ struct DefUseInstrumentationPass
 
         uint64_t Size = LoadSize.getFixedValue();
 
-        Builder.CreateCall(HookLoad, {Address, Builder.getInt64(Size)});
+        Builder.CreateCall(HookLoad, {  Address, Builder.getInt64(Size)});
 
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
         Value *PointerOperand = SI->getPointerOperand();
@@ -103,7 +126,7 @@ struct DefUseInstrumentationPass
 
         uint64_t Size = StoreSize.getFixedValue();
 
-        Builder.CreateCall(HookStore, {Address, Builder.getInt64(Size)});
+        Builder.CreateCall(HookStore, { Address, Builder.getInt64(Size)});
       }
 
       for (Use &Operand : I->operands()) {
@@ -113,14 +136,14 @@ struct DefUseInstrumentationPass
 
         if (!Def) {
           continue;
-        }
+        } 
 
         if (!InstIDs.contains(Def))
           continue;
 
         uint64_t DefID = InstIDs.lookup(Def);
 
-        Builder.CreateCall(Hook_use, Builder.getInt64(DefID));
+        Builder.CreateCall(Hook_use,  {ModuleToken, Builder.getInt64(DefID)});
 
         errs()  <<    "DEF " << DefID <<
                       "-> USE " << UseID << "\n";
