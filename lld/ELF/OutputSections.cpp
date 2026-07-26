@@ -936,7 +936,7 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
             << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
             << " instead of 0x" << utohexstr(addend)
             << " for dynamic relocation " << rel.type << " at offset 0x"
-            << utohexstr(rel.getOffset())
+            << utohexstr(rel.r_offset)
             << (rel.sym ? " against symbol " + rel.sym->getName() : "");
     }
   });

@@ -1440,9 +1440,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  if (auto *eh = dyn_cast<EhInputSection>(inputSec))
-    return eh->getParent()->getVA(offsetInSec);
-  return inputSec->getVA(offsetInSec);
+  return inputSec->getRelocVA(offsetInSec);
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
