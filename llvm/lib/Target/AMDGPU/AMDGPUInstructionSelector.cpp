@@ -6660,16 +6660,19 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
                                                     unsigned ShAmtBits) const {
   assert(MI.getOpcode() == TargetOpcode::G_AND);
 
-  std::optional<APInt> RHS =
-      getIConstantVRegVal(MI.getOperand(2).getReg(), *MRI);
+  // A divergent shift amount reaches the mask through a cross-bank copy of the
+  // constant, which the pattern matcher looks through, so look through it here
+  // too.
+  std::optional<ValueAndVReg> RHS =
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), *MRI);
   if (!RHS)
     return false;
 
-  if (RHS->countr_one() >= ShAmtBits)
+  if (RHS->Value.countr_one() >= ShAmtBits)
     return true;
 
   const APInt &LHSKnownZeros = VT->getKnownZeroes(MI.getOperand(1).getReg());
-  return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
+  return (LHSKnownZeros | RHS->Value).countr_one() >= ShAmtBits;
 }
 
 InstructionSelector::ComplexRendererFns

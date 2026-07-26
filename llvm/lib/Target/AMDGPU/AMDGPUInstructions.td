@@ -292,40 +292,66 @@ def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
 
 // Constrained shift PatFrags.
 
+// RegBankLegalize inserts a cross-bank copy between the mask constant and the
+// AND when the constant stays in the SGPR bank but the AND is divergent, so the
+// matcher has to look through copies to find the imm.
+let GIIgnoreCopies = 1 in {
+
 def csh_mask_16 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 4); }]> {
+  [{ return isUnneededShiftMask(N, 4); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 4); }];
   }
 
 def csh_mask_32 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 5); }]> {
+  [{ return isUnneededShiftMask(N, 5); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 5); }];
   }
 
 def csh_mask_64 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 6); }]> {
+  [{ return isUnneededShiftMask(N, 6); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 6); }];
   }
+
+} // End GIIgnoreCopies = 1
 
 foreach width = [16, 32, 64] in {
 defvar csh_mask = !cast<SDPatternOperator>("csh_mask_"#width);
 
+// The masked alternatives get GIIgnoreCopies so the AND itself can be found
+// when it is uniform but the shift is divergent, which puts a COPY between them.
+// The flag is confined to these frags to leave the unmasked alternatives, and
+// anything built on top of them, matching exactly as before.
+def cshl_#width#_masked : PatFrag<(ops node:$src0, node:$src1),
+  (shl node:$src0, (csh_mask node:$src1))>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 def cshl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(shl node:$src0, node:$src1), (shl node:$src0, (csh_mask node:$src1))]>;
+  [(shl node:$src0, node:$src1),
+  (!cast<SDPatternOperator>("cshl_"#width#"_masked") node:$src0, node:$src1)]>;
 defvar cshl = !cast<SDPatternOperator>("cshl_"#width);
 def cshl_#width#_oneuse : HasOneUseBinOp<cshl>;
 def clshl_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (cshl $src1, $src0)>;
 
+def csrl_#width#_masked : PatFrag<(ops node:$src0, node:$src1),
+  (srl node:$src0, (csh_mask node:$src1))>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 def csrl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(srl node:$src0, node:$src1), (srl node:$src0, (csh_mask node:$src1))]>;
+  [(srl node:$src0, node:$src1),
+  (!cast<SDPatternOperator>("csrl_"#width#"_masked") node:$src0, node:$src1)]>;
 defvar csrl = !cast<SDPatternOperator>("csrl_"#width);
 def csrl_#width#_oneuse : HasOneUseBinOp<csrl>;
 def clshr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (csrl $src1, $src0)>;
 
+def csra_#width#_masked : PatFrag<(ops node:$src0, node:$src1),
+  (sra node:$src0, (csh_mask node:$src1))>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 def csra_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(sra node:$src0, node:$src1), (sra node:$src0, (csh_mask node:$src1))]>;
+  [(sra node:$src0, node:$src1),
+  (!cast<SDPatternOperator>("csra_"#width#"_masked") node:$src0, node:$src1)]>;
 defvar csra = !cast<SDPatternOperator>("csra_"#width);
 def csra_#width#_oneuse : HasOneUseBinOp<csra>;
 def cashr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
