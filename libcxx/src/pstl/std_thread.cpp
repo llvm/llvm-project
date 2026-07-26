@@ -180,7 +180,7 @@ struct Task {
   std::latch requests;
 };
 
-struct DequeID {
+struct QueueID {
   static_assert(std::atomic<std::thread::id>::is_always_lock_free);
   std::atomic<std::thread::id> id = {};
   std::atomic_size_t aquire_count = 0;
@@ -189,11 +189,11 @@ struct DequeID {
 struct Sched {
 private:
   std::unique_ptr<std::thread[]> m_workers;
-  std::unique_ptr<SPMCQueue[]> m_deques;
-  std::unique_ptr<DequeID[]> m_deque_ids;
+  std::unique_ptr<SPMCQueue[]> m_queues;
+  std::unique_ptr<QueueID[]> m_queue_ids;
 
   size_t m_workers_count;
-  size_t m_deques_count;
+  size_t m_queues_count;
 
   std::mutex m_workers_sleep_mutex;
   std::condition_variable m_workers_sleep_cv;
@@ -206,17 +206,17 @@ public:
     if (cpu_threads == 0)
       cpu_threads = 1; // safe fallback
 
-    m_deques_count = cpu_threads * 2;
-    m_deques       = std::make_unique<SPMCQueue[]>(m_deques_count);
-    m_deque_ids    = std::make_unique<DequeID[]>(m_deques_count);
+    m_queues_count = cpu_threads * 2;
+    m_queues       = std::make_unique<SPMCQueue[]>(m_queues_count);
+    m_queue_ids    = std::make_unique<QueueID[]>(m_queues_count);
 
     m_workers_count = cpu_threads - 1;
     m_workers       = std::make_unique<std::thread[]>(m_workers_count);
 
     for (size_t i = 0; i < m_workers_count; ++i) {
       std::thread worker(&Sched::worker_thread, this, i);
-      m_deque_ids[i].id.store(worker.get_id());
-      m_deque_ids[i].aquire_count.store(1);
+      m_queue_ids[i].id.store(worker.get_id());
+      m_queue_ids[i].aquire_count.store(1);
       m_workers[i] = std::move(worker);
     }
   }
@@ -227,37 +227,37 @@ public:
 
   void wake_workers() noexcept { m_workers_sleep_cv.notify_all(); }
 
-  SPMCQueue* acquire_deque(std::thread::id thread_id) {
-    for (size_t i = 0; i < m_deques_count; ++i) {
-      std::thread::id id = m_deque_ids[i].id.load();
+  SPMCQueue* acquire_queue(std::thread::id thread_id) {
+    for (size_t i = 0; i < m_queues_count; ++i) {
+      std::thread::id id = m_queue_ids[i].id.load();
       if (id == thread_id) {
         bool is_guest = i >= m_workers_count;
         if (is_guest) {
-          m_deque_ids[i].aquire_count.fetch_add(1);
+          m_queue_ids[i].aquire_count.fetch_add(1);
         }
-        return &m_deques[i];
+        return &m_queues[i];
       }
     }
-    for (size_t i = 0; i < m_deques_count; ++i) {
-      std::thread::id id = m_deque_ids[i].id.load();
+    for (size_t i = 0; i < m_queues_count; ++i) {
+      std::thread::id id = m_queue_ids[i].id.load();
       if (id == std::thread::id()) {
         std::thread::id expected;
-        if (m_deque_ids[i].id.compare_exchange_strong(expected, thread_id)) {
+        if (m_queue_ids[i].id.compare_exchange_strong(expected, thread_id)) {
           // Acquired by a new guest thread => set aquire_count to 1
-          m_deque_ids[i].aquire_count.store(1);
-          return &m_deques[i];
+          m_queue_ids[i].aquire_count.store(1);
+          return &m_queues[i];
         }
       }
     }
     return nullptr;
   }
 
-  void release_deque(SPMCQueue* deque) {
-    size_t idx    = static_cast<size_t>(deque - m_deques.get());
+  void release_queue(SPMCQueue* queue) {
+    size_t idx    = static_cast<size_t>(queue - m_queues.get());
     bool is_guest = idx >= m_workers_count;
     if (is_guest) {
-      if (m_deque_ids[idx].aquire_count.fetch_sub(1) == 1) {
-        m_deque_ids[idx].id.store(std::thread::id());
+      if (m_queue_ids[idx].aquire_count.fetch_sub(1) == 1) {
+        m_queue_ids[idx].id.store(std::thread::id());
       }
     }
   }
@@ -291,22 +291,22 @@ static void process_request(Task* task) noexcept {
 }
 
 void Sched::worker_thread(size_t worker_num) noexcept {
-  const size_t deques_count    = m_deques_count;
+  const size_t queues_count    = m_queues_count;
   constexpr int max_spin_count = 16;
   int spin_count               = 0;
 
   while (true) {
     Task* task = nullptr;
 
-    // 1st - try to pop from own deque
-    if ((task = m_deques[worker_num].pop())) {
-      LOG("Worker %zu popped task %p from own deque\n", worker_num, task);
+    // 1st - try to pop from own queue
+    if ((task = m_queues[worker_num].pop())) {
+      LOG("Worker %zu popped task %p from own queue\n", worker_num, task);
     } else {
-      // 2nd - try to steal from other deques
-      for (size_t i = 0; i != m_deques_count; ++i) {
-        size_t idx = (worker_num + i) % deques_count;
-        if ((task = m_deques[idx].steal())) {
-          LOG("Worker %zu stole task %p from deque %zu\n", worker_num, task, idx);
+      // 2nd - try to steal from other queues
+      for (size_t i = 0; i != queues_count; ++i) {
+        size_t idx = (worker_num + i) % queues_count;
+        if ((task = m_queues[idx].steal())) {
+          LOG("Worker %zu stole task %p from queue %zu\n", worker_num, task, idx);
           break;
         }
       }
@@ -339,8 +339,8 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
   }
 
   std::thread::id thread_id = std::this_thread::get_id();
-  SPMCQueue* deque          = acquire_deque(thread_id);
-  if (deque == nullptr) {
+  SPMCQueue* queue          = acquire_queue(thread_id);
+  if (queue == nullptr) {
     apply_serial(iterations, ctxt, func);
     return;
   }
@@ -356,9 +356,9 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
 
   LOG("New root task %p of %zu iterations with %zu requests\n", &root_task, iterations, num_requests);
 
-  // Push all but one request to the deque, and process the last one directly in this thread.
+  // Push all but one request to the queue, and process the last one directly in this thread.
   while (num_requests > 1) {
-    if (!deque->push(&root_task)) {
+    if (!queue->push(&root_task)) {
       break;
     }
     --num_requests;
@@ -376,14 +376,14 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
   while (!root_task.requests.try_wait()) {
     Task* task = nullptr;
 
-    // 1st - try to pop from own deque
-    if ((task = deque->pop())) {
-      LOG("Guest thread popped task %p from own deque\n", task);
+    // 1st - try to pop from own queue
+    if ((task = queue->pop())) {
+      LOG("Guest thread popped task %p from own queue\n", task);
     } else {
-      // 2nd - try to steal from other deques
-      for (size_t i = 0; i != m_deques_count; ++i) {
-        if (&m_deques[i] != deque && (task = m_deques[i].steal())) {
-          LOG("Guest stole task %p from deque %zu\n", task, i);
+      // 2nd - try to steal from other queues
+      for (size_t i = 0; i != m_queues_count; ++i) {
+        if (&m_queues[i] != queue && (task = m_queues[i].steal())) {
+          LOG("Guest stole task %p from queue %zu\n", task, i);
           break;
         }
       }
@@ -400,7 +400,7 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
 
   root_task.requests.wait();
 
-  release_deque(deque);
+  release_queue(queue);
 }
 
 void __apply(size_t __iterations, void* __context, void (*__func)(void* __context, size_t __iteration)) noexcept {
