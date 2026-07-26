@@ -66,20 +66,12 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
   }
 }
 
-static std::string getRegionName(const MemRegion *Reg) {
-  // FIXME: Once the checker supports heap allocation, more region kinds
-  // should be handled to produce the correct descriptive name.
-  if (const std::string &RegName = Reg->getDescriptiveName(); !RegName.empty())
-    return RegName;
-  llvm_unreachable("unhandled region");
-}
-
 void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
                                            const Stmt *S, ExplodedNode *N,
                                            CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Use of ") + getRegionName(Region) +
+      (llvm::Twine("Use of ") + lifetime_modeling::getRegionName(Region) +
        " after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
@@ -108,7 +100,9 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (getRegionName(SourceRegion) + llvm::Twine(" is destroyed here")).str(),
+      (lifetime_modeling::getRegionName(SourceRegion) +
+       llvm::Twine(" is destroyed here"))
+          .str(),
       true);
 }
 

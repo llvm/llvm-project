@@ -87,6 +87,14 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   return State;
 }
 
+std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string &RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  llvm_unreachable("unhandled region");
+}
+
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
