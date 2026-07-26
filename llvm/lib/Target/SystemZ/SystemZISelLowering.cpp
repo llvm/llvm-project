@@ -1470,24 +1470,20 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
   assert(Limit != ~0U &&
          "Expected EmitTargetCodeForMemXXX() to handle AlwaysInline cases.");
 
-  if (Op.isMemmove()) {
-    if (Op.size() >= 16 &&
-        (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31)))
-      return false;
-    return TargetLowering::findOptimalMemOpLowering(
-        Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
-  }
-
   if (Op.isZeroMemset())
     return false; // Memset zero: Use XC.
 
   const int MVCFastLen = 16;
-  // Use MVC up to 16 bytes.  Small memset uses STC/MVI for first byte.
-  if ((Op.isMemset() ? Op.size() - 1 : Op.size()) <= MVCFastLen)
+  // Use MVC up to 16 bytes for memcpy.  Small memset uses STC/MVI for first
+  // byte.
+  if (Op.isMemcpy() && Op.size() <= MVCFastLen)
+    return false;
+  if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
     return false;
 
   // Avoid unaligned VL/VST:s.
-  if (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31))
+  if ((Op.size() >= 16 && !Op.isAligned(Align(8))) ||
+      (Op.size() >= 25 && Op.size() <= 31))
     return false;
 
   return TargetLowering::findOptimalMemOpLowering(
@@ -10892,8 +10888,7 @@ SystemZTargetLowering::emitMemmoveImm(MachineInstr &MI,
   MachineOperand DstAddr = earlyUseOperand(MI.getOperand(0));
   MachineOperand SrcAddr = earlyUseOperand(MI.getOperand(1));
   uint64_t Len = MI.getOperand(2).getImm();
-  assert(Len >= 16 && Len <= 256 &&
-         "Memmove of of unsupported constant length.");
+  assert(Len > 0 && Len <= 256 && "Memmove of of unsupported constant length.");
 
   // Use MVC or MVCRL after comparing the addresses.
   MachineBasicBlock *DoneMBB = SystemZ::splitBlockAfter(MI, MBB);
