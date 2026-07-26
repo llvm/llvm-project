@@ -26,6 +26,7 @@
 namespace clang {
 
 class ASTContext;
+class ASTContextStateStash;
 class CXXRecordDecl;
 
 /// ASTRecordLayout -
@@ -60,6 +61,7 @@ public:
 
 private:
   friend class ASTContext;
+  friend class ASTContextStateStash;
 
   /// Size - Size of record in characters.
   CharUnits Size;

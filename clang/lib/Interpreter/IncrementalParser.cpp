@@ -88,6 +88,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
+    Consumer->HandleTranslationUnit(C);
     CleanUpPTU(C.getTranslationUnitDecl());
 
     Diags.Reset(/*soft=*/true);

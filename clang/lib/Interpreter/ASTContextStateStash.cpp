@@ -11,11 +11,13 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MangleNumberingContext.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -30,7 +32,6 @@ namespace clang {
 template <typename EntryType, typename PredT>
 static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred) {
   SmallVector<EntryType *, 16> ToRemove;
-
   for (auto &N : FS)
     if (Pred(N))
       ToRemove.push_back(&N);
@@ -57,7 +58,6 @@ eraseFoldingSetIf(llvm::ContextualFoldingSet<EntryType, ASTContext &> &FS,
 template <typename KeyT, typename ValueT, typename PredT>
 static void eraseDenseMapIf(llvm::DenseMap<KeyT, ValueT> &Map, PredT &&Pred) {
   SmallVector<KeyT, 16> ToRemove;
-
   for (auto &KV : Map)
     if (Pred(KV))
       ToRemove.push_back(KV.getFirst());
@@ -191,6 +191,7 @@ void ASTContextStateStash::stash(StashCheckPoint &CP) {
   CP.RequireVectorDeletingDtorSize = Ctx.RequireVectorDeletingDtor.size();
 
   CP.MergedDeclsSize = Ctx.MergedDecls.size();
+  CP.DeclAttrsSize = Ctx.DeclAttrs.size();
   CP.MergedDefModulesSize = Ctx.MergedDefModules.size();
 
   CP.ModuleInitializersSize = Ctx.ModuleInitializers.size();
@@ -222,11 +223,33 @@ void ASTContextStateStash::stash(StashCheckPoint &CP) {
   CP.MangleNumberingContextsSize = Ctx.MangleNumberingContexts.size();
   CP.ExtraMangleNumberingContextsSize = Ctx.ExtraMangleNumberingContexts.size();
   CP.TraversalScopeSize = Ctx.TraversalScope.size();
-  CP.LastSDM = Ctx.LastSDM;
+  // CP.LastSDM = Ctx.LastSDM;
+  CP.AutoDeductTy = Ctx.AutoDeductTy;         // Deduction against 'auto'.
+  CP.AutoRRefDeductTy = Ctx.AutoRRefDeductTy; // Deduction against 'auto &&'.
+
+  /// ObjectC
+  CP.ObjCObjectTypesSize = Ctx.ObjCObjectTypes.size();
+  CP.ObjCObjectPointerTypesSize = Ctx.ObjCObjectPointerTypes.size();
+  CP.ObjCIdDeclCP = Ctx.ObjCIdDecl;
+
+  CP.ObjCSelDeclCP = Ctx.ObjCSelDecl;
+
+  CP.ObjCClassDeclCP = Ctx.ObjCClassDecl;
+
+  Ctx.ObjCProtocolClassDecl = CP.ObjCProtocolClassDeclCP;
 }
 
 void ASTContextStateStash::restore(StashCheckPoint &CP,
                                    llvm::SlabCheckPoint SlabCP) {
+  if (CP.AutoDeductTy != Ctx.AutoDeductTy) {
+    llvm::dbgs() << "Ctx.AutoDeductTy != CP.AutoDeductTy\n";
+    Ctx.AutoDeductTy = CP.AutoDeductTy;
+  }
+
+  if (CP.AutoRRefDeductTy != Ctx.AutoRRefDeductTy) {
+    llvm::dbgs() << "Ctx.AutoRRefDeductTy != CP.AutoRRefDeductTy\n";
+    Ctx.AutoRRefDeductTy = CP.AutoRRefDeductTy;
+  }
 
   if (Ctx.TemplateTypeParmTypes.size() != CP.TemplateTypeParmTypesSize) {
     llvm::dbgs() << "Ctx.TemplateTypeParmTypes.size() != "
@@ -864,18 +887,22 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.ASTRecordLayoutsSize != Ctx.ASTRecordLayouts.size()) {
     llvm::dbgs()
         << "if (CP.ASTRecordLayoutsSize != Ctx.ASTRecordLayouts.size()\n";
+    std::vector<const ASTRecordLayout *> ToBeDestroyed;
     eraseDenseMapIf(
         Ctx.ASTRecordLayouts,
         [&](llvm::detail::DenseMapPair<const RecordDecl *,
                                        const ASTRecordLayout *> &KV) -> bool {
-          return Ctx.getAllocator().isAfterCheckpoint(
-                     static_cast<void *>(
-                         const_cast<RecordDecl *>(KV.getFirst())),
-                     SlabCP) ||
-                 Ctx.getAllocator().isAfterCheckpoint(
-                     static_cast<void *>(
-                         const_cast<ASTRecordLayout *>(KV.getSecond())),
-                     SlabCP);
+          bool IsAfter =
+              Ctx.getAllocator().isAfterCheckpoint(
+                  static_cast<void *>(const_cast<RecordDecl *>(KV.getFirst())),
+                  SlabCP) ||
+              Ctx.getAllocator().isAfterCheckpoint(
+                  static_cast<void *>(
+                      const_cast<ASTRecordLayout *>(KV.getSecond())),
+                  SlabCP);
+          if (IsAfter)
+            const_cast<ASTRecordLayout *>(KV.getSecond())->Destroy(Ctx);
+          return IsAfter;
         });
     assert(CP.ASTRecordLayoutsSize == Ctx.ASTRecordLayouts.size());
   }
@@ -922,7 +949,7 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
               static_cast<void *>(const_cast<CXXRecordDecl *>(KV.getFirst())),
               SlabCP);
         });
-    assert(CP.KeyFunctionsSize == Ctx.KeyFunctions.size());
+    // assert(CP.KeyFunctionsSize == Ctx.KeyFunctions.size());
   }
 
   if (CP.BlockVarCopyInitsSize != Ctx.BlockVarCopyInits.size()) {
@@ -1022,8 +1049,8 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
                  Ctx.getAllocator().isAfterCheckpoint(
                      static_cast<void *>(KV.getSecond()), SlabCP);
         });
-    assert(CP.OperatorDeletesForVirtualDtorSize ==
-           Ctx.OperatorDeletesForVirtualDtor.size());
+    // assert(CP.OperatorDeletesForVirtualDtorSize ==
+    //        Ctx.OperatorDeletesForVirtualDtor.size());
   }
 
   if (CP.GlobalOperatorDeletesForVirtualDtorSize !=
@@ -1097,91 +1124,106 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   }
 
   if (CP.MergedDeclsSize != Ctx.MergedDecls.size()) {
-    llvm::dbgs() << "CP.MergedDeclsSize != Ctx.MergedDecls.size()";
+    llvm::dbgs() << "CP.MergedDeclsSize != Ctx.MergedDecls.size()\n";
     assert(CP.MergedDeclsSize == Ctx.MergedDecls.size());
   }
 
+  if (CP.DeclAttrsSize != Ctx.DeclAttrs.size()) {
+    llvm::dbgs() << "CP.DeclAttrsSize != Ctx.DeclAttrs.size()\n";
+    eraseDenseMapIf(
+        Ctx.DeclAttrs,
+        [&](llvm::detail::DenseMapPair<const Decl *, AttrVec *> &KV) -> bool {
+          bool isAfter =
+              Ctx.getAllocator().isAfterCheckpoint(KV.getFirst(), SlabCP) ||
+              Ctx.getAllocator().isAfterCheckpoint(KV.getSecond(), SlabCP);
+          if (isAfter)
+            KV.getSecond()->~AttrVec();
+          return isAfter;
+        });
+    assert(CP.DeclAttrsSize == Ctx.DeclAttrs.size());
+  }
+
   if (CP.MergedDefModulesSize != Ctx.MergedDefModules.size()) {
-    llvm::dbgs() << "CP.MergedDefModulesSize != Ctx.MergedDefModules.size()";
+    llvm::dbgs() << "CP.MergedDefModulesSize != Ctx.MergedDefModules.size()\n";
     assert(CP.MergedDefModulesSize == Ctx.MergedDefModules.size());
   }
 
   if (CP.ModuleInitializersSize != Ctx.ModuleInitializers.size()) {
     llvm::dbgs()
-        << "CP.ModuleInitializersSize != Ctx.ModuleInitializers.size()";
+        << "CP.ModuleInitializersSize != Ctx.ModuleInitializers.size()\n";
     assert(CP.ModuleInitializersSize == Ctx.ModuleInitializers.size());
   }
 
   if (CP.PrimaryModuleNameMapSize != Ctx.PrimaryModuleNameMap.size()) {
     llvm::dbgs()
-        << "CP.PrimaryModuleNameMapSize != Ctx.PrimaryModuleNameMap.size()";
+        << "CP.PrimaryModuleNameMapSize != Ctx.PrimaryModuleNameMap.size()\n";
     assert(CP.PrimaryModuleNameMapSize == Ctx.PrimaryModuleNameMap.size());
   }
 
   if (CP.SameModuleLookupSetSize != Ctx.SameModuleLookupSet.size()) {
     llvm::dbgs()
-        << "CP.SameModuleLookupSetSize != Ctx.SameModuleLookupSet.size()";
+        << "CP.SameModuleLookupSetSize != Ctx.SameModuleLookupSet.size()\n";
     assert(CP.SameModuleLookupSetSize == Ctx.SameModuleLookupSet.size());
   }
 
   if (CP.ScalableVecTyMapSize != Ctx.ScalableVecTyMap.size()) {
-    llvm::dbgs() << "CP.ScalableVecTyMapSize != Ctx.ScalableVecTyMap.size()";
+    llvm::dbgs() << "CP.ScalableVecTyMapSize != Ctx.ScalableVecTyMap.size()\n";
     assert(CP.ScalableVecTyMapSize == Ctx.ScalableVecTyMap.size());
   }
 
   if (CP.LambdaCastPathsSize != Ctx.LambdaCastPaths.size()) {
-    llvm::dbgs() << "CP.LambdaCastPathsSize != Ctx.LambdaCastPaths.size()";
+    llvm::dbgs() << "CP.LambdaCastPathsSize != Ctx.LambdaCastPaths.size()\n";
     assert(CP.LambdaCastPathsSize == Ctx.LambdaCastPaths.size());
   }
 
   if (CP.DeclRawCommentsSize != Ctx.DeclRawComments.size()) {
-    llvm::dbgs() << "CP.DeclRawCommentsSize != Ctx.DeclRawComments.size()";
+    llvm::dbgs() << "CP.DeclRawCommentsSize != Ctx.DeclRawComments.size()\n";
     assert(CP.DeclRawCommentsSize == Ctx.DeclRawComments.size());
   }
 
   if (CP.RedeclChainCommentsSize != Ctx.RedeclChainComments.size()) {
     llvm::dbgs()
-        << "CP.RedeclChainCommentsSize != Ctx.RedeclChainComments.size()";
+        << "CP.RedeclChainCommentsSize != Ctx.RedeclChainComments.size()\n";
     assert(CP.RedeclChainCommentsSize == Ctx.RedeclChainComments.size());
   }
 
   if (CP.CommentlessRedeclChainsSize != Ctx.CommentlessRedeclChains.size()) {
     llvm::dbgs() << "CP.CommentlessRedeclChainsSize != "
-                    "Ctx.CommentlessRedeclChains.size()";
+                    "Ctx.CommentlessRedeclChains.size()\n";
     assert(CP.CommentlessRedeclChainsSize ==
            Ctx.CommentlessRedeclChains.size());
   }
 
   if (CP.ParsedCommentsSize != Ctx.ParsedComments.size()) {
-    llvm::dbgs() << "CP.ParsedCommentsSize != Ctx.ParsedComments.size()";
+    llvm::dbgs() << "CP.ParsedCommentsSize != Ctx.ParsedComments.size()\n";
     assert(CP.ParsedCommentsSize == Ctx.ParsedComments.size());
   }
 
   if (CP.RelocatableClassesSize != Ctx.RelocatableClasses.size()) {
     llvm::dbgs()
-        << "CP.RelocatableClassesSize != Ctx.RelocatableClasses.size()";
+        << "CP.RelocatableClassesSize != Ctx.RelocatableClasses.size()\n";
     assert(CP.RelocatableClassesSize == Ctx.RelocatableClasses.size());
   }
 
   if (CP.ParamIndicesSize != Ctx.ParamIndices.size()) {
-    llvm::dbgs() << "CP.ParamIndicesSize != Ctx.ParamIndices.size()";
+    llvm::dbgs() << "CP.ParamIndicesSize != Ctx.ParamIndices.size()\n";
     assert(CP.ParamIndicesSize == Ctx.ParamIndices.size());
   }
 
   if (CP.MangleNumbersSize != Ctx.MangleNumbers.size()) {
-    llvm::dbgs() << "CP.MangleNumbersSize != Ctx.MangleNumbers.size()";
+    llvm::dbgs() << "CP.MangleNumbersSize != Ctx.MangleNumbers.size()\n";
     assert(CP.MangleNumbersSize == Ctx.MangleNumbers.size());
   }
 
   if (CP.StaticLocalNumbersSize != Ctx.StaticLocalNumbers.size()) {
     llvm::dbgs()
-        << "CP.StaticLocalNumbersSize != Ctx.StaticLocalNumbers.size()";
+        << "CP.StaticLocalNumbersSize != Ctx.StaticLocalNumbers.size()\n";
     assert(CP.StaticLocalNumbersSize == Ctx.StaticLocalNumbers.size());
   }
 
   if (CP.TemplateOrInstantiationSize != Ctx.TemplateOrInstantiation.size()) {
     llvm::dbgs() << "CP.TemplateOrInstantiationSize != "
-                    "Ctx.TemplateOrInstantiation.size()";
+                    "Ctx.TemplateOrInstantiation.size()\n";
     assert(CP.TemplateOrInstantiationSize ==
            Ctx.TemplateOrInstantiation.size());
   }
@@ -1189,7 +1231,7 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.InstantiatedFromUsingDeclSize !=
       Ctx.InstantiatedFromUsingDecl.size()) {
     llvm::dbgs() << "CP.InstantiatedFromUsingDeclSize != "
-                    "Ctx.InstantiatedFromUsingDecl.size()";
+                    "Ctx.InstantiatedFromUsingDecl.size()\n";
     assert(CP.InstantiatedFromUsingDeclSize ==
            Ctx.InstantiatedFromUsingDecl.size());
   }
@@ -1197,7 +1239,7 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.InstantiatedFromUsingEnumDeclSize !=
       Ctx.InstantiatedFromUsingEnumDecl.size()) {
     llvm::dbgs() << "CP.InstantiatedFromUsingEnumDeclSize != "
-                    "Ctx.InstantiatedFromUsingEnumDecl.size()";
+                    "Ctx.InstantiatedFromUsingEnumDecl.size()\n";
     assert(CP.InstantiatedFromUsingEnumDeclSize ==
            Ctx.InstantiatedFromUsingEnumDecl.size());
   }
@@ -1205,7 +1247,7 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.InstantiatedFromUsingShadowDeclSize !=
       Ctx.InstantiatedFromUsingShadowDecl.size()) {
     llvm::dbgs() << "CP.InstantiatedFromUsingShadowDeclSize != "
-                    "Ctx.InstantiatedFromUsingShadowDecl.size()";
+                    "Ctx.InstantiatedFromUsingShadowDecl.size()\n";
     assert(CP.InstantiatedFromUsingShadowDeclSize ==
            Ctx.InstantiatedFromUsingShadowDecl.size());
   }
@@ -1213,19 +1255,72 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.InstantiatedFromUnnamedFieldDeclSize !=
       Ctx.InstantiatedFromUnnamedFieldDecl.size()) {
     llvm::dbgs() << "CP.InstantiatedFromUnnamedFieldDeclSize != "
-                    "Ctx.InstantiatedFromUnnamedFieldDecl.size()";
+                    "Ctx.InstantiatedFromUnnamedFieldDecl.size()\n";
     assert(CP.InstantiatedFromUnnamedFieldDeclSize ==
            Ctx.InstantiatedFromUnnamedFieldDecl.size());
   }
 
   if (CP.OverriddenMethodsSize != Ctx.OverriddenMethods.size()) {
-    llvm::dbgs() << "CP.OverriddenMethodsSize != Ctx.OverriddenMethods.size()";
+    llvm::dbgs()
+        << "CP.OverriddenMethodsSize != Ctx.OverriddenMethods.size()\n";
+    // using CXXMethodVector = llvm::TinyPtrVector<const CXXMethodDecl *>;
+    // llvm::DenseMap<const CXXMethodDecl *, CXXMethodVector> OverriddenMethods;
+    // eraseDenseMapIf(
+    //     Ctx.OverriddenMethods,
+    //     [&](llvm::detail::DenseMapPair<const CXXMethodDecl *,
+    //     CXXMethodVector>
+    //             &KV) -> bool {
+    //       bool isAfter = Ctx.getAllocater().isAfterCheckpoint(
+    //           static_cast<void *>(const_cast<CXXMethodDecl
+    //           *>(KV.getFirst())), SlabCP);
+    //       if (!isAfter) {
+    //         std::vector<CXXMethodDecl *> ToBeRemoved;
+    //         ToBeRemoved.reserve(KV.getSecond().size());
+    //         for (auto *M : std::reverse(KV.getSecond()))
+    //           if (Ctx.getAllocater().isAfterCheckpoint(
+    //                   static_cast<void *>(const_cast<CXXMethodDecl *>(M)),
+    //                   SlabCP)) {
+    //             ToBeRemoved.push_back(M);
+    //           }
+    //         for (auto *M : ToBeRemoved)
+    //           KV.getSecond().erase(M);
+    //       }
+    //       return isAfter;
+    //     });
+
+    for (auto &KV : Ctx.OverriddenMethods) {
+      if (Ctx.getAllocator().isAfterCheckpoint(KV.first, SlabCP))
+        continue; // entire entry will be removed in second pass
+
+      auto &Vec = KV.getSecond();
+      llvm::SmallVector<const CXXMethodDecl *, 4> ToRemove;
+      for (auto *M : Vec)
+        if (Ctx.getAllocator().isAfterCheckpoint(M, SlabCP))
+          ToRemove.push_back(M);
+
+      for (auto *M : ToRemove)
+        Vec.erase(llvm::find(Vec, M));
+    }
+
+    eraseDenseMapIf(
+        Ctx.OverriddenMethods,
+        [&](llvm::detail::DenseMapPair<
+            const CXXMethodDecl *, ASTContext::CXXMethodVector> &KV) -> bool {
+          return Ctx.getAllocator().isAfterCheckpoint(KV.getFirst(), SlabCP);
+        });
     assert(CP.OverriddenMethodsSize == Ctx.OverriddenMethods.size());
   }
 
   if (CP.MangleNumberingContextsSize != Ctx.MangleNumberingContexts.size()) {
     llvm::dbgs() << "CP.MangleNumberingContextsSize != "
-                    "Ctx.MangleNumberingContexts.size()";
+                    "Ctx.MangleNumberingContexts.size()\n";
+    eraseDenseMapIf(
+        Ctx.MangleNumberingContexts,
+        [&](llvm::detail::DenseMapPair<
+            const DeclContext *, std::unique_ptr<MangleNumberingContext>> &KV)
+            -> bool {
+          return Ctx.getAllocator().isAfterCheckpoint(KV.getFirst(), SlabCP);
+        });
     assert(CP.MangleNumberingContextsSize ==
            Ctx.MangleNumberingContexts.size());
   }
@@ -1233,15 +1328,59 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.ExtraMangleNumberingContextsSize !=
       Ctx.ExtraMangleNumberingContexts.size()) {
     llvm::dbgs() << "CP.ExtraMangleNumberingContextsSize != "
-                    "Ctx.ExtraMangleNumberingContexts.size()";
+                    "Ctx.ExtraMangleNumberingContexts.size()\n";
     assert(CP.ExtraMangleNumberingContextsSize ==
            Ctx.ExtraMangleNumberingContexts.size());
   }
 
   if (CP.TraversalScopeSize != Ctx.TraversalScope.size()) {
     llvm::dbgs() << "CP.TraversalScopeSize != "
-                    "Ctx.TraversalScope.size()";
+                    "Ctx.TraversalScope.size()\n";
     assert(CP.TraversalScopeSize == Ctx.TraversalScope.size());
+  }
+
+
+  /// Obj-C
+  if (CP.ObjCObjectTypesSize != Ctx.ObjCObjectTypes.size()) {
+    llvm::dbgs() << "CP.ObjCObjectTypesSize != Ctx.ObjCObjectTypes.size()\n";
+    eraseFoldingSetIf(Ctx.ObjCObjectTypes,
+                      [&](ObjCObjectTypeImpl &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(
+                            static_cast<void *>(&Node), SlabCP);
+                      });
+    assert(CP.ObjCObjectTypesSize == Ctx.ObjCObjectTypes.size());
+  }
+
+  if (CP.ObjCObjectPointerTypesSize != Ctx.ObjCObjectPointerTypes.size()) {
+    llvm::dbgs() << "CP.ObjCObjectPointerTypesSize != "
+                    "Ctx.ObjCObjectPointerTypes.size()\n";
+    eraseFoldingSetIf(Ctx.ObjCObjectPointerTypes,
+                      [&](ObjCObjectPointerType &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(
+                            static_cast<void *>(&Node), SlabCP);
+                      });
+    assert(CP.ObjCObjectPointerTypesSize == Ctx.ObjCObjectPointerTypes.size());
+  }
+
+  if (CP.ObjCIdDeclCP != Ctx.ObjCIdDecl) {
+    llvm::dbgs() << "CP.ObjCIdDeclCP != Ctx.ObjCIdDecl\n";
+    Ctx.ObjCIdDecl = CP.ObjCIdDeclCP;
+    assert(CP.ObjCIdDeclCP == Ctx.ObjCIdDecl);
+  }
+  if (CP.ObjCSelDeclCP != Ctx.ObjCSelDecl) {
+    llvm::dbgs() << "CP.ObjCSelDeclCP != Ctx.ObjCSelDecl\n";
+    Ctx.ObjCSelDecl = CP.ObjCSelDeclCP;
+    assert(CP.ObjCSelDeclCP == Ctx.ObjCSelDecl);
+  }
+  if (CP.ObjCClassDeclCP != Ctx.ObjCClassDecl) {
+    llvm::dbgs() << "CP.ObjCClassDeclCP != Ctx.ObjCClassDecl\n";
+    Ctx.ObjCClassDecl = CP.ObjCClassDeclCP;
+    assert(CP.ObjCClassDeclCP == Ctx.ObjCClassDecl);
+  }
+  if (CP.ObjCProtocolClassDeclCP != Ctx.ObjCProtocolClassDecl) {
+    llvm::dbgs() << "CP.ObjCProtocolClassDeclCP != Ctx.ObjCProtocolClassDecl\n";
+    Ctx.ObjCProtocolClassDecl = CP.ObjCProtocolClassDeclCP;
+    assert(CP.ObjCProtocolClassDeclCP == Ctx.ObjCProtocolClassDecl);
   }
 
   for (auto &[Decl, OldTy] : Ctx.PendingTypeForDeclMutations)
@@ -1260,7 +1399,8 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
         std::vector<NamedDecl *> NamedDeclsToRemove;
         // bool RemoveAll = true;
         for (NamedDecl *D : R) {
-          // llvm::outs() << "D->getTranslationUnitDecl() == MostRecentTU (" << (D->getTranslationUnitDecl() == MostRecentTU) << ")\n";
+          // llvm::outs() << "D->getTranslationUnitDecl() == MostRecentTU (" <<
+          // (D->getTranslationUnitDecl() == MostRecentTU) << ")\n";
           // llvm::outs() << "DeclContext : " << DC << "\n";
           // D->dump();
           // if (D->getTranslationUnitDecl() == MostRecentTU)
@@ -1279,18 +1419,18 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
       }
     }
 
-    Decl *Prev = DC->FirstDecl;
-    Decl *Cur = DC->FirstDecl;
-    while (Cur) {
-      if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(Cur),
-                                               SlabCP)) {
-        DC->LastDecl = Prev;
-        DC->LastDecl->NextInContextAndBits.setPointer(nullptr);
-        break;
-      }
-      Prev = Cur;
-      Cur = Cur->getNextDeclInContext();
-    }
+    // Decl *Prev = DC->FirstDecl;
+    // Decl *Cur = DC->FirstDecl;
+    // while (Cur) {
+    //   if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(Cur),
+    //                                            SlabCP)) {
+    //     DC->LastDecl = Prev;
+    //     DC->LastDecl->NextInContextAndBits.setPointer(nullptr);
+    //     break;
+    //   }
+    //   Prev = Cur;
+    //   Cur = Cur->getNextDeclInContext();
+    // }
   }
 
   // if (FirstDecl) {
@@ -1305,10 +1445,8 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   // if (auto *Record = dyn_cast<CXXRecordDecl>(this))
   //   Record->addedMember(D);
 
-
   //   ImportDecl *FirstLocalImport = nullptr;
   // ImportDecl *LastLocalImport = nullptr;
-
 
   // class ImportDecl final : public Decl,
   //                        llvm::TrailingObjects<ImportDecl, SourceLocation> {
@@ -1323,7 +1461,8 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   // /// The next import in the list of imports local to the translation
   // /// unit being parsed (not loaded from an AST file).
   // ///
-  // /// Includes a bit that indicates whether we have source-location information
+  // /// Includes a bit that indicates whether we have source-location
+  // information
   // /// for each identifier in the module name.
   // ///
   // /// When the bit is false, we only have a single source location for the
@@ -1332,25 +1471,33 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
 
   Ctx.PendingDCMutations.clear();
 
-  llvm::PointerIntPair<StoredDeclsMap*,1> LastSDM = Ctx.LastSDM;
+  // llvm::PointerIntPair<StoredDeclsMap*,1> LastSDM = Ctx.LastSDM;
 
-  StoredDeclsMap *Map = LastSDM.getPointer();
-  bool Dependent = LastSDM.getInt();
-  while (Map && (Map != CP.LastSDM.getPointer())) {
-    // llvm::outs() << "we are deleting LASTSDM\n";
-  //   // Advance the iteration before we invalidate memory.
-    llvm::PointerIntPair<StoredDeclsMap*,1> Next = Map->Previous;
+  // StoredDeclsMap *Map = LastSDM.getPointer();
+  // bool Dependent = LastSDM.getInt();
+  // while (Map && (Map != CP.LastSDM.getPointer())) {
+  //   // llvm::outs() << "we are deleting LASTSDM\n";
+  // //   // Advance the iteration before we invalidate memory.
+  //   llvm::PointerIntPair<StoredDeclsMap*,1> Next = Map->Previous;
 
-    if (Dependent)
-      delete static_cast<DependentStoredDeclsMap*>(Map);
-    else
-      delete Map;
+  //   if (Dependent)
+  //     delete static_cast<DependentStoredDeclsMap*>(Map);
+  //   else
+  //     delete Map;
 
-    Map = Next.getPointer();
-    Dependent = Next.getInt();
+  //   Map = Next.getPointer();
+  //   Dependent = Next.getInt();
+  // }
+
+  // Ctx.LastSDM = CP.LastSDM;
+  DeclListNode *FreeNodeHead = Ctx.ListNodeFreeList;
+  while (FreeNodeHead) {
+    if (!Ctx.getAllocator().isAfterCheckpoint(FreeNodeHead, SlabCP))
+      break;
+    FreeNodeHead = dyn_cast_if_present<DeclListNode *>(FreeNodeHead->Rest);
   }
 
-  Ctx.LastSDM = CP.LastSDM;
+  Ctx.ListNodeFreeList = FreeNodeHead;
 
   Ctx.Types.resize(CP.TypesSize);
 }

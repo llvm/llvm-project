@@ -188,8 +188,6 @@ struct StashCheckPoint {
   size_t TypedefTypesSize = 0;
   size_t DependentNameTypesSize = 0;
   size_t PackExpansionTypesSize = 0;
-  size_t ObjCObjectTypesSize = 0;
-  size_t ObjCObjectPointerTypesSize = 0;
   size_t UnaryTransformTypesSize = 0;
 
   size_t AutoTypesSize = 0;
@@ -248,6 +246,7 @@ struct StashCheckPoint {
   size_t RequireVectorDeletingDtorSize = 0;
 
   size_t MergedDeclsSize = 0;
+  size_t DeclAttrsSize = 0;
   size_t MergedDefModulesSize = 0;
 
   size_t ModuleInitializersSize = 0;
@@ -277,8 +276,25 @@ struct StashCheckPoint {
   size_t ExtraMangleNumberingContextsSize = 0;
 
   size_t TraversalScopeSize = 0;
-  llvm::PointerIntPair<StoredDeclsMap *, 1> LastSDM;
+
+  /// object-c
+  size_t ObjCObjectTypesSize = 0;
+  size_t ObjCObjectPointerTypesSize = 0;
+
+  mutable TypedefDecl *ObjCIdDeclCP = nullptr;
+
+  mutable TypedefDecl *ObjCSelDeclCP = nullptr;
+
+  mutable TypedefDecl *ObjCClassDeclCP = nullptr;
+
+  mutable ObjCInterfaceDecl *ObjCProtocolClassDeclCP = nullptr;
+
+  // llvm::PointerIntPair<StoredDeclsMap *, 1> LastSDM;
 //    = llvm::PointerIntPair<StoredDeclsMap *, 1>(nullptr, 0);
+  mutable QualType AutoDeductTy;     // Deduction against 'auto'.
+  mutable QualType AutoRRefDeductTy; // Deduction against 'auto &&'.
+
+  // mutable DeclarationNameTable DeclarationNames; need to revert.
 };
 
 class ASTContextStateStash {
@@ -295,6 +311,5 @@ public:
   void restore(StashCheckPoint &CP, llvm::SlabCheckPoint SlabCP);
   void commit();
 };
-
 } // end namespace clang
 #endif // LLVM_CLANG_INTERPRETER_ERROR_RECOVERY_H
