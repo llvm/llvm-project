@@ -19,6 +19,7 @@
 #include <__thread/this_thread.h>
 #include <__thread/thread.h>
 #include <__type_traits/is_trivial.h>
+#include <latch>
 
 // #define WITH_LOGGING 1
 #ifdef WITH_LOGGING
@@ -174,12 +175,9 @@ private:
 struct Task {
   void* ctxt;
   void (*func)(void*, std::size_t);
-  size_t iterations;
-  alignas(std::hardware_destructive_interference_size) std::atomic_size_t index;
-  alignas(std::hardware_destructive_interference_size) std::atomic_size_t requests;
-  alignas(std::hardware_destructive_interference_size) std::mutex m;
-  bool completed = false;
-  std::condition_variable cv;
+  std::size_t iterations;
+  std::atomic_size_t index;
+  std::latch requests;
 };
 
 struct DequeID {
@@ -279,7 +277,7 @@ static void apply_serial(std::size_t iterations, void* ctxt, void (*func)(void*,
   }
 }
 
-static void process_request(Task* task) {
+static void process_request(Task* task) noexcept {
   size_t const iterations                = task->iterations;
   void* const ctxt                       = task->ctxt;
   void (*const func)(void*, std::size_t) = task->func;
@@ -289,11 +287,7 @@ static void process_request(Task* task) {
     func(ctxt, index);
   }
 
-  if (task->requests.fetch_sub(1, std::memory_order_release) == 1) {
-    std::lock_guard lock{task->m};
-    task->completed = true;
-    task->cv.notify_one();
-  }
+  task->requests.count_down();
 }
 
 void Sched::worker_thread(size_t worker_num) noexcept {
@@ -303,7 +297,6 @@ void Sched::worker_thread(size_t worker_num) noexcept {
 
   while (true) {
     Task* task = nullptr;
-    //    bool has_task = false;
 
     // 1st - try to pop from own deque
     if ((task = m_deques[worker_num].pop())) {
@@ -353,12 +346,14 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
   }
 
   size_t num_requests = std::min(m_workers_count + 1, iterations);
-  Task root_task;
-  root_task.ctxt       = ctxt;
-  root_task.func       = func;
-  root_task.iterations = iterations;
-  root_task.index      = 0;
-  root_task.requests   = num_requests;
+  Task root_task{
+      .ctxt       = ctxt,                             //
+      .func       = func,                             //
+      .iterations = iterations,                       //
+      .index      = 0,                                //
+      .requests{static_cast<ptrdiff_t>(num_requests)} //
+  };
+
   LOG("New root task %p of %zu iterations with %zu requests\n", &root_task, iterations, num_requests);
 
   // Push all but one request to the deque, and process the last one directly in this thread.
@@ -378,7 +373,7 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
     --num_requests;
   }
 
-  while (root_task.requests.load() > 0) {
+  while (!root_task.requests.try_wait()) {
     Task* task = nullptr;
 
     // 1st - try to pop from own deque
@@ -403,8 +398,7 @@ void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::s
     }
   }
 
-  std::unique_lock lock{root_task.m};
-  root_task.cv.wait(lock, [&root_task] { return root_task.completed; });
+  root_task.requests.wait();
 
   release_deque(deque);
 }
