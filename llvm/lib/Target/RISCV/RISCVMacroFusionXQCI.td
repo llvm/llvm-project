@@ -10,27 +10,12 @@
 // The following definitions describe macro fusion predicators applicable to
 // Xqci instructions.
 
-// Fuse two instructions where the destination register of the first
-// instruction is the same as the destination register of the second
-// instruction.
-class FirstRdEqSecondRdFusion<string name, string fieldName, string desc,
-                              MCInstPredicate firstPred,
-                              MCInstPredicate secondPred,
-                              int secondOpIdx=0, int firstOpIdx=0>
-  : Fusion<name, fieldName, desc,
-           [
-             SecondFusionPredicateWithMCInstPredicate<secondPred>,
-             WildcardTrue,
-             FirstFusionPredicateWithMCInstPredicate<firstPred>,
-             TieReg<firstOpIdx, secondOpIdx>
-           ]>;
-
 defvar LoadImmOp = [LUI, QC_E_LI, QC_LI];
 // 48-bit load store
 defvar LongLoadStoreXqciOp = [QC_E_LB, QC_E_LBU, QC_E_LH, QC_E_LHU, QC_E_LW,
                               QC_E_SB, QC_E_SH, QC_E_SW];
 // 48-bit logical operations
-defvar LongLogicalXqciOp = [QC_E_XORAI, QC_E_ORAI, QC_E_ANDAI, QC_E_ADDAI];
+defvar LongAccumXqciOp = [QC_E_XORAI, QC_E_ORAI, QC_E_ANDAI, QC_E_ADDAI];
 
 // Fuse load-immediate/move-immediate followed by arithmetic/logic.
 def TuneMOVIMMALUXqciFusion
@@ -91,30 +76,47 @@ def TuneMOVIMMJumpXqciFusion
                  ]>,
                  CheckOpcode<[JALR]>>;
 
-// Fuse load-immediate/move-immediate followed by long logical operation.
 // The destination register of the first operation is the same as the
 // destination register of the second operation.
-def TuneMOVIMMLongLogicalXciFusion
-  : FirstRdEqSecondRdFusion<"xqci-movimm-longlogical",
-                 "HasMOVIMMLongLogicalXqciFusion",
-                 "Enable MOVIMM + long logical operation macrofusion",
-                 CheckAny<[
-                   CheckAll<[
-                     CheckOpcode<[ADDI]>,
-                     CheckRegOperand<1, X0>
-                   ]>,
-                   CheckOpcode<LoadImmOp>,
-                 ]>,
-                 CheckOpcode<LongLogicalXqciOp>>;
 
-// Fuse move followed by long logical operation.
+// Fuse load-immediate/move-immediate followed by long accumulate operation.
+def TuneMOVIMMLongAccumXciFusion
+  : Fusion<"xqci-movimm-longlogical", "HasMOVIMMLongAccumXqciFusion",
+           "Enable MOVIMM + long accumulate macrofusion",
+           [
+             SecondFusionPredicateWithMCInstPredicate<
+               CheckOpcode<LongAccumXqciOp>
+             >,
+             WildcardTrue,
+             FirstFusionPredicateWithMCInstPredicate<
+               CheckAny<[
+                 CheckAll<[
+                   CheckOpcode<[ADDI]>,
+                   CheckRegOperand<1, X0>
+                 ]>,
+                 CheckOpcode<LoadImmOp>,
+               ]>
+             >,
+             TieReg<0, 0>,
+             TieReg<0, 1>,
+           ]>;
+
+// Fuse move followed by long accumulate operation.
 def TuneMovALUXqciFusion
-  : FirstRdEqSecondRdFusion<"xqci-mov-longlogical", "HasMovALUXqciFusion",
-                            "Enable MOV + long logical operation macrofusion",
-                            CheckAll<[
-                              CheckOpcode<[ADDI]>,
-                              CheckIsImmOperand<2>,
-                              CheckImmOperand<2, 0>
-                            ]>,
-                            CheckOpcode<LongLogicalXqciOp>
-                            >;
+  : Fusion<"xqci-mov-longlogical", "HasMovALUXqciFusion",
+           "Enable MOV + long accumulate macrofusion",
+           [
+             SecondFusionPredicateWithMCInstPredicate<
+               CheckOpcode<LongAccumXqciOp>
+             >,
+             WildcardTrue,
+             FirstFusionPredicateWithMCInstPredicate<
+               CheckAll<[
+                 CheckOpcode<[ADDI]>,
+                 CheckIsImmOperand<2>,
+                 CheckImmOperand<2, 0>
+               ]>
+             >,
+             TieReg<0, 0>,
+             TieReg<0, 1>
+           ]>;

@@ -73,34 +73,31 @@ body:             |
     PseudoRET
 ...
 
-# CHECK: movimm_alujump_xqci:%bb.0
+# CHECK: movimm_longaccum_xqci:%bb.0
 # CHECK: Macro fuse: {{.*}}QC_LI - QC_E_XORAI
-name: movimm_alujump_xqci
+name: movimm_longaccum_xqci
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
-    %1:gpr = COPY $x10
-    %2:gprnox0 = QC_LI 1
-    %3:gpr = XORI %1, 2
-    %2:gprnox0 = QC_E_XORAI %2, 0
-    $x10 = COPY %3
-    $x11 = COPY %2
+    $x11 = QC_LI 1
+    $x12 = XORI $x10, 2
+    $x11 = QC_E_XORAI $x11, 3
+    $x13 = COPY $x12
+    $x10 = COPY $x11
     PseudoRET
 ...
 
-# CHECK: mov_alu_xqci:%bb.0
+# CHECK: mov_longaccum_xqci:%bb.0
 # CHECK: Macro fuse: {{.*}}ADDI - QC_E_XORAI
-name: mov_alu_xqci
+name: mov_longaccum_xqci
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
-    %0:gpr = COPY $x10
-    %2:gprnox0 = ADDI %0, 0
-    %3:gpr = XORI %0, 2
-    %2:gprnox0 = QC_E_XORAI %2, 3
-    $x10 = COPY %2
-    $x11 = COPY %3
-    PseudoRET
+    $x11 = ADDI $x10, 0
+    $x12 = XORI $x10, 2
+    $x11 = QC_E_XORAI $x11, 3
+    $x13 = COPY $x12
+    $x10 = COPY $x11
 ...
