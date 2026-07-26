@@ -212,8 +212,8 @@ exit:
   ret i32 %result
 }
 
-define i32 @cyclic_undef_target(i1 %choose, i1 %again) {
-; DYNAMIC-LABEL: define i32 @cyclic_undef_target(
+define i32 @cyclic_second_argument_target(i1 %choose, i1 %again, ptr %unknown) {
+; DYNAMIC-LABEL: define i32 @cyclic_second_argument_target(
 ; DYNAMIC: %callee = phi ptr [ @foo, %entry ], [ %next, %loop ]
 ; DYNAMIC: call i32 %callee()
 entry:
@@ -221,7 +221,7 @@ entry:
 
 loop:
   %callee = phi ptr [ @foo, %entry ], [ %next, %loop ]
-  %next = select i1 %choose, ptr %callee, ptr undef
+  %next = select i1 %choose, ptr %callee, ptr %unknown
   %result = call i32 %callee()
   br i1 %again, label %loop, label %exit
 
@@ -229,8 +229,8 @@ exit:
   ret i32 %result
 }
 
-define i32 @cyclic_poison_target(i1 %choose, i1 %again) {
-; DYNAMIC-LABEL: define i32 @cyclic_poison_target(
+define i32 @cyclic_third_argument_target(i1 %choose, i1 %again, ptr %unknown) {
+; DYNAMIC-LABEL: define i32 @cyclic_third_argument_target(
 ; DYNAMIC: %callee = phi ptr [ @foo, %entry ], [ %next, %loop ]
 ; DYNAMIC: call i32 %callee()
 entry:
@@ -238,7 +238,7 @@ entry:
 
 loop:
   %callee = phi ptr [ @foo, %entry ], [ %next, %loop ]
-  %next = select i1 %choose, ptr %callee, ptr poison
+  %next = select i1 %choose, ptr %callee, ptr %unknown
   %result = call i32 %callee()
   br i1 %again, label %loop, label %exit
 
@@ -246,15 +246,16 @@ exit:
   ret i32 %result
 }
 
-define i32 @dynamic_leaf_targets(i1 %c, ptr %argument) {
+define i32 @dynamic_leaf_targets(i1 %c, ptr %argument, ptr %other,
+                                 ptr %third) {
 ; DYNAMIC-LABEL: define i32 @dynamic_leaf_targets(
 ; DYNAMIC: call i32 %load.target()
 ; DYNAMIC: call i32 %atomic.target()
 ; DYNAMIC: call i32 %volatile.target()
 ; DYNAMIC: call i32 %argument.target()
 ; DYNAMIC: call i32 %call.target()
-; DYNAMIC: call i32 %undef.target()
-; DYNAMIC: call i32 %poison.target()
+; DYNAMIC: call i32 %other.target()
+; DYNAMIC: call i32 %third.target()
 ; DYNAMIC: call i32 %alias.target()
 ; DYNAMIC: call i32 %ifunc.target()
   %loaded = load ptr, ptr @fnptr
@@ -266,8 +267,8 @@ define i32 @dynamic_leaf_targets(i1 %c, ptr %argument) {
   %volatile.target = select i1 %c, ptr @foo, ptr %volatile
   %argument.target = select i1 %c, ptr @foo, ptr %argument
   %call.target = select i1 %c, ptr @foo, ptr %returned
-  %undef.target = select i1 %c, ptr @foo, ptr undef
-  %poison.target = select i1 %c, ptr @foo, ptr poison
+  %other.target = select i1 %c, ptr @foo, ptr %other
+  %third.target = select i1 %c, ptr @foo, ptr %third
   %alias.target = select i1 %c, ptr @foo, ptr @foo_alias
   %ifunc.target = select i1 %c, ptr @foo, ptr @foo_ifunc
   %r0 = call i32 %load.target()
@@ -275,8 +276,8 @@ define i32 @dynamic_leaf_targets(i1 %c, ptr %argument) {
   %r2 = call i32 %volatile.target()
   %r3 = call i32 %argument.target()
   %r4 = call i32 %call.target()
-  %r5 = call i32 %undef.target()
-  %r6 = call i32 %poison.target()
+  %r5 = call i32 %other.target()
+  %r6 = call i32 %third.target()
   %r7 = call i32 %alias.target()
   %r8 = call i32 %ifunc.target()
   %s0 = add i32 %r0, %r1
