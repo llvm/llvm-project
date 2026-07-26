@@ -17,6 +17,12 @@
 #include "llvm/IR/Use.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+
+
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Instructions.h"
+
+
 #include <cstdint>
 
 namespace llvm {
@@ -36,6 +42,11 @@ struct DefUseInstrumentationPass
     FunctionCallee Hook_inst =  M.getOrInsertFunction("__def_use_trace_inst", HookType);
     FunctionCallee Hook_use =  M.getOrInsertFunction("__def_use_trace_ssa_use", HookType);
 
+    FunctionType *MemoryHookType = FunctionType::get(Type::getVoidTy(Ctx),{Type::getInt64Ty(Ctx), Type::getInt64Ty(Ctx)},false);
+    FunctionCallee HookLoad = M.getOrInsertFunction("__def_use_trace_load", MemoryHookType);
+    FunctionCallee HookStore = M.getOrInsertFunction("__def_use_trace_store", MemoryHookType);
+
+    const DataLayout &DL = M.getDataLayout(); // DataLayout::getTypeStoreSize()  чтоб получить размер значения в памяти
 
     // первый обход заполняет мапу инструкция - ID
     uint64_t CallID = 0;
@@ -58,6 +69,19 @@ struct DefUseInstrumentationPass
       uint64_t UseID = InstIDs.lookup(I);
       Builder.SetInsertPoint(I);
       Builder.CreateCall(Hook_inst, Builder.getInt64(UseID));
+
+      if (auto *LI = dyn_cast<LoadInst>(I)) {
+        Value *PointerOperand = LI->getPointerOperand();
+
+        errs() << "Found LOAD: " << *LI << '\n';
+        errs() << "Load pointer operand: " << *PointerOperand << '\n';
+
+      } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+        Value *PointerOperand = SI->getPointerOperand();
+
+        errs() << "Found STORE: " << *SI << '\n';
+        errs() << "Store pointer operand: " << *PointerOperand << '\n';
+      }
 
       for (Use &Operand : I->operands()) {
         Value *V = Operand.get();
