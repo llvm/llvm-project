@@ -70,17 +70,40 @@ struct DefUseInstrumentationPass
       Builder.SetInsertPoint(I);
       Builder.CreateCall(Hook_inst, Builder.getInt64(UseID));
 
+      // Load и Store отельно обрабатываем
       if (auto *LI = dyn_cast<LoadInst>(I)) {
         Value *PointerOperand = LI->getPointerOperand();
 
-        errs() << "Found LOAD: " << *LI << '\n';
-        errs() << "Load pointer operand: " << *PointerOperand << '\n';
+        Value *Address =
+            Builder.CreatePtrToInt(PointerOperand, Type::getInt64Ty(Ctx));
+
+        errs() << "LOAD address value: " << *Address << '\n';
+
+        TypeSize LoadSize = DL.getTypeStoreSize(LI->getType());
+
+        errs() << "Load size: " << LoadSize.getFixedValue() << '\n';
+
+        uint64_t Size = LoadSize.getFixedValue();
+
+        Builder.CreateCall(HookLoad, {Address, Builder.getInt64(Size)});
 
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
         Value *PointerOperand = SI->getPointerOperand();
 
-        errs() << "Found STORE: " << *SI << '\n';
-        errs() << "Store pointer operand: " << *PointerOperand << '\n';
+        Value *Address =
+            Builder.CreatePtrToInt(PointerOperand, Type::getInt64Ty(Ctx));
+
+        errs() << "Store address value: " << *Address << '\n';
+
+        Type *StoredType = SI->getValueOperand()->getType();
+        TypeSize StoreSize = DL.getTypeStoreSize(StoredType);
+
+        errs() << "Store size: " << StoreSize.getFixedValue() << '\n';
+
+
+        uint64_t Size = StoreSize.getFixedValue();
+
+        Builder.CreateCall(HookStore, {Address, Builder.getInt64(Size)});
       }
 
       for (Use &Operand : I->operands()) {
