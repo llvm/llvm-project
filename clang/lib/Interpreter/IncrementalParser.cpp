@@ -329,6 +329,8 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
 
   // Lookup alone is not enough: the redeclaration chain still reaches these.
   withdrawMostRecentTU(MostRecentTU);
+  RepairRedeclChain(MostRecentTU, MostRecentTU);
+  S.getASTContext().setTranslationUnitDecl(MostRecentTU->getPreviousDecl());
 }
 
 PartialTranslationUnit &

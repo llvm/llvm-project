@@ -20,12 +20,14 @@ if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
 endif()
 
 add_clang_library(clangInterpreter
+  ASTContextStateStash.cpp
   DeviceOffload.cpp
   CodeCompletion.cpp
   IncrementalAction.cpp
   IncrementalExecutor.cpp
   OrcIncrementalExecutor.cpp
   IncrementalParser.cpp
+  SemaStateStash.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
