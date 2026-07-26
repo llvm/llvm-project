@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -O3 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O0 -triple %itanium_abi_triple -funsafe-math-optimizations -emit-llvm -o - %s | FileCheck %s --check-prefix=UNSAFE
+
 // Simple case
 float fp_reassoc_simple(float a, float b, float c) {
 // CHECK: _Z17fp_reassoc_simplefff
@@ -89,4 +91,18 @@ float fp_reassoc_call_helper(float a, float b, float c) {
 // CHECK-NEXT: fadd float %[[S1]], %c
 #pragma clang fp reassociate(on)
   return helper_func(a, b, c);
+}
+
+
+double fp_reassoc_call_helper(bool flag, double x, double y) {
+  return flag ? x : y;
+}
+
+#pragma clang fp reassociate(off)
+double fp_reassoc_off_fneg_call(double x) {
+  // UNSAFE-LABEL: _Z24fp_reassoc_off_fneg_calld
+  // UNSAFE: fcmp nsz arcp afn
+  // UNSAFE: fneg nsz arcp afn
+  // UNSAFE: call nsz arcp afn
+  return fp_reassoc_call_helper(x < 0, -x, x);
 }
