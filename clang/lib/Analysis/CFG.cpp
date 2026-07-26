@@ -2376,6 +2376,7 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
       return VisitConditionalOperator(cast<BinaryConditionalOperator>(S), asc);
 
     case Stmt::BinaryOperatorClass:
+    case Stmt::CompoundAssignOperatorClass:
       return VisitBinaryOperator(cast<BinaryOperator>(S), asc);
 
     case Stmt::BlockExprClass:
@@ -5219,6 +5220,7 @@ tryAgain:
       return VisitChildrenForTemporaries(E, ExternallyDestructed, Context);
 
     case Stmt::BinaryOperatorClass:
+    case Stmt::CompoundAssignOperatorClass:
       return VisitBinaryOperatorForTemporaries(cast<BinaryOperator>(E),
                                                ExternallyDestructed, Context);
 
