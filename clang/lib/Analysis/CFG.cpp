@@ -797,6 +797,21 @@ private:
   CFGBlock *createBlock(bool add_successor = true);
   CFGBlock *createNoReturnBlock();
 
+  /// Add a statement to the CFG, returning the block it was added to.
+  ///
+  /// Beware that this does not necessarily leave \c Block current, because the
+  /// statement may itself contain control flow. In particular, a GCC
+  /// statement-expression holding a loop (e.g. \c ({ while (...) {} v; })) ends
+  /// the block it started in, so afterwards \c Block may be null and the
+  /// returned block may differ from the one on entry. Callers that need the
+  /// block a statement ended up in must therefore use the returned value rather
+  /// than \c Block, and keep the last non-null result when adding several
+  /// statements in a row. The same caveat applies to \c Visit(), which this
+  /// wraps.
+  ///
+  /// May also return null when no block was created, e.g. for a NullStmt when
+  /// \c Block is not current; callers therefore have to keep the previous
+  /// non-null block rather than overwrite it unconditionally.
   CFGBlock *addStmt(Stmt *S) {
     return Visit(S, AddStmtChoice::AlwaysAdd);
   }
@@ -3209,9 +3224,8 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
       ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
       AILE ? AILE->getSubExpr() : Init);
 
-  // Keep track of the last non-null block, as 'Block' can be nulled out
-  // if the initializer expression is something like a 'while' in a
-  // statement-expression.
+  // Keep track of the last non-null block, as 'Block' can be nulled out by
+  // the initializer. See the comment on addStmt().
   CFGBlock *LastBlock = Block;
 
   if (Init) {
@@ -3237,7 +3251,7 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
       LastBlock = newBlock;
   }
 
-  maybeAddScopeBeginForVarDecl(Block, VD, DS);
+  maybeAddScopeBeginForVarDecl(LastBlock, VD, DS);
 
   // Remove variable from local scope.
   if (ScopePos && VD == *ScopePos)
@@ -3823,13 +3837,13 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
               ConstructionContextLayer::create(cfg->getBumpVectorContext(), DS),
               Init);
           appendStmt(Block, DS);
-          EntryConditionBlock = addStmt(Init);
-          assert(Block == EntryConditionBlock);
+          if (CFGBlock *NewBlock = addStmt(Init))
+            EntryConditionBlock = NewBlock;
           maybeAddScopeBeginForVarDecl(EntryConditionBlock, VD, C);
         }
       }
 
-      if (Block && badCFG)
+      if (badCFG)
         return nullptr;
 
       KnownVal = tryEvaluateBool(C);
@@ -4149,13 +4163,13 @@ CFGBlock *CFGBuilder::VisitWhileStmt(WhileStmt *W) {
                                              const_cast<DeclStmt *>(DS)),
             Init);
         appendStmt(Block, DS);
-        EntryConditionBlock = addStmt(Init);
-        assert(Block == EntryConditionBlock);
+        if (CFGBlock *NewBlock = addStmt(Init))
+          EntryConditionBlock = NewBlock;
         maybeAddScopeBeginForVarDecl(EntryConditionBlock, VD, C);
       }
     }
 
-    if (Block && badCFG)
+    if (badCFG)
       return nullptr;
 
     // See if this is a known constant.

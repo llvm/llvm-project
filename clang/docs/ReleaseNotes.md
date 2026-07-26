@@ -459,6 +459,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Crash and bug fixes
 
+- Fixed a crash during CFG construction when a condition variable or an
+  init-statement of a `while`, `for`, `if` or `switch` was initialized by a
+  statement-expression containing control flow, e.g.
+  `while (S s = ({ while (...) {} S{}; }))`. (#GH211976)
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:

@@ -1,7 +1,9 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -Wno-error=invalid-gnu-asm-cast -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -Wno-error=invalid-gnu-asm-cast -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
+
+// DEFINE: %{clang-dump-cfg} = %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -Wno-error=invalid-gnu-asm-cast -std=c++11
+// RUN: %{clang-dump-cfg} -analyzer-config cfg-rich-constructors=false %s 2>&1 | \
+// RUN:   FileCheck -check-prefixes=CHECK,WARNINGS %s
+// RUN: %{clang-dump-cfg} -analyzer-config cfg-rich-constructors=true  %s 2>&1 | \
+// RUN:   FileCheck -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -
 // the CFG used by the Sema analysis-based warnings and the CFG used by the
@@ -490,6 +492,120 @@ int foo() {
     return 0;
 }
 } // namespace statement_expression_in_return
+
+// A statement-expression initializing a loop condition variable finishes the
+// current block, so the entry to the condition is the block the nested loop
+// starts in.  The loop-back edge has to point there, not at the block holding
+// the condition variable.
+namespace statement_expression_in_loop_condition_variable {
+struct S { explicit operator bool(); };
+
+// CHECK-LABEL: void while_loop(int n)
+// CHECK:       [B6 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B1]
+// CHECK-NEXT:    Preds (1): B2
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B2]
+// CHECK-NEXT:    1: n
+// CHECK-NEXT:    2: --[B2.1]
+// CHECK-NEXT:    Preds (1): B3
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:       [B3]
+// CHECK-NEXT:    1: {}
+// CHECK-NEXT:    2: S[B3.1] (CXXFunctionalCastExpr, NoOp, S)
+// CHECK-NEXT:    3: [B3.2]
+// CHECK-NEXT:    4: [B3.3] (CXXConstructExpr, S)
+// CHECK-NEXT:    5: ({ ... ;  })
+// CHECK-NEXT:    6: [B3.5]
+// WARNINGS-NEXT:    7: [B3.6] (CXXConstructExpr, S)
+// ANALYZER-NEXT:    7: [B3.6] (CXXConstructExpr, [B3.8], S)
+// CHECK-NEXT:    8: S s = ({
+// CHECK-NEXT:     while (S t{})
+// CHECK-NEXT:         {
+// CHECK-NEXT:         }
+// CHECK-NEXT:     S{};
+// CHECK-NEXT: });
+// CHECK-NEXT:    9: s
+// CHECK-NEXT:   10: [B3.9].operator bool
+// CHECK-NEXT:   11: [B3.9]
+// CHECK-NEXT:   12: [B3.11] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:    T: while [B3.12]
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (2): B2 B0
+// CHECK:       [B4]
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B5]
+// CHECK-NEXT:    1: {}
+// CHECK-NEXT:    2: S t{};
+// CHECK-NEXT:    3: t
+// CHECK-NEXT:    4: [B5.3].operator bool
+// CHECK-NEXT:    5: [B5.3]
+// CHECK-NEXT:    6: [B5.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:    T: while [B5.6]
+// CHECK-NEXT:    Preds (3): B4 B1 B6
+// CHECK-NEXT:    Succs (2): B4 B3
+// CHECK:       [B0 (EXIT)]
+// CHECK-NEXT:    Preds (1): B3
+void while_loop(int n) {
+  while (S s = ({ while (S t{}) {} S{}; }))
+    --n;
+}
+
+// CHECK-LABEL: void for_loop(int n)
+// CHECK:       [B6 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B1]
+// CHECK-NEXT:    Preds (1): B2
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B2]
+// CHECK-NEXT:    1: n
+// CHECK-NEXT:    2: --[B2.1]
+// CHECK-NEXT:    Preds (1): B3
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:       [B3]
+// CHECK-NEXT:    1: {}
+// CHECK-NEXT:    2: S[B3.1] (CXXFunctionalCastExpr, NoOp, S)
+// CHECK-NEXT:    3: [B3.2]
+// CHECK-NEXT:    4: [B3.3] (CXXConstructExpr, S)
+// CHECK-NEXT:    5: ({ ... ;  })
+// CHECK-NEXT:    6: [B3.5]
+// WARNINGS-NEXT:    7: [B3.6] (CXXConstructExpr, S)
+// ANALYZER-NEXT:    7: [B3.6] (CXXConstructExpr, [B3.8], S)
+// CHECK-NEXT:    8: S s = ({
+// CHECK-NEXT:     while (S t{})
+// CHECK-NEXT:         {
+// CHECK-NEXT:         }
+// CHECK-NEXT:     S{};
+// CHECK-NEXT: });
+// CHECK-NEXT:    9: s
+// CHECK-NEXT:   10: [B3.9].operator bool
+// CHECK-NEXT:   11: [B3.9]
+// CHECK-NEXT:   12: [B3.11] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:    T: for (; [B3.12]; )
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (2): B2 B0
+// CHECK:       [B4]
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B5]
+// CHECK-NEXT:    1: {}
+// CHECK-NEXT:    2: S t{};
+// CHECK-NEXT:    3: t
+// CHECK-NEXT:    4: [B5.3].operator bool
+// CHECK-NEXT:    5: [B5.3]
+// CHECK-NEXT:    6: [B5.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:    T: while [B5.6]
+// CHECK-NEXT:    Preds (3): B4 B1 B6
+// CHECK-NEXT:    Succs (2): B4 B3
+// CHECK:       [B0 (EXIT)]
+// CHECK-NEXT:    Preds (1): B3
+void for_loop(int n) {
+  for (; S s = ({ while (S t{}) {} S{}; });)
+    --n;
+}
+} // namespace statement_expression_in_loop_condition_variable
 
 // CHECK-LABEL: void vla_simple(int x)
 // CHECK: [B1]

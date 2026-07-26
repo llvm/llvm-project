@@ -1484,3 +1484,72 @@ void cleanup_F(F *f);
 void test() {
   F f __attribute((cleanup(cleanup_F)));
 }
+
+// An initializer that is a statement-expression containing control flow
+// finishes the current block, so the scope of the condition variable has to
+// begin in the block the initializer actually starts in.
+// CHECK:      [B7 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B6
+// CHECK:      [B1]
+// CHECK-NEXT:   1: [B3.7].~D() (Implicit destructor)
+// CHECK-NEXT:   2: CFGScopeEnd(d)
+// CHECK-NEXT:   Preds (2): B2 B3
+// CHECK-NEXT:   Succs (1): B0
+// CHECK:      [B2]
+// CHECK-NEXT:   1: n
+// CHECK-NEXT:   2: --[B2.1]
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (1): B1
+// CHECK:      [B3]
+// CHECK-NEXT:   1: [B6.4].~D() (Implicit destructor)
+// CHECK-NEXT:   2: CFGScopeEnd(t)
+// CHECK-NEXT:   3: D{} (CXXConstructExpr, [B3.4], D)
+// CHECK-NEXT:   4: [B3.3] (BindTemporary)
+// CHECK-NEXT:   5: ({ ... ;  })
+// CHECK-NEXT:   6: [B3.5] (BindTemporary)
+// CHECK-NEXT:   7: D d = ({
+// CHECK-NEXT:    while (D t{})
+// CHECK-NEXT:        {
+// CHECK-NEXT:        }
+// CHECK-NEXT:    D{};
+// CHECK-NEXT: });
+// CHECK-NEXT:   8: d
+// CHECK-NEXT:   9: [B3.8].operator bool
+// CHECK-NEXT:  10: [B3.8]
+// CHECK-NEXT:  11: [B3.10] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:   T: if [B3.11]
+// CHECK-NEXT:   Preds (1): B6
+// CHECK-NEXT:   Succs (2): B2 B1
+// CHECK:      [B4]
+// CHECK-NEXT:   Preds (1): B5
+// CHECK-NEXT:   Succs (1): B6
+// CHECK:      [B5]
+// CHECK-NEXT:   1: [B6.4].~D() (Implicit destructor)
+// CHECK-NEXT:   2: CFGScopeEnd(t)
+// CHECK-NEXT:   Preds (1): B6
+// CHECK-NEXT:   Succs (1): B4
+// CHECK:      [B6]
+// CHECK-NEXT:   1: CFGScopeBegin(d)
+// CHECK-NEXT:   2: CFGScopeBegin(t)
+// CHECK-NEXT:   3: {} (CXXConstructExpr, [B6.4], D)
+// CHECK-NEXT:   4: D t{};
+// CHECK-NEXT:   5: t
+// CHECK-NEXT:   6: [B6.5].operator bool
+// CHECK-NEXT:   7: [B6.5]
+// CHECK-NEXT:   8: [B6.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:   T: while [B6.8]
+// CHECK-NEXT:   Preds (2): B4 B7
+// CHECK-NEXT:   Succs (2): B5 B3
+// CHECK:      [B0 (EXIT)]
+// CHECK-NEXT:   Preds (1): B1
+class D {
+public:
+  D();
+  ~D();
+  explicit operator bool();
+};
+
+void if_cond_var_stmt_expr(int n) {
+  if (D d = ({ while (D t{}) {} D{}; }))
+    --n;
+}
