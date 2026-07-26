@@ -138,7 +138,7 @@ long double    tanhl(long double x);
 
 bool signbit(arithmetic x);
 
-int fpclassify(arithmetic x);
+int fpclassify(arithmetic x); // constexpr since C++23
 
 bool isfinite(arithmetic x);
 bool isinf(arithmetic x);

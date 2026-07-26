@@ -1,4 +1,5 @@
 # RUN: llc -march=hexagon -run-pass=pipeliner -debug-only=pipeliner %s -o - 2>&1 > /dev/null | FileCheck %s
+# REQUIRES: asserts
 
 # Test that the phi in the epilog block generated for an existing phi
 # in the loop, obtains loop value from phi generated in the kernel block.

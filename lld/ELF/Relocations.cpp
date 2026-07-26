@@ -927,9 +927,9 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
-      // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
-      // needing the GOT if we can't relax everything.
-      if (expr == R_RELAX_GOT_PC)
+      // If the target adjusted the expression to an optimizable form, we may
+      // end up needing the GOT if we can't optimize everything.
+      if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
         ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
     }
   }

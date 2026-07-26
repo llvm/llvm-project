@@ -178,6 +178,19 @@ static Attribute getBoolAttribute(Type type, bool value) {
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
+/// Return a scalar or splat integer attribute of `type` (an integer/index type
+/// or a shaped type thereof) holding `value`. Returns a null attribute for
+/// shaped types with a dynamic shape, so callers can bail out of folding.
+static Attribute getIntegerAttrOfType(Type type, int64_t value) {
+  auto scalarAttr = IntegerAttr::get(getElementTypeOrSelf(type), value);
+  ShapedType shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return scalarAttr;
+  if (!shapedType.hasStaticShape())
+    return {};
+  return DenseElementsAttr::get(shapedType, scalarAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
@@ -791,9 +804,21 @@ static Value foldDivMul(Value lhs, Value rhs,
 }
 
 OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: divui (x, 0) -> poison. Division by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // divui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // divui (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // divui (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nuw))
@@ -831,9 +856,21 @@ Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: divsi (x, 0) -> poison. Division by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // divsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // divsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // divsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nsw))
@@ -887,9 +924,21 @@ static APInt signedCeilNonnegInputs(const APInt &a, const APInt &b,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: ceildivui (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // ceildivui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // ceildivui (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // ceildivui (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -917,9 +966,21 @@ Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: ceildivsi (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // ceildivsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // ceildivsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // ceildivsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // Don't fold if it would overflow or if it requires a division by zero.
   // TODO: This hook won't fold operations where a = MININT, because
@@ -986,9 +1047,21 @@ Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: floordivsi (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // floordivsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // floordivsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // floordivsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // Don't fold if it would overflow or if it requires a division by zero.
   bool overflowOrDiv = false;
@@ -1009,9 +1082,18 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: remui (x, 0) -> poison. Remainder by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // remui (x, 1) -> 0.
   if (matchPattern(adaptor.getRhs(), m_One()))
-    return Builder(getContext()).getZeroAttr(getType());
+    return getIntegerAttrOfType(getType(), 0);
+
+  // remui (0, x) -> 0 and remui (x, x) -> 0. Division by zero is UB, so
+  // refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()) || getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -1036,9 +1118,18 @@ Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: remsi (x, 0) -> poison. Remainder by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // remsi (x, 1) -> 0.
   if (matchPattern(adaptor.getRhs(), m_One()))
-    return Builder(getContext()).getZeroAttr(getType());
+    return getIntegerAttrOfType(getType(), 0);
+
+  // remsi (0, x) -> 0 and remsi (x, x) -> 0. Division by zero is UB, so
+  // refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()) || getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;

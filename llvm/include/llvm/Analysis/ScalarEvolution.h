@@ -269,6 +269,9 @@ protected:
   /// have no SCEVUse flags.
   const SCEV *CanonicalSCEV = nullptr;
 
+  /// Immutable type of the SCEV.
+  Type *const Ty;
+
 public:
   using NoWrapFlags = SCEVNoWrapFlags;
   static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
@@ -278,15 +281,15 @@ public:
   static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
-                unsigned short ExpressionSize)
-      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
+                unsigned short ExpressionSize, Type *Ty)
+      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize), Ty(Ty) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
   SCEVTypes getSCEVType() const { return SCEVType; }
 
   /// Return the LLVM type of this SCEV expression.
-  LLVM_ABI Type *getType() const;
+  Type *getType() const { return Ty; }
 
   /// Return operands of this SCEV expression.
   LLVM_ABI ArrayRef<SCEVUse> operands() const;

@@ -1796,7 +1796,7 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   }
 
   if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat() &&
-      llvm::isa<IntegerType>(resultETy)) {
+      llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape()) {
     APInt l = lhsAttr.getSplatValue<APInt>();
     APInt r = rhsAttr.getSplatValue<APInt>();
     if (!r.isZero()) {
@@ -1841,6 +1841,9 @@ std::optional<APInt> mulInt(APInt lhs, APInt rhs, int32_t shift,
 
 DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                   RankedTensorType ty, int32_t shift) {
+  // A constant result can only be built for a statically-shaped type.
+  if (!ty.hasStaticShape())
+    return {};
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     if (llvm::isa<IntegerType>(ty.getElementType())) {
       APInt l = lhs.getSplatValue<APInt>();

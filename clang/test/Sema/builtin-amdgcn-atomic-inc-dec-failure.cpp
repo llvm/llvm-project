@@ -3,7 +3,7 @@
 // RUN:   -triple=amdgcn-amd-amdhsa -fsyntax-only \
 // RUN:   -verify=dev
 // RUN: %clang_cc1 %s -x hip -triple x86_64 -o - \
-// RUN:   -aux-triple amdgcn-amd-amdhsa -fsyntax-only \
+// RUN:   -aux-triple amdgpu-amd-amdhsa -fsyntax-only \
 // RUN:   -verify=host
 
 // dev-no-diagnostics

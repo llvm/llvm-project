@@ -83,8 +83,8 @@ void test2(void) {
     -           // expected-warning {{will never be executed}}
       halt();
   case 8:
-    i
-      +=        // expected-warning {{will never be executed}}
+    i           // expected-warning {{will never be executed}}
+      +=
       halt();
   case 9:
     halt()

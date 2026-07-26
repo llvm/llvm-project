@@ -3187,6 +3187,125 @@ func.func @no_fold_divsi_of_muli(%arg0 : index, %arg1 : index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @divui_zero_dividend
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]]
+func.func @divui_zero_dividend(%arg0 : i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.divui %c0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @divsi_zero_dividend
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]]
+func.func @divsi_zero_dividend(%arg0 : i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.divsi %c0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @divui_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @divui_self(%arg0 : i32) -> i32 {
+  %0 = arith.divui %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @divsi_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @divsi_self(%arg0 : i32) -> i32 {
+  %0 = arith.divsi %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @ceildivui_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @ceildivui_self(%arg0 : i32) -> i32 {
+  %0 = arith.ceildivui %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @ceildivsi_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @ceildivsi_self(%arg0 : i32) -> i32 {
+  %0 = arith.ceildivsi %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @floordivsi_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @floordivsi_self(%arg0 : i32) -> i32 {
+  %0 = arith.floordivsi %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @remui_self_and_zero
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @remui_self_and_zero(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.remui %arg0, %arg0 : i32
+  %1 = arith.remui %c0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: func @remsi_self_and_zero
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @remsi_self_and_zero(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.remsi %arg0, %arg0 : i32
+  %1 = arith.remsi %c0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: func @divui_self_vector
+//       CHECK:   %[[C1:.+]] = arith.constant dense<1> : vector<4xi32>
+//       CHECK:   return %[[C1]]
+func.func @divui_self_vector(%arg0 : vector<4xi32>) -> vector<4xi32> {
+  %0 = arith.divui %arg0, %arg0 : vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @ceildivui_ceildivsi_floordivsi_zero_dividend
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]], %[[C0]]
+func.func @ceildivui_ceildivsi_floordivsi_zero_dividend(%arg0 : i32)
+    -> (i32, i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.ceildivui %c0, %arg0 : i32
+  %1 = arith.ceildivsi %c0, %arg0 : i32
+  %2 = arith.floordivsi %c0, %arg0 : i32
+  return %0, %1, %2 : i32, i32, i32
+}
+
+// Distinct operands must not fold to the self identity.
+// CHECK-LABEL: func @divsi_distinct_no_fold
+//       CHECK:   arith.divsi
+func.func @divsi_distinct_no_fold(%arg0 : i32, %arg1 : i32) -> i32 {
+  %0 = arith.divsi %arg0, %arg1 : i32
+  return %0 : i32
+}
+
+// A dynamic shape must bail out of the self/zero-dividend constant folds.
+// CHECK-LABEL: func @div_rem_self_dynamic_no_fold
+//       CHECK:   arith.divui
+//       CHECK:   arith.remui
+func.func @div_rem_self_dynamic_no_fold(%arg0 : tensor<?xi32>)
+    -> (tensor<?xi32>, tensor<?xi32>) {
+  %0 = arith.divui %arg0, %arg0 : tensor<?xi32>
+  %1 = arith.remui %arg0, %arg0 : tensor<?xi32>
+  return %0, %1 : tensor<?xi32>, tensor<?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @test_cmpf(
 func.func @test_cmpf(%arg0 : f32) -> (i1, i1, i1, i1) {
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true

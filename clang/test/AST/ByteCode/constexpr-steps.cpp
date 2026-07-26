@@ -15,3 +15,17 @@ constexpr void addr() { // expected-error {{never produces a constant expression
 static_assert((addr(), 1) == 1); // expected-error {{not an integral constant expression}} \
                                  // expected-note {{in call to}}
 
+/// No error here, even if the array has > 100 elements, an even if they are not coming from an array filler.
+
+constexpr int f[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0
+                    };

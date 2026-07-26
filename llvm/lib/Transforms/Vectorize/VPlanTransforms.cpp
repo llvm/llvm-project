@@ -412,17 +412,6 @@ static bool sinkScalarOperands(VPlan &Plan) {
   return Changed;
 }
 
-/// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
-/// the mask.
-static VPValue *getPredicatedMask(VPRegionBlock *R) {
-  auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
-  if (!EntryBB || EntryBB->size() != 1 ||
-      !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
-    return nullptr;
-
-  return cast<VPBranchOnMaskRecipe>(&*EntryBB->begin())->getOperand(0);
-}
-
 /// If \p R is a triangle region, return the 'then' block of the triangle.
 static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
   auto *EntryBB = cast<VPBasicBlock>(R->getEntry());
@@ -467,8 +456,8 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     if (!Region2 || !Region2->isReplicator())
       continue;
 
-    VPValue *Mask1 = getPredicatedMask(Region1);
-    VPValue *Mask2 = getPredicatedMask(Region2);
+    VPValue *Mask1 = Region1->getEntryBranchOnMask()->getOperand(0);
+    VPValue *Mask2 = Region2->getEntryBranchOnMask()->getOperand(0);
     if (!Mask1 || Mask1 != Mask2)
       continue;
 

@@ -3,7 +3,7 @@
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL12 %s
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 \
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL20 %s
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-mesa3d -target-cpu gfx600 -cl-std=CL3.0 \
+// RUN: %clang_cc1 %s -O0 -triple amdgpu6.00-amd-mesa3d -cl-std=CL3.0 \
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL30 %s
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 \
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL30GAS %s

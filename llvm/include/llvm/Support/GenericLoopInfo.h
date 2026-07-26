@@ -427,12 +427,6 @@ public:
       LI->reallocBlocks(*static_cast<LoopT *>(this), Size);
   }
 
-  /// interface to do reserve() for SubLoops
-  void reserveSubLoops(unsigned Size) {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    SubLoops.reserve(Size);
-  }
-
   /// This method is used to move BB (which must be part of this loop) to be the
   /// loop header of the loop (the block that dominates all others).
   void moveToHeader(BlockT *BB) {
@@ -667,10 +661,6 @@ private:
   /// The header of a loop under construction, stashed until the layout carve
   /// builds the block list.
   static BlockT *pendingHeader(const LoopT *L) { return L->PendingHeader; }
-
-  void discoverAndMapSubloop(LoopT *L, BlockT *Header,
-                             ArrayRef<BlockT *> Backedges,
-                             const DominatorTreeBase<BlockT, false> &DomTree);
 
   /// True if \p L borrows its block list from BlockLayout.
   static bool hasBorrowedBlocks(const LoopT &L) {

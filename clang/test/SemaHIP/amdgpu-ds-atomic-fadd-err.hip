@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -triple amdgpu9.0a -verify=device,both %s -fcuda-is-device
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgcn -verify=host,both %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64 -aux-triple amdgpu -verify=host,both %s
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))

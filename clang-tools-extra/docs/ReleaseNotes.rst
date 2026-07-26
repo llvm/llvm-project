@@ -109,6 +109,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
+  nested expressions involving different macros or a mix of macro and
+  non-macro operands.
+
 - Improved :doc:`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. ``std::in_place_t``, ``std::allocator_arg_t``,
