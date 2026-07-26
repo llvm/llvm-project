@@ -157,15 +157,27 @@ promoteInlineableIndirectCall(CallBase &CB, InlineAdvisor &Advisor,
                               bool OnlyMandatory,
                               SmallVectorImpl<CallBase *> &PromotedCalls) {
   SmallVector<Function *> Targets;
-  if (!getStaticIndirectCallTargets(CB, Targets) || Targets.size() < 2)
+  if (!getStaticIndirectCallTargets(CB, Targets))
     return false;
+
+  // A singleton target needs no call-site versioning, so promote it directly
+  // and leave the normal advisor query to the resulting direct call.
+  if (Targets.size() == 1) {
+    Function *Target = Targets.front();
+    if (Target->isDeclaration() || !isLegalToPromote(CB, Target))
+      return false;
+    PromotedCalls.push_back(&promoteCall(CB, Target));
+    return true;
+  }
 
   // This advice only gates the all-or-nothing indirect-to-direct promotion.
   // The promoted direct calls are distinct call sites and will get fresh advice
   // before InlineFunction processes them. Thus, this is a promotion heuristic,
   // not a guarantee that every promoted call will subsequently be inlined.
   for (Function *Target : Targets) {
-    if (Target->isDeclaration() || !isLegalToPromote(CB, Target))
+    if (Target->isDeclaration() ||
+        CB.getFunctionType() != Target->getFunctionType() ||
+        !isLegalToPromote(CB, Target))
       return false;
 
     Value *IndirectCallee = CB.getCalledOperand();

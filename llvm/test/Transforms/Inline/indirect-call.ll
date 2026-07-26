@@ -304,6 +304,9 @@ define i32 @duplicate_target(i1 %c) {
 ; CHECK-LABEL: define {{.*}}i32 @duplicate_target(
 ; CHECK-NOT: call
 ; CHECK: ret i32 1
+; DYNAMIC-LABEL: define i32 @duplicate_target(
+; DYNAMIC-NOT: call i32
+; DYNAMIC: ret i32 1
   %callee = select i1 %c, ptr @foo, ptr @foo
   %result = call i32 %callee()
   ret i32 %result
