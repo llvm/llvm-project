@@ -16,6 +16,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
+#include <__algorithm/mismatch.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/not_fn.h>
@@ -64,6 +65,10 @@ namespace __pstl {
 // - none_of
 // - is_partitioned
 // - find_first_of
+//
+// mismatch family
+// ---------------
+// - mismatch_3leg
 //
 // for_each family
 // ---------------
@@ -213,6 +218,38 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
         return std::find_if(__first2, __last2, [&](_Ref2 __value) { return __pred(__element, __value); }) != __last2;
       }
     });
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// mismatch family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __mismatch_3leg<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+  optional<pair<_ForwardIterator1, _ForwardIterator2>>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _Comp __comp) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
+      // Forward to the 4-legged version of mismatch.
+      using _Mismatch           = __dispatch<__mismatch, __current_configuration, _ExecutionPolicy>;
+      _ForwardIterator2 __last2 = __first2 + (__last1 - __first1);
+      return _Mismatch()(
+          __policy,
+          std::move(__first1),
+          std::move(__last1),
+          std::move(__first2),
+          std::move(__last2),
+          std::move(__comp));
+    } else {
+      // Currently only random access iterators are supported for parallel mismatch_3leg.
+      return std::mismatch(std::move(__first1), std::move(__last1), std::move(__first2), std::move(__comp));
+    }
   }
 };
 
