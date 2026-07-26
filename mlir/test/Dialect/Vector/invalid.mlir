@@ -1431,6 +1431,15 @@ func.func @maskedload_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?>
 
 // -----
 
+func.func @maskedload_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %pass: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedload' op most minor memref dim must have unit stride}}
+  %0 = vector.maskedload %src[%c0], %mask, %pass : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.maskedstore
 //===----------------------------------------------------------------------===//
@@ -1488,6 +1497,15 @@ func.func @maskedstore_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.maskedstore' op most minor memref dim must have unit stride}}
   vector.maskedstore %src[%c0], %mask, %value : memref<?xi8, strided<[2], offset: ?>>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+// -----
+
+func.func @maskedstore_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedstore' op most minor memref dim must have unit stride}}
+  vector.maskedstore %src[%c0], %mask, %value : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8>
   return
 }
 
@@ -1768,6 +1786,15 @@ func.func @expandload_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?>
 
 // -----
 
+func.func @expandload_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %pass_thru: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.expandload' op most minor memref dim must have unit stride}}
+  %0 = vector.expandload %src[%c0], %mask, %pass_thru : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// -----
+
 func.func @expandload_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.expandload' op memref strides must be non-negative}}
@@ -1835,6 +1862,15 @@ func.func @compressstore_non_unit_stride(%src: memref<?xi8, strided<[2], offset:
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.compressstore' op most minor memref dim must have unit stride}}
   vector.compressstore %src[%c0], %mask, %value : memref<?xi8, strided<[2], offset: ?>>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+// -----
+
+func.func @compressstore_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.compressstore' op most minor memref dim must have unit stride}}
+  vector.compressstore %src[%c0], %mask, %value : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8>
   return
 }
 
