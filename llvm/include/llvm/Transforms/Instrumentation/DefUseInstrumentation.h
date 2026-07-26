@@ -89,6 +89,9 @@ struct DefUseInstrumentationPass
     // второй обход создает зависимости, на основе мапы, использует ли функция результат уже другой инструкции
 
     for (Instruction *I : Instructions) {
+      if (isa<PHINode>(I)) {    //phi функции скипаем, реализации нет
+        continue;
+      }
       uint64_t UseID = InstIDs.lookup(I);
       Builder.SetInsertPoint(I);
       Builder.CreateCall(Hook_inst,  {ModuleToken,Builder.getInt64(UseID)});
@@ -129,6 +132,8 @@ struct DefUseInstrumentationPass
         Builder.CreateCall(HookStore, { Address, Builder.getInt64(Size)});
       }
 
+
+      // проверка операнда, что это именно mul/plus и др, и установление связи def - use
       for (Use &Operand : I->operands()) {
         Value *V = Operand.get();
 
