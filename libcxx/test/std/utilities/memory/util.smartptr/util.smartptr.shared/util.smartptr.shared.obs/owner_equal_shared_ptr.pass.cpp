@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <memory>
 
@@ -14,8 +14,10 @@
 
 // template<class U> bool owner_equal(shared_ptr<U> const& b) const noexcept;
 
-#include <memory>
 #include <cassert>
+#include <concepts>
+#include <memory>
+
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -25,16 +27,16 @@ int main(int, char**) {
   const std::shared_ptr<void> empty1;
   const std::shared_ptr<long> empty2;
 
-  assert(p1.owner_equal(p2));
+  std::same_as<bool> decltype(auto) result = p1.owner_equal(p2);
+  assert(result);
+  static_assert(noexcept(p1.owner_equal(p2)));
+
   assert(p2.owner_equal(p1));
   assert(!p1.owner_equal(p3));
   assert(!p3.owner_equal(p1));
 
   assert(empty1.owner_equal(empty2));
   assert(!p1.owner_equal(empty1));
-
-  ASSERT_SAME_TYPE(decltype(p1.owner_equal(p2)), bool);
-  ASSERT_NOEXCEPT(p1.owner_equal(p2));
 
   return 0;
 }

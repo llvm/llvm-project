@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <memory>
 
@@ -14,8 +14,10 @@
 
 // template<class U> bool owner_equal(weak_ptr<U> const& b) const noexcept;
 
-#include <memory>
 #include <cassert>
+#include <concepts>
+#include <memory>
+
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -27,16 +29,16 @@ int main(int, char**) {
   const std::weak_ptr<void> empty1;
   const std::weak_ptr<long> empty2;
 
-  assert(w1.owner_equal(w2));
+  std::same_as<bool> decltype(auto) result = w1.owner_equal(w2);
+  assert(result);
+  static_assert(noexcept(w1.owner_equal(w2)));
+
   assert(w2.owner_equal(w1));
   assert(!w1.owner_equal(w3));
   assert(!w3.owner_equal(w1));
 
   assert(empty1.owner_equal(empty2));
   assert(!w1.owner_equal(empty1));
-
-  ASSERT_SAME_TYPE(decltype(w1.owner_equal(w2)), bool);
-  ASSERT_NOEXCEPT(w1.owner_equal(w2));
 
   return 0;
 }

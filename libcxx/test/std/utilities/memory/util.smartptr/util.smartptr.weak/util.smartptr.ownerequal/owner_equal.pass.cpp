@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <memory>
 
@@ -21,13 +21,14 @@
 //     template<class T, class U>
 //         bool operator()(weak_ptr<T> const&, weak_ptr<U> const&) const noexcept;
 //
-//     typedef unspecified is_transparent;
+//     using is_transparent = unspecified;
 // };
 
-#include <memory>
 #include <cassert>
-#include <type_traits>
+#include <concepts>
+#include <memory>
 #include <unordered_set>
+
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -39,7 +40,13 @@ int main(int, char**) {
 
   std::owner_equal oe;
 
-  assert(oe(p1, p2));
+  std::same_as<bool> decltype(auto) result = oe(p1, p2);
+  assert(result);
+  static_assert(noexcept(oe(p1, p2)));
+  static_assert(noexcept(oe(p1, w1)));
+  static_assert(noexcept(oe(w1, p1)));
+  static_assert(noexcept(oe(w1, w1)));
+
   assert(oe(p1, w1));
   assert(oe(w1, p1));
   assert(oe(w1, w1));
@@ -49,13 +56,7 @@ int main(int, char**) {
   assert(!oe(w1, p3));
   assert(!oe(w1, w3));
 
-  ASSERT_SAME_TYPE(decltype(oe(p1, p2)), bool);
-  ASSERT_NOEXCEPT(oe(p1, p2));
-  ASSERT_NOEXCEPT(oe(p1, w1));
-  ASSERT_NOEXCEPT(oe(w1, p1));
-  ASSERT_NOEXCEPT(oe(w1, w1));
-
-  static_assert(std::is_same<std::owner_equal::is_transparent, void>::value, "");
+  static_assert(std::same_as<std::owner_equal::is_transparent, void>);
 
   {
     std::unordered_set<std::weak_ptr<int>, std::owner_hash, std::owner_equal> s;

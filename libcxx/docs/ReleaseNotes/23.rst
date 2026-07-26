@@ -55,7 +55,6 @@ Implemented Papers
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
 - P4206R0: Revert string support in ``std::constant_wrapper`` (`Github <https://llvm.org/PR203338>`__)
-- P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
 
 Improvements and New Features
 -----------------------------

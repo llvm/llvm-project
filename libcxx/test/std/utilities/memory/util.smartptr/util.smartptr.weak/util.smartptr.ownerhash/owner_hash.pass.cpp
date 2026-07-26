@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <memory>
 
@@ -20,9 +20,11 @@
 //     typedef unspecified is_transparent;
 // };
 
-#include <memory>
 #include <cassert>
-#include <type_traits>
+#include <concepts>
+#include <cstddef>
+#include <memory>
+
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -32,18 +34,17 @@ int main(int, char**) {
 
   std::owner_hash oh;
 
-  assert(oh(p1) == p1.owner_hash());
-  assert(oh(w1) == w1.owner_hash());
+  std::same_as<std::size_t> decltype(auto) hash_p1 = oh(p1);
+  std::same_as<std::size_t> decltype(auto) hash_w1 = oh(w1);
+  static_assert(noexcept(oh(p1)));
+  static_assert(noexcept(oh(w1)));
 
-  assert(oh(p1) == oh(p2));
-  assert(oh(p1) == oh(w1));
+  assert(hash_p1 == p1.owner_hash());
+  assert(hash_w1 == w1.owner_hash());
+  assert(hash_p1 == oh(p2));
+  assert(hash_p1 == hash_w1);
 
-  ASSERT_SAME_TYPE(decltype(oh(p1)), std::size_t);
-  ASSERT_SAME_TYPE(decltype(oh(w1)), std::size_t);
-  ASSERT_NOEXCEPT(oh(p1));
-  ASSERT_NOEXCEPT(oh(w1));
-
-  static_assert(std::is_same<std::owner_hash::is_transparent, void>::value, "");
+  static_assert(std::same_as<std::owner_hash::is_transparent, void>);
 
   return 0;
 }
