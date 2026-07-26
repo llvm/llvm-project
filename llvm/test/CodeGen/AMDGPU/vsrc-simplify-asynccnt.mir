@@ -8,7 +8,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vm_vsrc
-    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK: GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
     ; CHECK-NEXT: V_NOP_e32 implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
@@ -37,7 +37,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vm_vsrc_implied
-    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK: GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
     ; CHECK-NEXT: V_NOP_e32 implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
@@ -65,7 +65,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vm_vsrc_asyncmark
-    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK: GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
     ; CHECK-NEXT: V_NOP_e32 implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
@@ -96,7 +96,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vm_vsrc_asyncmark_resolved
-    ; CHECK: GLOBAL_WB 0, implicit $exec
+    ; CHECK: GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
     ; CHECK-NEXT: V_NOP_e32 implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
