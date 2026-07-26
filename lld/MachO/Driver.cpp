@@ -2105,6 +2105,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->bpStartupSortInitializers =
       args.hasFlag(OPT_bp_startup_sort_initializers,
                    OPT_no_bp_startup_sort_initializers, false);
+  config->bpStartupSortObjCLoadMethods =
+      args.hasFlag(OPT_bp_startup_sort_objc_load_methods,
+                   OPT_no_bp_startup_sort_objc_load_methods, false);
   if (const Arg *arg = args.getLastArg(OPT_bp_startup_sort)) {
     StringRef startupSortStr = arg->getValue();
     if (startupSortStr == "function") {
@@ -2121,6 +2124,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
           "--bp-startup-sort=function");
   if (!config->bpStartupFunctionSort && config->bpStartupSortInitializers)
     error("--bp-startup-sort-initializers must be used with "
+          "--bp-startup-sort=function");
+  if (!config->bpStartupFunctionSort && config->bpStartupSortObjCLoadMethods)
+    error("--bp-startup-sort-objc-load-methods must be used with "
           "--bp-startup-sort=function");
   if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
     error("--bp-startup-sort=function must be used with "

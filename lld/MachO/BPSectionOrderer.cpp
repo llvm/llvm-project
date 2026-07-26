@@ -8,6 +8,7 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "ObjC.h"
 #include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
@@ -120,7 +121,8 @@ private:
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     StringRef profilePath, ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
     bool forFunctionCompression, bool forDataCompression,
-    bool compressionSortStartupFunctions, bool sortInitializers, bool verbose) {
+    bool compressionSortStartupFunctions, bool sortInitializers,
+    bool sortObjCLoadMethods, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
   DenseMap<const InputSection *, unsigned> sectionToIdx;
@@ -208,10 +210,28 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
              << initialStartupSectionIdxs.size() << "\n";
   }
 
+  SmallVector<unsigned> objcLoadSectionIdxs;
+  if (sortObjCLoadMethods) {
+    for (InputSection *isec : objc::getLoadMethodSections()) {
+      auto it = sectionToIdx.find(isec);
+      if (it != sectionToIdx.end()) {
+        initialStartupSectionIdxs.insert(it->second);
+        objcLoadSectionIdxs.push_back(it->second);
+      }
+    }
+    llvm::sort(objcLoadSectionIdxs);
+    objcLoadSectionIdxs.erase(llvm::unique(objcLoadSectionIdxs),
+                              objcLoadSectionIdxs.end());
+    if (verbose)
+      dbgs() << "Objective-C +load functions for startup: "
+             << objcLoadSectionIdxs.size() << "\n";
+  }
+
   auto result = BPOrdererMachO().computeOrder(
       profilePath, compressionSortSpecs, forFunctionCompression,
       forDataCompression, compressionSortStartupFunctions, verbose, sections,
-      rootSymbolToSectionIdxs, initialStartupSectionIdxs.getArrayRef());
+      rootSymbolToSectionIdxs, initialStartupSectionIdxs.getArrayRef(),
+      objcLoadSectionIdxs);
   // BP already orders cold sections after non-cold via separate buckets.
   // Unset isCold on sections that received a BP priority so Writer.cpp's
   // stable_partition doesn't re-partition them. Sections without a BP priority
