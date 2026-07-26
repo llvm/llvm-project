@@ -1270,7 +1270,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Added a new `check::LifetimeEnd` callback that fires for each `CFGLifetimeEnds` element, which is useful for detecting dangling pointers. (#GH201123)
 - The `unix.StdCLibraryFunctions` standard-library summaries were optimized for binary size. (#GH202662)
 - Fixed the alignment of entries printed by `clang -cc1 -analyzer-print-analyzer-options` / `-analyzer-help`. (#GH190570)
-- Improved the models of `strchr`/`strrchr`/`memchr`/`strstr`/`strpbrk`/`strchrnul`, enabling `core.StackAddressEscape` to catch dangling pointers returned by these functions. (#GH203260)
 - Improved the modeling of symbolic ranges in the engine when calculating the largest and smallest possible values for range sets involving the `+`, `-`, and `*` binary operators. (#GH173113)
 
 #### Moved checkers
