@@ -20866,9 +20866,141 @@ static SDValue performBICiCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// True if \p Op is already in memory, or is produced by a chain of bitwise
+/// ops that is itself rooted in memory -- i.e. nothing has to leave a general
+/// purpose register to reach here.
+static bool isBitwiseChainFromMemory(SDValue Op, EVT VT, unsigned Depth = 0) {
+  if (Depth > 4)
+    return false;
+  // A bitwise op of the same wide type that is itself rooted in memory.
+  if (ISD::isBitwiseLogicOp(Op.getOpcode()) && Op.getValueType() == VT)
+    return isBitwiseChainFromMemory(Op.getOperand(0), VT, Depth + 1) &&
+           isBitwiseChainFromMemory(Op.getOperand(1), VT, Depth + 1);
+
+  while (Op.getOpcode() == ISD::BITCAST)
+    Op = Op.getOperand(0);
+
+  if (const auto *Ld = dyn_cast<LoadSDNode>(Op))
+    return Ld->isSimple();
+
+  // An earlier operand of the same chain that this combine already rewrote:
+  // the value now has legal lanes, so it is in vector registers already and
+  // reinterpreting it is free.
+  EVT OpVT = Op.getValueType();
+  return OpVT.isFixedLengthVector() && OpVT.getScalarSizeInBits() <= 64 &&
+         (Op.getOpcode() == ISD::CONCAT_VECTORS ||
+          ISD::isBitwiseLogicOp(Op.getOpcode()));
+}
+
+/// AND, OR and XOR are bitwise, so the element width of a vector operand
+/// carries no semantics: an <8 x i128> AND computes exactly the same 1024 bits
+/// as a <16 x i64> AND. Without this, a vector whose elements are wider than
+/// the widest legal element is scalarized into GPR pairs, which for
+/// memory-to-memory code costs roughly 2.5x the instructions -- and spills
+/// callee-saved registers -- compared to the bit-identical operation on a
+/// legal element type. Every other element width (i8/i16/i32/i64) already
+/// produces the same optimal code for the same computation.
+///
+/// This is deliberately not done for ADD/SUB/MUL, whose 128-bit carry
+/// semantics genuinely require scalarization. Where the value really does
+/// belong in GPRs (a by-value <2 x i128> argument, or a scalar use of the
+/// result) the artificial vector ops fold back away and codegen is unchanged.
+///
+/// The operation is emitted directly on legal v2i64 chunks rather than on one
+/// wide vector: a wide `logic (bitcast X), (bitcast Y)` would be hoisted
+/// straight back to `bitcast (logic X, Y)` by the generic combiner, which
+/// would loop forever.
+static SDValue
+performBitwiseWideVectorEltCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (!DCI.isBeforeLegalize() || !VT.isFixedLengthVector())
+    return SDValue();
+
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned TotalBits = VT.getSizeInBits();
+  // Require more than one 128-bit chunk. At exactly 128 bits the extract below
+  // is a no-op, folds away, and leaves a plain `logic (bitcast X), (bitcast Y)`
+  // that the generic combiner hoists straight back -- an infinite loop. A
+  // single 128-bit unit is also the case with the least to gain.
+  if (EltBits <= 64 || !isPowerOf2_32(EltBits) || TotalBits % 128 != 0 ||
+      TotalBits <= 128)
+    return SDValue();
+
+  // Profitability. Moving to vector registers is only a win if the data is
+  // not already sitting in GPRs: a by-value <2 x i128> argument arrives in
+  // x0-x7 and must be returned in x0-x3, so scalarizing it is already optimal
+  // and vectorizing would only add cross-bank moves. Require instead that both
+  // operands come from memory (or from an already-vectorized bitwise op), in
+  // which case the loads can target q registers directly and nothing has to
+  // cross banks.
+  if (!isBitwiseChainFromMemory(N->getOperand(0), VT) ||
+      !isBitwiseChainFromMemory(N->getOperand(1), VT))
+    return SDValue();
+
+  // ...and that the result goes back to memory. If it has to reach GPRs
+  // instead -- a scalar use of a lane, or a by-value return -- the cross-bank
+  // moves cost more than halving the operation count saves. Measured on an
+  // Apple M4, forcing the vector form on a 256-bit AND whose result feeds an
+  // i128 add is about 1.5x slower even though the instruction count is
+  // identical. A chain of bitwise ops that itself ends in a store is fine,
+  // since the whole chain then stays in vector registers.
+  SmallVector<const SDNode *, 8> Worklist{N};
+  SmallPtrSet<const SDNode *, 8> Seen;
+  while (!Worklist.empty()) {
+    const SDNode *Cur = Worklist.pop_back_val();
+    if (!Seen.insert(Cur).second)
+      continue;
+    if (Seen.size() > 16)
+      return SDValue();
+    for (const SDNode *U : Cur->users()) {
+      if (const auto *St = dyn_cast<StoreSDNode>(U)) {
+        if (St->isSimple() && St->getValue().getNode() == Cur)
+          continue;
+        return SDValue();
+      }
+      if (ISD::isBitwiseLogicOp(U->getOpcode()) && U->getValueType(0) == VT) {
+        Worklist.push_back(U);
+        continue;
+      }
+      // A consumer this combine already rewrote wants the value with legal
+      // lanes anyway, so producing it in vector registers is exactly right.
+      // (Which end of a chain gets rewritten first is just worklist order.)
+      if (U->getOpcode() == ISD::BITCAST &&
+          U->getValueType(0).isFixedLengthVector() &&
+          U->getValueType(0).getScalarSizeInBits() <= 64)
+        continue;
+      return SDValue();
+    }
+  }
+
+  SDLoc DL(N);
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT WideVT = EVT::getVectorVT(Ctx, MVT::i64, TotalBits / 64);
+  SDValue LHS = DAG.getNode(ISD::BITCAST, DL, WideVT, N->getOperand(0));
+  SDValue RHS = DAG.getNode(ISD::BITCAST, DL, WideVT, N->getOperand(1));
+
+  SmallVector<SDValue, 8> Chunks;
+  for (unsigned I = 0, E = TotalBits / 128; I != E; ++I) {
+    SDValue Idx = DAG.getVectorIdxConstant(I * 2, DL);
+    Chunks.push_back(DAG.getNode(
+        N->getOpcode(), DL, MVT::v2i64,
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, LHS, Idx),
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, RHS, Idx)));
+  }
+
+  SDValue Res = Chunks.size() == 1
+                    ? Chunks[0]
+                    : DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Chunks);
+  return DAG.getNode(ISD::BITCAST, DL, VT, Res);
+}
+
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
+  if (SDValue R = performBitwiseWideVectorEltCombine(N, DAG, DCI))
+    return R;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -21925,6 +22057,9 @@ static SDValue performORCombine(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
 
+  if (SDValue R = performBitwiseWideVectorEltCombine(N, DAG, DCI))
+    return R;
+
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
 
@@ -22133,6 +22268,9 @@ static SDValue performANDCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   EVT VT = N->getValueType(0);
+
+  if (SDValue R = performBitwiseWideVectorEltCombine(N, DAG, DCI))
+    return R;
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
