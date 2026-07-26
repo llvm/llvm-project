@@ -1,4 +1,4 @@
-#RUN: llc -mtriple=aarch64-- -run-pass prologepilog %s -o - | FileCheck %s
+#RUN: llc -mtriple=aarch64-- -run-pass prolog-epilog %s -o - | FileCheck %s
 # Check that we use the frame pointer to address the emergency spill slot.
 # Using the base pointer will result in an assert with "Emergency spill slot is
 # out of reach".

@@ -49,10 +49,9 @@ private:
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
-Session::Session(ExecutorProcessInfo EPI,
-                 std::unique_ptr<TaskDispatcher> Dispatcher,
+Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
                  ErrorReporterFn ReportError)
-    : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
+    : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {}
 
@@ -64,8 +63,8 @@ Session::~Session() {
   });
 }
 
-void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
-  assert(CA && "attach called with null CA object");
+void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
+  assert(CA && "doAttach called with null CA object");
 
   {
     std::scoped_lock<std::mutex> Lock(M);
@@ -121,6 +120,7 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     CurrentState = State::Attached;
   }
 
+  // Fall through to disconnect from case (3) above.
   CA->disconnect();
 }
 
@@ -350,8 +350,6 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 }
 
 void Session::completeShutdown() {
-  Dispatcher->shutdown();
-
   {
     std::scoped_lock<std::mutex> Lock(M);
     assert(CurrentState == State::Shutdown);
@@ -359,6 +357,12 @@ void Session::completeShutdown() {
     TargetState = State::None;
   }
   CV.notify_all();
+}
+
+void Session::sendWrapperResult(uint64_t CallId,
+                                WrapperFunctionBuffer ResultBytes) {
+  if (auto TmpCA = std::atomic_load(&CA))
+    TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

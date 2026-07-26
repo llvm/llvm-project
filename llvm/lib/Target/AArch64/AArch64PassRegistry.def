@@ -46,6 +46,7 @@ MACHINE_FUNCTION_PASS("aarch64-isel", AArch64DAGToDAGISelPass(*this))
 MACHINE_FUNCTION_PASS("aarch64-jump-tables", AArch64CompressJumpTablesPass())
 MACHINE_FUNCTION_PASS("aarch64-ldst-opt", AArch64LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("aarch64-mi-peephole-opt", AArch64MIPeepholeOptPass())
+MACHINE_FUNCTION_PASS("aarch64-ptrue-coalesce", AArch64PTrueCoalescingPass())
 MACHINE_FUNCTION_PASS("aarch64-post-coalescer", AArch64PostCoalescerPass())
 MACHINE_FUNCTION_PASS("aarch64-post-select-optimize",
                       AArch64PostSelectOptimizePass())
@@ -60,6 +61,7 @@ MACHINE_FUNCTION_PASS("aarch64-redundantcondbranch", AArch64RedundantCondBranchP
 MACHINE_FUNCTION_PASS("aarch64-simd-instr-opt", AArch64SIMDInstrOptPass())
 MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
 MACHINE_FUNCTION_PASS("aarch64-sls-hardening", AArch64SLSHardeningPass())
+MACHINE_FUNCTION_PASS("aarch64-srlt-define-superregs", AArch64SRLTDefineSuperRegsPass())
 MACHINE_FUNCTION_PASS("aarch64-stack-tagging-pre-ra", AArch64StackTaggingPreRAPass())
 MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
                       AArch64O0PreLegalizerCombinerPass())

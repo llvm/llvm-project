@@ -961,12 +961,13 @@ public:
   void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, llvm::StringRef name,
                            Status &error);
 
-  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, ConstString name);
+  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
+                                llvm::StringRef name);
 
-  BreakpointName *FindBreakpointName(ConstString name, bool can_create,
+  BreakpointName *FindBreakpointName(llvm::StringRef name, bool can_create,
                                      Status &error);
 
-  void DeleteBreakpointName(ConstString name);
+  void DeleteBreakpointName(llvm::StringRef name);
 
   void ConfigureBreakpointName(BreakpointName &bp_name,
                                const BreakpointOptions &options,
@@ -1009,16 +1010,20 @@ public:
   // be the one we use.  If no overrides return an override resolver, we'll use
   // the original one.
 
-  // This is the abstract version of the override.  Particular implementations
-  // e.g. the scripted override will derive from this.
+  /// This is the abstract version of the override.  Particular implementations,
+  /// e.g. the scripted override resolver, instantiate actual versions of the
+  /// class. The constructor takes the target this resolver is registered in, a
+  /// description for the override and a mask of the resolver types this
+  /// overrides, made of elements of the BreakpointResolverType enum.
   class BreakpointResolverOverride;
   using BreakpointResolverOverrideUP =
       std::unique_ptr<BreakpointResolverOverride>;
 
   class BreakpointResolverOverride {
   public:
-    BreakpointResolverOverride(Target &target, const std::string &description)
-        : m_target(target), m_desc(description) {}
+    BreakpointResolverOverride(Target &target, const std::string &description,
+                               uint64_t type_mask)
+        : m_target(target), m_desc(description), m_type_mask(type_mask) {}
 
     virtual BreakpointResolverOverrideUP CopyIntoNewTarget(Target &target) = 0;
 
@@ -1028,10 +1033,13 @@ public:
     // Return whether constructing this resolver was successful.
     virtual llvm::Error Validate() = 0;
     const std::string &GetDescription() { return m_desc; }
+    uint64_t GetTypeMask() { return m_type_mask; }
+    std::string DescribeTypeMask();
 
   protected:
     Target &m_target;
     std::string m_desc;
+    uint64_t m_type_mask = 0;
   };
 
   /// Add a breakpoint override resolver.  This version can't fail.
@@ -1045,7 +1053,7 @@ public:
 
   /// Add a breakpoint override resolver.  Return the ID or an error:
   llvm::Expected<lldb::user_id_t>
-  AddBreakpointResolverOverride(llvm::StringRef class_name,
+  AddBreakpointResolverOverride(llvm::StringRef class_name, uint64_t type_mask,
                                 StructuredData::DictionarySP args_data_sp,
                                 llvm::StringRef description);
 
@@ -1057,21 +1065,15 @@ public:
   void ClearBreakpointResolverOverrides() { m_breakpoint_overrides.clear(); }
 
   lldb::BreakpointResolverSP
-  CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
-    for (auto const &elem : m_breakpoint_overrides) {
-      if (lldb::BreakpointResolverSP overriden_sp =
-              elem.second->CheckForOverride(*this, original_sp))
-        return overriden_sp;
-    }
-    return {};
-  }
+  CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp);
 
   /// Describe the breakpoint overrides.  If ixds is empty, list all.  Otherwise
   /// list the overrides whose ids match the ones given in idxs.  The matched
   /// elements are removed from the list, so any elements remaining in idxs are
   /// indexes that are not breakpoint override indexes.
   void DescribeBreakpointOverrides(Stream &stream,
-                                   std::vector<lldb::user_id_t> &idxs);
+                                   std::vector<lldb::user_id_t> &idxs,
+                                   uint32_t terminal_width, bool use_color);
 
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
@@ -1689,7 +1691,7 @@ public:
   private:
     llvm::StringRef GetScriptClassName() const;
 
-    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
     /// to set the script to execute, and SetSpecifier to set the specifier
@@ -2087,9 +2089,8 @@ protected:
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
-  using BreakpointNameList =
-      std::map<ConstString, std::unique_ptr<BreakpointName>>;
-  BreakpointNameList m_breakpoint_names;
+  using BreakpointNameMap = llvm::StringMap<std::unique_ptr<BreakpointName>>;
+  BreakpointNameMap m_breakpoint_names;
 
   std::map<lldb::user_id_t, BreakpointResolverOverrideUP>
       m_breakpoint_overrides;

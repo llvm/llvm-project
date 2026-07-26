@@ -65,8 +65,10 @@
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx10-1-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX10_1_GENERIC %s
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx10-3-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX10_3_GENERIC %s
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx11-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX11_GENERIC %s
+// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx11-7-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX11_7_GENERIC %s
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx12-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX12_GENERIC %s
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx12-5-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX12_5_GENERIC %s
+// RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx13-generic -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefixes=HIP,GFX13_GENERIC %s
 
 //
 // Feature modifier coverage
@@ -135,7 +137,9 @@
 // GFX10_1_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx10-1-generic
 // GFX10_3_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx10-3-generic
 // GFX11_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx11-generic
+// GFX11_7_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx11-7-generic
 // GFX12_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx12-generic
 // GFX12_5_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx12-5-generic
+// GFX13_GENERIC: triple=amdgcn-amd-amdhsa,arch=gfx13-generic
 
 // SPIRV: triple=spirv64-amd-amdhsa,arch=amdgcnspirv

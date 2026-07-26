@@ -101,6 +101,7 @@ public:
   Function &F;
   const GCNSubtarget &ST;
   const AMDGPUTargetMachine &TM;
+  const TargetTransformInfo &TTI;
   const TargetLibraryInfo *TLI;
   const UniformityInfo &UA;
   const DataLayout &DL;
@@ -114,10 +115,11 @@ public:
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
+                           const TargetTransformInfo &TTI,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
                            const DominatorTree *DT, const UniformityInfo &UA)
-      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), UA(UA),
-        DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
+      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TTI(TTI), TLI(TLI),
+        UA(UA), DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -279,6 +281,7 @@ public:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
 
     // FIXME: Division expansion needs to preserve the dominator tree.
     if (!ExpandDiv64InIR)
@@ -738,7 +741,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
   bool IsNegative = false;
 
   // TODO: Handle other numerator values with arcp.
-  if (CLHS->isExactlyValue(1.0) || (IsNegative = CLHS->isExactlyValue(-1.0))) {
+  if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
     // Add in the sqrt flags.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(DivFMF | SqrtFMF);
@@ -779,8 +782,7 @@ AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder, Value *Num,
 
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
     bool IsNegative = false;
-    if (CLHS->isExactlyValue(1.0) ||
-        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+    if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
       Value *Src = Den;
 
       if (HasFP32DenormalFlush || FMF.approxFunc()) {
@@ -843,7 +845,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
 
   bool NumIsOne = false;
   if (const ConstantFP *CNum = dyn_cast<ConstantFP>(Num)) {
-    if (CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0))
+    if (CNum->isOne() || CNum->isMinusOne())
       NumIsOne = true;
   }
 
@@ -1083,10 +1085,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   // (0x7FF8F5/0x007EFB) would erroneously produce 258 instead of 257.
   //
   // Thus, we conservatively restrict expandDivRemToFloatImpl to
-  // [-0x40000,0x3FFFFF] for IsSigned
-  // [0x000000,0x3FFFFF] for !IsSigned.
+  // [-0x400000,0x3FFFFF] for IsSigned
+  // [ 0x000000,0x3FFFFF] for !IsSigned.
   assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
-         "abs(Num) must be <= than 0x40000 for expandDivRemToFloatImpl to work "
+         "abs(Num) must be <= 0x400000 for expandDivRemToFloatImpl to work "
          "correctly");
 
   Type *I32Ty = Builder.getInt32Ty();
@@ -1095,18 +1097,6 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
 
   Type *F32Ty = Builder.getFloatTy();
   ConstantInt *One = Builder.getInt32(1);
-  Value *JQ = One;
-
-  if (IsSigned) {
-    // char|short jq = ia ^ ib;
-    JQ = Builder.CreateXor(Num, Den);
-
-    // jq = jq >> (bitsize - 2)
-    JQ = Builder.CreateAShr(JQ, Builder.getInt32(30));
-
-    // jq = jq | 0x1
-    JQ = Builder.CreateOr(JQ, One);
-  }
 
   // int ia = (int)LHS;
   Value *IA = Num;
@@ -1119,52 +1109,41 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
                        : Builder.CreateUIToFP(IA, F32Ty);
 
   // float fb = (float)ib;
-  Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
-                       : Builder.CreateUIToFP(IB,F32Ty);
+  Value *FB = IsSigned ? Builder.CreateSIToFP(IB, F32Ty)
+                       : Builder.CreateUIToFP(IB, F32Ty);
 
   Value *RCP = Builder.CreateIntrinsic(Intrinsic::amdgcn_rcp,
                                        Builder.getFloatTy(), {FB});
+
+  // The calculation:
+  //   fq = fa*recip(fb)
+  // may be too small due to the 1ulp accuracy in the recip
+  // operation and rounding issues.  Since fq is truncated to produce
+  // an integer value it may be too small by one.  This is
+  // dealt with by incrementing fa by 1ulp:
+  //   fq = (fa+1ulp)*recip(fb)
+  // This will increase fa's magnitude by at most 0.5
+  // (i.e. when fabs(fa)==0x400000 the LSB of the mantissa represents 0.5).
+  // Thus, this method is safe since fa must be incremented by at least 1.0
+  // for the quotient to increase by one.
+
+  Value *FABits = Builder.CreateBitCast(FA, I32Ty);
+  Value *FABitsInc = Builder.CreateAdd(FABits, One);
+  FA = Builder.CreateBitCast(FABitsInc, F32Ty);
+
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
   Value *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
-  auto *FQI = dyn_cast<Instruction>(FQ);
-  if (FQI)
-    FQI->copyFastMathFlags(Builder.getFastMathFlags());
-
-  // float fqneg = -fq;
-  Value *FQNeg = Builder.CreateFNeg(FQ);
-
-  // float fr = mad(fqneg, fb, fa);
-  auto FMAD = !ST.hasMadMacF32Insts()
-                  ? Intrinsic::fma
-                  : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR =
-      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
-  // fr = fabs(fr);
-  FR = Builder.CreateFAbs(FR, FQI);
-
-  // fb = fabs(fb);
-  FB = Builder.CreateFAbs(FB, FQI);
-
-  // int cv = fr >= fb;
-  Value *CV = Builder.CreateFCmpOGE(FR, FB);
-
-  // jq = (cv ? jq : 0);
-  JQ = Builder.CreateSelect(CV, JQ, Builder.getInt32(0));
-
-  // dst = iq + jq;
-  Value *Div = Builder.CreateAdd(IQ, JQ);
-
-  Value *Res = Div;
+  Value *Res = IQ;
   if (!IsDiv) {
     // Rem needs compensation, it's easier to recompute it
-    Value *Rem = Builder.CreateMul(Div, Den);
+    Value *Rem = Builder.CreateMul(IQ, Den);
     Res = Builder.CreateSub(Num, Rem);
   }
 
@@ -1430,7 +1409,6 @@ bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   NewType = I->getType()->getWithNewBitWidth(NewBit);
 
   // Old cost
-  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opc, OldType, TTI::TCK_RecipThroughput);
   // New cost of new op
@@ -2278,6 +2256,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
+  const TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   const TargetLibraryInfo *TLI =
       &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   AssumptionCache *AC =
@@ -2286,17 +2266,18 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  return AMDGPUCodeGenPrepareImpl(F, TM, TLI, AC, DT, UA).run();
+  return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA).run();
 }
 
 PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
                                                 FunctionAnalysisManager &FAM) {
   const AMDGPUTargetMachine &ATM = static_cast<const AMDGPUTargetMachine &>(TM);
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   const TargetLibraryInfo *TLI = &FAM.getResult<TargetLibraryAnalysis>(F);
   AssumptionCache *AC = &FAM.getResult<AssumptionAnalysis>(F);
   const DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   const UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
-  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TLI, AC, DT, UA);
+  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TTI, TLI, AC, DT, UA);
   if (!Impl.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -2309,6 +2290,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)

@@ -1292,6 +1292,12 @@ def LoadOp : MemRef_Op<"load",
     be reused in the cache. For details, refer to the
     [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
 
+    A set `invariant` attribute indicates that the referenced memory location
+    contains the same value at all points in the program where it is
+    dereferenceable, so the load may be treated as invariant. For details, refer
+    to the
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
@@ -1308,7 +1314,8 @@ def LoadOp : MemRef_Op<"load",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$invariant);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
@@ -1760,15 +1767,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
                        "dynamically-sized shape", [MemRead]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
-  let builders = [OpBuilder<
-     (ins "MemRefType":$resultType, "Value":$operand, "Value":$shape), [{
-       $_state.addOperands(operand);
-       $_state.addOperands(shape);
-       $_state.addTypes(resultType);
-     }]>];
-
   let extraClassDeclaration = [{
-    MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
     Value getViewSource() { return getSource(); }
   }];
 

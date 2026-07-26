@@ -59,6 +59,7 @@ class LoopInfo;
 class raw_ostream;
 class ScalarEvolution;
 class SCEVAddRecExpr;
+class SCEVConstant;
 class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
@@ -733,7 +734,6 @@ public:
   LLVM_ABI const SCEV *getConstant(ConstantInt *V);
   LLVM_ABI const SCEV *getConstant(const APInt &Val);
   LLVM_ABI const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
-  LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op);
 
   LLVM_ABI const SCEV *getPtrToAddrExpr(const SCEV *Op);
   LLVM_ABI const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
@@ -876,7 +876,7 @@ public:
   /// If the LHS and RHS are pointers which don't share a common base
   /// (according to getPointerBase()), this returns a SCEVCouldNotCompute.
   /// To compute the difference between two unrelated pointers, you can
-  /// explicitly convert the arguments using getPtrToIntExpr(), for pointer
+  /// explicitly convert the arguments using getPtrToAddrExpr(), for pointer
   /// types that support it.
   LLVM_ABI const SCEV *getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
                                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
@@ -1983,10 +1983,11 @@ private:
   /// operands iteratively first.
   const ConstantRange &getRangeRefIter(const SCEV *S, RangeSignHint Hint);
 
-  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
-  /// Helper for \c getRange.
-  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
-                                    const APInt &MaxBECount);
+  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step},
+  /// and whether it may wrap. Helper for \c getRange.
+  std::pair<ConstantRange, SCEV::NoWrapFlags>
+  getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
+                      const APInt &MaxBECount);
 
   /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
   /// Start,+,\p Step}<nw>.
@@ -2324,6 +2325,16 @@ private:
                                      const SCEV *RHS, const SCEV *FoundLHS,
                                      const SCEV *FoundRHS);
 
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
+  /// true.
+  ///
+  /// This routine tries to analyze if the SCEV differences match.
+  bool isImpliedCondOperandsViaMatchingDiff(CmpPredicate Pred, const SCEV *LHS,
+                                            const SCEV *RHS,
+                                            const SCEV *FoundLHS,
+                                            const SCEV *FoundRHS);
+
   /// If we know that the specified Phi is in the header of its containing
   /// loop, we know the loop executes a constant number of times, and the PHI
   /// node is just a recurrence involving constants, fold it.
@@ -2386,8 +2397,8 @@ private:
   bool proveNoWrapByVaryingStart(const SCEV *Start, const SCEV *Step,
                                  const Loop *L);
 
-  /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
-  SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
+  /// Try to infer NSW or NUW on \p AR relying on ConstantRange manipulation.
+  void inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
   /// Try to prove NSW on \p AR by proving facts about conditions known  on
   /// entry and backedge.
@@ -2528,6 +2539,10 @@ private:
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
 
+  /// Fast lookup cache for SCEVConstant nodes, using the fact that IR constants
+  /// are already uniqued.
+  DenseMap<ConstantInt *, SCEVConstant *> ConstantSCEVs;
+
   /// This maps loops to a list of addrecs that directly use said loop.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> LoopUsers;
 
@@ -2644,6 +2659,9 @@ public:
   /// Adds a new predicate.
   LLVM_ABI void addPredicate(const SCEVPredicate &Pred);
 
+  /// Adds all predicates in \p Preds.
+  LLVM_ABI void addPredicates(ArrayRef<const SCEVPredicate *> Preds);
+
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
@@ -2653,19 +2671,15 @@ public:
   getAsAddRec(Value *V,
               SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
-  /// Proves that V doesn't overflow by adding SCEV predicate.
-  LLVM_ABI void setNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
-
-  /// Returns true if we've proved that V doesn't wrap by means of a SCEV
-  /// predicate.
+  /// Returns true if we've statically proved that V doesn't wrap.
   LLVM_ABI bool hasNoOverflow(Value *V,
                               SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
 
-  /// We need to explicitly define the copy constructor because of FlagsMap.
+  /// We need to explicitly define the copy constructor due to the ownership of
+  /// the SCEVUnionPredicate Preds.
   LLVM_ABI PredicatedScalarEvolution(const PredicatedScalarEvolution &);
 
   /// Print the SCEV mappings done by the Predicated Scalar Evolution.
@@ -2693,9 +2707,6 @@ private:
   /// rewrites, we will rewrite the previous result instead of the original
   /// SCEV.
   DenseMap<const SCEV *, RewriteEntry> RewriteMap;
-
-  /// Records what NoWrap flags we've added to a Value *.
-  ValueMap<Value *, SCEVWrapPredicate::IncrementWrapFlags> FlagsMap;
 
   /// The ScalarEvolution analysis.
   ScalarEvolution &SE;

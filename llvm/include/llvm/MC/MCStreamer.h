@@ -853,7 +853,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                  unsigned MaxBytesToEmit = 0);
 
   virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
@@ -1062,6 +1062,10 @@ public:
                                 int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
 
   virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
+  virtual void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                     SMLoc Loc = {});
+  virtual void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                     SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
   virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
                                 SMLoc Loc = {});

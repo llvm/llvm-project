@@ -246,7 +246,9 @@ Error NativeRecordReplayTy::recordPrologueImpl(
     return Err;
 
   SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
-  return recordImage(Kernel, ImageFilename.c_str());
+
+  SmallString<128> IRImageFilename = getFilename(Instance, FileTy::IRImage);
+  return recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str());
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
@@ -270,23 +272,28 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
-  // Add minimum and maximum for allowed number of teams. If zero, it means
+  // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t MinMaxBlocks = std::max(KernelArgs.UserNumBlocks[0], uint32_t(0));
   json::Array JsonTeamsLimits;
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
 
-  // Add minimum and maximum for allowed number of threads. If zero, it means
+  // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t UserThreads = std::max(KernelArgs.UserThreadLimit[0], uint32_t(0));
+  uint32_t MaxThreads = UserThreads
+                            ? std::min(UserThreads, Kernel.getMaxThreads())
+                            : Kernel.getMaxThreads();
   json::Array JsonThreadsLimits;
-  JsonThreadsLimits.push_back(uint32_t(KernelArgs.UserThreadLimit[0] > 0));
-  JsonThreadsLimits.push_back(KernelArgs.UserThreadLimit[0]);
+  JsonThreadsLimits.push_back(1);
+  JsonThreadsLimits.push_back(MaxThreads);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
   for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)
-    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Ptrs[I]));
+    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Args[I]));
   JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
   json::Array JsonArgOffsets;
@@ -317,6 +324,8 @@ StringRef NativeRecordReplayTy::getExtension(FileTy FileType) {
     return "globals";
   case FileTy::Program:
     return "image";
+  case FileTy::IRImage:
+    return "bc";
   }
   return "";
 }
@@ -361,13 +370,23 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
 }
 
 Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
-                                        StringRef Filename) {
+                                        StringRef Filename,
+                                        StringRef IRImageFilename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving image file");
   OS << Kernel.getImage().getMemoryBuffer().getBuffer();
   OS.close();
+
+  if (!IRImageFilename.empty() && Kernel.getImage().hasIRImage()) {
+    raw_fd_ostream IROS(IRImageFilename, EC);
+    if (EC)
+      return Plugin::error(ErrorCode::HOST_IO, "saving IR image file");
+    IROS << Kernel.getImage().getIRImageMemoryBuffer().getBuffer();
+    IROS.close();
+  }
+
   return Plugin::success();
 }
 

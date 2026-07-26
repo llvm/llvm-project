@@ -37,6 +37,7 @@ class IRBuilderBase;
 class LoopInfo;
 class SCEV;
 class Type;
+class VFSelectionContext;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
@@ -273,6 +274,11 @@ struct VPTransformState {
   Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
                                        const VPLane &Lane);
 
+  /// Add the backedge (latch) incoming value to the canonical, reduction and
+  /// first-order recurrence phis in all loop headers state's plan, after
+  /// the loop body has been generated.
+  void fixupHeaderPhis();
+
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
   struct CFGState {
@@ -324,6 +330,7 @@ struct VPCostContext {
   const TargetLibraryInfo &TLI;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
+  const VFSelectionContext &Config;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
   PredicatedScalarEvolution &PSE;
@@ -332,12 +339,8 @@ struct VPCostContext {
   /// Number of predicated stores in the VPlan, computed on demand.
   std::optional<unsigned> NumPredStores;
 
-  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                const VPlan &Plan, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind,
-                PredicatedScalarEvolution &PSE, const Loop *L)
-      : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), PSE(PSE), L(L) {}
+  VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
+                LoopVectorizationCostModel &CM, VFSelectionContext &Config);
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -474,8 +477,6 @@ class VPlanPrinter {
   unsigned getOrCreateBID(const VPBlockBase *Block) {
     return BlockID.count(Block) ? BlockID[Block] : BlockID[Block] = BID++;
   }
-
-  Twine getOrCreateName(const VPBlockBase *Block);
 
   Twine getUID(const VPBlockBase *Block);
 

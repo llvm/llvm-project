@@ -63,7 +63,8 @@ class SelectionDAG;
 class SMSchedule;
 class SwingSchedulerDAG;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
@@ -1915,7 +1916,8 @@ public:
                                    SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
-  unsigned defaultDefLatency(const MCSchedModel &SchedModel,
+  unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
+                             const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
   /// Return true if this opcode has high latency to its result.

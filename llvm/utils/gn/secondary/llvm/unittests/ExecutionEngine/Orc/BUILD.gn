@@ -23,6 +23,7 @@ unittest("OrcJITTests") {
     "EPCGenericMemoryAccessTest.cpp",
     "ExecutionSessionWrapperFunctionCallsTest.cpp",
     "ExecutorAddressTest.cpp",
+    "InProcessEPCTest.cpp",
     "IndirectionUtilsTest.cpp",
     "JITLinkRedirectionManagerTest.cpp",
     "JITTargetMachineBuilderTest.cpp",

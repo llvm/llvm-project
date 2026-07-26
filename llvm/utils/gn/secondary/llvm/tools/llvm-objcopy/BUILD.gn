@@ -51,7 +51,7 @@ foreach(target, symlinks) {
   symlink_or_copy(target) {
     deps = [ ":llvm-objcopy" ]
     source = "llvm-objcopy"
-    output = "$root_out_dir/bin/$target"
+    output = "$llvm_current_bindir/$target"
   }
 }
 

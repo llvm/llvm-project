@@ -1008,19 +1008,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
   bool SimpleFinishLegalizing = true;
   switch (Node->getOpcode()) {
-  case ISD::POISON: {
-    // TODO: Currently, POISON is being lowered to UNDEF here. However, there is
-    // an open concern that this transformation may not be ideal, as targets
-    // should ideally handle POISON directly. Changing this behavior would
-    // require adding support for POISON in TableGen, which is a large change.
-    // Additionally, many existing test cases rely on the current behavior
-    // (e.g., llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion
-    // and incremental changes might be needed to properly support POISON
-    // without breaking existing targets and tests.
-    SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
-    ReplaceNode(Node, UndefNode.getNode());
-    return;
-  }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_VOID:
@@ -5657,21 +5644,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       UpdatedNodes->insert(Chain.getNode());
     }
     ReplacedNode(Node);
-    break;
-  }
-  case ISD::SCMP:
-  case ISD::UCMP: {
-    unsigned ExtOp =
-        Node->getOpcode() == ISD::UCMP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
-    MVT OpVT = Node->getOperand(0).getSimpleValueType();
-    // Compare at least at operand width; NVT is the legal type for the op
-    // result.
-    MVT ResVT = OpVT.bitsGT(NVT) ? OpVT : NVT;
-    Tmp1 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(0));
-    Tmp2 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(1));
-    Tmp1 = DAG.getNode(Node->getOpcode(), dl, ResVT, Tmp1, Tmp2);
-    // Result is -1/0/1; truncate to the original result type.
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::MUL:

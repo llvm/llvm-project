@@ -5,14 +5,15 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_tool(clang-ssaf-linker
+  StaticLibraryCreateCLI.cpp
   SSAFLinker.cpp
   )
 
 clang_target_link_libraries(clang-ssaf-linker
   PRIVATE
   clangBasic
-  clangScalableStaticAnalysisFrameworkAnalyses
-  clangScalableStaticAnalysisFrameworkCore
-  clangScalableStaticAnalysisFrameworkSourceTransformation
-  clangScalableStaticAnalysisFrameworkTool
+  clangScalableStaticAnalysisAnalyses
+  clangScalableStaticAnalysisCore
+  clangScalableStaticAnalysisSourceTransformation
+  clangScalableStaticAnalysisTool
   )

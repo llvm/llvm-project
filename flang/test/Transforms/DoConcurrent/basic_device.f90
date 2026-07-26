@@ -37,7 +37,7 @@ program do_concurrent_basic
     ! CHECK: %[[A_MAP_INFO:.*]] = omp.map.info var_ptr(%[[A_ORIG_DECL]]#1 : {{[^(]+}})
     ! CHECK-SAME: map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[A_BOUNDS]])
 
-    ! CHECK: omp.target
+    ! CHECK: omp.target kernel_type(spmd)
     ! CHECK-SAME: host_eval(%[[HOST_LB]] -> %[[LB:[[:alnum:]]+]], %[[HOST_UB]] -> %[[UB:[[:alnum:]]+]], %[[HOST_STEP]] -> %[[STEP:[[:alnum:]]+]] : index, index, index)
     ! CHECK-SAME: map_entries(
     ! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
@@ -72,9 +72,9 @@ program do_concurrent_basic
     ! CHECK-NEXT: omp.terminator
     ! CHECK-NEXT: } {omp.composite}
     ! CHECK-NEXT: omp.terminator
-    ! CHECK-NEXT: }
+    ! CHECK-NEXT: } {omp.combined}
     ! CHECK-NEXT: omp.terminator
-    ! CHECK-NEXT: }
+    ! CHECK-NEXT: } {omp.combined}
     do concurrent (i=1:10)
         a(i) = i
     end do
