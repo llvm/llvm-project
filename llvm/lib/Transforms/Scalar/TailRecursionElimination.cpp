@@ -415,14 +415,25 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   return !is_contained(I->operands(), CI);
 }
 
-// While shifts are neither associative nor commutative, a chain of shifts by a
-// constant amount C is equivalent to a single shift by the sum of the amounts:
-//     ... (Base << C) << C) ... << C == Base << (C * Iterations)
-// This relation applies to left shifts as well as arithmetic/logical right
-// shifts when the shift amount is a constant.
-static bool isPseudoAssociative(Instruction *I) {
+// Return true if I is a unary accumulator recurrence: a chain of
+// applications of a unary function `g` composed with itself,
+// `g(g(...g(Base)...))`, which is equivalent to a single application of the
+// N-times-composed function when `g` is pure. Neither associative nor
+// commutative, this differs from the ordinary accumulator recurrence handled
+// below, which requires I to be associative and commutative.
+//
+// TODO: Generalize this beyond shifts by a constant amount to arbitrary pure
+// unary functions (e.g., `f(x) = x == 0 ? Base : g(f(x - 1))` for any pure
+// unary `g`).
+static bool isUnaryAccumulatorRecurrence(Instruction *I) {
   if (!I->isShift())
     return false;
+
+  // A chain of shifts by a constant amount C is equivalent to a single shift
+  // by the sum of the amounts:
+  //     ... (Base << C) << C) ... << C == Base << (C * Iterations)
+  // This relation applies to left shifts as well as arithmetic/logical right
+  // shifts when the shift amount is a constant.
   return isa<ConstantInt>(I->getOperand(1));
 }
 
@@ -488,16 +499,17 @@ static Constant *findBaseCaseRetConstant(Function &F) {
 // call instruction CI.
 static Constant *canTransformAccumulatorRecursion(Instruction *I,
                                                   CallInst *CI) {
-  bool IsPseudoAssociative = isPseudoAssociative(I);
-  if ((!I->isAssociative() || !I->isCommutative()) && !IsPseudoAssociative)
+  bool IsUnaryAccumulatorRecurrence = isUnaryAccumulatorRecurrence(I);
+  if ((!I->isAssociative() || !I->isCommutative()) &&
+      !IsUnaryAccumulatorRecurrence)
     return nullptr;
 
   assert(I->getNumOperands() >= 2 &&
          "Associative/commutative operations should have at least 2 args!");
 
   Constant *AccInitVal = nullptr;
-  if (IsPseudoAssociative) {
-    // For pseudo-associative operations, we require that the recursive call
+  if (IsUnaryAccumulatorRecurrence) {
+    // For unary accumulator recurrences, we require that the recursive call
     // is always on the first operand.
     if (I->getOperand(0) != CI)
       return nullptr;
@@ -798,10 +810,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       continue;
 
     // If we can't move the instruction above the call, it might be because it
-    // is an (associative and commutative) or pseudo-associative arithmetic
-    // operation that could be transformed using accumulator recursion
-    // elimination. Check to see if this is the case, and if so, remember which
-    // instruction accumulates for later.
+    // is an (associative and commutative) or unary accumulator recurrence
+    // arithmetic operation that could be transformed using accumulator
+    // recursion elimination. Check to see if this is the case, and if so,
+    // remember which instruction accumulates for later.
     Constant *AccInitVal = canTransformAccumulatorRecursion(&*BBI, CI);
 
     if (AccPN || !AccInitVal)
@@ -967,7 +979,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           if (!RI)
             continue;
 
-          if (isPseudoAssociative(AccRecInstr)) {
+          if (isUnaryAccumulatorRecurrence(AccRecInstr)) {
             // Base-case initialization: the accumulator PHI already holds the
             // final result, so return it directly.
             RI->setOperand(0, AccPN);
@@ -1001,7 +1013,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         // We need to insert a copy of our accumulator instruction before any
         // of the selects we inserted, and select its result instead.
         for (SelectInst *SI : RetSelects) {
-          if (isPseudoAssociative(AccRecInstr)) {
+          if (isUnaryAccumulatorRecurrence(AccRecInstr)) {
             SI->setFalseValue(AccPN);
           } else {
             SI->setFalseValue(
