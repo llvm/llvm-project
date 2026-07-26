@@ -120,7 +120,7 @@ struct MyStruct { int x; };
 
 struct Inner { int x; };
 
-struct Outer { struct Inner inner; };
+struct Outer { Inner inner; };
 
 struct A {
   struct B { int x; };
