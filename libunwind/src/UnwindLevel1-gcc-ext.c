@@ -28,6 +28,14 @@
 
 #if defined(_LIBUNWIND_BUILD_ZERO_COST_APIS)
 
+#if defined(_LIBUNWIND_TARGET_PPC64) && defined(_CALL_ELF) && _CALL_ELF == 2
+// Set to 1 during _Unwind_Backtrace to suppress the PPC64 ELFv2 TOC
+// restoration heuristic (see DwarfInstructions.hpp). A read-only stack walk
+// does not need correct r2, and the heuristic can fault on invalid stack
+// data at the bottom of the call stack.
+_Thread_local int _unw_ppc64_in_backtrace = 0;
+#endif
+
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 #define PRIVATE_1 private_[0]
 #elif defined(_LIBUNWIND_ARM_EHABI)
@@ -139,6 +147,10 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
   _LIBUNWIND_TRACE_API("_Unwind_Backtrace(callback=%p)",
                        (void *)(uintptr_t)callback);
 
+#if defined(_LIBUNWIND_TARGET_PPC64) && defined(_CALL_ELF) && _CALL_ELF == 2
+  _unw_ppc64_in_backtrace = 1;
+#endif
+
 #if defined(_LIBUNWIND_ARM_EHABI)
   // Create a mock exception object for force unwinding.
   _Unwind_Exception ex;
@@ -157,6 +169,9 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
       _LIBUNWIND_TRACE_UNWINDING(" _backtrace: ended because cursor reached "
                                  "bottom of stack, returning %d",
                                  _URC_END_OF_STACK);
+#if defined(_LIBUNWIND_TARGET_PPC64) && defined(_CALL_ELF) && _CALL_ELF == 2
+      _unw_ppc64_in_backtrace = 0;
+#endif
       return _URC_END_OF_STACK;
     }
 #else
@@ -202,6 +217,9 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
     if (result != _URC_NO_REASON) {
       _LIBUNWIND_TRACE_UNWINDING(
           " _backtrace: ended because callback returned %d", result);
+#if defined(_LIBUNWIND_TARGET_PPC64) && defined(_CALL_ELF) && _CALL_ELF == 2
+      _unw_ppc64_in_backtrace = 0;
+#endif
       return result;
     }
   }

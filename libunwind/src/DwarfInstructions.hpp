@@ -22,6 +22,14 @@
 #include "dwarf2.h"
 #include "libunwind_ext.h"
 
+#if defined(_LIBUNWIND_TARGET_PPC64) && defined(_CALL_ELF) && _CALL_ELF == 2
+// Thread-local flag set by _Unwind_Backtrace to suppress the PPC64 ELFv2 TOC
+// restoration heuristic during read-only stack walks (see
+// UnwindLevel1-gcc-ext.c). Declared extern "C" so the C definition in
+// UnwindLevel1-gcc-ext.c is visible here.
+extern "C" _Thread_local int _unw_ppc64_in_backtrace;
+#endif
+
 namespace libunwind {
 
 
@@ -405,7 +413,16 @@ int DwarfInstructions<A, R>::stepWithDwarf(
       // then r2 was saved and needs to be restored.
       // ELFv2 ABI specifies that the TOC Pointer must be saved at SP + 24,
       // while in ELFv1 ABI it is saved at SP + 40.
-      if (R::getArch() == REGISTERS_PPC64 && returnAddress != 0) {
+      //
+      // On ppc64 ELFv2, skip this heuristic during _Unwind_Backtrace. A
+      // read-only stack walk does not execute landing pads and does not need
+      // a correct r2; suppressing the heuristic avoids reading from invalid
+      // stack slots at the bottom of the call stack.
+      if (R::getArch() == REGISTERS_PPC64 && returnAddress != 0
+#if defined(_CALL_ELF) && _CALL_ELF == 2
+          && !_unw_ppc64_in_backtrace
+#endif
+      ) {
         pint_t sp = newRegisters.getRegister(UNW_REG_SP);
         pint_t r2 = 0;
         switch (addressSpace.get32(returnAddress)) {
