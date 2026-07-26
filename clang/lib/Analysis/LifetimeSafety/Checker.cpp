@@ -56,7 +56,19 @@ using AnnotationTarget =
 using EscapingTarget = LifetimeSafetySemaHelper::EscapingTarget;
 
 class LifetimeChecker {
-private:
+  struct PathKey {
+    const void *RootVal;
+    unsigned Kind;
+    bool operator<(const PathKey &Other) const {
+      if (RootVal != Other.RootVal)
+        return RootVal < Other.RootVal;
+      return Kind < Other.Kind;
+    }
+    bool operator==(const PathKey &Other) const {
+      return RootVal == Other.RootVal && Kind == Other.Kind;
+    }
+  };
+  std::vector<std::pair<PathKey, llvm::SmallVector<LoanID, 2>>> LoansByPath;
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
@@ -95,6 +107,39 @@ public:
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
         AST(ADC.getASTContext()), Cfg(ADC.getCFG()), FD(ADC.getDecl()),
         LSOpts(LSOpts) {
+    for (const Loan *Loan : FactMgr.getLoanMgr().getLoans()) {
+      const AccessPath &Path = Loan->getAccessPath();
+      const void *RootVal = nullptr;
+      switch (Path.getKind()) {
+      case AccessPath::Kind::ValueDecl:
+        RootVal = Path.getAsValueDecl();
+        break;
+      case AccessPath::Kind::MaterializeTemporary:
+        RootVal = Path.getAsMaterializeTemporaryExpr();
+        break;
+      case AccessPath::Kind::PlaceholderParam:
+        RootVal = Path.getAsPlaceholderParam();
+        break;
+      case AccessPath::Kind::PlaceholderThis:
+        RootVal = Path.getAsPlaceholderThis();
+        break;
+      case AccessPath::Kind::NewAllocation:
+        RootVal = Path.getAsNewAllocation();
+        break;
+      }
+      PathKey Key = {RootVal, static_cast<unsigned>(Path.getKind())};
+      auto It = std::lower_bound(LoansByPath.begin(), LoansByPath.end(), Key,
+                                 [](const auto &X, const PathKey &K) {
+                                   return X.first < K;
+                                 });
+      if (It != LoansByPath.end() && It->first == Key) {
+        It->second.push_back(Loan->getID());
+      } else {
+        llvm::SmallVector<LoanID, 2> Vec;
+        Vec.push_back(Loan->getID());
+        LoansByPath.insert(It, {Key, std::move(Vec)});
+      }
+    }
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -121,7 +166,9 @@ public:
   /// [[clang::noescape]].
   void checkAnnotations(const OriginEscapesFact *OEF) {
     OriginID EscapedOID = OEF->getEscapedOriginID();
-    LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    const LoanSet *EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    if (!EscapedLoans)
+      return;
     auto CheckParam = [&](const ParmVarDecl *PVD, bool IsMoved) {
       // NoEscape param should not escape.
       if (PVD->hasAttr<NoEscapeAttr>()) {
@@ -164,7 +211,7 @@ public:
       }
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
-    for (LoanID LID : EscapedLoans) {
+    for (LoanID LID : *EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
       const AccessPath &AP = L->getAccessPath();
       if (const auto *PVD = AP.getAsPlaceholderParam())
@@ -172,6 +219,36 @@ public:
       else if (const auto *MD = AP.getAsPlaceholderThis())
         CheckImplicitThis(MD);
     }
+  }
+
+  /// Returns the corresponding loan IDs for an AccessPath using the precomputed map.
+  llvm::ArrayRef<LoanID> getLoansForPath(const AccessPath &Path) const {
+    const void *RootVal = nullptr;
+    switch (Path.getKind()) {
+    case AccessPath::Kind::ValueDecl:
+      RootVal = Path.getAsValueDecl();
+      break;
+    case AccessPath::Kind::MaterializeTemporary:
+      RootVal = Path.getAsMaterializeTemporaryExpr();
+      break;
+    case AccessPath::Kind::PlaceholderParam:
+      RootVal = Path.getAsPlaceholderParam();
+      break;
+    case AccessPath::Kind::PlaceholderThis:
+      RootVal = Path.getAsPlaceholderThis();
+      break;
+    case AccessPath::Kind::NewAllocation:
+      RootVal = Path.getAsNewAllocation();
+      break;
+    }
+    PathKey Key = {RootVal, static_cast<unsigned>(Path.getKind())};
+    auto It = std::lower_bound(LoansByPath.begin(), LoansByPath.end(), Key,
+                               [](const auto &X, const PathKey &K) {
+                                 return X.first < K;
+                               });
+    if (It != LoansByPath.end() && It->first == Key)
+      return It->second;
+    return {};
   }
 
   /// Checks for use-after-free & use-after-return errors when an access path
@@ -182,29 +259,32 @@ public:
   /// hold that are prefixed by the expired path.
   void checkExpiry(const ExpireFact *EF) {
     const AccessPath &ExpiredPath = EF->getAccessPath();
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
-      for (LoanID HeldLoanID : HeldLoans) {
-        const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
-        if (ExpiredPath != HeldLoan->getAccessPath())
-          continue;
-        // HeldLoan is expired because its AccessPath is expired.
-        PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
-        const Expr *MovedExpr = nullptr;
-        if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
-          MovedExpr = *ME;
-        // Skip if we already have a dominating causing fact.
-        if (CurWarning.CausingFactDominatesExpiry)
-          continue;
-        if (causingFactDominatesExpiry(LiveInfo.Kind))
-          CurWarning.CausingFactDominatesExpiry = true;
-        CurWarning.CausingFact = LiveInfo.CausingFact;
-        CurWarning.ExpiryLoc = EF->getExpiryLoc();
-        CurWarning.MovedExpr = MovedExpr;
-        CurWarning.InvalidatedByExpr = nullptr;
-      }
-    }
+    
+    llvm::ArrayRef<LoanID> ExpiredLoanIDs = getLoansForPath(ExpiredPath);
+    if (ExpiredLoanIDs.empty())
+      return;
+
+    const LivenessMap &Origins = LiveOrigins.getLiveOriginsAt(EF);
+
+    auto CheckLoans = [&](OriginID OID, const LoanSet &HeldLoans) {
+        for (LoanID HeldLoanID : ExpiredLoanIDs) {
+            if (!HeldLoans.contains(HeldLoanID)) continue;
+            const LivenessInfo *LiveInfo = Origins.lookup(OID);
+            if (!LiveInfo) continue;
+            
+            const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
+            PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
+            if (CurWarning.CausingFactDominatesExpiry) continue;
+            if (causingFactDominatesExpiry(LiveInfo->Kind))
+                CurWarning.CausingFactDominatesExpiry = true;
+            CurWarning.CausingFact = LiveInfo->CausingFact;
+            CurWarning.ExpiryLoc = EF->getExpiryLoc();
+            CurWarning.MovedExpr = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID) ? *MovedLoans.getMovedLoans(EF).lookup(HeldLoanID) : nullptr;
+            CurWarning.InvalidatedByExpr = nullptr;
+        }
+    };
+
+    LoanPropagation.forEachOriginWithLoansAt(EF, CheckLoans);
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
@@ -215,35 +295,47 @@ public:
   void checkInvalidation(const InvalidateOriginFact *IOF) {
     OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
     /// Get loans directly pointing to the invalidated container
-    LoanSet DirectlyInvalidatedLoans =
+    const LoanSet *DirectlyInvalidatedLoans =
         LoanPropagation.getLoans(InvalidatedOrigin, IOF);
-    auto IsInvalidated = [&](const Loan *L) {
-      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
-        const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath() == L->getAccessPath())
-          return true;
-      }
-      return false;
-    };
-    // For each live origin, check if it holds an invalidated loan and report.
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
-      for (LoanID LiveLoanID : HeldLoans)
-        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
-          bool LastDomination =
-              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
-          if (!LastDomination) {
-            FinalWarningsMap[LiveLoanID] = {
-                /*ExpiryLoc=*/{},
-                /*CausingFact=*/LiveInfo.CausingFact,
-                /*MovedExpr=*/nullptr,
-                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*CausingFactDominatesExpiry=*/CurDomination};
-          }
+    if (!DirectlyInvalidatedLoans || DirectlyInvalidatedLoans->isEmpty())
+      return;
+
+    llvm::SmallVector<LoanID, 4> InvalidatedLoanIDs;
+    for (const Loan *L : FactMgr.getLoanMgr().getLoans()) {
+      for (LoanID InvalidID : *DirectlyInvalidatedLoans) {
+        if (FactMgr.getLoanMgr().getLoan(InvalidID)->getAccessPath() == L->getAccessPath()) {
+          InvalidatedLoanIDs.push_back(L->getID());
+          break;
         }
+      }
     }
+    if (InvalidatedLoanIDs.empty())
+      return;
+
+    // For each live origin, check if it holds an invalidated loan and report.
+    const LivenessMap &Origins = LiveOrigins.getLiveOriginsAt(IOF);
+
+    auto CheckLoans = [&](OriginID OID, const LoanSet &HeldLoans) {
+        for (LoanID LiveLoanID : InvalidatedLoanIDs) {
+            if (!HeldLoans.contains(LiveLoanID)) continue;
+            const LivenessInfo *LiveInfo = Origins.lookup(OID);
+            if (!LiveInfo) continue;
+            
+            bool CurDomination = causingFactDominatesExpiry(LiveInfo->Kind);
+            bool LastDomination =
+                FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
+            if (!LastDomination) {
+                FinalWarningsMap[LiveLoanID] = {
+                    /*ExpiryLoc=*/{},
+                    /*CausingFact=*/LiveInfo->CausingFact,
+                    /*MovedExpr=*/nullptr,
+                    /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                    /*CausingFactDominatesExpiry=*/CurDomination};
+            }
+        }
+    };
+
+    LoanPropagation.forEachOriginWithLoansAt(IOF, CheckLoans);
   }
 
   void issuePendingWarnings() {

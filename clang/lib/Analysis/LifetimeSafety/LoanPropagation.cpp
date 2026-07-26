@@ -97,14 +97,16 @@ struct Lattice {
   /// Origins confined to a single block. Discarded at block boundaries.
   OriginLoanMap BlockLocalOrigins = OriginLoanMap(nullptr);
 
-  explicit Lattice(const OriginLoanMap &Persistent,
-                   const OriginLoanMap &BlockLocal)
-      : PersistentOrigins(Persistent), BlockLocalOrigins(BlockLocal) {}
+  explicit Lattice(OriginLoanMap Persistent, OriginLoanMap BlockLocal)
+      : PersistentOrigins(std::move(Persistent)),
+        BlockLocalOrigins(std::move(BlockLocal)) {}
   Lattice() = default;
 
   bool operator==(const Lattice &Other) const {
-    return PersistentOrigins == Other.PersistentOrigins &&
-           BlockLocalOrigins == Other.BlockLocalOrigins;
+    return PersistentOrigins.getRootWithoutRetain() ==
+               Other.PersistentOrigins.getRootWithoutRetain() &&
+           BlockLocalOrigins.getRootWithoutRetain() ==
+               Other.BlockLocalOrigins.getRootWithoutRetain();
   }
   bool operator!=(const Lattice &Other) const { return !(*this == Other); }
 
@@ -149,7 +151,7 @@ public:
 
   /// Merges two lattices by taking the union of loans for each origin.
   /// Only persistent origins are joined; block-local origins are discarded.
-  Lattice join(Lattice A, Lattice B) {
+  Lattice join(const Lattice &A, const Lattice &B) {
     OriginLoanMap JoinedOrigins = utils::join(
         A.PersistentOrigins, B.PersistentOrigins, OriginLoanMapFactory,
         [&](const LoanSet *S1, const LoanSet *S2) {
@@ -170,8 +172,13 @@ public:
   Lattice transfer(Lattice In, const IssueFact &F) {
     OriginID OID = F.getOriginID();
     LoanID LID = F.getLoanID();
+    const LoanSet *Existing = isPersistent(OID)
+                                  ? In.PersistentOrigins.lookup(OID)
+                                  : In.BlockLocalOrigins.lookup(OID);
+    if (Existing && Existing->isSingleton() && Existing->contains(LID))
+      return In;
     LoanSet NewLoans = LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID);
-    return setLoans(In, OID, NewLoans);
+    return setLoans(std::move(In), OID, NewLoans, Existing);
   }
 
   /// A flow from source to destination. If `KillDest` is true, this replaces
@@ -181,33 +188,57 @@ public:
     OriginID DestOID = F.getDestOriginID();
     OriginID SrcOID = F.getSrcOriginID();
 
-    LoanSet DestLoans =
-        F.getKillDest() ? LoanSetFactory.getEmptySet() : getLoans(In, DestOID);
-    LoanSet SrcLoans = getLoans(In, SrcOID);
-    LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
+    const LoanSet *Existing = isPersistent(DestOID)
+                                  ? In.PersistentOrigins.lookup(DestOID)
+                                  : In.BlockLocalOrigins.lookup(DestOID);
 
-    return setLoans(In, DestOID, MergedLoans);
+    LoanSet DestLoans =
+        Existing ? (F.getKillDest() ? LoanSetFactory.getEmptySet() : *Existing)
+                 : LoanSetFactory.getEmptySet();
+                 
+    const LoanSet *SrcLoans = getLoans(In, SrcOID);
+    LoanSet MergedLoans = SrcLoans ? utils::join(DestLoans, *SrcLoans, LoanSetFactory) : DestLoans;
+
+    return setLoans(std::move(In), DestOID, MergedLoans, Existing);
   }
 
   Lattice transfer(Lattice In, const KillOriginFact &F) {
-    return setLoans(In, F.getKilledOrigin(), LoanSetFactory.getEmptySet());
+    OriginID OID = F.getKilledOrigin();
+    const LoanSet *Existing = isPersistent(OID)
+                                  ? In.PersistentOrigins.lookup(OID)
+                                  : In.BlockLocalOrigins.lookup(OID);
+    return setLoans(std::move(In), OID, LoanSetFactory.getEmptySet(), Existing);
   }
 
   Lattice transfer(Lattice In, const ExpireFact &F) {
-    if (auto OID = F.getOriginID())
-      return setLoans(In, *OID, LoanSetFactory.getEmptySet());
+    if (auto OID = F.getOriginID()) {
+      const LoanSet *Existing = isPersistent(*OID)
+                                    ? In.PersistentOrigins.lookup(*OID)
+                                    : In.BlockLocalOrigins.lookup(*OID);
+      return setLoans(std::move(In), *OID, LoanSetFactory.getEmptySet(), Existing);
+    }
     return In;
   }
 
-  LoanSet getLoans(OriginID OID, ProgramPoint P) const {
+  const LoanSet *getLoans(OriginID OID, ProgramPoint P) const {
     return getLoans(getState(P), OID);
+  }
+
+  void forEachOriginWithLoansAt(ProgramPoint P,
+                                clang::lifetimes::internal::LoanPropagationAnalysis::LoanMatchCallback CB) const {
+    const auto &PState = getState(P);
+    for (const auto &[OID, Loans] : PState.PersistentOrigins)
+      CB(OID, Loans);
+    for (const auto &[OID, Loans] : PState.BlockLocalOrigins)
+      CB(OID, Loans);
   }
 
   llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
                                                    const OriginID StartOID,
                                                    const LoanID TargetLoan,
                                                    const CFG *Cfg) const {
-    assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
+    const LoanSet *StartLoans = getLoans(StartOID, StartPoint);
+    assert(StartLoans && StartLoans->contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
     // Locate the CFG block containing the StartPoint
@@ -253,8 +284,14 @@ public:
       // current origin.
       for (const CFGBlock *PredBlock : CurrBlock->preds()) {
         SearchState NextState = {PredBlock, CurrOID};
-        if (getLoans(getOutState(PredBlock), CurrOID).contains(TargetLoan) &&
-            VistedStates.insert(NextState).second)
+        auto Out = getOutState(PredBlock);
+        if (Out) {
+          if (const LoanSet *OutLoans = getLoans(*Out, CurrOID)) {
+            if (OutLoans->contains(TargetLoan) &&
+                VistedStates.insert(NextState).second)
+              PendingStates.push_back({NextState, CurrNode.OriginFlowChain});
+          }
+        }
           PendingStates.push_back({NextState, CurrNode.OriginFlowChain});
       }
     }
@@ -268,9 +305,10 @@ public:
                                                    const CFG *Cfg) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
-      if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
-                                    Cfg);
+      if (const LoanSet *Loans = getLoans(Cur->getOuterOriginID(), UF))
+        if (Loans->contains(TargetLoan))
+          return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
+                                      Cfg);
 
     return {};
   }
@@ -281,20 +319,30 @@ private:
     return PersistentOrigins.test(OID.Value);
   }
 
-  Lattice setLoans(Lattice L, OriginID OID, LoanSet Loans) {
+  Lattice setLoans(Lattice L, OriginID OID, LoanSet Loans, const LoanSet *Existing) {
+    if (Existing && *Existing == Loans)
+      return L;
+      
+    if (Loans.isEmpty()) {
+      if (!Existing)
+        return L;
+      if (isPersistent(OID))
+        return Lattice(OriginLoanMapFactory.remove(L.PersistentOrigins, OID),
+                       std::move(L.BlockLocalOrigins));
+      return Lattice(std::move(L.PersistentOrigins),
+                     OriginLoanMapFactory.remove(L.BlockLocalOrigins, OID));
+    }
     if (isPersistent(OID))
       return Lattice(OriginLoanMapFactory.add(L.PersistentOrigins, OID, Loans),
-                     L.BlockLocalOrigins);
-    return Lattice(L.PersistentOrigins,
+                     std::move(L.BlockLocalOrigins));
+    return Lattice(std::move(L.PersistentOrigins),
                    OriginLoanMapFactory.add(L.BlockLocalOrigins, OID, Loans));
   }
 
-  LoanSet getLoans(Lattice L, OriginID OID) const {
+  const LoanSet *getLoans(const Lattice &L, OriginID OID) const {
     const OriginLoanMap *Map =
         isPersistent(OID) ? &L.PersistentOrigins : &L.BlockLocalOrigins;
-    if (auto *Loans = Map->lookup(OID))
-      return *Loans;
-    return LoanSetFactory.getEmptySet();
+    return Map->lookup(OID);
   }
 
   /// Builds the chain of origins through which a loan has propagated.
@@ -321,7 +369,8 @@ private:
         continue;
 
       const OriginID SrcOriginID = OFF->getSrcOriginID();
-      if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
+      const LoanSet *Loans = getLoans(SrcOriginID, OFF);
+      if (!Loans || !Loans->contains(TargetLoan))
         continue;
 
       OriginFlowChain.push_back(SrcOriginID);
@@ -355,8 +404,12 @@ LoanPropagationAnalysis::LoanPropagationAnalysis(
 
 LoanPropagationAnalysis::~LoanPropagationAnalysis() = default;
 
-LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
+const LoanSet *LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
+}
+
+void LoanPropagationAnalysis::forEachOriginWithLoansAt(ProgramPoint P, LoanPropagationAnalysis::LoanMatchCallback CB) const {
+    PImpl->forEachOriginWithLoansAt(P, CB);
 }
 
 llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(

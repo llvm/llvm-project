@@ -25,12 +25,13 @@ namespace {
 struct Lattice {
   MovedLoansMap MovedLoans = MovedLoansMap(nullptr);
 
-  explicit Lattice(MovedLoansMap MovedLoans) : MovedLoans(MovedLoans) {}
+  explicit Lattice(MovedLoansMap MovedLoans) : MovedLoans(std::move(MovedLoans)) {}
 
   Lattice() = default;
 
   bool operator==(const Lattice &Other) const {
-    return MovedLoans == Other.MovedLoans;
+    return MovedLoans.getRootWithoutRetain() ==
+           Other.MovedLoans.getRootWithoutRetain();
   }
   bool operator!=(const Lattice &Other) const { return !(*this == Other); }
 };
@@ -55,7 +56,7 @@ public:
 
   /// Merges moved loan state from different control flow paths. When a loan
   /// is moved on multiple paths, picks the lexically earliest move expression.
-  Lattice join(Lattice A, Lattice B) {
+  Lattice join(const Lattice &A, const Lattice &B) {
     MovedLoansMap MovedLoans = utils::join(
         A.MovedLoans, B.MovedLoans, MovedLoansMapFactory,
         [](const Expr *const *MoveA, const Expr *const *MoveB) -> const Expr * {
@@ -63,6 +64,8 @@ public:
           if (!MoveA)
             return *MoveB;
           if (!MoveB)
+            return *MoveA;
+          if (*MoveA == *MoveB)
             return *MoveA;
           return (*MoveA)->getExprLoc() < (*MoveB)->getExprLoc() ? *MoveA
                                                                  : *MoveB;
@@ -74,28 +77,39 @@ public:
   /// Marks all live loans sharing the same access path as the moved origin as
   /// potentially moved.
   Lattice transfer(Lattice In, const MovedOriginFact &F) {
-    MovedLoansMap MovedLoans = In.MovedLoans;
     OriginID MovedOrigin = F.getMovedOrigin();
-    LoanSet ImmediatelyMovedLoans = LoanPropagation.getLoans(MovedOrigin, &F);
+    const LoanSet *ImmediatelyMovedLoans = LoanPropagation.getLoans(MovedOrigin, &F);
+    if (!ImmediatelyMovedLoans || ImmediatelyMovedLoans->isEmpty())
+      return In;
+
     auto IsInvalidated = [&](const AccessPath &Path) {
-      for (LoanID LID : ImmediatelyMovedLoans) {
+      for (LoanID LID : *ImmediatelyMovedLoans) {
         const Loan *MovedLoan = LoanMgr.getLoan(LID);
         if (MovedLoan->getAccessPath() == Path)
           return true;
       }
       return false;
     };
-    for (auto [O, _] : LiveOrigins.getLiveOriginsAt(&F))
-      for (LoanID LiveLoan : LoanPropagation.getLoans(O, &F)) {
-        const Loan *LiveLoanPtr = LoanMgr.getLoan(LiveLoan);
-        if (IsInvalidated(LiveLoanPtr->getAccessPath()))
-          MovedLoans =
-              MovedLoansMapFactory.add(MovedLoans, LiveLoan, F.getMoveExpr());
-      }
-    return Lattice(MovedLoans);
+    const auto &Origins = LiveOrigins.getLiveOriginsAt(&F);
+    
+    auto CheckLoans = [&](OriginID O, const LoanSet &Loans) {
+        if (!Origins.lookup(O)) return;
+        for (LoanID LiveLoan : Loans) {
+            const Loan *LiveLoanPtr = LoanMgr.getLoan(LiveLoan);
+            if (IsInvalidated(LiveLoanPtr->getAccessPath())) {
+                if (const Expr *const *Existing = In.MovedLoans.lookup(LiveLoan))
+                    if (*Existing == F.getMoveExpr())
+                        continue;
+                In = Lattice(MovedLoansMapFactory.add(std::move(In.MovedLoans), LiveLoan, F.getMoveExpr()));
+            }
+        }
+    };
+    
+    LoanPropagation.forEachOriginWithLoansAt(&F, CheckLoans);
+    return In;
   }
 
-  MovedLoansMap getMovedLoans(ProgramPoint P) { return getState(P).MovedLoans; }
+  const MovedLoansMap &getMovedLoans(ProgramPoint P) { return getState(P).MovedLoans; }
 
 private:
   const LoanPropagationAnalysis &LoanPropagation;
@@ -121,7 +135,7 @@ MovedLoansAnalysis::MovedLoansAnalysis(
 
 MovedLoansAnalysis::~MovedLoansAnalysis() = default;
 
-MovedLoansMap MovedLoansAnalysis::getMovedLoans(ProgramPoint P) const {
+const MovedLoansMap &MovedLoansAnalysis::getMovedLoans(ProgramPoint P) const {
   return PImpl->getMovedLoans(P);
 }
 } // namespace clang::lifetimes::internal

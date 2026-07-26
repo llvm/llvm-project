@@ -366,6 +366,22 @@ public:
     void *Mem = FactAllocator.Allocate<FactType>();
     FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
+
+    if constexpr (std::is_same_v<FactType, OriginEscapesFact> ||
+                  std::is_same_v<FactType, ReturnEscapeFact> ||
+                  std::is_same_v<FactType, GlobalEscapeFact> ||
+                  std::is_same_v<FactType, FieldEscapeFact> ||
+                  std::is_same_v<FactType, InvalidateOriginFact> ||
+                  std::is_same_v<FactType, TestPointFact>) {
+      NeedsDataflow = true;
+    } else if constexpr (std::is_same_v<FactType, IssueFact>) {
+      const Loan *L = getLoanMgr().getLoan(Res->getLoanID());
+      if (L && !L->getAccessPath().getAsPlaceholderThis() &&
+          !L->getAccessPath().getAsPlaceholderParam()) {
+        NeedsDataflow = true;
+      }
+    }
+
     return Res;
   }
 
@@ -386,6 +402,8 @@ public:
   /// \note This is intended for testing only.
   llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
   size_t getBlockID(ProgramPoint P) const;
+
+  bool NeedsDataflow = false;
 
   unsigned getNumFacts() const { return NextFactID.Value; }
 

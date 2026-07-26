@@ -46,8 +46,17 @@ using MapTy = llvm::ImmutableMap<KeyT, ValT, llvm::ImutKeyValueInfo<KeyT, ValT>,
 
 /// Computes the union of two ImmutableSets.
 template <typename T>
-SetTy<T> join(SetTy<T> A, SetTy<T> B, typename SetTy<T>::Factory &F) {
-  return F.unionSets(A, B);
+SetTy<T> join(const SetTy<T> &A_ref, const SetTy<T> &B_ref, typename SetTy<T>::Factory &F) {
+  if (A_ref.getRootWithoutRetain() == B_ref.getRootWithoutRetain())
+    return A_ref;
+  SetTy<T> A = A_ref;
+  SetTy<T> B = B_ref;
+  SetTy<T> Result = F.unionSets(A, B);
+  if (Result.getRootWithoutRetain() == A_ref.getRootWithoutRetain())
+    return A_ref;
+  if (Result.getRootWithoutRetain() == B_ref.getRootWithoutRetain())
+    return B_ref;
+  return Result;
 }
 
 /// Describes the strategy for joining two `ImmutableMap` instances, primarily
@@ -72,30 +81,43 @@ enum class JoinKind {
 /// JoinValues is commutative with a left identity, which holds for the
 /// lifetime lattices.
 template <typename KeyT, typename ValT, typename Joiner>
-MapTy<KeyT, ValT> join(MapTy<KeyT, ValT> A, MapTy<KeyT, ValT> B,
+MapTy<KeyT, ValT> join(const MapTy<KeyT, ValT> &A_ref, const MapTy<KeyT, ValT> &B_ref,
                        typename MapTy<KeyT, ValT>::Factory &F,
                        Joiner JoinValues, JoinKind Kind) {
-  if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
-    return A;
-  // Drive the merge with the taller map so the shorter one is the one split.
-  if (A.getHeight() < B.getHeight())
+  if (A_ref.getRootWithoutRetain() == B_ref.getRootWithoutRetain())
+    return A_ref;
+
+  MapTy<KeyT, ValT> A = A_ref;
+  MapTy<KeyT, ValT> B = B_ref;
+
+  bool Swapped = false;
+  if (A.getHeight() < B.getHeight()) {
     std::swap(A, B);
+    Swapped = true;
+  }
 
   using ValueTy = typename MapTy<KeyT, ValT>::value_type;
-  auto Combine = [&JoinValues](const ValueTy *AElem,
+  auto Combine = [&JoinValues, Swapped](const ValueTy *AElem,
                                const ValueTy *BElem) -> std::pair<KeyT, ValT> {
+    const ValueTy *OrigA = Swapped ? BElem : AElem;
+    const ValueTy *OrigB = Swapped ? AElem : BElem;
     const KeyT &Key = AElem ? AElem->first : BElem->first;
     return std::pair<KeyT, ValT>(Key,
-                                 JoinValues(AElem ? &AElem->second : nullptr,
-                                            BElem ? &BElem->second : nullptr));
+                                 JoinValues(OrigA ? &OrigA->second : nullptr,
+                                            OrigB ? &OrigB->second : nullptr));
   };
   // Asymmetric keeps keys unique to either map as-is (valid because JoinValues
   // has a left identity); symmetric passes unmatched keys through JoinValues.
   // The lifetime joins are idempotent lattice joins, so pointer-identical
   // subtrees (common once one state is derived from the other) can be shared.
-  return F.mergeWith(A, B, Combine,
-                     /*KeepUnmatched=*/Kind == JoinKind::Asymmetric,
-                     /*SkipShared=*/true);
+  MapTy<KeyT, ValT> Result = F.mergeWith(A, B, Combine,
+                                         /*KeepUnmatched=*/Kind == JoinKind::Asymmetric,
+                                         /*SkipShared=*/true);
+  if (Result.getRootWithoutRetain() == A_ref.getRootWithoutRetain())
+    return A_ref;
+  if (Result.getRootWithoutRetain() == B_ref.getRootWithoutRetain())
+    return B_ref;
+  return Result;
 }
 } // namespace clang::lifetimes::internal::utils
 

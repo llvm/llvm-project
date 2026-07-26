@@ -35,7 +35,7 @@ public:
                      MovedLoansMap::Factory &MovedLoansMapFactory);
   ~MovedLoansAnalysis();
 
-  MovedLoansMap getMovedLoans(ProgramPoint P) const;
+  const MovedLoansMap &getMovedLoans(ProgramPoint P) const;
 
 private:
   class Impl;

@@ -64,13 +64,14 @@ private:
   AnalysisDeclContext &AC;
 
   /// The dataflow state before a basic block is processed.
-  llvm::DenseMap<const CFGBlock *, Lattice> InStates;
+  llvm::SmallVector<std::optional<Lattice>> InStates;
   /// The dataflow state after a basic block is processed.
-  llvm::DenseMap<const CFGBlock *, Lattice> OutStates;
+  llvm::SmallVector<std::optional<Lattice>> OutStates;
   /// Dataflow state at each program point, indexed by Fact ID.
   /// In a forward analysis, this is the state after the Fact at that point has
   /// been applied, while in a backward analysis, it is the state before.
   llvm::SmallVector<Lattice> PointToState;
+  llvm::BitVector PointInitialized;
 
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
@@ -86,7 +87,15 @@ public:
     Derived &D = static_cast<Derived &>(*this);
     llvm::TimeTraceScope Time(D.getAnalysisName());
 
-    PointToState.resize(FactMgr.getNumFacts());
+    PointToState.resize(FactMgr.getNumFacts(), D.getInitialState());
+    PointInitialized.resize(FactMgr.getNumFacts());
+    InStates.resize(Cfg.getNumBlockIDs());
+    OutStates.resize(Cfg.getNumBlockIDs());
+
+    if (FactMgr.getLoanMgr().getLoans().empty() || !FactMgr.NeedsDataflow) {
+      PointInitialized.set();
+      return;
+    }
 
     using Worklist =
         std::conditional_t<Dir == Direction::Forward, ForwardDataflowWorklist,
@@ -94,23 +103,31 @@ public:
     Worklist W(Cfg, AC);
 
     const CFGBlock *Start = isForward() ? &Cfg.getEntry() : &Cfg.getExit();
-    InStates[Start] = D.getInitialState();
+    InStates[Start->getBlockID()] = D.getInitialState();
     W.enqueueBlock(Start);
 
     while (const CFGBlock *B = W.dequeue()) {
       Lattice StateIn = *getInState(B);
-      Lattice StateOut = transferBlock(B, StateIn);
-      OutStates[B] = StateOut;
+      std::optional<Lattice> StateOut = transferBlock(B, std::move(StateIn));
+      // If none of the facts inside the block changed state, and the final state
+      // is unchanged, transferBlock returns std::nullopt. We don't need to propagate.
+      if (!StateOut)
+        continue;
+      
+      const std::optional<Lattice> &OldOutState = getOutState(B);
+      if (OldOutState && *OldOutState == *StateOut)
+        continue;
+      OutStates[B->getBlockID()] = *StateOut;
       for (const CFGBlock *AdjacentB : isForward() ? B->succs() : B->preds()) {
         if (!AdjacentB)
           continue;
-        std::optional<Lattice> OldInState = getInState(AdjacentB);
+        const std::optional<Lattice> &OldInState = getInState(AdjacentB);
         Lattice NewInState =
-            !OldInState ? StateOut : D.join(*OldInState, StateOut);
+            !OldInState ? *StateOut : D.join(*OldInState, *StateOut);
         // Enqueue the adjacent block if its in-state has changed or if we have
         // never seen it.
         if (!OldInState || NewInState != *OldInState) {
-          InStates[AdjacentB] = NewInState;
+          InStates[AdjacentB->getBlockID()] = std::move(NewInState);
           W.enqueueBlock(AdjacentB);
         }
       }
@@ -118,43 +135,62 @@ public:
   }
 
 protected:
-  Lattice getState(ProgramPoint P) const {
+  const Lattice &getState(ProgramPoint P) const {
+    assert(PointInitialized.test(P->getID().Value) && "Queried uninitialized state!");
     return PointToState[P->getID().Value];
   }
 
-  std::optional<Lattice> getInState(const CFGBlock *B) const {
-    auto It = InStates.find(B);
-    if (It == InStates.end())
-      return std::nullopt;
-    return It->second;
+  const std::optional<Lattice> &getInState(const CFGBlock *B) const {
+    if (B->getBlockID() >= InStates.size()) {
+      static const std::optional<Lattice> Empty;
+      return Empty;
+    }
+    return InStates[B->getBlockID()];
   }
 
-  Lattice getOutState(const CFGBlock *B) const { return OutStates.lookup(B); }
-
+  const std::optional<Lattice> &getOutState(const CFGBlock *B) const {
+    if (B->getBlockID() >= OutStates.size()) {
+      static const std::optional<Lattice> Empty;
+      return Empty;
+    }
+    return OutStates[B->getBlockID()];
+  }
   void dump() const {
     const Derived *D = static_cast<const Derived *>(this);
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << D->getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
     const CFGBlock &B = isForward() ? Cfg.getExit() : Cfg.getEntry();
-    getOutState(&B).dump(llvm::dbgs());
+    if (auto Out = getOutState(&B)) {
+      Out->dump(llvm::dbgs());
+    } else {
+      llvm::dbgs() << "No state for block\n";
+    }
   }
 
 private:
   /// Computes the state at one end of a block by applying all its facts
   /// sequentially to a given state from the other end.
-  Lattice transferBlock(const CFGBlock *Block, Lattice State) {
+  std::optional<Lattice> transferBlock(const CFGBlock *Block, Lattice State) {
     auto Facts = FactMgr.getFacts(Block);
     if constexpr (isForward()) {
       for (const Fact *F : Facts) {
-        State = transferFact(State, F);
-        PointToState[F->getID().Value] = State;
+        State = transferFact(std::move(State), F);
+        unsigned ID = F->getID().Value;
+        if (PointInitialized.test(ID) && PointToState[ID] == State)
+          return std::nullopt; // Converged early
+        PointToState[ID] = State;
+        PointInitialized.set(ID);
       }
     } else {
       for (const Fact *F : llvm::reverse(Facts)) {
         // In backward analysis, capture the state before applying the fact.
-        PointToState[F->getID().Value] = State;
-        State = transferFact(State, F);
+        unsigned ID = F->getID().Value;
+        if (PointInitialized.test(ID) && PointToState[ID] == State)
+          return std::nullopt; // Converged early
+        PointToState[ID] = State;
+        PointInitialized.set(ID);
+        State = transferFact(std::move(State), F);
       }
     }
     return State;
@@ -165,23 +201,23 @@ private:
     Derived *D = static_cast<Derived *>(this);
     switch (F->getKind()) {
     case Fact::Kind::Issue:
-      return D->transfer(In, *F->getAs<IssueFact>());
+      return D->transfer(std::move(In), *F->getAs<IssueFact>());
     case Fact::Kind::Expire:
-      return D->transfer(In, *F->getAs<ExpireFact>());
+      return D->transfer(std::move(In), *F->getAs<ExpireFact>());
     case Fact::Kind::OriginFlow:
-      return D->transfer(In, *F->getAs<OriginFlowFact>());
+      return D->transfer(std::move(In), *F->getAs<OriginFlowFact>());
     case Fact::Kind::MovedOrigin:
-      return D->transfer(In, *F->getAs<MovedOriginFact>());
+      return D->transfer(std::move(In), *F->getAs<MovedOriginFact>());
     case Fact::Kind::OriginEscapes:
-      return D->transfer(In, *F->getAs<OriginEscapesFact>());
+      return D->transfer(std::move(In), *F->getAs<OriginEscapesFact>());
     case Fact::Kind::Use:
-      return D->transfer(In, *F->getAs<UseFact>());
+      return D->transfer(std::move(In), *F->getAs<UseFact>());
     case Fact::Kind::TestPoint:
-      return D->transfer(In, *F->getAs<TestPointFact>());
+      return D->transfer(std::move(In), *F->getAs<TestPointFact>());
     case Fact::Kind::InvalidateOrigin:
-      return D->transfer(In, *F->getAs<InvalidateOriginFact>());
+      return D->transfer(std::move(In), *F->getAs<InvalidateOriginFact>());
     case Fact::Kind::KillOrigin:
-      return D->transfer(In, *F->getAs<KillOriginFact>());
+      return D->transfer(std::move(In), *F->getAs<KillOriginFact>());
     }
     llvm_unreachable("Unknown fact kind");
   }

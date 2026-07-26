@@ -647,8 +647,10 @@ protected:
     TreeTy *L = transformTree(getLeft(T), Combine, FromB);
     TreeTy *R = transformTree(getRight(T), Combine, FromB);
     const value_type &E = getValue(T);
-    return createNode(L, FromB ? Combine(nullptr, &E) : Combine(&E, nullptr),
-                      R);
+    value_type NewE = FromB ? Combine(nullptr, &E) : Combine(&E, nullptr);
+    if (L == getLeft(T) && R == getRight(T) && T->isElementEqual(NewE))
+      return T;
+    return createNode(L, NewE, R);
   }
 
   /// Merges \p A and \p B by recursing over \p A's structure and splitting \p B
@@ -691,7 +693,10 @@ protected:
           return A;
         return joinTrees(NewL, AElem, NewR);
       }
-      return joinTrees(NewL, Combine(&AElem, nullptr), NewR);
+      auto NewE = Combine(&AElem, nullptr);
+      if (NewL == getLeft(A) && NewR == getRight(A) && A->isElementEqual(NewE))
+        return A;
+      return joinTrees(NewL, NewE, NewR);
     }
     // Key present in both: combine the two elements. Preserve sharing when the
     // combined value is unchanged and neither subtree moved, so that a join

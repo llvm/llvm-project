@@ -35,7 +35,10 @@ public:
                           LoanSet::Factory &LoanSetFactory);
   ~LoanPropagationAnalysis();
 
-  LoanSet getLoans(OriginID OID, ProgramPoint P) const;
+  const LoanSet *getLoans(OriginID OID, ProgramPoint P) const;
+
+  using LoanMatchCallback = llvm::function_ref<void(OriginID, const LoanSet &)>;
+  void forEachOriginWithLoansAt(ProgramPoint P, LoanMatchCallback CB) const;
 
   /// Builds the chain of origins through which a loan has propagated.
   ///

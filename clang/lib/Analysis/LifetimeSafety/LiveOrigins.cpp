@@ -22,10 +22,11 @@ struct Lattice {
 
   Lattice() : LiveOrigins(nullptr) {};
 
-  explicit Lattice(LivenessMap L) : LiveOrigins(L) {}
+  explicit Lattice(LivenessMap L) : LiveOrigins(std::move(L)) {}
 
   bool operator==(const Lattice &Other) const {
-    return LiveOrigins == Other.LiveOrigins;
+    return LiveOrigins.getRootWithoutRetain() ==
+           Other.LiveOrigins.getRootWithoutRetain();
   }
 
   bool operator!=(const Lattice &Other) const { return !(*this == Other); }
@@ -87,7 +88,7 @@ public:
   /// Merges two lattices by combining liveness information.
   /// When the same origin has different confidence levels, we take the lower
   /// one.
-  Lattice join(Lattice L1, Lattice L2) const {
+  Lattice join(const Lattice &L1, const Lattice &L2) const {
     LivenessMap Merged = L1.LiveOrigins;
     // Take the earliest Fact to make the join hermetic and commutative.
     auto CombineCausingFact = [](CausingFactType A,
@@ -95,6 +96,8 @@ public:
       if (!A)
         return B;
       if (!B)
+        return A;
+      if (A == B)
         return A;
       return GetFactLoc(A) < GetFactLoc(B) ? A : B;
     };
@@ -114,6 +117,8 @@ public:
         return LivenessInfo(L2->CausingFact, LivenessKind::Maybe);
       if (!L2)
         return LivenessInfo(L1->CausingFact, LivenessKind::Maybe);
+      if (*L1 == *L2)
+        return *L1;
       return LivenessInfo(CombineCausingFact(L1->CausingFact, L2->CausingFact),
                           CombineLivenessKind(L1->Kind, L2->Kind));
     };
@@ -128,66 +133,84 @@ public:
   /// dominates this program point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
-    Lattice Out = In;
     for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin()) {
       OriginID OID = Cur->getOuterOriginID();
       // Write kills liveness.
       if (UF.isWritten()) {
-        Out = Lattice(Factory.remove(Out.LiveOrigins, OID));
+        if (In.LiveOrigins.lookup(OID))
+          In = Lattice(Factory.remove(std::move(In.LiveOrigins), OID));
       } else {
         // Read makes origin live with definite confidence (dominates this
         // point).
-        Out = Lattice(Factory.add(Out.LiveOrigins, OID,
-                                  LivenessInfo(&UF, LivenessKind::Must)));
+        LivenessInfo NewInfo(&UF, LivenessKind::Must);
+        if (const LivenessInfo *Existing = In.LiveOrigins.lookup(OID)) {
+          if (Existing->Kind == NewInfo.Kind)
+            continue;
+        }
+        In = Lattice(Factory.add(std::move(In.LiveOrigins), OID, NewInfo));
       }
     }
-    return Out;
+    return In;
   }
 
   /// An escaping origin (e.g., via return) makes the origin live with definite
   /// confidence, as it dominates this program point.
   Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
     OriginID OID = OEF.getEscapedOriginID();
-    return Lattice(Factory.add(In.LiveOrigins, OID,
-                               LivenessInfo(&OEF, LivenessKind::Must)));
+    LivenessInfo NewInfo(&OEF, LivenessKind::Must);
+    if (const LivenessInfo *Existing = In.LiveOrigins.lookup(OID)) {
+      if (Existing->Kind == NewInfo.Kind)
+        return In;
+    }
+    return Lattice(Factory.add(std::move(In.LiveOrigins), OID, NewInfo));
   }
 
   /// Issuing a new loan to an origin kills its liveness.
   Lattice transfer(Lattice In, const IssueFact &IF) {
-    return Lattice(Factory.remove(In.LiveOrigins, IF.getOriginID()));
+    if (In.LiveOrigins.lookup(IF.getOriginID()))
+      return Lattice(Factory.remove(std::move(In.LiveOrigins), IF.getOriginID()));
+    return In;
   }
 
   /// An OriginFlow kills the liveness of the destination origin if `KillDest`
   /// is true. Otherwise, it propagates liveness from destination to source.
   Lattice transfer(Lattice In, const OriginFlowFact &OF) {
-    Lattice Out = In;
     OriginID Dest = OF.getDestOriginID();
     OriginID Src = OF.getSrcOriginID();
     // If the destination of the flow is live, the source of the flow must also
     // be marked live before this point as its value will flow into the
     // destination.
-    if (In.LiveOrigins.contains(Dest)) {
-      const LivenessInfo *DestInfo = In.LiveOrigins.lookup(Dest);
-      assert(DestInfo);
-      Out = Lattice(Factory.add(Out.LiveOrigins, Src, *DestInfo));
+    bool DestLive = false;
+    if (const LivenessInfo *DestInfo = In.LiveOrigins.lookup(Dest)) {
+      DestLive = true;
+      if (const LivenessInfo *ExistingSrc = In.LiveOrigins.lookup(Src)) {
+        if (ExistingSrc->Kind != DestInfo->Kind)
+          In = Lattice(Factory.add(std::move(In.LiveOrigins), Src, *DestInfo));
+      } else {
+        In = Lattice(Factory.add(std::move(In.LiveOrigins), Src, *DestInfo));
+      }
     }
-    if (OF.getKillDest())
-      Out = Lattice(Factory.remove(Out.LiveOrigins, Dest));
-    return Out;
-  }
-
-  Lattice transfer(Lattice In, const KillOriginFact &F) {
-    return Lattice(Factory.remove(In.LiveOrigins, F.getKilledOrigin()));
-  }
-
-  Lattice transfer(Lattice In, const ExpireFact &F) {
-    if (auto OID = F.getOriginID())
-      return Lattice(Factory.remove(In.LiveOrigins, *OID));
+    if (OF.getKillDest() && DestLive)
+      In = Lattice(Factory.remove(std::move(In.LiveOrigins), Dest));
     return In;
   }
 
-  LivenessMap getLiveOriginsAt(ProgramPoint P) const {
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    if (In.LiveOrigins.lookup(F.getKilledOrigin()))
+      return Lattice(Factory.remove(std::move(In.LiveOrigins), F.getKilledOrigin()));
+    return In;
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID()) {
+      if (In.LiveOrigins.lookup(*OID))
+        return Lattice(Factory.remove(std::move(In.LiveOrigins), *OID));
+    }
+    return In;
+  }
+
+  const LivenessMap &getLiveOriginsAt(ProgramPoint P) const {
     return getState(P).LiveOrigins;
   }
 
@@ -223,7 +246,7 @@ LiveOriginsAnalysis::LiveOriginsAnalysis(const CFG &C, AnalysisDeclContext &AC,
 
 LiveOriginsAnalysis::~LiveOriginsAnalysis() = default;
 
-LivenessMap LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
+const LivenessMap &LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
   return PImpl->getLiveOriginsAt(P);
 }
 

@@ -156,8 +156,9 @@ public:
     LoanSet Result = F.getEmptySet();
 
     for (const auto &[OID, LI] : LiveOriginsMap) {
-      LoanSet Loans = LoanPropagation.getLoans(OID, P);
-      Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
+      const LoanSet *Loans = LoanPropagation.getLoans(OID, P);
+      if (Loans && !Loans->isEmpty())
+        Result = clang::lifetimes::internal::utils::join(Result, *Loans, F);
     }
 
     if (Result.isEmpty())
@@ -183,7 +184,10 @@ public:
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    return Analysis.getLoanPropagation().getLoans(OID, PP);
+    const LoanSet *Loans = Analysis.getLoanPropagation().getLoans(OID, PP);
+    if (Loans && !Loans->isEmpty())
+      return *Loans;
+    return std::nullopt;
   }
 
   std::optional<std::vector<std::pair<OriginID, LivenessKind>>>

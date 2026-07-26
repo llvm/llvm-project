@@ -47,12 +47,12 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
   OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
   if (LPA) {
-    LoanSet DestinationLoans = LPA->getLoans(getDestOriginID(), this);
-    if (DestinationLoans.isEmpty())
+    const LoanSet *DestinationLoans = LPA->getLoans(getDestOriginID(), this);
+    if (!DestinationLoans || DestinationLoans->isEmpty())
       OS << " has no loans";
     else {
       OS << " has loans to { ";
-      for (LoanID LID : DestinationLoans) {
+      for (LoanID LID : *DestinationLoans) {
         LM.getLoan(LID)->getAccessPath().dump(OS);
         OS << " ";
       }

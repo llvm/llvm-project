@@ -83,7 +83,7 @@ public:
 
   /// Returns the set of origins that are live at a specific program point,
   /// along with the the details of the liveness.
-  LivenessMap getLiveOriginsAt(ProgramPoint P) const;
+  const LivenessMap &getLiveOriginsAt(ProgramPoint P) const;
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
