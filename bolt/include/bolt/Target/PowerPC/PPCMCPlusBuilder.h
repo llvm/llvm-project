@@ -60,6 +60,9 @@ public:
   bool isNoop(const MCInst &Inst) const override;
   void createNoop(MCInst &Nop) const override;
 
+  /// Create a return instruction (blr on PPC64).
+  void createReturn(MCInst &Inst) const override;
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const llvm::MCSymbol *&Tgt,
                      const llvm::MCSymbol *&Fallthrough, llvm::MCInst *&CondBr,
