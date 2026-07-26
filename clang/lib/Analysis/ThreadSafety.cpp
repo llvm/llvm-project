@@ -488,10 +488,11 @@ public:
   /// Return the next context after processing S.  This function is used by
   /// clients of the class to get the appropriate context when traversing the
   /// CFG.  It must be called for every assignment or DeclStmt.
-  Context getNextContext(unsigned &CtxIndex, const Stmt *S, Context C) {
-    if (SavedContexts[CtxIndex+1].first == S) {
+  const Context &getNextContext(unsigned &CtxIndex, const Stmt *S,
+                                const Context &C) {
+    if (SavedContexts[CtxIndex + 1].first == S) {
       CtxIndex++;
-      Context Result = SavedContexts[CtxIndex].second;
+      const Context &Result = SavedContexts[CtxIndex].second;
       return Result;
     }
     return C;
@@ -1257,16 +1258,26 @@ public:
   const CallExpr* getTrylockCallExpr(const Stmt *Cond, LocalVarContext C,
                                      bool &Negate);
 
+  using TerminatorTrylockCall =
+      std::tuple<const CallExpr *, const NamedDecl *,
+                 std::optional<llvm::scope_exit<std::function<void()>>>>;
+
+  TerminatorTrylockCall getTerminatorTrylockCall(const CFGBlock *Block,
+                                                 bool &Negate);
+
   void getEdgeLockset(FactSet &Result, const FactSet &ExitSet,
                       const CFGBlock* PredBlock,
                       const CFGBlock *CurrBlock);
+
+  void getTerminatorTrylockCaps(const CFGBlock *Block, CapExprSet &Caps);
 
   bool join(const FactEntry &A, const FactEntry &B, SourceLocation JoinLoc,
             LockErrorKind EntryLEK);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind EntryLEK,
-                        LockErrorKind ExitLEK);
+                        LockErrorKind ExitLEK,
+                        const CapExprSet *TrylockRebranchCaps = nullptr);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind LEK) {
@@ -1668,40 +1679,57 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
   return nullptr;
 }
 
-/// Find the lockset that holds on the edge between PredBlock
-/// and CurrBlock.  The edge set is the exit set of PredBlock (passed
-/// as the ExitSet parameter) plus any trylocks, which are conditionally held.
-void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
-                                          const FactSet &ExitSet,
-                                          const CFGBlock *PredBlock,
-                                          const CFGBlock *CurrBlock) {
-  Result = ExitSet;
+/// If the terminator of \p Block branches on the result of a call to a
+/// function annotated with try_acquire_capability (possibly negated or stored
+/// in a local variable), return that call and its callee. \p Negate is set if
+/// the branch tests the negated result of the call. In beta mode, this leaves
+/// the local variable lookup closure of SExprBuilder installed so that callers
+/// can translate the callee's attribute expressions
+ThreadSafetyAnalyzer::TerminatorTrylockCall
+ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
+                                               bool &Negate) {
+  assert(!Negate && "Must be called with Negate initialized to false");
 
-  const Stmt *Cond = PredBlock->getTerminatorCondition();
+  const Stmt *Cond = Block->getTerminatorCondition();
   // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(PredBlock->getTerminatorStmt()))
-    return;
+  if (!Cond || isa<ConditionalOperator>(Block->getTerminatorStmt()))
+    return {};
 
-  bool Negate = false;
-  const CFGBlockInfo *PredBlockInfo = &BlockInfo[PredBlock->getBlockID()];
-  const LocalVarContext &LVarCtx = PredBlockInfo->ExitContext;
+  const LocalVarContext &LVarCtx = BlockInfo[Block->getBlockID()].ExitContext;
 
+  std::optional<llvm::scope_exit<std::function<void()>>> Cleanup;
   if (Handler.issueBetaWarnings()) {
     // Temporarily set the lookup context for SExprBuilder.
     SxBuilder.setLookupLocalVarExpr(
         [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
           return LocalVarMap.lookupExpr(D, Ctx);
         });
+    Cleanup.emplace([this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
   }
-  llvm::scope_exit Cleanup(
-      [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
   if (!Exp)
-    return;
+    return {};
 
   auto *FunDecl = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
   if (!FunDecl || !FunDecl->hasAttr<TryAcquireCapabilityAttr>())
+    return {};
+
+  return {Exp, FunDecl, std::move(Cleanup)};
+}
+
+/// Find the lockset that holds on the edge between PredBlock
+/// and CurrBlock.  The edge set is the exit set of PredBlock (passed
+/// as the ExitSet parameter) plus any trylocks, which are conditionally held.
+void ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
+                                          const FactSet &ExitSet,
+                                          const CFGBlock *PredBlock,
+                                          const CFGBlock *CurrBlock) {
+  Result = ExitSet;
+
+  bool Negate = false;
+  auto [Exp, FunDecl, Cleanup] = getTerminatorTrylockCall(PredBlock, Negate);
+  if (!Exp)
     return;
 
   CapExprSet ExclusiveLocksToAdd;
@@ -1723,6 +1751,20 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
                                                           LK_Shared, Loc));
 }
 
+/// If the terminator of \p Block branches on the result of a try-lock call
+/// (possibly stored in a local variable), add the capabilities acquired by
+/// that call to \p Caps.
+void ThreadSafetyAnalyzer::getTerminatorTrylockCaps(const CFGBlock *Block,
+                                                    CapExprSet &Caps) {
+  bool Negate = false;
+  auto [Exp, FunDecl, Cleanup] = getTerminatorTrylockCall(Block, Negate);
+  if (!Exp)
+    return;
+
+  for (const auto *Attr : FunDecl->specific_attrs<TryAcquireCapabilityAttr>())
+    getMutexIDs(Caps, Attr, Exp, FunDecl);
+}
+
 namespace {
 
 /// We use this class to visit different types of expressions in
@@ -1737,22 +1779,101 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   FactSet FSet;
   // The fact set for the function on exit.
   const FactSet &FunctionExitFSet;
-  LocalVariableMap::Context LVarCtx;
-  unsigned CtxIndex;
+
+  /// A `LocalVariableMap::Context` wrapper that groups a context 'Q' with its
+  /// immediate predecessor 'P' for a program point.  If the program point is
+  /// right after a Stmt 'S', 'P' is the pre-context of 'S' and 'Q' is the
+  /// post-context of 'S'.  Otherwise, 'P' == 'Q'.
+  ///
+  /// A DualLocalVarContext sets the global context for VarDefinition lookup to
+  /// the post-context 'Q',  once CREATED or UPDATED to the next program
+  /// point.  One can temporarily switch the global context to either 'P' or 'Q'
+  /// using `switchToContextForScope`. The lifetime of the global context
+  /// switching is bound to the enclosing scope. The global context will be set
+  /// back to the prior state by the end of the scope.  This is done by the
+  /// returned ContextSwitchScope object.
+  ///
+  /// Note: The pre- and post-context of a Stmt are distinct only in Beta mode
+  /// (i.e., `Analyzer.Handler.issueBetaWarnings()`) because of the
+  /// out-parameter validation.  If not in Beta mode, the global context for
+  /// VarDefinition lookup is invisible, thus this wrapper has no impact on the
+  /// analysis.
+  class DualLocalVarContext {
+  public:
+    enum Point : char { Pre = 0, Post = 1 };
+
+    class ContextSwitchScope {
+      DualLocalVarContext &DC;
+      Point LastPoint;
+
+    public:
+      ContextSwitchScope(DualLocalVarContext &DC, Point LastPoint)
+          : DC(DC), LastPoint(LastPoint) {}
+      ContextSwitchScope(const ContextSwitchScope &) = delete;
+      ContextSwitchScope &operator=(const ContextSwitchScope &) = delete;
+      ~ContextSwitchScope() { DC.switchContextTo(LastPoint); }
+    };
+
+    /// Temporarily switch context to \p P as long as the returned object lives.
+    [[nodiscard]] ContextSwitchScope switchToContextForScope(Point P) {
+      Point PriorPoint = CurrPoint;
+      switchContextTo(P);
+      return ContextSwitchScope(*this, PriorPoint);
+    }
+
+    /// Update the pre- and post-contexts to be associated with the next Stmt \p
+    /// S. Set the global context to the post-context of \p S upon returning.
+    ///
+    /// If \p S is null, the behavior is as if the Stmt is a no-op--the
+    /// post-context will shift to be the pre-context and the new post-context
+    /// is the same as the old one, resulting in identical pre- and
+    /// post-contexts.
+    void moveToNextContext(const Stmt *S) {
+      PrePost[Pre] = PrePost[Post];
+
+      const LocalVariableMap::Context &NewPostCtx =
+          S ? Analyzer.LocalVarMap.getNextContext(CtxIndex, S, *PrePost[Post])
+            : *PrePost[Pre];
+
+      PrePost[Post] = &NewPostCtx;
+      switchContextTo(Post);
+    }
+
+    /// Constructs a DualLocalVarContext for the entry program point, where pre-
+    /// and post-contexts are both equal to the \p EntryContext.
+    DualLocalVarContext(ThreadSafetyAnalyzer &Analyzer, unsigned EntryIdx,
+                        const LocalVariableMap::Context *EntryContext)
+        : Analyzer(Analyzer), PrePost{EntryContext, EntryContext},
+          CurrPoint(Post), CtxIndex(EntryIdx) {
+      assert(EntryContext);
+      switchContextTo(Post);
+    }
+
+  private:
+    ThreadSafetyAnalyzer &Analyzer;
+    // PrePost[0] points to the pre-context and
+    // PrePost[1] points to the post-context:
+    std::array<const LocalVariableMap::Context *, 2> PrePost;
+    Point CurrPoint;
+    unsigned CtxIndex;
+
+    void switchContextTo(Point P) {
+      if (!Analyzer.Handler.issueBetaWarnings())
+        return;
+      Analyzer.SxBuilder.setLookupLocalVarExpr(
+          [Ctx = *PrePost[P],
+           Analyzer = &Analyzer](const NamedDecl *D) mutable -> const Expr * {
+            return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+          });
+      CurrPoint = P;
+    }
+  };
+
+  DualLocalVarContext LVarCtx;
 
   // To update the context used in attr-expr translation.  If `S` is non-null,
   // the context is updated to the program point right after 'S'.
-  void updateLocalVarMapCtx(const Stmt *S) {
-    if (S)
-      LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
-    if (!Analyzer->Handler.issueBetaWarnings())
-      return;
-    // The lookup closure needs to be reconstructed with the refreshed LVarCtx.
-    Analyzer->SxBuilder.setLookupLocalVarExpr(
-        [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
-          return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
-        });
-  }
+  void updateLocalVarMapCtx(const Stmt *S) { LVarCtx.moveToNextContext(S); }
 
   // helper functions
 
@@ -1777,8 +1898,8 @@ public:
   BuildLockset(ThreadSafetyAnalyzer *Anlzr, CFGBlockInfo &Info,
                const FactSet &FunctionExitFSet)
       : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
-        FunctionExitFSet(FunctionExitFSet), LVarCtx(Info.EntryContext),
-        CtxIndex(Info.EntryIndex) {
+        FunctionExitFSet(FunctionExitFSet),
+        LVarCtx(*Analyzer, Info.EntryIndex, &Info.EntryContext) {
     updateLocalVarMapCtx(nullptr);
   }
 
@@ -2083,6 +2204,18 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                               til::SExpr *Self, SourceLocation Loc) {
+  // Move to the call Stmt so that both pre- and post-context are available.
+  updateLocalVarMapCtx(Exp);
+
+  // Most function attributes are associated with the pre-context. Exceptions
+  // are AcquireCapability and AssertCapability, which ensure some locks are
+  // held after the call, and thus are associated with the post-context. They
+  // will require a temporary switch to the post-context during handling.
+  //
+  // Parameter attributes are restricted to scoped objects, and thus are NOT
+  // context-sensitive.
+  auto PreContextForThisScope =
+      LVarCtx.switchToContextForScope(DualLocalVarContext::Pre);
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
@@ -2113,6 +2246,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       // When we encounter a lock function, we need to add the lock to our
       // lockset.
       case attr::AcquireCapability: {
+        auto PostContextForThisScope =
+            LVarCtx.switchToContextForScope(DualLocalVarContext::Post);
         const auto *A = cast<AcquireCapabilityAttr>(At);
         Analyzer->getMutexIDs(A->isShared() ? SharedLocksToAdd
                                             : ExclusiveLocksToAdd,
@@ -2124,6 +2259,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       // a warning if it is already there, and will not generate a warning
       // if it is not removed.
       case attr::AssertCapability: {
+        auto PostContextForThisScope =
+            LVarCtx.switchToContextForScope(DualLocalVarContext::Post);
         const auto *A = cast<AssertCapabilityAttr>(At);
         CapExprSet AssertLocks;
         Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
@@ -2446,9 +2583,13 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   }
 
   auto *D = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
+
   if (D)
     handleCall(Exp, D);
-  updateLocalVarMapCtx(Exp);
+  else
+    // Even if we cannot handle the call, we need to update the context for the
+    // Stmt:
+    updateLocalVarMapCtx(Exp);
 }
 
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
@@ -2592,12 +2733,23 @@ bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B,
 /// \param JoinLoc The location of the join point for error reporting
 /// \param EntryLEK The warning if a mutex is missing from \p EntrySet.
 /// \param ExitLEK The warning if a mutex is missing from \p ExitSet.
-void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
-                                            const FactSet &ExitSet,
-                                            SourceLocation JoinLoc,
-                                            LockErrorKind EntryLEK,
-                                            LockErrorKind ExitLEK) {
+/// \param TrylockRebranchCaps Capabilities acquired by a try-lock whose result
+/// the joining block's terminator branches on; differences in these are not
+/// diagnosed because the paths re-diverge at the terminator (but they are
+/// still removed from the intersection, and conditionally re-added on the
+/// outgoing edges by getEdgeLockset()).
+void ThreadSafetyAnalyzer::intersectAndWarn(
+    FactSet &EntrySet, const FactSet &ExitSet, SourceLocation JoinLoc,
+    LockErrorKind EntryLEK, LockErrorKind ExitLEK,
+    const CapExprSet *TrylockRebranchCaps) {
   FactSet EntrySetOrig = EntrySet;
+
+  auto IsTrylockRebranched = [TrylockRebranchCaps](const FactEntry &FE) {
+    return TrylockRebranchCaps &&
+           llvm::any_of(*TrylockRebranchCaps, [&FE](const CapabilityExpr &CE) {
+             return !CE.shouldIgnore() && FE.matches(CE);
+           });
+  };
 
   // Find locks in ExitSet that conflict or are not in EntrySet, and warn.
   for (const auto &Fact : ExitSet) {
@@ -2607,7 +2759,8 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
     if (EntryIt != EntrySet.end()) {
       if (join(FactMan[*EntryIt], ExitFact, JoinLoc, EntryLEK))
         *EntryIt = Fact;
-    } else if (!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) {
+    } else if ((!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) &&
+               !IsTrylockRebranched(ExitFact)) {
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
                                              EntryLEK, Handler);
     }
@@ -2619,8 +2772,9 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
     const FactEntry *ExitFact = ExitSet.findLock(FactMan, *EntryFact);
 
     if (!ExitFact) {
-      if (!EntryFact->managed() || ExitLEK == LEK_LockedSomeLoopIterations ||
-          ExitLEK == LEK_NotLockedAtEndOfFunction)
+      if ((!EntryFact->managed() || ExitLEK == LEK_LockedSomeLoopIterations ||
+           ExitLEK == LEK_NotLockedAtEndOfFunction) &&
+          !IsTrylockRebranched(*EntryFact))
         EntryFact->handleRemovalFromIntersection(EntrySetOrig, FactMan, JoinLoc,
                                                  ExitLEK, Handler);
       if (ExitLEK == LEK_LockedSomePredecessors)
@@ -2832,6 +2986,10 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     // union because the real error is probably that we forgot to unlock M on
     // all code paths.
     bool LocksetInitialized = false;
+    // Capabilities acquired by a try-lock whose result this block's
+    // terminator branches on. Computed lazily on the first join.
+    CapExprSet TerminatorTrylockCaps;
+    bool TerminatorTrylockCapsComputed = false;
     for (CFGBlock::const_pred_iterator PI = CurrBlock->pred_begin(),
          PE  = CurrBlock->pred_end(); PI != PE; ++PI) {
       // if *PI -> CurrBlock is a back edge
@@ -2858,11 +3016,24 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         // Surprisingly 'continue' doesn't always produce back edges, because
         // the CFG has empty "transition" blocks where they meet with the end
         // of the regular loop body. We still want to diagnose them as loop.
-        intersectAndWarn(
-            CurrBlockInfo->EntrySet, PrevLockset, CurrBlockInfo->EntryLoc,
-            isa_and_nonnull<ContinueStmt>((*PI)->getTerminatorStmt())
-                ? LEK_LockedSomeLoopIterations
-                : LEK_LockedSomePredecessors);
+        if (isa_and_nonnull<ContinueStmt>((*PI)->getTerminatorStmt())) {
+          // Loop join: warn on locks held for only some iterations.
+          intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset,
+                           CurrBlockInfo->EntryLoc,
+                           LEK_LockedSomeLoopIterations,
+                           LEK_LockedSomeLoopIterations, nullptr);
+        } else {
+          // Branch join: a lockset difference is harmless if the terminator
+          // re-branches on the try-lock result.
+          if (!TerminatorTrylockCapsComputed) {
+            // Compute once; the result depends only on CurrBlock, not on *PI.
+            getTerminatorTrylockCaps(CurrBlock, TerminatorTrylockCaps);
+            TerminatorTrylockCapsComputed = true;
+          }
+          intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset,
+                           CurrBlockInfo->EntryLoc, LEK_LockedSomePredecessors,
+                           LEK_LockedSomePredecessors, &TerminatorTrylockCaps);
+        }
       }
     }
 

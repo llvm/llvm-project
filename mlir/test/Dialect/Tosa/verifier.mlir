@@ -120,7 +120,7 @@ func.func @test_large_constant_permutation() {
 // -----
 
 func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<f32>'}}
   %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<*xf32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -187,7 +187,7 @@ func.func @test_slice_invalid_size() {
 func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
   %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
   %1 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  // expected-error@+1 {{'tosa.slice' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  // expected-error@+1 {{'tosa.slice' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<f32>'}}
   %2 = tosa.slice %arg0, %0, %1 : (tensor<f32>, !tosa.shape<0>, !tosa.shape<0>) -> tensor<f32>
   return %2 : tensor<f32>
 }
@@ -1593,7 +1593,7 @@ func.func @cast_from_block_scaled_incompatible_input_output_shape(%arg0: tensor<
 // -----
 
 func.func @cast_from_block_scaled_not_scalar(%arg0: tensor<f4E2M1FN>, %arg1: tensor<f8E8M0FNU>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.cast_from_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f4E2M1FN>'}}
+  // expected-error@+1 {{'tosa.cast_from_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1 of micro-scaling format number values, but got 'tensor<f4E2M1FN>'}}
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<f4E2M1FN>, tensor<f8E8M0FNU>) -> tensor<f32>
   return %0 : tensor<f32>
 }
@@ -1641,7 +1641,7 @@ func.func @test_cast_to_block_scaled_incompatible_input_output_shape(%arg0: tens
 // -----
 
 func.func @test_cast_to_block_scaled_not_scalar(%arg0: tensor<f32>) -> (tensor<f4E2M1FN>, tensor<f8E8M0FNU>) {
-  // expected-error@+1 {{'tosa.cast_to_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  // expected-error@+1 {{'tosa.cast_to_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<f32>'}}
   %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<f32>) -> (tensor<f4E2M1FN>, tensor<f8E8M0FNU>)
   return %0#0, %0#1 : tensor<f4E2M1FN>, tensor<f8E8M0FNU>
 }
@@ -1761,7 +1761,7 @@ func.func @test_dim_invalid_axis(%arg0: tensor<1x2x3xi32>) -> !tosa.shape<1> {
 // -----
 
 func.func @test_dim_scalar(%arg0: tensor<i32>) -> !tosa.shape<1> {
-  // expected-error@+1 {{'tosa.dim' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<i32>'}}
+  // expected-error@+1 {{'tosa.dim' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<i32>'}}
   %0 = tosa.dim %arg0 {axis = 4 : i32} : (tensor<i32>) -> !tosa.shape<1>
   return %0 : !tosa.shape<1>
 }

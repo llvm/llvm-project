@@ -525,7 +525,7 @@ public:
   // The condition test is sunk to the top of the scope body (a false
   // result becomes a cir.break out of the loop) and, for a for loop, the step
   // is appended to the end of the scope body. The loop's cleanup region becomes
-  // the a cir.cleanup.scope enclosing the body region.
+  // the cleanup region of a cir.cleanup.scope enclosing the new body.
   //
   // For example, a while loop:
   //
