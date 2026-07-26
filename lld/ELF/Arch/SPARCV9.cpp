@@ -25,6 +25,8 @@ public:
   SPARCV9(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
+  RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
@@ -70,6 +72,23 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
+  }
+}
+
+RelType SPARCV9::getDynRel(RelType type) const {
+  if (type == R_SPARC_64)
+    return type;
+  return R_SPARC_NONE;
+}
+
+int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_SPARC_64:
+  case R_SPARC_GLOB_DAT:
+    return read64be(buf);
+  default:
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
+    return 0;
   }
 }
 
