@@ -1,50 +1,91 @@
 #include <cstdint>
-#include <cstdio>
-#include <unordered_map>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <map>
+#include <utility>
+#include <unordered_map>
 
-static std::uint64_t NextEventID = 0;
-static std::uint64_t CurrentEventID = 0;
+namespace {
 
-static std::unordered_map<std::uint64_t, std::uint64_t> LastEvent;
+uint64_t NextEventID = 0;
+uint64_t CurrentEventID = 0;
 
-extern "C" void __def_use_trace_inst(std::uint64_t InstID) {
+// Статический InstID -> последнее динамическое событие этой инструкции.
+std::unordered_map<uint64_t, uint64_t> LastEventByInstID;
+
+// Пока учитываем только полное совпадение адреса и размера:
+//
+// (Address, Size) -> EventID последнего store.
+std::map<std::pair<uint64_t, uint64_t>, uint64_t> LastStoreEvent;
+
+} // namespace
+
+extern "C" void __def_use_trace_inst(uint64_t InstID) {
   CurrentEventID = NextEventID++;
 
-  std::fprintf(
-      stderr,
-      "EVENT %llu INST %llu\n",
-      static_cast<unsigned long long>(CurrentEventID),
-      static_cast<unsigned long long>(InstID));
+  LastEventByInstID[InstID] = CurrentEventID;
 
-  LastEvent[InstID] = CurrentEventID;
+  std::cerr << "EVENT "
+            << CurrentEventID
+            << " INST "
+            << InstID
+            << '\n';
 }
 
-extern "C" void __def_use_trace_ssa_use(std::uint64_t DefID) {
-  auto It = LastEvent.find(DefID);
+extern "C" void __def_use_trace_ssa_use(uint64_t DefInstID) {
+  auto It = LastEventByInstID.find(DefInstID);
 
-  if (It == LastEvent.end()) {
-    std::fprintf(
-        stderr,
-        "MISSING DEF INST %llu\n",
-        static_cast<unsigned long long>(DefID));
+  if (It == LastEventByInstID.end()) {
     return;
   }
 
-  std::fprintf(
-      stderr,
-      "EDGE %llu -> %llu\n",
-      static_cast<unsigned long long>(It->second),
-      static_cast<unsigned long long>(CurrentEventID));
+  uint64_t DefEventID = It->second;
+
+  std::cerr << "EDGE "
+            << DefEventID
+            << " -> "
+            << CurrentEventID
+            << '\n';
 }
 
 extern "C" void __def_use_trace_store(uint64_t Address,
                                       uint64_t Size) {
-  std::cerr << "STORE 0x" << std::hex <<  Address << " " <<  std::dec << Size << '\n';
+  std::cerr << "STORE 0x"
+            << std::hex
+            << Address
+            << std::dec
+            << " "
+            << Size
+            << '\n';
+
+  std::pair<uint64_t, uint64_t> MemoryRange{Address, Size};
+
+  LastStoreEvent[MemoryRange] = CurrentEventID;
 }
 
 extern "C" void __def_use_trace_load(uint64_t Address,
                                      uint64_t Size) {
-  std::cerr << "LOAD 0x" << std::hex << Address << " " << std::dec <<  Size << '\n';
+  std::cerr << "LOAD 0x"
+            << std::hex
+            << Address
+            << std::dec
+            << " "
+            << Size
+            << '\n';
+
+  std::pair<uint64_t, uint64_t> MemoryRange{Address, Size};
+
+  auto It = LastStoreEvent.find(MemoryRange);
+
+  if (It == LastStoreEvent.end()) {
+    return;
+  }
+
+  uint64_t StoreEventID = It->second;
+
+  std::cerr << "MEM_EDGE "
+            << StoreEventID
+            << " -> "
+            << CurrentEventID
+            << '\n';
 }
