@@ -12804,9 +12804,11 @@ def warn_omp_unterminated_declare_target : Warning<
   "expected '#pragma omp end declare target' at end of file to match '#pragma omp %0'">,
   InGroup<SourceUsesOpenMP>;
 def err_ompx_bare_no_grid : Error<
-  "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
-def err_omp_multi_expr_not_allowed: Error<"only one expression allowed in '%0' clause">;
-def err_ompx_more_than_three_expr_not_allowed: Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
+  "'ompx_bare' clause requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
+def err_ompx_more_than_three_expr_not_allowed : Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
+def err_ompx_bare_no_dims : Error<
+  "'ompx_bare' clause cannot be specified with 'dims' modifier in 'num_teams' and 'thread_limit' clauses">;
+def err_omp_max_three_exprs : Error<"maximum three expressions are supported in '%0' clause">;
 def err_omp_transparent_invalid_value : Error<"invalid value for transparent clause,"
   " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
 def err_omp_transparent_invalid_type : Error<
@@ -12815,6 +12817,10 @@ def err_omp_num_teams_lower_bound_larger
     : Error<"lower bound is greater than upper bound in 'num_teams' clause">;
 def err_omp_modifier_requires_version : Error<
   "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
+def err_omp_unexpected_num_exprs
+    : Error<"unexpected number of expressions in '%0' clause (expected %1, have %2)">;
+def err_omp_incompatible_modifiers
+    : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -12841,7 +12847,6 @@ def note_related_result_type_explicit : Note<
   "%select{| and is expected to return an instance of its class type}0">;
 def err_invalid_type_for_program_scope_var : Error<
   "the %0 type cannot be used to declare a program scope variable">;
-
 }
 
 let CategoryName = "Modules Issue" in {
@@ -13791,6 +13796,9 @@ def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %sele
 def err_hlsl_atomic_arg_addr_space : Error<
   "%ordinal0 argument to atomic builtin must reference groupshared or device "
   "memory (was %1)">;
+
+def err_hlsl_builtin_requires_sm : Error<
+  "%0 requires shader model %1 or newer">;
 
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;

@@ -1147,24 +1147,6 @@ fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
       [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
 }
 
-llvm::SmallVector<mlir::Value>
-fir::factory::getNonDeferredLenParams(const fir::ExtendedValue &exv) {
-  return exv.match(
-      [&](const fir::CharArrayBoxValue &character)
-          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
-      [&](const fir::CharBoxValue &character)
-          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
-      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
-        return {box.nonDeferredLenParams().begin(),
-                box.nonDeferredLenParams().end()};
-      },
-      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
-        return {box.getExplicitParameters().begin(),
-                box.getExplicitParameters().end()};
-      },
-      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
-}
-
 // If valTy is a box type, then we need to extract the type parameters from
 // the box value.
 static llvm::SmallVector<mlir::Value> getFromBox(mlir::Location loc,
@@ -1623,64 +1605,6 @@ fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
   return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
 }
 
-mlir::Value fir::factory::genLenOfCharacter(
-    fir::FirOpBuilder &builder, mlir::Location loc, fir::ArrayLoadOp arrLoad,
-    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
-  llvm::SmallVector<mlir::Value> typeParams(arrLoad.getTypeparams());
-  return genLenOfCharacter(builder, loc,
-                           mlir::cast<fir::SequenceType>(arrLoad.getType()),
-                           arrLoad.getMemref(), typeParams, path, substring);
-}
-
-mlir::Value fir::factory::genLenOfCharacter(
-    fir::FirOpBuilder &builder, mlir::Location loc, fir::SequenceType seqTy,
-    mlir::Value memref, llvm::ArrayRef<mlir::Value> typeParams,
-    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
-  auto idxTy = builder.getIndexType();
-  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
-  auto saturatedDiff = [&](mlir::Value lower, mlir::Value upper) {
-    auto diff = mlir::arith::SubIOp::create(builder, loc, upper, lower);
-    auto one = builder.createIntegerConstant(loc, idxTy, 1);
-    auto size = mlir::arith::AddIOp::create(builder, loc, diff, one);
-    auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::sgt, size, zero);
-    return mlir::arith::SelectOp::create(builder, loc, cmp, size, zero);
-  };
-  if (substring.size() == 2) {
-    auto upper = builder.createConvert(loc, idxTy, substring.back());
-    auto lower = builder.createConvert(loc, idxTy, substring.front());
-    return saturatedDiff(lower, upper);
-  }
-  auto lower = zero;
-  if (substring.size() == 1)
-    lower = builder.createConvert(loc, idxTy, substring.front());
-  auto eleTy = fir::applyPathToType(seqTy, path);
-  if (!fir::hasDynamicSize(eleTy)) {
-    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
-      // Use LEN from the type.
-      return builder.createIntegerConstant(loc, idxTy, charTy.getLen());
-    }
-    // Do we need to support !fir.array<!fir.char<k,n>>?
-    fir::emitFatalError(loc,
-                        "application of path did not result in a !fir.char");
-  }
-  if (fir::isa_box_type(memref.getType())) {
-    if (mlir::isa<fir::BoxCharType>(memref.getType()))
-      return fir::BoxCharLenOp::create(builder, loc, idxTy, memref);
-    if (mlir::isa<fir::BoxType>(memref.getType()))
-      return CharacterExprHelper(builder, loc).readLengthFromBox(memref);
-    fir::emitFatalError(loc, "memref has wrong type");
-  }
-  if (typeParams.empty()) {
-    fir::emitFatalError(loc, "array_load must have typeparams");
-  }
-  if (fir::isa_char(seqTy.getEleTy())) {
-    assert(typeParams.size() == 1 && "too many typeparams");
-    return typeParams.front();
-  }
-  TODO(loc, "LEN of character must be computed at runtime");
-}
-
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
                                           mlir::Location loc, mlir::Type type) {
   mlir::Type i1 = builder.getIntegerType(1);
@@ -1718,34 +1642,6 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
   }
   fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
-}
-
-std::optional<std::int64_t>
-fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
-                                   mlir::Value stride) {
-  std::function<std::optional<std::int64_t>(mlir::Value)> getConstantValue =
-      [&](mlir::Value value) -> std::optional<std::int64_t> {
-    if (auto valInt = fir::getIntIfConstant(value))
-      return *valInt;
-    auto *definingOp = value.getDefiningOp();
-    if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
-      auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);
-      return getConstantValue(valOp.getValue());
-    }
-    return {};
-  };
-  if (auto lbInt = getConstantValue(lb)) {
-    if (auto ubInt = getConstantValue(ub)) {
-      if (auto strideInt = getConstantValue(stride)) {
-        if (*strideInt != 0) {
-          std::int64_t extent = 1 + (*ubInt - *lbInt) / *strideInt;
-          if (extent > 0)
-            return extent;
-        }
-      }
-    }
-  }
-  return {};
 }
 
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
