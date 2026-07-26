@@ -823,8 +823,8 @@ struct owner_less<void>
     typedef void is_transparent;
 };
 
-// class owner_hash:                                                          // C++26
-struct owner_hash {
+// struct owner_hash
+struct owner_hash {                                                            // C++26
   template<class T>
     size_t operator()(const shared_ptr<T>&) const noexcept;
 
@@ -834,8 +834,8 @@ struct owner_hash {
   using is_transparent = unspecified;
 };
 
-// class owner_equal:                                                         // C++26
-struct owner_equal {
+// struct owner_equal
+struct owner_equal {                                                           // C++26
   template<class T, class U>
     bool operator()(const shared_ptr<T>&, const shared_ptr<U>&) const noexcept;
   template<class T, class U>

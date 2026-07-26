@@ -17,7 +17,7 @@
 //     template<class T>
 //         size_t operator()(weak_ptr<T> const&) const noexcept;
 //
-//     typedef unspecified is_transparent;
+//     using is_transparent = unspecified;
 // };
 
 #include <cassert>
@@ -44,7 +44,8 @@ int main(int, char**) {
   assert(hash_p1 == oh(p2));
   assert(hash_p1 == hash_w1);
 
-  static_assert(std::same_as<std::owner_hash::is_transparent, void>);
+  using member_is_transparent [[maybe_unused]] = std::owner_hash::is_transparent;
+  LIBCPP_STATIC_ASSERT(std::same_as<member_is_transparent, void>);
 
   return 0;
 }

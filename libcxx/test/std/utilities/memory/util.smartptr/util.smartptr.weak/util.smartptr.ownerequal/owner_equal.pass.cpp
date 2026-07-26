@@ -56,7 +56,8 @@ int main(int, char**) {
   assert(!oe(w1, p3));
   assert(!oe(w1, w3));
 
-  static_assert(std::same_as<std::owner_equal::is_transparent, void>);
+  using member_is_transparent [[maybe_unused]] = std::owner_equal::is_transparent;
+  LIBCPP_STATIC_ASSERT(std::same_as<member_is_transparent, void>);
 
   {
     std::unordered_set<std::weak_ptr<int>, std::owner_hash, std::owner_equal> s;
