@@ -1,4 +1,13 @@
-// RUN: %clang_analyze_cc1 -verify %s \
+// The u"" and U"" string literals below need C11 or later. Pin the standard
+// because targets such as PS4 default to gnu99.
+// RUN: %clang_analyze_cc1 -std=c17 -verify %s \
+// RUN:   -analyzer-checker=core,unix \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false
+//
+// Also check a target whose default C standard is gnu99, so that dropping the
+// -std= above is caught everywhere instead of only on the SIE buildbots.
+// RUN: %clang_analyze_cc1 -triple x86_64-scei-ps4 -std=c17 -verify %s \
 // RUN:   -analyzer-checker=core,unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
