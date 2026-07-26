@@ -33,7 +33,8 @@ struct DefUseInstrumentationPass
     SmallVector<Instruction *> Instructions;            // Чтоб модуль заново не обходить, а по вектору пробежаться
 
     FunctionType* HookType = FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt64Ty(Ctx)}, false);
-    FunctionCallee Hook =  M.getOrInsertFunction("__def_use_trace_enter", HookType);
+    FunctionCallee Hook_inst =  M.getOrInsertFunction("__def_use_trace_inst", HookType);
+    FunctionCallee Hook_use =  M.getOrInsertFunction("__def_use_trace_ssa_use", HookType);
 
 
     // первый обход заполняет мапу инструкция - ID
@@ -51,10 +52,12 @@ struct DefUseInstrumentationPass
         }
       }
     }
-    // второй обход создает зависимости, на основе мапы, использует ли функция результат уже другой функции
+    // второй обход создает зависимости, на основе мапы, использует ли функция результат уже другой инструкции
 
     for (Instruction *I : Instructions) {
       uint64_t UseID = InstIDs.lookup(I);
+      Builder.SetInsertPoint(I);
+      Builder.CreateCall(Hook_inst, Builder.getInt64(UseID));
 
       for (Use &Operand : I->operands()) {
         Value *V = Operand.get();
@@ -69,20 +72,14 @@ struct DefUseInstrumentationPass
           continue;
 
         uint64_t DefID = InstIDs.lookup(Def);
-        
+
+        Builder.CreateCall(Hook_use, Builder.getInt64(DefID));
+
         errs()  <<    "DEF " << DefID <<
                       "-> USE " << UseID << "\n";
       }
     }
 
-    // третий обход чтоб вставить колбеки
-    for (Instruction *I : Instructions) {
-      uint64_t ID = InstIDs.lookup(I);
-
-      Builder.SetInsertPoint(I);
-      Builder.CreateCall(Hook, Builder.getInt64(ID));
-    }
-        
     return PreservedAnalyses::none();
     }
   };
