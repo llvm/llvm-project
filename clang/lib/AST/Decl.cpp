@@ -5414,7 +5414,7 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
 }
 
 const FieldDecl *RecordDecl::findFlexibleArrayMember() const {
-  if (!hasFlexibleArrayMember())
+  if (!hasFlexibleArrayMember() || isUnion())
     return nullptr;
 
   const FieldDecl *Last = nullptr;

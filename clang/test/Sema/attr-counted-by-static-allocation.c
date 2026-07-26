@@ -61,6 +61,19 @@ struct union_holder {
 };
 struct union_holder union_global;
 
+// A union has no tail field, so neither member order is diagnosed.
+union union_flex_last {
+  long long y;
+  struct flex inner;
+};
+union union_flex_last union_last_global;
+
+union union_flex_first {
+  struct flex inner;
+  long long y;
+};
+union union_flex_first union_first_global;
+
 // FAM reached through a C11 anonymous struct: diagnosed.
 struct anon_holder {
   int count;
