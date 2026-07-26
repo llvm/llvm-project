@@ -397,6 +397,13 @@ std::optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
 std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
     const SourceManager &SM, const DeclarationNameInfo &Unresolved,
     CXXScopeSpec *SS, const LangOptions &LangOpts, bool UnresolvedIsSpecifier) {
+  // A conversion function name contains a type rather than an unqualified
+  // symbol name. The type may itself be qualified, and cannot be represented
+  // by Name + Scopes.
+  if (Unresolved.getName().getNameKind() ==
+      DeclarationName::CXXConversionFunctionName)
+    return std::nullopt;
+
   CheapUnresolvedName Result;
   Result.Name = Unresolved.getAsString();
   if (SS && SS->isNotEmpty()) { // "::" or "ns::"
