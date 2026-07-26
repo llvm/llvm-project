@@ -17229,18 +17229,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           for (unsigned I = 0; I < Sz; ++I) {
             if (UsedScalars.test(I))
               continue;
-            if (auto *Inst = dyn_cast<Instruction>(UniqueValues[I])) {
-              if (auto It = ExternalUsesAsExtractCost.find(Inst);
-                  It != ExternalUsesAsExtractCost.end()) {
-                ScalarCost += It->second;
-                continue;
-              }
-              if (auto It = ExternalUsesAsRematCost.find(Inst);
-                  It != ExternalUsesAsRematCost.end()) {
-                ScalarCost += It->second;
-                continue;
-              }
-            }
             ScalarCost += ScalarEltCost(I);
           }
         }
@@ -17283,7 +17271,29 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         VecCost += SpillsReloads;
         LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost - CommonCost,
                                  ScalarCost, "Calculated costs for Tree"));
-        return VecCost - ScalarCost;
+
+        InstructionCost RematAdjustment = 0;
+        for (auto *UV : UniqueValues) {
+          if (auto *Inst = dyn_cast<Instruction>(UV)) {
+            if (auto It = ExternalUsesAsExtractCost.find(Inst);
+                It != ExternalUsesAsExtractCost.end()) {
+              RematAdjustment += It->second;
+              continue;
+            }
+            if (auto It = ExternalUsesAsRematCost.find(Inst);
+                It != ExternalUsesAsRematCost.end()) {
+              RematAdjustment += It->second;
+              continue;
+            }
+          }
+        }
+        if (RematAdjustment != 0)
+          LLVM_DEBUG({
+            dbgs() << "SLP: Adjusting cost by " << RematAdjustment
+                   << " to account for rematerialization\n.";
+          });
+
+        return VecCost - ScalarCost + RematAdjustment;
       };
   // Calculate cost difference from vectorizing set of GEPs.
   // Negative value means vectorizing is profitable.
@@ -20325,10 +20335,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         if (KeepScalar) {
           ExternalUsesAsOriginalScalar.insert(EU.Scalar);
           if (isDeferredExtractable(EU.Scalar)) {
+            InstructionCost RematDelta = ExtraCost - ScalarCost;
             auto [ItCost, Inserted] =
-                ExternalUsesAsRematCostTmp.try_emplace(EU.Scalar, ScalarCost);
+                ExternalUsesAsRematCostTmp.try_emplace(EU.Scalar, RematDelta);
             if (!Inserted)
-              ItCost->second = std::min(ItCost->second, ScalarCost);
+              ItCost->second = std::min(ItCost->second, RematDelta);
           }
 
           for (Value *V : Inst->operands()) {
@@ -20364,10 +20375,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           }
         } else if (isDeferredExtractable(EU.Scalar)) {
           ExternalUsesAsExtract.insert(EU.Scalar);
+          InstructionCost ExtractDelta = ScalarCost - ExtraCost;
           auto [ItCost, Inserted] =
-              ExternalUsesAsExtractCostTmp.try_emplace(Inst, ExtraCost);
+              ExternalUsesAsExtractCostTmp.try_emplace(Inst, ExtractDelta);
           if (!Inserted)
-            ItCost->second = std::min(ItCost->second, ExtraCost);
+            ItCost->second = std::min(ItCost->second, ExtractDelta);
         }
       }
     }
