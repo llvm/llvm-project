@@ -491,8 +491,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
 
-      if (getEffectiveUndefValueBehavior() ==
-          UndefValueBehavior::NonDeterministic) {
+      if (!IsByteType && getEffectiveUndefValueBehavior() ==
+                             UndefValueBehavior::NonDeterministic) {
         // We don't use std::uniform_int_distribution here because it produces
         // different results across different library implementations. Instead,
         // we directly use the low bits from Rng.
@@ -501,8 +501,10 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     }
 
     if (IsByteType) {
-      LogicalByte.writeBits(~LogicalByte.ConcreteMask & LogicalByte.Value,
-                            RandomBits);
+      // FIXME: Currently we treat undef bits as poison bits in the byte value,
+      // because keeping undef bits reintroduces undef SSA values.
+      // It should be fixed by completely remove undef bits from the memory.
+      LogicalByte.poisonBits(~LogicalByte.ConcreteMask);
       LogicalBytes[I / 8] = LogicalByte;
       continue;
     }
@@ -587,14 +589,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     for (Byte &V : Res.mutableBytes()) {
       if (V.ConcreteMask != 255)
         HasUndefinedBits = true;
-      uint8_t UndefBits = ~V.ConcreteMask & V.Value;
-      if (UndefBits == 0)
-        continue;
-      uint8_t RandomBits = 0;
-      if (getEffectiveUndefValueBehavior() ==
-          UndefValueBehavior::NonDeterministic)
-        RandomBits = static_cast<uint8_t>(Rng());
-      V.writeBits(UndefBits, RandomBits);
+      V.poisonBits(~V.ConcreteMask);
     }
     if (ContainsUndefinedBits)
       *ContainsUndefinedBits = HasUndefinedBits;

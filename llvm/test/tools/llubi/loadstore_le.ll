@@ -281,7 +281,7 @@ define void @main() {
 ; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %gep_second_byte, align 1
 ; CHECK-NEXT:   %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2 => ptr 0xCE [alloc_byte + 2]
 ; CHECK-NEXT:   store b8 poison, ptr %gep_third_byte, align 1
-; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 11000000(00101100) 0x!! 0x2F 
+; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 11000000(00101100) 0x!! 0x!! 
 ; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
 ; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 0xEF 0xBE 0xAD 0xDE 
 ; CHECK-NEXT:   %bytes_non_pow2 = load b28, ptr %alloc_byte, align 4 => b28 0x!! 0x!! 0x!! !!!! 
@@ -297,6 +297,6 @@ define void @main() {
 ; CHECK-NEXT:   store ptr %alloc_ptr_array, ptr %ptr_array_2, align 8
 ; CHECK-NEXT:   %ptr_array_2_middle = getelementptr i8, ptr %alloc_ptr_array, i64 20 => ptr 0xEC [alloc_ptr_array + 20]
 ; CHECK-NEXT:   store i8 0, ptr %ptr_array_2_middle, align 1
-; CHECK-NEXT:   %mixed_alloc = load b256, ptr %alloc_ptr_array, align 8 => b256 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 ptr 0xD8 [alloc_ptr_array] 11011000(00011010) 00000000(00010110) 00000000(10100110) 00000000(01111111) 0x00 00000000(10101000) 00000000(11101101) 00000000(10001101) 0x2A 0xDF 0x69 0xB8 0x97 0x8B 0xB3 0x07 
+; CHECK-NEXT:   %mixed_alloc = load b256, ptr %alloc_ptr_array, align 8 => b256 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 ptr 0xD8 [alloc_ptr_array] 11011000(00101111) 00000000(10110101) 00000000(11111000) 00000000(10010110) 0x00 00000000(01100011) 00000000(00011010) 00000000(00000101) 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
