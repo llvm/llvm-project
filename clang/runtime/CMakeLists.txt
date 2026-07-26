@@ -2,6 +2,8 @@
 
 include(ExternalProject)
 
+add_subdirectory(def-use)
+
 set(known_subdirs
   "libcxx"
   )
