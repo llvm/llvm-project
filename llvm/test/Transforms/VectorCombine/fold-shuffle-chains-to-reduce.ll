@@ -435,3 +435,110 @@ define i32 @test_reduce_reconvergent_intermediate_v4i32(<4 x i32> %a) {
   %e = extractelement <2 x i32> %c, i64 0
   ret i32 %e
 }
+
+; Equivalent bitcast sources with disjoint demanded lanes can be merged into
+; one complete reduction.
+define i32 @test_reduce_equivalent_bitcast_sources(<2 x i64> %a) {
+; CHECK-LABEL: define i32 @test_reduce_equivalent_bitcast_sources(
+; CHECK-SAME: <2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BC0]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %bc0 = bitcast <2 x i64> %a to <4 x i32>
+  %hi = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+
+  %bc1 = bitcast <2 x i64> %a to <4 x i32>
+  %sum0 = add <4 x i32> %hi, %bc1
+
+  %sh = shufflevector <4 x i32> %sum0, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %sum1 = add <4 x i32> %sum0, %sh
+  %r = extractelement <4 x i32> %sum1, i64 0
+  ret i32 %r
+}
+
+; Equivalent sources demand lane 0 through two different paths. Add is not
+; idempotent, so merging the lane sets would lose one contribution.
+define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(
+    <2 x i64> %a) {
+; CHECK-LABEL: define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(
+; CHECK-NOT: @llvm.vector.reduce.add
+; CHECK: ret i32
+;
+  %bc0 = bitcast <2 x i64> %a to <4 x i32>
+  %lhs = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+
+  %bc1 = bitcast <2 x i64> %a to <4 x i32>
+  %rhs = shufflevector <4 x i32> %bc1, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+
+  %sum0 = add <4 x i32> %lhs, %rhs
+  %sh = shufflevector <4 x i32> %sum0, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %sum1 = add <4 x i32> %sum0, %sh
+  %r = extractelement <4 x i32> %sum1, i64 0
+  ret i32 %r
+}
+
+; The second equivalent source has an internally duplicated demanded lane.
+; Its lane set does not overlap the first source, so this specifically checks
+; the per-source Duplicates field rather than cross-source overlap.
+define i32 @test_no_reduce_later_equivalent_source_has_duplicates(
+    <2 x i64> %a) {
+; CHECK-LABEL: define i32 @test_no_reduce_later_equivalent_source_has_duplicates(
+; CHECK-NOT: @llvm.vector.reduce.add
+; CHECK: ret i32
+;
+  %bc0 = bitcast <2 x i64> %a to <4 x i32>
+  %lhs = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+
+  %bc1 = bitcast <2 x i64> %a to <4 x i32>
+  %rhs = shufflevector <4 x i32> %bc1, <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 poison, i32 poison>
+
+  %sum0 = add <4 x i32> %lhs, %rhs
+  %sh = shufflevector <4 x i32> %sum0, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %sum1 = add <4 x i32> %sum0, %sh
+  %r = extractelement <4 x i32> %sum1, i64 0
+  ret i32 %r
+}
+
+; Bitcasts with the same result type but different underlying values are
+; different logical sources and cannot be merged.
+define i32 @test_no_reduce_different_bitcast_sources(
+    <2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: define i32 @test_no_reduce_different_bitcast_sources(
+; CHECK-NOT: @llvm.vector.reduce.add
+; CHECK: ret i32
+;
+  %bc0 = bitcast <2 x i64> %a to <4 x i32>
+  %hi = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+
+  %bc1 = bitcast <2 x i64> %b to <4 x i32>
+  %sum0 = add <4 x i32> %hi, %bc1
+
+  %sh = shufflevector <4 x i32> %sum0, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %sum1 = add <4 x i32> %sum0, %sh
+  %r = extractelement <4 x i32> %sum1, i64 0
+  ret i32 %r
+}
+
+; Overlapping lanes are safe for an idempotent operation.
+define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(
+    <2 x i64> %a) {
+; CHECK-LABEL: define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(
+; CHECK-SAME: <2 x i64> [[A:%.*]]) {
+; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
+; CHECK-NEXT:    [[PARTIAL:%.*]] = shufflevector <4 x i32> [[BC0]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[PARTIAL]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %bc0 = bitcast <2 x i64> %a to <4 x i32>
+  %lhs = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+
+  %bc1 = bitcast <2 x i64> %a to <4 x i32>
+  %rhs = shufflevector <4 x i32> %bc1, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+
+  %or0 = or <4 x i32> %lhs, %rhs
+  %sh = shufflevector <4 x i32> %or0, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %or1 = or <4 x i32> %or0, %sh
+  %r = extractelement <4 x i32> %or1, i64 0
+  ret i32 %r
+}

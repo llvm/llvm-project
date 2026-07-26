@@ -4263,15 +4263,33 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     APInt Elts;
   };
   std::optional<ReductionCut> Cut;
+  auto AreEquivalentBitcastSources = [](Value *V1, Value *V2) {
+    auto *C1 = dyn_cast<BitCastInst>(V1);
+    auto *C2 = dyn_cast<BitCastInst>(V2);
+    return C1 && C2 && C1->getType() == C2->getType() &&
+           C1->getOperand(0) == C2->getOperand(0);
+  };
   for (Value *S : Sources) {
     auto It = Demands.find(S);
     if (It == Demands.end() || It->second.Lanes.isZero())
       continue;
-    if (Cut || (!IsIdempotent && !It->second.Duplicates.isZero())) {
+    if (!IsIdempotent && !It->second.Duplicates.isZero()) {
       Cut.reset();
       break;
     }
-    Cut = ReductionCut{S, It->second.Lanes};
+    if (!Cut) {
+      Cut = ReductionCut{S, It->second.Lanes};
+      continue;
+    }
+    if (!AreEquivalentBitcastSources(Cut->Src, S)) {
+      Cut.reset();
+      break;
+    }
+    if (!IsIdempotent && !(Cut->Elts & It->second.Lanes).isZero()) {
+      Cut.reset();
+      break;
+    }
+    Cut->Elts |= It->second.Lanes;
   }
   if (!Cut) {
     for (Value *V : Nodes) {
