@@ -142,6 +142,12 @@ def bp_startup_sort: Joined<["--"], "bp-startup-sort=">,
     MetaVarName<"[none,function]">,
     HelpText<"Order sections based on profile data to improve startup time">,
     Group<grp_lld>;
+def bp_startup_sort_initializers: Flag<["--"], "bp-startup-sort-initializers">,
+    HelpText<"Include Mach-O initializer functions in balanced-partitioning startup sorting">,
+    Group<grp_lld>;
+def no_bp_startup_sort_initializers: Flag<["--"], "no-bp-startup-sort-initializers">,
+    HelpText<"Do not include Mach-O initializer functions in balanced-partitioning startup sorting">,
+    Group<grp_lld>;
 def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-startup-functions">,
     HelpText<"Order startup functions to improve compressed size in addition to startup time">,
     Group<grp_lld>;

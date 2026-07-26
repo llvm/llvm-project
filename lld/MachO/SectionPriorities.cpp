@@ -381,7 +381,7 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
         config->bpCompressionSortSpecs, config->bpFunctionOrderForCompression,
         config->bpDataOrderForCompression,
         config->bpCompressionSortStartupFunctions,
-        config->bpVerboseSectionOrderer);
+        config->bpStartupSortInitializers, config->bpVerboseSectionOrderer);
   } else if (config->callGraphProfileSort) {
     // Sort sections by the profile data provided by __LLVM,__cg_profile
     // sections.

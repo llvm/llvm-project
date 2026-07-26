@@ -12,10 +12,12 @@
 #include "Relocations.h"
 #include "Symbols.h"
 #include "Target.h"
+#include "SyntheticSections.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StableHashing.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 
@@ -118,7 +120,7 @@ private:
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     StringRef profilePath, ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
     bool forFunctionCompression, bool forDataCompression,
-    bool compressionSortStartupFunctions, bool verbose) {
+    bool compressionSortStartupFunctions, bool sortInitializers, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
   DenseMap<const InputSection *, unsigned> sectionToIdx;
@@ -182,10 +184,34 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
+  SetVector<unsigned> initialStartupSectionIdxs;
+  if (sortInitializers) {
+    const auto &initOffsetInputs = in.initOffsets->inputs();
+    SmallVector<ConcatInputSection *> initializerSections(
+        initOffsetInputs.begin(), initOffsetInputs.end());
+    for (InputSection *isec : inputSections)
+      if (sectionType(isec->getFlags()) ==
+          llvm::MachO::S_MOD_INIT_FUNC_POINTERS)
+        initializerSections.push_back(cast<ConcatInputSection>(isec));
+    for (const ConcatInputSection *isec : initializerSections) {
+      for (const Relocation &reloc : isec->relocs) {
+        InputSection *referent = reloc.getReferentInputSection();
+        if (!referent)
+          continue;
+        auto it = sectionToIdx.find(referent->canonical());
+        if (it != sectionToIdx.end())
+          initialStartupSectionIdxs.insert(it->second);
+      }
+    }
+    if (verbose)
+      dbgs() << "Initializer functions for startup: "
+             << initialStartupSectionIdxs.size() << "\n";
+  }
+
   auto result = BPOrdererMachO().computeOrder(
       profilePath, compressionSortSpecs, forFunctionCompression,
       forDataCompression, compressionSortStartupFunctions, verbose, sections,
-      rootSymbolToSectionIdxs);
+      rootSymbolToSectionIdxs, initialStartupSectionIdxs.getArrayRef());
   // BP already orders cold sections after non-cold via separate buckets.
   // Unset isCold on sections that received a BP priority so Writer.cpp's
   // stable_partition doesn't re-partition them. Sections without a BP priority

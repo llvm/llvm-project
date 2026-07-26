@@ -2102,6 +2102,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->bpCompressionSortStartupFunctions =
       args.hasFlag(OPT_bp_compression_sort_startup_functions,
                    OPT_no_bp_compression_sort_startup_functions, false);
+  config->bpStartupSortInitializers =
+      args.hasFlag(OPT_bp_startup_sort_initializers,
+                   OPT_no_bp_startup_sort_initializers, false);
   if (const Arg *arg = args.getLastArg(OPT_bp_startup_sort)) {
     StringRef startupSortStr = arg->getValue();
     if (startupSortStr == "function") {
@@ -2115,6 +2118,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (!config->bpStartupFunctionSort &&
       config->bpCompressionSortStartupFunctions)
     error("--bp-compression-sort-startup-functions must be used with "
+          "--bp-startup-sort=function");
+  if (!config->bpStartupFunctionSort && config->bpStartupSortInitializers)
+    error("--bp-startup-sort-initializers must be used with "
           "--bp-startup-sort=function");
   if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
     error("--bp-startup-sort=function must be used with "

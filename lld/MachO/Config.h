@@ -233,6 +233,7 @@ struct Configuration {
 
   llvm::StringRef irpgoProfilePath;
   bool bpStartupFunctionSort = false;
+  bool bpStartupSortInitializers = false;
   bool bpCompressionSortStartupFunctions = false;
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
