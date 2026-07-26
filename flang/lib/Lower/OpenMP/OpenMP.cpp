@@ -6022,7 +6022,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
     } else if (const auto *defaultVariantClause =
                    std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)) {
       const auto &dirSpec = defaultVariantClause->v.v;
-        fallback = getFallbackVariant(dirSpec.value());
+      fallback = getFallbackVariant(dirSpec.value());
     }
   }
 
