@@ -103,11 +103,11 @@ struct DefUseInstrumentationPass
         Value *Address =
             Builder.CreatePtrToInt(PointerOperand, Type::getInt64Ty(Ctx));
 
-        errs() << "LOAD address value: " << *Address << '\n';
+        // errs() << "LOAD address value: " << *Address << '\n';
 
         TypeSize LoadSize = DL.getTypeStoreSize(LI->getType());
 
-        errs() << "Load size: " << LoadSize.getFixedValue() << '\n';
+        // errs() << "Load size: " << LoadSize.getFixedValue() << '\n';
 
         uint64_t Size = LoadSize.getFixedValue();
 
@@ -119,12 +119,12 @@ struct DefUseInstrumentationPass
         Value *Address =
             Builder.CreatePtrToInt(PointerOperand, Type::getInt64Ty(Ctx));
 
-        errs() << "Store address value: " << *Address << '\n';
+        // errs() << "Store address value: " << *Address << '\n';
 
         Type *StoredType = SI->getValueOperand()->getType();
         TypeSize StoreSize = DL.getTypeStoreSize(StoredType);
 
-        errs() << "Store size: " << StoreSize.getFixedValue() << '\n';
+        // errs() << "Store size: " << StoreSize.getFixedValue() << '\n';
 
 
         uint64_t Size = StoreSize.getFixedValue();
@@ -150,8 +150,8 @@ struct DefUseInstrumentationPass
 
         Builder.CreateCall(Hook_use,  {ModuleToken, Builder.getInt64(DefID)});
 
-        errs()  <<    "DEF " << DefID <<
-                      "-> USE " << UseID << "\n";
+        // errs()  <<    "DEF " << DefID <<
+        //              "-> USE " << UseID << "\n";
       }
     }
 
