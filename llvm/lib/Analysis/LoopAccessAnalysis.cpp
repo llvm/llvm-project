@@ -227,8 +227,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
+  // If the deref size is only known when the pointer is non-null, ignore it
+  // here and fall back to a dereferenceable assumption below.
   if (DerefBytes && CheckForNonNull)
-    return false;
+    DerefBytes = 0;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
