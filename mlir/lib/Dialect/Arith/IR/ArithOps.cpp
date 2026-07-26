@@ -552,6 +552,11 @@ arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
 
   // subui_extended(x, x) -> 0, false
   if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getDiff().getType());
+    if (shapedType && !shapedType.hasStaticShape())
+      return failure();
     Builder builder(getContext());
     auto zeroDiff = builder.getZeroAttr(getDiff().getType());
     auto falseValue = builder.getZeroAttr(borrowTy);
@@ -1244,8 +1249,13 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
   /// xor(x, x) -> 0
-  if (getLhs() == getRhs())
-    return Builder(getContext()).getZeroAttr(getType());
+  if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getType());
+    if (!shapedType || shapedType.hasStaticShape())
+      return Builder(getContext()).getZeroAttr(getType());
+  }
   /// xor(xor(x, a), a) -> x
   /// xor(xor(a, x), a) -> x
   if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>()) {
