@@ -18,15 +18,27 @@
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_getschedparam.h"
 #include "src/pthread/pthread_join.h"
+#include "src/pthread/pthread_mutex_destroy.h"
+#include "src/pthread/pthread_mutex_init.h"
+#include "src/pthread/pthread_mutex_lock.h"
+#include "src/pthread/pthread_mutex_unlock.h"
 #include "src/pthread/pthread_self.h"
 #include "src/pthread/pthread_setschedparam.h"
 #include "test/IntegrationTest/test.h"
 
-static void *child_func(void *) { return nullptr; }
+#include <pthread.h>
+
+static pthread_mutex_t mutex;
+
+static void *child_func(void *) {
+  LIBC_NAMESPACE::pthread_mutex_lock(&mutex);
+  LIBC_NAMESPACE::pthread_mutex_unlock(&mutex);
+  return nullptr;
+}
 
 TEST_MAIN() {
   auto main_thread = LIBC_NAMESPACE::pthread_self();
-  struct sched_param param;
+  sched_param param;
   int policy;
 
   // 1. Test getschedparam on self
@@ -41,7 +53,7 @@ TEST_MAIN() {
 
   // Verify it was set
   int new_policy;
-  struct sched_param new_param;
+  sched_param new_param;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_getschedparam(main_thread, &new_policy,
                                                   &new_param),
             0);
@@ -60,6 +72,11 @@ TEST_MAIN() {
   param.sched_priority = 0; // Reset
 
   // 5. Test on Child Thread
+  // Initialize and lock mutex to prevent child thread from exiting before main
+  // thread runs tests
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&mutex, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_lock(&mutex), 0);
+
   pthread_t th;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr, child_func, nullptr),
             0);
@@ -85,8 +102,13 @@ TEST_MAIN() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_setschedparam(th, SCHED_OTHER, &param),
             EINVAL);
 
+  // Release mutex so child thread can complete execution
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex), 0);
+
   void *retval;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, &retval), 0);
+
+  LIBC_NAMESPACE::pthread_mutex_destroy(&mutex);
 
   return 0;
 }
