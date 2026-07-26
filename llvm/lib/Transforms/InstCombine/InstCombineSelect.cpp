@@ -5313,17 +5313,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                 TrueVal->getType(), MaskedLoadPtr,
                 OldLoad->getParamAlign(0).valueOrOne(),
                 CondVal, FalseVal);
-    In->copyMetadata(*OldLoad);
-    static const unsigned IDs[] = {LLVMContext::MD_range,
-                                   LLVMContext::MD_nonnull,
-                                   LLVMContext::MD_dereferenceable,
-                                   LLVMContext::MD_dereferenceable_or_null,
-                                   LLVMContext::MD_align,
-                                   LLVMContext::MD_noundef,
-                                   LLVMContext::MD_nofree,
-                                   LLVMContext::MD_nofpclass};
-    for (unsigned ID : IDs)
-      In->setMetadata(ID, nullptr);
+
+    llvm::SmallVector<std::pair<unsigned, llvm::MDNode *>> Metadata;
+    llvm::getMetadataToPropagate(OldLoad, Metadata);
+    for (auto &[Kind, Node] : Metadata)
+      In->setMetadata(Kind, Node);
+    In->setDebugLoc(OldLoad->getDebugLoc());
+
     return replaceInstUsesWith(SI, In);
   }
 
