@@ -241,7 +241,7 @@ Retry:
 
     switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
       if (NextToken().is(tok::less)) {
         Tok.setKind(tok::identifier);
         Diag(Tok, diag::ext_keyword_as_ident)
@@ -1340,9 +1340,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
             << Cond.get().first->getSourceRange();
     } else if (Cond.get().first != nullptr)
       // Handle: if (int decl = 0) {}.
-      Diag(Cond.get().first->getBeginLoc(),
-           getLangOpts().C2y ? diag::warn_c2y_compat_decl_statement
-                             : diag::ext_c2y_decl_statement)
+      DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
           << (CK == Sema::ConditionKind::Switch);
   }
 
@@ -2347,6 +2345,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // the other parts.
   getCurScope()->EnterLoopBody(PrecedingLabel);
 
+  bool BodyStartsWithAttr = Tok.isOneOf(tok::l_square, tok::kw___attribute);
+  SourceLocation BodyBeginLoc = Tok.getLocation();
+
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2396,6 +2397,14 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       Diag(ForLoc, diag::err_expansion_stmt_requires_range);
       return StmtError();
     }
+
+    // attribute-specifier without attribute (`[[]]`) isn't in AST.
+    // `__declspec()` is only applied to declarations, so we can ignore it.
+    if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithAttr)
+      Diag(BodyBeginLoc,
+           isa<CompoundStmt>(Body.get()->stripLabelLikeStatements())
+               ? diag::ext_expansion_stmt_body_attr
+               : diag::ext_expansion_stmt_body_not_compound_stmt);
 
     return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
   }

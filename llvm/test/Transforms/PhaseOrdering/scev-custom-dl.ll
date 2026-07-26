@@ -198,13 +198,14 @@ define void @test_range_ref1(i8 %t) {
 ; CHECK-NEXT:    %t.ptr = inttoptr i40 %0 to ptr
 ; CHECK-NEXT:    --> %t.ptr U: [0,256) S: [0,256)
 ; CHECK-NEXT:    %idx = phi ptr [ %t.ptr, %entry ], [ %snext, %loop ]
-; CHECK-NEXT:    --> {%t.ptr,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%t.ptr,+,1}<nuw><nsw><%loop> U: [0,297) S: [0,297) Exits: (-1 + (-1 * (ptrtoaddr ptr %t.ptr to i32))<nsw> + ((1 + (ptrtoaddr ptr %t.ptr to i32))<nuw><nsw> umax (ptrtoaddr ptr inttoptr (i8 42 to ptr) to i32)) + %t.ptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %snext = getelementptr inbounds nuw i8, ptr %idx, i32 1
-; CHECK-NEXT:    --> {(1 + %t.ptr)<nuw><nsw>,+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %t.ptr)<nuw><nsw>,+,1}<nuw><nsw><%loop> U: [1,298) S: [1,298) Exits: ((-1 * (ptrtoaddr ptr %t.ptr to i32))<nsw> + ((1 + (ptrtoaddr ptr %t.ptr to i32))<nuw><nsw> umax (ptrtoaddr ptr inttoptr (i8 42 to ptr) to i32)) + %t.ptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_range_ref1
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * (ptrtoaddr ptr %t.ptr to i32))<nsw> + ((1 + (ptrtoaddr ptr %t.ptr to i32))<nuw><nsw> umax (ptrtoaddr ptr inttoptr (i8 42 to ptr) to i32)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 41
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoaddr ptr %t.ptr to i32))<nsw> + ((1 + (ptrtoaddr ptr %t.ptr to i32))<nuw><nsw> umax (ptrtoaddr ptr inttoptr (i8 42 to ptr) to i32)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
  entry:
   %t.ptr = inttoptr i8 %t to ptr

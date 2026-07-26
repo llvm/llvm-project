@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fclangir -emit-llvm %s -o - \
+// RUN:   -fopenmp-targets=amdgpu-amd-amdhsa -fclangir -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - \
+// RUN:   -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=OGCG
 
 void use(int);

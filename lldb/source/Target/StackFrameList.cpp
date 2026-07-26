@@ -644,7 +644,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
-      s.Printf("\n    Copying previous frame to current frame");
+      s.PutCString("\n    Copying previous frame to current frame");
 #endif
     }
     // We are done with the old stack frame list, we can release it now.
@@ -762,7 +762,7 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
 
 static bool CompareStackID(const StackFrameSP &stack_sp,
                            const StackID &stack_id) {
-  return stack_sp->GetStackID() < stack_id;
+  return stack_sp->GetStackID().IsYoungerThan(stack_id);
 }
 
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {

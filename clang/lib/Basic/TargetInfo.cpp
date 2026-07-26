@@ -24,37 +24,37 @@
 #include <cstdlib>
 using namespace clang;
 
-static const LangASMap DefaultAddrSpaceMap = {0};
+static constexpr LangASMap DefaultAddrSpaceMap;
 // The fake address space map must have a distinct entry for each
 // language-specific address space.
-static const LangASMap FakeAddrSpaceMap = {
-    0,  // Default
-    1,  // opencl_global
-    3,  // opencl_local
-    2,  // opencl_constant
-    0,  // opencl_private
-    4,  // opencl_generic
-    5,  // opencl_global_device
-    6,  // opencl_global_host
-    7,  // cuda_device
-    8,  // cuda_constant
-    9,  // cuda_shared
-    1,  // sycl_global
-    5,  // sycl_global_device
-    6,  // sycl_global_host
-    3,  // sycl_local
-    0,  // sycl_private
-    10, // ptr32_sptr
-    11, // ptr32_uptr
-    12, // ptr64
-    13, // hlsl_groupshared
-    14, // hlsl_constant
-    15, // hlsl_private
-    16, // hlsl_device
-    17, // hlsl_input
-    18, // hlsl_output
-    19, // hlsl_push_constant
-    20, // wasm_funcref
+static constexpr LangASMap FakeAddrSpaceMap = {
+    {LangAS::Default, 0},
+    {LangAS::opencl_global, 1},
+    {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},
+    {LangAS::opencl_private, 0},
+    {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5},
+    {LangAS::opencl_global_host, 6},
+    {LangAS::cuda_device, 7},
+    {LangAS::cuda_constant, 8},
+    {LangAS::cuda_shared, 9},
+    {LangAS::sycl_global, 1},
+    {LangAS::sycl_global_device, 5},
+    {LangAS::sycl_global_host, 6},
+    {LangAS::sycl_local, 3},
+    {LangAS::sycl_private, 0},
+    {LangAS::ptr32_sptr, 10},
+    {LangAS::ptr32_uptr, 11},
+    {LangAS::ptr64, 12},
+    {LangAS::hlsl_groupshared, 13},
+    {LangAS::hlsl_constant, 14},
+    {LangAS::hlsl_private, 15},
+    {LangAS::hlsl_device, 16},
+    {LangAS::hlsl_input, 17},
+    {LangAS::hlsl_output, 18},
+    {LangAS::hlsl_push_constant, 19},
+    {LangAS::wasm_funcref, 20},
 };
 
 // TargetInfo Constructor.
