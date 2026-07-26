@@ -64,6 +64,9 @@ namespace llvm {
     bool operator>=(const MVT& S) const { return SimpleTy >= S.SimpleTy; }
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
+    /// Return the value type as a string, e.g. `i32`.
+    std::string getString() const;
+
     /// Support for debugging, callable in GDB: VT.dump()
     LLVM_ABI void dump() const;
 
