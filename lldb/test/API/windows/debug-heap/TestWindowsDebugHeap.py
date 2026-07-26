@@ -16,7 +16,7 @@ class DebugHeapTestCase(TestBase):
         self.runCmd("settings clear platform.plugin.windows.disable-debug-heap")
         return super().tearDown()
 
-    def _run_to_exit(self, envp: List[str]=[]):
+    def _run_to_exit(self, envp: List[str] = []):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
