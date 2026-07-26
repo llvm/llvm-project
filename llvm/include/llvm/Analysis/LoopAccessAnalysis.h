@@ -235,6 +235,37 @@ public:
            std::numeric_limits<uint64_t>::max();
   }
 
+  /// Returns true if a memory dependence at byte distance \p Distance between
+  /// a store (with element size \p TypeByteSize bytes) widened to
+  /// \p VectorStoreSize bytes and a subsequent load of \p LoadElementSize bytes
+  /// would prevent store-to-load forwarding.
+  ///
+  /// The conflicting store must still be likely to be in the store buffer, i.e.
+  /// \c Distance / VectorStoreSize is below 8 * TypeByteSize iterations. Given
+  /// that, the load overruns from the widened store it starts in into the next
+  /// one when either:
+  ///   (a) it starts misaligned, \c R = \c Distance % VectorStoreSize bytes
+  ///       below a widened-store boundary, and is wider than those \c R bytes
+  ///       (\p LoadElementSize > \c R), or
+  ///   (b) it starts aligned (\c R == 0) but is itself wider than the widened
+  ///       store window (\p LoadElementSize > \p VectorStoreSize).
+  /// A \p LoadElementSize of 0 (the default) leaves the load width unknown and
+  /// disables both terms. Passing \p VectorStoreSize makes (a) reduce to "any
+  /// misalignment conflicts" and (b) never fire, matching the original,
+  /// width-agnostic predicate.
+  static bool isStoreLoadForwardingConflict(uint64_t Distance,
+                                            uint64_t VectorStoreSize,
+                                            uint64_t TypeByteSize,
+                                            uint64_t LoadElementSize = 0) {
+    assert(VectorStoreSize != 0 && "Expected non-zero vector store size");
+    const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
+    if (Distance / VectorStoreSize >= NumItersForStoreLoadThroughMemory)
+      return false;
+    if (uint64_t R = Distance % VectorStoreSize)
+      return LoadElementSize > R;
+    return LoadElementSize > VectorStoreSize;
+  }
+
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding, multiplied by the size of the elements in bits.
   uint64_t getStoreLoadForwardSafeDistanceInBits() const {
