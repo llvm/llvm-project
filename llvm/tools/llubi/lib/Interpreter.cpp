@@ -19,6 +19,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
@@ -408,6 +409,116 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return std::move(ResVec);
     }
     return ScalarFn(LHS, RHS);
+  }
+
+  struct IntBinOpFlags {
+    bool HasNSW = false;
+    bool HasNUW = false;
+    bool IsExact = false;
+    bool IsDisjoint = false;
+  };
+
+  AnyValue evaluateIntBinOp(unsigned Opcode, const AnyValue &LHS,
+                            const AnyValue &RHS, IntBinOpFlags Flags) {
+    // Keep the same immediate-UB priority as the corresponding instruction
+    // visitors. In particular, a poison divisor may refine to zero.
+    switch (Opcode) {
+    case Instruction::SDiv:
+    case Instruction::SRem: {
+      if (RHS.isPoison()) {
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
+        return AnyValue::poison();
+      }
+      const APInt &RHSVal = RHS.asInteger();
+      if (RHSVal.isZero()) {
+        reportImmediateUB() << "Division by zero.";
+        return AnyValue::poison();
+      }
+      if (LHS.isPoison()) {
+        if (RHSVal.isAllOnes())
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
+        return AnyValue::poison();
+      }
+      const APInt &LHSVal = LHS.asInteger();
+      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
+        if (Opcode == Instruction::SDiv)
+          reportImmediateUB() << "Signed division overflow.";
+        else
+          reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
+                              << ", RHS: " << RHSVal;
+        return AnyValue::poison();
+      }
+      if (Opcode == Instruction::SDiv && Flags.IsExact) {
+        APInt Q, R;
+        APInt::sdivrem(LHSVal, RHSVal, Q, R);
+        return R.isZero() ? AnyValue(Q) : AnyValue::poison();
+      }
+      return Opcode == Instruction::SDiv ? AnyValue(LHSVal.sdiv(RHSVal))
+                                         : AnyValue(LHSVal.srem(RHSVal));
+    }
+    case Instruction::UDiv:
+    case Instruction::URem: {
+      if (RHS.isPoison()) {
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
+        return AnyValue::poison();
+      }
+      const APInt &RHSVal = RHS.asInteger();
+      if (RHSVal.isZero()) {
+        reportImmediateUB() << "Division by zero.";
+        return AnyValue::poison();
+      }
+      if (LHS.isPoison())
+        return AnyValue::poison();
+      const APInt &LHSVal = LHS.asInteger();
+      if (Opcode == Instruction::UDiv && Flags.IsExact) {
+        APInt Q, R;
+        APInt::udivrem(LHSVal, RHSVal, Q, R);
+        return R.isZero() ? AnyValue(Q) : AnyValue::poison();
+      }
+      return Opcode == Instruction::UDiv ? AnyValue(LHSVal.udiv(RHSVal))
+                                         : AnyValue(LHSVal.urem(RHSVal));
+    }
+    default:
+      break;
+    }
+
+    if (LHS.isPoison() || RHS.isPoison())
+      return AnyValue::poison();
+
+    const APInt &LHSVal = LHS.asInteger();
+    const APInt &RHSVal = RHS.asInteger();
+    switch (Opcode) {
+    case Instruction::Add:
+      return addNoWrap(LHSVal, RHSVal, Flags.HasNSW, Flags.HasNUW);
+    case Instruction::Sub:
+      return subNoWrap(LHSVal, RHSVal, Flags.HasNSW, Flags.HasNUW);
+    case Instruction::Mul:
+      return mulNoWrap(LHSVal, RHSVal, Flags.HasNSW, Flags.HasNUW);
+    case Instruction::And:
+      return LHSVal & RHSVal;
+    case Instruction::Xor:
+      return LHSVal ^ RHSVal;
+    case Instruction::Or:
+      if (Flags.IsDisjoint && LHSVal.intersects(RHSVal))
+        return AnyValue::poison();
+      return LHSVal | RHSVal;
+    case Instruction::Shl:
+      if (RHSVal.uge(LHSVal.getBitWidth()) ||
+          (Flags.HasNSW && RHSVal.uge(LHSVal.getNumSignBits())) ||
+          (Flags.HasNUW && RHSVal.ugt(LHSVal.countl_zero())))
+        return AnyValue::poison();
+      return LHSVal.shl(RHSVal);
+    case Instruction::LShr:
+    case Instruction::AShr:
+      if (RHSVal.uge(LHSVal.getBitWidth()) ||
+          (Flags.IsExact && RHSVal.ugt(LHSVal.countr_zero())))
+        return AnyValue::poison();
+      return Opcode == Instruction::LShr ? AnyValue(LHSVal.lshr(RHSVal))
+                                         : AnyValue(LHSVal.ashr(RHSVal));
+    default:
+      llvm_unreachable("Unexpected integer binary operation");
+    }
   }
 
   void visitBinOp(
@@ -814,6 +925,170 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Mask.asAggregate()[I].asBoolean();
   }
 
+  std::optional<uint64_t> getVPVectorLength(VPIntrinsic &VPI,
+                                            ArrayRef<AnyValue> Args) {
+    const auto EVLPos =
+        VPIntrinsic::getVectorLengthParamPos(VPI.getIntrinsicID());
+    assert(EVLPos && "VP intrinsic without an explicit vector length");
+
+    const AnyValue &EVL = Args[*EVLPos];
+    if (EVL.isPoison()) {
+      reportImmediateUB() << "VP intrinsic with poison explicit vector length.";
+      return std::nullopt;
+    }
+
+    const uint64_t MaxEVL = Ctx.getEVL(VPI.getStaticVectorLength());
+    if (EVL.asInteger().ugt(MaxEVL)) {
+      reportImmediateUB() << "VP intrinsic explicit vector length exceeds "
+                             "the runtime vector length. EVL: "
+                          << EVL.asInteger() << ", Vector length: " << MaxEVL
+                          << ".";
+      return std::nullopt;
+    }
+    return EVL.asInteger().getZExtValue();
+  }
+
+  AnyValue getUndefinedScalar(Type *Ty) {
+    AnyValue Res = AnyValue::getPoisonValue(Ctx, Ty);
+    Ctx.freeze(Res, Ty);
+    return Res;
+  }
+
+  AnyValue applyVPFastMathFlags(VPIntrinsic &VPI, AnyValue Val) {
+    const FastMathFlags FMF = VPI.getFastMathFlagsOrNone();
+    if (!FMF.any())
+      return Val;
+    return handleFMFFlags(std::move(Val), FMF, /*IsInput=*/true);
+  }
+
+  AnyValue callVPSelectIntrinsic(VPIntrinsic &VPI, ArrayRef<AnyValue> Args) {
+    const auto EVL = getVPVectorLength(VPI, Args);
+    if (!EVL)
+      return AnyValue::getPoisonValue(Ctx, VPI.getType());
+
+    const auto &Cond = Args[0].asAggregate();
+    const auto &TrueVal = Args[1].asAggregate();
+    const auto &FalseVal = Args[2].asAggregate();
+    Type *ElemTy = cast<VectorType>(VPI.getType())->getElementType();
+
+    std::vector<AnyValue> Res;
+    Res.reserve(Cond.size());
+    for (size_t I = 0, E = Cond.size(); I != E; ++I) {
+      if (I >= *EVL) {
+        Res.push_back(getUndefinedScalar(ElemTy));
+        continue;
+      }
+
+      switch (Cond[I].asBoolean()) {
+      case BooleanKind::True:
+        Res.push_back(applyVPFastMathFlags(VPI, TrueVal[I]));
+        break;
+      case BooleanKind::False:
+        Res.push_back(applyVPFastMathFlags(VPI, FalseVal[I]));
+        break;
+      case BooleanKind::Poison:
+        Res.push_back(AnyValue::poison());
+        break;
+      }
+    }
+    return std::move(Res);
+  }
+
+  AnyValue callVPMergeIntrinsic(VPIntrinsic &VPI, ArrayRef<AnyValue> Args) {
+    const auto Pivot = getVPVectorLength(VPI, Args);
+    if (!Pivot)
+      return AnyValue::getPoisonValue(Ctx, VPI.getType());
+
+    const auto &Cond = Args[0].asAggregate();
+    const auto &TrueVal = Args[1].asAggregate();
+    const auto &FalseVal = Args[2].asAggregate();
+
+    std::vector<AnyValue> Res;
+    Res.reserve(Cond.size());
+    for (size_t I = 0, E = Cond.size(); I != E; ++I) {
+      if (I >= *Pivot) {
+        Res.push_back(applyVPFastMathFlags(VPI, FalseVal[I]));
+        continue;
+      }
+
+      switch (Cond[I].asBoolean()) {
+      case BooleanKind::True:
+        Res.push_back(applyVPFastMathFlags(VPI, TrueVal[I]));
+        break;
+      case BooleanKind::False:
+        Res.push_back(applyVPFastMathFlags(VPI, FalseVal[I]));
+        break;
+      case BooleanKind::Poison:
+        Res.push_back(AnyValue::poison());
+        break;
+      }
+    }
+    return std::move(Res);
+  }
+
+  AnyValue callVPIntegerBinaryIntrinsic(VPIntrinsic &VPI,
+                                        ArrayRef<AnyValue> Args) {
+    const auto EVL = getVPVectorLength(VPI, Args);
+    if (!EVL)
+      return AnyValue::getPoisonValue(Ctx, VPI.getType());
+
+    const auto MaskPos = VPIntrinsic::getMaskParamPos(VPI.getIntrinsicID());
+    assert(MaskPos && "VP integer binary intrinsic without a mask");
+    const auto &LHS = Args[0].asAggregate();
+    const auto &RHS = Args[1].asAggregate();
+    const AnyValue &Mask = Args[*MaskPos];
+    const unsigned Opcode = *VPI.getFunctionalOpcode();
+
+    std::vector<AnyValue> Res;
+    Res.reserve(LHS.size());
+    for (size_t I = 0, E = LHS.size(); I != E; ++I) {
+      // Check EVL first: a poison mask lane past EVL is disabled by the EVL
+      // mask and must not affect the result.
+      if (I >= *EVL) {
+        Res.push_back(AnyValue::poison());
+        continue;
+      }
+
+      switch (getMaskLane(Mask, I)) {
+      case BooleanKind::False:
+      case BooleanKind::Poison:
+        Res.push_back(AnyValue::poison());
+        break;
+      case BooleanKind::True:
+        Res.push_back(
+            evaluateIntBinOp(Opcode, LHS[I], RHS[I], IntBinOpFlags{}));
+        break;
+      }
+    }
+    return std::move(Res);
+  }
+
+  std::optional<AnyValue> callVPIntrinsic(VPIntrinsic &VPI,
+                                          ArrayRef<AnyValue> Args) {
+    switch (VPI.getIntrinsicID()) {
+    case Intrinsic::vp_select:
+      return callVPSelectIntrinsic(VPI, Args);
+    case Intrinsic::vp_merge:
+      return callVPMergeIntrinsic(VPI, Args);
+    case Intrinsic::vp_add:
+    case Intrinsic::vp_sub:
+    case Intrinsic::vp_mul:
+    case Intrinsic::vp_sdiv:
+    case Intrinsic::vp_udiv:
+    case Intrinsic::vp_srem:
+    case Intrinsic::vp_urem:
+    case Intrinsic::vp_ashr:
+    case Intrinsic::vp_lshr:
+    case Intrinsic::vp_shl:
+    case Intrinsic::vp_or:
+    case Intrinsic::vp_and:
+    case Intrinsic::vp_xor:
+      return callVPIntegerBinaryIntrinsic(VPI, Args);
+    default:
+      return std::nullopt;
+    }
+  }
+
   AnyValue callExperimentalVectorHistogramIntrinsic(CallBase &CB,
                                                     ArrayRef<AnyValue> Args,
                                                     Intrinsic::ID IID) {
@@ -1019,6 +1294,11 @@ public:
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
     const FastMathFlags FMF = CB.getFastMathFlagsOrNone();
+
+    if (VPIntrinsic::isVPIntrinsic(IID))
+      if (auto *VPI = dyn_cast<VPIntrinsic>(&CB))
+        if (auto Res = callVPIntrinsic(*VPI, Args))
+          return std::move(*Res);
 
     switch (IID) {
     case Intrinsic::assume:
@@ -2176,132 +2456,53 @@ public:
   }
 
   void visitAdd(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
-      return addNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
+    IntBinOpFlags Flags{I.hasNoSignedWrap(), I.hasNoUnsignedWrap()};
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::Add, LHS, RHS, Flags);
     });
   }
 
   void visitSub(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
-      return subNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
+    IntBinOpFlags Flags{I.hasNoSignedWrap(), I.hasNoUnsignedWrap()};
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::Sub, LHS, RHS, Flags);
     });
   }
 
   void visitMul(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
-      return mulNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
+    IntBinOpFlags Flags{I.hasNoSignedWrap(), I.hasNoUnsignedWrap()};
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::Mul, LHS, RHS, Flags);
     });
   }
 
   void visitSDiv(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison()) {
-        if (RHSVal.isAllOnes())
-          reportImmediateUB()
-              << "Signed division overflow (refine LHS to INT_MIN).";
-        return AnyValue::poison();
-      }
-      const APInt &LHSVal = LHS.asInteger();
-      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB() << "Signed division overflow.";
-        return AnyValue::poison();
-      }
-
-      if (I.isExact()) {
-        APInt Q, R;
-        APInt::sdivrem(LHSVal, RHSVal, Q, R);
-        if (!R.isZero())
-          return AnyValue::poison();
-        return Q;
-      } else {
-        return LHSVal.sdiv(RHSVal);
-      }
+    IntBinOpFlags Flags;
+    Flags.IsExact = I.isExact();
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::SDiv, LHS, RHS, Flags);
     });
   }
 
   void visitSRem(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison()) {
-        if (RHSVal.isAllOnes())
-          reportImmediateUB()
-              << "Signed division overflow (refine LHS to INT_MIN).";
-        return AnyValue::poison();
-      }
-      const APInt &LHSVal = LHS.asInteger();
-      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
-                            << ", RHS: " << RHSVal;
-        return AnyValue::poison();
-      }
-
-      return LHSVal.srem(RHSVal);
+    IntBinOpFlags Flags;
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::SRem, LHS, RHS, Flags);
     });
   }
 
   void visitUDiv(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison())
-        return AnyValue::poison();
-      const APInt &LHSVal = LHS.asInteger();
-
-      if (I.isExact()) {
-        APInt Q, R;
-        APInt::udivrem(LHSVal, RHSVal, Q, R);
-        if (!R.isZero())
-          return AnyValue::poison();
-        return Q;
-      } else {
-        return LHSVal.udiv(RHSVal);
-      }
+    IntBinOpFlags Flags;
+    Flags.IsExact = I.isExact();
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::UDiv, LHS, RHS, Flags);
     });
   }
 
   void visitURem(BinaryOperator &I) {
-    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-      // Priority: Immediate UB > poison > normal value
-      if (RHS.isPoison()) {
-        reportImmediateUB() << "Division by zero (refine RHS to 0).";
-        return AnyValue::poison();
-      }
-      const APInt &RHSVal = RHS.asInteger();
-      if (RHSVal.isZero()) {
-        reportImmediateUB() << "Division by zero.";
-        return AnyValue::poison();
-      }
-      if (LHS.isPoison())
-        return AnyValue::poison();
-      const APInt &LHSVal = LHS.asInteger();
-      return LHSVal.urem(RHSVal);
+    IntBinOpFlags Flags;
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) {
+      return evaluateIntBinOp(Instruction::URem, LHS, RHS, Flags);
     });
   }
 
@@ -2476,54 +2677,51 @@ public:
   }
 
   void visitAnd(BinaryOperator &I) {
-    visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      return LHS & RHS;
-    });
+    IntBinOpFlags Flags;
+    visitBinOp(
+        I,
+        [this, &Flags](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          return evaluateIntBinOp(Instruction::And, LHS, RHS, Flags);
+        });
   }
 
   void visitXor(BinaryOperator &I) {
-    visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      return LHS ^ RHS;
-    });
+    IntBinOpFlags Flags;
+    visitBinOp(
+        I,
+        [this, &Flags](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+          return evaluateIntBinOp(Instruction::Xor, LHS, RHS, Flags);
+        });
   }
 
   void visitOr(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (cast<PossiblyDisjointInst>(I).isDisjoint() && LHS.intersects(RHS))
-        return AnyValue::poison();
-      return LHS | RHS;
+    IntBinOpFlags Flags;
+    Flags.IsDisjoint = cast<PossiblyDisjointInst>(I).isDisjoint();
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      return evaluateIntBinOp(Instruction::Or, LHS, RHS, Flags);
     });
   }
 
   void visitShl(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(LHS.getBitWidth()))
-        return AnyValue::poison();
-      if (I.hasNoSignedWrap() && RHS.uge(LHS.getNumSignBits()))
-        return AnyValue::poison();
-      if (I.hasNoUnsignedWrap() && RHS.ugt(LHS.countl_zero()))
-        return AnyValue::poison();
-      return LHS.shl(RHS);
+    IntBinOpFlags Flags{I.hasNoSignedWrap(), I.hasNoUnsignedWrap()};
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      return evaluateIntBinOp(Instruction::Shl, LHS, RHS, Flags);
     });
   }
 
   void visitLShr(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(LHS.getBitWidth()) ||
-          (cast<PossiblyExactOperator>(I).isExact() &&
-           RHS.ugt(LHS.countr_zero())))
-        return AnyValue::poison();
-      return LHS.lshr(RHS);
+    IntBinOpFlags Flags;
+    Flags.IsExact = cast<PossiblyExactOperator>(I).isExact();
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      return evaluateIntBinOp(Instruction::LShr, LHS, RHS, Flags);
     });
   }
 
   void visitAShr(BinaryOperator &I) {
-    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(LHS.getBitWidth()) ||
-          (cast<PossiblyExactOperator>(I).isExact() &&
-           RHS.ugt(LHS.countr_zero())))
-        return AnyValue::poison();
-      return LHS.ashr(RHS);
+    IntBinOpFlags Flags;
+    Flags.IsExact = cast<PossiblyExactOperator>(I).isExact();
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      return evaluateIntBinOp(Instruction::AShr, LHS, RHS, Flags);
     });
   }
 
