@@ -50,11 +50,10 @@ entry:
 ; ASM32-NEXT:  L..func_begin0:
 ; ASM32-NEXT:  # %bb.0:                                # %entry
 ; ASM32-NEXT:  L..tmp0:
-; ASM32-NEXT:          li 4, 0
+; ASM32-NEXT:          li 3, 0
+; ASM32-NEXT:          stw 3, -4(1)
 ; ASM32-NEXT:  L..tmp1:
 ; ASM32-NEXT:  L..tmp2:
-; ASM32-NEXT:          li 3, 0
-; ASM32-NEXT:          stw 4, -4(1)
 ; ASM32-NEXT:          blr
 ; ASM32-NEXT:  L..tmp3:
 ; ASM32-NEXT:  L..main0:
@@ -253,11 +252,10 @@ entry:
 ; ASM64-NEXT:  L..func_begin0:
 ; ASM64-NEXT:  # %bb.0:                                # %entry
 ; ASM64-NEXT:  L..tmp0:
-; ASM64-NEXT:          li 4, 0
+; ASM64-NEXT:          li 3, 0
+; ASM64-NEXT:          stw 3, -4(1)
 ; ASM64-NEXT:  L..tmp1:
 ; ASM64-NEXT:  L..tmp2:
-; ASM64-NEXT:          li 3, 0
-; ASM64-NEXT:          stw 4, -4(1)
 ; ASM64-NEXT:          blr
 ; ASM64-NEXT:  L..tmp3:
 ; ASM64-NEXT:  L..main0:
@@ -474,10 +472,10 @@ entry:
 ; DWARF32-NEXT:                DW_AT_stmt_list   (0x00000000)
 ; DWARF32-NEXT:                DW_AT_comp_dir    ("debug")
 ; DWARF32-NEXT:                DW_AT_low_pc      (0x00000000)
-; DWARF32-NEXT:                DW_AT_high_pc     (0x00000026)
+; DWARF32-NEXT:                DW_AT_high_pc     (0x00000022)
 ; DWARF32:       0x00000039:   DW_TAG_subprogram
 ; DWARF32-NEXT:                  DW_AT_low_pc    (0x00000000)
-; DWARF32-NEXT:                  DW_AT_high_pc   (0x00000026)
+; DWARF32-NEXT:                  DW_AT_high_pc   (0x00000022)
 ; DWARF32-NEXT:                  DW_AT_frame_base        (DW_OP_reg1 R1)
 ; DWARF32-NEXT:                  DW_AT_name      ("main")
 ; DWARF32-NEXT:                  DW_AT_decl_file ("debug{{[/\\]}}1.c")
@@ -523,5 +521,5 @@ entry:
 ; DWARF32:       Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; DWARF32-NEXT:  ------------------ ------ ------ ------ --- ------------- ------- -------------
 ; DWARF32-NEXT:  0x0000000000000000      2      0      1   0             0       0  is_stmt
-; DWARF32-NEXT:  0x0000000000000004      3      3      1   0             0       0  is_stmt prologue_end
-; DWARF32-NEXT:  0x0000000000000024      3      3      1   0             0       0  is_stmt end_sequence
+; DWARF32-NEXT:  0x0000000000000008      3      3      1   0             0       0  is_stmt prologue_end
+; DWARF32-NEXT:  0x0000000000000020      3      3      1   0             0       0  is_stmt end_sequence

@@ -52,9 +52,8 @@ define win64cc ptr @f9(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64
 ; CHECK-LABEL: f9:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x18, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    ldr x18, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
@@ -78,9 +77,8 @@ define win64cc ptr @f8(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64
 ; CHECK-LABEL: f8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x18, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    add x0, sp, #16
-; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    ldr x18, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
@@ -104,10 +102,9 @@ define win64cc ptr @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64
 ; CHECK-LABEL: f7:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x18, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    str x7, [sp, #24]
-; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    ldr x18, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;

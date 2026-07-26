@@ -1328,6 +1328,58 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   if (!TII->isReMaterializable(*DefMI))
     return false;
 
+  if (DstReg.isPhysical() && DefMI->getParent() == CopyMI->getParent()) {
+    // Check if DstReg is used by a return instruction immediately after CopyMI,
+    // with no intervening redefinition or tail call. In this case, remating a
+    // trivial def (e.g., LI 0) when SrcReg has store uses between DefMI and
+    // CopyMI would be harmful: DefMI cannot be deleted (still used by stores),
+    // so remat would introduce a redundant instruction.
+    MachineBasicBlock *MBB = CopyMI->getParent();
+    bool RedefinedAfterCopy = false;
+    bool HasMusttail = false;
+    MachineInstr *Ret = nullptr;
+    for (auto I = std::next(CopyMI->getIterator()); I != MBB->end(); ++I) {
+      // isReturn() && !isCall() excludes tail calls (e.g., TCRETURNdi) which
+      // have both flags set and should not trigger this optimization.
+      if (I->isReturn() && !I->isCall()) {
+        Ret = &*I;
+        break;
+      }
+      if (I->isCall()) {
+        HasMusttail = true;
+        break;
+      }
+      if (I->modifiesRegister(DstReg, TRI)) {
+        RedefinedAfterCopy = true;
+        break;
+      }
+    }
+    if (!RedefinedAfterCopy && !HasMusttail && Ret &&
+        Ret->readsRegister(DstReg, TRI)) {
+      // If there is a call between DefMI and CopyMI, remat is beneficial
+      // because it reduces register pressure across the call boundary.
+      // Only suppress remat when there is no such call.
+      bool HasCallBetween = false;
+      for (auto I = std::next(DefMI->getIterator()); I != CopyMI->getIterator();
+           ++I) {
+        if (I->isCall()) {
+          HasCallBetween = true;
+          break;
+        }
+      }
+      if (!HasCallBetween) {
+        SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
+        for (const MachineOperand &MO : MRI->use_nodbg_operands(SrcReg)) {
+          const MachineInstr *UseMI = MO.getParent();
+          SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
+          if (UseIdx > DefIdx && UseIdx < CopyIdx && !UseMI->isCopyLike() &&
+              UseMI->mayStore())
+            return false;
+        }
+      }
+    }
+  }
+
   bool SawStore = false;
   if (!DefMI->isSafeToMove(SawStore))
     return false;
