@@ -1345,9 +1345,11 @@ namespace llvm {
 }
 
 namespace clang {
+class ASTContextStateStash;
 /// A list storing NamedDecls in the lookup tables.
 class DeclListNode {
   friend class ASTContext; // allocate, deallocate nodes.
+  friend class ASTContextStateStash;
   friend class StoredDeclsList;
 public:
   using Decls = llvm::PointerUnion<NamedDecl*, DeclListNode*>;

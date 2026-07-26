@@ -613,8 +613,10 @@ Interpreter::Parse(llvm::StringRef Code) {
   PTUSlabRollback Rollback(CI->getSema());
 
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
-  if (!TuOrErr)
+  if (!TuOrErr) {
+    Act->GenModule(true);
     return TuOrErr.takeError();
+  }
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 

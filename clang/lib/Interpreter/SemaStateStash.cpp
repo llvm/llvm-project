@@ -28,16 +28,16 @@
 
 namespace clang {
 
-// template <typename EntryType, typename PredT>
-// static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred)
-// {
-//   SmallVector<EntryType *, 16> ToRemove;
-//   for (auto &N : FS)
-//     if (Pred(N))
-//       ToRemove.push_back(&N);
-//   for (auto *N : ToRemove)
-//     FS.RemoveNode(N);
-// }
+template <typename EntryType, typename PredT>
+static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred)
+{
+  SmallVector<EntryType *, 16> ToRemove;
+  for (auto &N : FS)
+    if (Pred(N))
+      ToRemove.push_back(&N);
+  for (auto *N : ToRemove)
+    FS.RemoveNode(N);
+}
 
 // template <typename EntryType, typename PredT>
 // static void eraseContextualFoldingSetIf(
@@ -74,15 +74,16 @@ static void eraseDenseMapIf(llvm::DenseMap<KeyT, ValueT> &Map, PredT &&Pred) {
 //     Set.erase(Val);
 // }
 
-// template <typename T, typename PredT>
-// static void eraseSmallPtrSetIf(llvm::SmallPtrSet<T, 4> &Set, PredT &&Pred) {
-//   SmallVector<T, 8> ToRemove;
-//   for (T Val : Set)
-//     if (Pred(Val))
-//       ToRemove.push_back(Val);
-//   for (T Val : ToRemove)
-//     Set.erase(Val);
-// }
+template <typename T, unsigned SmallSize, typename PredT>
+static void eraseSmallPtrSetIf(llvm::SmallPtrSet<T, SmallSize> &Set,
+                               PredT &&Pred) {
+  SmallVector<T, 8> ToRemove;
+  for (T Val : Set)
+    if (Pred(Val))
+      ToRemove.push_back(Val);
+  for (T Val : ToRemove)
+    Set.erase(Val);
+}
 
 // template <typename T, unsigned N, typename PredT>
 // static void eraseSmallSetVectorIf(llvm::SmallSetVector<T, N> &SV,
@@ -382,7 +383,13 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
   if (CP.VTablesUsedSize != S.VTablesUsed.size()) {
     llvm::dbgs() << "CP.VTablesUsedSize != S.VTablesUsed.size()\n";
     //   llvm::DenseMap<CXXRecordDecl *, bool> VTablesUsed;
-    assert(CP.VTablesUsedSize == S.VTablesUsed.size());
+    eraseDenseMapIf(
+        S.VTablesUsed,
+        [&](llvm::detail::DenseMapPair<CXXRecordDecl *, bool> &KV) -> bool {
+          return Ctx.getAllocator().isAfterCheckpoint(
+              static_cast<void *>(KV.getFirst()), SlabCP);
+        });
+    // assert(CP.VTablesUsedSize == S.VTablesUsed.size());
   }
 
   if (CP.DelayedDllExportClassesSize != S.DelayedDllExportClasses.size()) {
@@ -427,7 +434,11 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
     /// emitted a list of pure virtual functions. Used to prevent emitting the
     /// same list more than once.
     //   std::unique_ptr<RecordDeclSetTy> PureVirtualClassDiagSet;
-    assert(CP.PureVirtualClassDiagSetSize == S.PureVirtualClassDiagSet->size());
+    eraseSmallPtrSetIf(
+        *S.PureVirtualClassDiagSet.get(), [&](const CXXRecordDecl *RD) -> bool {
+          return Ctx.getAllocator().isAfterCheckpoint(RD, SlabCP);
+        });
+    // assert(CP.PureVirtualClassDiagSetSize == S.PureVirtualClassDiagSet->size());
   }
 
   if (CP.DelegatingCtorDeclsSize != S.DelegatingCtorDecls.end()) {
@@ -848,12 +859,13 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
   if (CP.SpecialMemberCacheSize != S.SpecialMemberCache.size()) {
     llvm::dbgs() << "CP.SpecialMemberCacheSize != "
                     "S.SpecialMemberCache.size()\n";
-    // eraseFoldingSetIf(S.SpecialMemberCache,
-    //                   [&](Sema::SpecialMemberOverloadResultEntry &Node) ->
-    //                   bool {
-    //                     return S.BumpAlloc.isAfterCheckpoint(
-    //                         static_cast<void *>(&Node), CP.SemaBumpSlabCP);
-    //                   });
+    
+    eraseFoldingSetIf(
+        S.SpecialMemberCache,
+        [&](Sema::SpecialMemberOverloadResultEntry &Node) -> bool {
+          return S.BumpAlloc.isAfterCheckpoint(static_cast<void *>(&Node),
+                                               CP.SemaBumpSlabCP);
+        });
     assert(CP.SpecialMemberCacheSize == S.SpecialMemberCache.size());
   }
 
