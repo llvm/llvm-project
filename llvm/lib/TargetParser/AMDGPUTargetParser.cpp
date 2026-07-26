@@ -245,7 +245,7 @@ StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
 #define R600_GPU(NAME, ENUM, FEATURES)                                         \
   case ENUM:                                                                   \
     return NAME;
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
   default:
     return "";
   }
@@ -265,7 +265,7 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
   return StringSwitch<AMDGPU::GPUKind>(CPU)
 #define R600_GPU(NAME, ENUM, FEATURES) .Case(NAME, ENUM)
 #define R600_GPU_ALIAS(NAME, ENUM) .Case(NAME, ENUM)
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
       .Default(AMDGPU::GPUKind::GK_NONE);
 }
 
@@ -296,7 +296,7 @@ unsigned AMDGPU::getArchAttrR600(GPUKind AK) {
 #define R600_GPU(NAME, ENUM, FEATURES)                                         \
   case ENUM:                                                                   \
     return FEATURES;
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
   default:
     return FEATURE_NONE;
   }
@@ -319,7 +319,7 @@ void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
   Values.append({
 #define R600_GPU(NAME, ENUM, FEATURES) NAME,
 #define R600_GPU_ALIAS(NAME, ENUM) NAME,
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
   });
 }
 
