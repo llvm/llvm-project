@@ -1447,10 +1447,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name == "coro.end") {
+    Intrinsic::ID CoroEndID = Intrinsic::not_intrinsic;
+    if (Name == "coro.end" &&
+        (F->arg_size() == 2 || F->getReturnType()->isIntegerTy(1)))
+      CoroEndID = Intrinsic::coro_end;
+    else if (Name == "coro.end.async" && F->getReturnType()->isIntegerTy(1))
+      CoroEndID = Intrinsic::coro_end_async;
+
+    if (CoroEndID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                Intrinsic::coro_end);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
       return true;
     }
 
@@ -5338,10 +5344,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::coro_end_async:
   case Intrinsic::coro_end: {
     SmallVector<Value *, 3> Args(CI->args());
-    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    if (NewFn->getIntrinsicID() == Intrinsic::coro_end && Args.size() == 2)
+      Args.push_back(ConstantTokenNone::get(CI->getContext()));
     NewCall = Builder.CreateCall(NewFn, Args);
+
+    if (!CI->getType()->isVoidTy()) {
+      if (!CI->use_empty()) {
+        Function *IsInRamp = Intrinsic::getOrInsertDeclaration(
+            CI->getModule(), Intrinsic::coro_is_in_ramp);
+        Value *InRamp = Builder.CreateCall(IsInRamp);
+        CI->replaceAllUsesWith(Builder.CreateNot(InRamp));
+      }
+      CI->eraseFromParent();
+      return;
+    }
+
     break;
   }
 

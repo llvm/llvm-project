@@ -60,6 +60,31 @@ func.func @omp_flush(%arg0 : memref<i32>) -> () {
   return
 }
 
+// CHECK-LABEL: func @omp_error
+func.func @omp_error(%msg : !llvm.ptr) -> () {
+  // Warning severity with a message.
+  // CHECK: omp.error severity(warning) message("a warning")
+  omp.error severity(warning) message("a warning")
+
+  // Fatal severity with a message.
+  // CHECK: omp.error severity(fatal) message("fatal error")
+  omp.error severity(fatal) message("fatal error")
+
+  // Fatal severity without a message.
+  // CHECK: omp.error severity(fatal)
+  omp.error severity(fatal)
+
+  // Warning severity without a message.
+  // CHECK: omp.error severity(warning)
+  omp.error severity(warning)
+
+  // Warning severity with a runtime message operand.
+  // CHECK: omp.error severity(warning) message_expr(%{{.*}} : !llvm.ptr)
+  omp.error severity(warning) message_expr(%msg : !llvm.ptr)
+
+  return
+}
+
 func.func @omp_terminator() -> () {
   // CHECK: omp.terminator
   omp.terminator

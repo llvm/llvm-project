@@ -162,6 +162,9 @@
 /mlir/**/*shard* @fschlimb
 /mlir/**/*Shard* @fschlimb
 
+# MLIR WasmSSA Dialect
+/mlir/**/WasmSSA* @flemairen6 @lforg37
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel

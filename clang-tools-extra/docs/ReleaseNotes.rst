@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`performance-expensive-value-or
+  <clang-tidy/checks/performance/expensive-value-or>` check.
+
+  Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
+  ``ValueOr``) on optional types where the return type is expensive to copy.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
