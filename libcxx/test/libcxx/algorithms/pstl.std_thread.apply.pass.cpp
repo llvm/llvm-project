@@ -8,7 +8,9 @@
 
 // <algorithm>
 
-// REQUIRES: libcpp-pstl-backend-std-thread
+// REQUIRES: std-at-least-c++17, libcpp-pstl-backend-std-thread
+
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // void __apply(size_t __iterations, void* __context, void (*__func)(void* __context, size_t __iteration)) noexcept;
 
