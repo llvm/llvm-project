@@ -13,6 +13,7 @@
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/move.h>
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
 #include <__config>
