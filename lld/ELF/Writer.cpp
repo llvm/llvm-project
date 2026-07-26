@@ -1747,6 +1747,17 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
       is->trim();
 }
 
+// Sections that finalizeAddressDependentContent may add to.
+static bool mayGrowLate(Ctx &ctx, SyntheticSection *sec) {
+  if (sec != ctx.in.relaDyn.get())
+    return false;
+  // Relocations may move here from .relr.auth.dyn.
+  if (ctx.in.relrAuthDyn && ctx.in.relrAuthDyn->isNeeded())
+    return true;
+  // PPC64PILongBranchThunk adds a relative relocation for its .branch_lt entry.
+  return ctx.in.ppc64LongBranchTarget && ctx.arg.isPic;
+}
+
 // In order to allow users to manipulate linker-synthesized sections,
 // we had to add synthetic sections to the input section list early,
 // even before we make decisions whether they are needed. This allows
@@ -1758,7 +1769,8 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
 //
 // To deal with the above problem, this function is called after
 // scanRelocations is called to remove synthetic sections that turn
-// out to be empty.
+// out to be empty. It runs before finalizeAddressDependentContent, which may
+// add to a section mayGrowLate reports.
 static void removeUnusedSyntheticSections(Ctx &ctx) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
@@ -1773,15 +1785,7 @@ static void removeUnusedSyntheticSections(Ctx &ctx) {
   auto end =
       std::remove_if(start, ctx.inputSections.end(), [&](InputSectionBase *s) {
         auto *sec = cast<SyntheticSection>(s);
-        if (sec->getParent() && sec->isNeeded())
-          return false;
-        // .relr.auth.dyn relocations may be moved to .rela.dyn in
-        // finalizeAddressDependentContent, making .rela.dyn no longer empty.
-        // Conservatively keep .rela.dyn. .relr.auth.dyn can be made empty, but
-        // we would fail to remove it here.
-        if (ctx.arg.emachine == EM_AARCH64 && ctx.arg.relrPackDynRelocs &&
-            sec == ctx.in.relaDyn.get() && ctx.in.relrAuthDyn &&
-            ctx.in.relrAuthDyn->isNeeded())
+        if ((sec->getParent() && sec->isNeeded()) || mayGrowLate(ctx, sec))
           return false;
         unused.insert(sec);
         return true;
