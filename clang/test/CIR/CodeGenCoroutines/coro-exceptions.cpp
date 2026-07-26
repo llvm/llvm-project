@@ -4,42 +4,7 @@
 // FIXME: we currently don't have flatten-cfg for coroutines or lower to LLVM-IR
 // implemented correctly, so this tests only the CIR output.
 
-namespace std {
-template <class Ret, typename... T>
-struct coroutine_traits { using promise_type = typename Ret::promise_type; };
-
-template <class Promise = void> struct coroutine_handle {
-  static coroutine_handle from_address(void *) noexcept;
-};
-template <> struct coroutine_handle<void> {
-  template <class P> coroutine_handle(coroutine_handle<P>) noexcept;
-  static coroutine_handle from_address(void *);
-};
-
-// Awaitable whose await_resume CAN throw.
-struct suspend_maybe_throw {
-  bool await_ready() noexcept;
-  void await_suspend(coroutine_handle<>) noexcept;
-  void await_resume(); // not noexcept
-};
-
-// Awaitable whose await_resume is noexcept.
-struct suspend_nothrow {
-  bool await_ready() noexcept;
-  void await_suspend(coroutine_handle<>) noexcept;
-  void await_resume() noexcept;
-};
-} // namespace std
-
-struct TaskWithEH {
-  struct promise_type {
-    TaskWithEH get_return_object();
-    std::suspend_nothrow initial_suspend() noexcept;
-    std::suspend_nothrow final_suspend() noexcept;
-    void return_void();
-    void unhandled_exception();
-  };
-};
+#include "Inputs/coroutine.h"
 
 TaskWithEH simple_eh_body() {
   co_return;
@@ -73,16 +38,6 @@ TaskWithEH simple_eh_body() {
 // CIR: }
 // Make sure that 'final' is outside of the above try/catch/etc.
 // CIR: cir.call @_ZN10TaskWithEH12promise_type13final_suspendEv
-
-struct TaskThrowingInit {
-  struct promise_type {
-    TaskThrowingInit get_return_object();
-    std::suspend_maybe_throw initial_suspend() noexcept;   // resume CAN throw
-    std::suspend_nothrow final_suspend() noexcept;
-    void return_void();
-    void unhandled_exception();
-  };
-};
 
 TaskThrowingInit throwing_init_suspend() {
   co_return;
