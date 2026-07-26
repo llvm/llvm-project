@@ -33,6 +33,10 @@ struct __attribute__((annotate("type_ann"))) Tagged {
   static int sget() { return 7; }
 };
 
+// CIR-DAG: !cir.struct<"Tagged" {!s32i} annotations = [#cir.annotation<"type_ann">]>
+// CIR-DAG: !cir.struct<"Box<int>" {!s32i} annotations = [#cir.annotation<"tpl_ann">]>
+// CIR-DAG: !cir.struct<"anon.{{[0-9]+}}" {!s32i} annotations = [#cir.annotation<"anon_ann">]>
+
 // CIR: cir.func {{.*}} @{{.*Tagged.*get.*}}({{.*}}) {{.*}}[#cir.annotation<"method_ann">]
 // CIR: cir.func {{.*}} @{{.*Tagged.*sget.*}}() {{.*}}[#cir.annotation<"static_method_ann">]
 
@@ -58,3 +62,18 @@ namespace ns {
 __attribute__((annotate("ns_global_ann")))
 int g = 5;
 }
+
+// Templates propagate the attribute to each instantiation.
+template <typename T> struct __attribute__((annotate("tpl_ann"))) Box {
+  T v;
+};
+Box<int> boxInstance;
+
+// An AST-anonymous struct (no tag name) is still given a synthesized CIR
+// type name (e.g. "anon.0") and goes through the same named-record
+// completion path as a tagged struct, so it is annotated the same way.
+struct __attribute__((annotate("anon_ann"))) {
+  int v;
+} anonInstance;
+
+int use_anon() { return anonInstance.v; }

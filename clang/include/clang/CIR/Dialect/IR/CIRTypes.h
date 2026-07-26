@@ -121,9 +121,10 @@ public:
   mlir::Type getElementType(size_t idx) const { return getMembers()[idx]; }
   std::string getKindAsStr() const;
   std::string getPrefixedName() const;
+  mlir::ArrayAttr getAnnotations() const;
 
   void complete(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
-                mlir::Type padding = {});
+                mlir::Type padding = {}, mlir::ArrayAttr annotations = {});
   uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                             unsigned idx) const;
   bool isLayoutIdentical(const RecordType &other);

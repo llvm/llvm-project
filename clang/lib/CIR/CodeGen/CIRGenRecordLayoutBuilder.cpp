@@ -736,7 +736,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
   ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded,
-               lowering.unionPadding);
+               lowering.unionPadding, cgm.getRecordAnnotations(rd));
 
   // Queue ABI metadata for the module-level cir.record_layouts attribute.
   if (ty->getName()) {

@@ -933,6 +933,10 @@ public:
   /// Add global annotations for a global value (GlobalOp or FuncOp).
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
+  /// Collect the annotate attributes on a record declaration into an array
+  /// attribute, or return null if there are none.
+  mlir::ArrayAttr getRecordAnnotations(const clang::RecordDecl *rd);
+
 private:
   /// Search \p currentClass and its non-virtual base subobjects for \p field,
   /// appending CIR field indices along the path from \p currentClass.

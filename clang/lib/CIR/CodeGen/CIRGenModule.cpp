@@ -4172,6 +4172,15 @@ void CIRGenModule::addGlobalAnnotations(const ValueDecl *d,
     func.setAnnotationsAttr(builder.getArrayAttr(annotations));
 }
 
+mlir::ArrayAttr CIRGenModule::getRecordAnnotations(const RecordDecl *rd) {
+  if (!rd->hasAttr<AnnotateAttr>())
+    return {};
+  llvm::SmallVector<mlir::Attribute> annotations;
+  for (const auto *i : rd->specific_attrs<AnnotateAttr>())
+    annotations.push_back(emitAnnotateAttr(i));
+  return builder.getArrayAttr(annotations);
+}
+
 void CIRGenModule::emitGlobalAnnotations() {
   for (const auto &[mangledName, vd] : deferredAnnotations) {
     mlir::Operation *gv = getGlobalValue(mangledName);

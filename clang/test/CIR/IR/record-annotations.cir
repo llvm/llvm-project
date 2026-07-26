@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+
+// Struct, union, and multiple/argument-carrying annotations round-trip.
+!rec_S = !cir.struct<"S" {!s32i} annotations = [#cir.annotation<"ann">]>
+!rec_U = !cir.union<"U" {!s32i, !u8i} annotations = [#cir.annotation<"ann">]>
+!rec_M = !cir.struct<"M" {!s32i} annotations = [#cir.annotation<"a">, #cir.annotation<"b", ["x", 1 : i32]>]>
+
+// CHECK-DAG: !rec_S = !cir.struct<"S" {!s32i} annotations = [#cir.annotation<"ann">]>
+// CHECK-DAG: !rec_U = !cir.union<"U" {!s32i, !u8i} annotations = [#cir.annotation<"ann">]>
+// CHECK-DAG: !rec_M = !cir.struct<"M" {!s32i} annotations = [#cir.annotation<"a">, #cir.annotation<"b", ["x", 1 : i32]>]>
+
+module {
+  // Reference the types so they are printed.
+  cir.func @useTypes(%arg0: !rec_S, %arg1: !rec_U, %arg2: !rec_M) {
+    cir.return
+  }
+}
