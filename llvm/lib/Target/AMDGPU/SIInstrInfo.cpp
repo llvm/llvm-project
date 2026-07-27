@@ -7878,13 +7878,13 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   unsigned Opcode = MI.getOpcode();
   MachineBasicBlock *MBB = MI.getParent();
   // Legalize operands and check for size mismatch
-  if (!OpIdx || OpIdx >= MI.getNumExplicitOperands() ||
+  if (OpIdx >= MI.getNumExplicitOperands() ||
       OpIdx >= get(Opcode).getNumOperands() ||
       get(Opcode).operands()[OpIdx].RegClass == -1)
     return;
 
   MachineOperand &Op = MI.getOperand(OpIdx);
-  if (!Op.isReg() || !Op.getReg().isVirtual())
+  if (!Op.isReg() || !Op.getReg().isVirtual() || Op.isDef())
     return;
 
   const TargetRegisterClass *CurrRC = MRI.getRegClass(Op.getReg());
@@ -7910,7 +7910,7 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
 }
 void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
-  for (unsigned OpIdx = 1; OpIdx < MI.getNumExplicitOperands(); OpIdx++)
+  for (unsigned OpIdx = 0; OpIdx < MI.getNumExplicitOperands(); OpIdx++)
     legalizeOperandsVALUt16(MI, OpIdx, MRI);
 }
 
