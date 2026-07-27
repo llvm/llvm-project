@@ -629,16 +629,16 @@ void Thunk::setOffset(uint64_t newOffset) {
   offset = newOffset;
 }
 
-// AArch64 Thunk base class.
-static uint64_t getAArch64ThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
-  uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(ctx, a);
-  return v;
+uint64_t Thunk::getDestVA() const {
+  return destination.isInPlt(ctx) ? destination.getPltVA(ctx)
+                                  : destination.getVA(ctx, addend);
 }
 
+// AArch64 Thunk base class.
 bool AArch64Thunk::getMayUseShortThunk() {
   if (!mayUseShortThunk)
     return false;
-  uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   mayUseShortThunk = llvm::isInt<28>(s - p);
   if (!mayUseShortThunk)
@@ -651,7 +651,7 @@ void AArch64Thunk::writeTo(uint8_t *buf) {
     writeLong(buf);
     return;
   }
-  uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   write32(ctx, buf, 0x14000000); // b S
   ctx.target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
@@ -674,9 +674,7 @@ void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 8, R_AARCH64_ABS64, s);
 }
@@ -707,9 +705,7 @@ void AArch64ABSXOLongThunk::writeLong(uint8_t *buf) {
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 0, R_AARCH64_MOVW_UABS_G0_NC, s);
   ctx.target->relocateNoSym(buf + 4, R_AARCH64_MOVW_UABS_G1_NC, s);
@@ -737,9 +733,7 @@ void AArch64ADRPThunk::writeLong(uint8_t *buf) {
   // if mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
@@ -1402,7 +1396,8 @@ void PPC32LongThunk::writeTo(uint8_t *buf) {
   write32(ctx, buf + 4, 0x4e800420); // bctr
 }
 
-void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, int64_t offset) {
+void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, uint64_t addr) {
+  uint64_t offset = addr - getPPC64TocBase(ctx);
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
 
@@ -1413,10 +1408,9 @@ void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, int64_t offset) {
 }
 
 void PPC64PltCallStub::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getGotPltVA(ctx) - getPPC64TocBase(ctx);
   // Save the TOC pointer to the save-slot reserved in the call frame.
   write32(ctx, buf + 0, 0xf8410018); // std     r2,24(r1)
-  writePPC64LoadAndBranch(ctx, buf + 4, offset);
+  writePPC64LoadAndBranch(ctx, buf + 4, destination.getGotPltVA(ctx));
 }
 
 void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
@@ -1456,10 +1450,9 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(ctx, buf + nextInstOffset + 4, BCTR);  // bctr
   } else {
     ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
-    const int64_t offsetFromTOC =
-        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-        getPPC64TocBase(ctx);
-    writePPC64LoadAndBranch(ctx, buf + 4, offsetFromTOC);
+    const uint64_t addr =
+        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend);
+    writePPC64LoadAndBranch(ctx, buf + 4, addr);
   }
 }
 
@@ -1519,10 +1512,9 @@ bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
-  int64_t offset =
-      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-      getPPC64TocBase(ctx);
-  writePPC64LoadAndBranch(ctx, buf, offset);
+  uint64_t addr =
+      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend);
+  writePPC64LoadAndBranch(ctx, buf, addr);
 }
 
 void PPC64LongBranchThunk::addSymbols(ThunkSection &isec) {

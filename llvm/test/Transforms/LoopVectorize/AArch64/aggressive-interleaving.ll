@@ -22,8 +22,8 @@ define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320-NEXT:    [[TPM29:%.*]] = load ptr, ptr [[TPM28]], align 8
 ; A320-NEXT:    [[TPM17:%.*]] = alloca double, align 8
 ; A320-NEXT:    [[TPM32:%.*]] = getelementptr inbounds double, ptr [[TPM17]], i64 [[TPM26]]
-; A320-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[TPM29]] to i64
-; A320-NEXT:    [[TPM102:%.*]] = ptrtoint ptr [[TPM10]] to i64
+; A320-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[TPM29]] to i64
+; A320-NEXT:    [[TPM102:%.*]] = ptrtoaddr ptr [[TPM10]] to i64
 ; A320-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[TPM102]]
 ; A320-NEXT:    [[TMP6:%.*]] = add i64 [[TMP1]], -8
 ; A320-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP6]], 2

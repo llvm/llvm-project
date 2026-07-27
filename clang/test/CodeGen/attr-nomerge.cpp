@@ -42,8 +42,15 @@ void foo(int i, A *ap, B *bp) {
 
   A *newA = new B();
   delete newA;
-  [[clang::nomerge]] __builtin_trap();
   [[clang::nomerge]] __debugbreak();
+  [[clang::nomerge]] __debugbreak();
+}
+
+void foo_trap() {
+  [[clang::nomerge]] __builtin_trap();
+}
+
+void foo_verbose_trap() {
   [[clang::nomerge]] __builtin_verbose_trap("check null", "Argument must not be null.");
 }
 
@@ -100,10 +107,18 @@ void something_else_again() {
 // CHECK: load ptr, ptr
 // CHECK: %[[AG:.*]] = load ptr, ptr
 // CHECK-NEXT: call void %[[AG]](ptr {{.*}}) #[[ATTR1]]
-// CHECK: call void @llvm.trap() #[[ATTR0]]
-// CHECK: call void @llvm.debugtrap() #[[ATTR0]]
-// CHECK: call void @llvm.trap() #[[ATTR0]]
+// CHECK: call void @llvm.debugtrap() #[[ATTR1]]
+// CHECK: call void @llvm.debugtrap() #[[ATTR1]]
 // CHECK: call void  @_ZN1AD1Ev(ptr {{.*}}) #[[ATTR1]]
+
+// CHECK-LABEL: define dso_local void @_Z8foo_trapv()
+// CHECK: call void @llvm.trap() #[[ATTR_TRAP:[0-9]+]]
+// CHECK-NEXT: unreachable
+
+// CHECK-LABEL: define dso_local void @_Z16foo_verbose_trapv()
+// CHECK: call void @llvm.trap() #[[ATTR_TRAP]]
+// CHECK-NEXT: unreachable
 
 // CHECK-DAG: attributes #[[ATTR0]] = {{{.*}}nomerge{{.*}}}
 // CHECK-DAG: attributes #[[ATTR1]] = {{{.*}}nomerge{{.*}}}
+// CHECK-DAG: attributes #[[ATTR_TRAP]] = {{{.*}}nomerge{{.*}}}

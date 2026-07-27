@@ -31,6 +31,25 @@ class NEONType<ValueType VT> {
     v4bf16: nxv8bf16,
     v8bf16: nxv8bf16,
     untyped);
+
+  SubRegIndex ZPRsubreg = !switch(VT,
+    v8i8: dsub,
+    v16i8: zsub,
+    v4i16: dsub,
+    v8i16: zsub,
+    v2i32: dsub,
+    v4i32: zsub,
+    v1i64: dsub,
+    v2i64: zsub,
+    v4f16: dsub,
+    v8f16: zsub,
+    v2f32: dsub,
+    v4f32: zsub,
+    v1f64: dsub,
+    v2f64: zsub,
+    v4bf16: dsub,
+    v8bf16: zsub,
+    ?);
 }
 
 // Helper class to hold conversions of legal scalable vector types.
@@ -307,6 +326,8 @@ class imm8_opt_lsl<int ElementWidth, string printType,
   let PrintMethod = "printImm8OptLsl<" # printType # ">";
   let ParserMatchClass = OpndClass;
   let MIOperandInfo = (ops i32imm, i32imm);
+  let OperandType = "OPERAND_SHIFTED_IMMEDIATE";
+  let OperandNamespace = "AArch64";
 }
 
 def cpy_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "int8_t",  SVECpyImmOperand8>;
@@ -406,6 +427,8 @@ class SVEExactFPImm<string Suffix, string ValA, string ValB> : AsmOperandClass {
 class SVEExactFPImmOperand<string Suffix, string ValA, string ValB> : Operand<i32> {
   let PrintMethod = "printExactFPImm<" # ValA # ", " # ValB # ">";
   let ParserMatchClass = SVEExactFPImm<Suffix, ValA, ValB>;
+  let OperandType = "OPERAND_IMM_UINT1";
+  let OperandNamespace = "AArch64";
 }
 
 def sve_fpimm_half_one
@@ -424,6 +447,8 @@ def sve_incdec_imm : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm1_16Operand;
   let EncoderMethod = "getSVEIncDecImm";
   let DecoderMethod = "DecodeSVEIncDecImm";
+  let OperandType = "OPERAND_IMM_UINT4plus1";
+  let OperandNamespace = "AArch64";
 }
 
 // This allows i32 immediate extraction from i64 based arithmetic.

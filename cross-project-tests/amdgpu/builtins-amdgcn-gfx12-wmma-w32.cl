@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -target-feature +wavefrontsize32 -S -o - %s | FileCheck %s --check-prefix=CHECK-GFX1200
+// RUN: %clang_cc1 -triple amdgpu12.00-unknown-unknown -S -o - %s | FileCheck %s --check-prefix=CHECK-GFX1200
 
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));

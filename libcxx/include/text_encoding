@@ -68,7 +68,6 @@ struct text_encoding
 
 #  if _LIBCPP_STD_VER >= 26
 
-#    include <__algorithm/count.h>
 #    include <__algorithm/find_if.h>
 #    include <__algorithm/lower_bound.h>
 #    include <__cstddef/ptrdiff_t.h>
@@ -623,6 +622,8 @@ public:
   static bool environment_is() = delete;
 #    endif
 
+  constexpr static unsigned long long __num_aliases = 884;
+
 private:
   constexpr const __te_data& __get() const { return __entries[__encoding_idx_]; }
 
@@ -792,8 +793,6 @@ private:
       "11\0CP50220\0csCP50220\0";
 
   struct __offset_table {
-    constexpr static unsigned long long __num_aliases =
-        std::count(__aliases_string, __aliases_string + sizeof(__aliases_string), '\0') + 1;
     unsigned short __table[__num_aliases];
   };
 
@@ -805,8 +804,7 @@ private:
 
     unsigned long long __idx = 3;
 
-    for (unsigned short __pos = 0; __pos < sizeof(__aliases_string) - 1 && __idx < __offset_table::__num_aliases;
-         __pos++) {
+    for (unsigned short __pos = 0; __pos < sizeof(__aliases_string) - 1 && __idx < __num_aliases; __pos++) {
       if (__aliases_string[__pos] == '\0') {
         __aliases.__table[__idx++] = __pos + 1;
       }
