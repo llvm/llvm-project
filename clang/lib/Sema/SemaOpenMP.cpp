@@ -7861,8 +7861,7 @@ static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
     }
     for (const Expr *A : P.Attrs) {
       if (A->isValueDependent() || A->isTypeDependent() ||
-          A->isInstantiationDependent() ||
-          A->containsUnexpandedParameterPack())
+          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
         continue;
       const auto *SL = dyn_cast<StringLiteral>(A);
       if (!SL) {
@@ -7870,8 +7869,7 @@ static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
         return false;
       }
       if (!SL->getString().starts_with("ompx_")) {
-        S.Diag(A->getExprLoc(),
-               diag::err_omp_interop_attr_missing_ompx_prefix)
+        S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
             << SL->getString();
         return false;
       }
