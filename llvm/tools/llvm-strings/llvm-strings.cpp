@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Opts.inc"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
@@ -28,9 +29,7 @@
 #include "llvm/Support/WithColor.h"
 #include <cctype>
 #include <fstream>
-#include <iostream>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -93,9 +92,9 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
-static void strings(raw_ostream &OS, StringRef FileName, std::istream &IS) {
+static void strings(raw_ostream &OS, StringRef FileName,
+                    sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
   auto print = [&OS, FileName](unsigned Offset, StringRef L) {
     if (L.size() < static_cast<size_t>(MinLength))
       return;
@@ -117,14 +116,21 @@ static void strings(raw_ostream &OS, StringRef FileName, std::istream &IS) {
     OS << L << '\n';
   };
 
+  Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
   std::string StringBuffer;
   unsigned Offset = 0;
   while (true) {
-    IS.read(Buffer.data(), Buffer.size());
-    std::streamsize CurSize = IS.gcount();
+    Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
+        Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
+    if (!ReadBytesOrErr) {
+      errs() << FileName << ": "
+             << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
+      return;
+    }
+    std::size_t CurSize = *ReadBytesOrErr;
     if (CurSize <= 0)
       break;
-    for (std::streamsize I = 0; I != CurSize; ++I) {
+    for (std::size_t I = 0; I != CurSize; ++I) {
       char C = Buffer[I];
       if (isPrint(C) || C == '\t') {
         StringBuffer.push_back(C);
@@ -137,8 +143,6 @@ static void strings(raw_ostream &OS, StringRef FileName, std::istream &IS) {
         ++Offset;
       }
     }
-    if (!IS)
-      break;
   }
 
   if (StringBuffer.size())
@@ -195,14 +199,15 @@ int main(int argc, char **argv) {
 
   for (const auto &File : InputFileNames) {
     if (File == "-") {
-      strings(llvm::outs(), "{standard input}", std::cin);
+      strings(llvm::outs(), "{standard input}", sys::fs::getStdinHandle());
     } else {
-      std::ifstream IS(File, std::ios::in | std::ios::binary);
-      if (!IS) {
-        errs() << File << ": " << sys::StrError(errno) << '\n';
+      Expected<sys::fs::file_t> FDOrErr = sys::fs::openNativeFileForReadWrite(
+          File, sys::fs::CD_OpenExisting, sys::fs::OF_None);
+      if (!FDOrErr) {
+        errs() << File << ": " << FDOrErr.takeError() << '\n';
         continue;
       }
-      strings(llvm::outs(), File, IS);
+      strings(llvm::outs(), File, *FDOrErr);
     }
   }
 
