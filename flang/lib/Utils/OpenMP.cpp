@@ -13,11 +13,33 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 namespace Fortran::utils::openmp {
+std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
+  auto [kind, deconstructed] =
+      fir::NameUniquer::deconstruct(recordType.getName());
+  if (kind != fir::NameUniquer::NameKind::DERIVED_TYPE)
+    return recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
+
+  llvm::SmallVector<llvm::StringRef> modules;
+  llvm::SmallVector<llvm::StringRef> procs;
+  modules.reserve(deconstructed.modules.size());
+  procs.reserve(deconstructed.procs.size());
+  for (const std::string &module : deconstructed.modules)
+    modules.emplace_back(module);
+  for (const std::string &proc : deconstructed.procs) {
+    procs.emplace_back(proc);
+  }
+
+  std::string mapperName = deconstructed.name + llvm::omp::OmpDefaultMapperName;
+  return fir::NameUniquer::doGenerated(
+      modules, procs, deconstructed.blockId, mapperName);
+}
+
 mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
@@ -260,8 +282,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     mlir::FlatSymbolRefAttr mapperId;
     if (auto recType = mlir::dyn_cast<fir::RecordType>(
             fir::getFortranElementType(memberType))) {
-      std::string mapperIdName =
-          recType.getName().str() + llvm::omp::OmpDefaultMapperName;
+      std::string mapperIdName = getCanonicalDefaultDeclareMapperName(recType);
       mangler(mapperIdName, memberName);
       mapperId = getOrGenImplicitDefaultDeclareMapper(
           firOpBuilder, loc, recType, mapperIdName, mangler);
