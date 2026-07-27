@@ -62,6 +62,9 @@ class MyResponder(MockGDBServerResponder):
     def qProcessInfo(self):
         return "ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(self._triple)
 
+    def qC(self):
+        return ""
+
     def setBreakpoint(self, packet):
         return "OK"
 
