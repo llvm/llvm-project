@@ -63,6 +63,11 @@ Error L0ContextTy::init() {
   if (RC != ZE_RESULT_SUCCESS)
     zeCommandListAppendHostFunction = nullptr;
 
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeDriverGetDefaultContext", (void **)&zeDriverGetDefaultContext);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeDriverGetDefaultContext = nullptr;
+
   return Plugin::success();
 }
 
