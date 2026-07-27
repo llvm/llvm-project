@@ -178,7 +178,7 @@ Symbols:
 # I386-NEXT:     Arch: i386
 # IAMCU-NEXT:    Arch: i386
 # AARCH-NEXT:    Arch: aarch64
-# AMDGPU-NEXT:   Arch: amdgcn
+# AMDGPU-NEXT:   Arch: amdgpu
 # ARM-NEXT:      Arch: arm
 # HEXAGON-NEXT:  Arch: hexagon
 # LA32-NEXT:     Arch: loongarch32
