@@ -134,7 +134,7 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
   // Cached orders cannot regain unreserved registers; recompute them lazily.
   bool OnlyNewReservations = Reserved.subsetOf(ReservedInput);
 
-  // subtracts reserved set from input set to get newly reserved regs
+  // Subtract the old set to find newly reserved registers.
   BitVector NewReservations = ReservedInput;
   NewReservations.reset(Reserved);
 
@@ -153,7 +153,7 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
   for (const TargetRegisterClass &RC : TRI->regclasses()) {
     RCInfo &Info = RegClass[RC.getID()];
 
-    // skip if class info is out of date
+    // Skip stale class information.
     if (Info.Tag != Tag)
       continue;
 

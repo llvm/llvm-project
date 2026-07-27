@@ -168,7 +168,7 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   RegsToRewrite.clear();
 
   // Update the set of reserved registers to include WWM ones
-  // without unnecessarily invalidating RegClassInfo
+  // without unnecessarily invalidating RegClassInfo.
   MRI->freezeReservedRegs();
   RegClassInfo.updateReservedRegs(MRI->getReservedRegs());
 }
