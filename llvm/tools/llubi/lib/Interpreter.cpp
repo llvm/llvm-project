@@ -972,22 +972,22 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     Type *ElemTy = cast<VectorType>(VPI.getType())->getElementType();
 
     std::vector<AnyValue> Res;
-    Res.reserve(Cond.size());
+    Res.resize(Cond.size());
     for (size_t I = 0, E = Cond.size(); I != E; ++I) {
       if (I >= *EVL) {
-        Res.push_back(getUndefinedScalar(ElemTy));
+        Res[I] = getUndefinedScalar(ElemTy);
         continue;
       }
 
       switch (Cond[I].asBoolean()) {
       case BooleanKind::True:
-        Res.push_back(applyVPFastMathFlags(VPI, TrueVal[I]));
+        Res[I] = applyVPFastMathFlags(VPI, TrueVal[I]);
         break;
       case BooleanKind::False:
-        Res.push_back(applyVPFastMathFlags(VPI, FalseVal[I]));
+        Res[I] = applyVPFastMathFlags(VPI, FalseVal[I]);
         break;
       case BooleanKind::Poison:
-        Res.push_back(AnyValue::poison());
+        Res[I] = AnyValue::poison();
         break;
       }
     }
@@ -1004,22 +1004,22 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     const auto &FalseVal = Args[2].asAggregate();
 
     std::vector<AnyValue> Res;
-    Res.reserve(Cond.size());
+    Res.resize(Cond.size());
     for (size_t I = 0, E = Cond.size(); I != E; ++I) {
       if (I >= *Pivot) {
-        Res.push_back(applyVPFastMathFlags(VPI, FalseVal[I]));
+        Res[I] = applyVPFastMathFlags(VPI, FalseVal[I]);
         continue;
       }
 
       switch (Cond[I].asBoolean()) {
       case BooleanKind::True:
-        Res.push_back(applyVPFastMathFlags(VPI, TrueVal[I]));
+        Res[I] = applyVPFastMathFlags(VPI, TrueVal[I]);
         break;
       case BooleanKind::False:
-        Res.push_back(applyVPFastMathFlags(VPI, FalseVal[I]));
+        Res[I] = applyVPFastMathFlags(VPI, FalseVal[I]);
         break;
       case BooleanKind::Poison:
-        Res.push_back(AnyValue::poison());
+        Res[I] = AnyValue::poison();
         break;
       }
     }
@@ -1040,24 +1040,26 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     const unsigned Opcode = *VPI.getFunctionalOpcode();
 
     std::vector<AnyValue> Res;
-    Res.reserve(LHS.size());
+    Res.resize(LHS.size());
     for (size_t I = 0, E = LHS.size(); I != E; ++I) {
       // Check EVL first: a poison mask lane past EVL is disabled by the EVL
       // mask and must not affect the result.
       if (I >= *EVL) {
-        Res.push_back(AnyValue::poison());
+        Res[I] = AnyValue::poison();
         continue;
       }
 
-      switch (getMaskLane(Mask, I)) {
+      switch (const BooleanKind Enabled = getMaskLane(Mask, I)) {
       case BooleanKind::False:
+        Res[I] = AnyValue::poison();
+        break;
       case BooleanKind::Poison:
-        Res.push_back(AnyValue::poison());
+      case BooleanKind::True: {
+        AnyValue Val =
+            evaluateIntBinOp(Opcode, LHS[I], RHS[I], IntBinOpFlags{});
+        Res[I] = Enabled == BooleanKind::True ? Val : AnyValue::poison();
         break;
-      case BooleanKind::True:
-        Res.push_back(
-            evaluateIntBinOp(Opcode, LHS[I], RHS[I], IntBinOpFlags{}));
-        break;
+      }
       }
     }
     return std::move(Res);
@@ -1295,10 +1297,9 @@ public:
     Type *RetTy = CB.getType();
     const FastMathFlags FMF = CB.getFastMathFlagsOrNone();
 
-    if (VPIntrinsic::isVPIntrinsic(IID))
-      if (auto *VPI = dyn_cast<VPIntrinsic>(&CB))
-        if (auto Res = callVPIntrinsic(*VPI, Args))
-          return std::move(*Res);
+    if (auto *VPI = dyn_cast<VPIntrinsic>(&CB))
+      if (auto Res = callVPIntrinsic(*VPI, Args))
+        return std::move(*Res);
 
     switch (IID) {
     case Intrinsic::assume:
