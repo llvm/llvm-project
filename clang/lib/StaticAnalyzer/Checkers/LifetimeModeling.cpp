@@ -92,7 +92,7 @@ std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
   // should be handled to produce the correct descriptive name.
   if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
     return RegName;
-  return "this region";
+  return "the region";
 }
 
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
