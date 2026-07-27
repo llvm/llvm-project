@@ -340,6 +340,32 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
   verifyFormat("o = 0o0_10_010;", "o = 0O0_10_010;", Style);
 }
 
+TEST_F(NumericLiteralCaseTest, IgnoresMacroInvocations) {
+  // Arguments of a likely macro invocation aren't literals.
+  constexpr StringRef A("FOO(0xabc);");
+  constexpr StringRef B("FOO(bar(1), 0xabc);");
+  // Non-macro contexts, where literals are still formatted.
+  constexpr StringRef C("foo(0xabc);");
+  constexpr StringRef D("FOO(1) + 0xabc;");
+  constexpr StringRef E("T(0xabc);");
+  constexpr StringRef F("NS::FOO(0xabc);");
+  verifyFormat(A);
+  verifyFormat(B);
+  verifyFormat(C);
+  verifyFormat(D);
+  verifyFormat(E);
+  verifyFormat(F);
+
+  auto Style = getLLVMStyle();
+  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
+  verifyFormat(A, Style);
+  verifyFormat(B, Style);
+  verifyFormat("foo(0xABC);", C, Style);
+  verifyFormat("FOO(1) + 0xABC;", D, Style);
+  verifyFormat("T(0xABC);", E, Style);
+  verifyFormat("NS::FOO(0xABC);", F, Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

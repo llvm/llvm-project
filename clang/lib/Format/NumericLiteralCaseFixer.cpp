@@ -43,6 +43,11 @@ static bool isNumericLiteralCaseFixerNeeded(const FormatStyle &Style) {
          Option.ExponentLetter != Leave || Option.Suffix != Leave;
 }
 
+// An all-caps identifier is likely a macro; see FormatToken::isPossibleMacro.
+static bool isPossibleMacroName(StringRef Name) {
+  return Name.size() > 1 && Name == Name.upper();
+}
+
 static std::string
 transformComponent(StringRef Component,
                    FormatStyle::NumericLiteralComponentStyle ConfigValue) {
@@ -137,8 +142,25 @@ NumericLiteralCaseFixer::process(const Environment &Env,
 
   Token Tok;
   tooling::Replacements Result;
+  int MacroArgDepth = 0; // Paren depth inside a possible macro invocation.
 
-  for (bool Skip = false; !Lex.LexFromRawLexer(Tok);) {
+  for (bool Skip = false, AfterMacroName = false, AfterScope = false;
+       !Lex.LexFromRawLexer(Tok);) {
+    // Leave arguments of a likely macro invocation (e.g. FOO(0xa)) untouched.
+    if (Tok.is(tok::raw_identifier)) {
+      AfterMacroName =
+          !AfterScope && isPossibleMacroName(Tok.getRawIdentifier());
+    } else if (Tok.is(tok::l_paren)) {
+      if (MacroArgDepth > 0 || AfterMacroName)
+        ++MacroArgDepth;
+      AfterMacroName = false;
+    } else {
+      if (Tok.is(tok::r_paren) && MacroArgDepth > 0)
+        --MacroArgDepth;
+      AfterMacroName = false;
+    }
+    AfterScope = Tok.is(tok::coloncolon);
+
     // Skip tokens that are too small to contain a formattable literal.
     // Size=2 is the smallest possible literal that could contain formattable
     // components, for example "1u".
@@ -157,7 +179,7 @@ NumericLiteralCaseFixer::process(const Environment &Env,
       continue;
     }
 
-    if (Skip || Tok.isNot(tok::numeric_constant) ||
+    if (Skip || MacroArgDepth > 0 || Tok.isNot(tok::numeric_constant) ||
         !AffectedRangeMgr.affectsCharSourceRange(
             CharSourceRange::getCharRange(Location, Tok.getEndLoc()))) {
       continue;
