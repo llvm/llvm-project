@@ -314,7 +314,7 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
       return false;
 
     // URem is represented as `A - ((A udiv B) * B)`. Only construct the complex
-    // SCEV expression, the multiply of the expression to check has a UDiv
+    // SCEV expression, if the multiply of the expression to check has a UDiv
     // operand.
     if (none_of(Mul->operands(),
                 [](const SCEV *Op) { return isa<SCEVUDivExpr>(Op); }))
