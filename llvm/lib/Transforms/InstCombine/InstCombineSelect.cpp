@@ -5307,7 +5307,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
                                            m_Specific(CondVal), m_Value())))) {
-    llvm::IntrinsicInst *LoadInst = cast<IntrinsicInst>(TrueVal);
+    auto *LoadInst = cast<IntrinsicInst>(TrueVal);
     Instruction *In = Builder.CreateMaskedLoad(
         TrueVal->getType(), MaskedLoadPtr,
         LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
