@@ -5731,7 +5731,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // accounted for here using the legacy cost model. However, some opcodes
   // are excluded from these precomputed scalarization costs and are instead
   // modeled later by the VPlan cost model (see UseVPlanCostModel below).
-  for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
+  for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
     if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
@@ -5754,7 +5754,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
-  for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
+  for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
     if (UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
