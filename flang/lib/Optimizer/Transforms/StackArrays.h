@@ -92,7 +92,11 @@ public:
 
   StackArraysAnalysisWrapper(mlir::Operation *op) {}
 
-  // returns nullptr if analysis failed
+  // Returns nullptr if analysis failed.
+  // Note: the returned pointer points into funcMaps and is invalidated if
+  // funcMaps grows (i.e. when a not-yet-analysed function is queried). This
+  // does not happen currently because each StackArraysAnalysisWrapper instance
+  // is only used to analyse a single function.
   const AllocMemMap *getCandidateOps(mlir::Operation *func);
 
 private:
