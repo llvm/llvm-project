@@ -106,9 +106,9 @@ static void xformStdFindIntoMemchr(StdFindOp findOp,
     return;
   llvm::Triple triple(tripleAttr.getValue().str());
   if (!triple.isArch64Bit() || triple.isX32() || triple.isABIN32() ||
-      triple.getEnvironment() == llvm::Triple::GNUILP32 ||
-      triple.isSPIRV() || triple.isAMDGPU() || triple.isNVPTX() ||
-      triple.isBPF() || triple.getOS() == llvm::Triple::Lv2) {
+      triple.getEnvironment() == llvm::Triple::GNUILP32 || triple.isSPIRV() ||
+      triple.isAMDGPU() || triple.isNVPTX() || triple.isBPF() ||
+      triple.getOS() == llvm::Triple::Lv2) {
     return;
   }
 
