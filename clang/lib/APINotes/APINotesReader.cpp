@@ -762,8 +762,7 @@ public:
   std::unique_ptr<SerializedIdentifierTable> IdentifierTable;
 
   /// Lazy reverse lookup cache from identifier ID to string.
-  bool IdentifierStringsInitialized = false;
-  llvm::DenseMap<uint32_t, llvm::StringRef> IdentifierStrings;
+  std::optional<llvm::DenseMap<uint32_t, llvm::StringRef>> IdentifierStrings;
 
   using SerializedContextIDTable =
       llvm::OnDiskIterableChainedHashTable<ContextIDTableInfo>;
