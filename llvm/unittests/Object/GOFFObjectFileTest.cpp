@@ -221,7 +221,7 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -290,7 +290,7 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -384,7 +384,7 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
           MemoryBufferRef(Data, "dummyGOFF"));
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -484,7 +484,7 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -516,7 +516,7 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<SymbolRef::Type> SymbolType = Symbol.getType();
@@ -559,7 +559,7 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<SymbolRef::Type> SymbolType = Symbol.getType();
@@ -633,7 +633,7 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
   auto Symbols = GOFFObj->symbols();
   ASSERT_EQ(std::distance(Symbols.begin(), Symbols.end()), 1);
   SymbolRef Symbol = *Symbols.begin();
