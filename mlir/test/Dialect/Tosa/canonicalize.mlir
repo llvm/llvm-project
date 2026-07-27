@@ -1441,6 +1441,31 @@ func.func @no_fold_mul_result_exceeds_i32() -> tensor<i32> {
 
 // -----
 
+// A dynamically-shaped result cannot be a constant; folding must bail instead
+// of building a DenseElementsAttr of a non-static shape (which would assert).
+// CHECK-LABEL: @no_fold_mul_dynamic_result
+// CHECK: tosa.mul
+func.func @no_fold_mul_dynamic_result() -> tensor<?xf32> {
+    %0 = "tosa.const"() <{values = dense<2.0> : tensor<4xf32>}> : () -> tensor<4xf32>
+    %1 = "tosa.const"() <{values = dense<3.0> : tensor<4xf32>}> : () -> tensor<4xf32>
+    %2 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+    %3 = tosa.mul %0, %1, %2 : (tensor<4xf32>, tensor<4xf32>, tensor<1xi8>) -> tensor<?xf32>
+    return %3 : tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_intdiv_dynamic_result
+// CHECK: tosa.intdiv
+func.func @no_fold_intdiv_dynamic_result() -> tensor<?xi32> {
+    %0 = "tosa.const"() <{values = dense<6> : tensor<4xi32>}> : () -> tensor<4xi32>
+    %1 = "tosa.const"() <{values = dense<2> : tensor<4xi32>}> : () -> tensor<4xi32>
+    %2 = tosa.intdiv %0, %1 : (tensor<4xi32>, tensor<4xi32>) -> tensor<?xi32>
+    return %2 : tensor<?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @test_fold_i1_to_i32_cast
 // CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
 // CHECK: return %[[OUT]] : tensor<i32>

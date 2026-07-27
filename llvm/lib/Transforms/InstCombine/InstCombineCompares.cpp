@@ -815,14 +815,35 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    if (Base.Ptr && CanFold(Base.LHSNW & Base.RHSNW) && !Base.isExpensive()) {
+    if (Base.Ptr && !Base.isExpensive()) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Type *IdxTy = DL.getIndexType(GEPLHS->getType());
-      Value *L =
-          EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, /*RewriteGEP=*/true);
-      Value *R =
-          EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy, /*RewriteGEP=*/true);
-      return NewICmp(Base.LHSNW & Base.RHSNW, L, R);
+      bool DoFold = CanFold(Base.LHSNW & Base.RHSNW);
+
+      if (!DoFold && Base.Ptr->getType()->isPointerTy()) {
+        // Without the flags, we can still fold if the offsets are constant and
+        // they cross the base's alignment boundary the same number of times, so
+        // either both arguments will wrap, or none of them will.
+        unsigned BW = DL.getIndexTypeSizeInBits(GEPLHS->getType());
+        APInt Alignment = APInt(BW, Base.Ptr->getPointerAlignment(DL).value());
+        APInt LOff(BW, 0);
+        APInt ROff(BW, 0);
+        if (GEPLHS->stripAndAccumulateConstantOffsets(
+                DL, LOff, /*AllowNonInbounds=*/true) == Base.Ptr &&
+            RHS->stripAndAccumulateConstantOffsets(
+                DL, ROff, /*AllowNonInbounds=*/true) == Base.Ptr)
+          DoFold =
+              APIntOps::RoundingSDiv(LOff, Alignment, APInt::Rounding::DOWN) ==
+              APIntOps::RoundingSDiv(ROff, Alignment, APInt::Rounding::DOWN);
+      }
+
+      if (DoFold) {
+        Type *IdxTy = DL.getIndexType(GEPLHS->getType());
+        Value *L = EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy,
+                                  /*RewriteGEP=*/true);
+        Value *R = EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy,
+                                  /*RewriteGEP=*/true);
+        return NewICmp(Base.LHSNW & Base.RHSNW, L, R);
+      }
     }
   }
 
@@ -6527,6 +6548,8 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
 
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
+  // TODO: for icmp (ptrtoaddr), (ptrtoaddr), we don't need this check;
+  // currently it is always false if the pointer has non-address bits.
   auto CompatibleSizes = [&](Type *PtrTy, Type *IntTy) {
     if (isa<VectorType>(PtrTy)) {
       PtrTy = cast<VectorType>(PtrTy)->getElementType();
@@ -6534,13 +6557,18 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
     }
     return DL.getPointerTypeSizeInBits(PtrTy) == IntTy->getIntegerBitWidth();
   };
-  if (CastOp0->getOpcode() == Instruction::PtrToInt &&
+  if (isa<PtrToIntInst, PtrToAddrInst>(CastOp0) &&
       CompatibleSizes(SrcTy, DestTy)) {
     Value *NewOp1 = nullptr;
     if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
       Value *PtrSrc = PtrToIntOp1->getOperand(0);
       if (PtrSrc->getType() == Op0Src->getType())
         NewOp1 = PtrToIntOp1->getOperand(0);
+    } else if (auto *PtrToAddrOp1 =
+                   dyn_cast<PtrToAddrOperator>(ICmp.getOperand(1))) {
+      Value *PtrSrc = PtrToAddrOp1->getOperand(0);
+      if (PtrSrc->getType() == Op0Src->getType())
+        NewOp1 = PtrToAddrOp1->getOperand(0);
     } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
       NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }

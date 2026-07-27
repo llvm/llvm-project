@@ -882,21 +882,6 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
 }
 
-void ExprEngine::handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                                   NodeBuilder &Bldr) {
-  // FIXME: We can probably just have some magic in Environment::getSVal()
-  // that propagates values, instead of creating a new node here.
-  //
-  // Unary "+" is a no-op, similar to a parentheses.  We still have places
-  // where it may be a block-level expression, so we need to
-  // generate an extra node that just propagates the value of the
-  // subexpression.
-  const Expr *Ex = U->getSubExpr()->IgnoreParens();
-  ProgramStateRef state = N->getState();
-  const StackFrame *SF = N->getStackFrame();
-  Bldr.generateNode(U, N, state->BindExpr(U, SF, state->getSVal(Ex, SF)));
-}
-
 void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
                                     ExplodedNodeSet &Dst) {
   // FIXME: Prechecks eventually go in ::Visit().
@@ -904,15 +889,20 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
   getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, U, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
+
+  // Lambda for handling the case when the operand is returned unchanged.
+  auto MakeNodeForIdentityOp = [U, &Engine = Engine](ExplodedNode *N) {
+    const Expr *Ex = U->getSubExpr()->IgnoreParens();
+    SVal SV = N->getState()->getSVal(Ex, N->getStackFrame());
+    return Engine.makeNodeWithBinding(N, U, SV);
+  };
 
   for (ExplodedNode *N : CheckedSet) {
     switch (U->getOpcode()) {
     default: {
-      Bldr.takeNodes(N);
       ExplodedNodeSet Tmp;
       VisitIncrementDecrementOperator(U, N, Tmp);
-      Bldr.addNodes(Tmp);
+      EvalSet.insert(Tmp);
       break;
     }
     case UO_Real: {
@@ -921,14 +911,13 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
       // FIXME: We don't have complex SValues yet.
       if (Ex->getType()->isAnyComplexType()) {
         // Just report "Unknown."
+        EvalSet.insert(N);
         break;
       }
 
       // For all other types, UO_Real is an identity operation.
       assert (U->getType() == Ex->getType());
-      ProgramStateRef state = N->getState();
-      const StackFrame *SF = N->getStackFrame();
-      Bldr.generateNode(U, N, state->BindExpr(U, SF, state->getSVal(Ex, SF)));
+      EvalSet.insert(MakeNodeForIdentityOp(N));
       break;
     }
 
@@ -937,13 +926,12 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
       // FIXME: We don't have complex SValues yet.
       if (Ex->getType()->isAnyComplexType()) {
         // Just report "Unknown."
+        EvalSet.insert(N);
         break;
       }
       // For all other types, UO_Imag returns 0.
-      ProgramStateRef state = N->getState();
-      const StackFrame *SF = N->getStackFrame();
       SVal X = svalBuilder.makeZeroVal(Ex->getType());
-      Bldr.generateNode(U, N, state->BindExpr(U, SF, X));
+      EvalSet.insert(Engine.makeNodeWithBinding(N, U, X));
       break;
     }
 
@@ -954,15 +942,13 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
         const ValueDecl *VD = DRE->getDecl();
 
         if (isa<CXXMethodDecl, FieldDecl, IndirectFieldDecl>(VD)) {
-          ProgramStateRef State = N->getState();
-          const StackFrame *SF = N->getStackFrame();
           SVal SV = svalBuilder.getMemberPointer(cast<NamedDecl>(VD));
-          Bldr.generateNode(U, N, State->BindExpr(U, SF, SV));
+          EvalSet.insert(Engine.makeNodeWithBinding(N, U, SV));
           break;
         }
       }
       // Explicitly proceed with default handler for this case cascade.
-      handleUOExtension(N, U, Bldr);
+      EvalSet.insert(MakeNodeForIdentityOp(N));
       break;
     }
     case UO_Plus:
@@ -970,7 +956,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
       [[fallthrough]];
     case UO_Deref:
     case UO_Extension: {
-      handleUOExtension(N, U, Bldr);
+      EvalSet.insert(MakeNodeForIdentityOp(N));
       break;
     }
 
@@ -986,7 +972,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
       SVal V = state->getSVal(Ex, SF);
 
       if (V.isUnknownOrUndef()) {
-        Bldr.generateNode(U, N, state->BindExpr(U, SF, V));
+        EvalSet.insert(Engine.makeNodeWithBinding(N, U, V));
         break;
       }
 
@@ -1023,7 +1009,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           state = state->BindExpr(U, SF, Result);
           break;
       }
-      Bldr.generateNode(U, N, state);
+      EvalSet.insert(Engine.makePostStmtNode(U, state, N));
       break;
     }
     }

@@ -1360,18 +1360,13 @@ define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-LABEL: test_pmulhsu_b:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pwcvtu.wb a0, a0
-; RV64-NEXT:    pwcvtu.wb a1, a1
 ; RV64-NEXT:    psext.h.b a0, a0
+; RV64-NEXT:    pwcvtu.wb a1, a1
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
 ; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    psrli.h a0, a0, 8
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %a_ext = sext <4 x i8> %a to <4 x i16>
   %b_ext = zext <4 x i8> %b to <4 x i16>
@@ -1402,12 +1397,7 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
 ; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    psrli.h a0, a0, 8
-; RV64-NEXT:    srli a1, a0, 48
-; RV64-NEXT:    srli a2, a0, 32
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    ppaire.b a0, a0, a3
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %a_ext = zext <4 x i8> %a to <4 x i16>
   %b_ext = sext <4 x i8> %b to <4 x i16>
@@ -2681,6 +2671,44 @@ define <2 x i16> @test_pmerge_mvmn_i16x2(<2 x i16> %rs2, <2 x i16> %rs1, <2 x i1
   ret <2 x i16> %res
 }
 
+; Packed sign and zero extend
+define <2 x i16> @test_psext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_psext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %shl = shl <2 x i16> %a, splat (i16 8)
+  %res = ashr <2 x i16> %shl, splat (i16 8)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pzext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_pzext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pzext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = and <2 x i16> %a, splat (i16 255)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_riscv_psext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_riscv_psext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_riscv_pzext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_riscv_pzext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pzext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pzext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
 ; Packed absolute difference sum
 define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_pabdsumu_u8x4_u32:
@@ -2745,4 +2773,22 @@ define <2 x i16> @test_undef_v2i16() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
   ret <2 x i16> undef
+}
+
+define <2 x i16> @test_pmulq_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulq_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulq.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulq.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulqr_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulqr_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulqr.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
 }

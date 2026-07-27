@@ -291,9 +291,6 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
   case scPtrToAddr:
     CanonicalSCEV = SE.getPtrToAddrExpr(CanonOps[0]);
     return;
-  case scPtrToInt:
-    CanonicalSCEV = SE.getPtrToIntExpr(CanonOps[0], getType());
-    return;
   case scTruncate:
     CanonicalSCEV = SE.getTruncateExpr(CanonOps[0], getType());
     return;
@@ -355,12 +352,10 @@ void SCEV::print(raw_ostream &OS) const {
   case scVScale:
     OS << "vscale";
     return;
-  case scPtrToAddr:
-  case scPtrToInt: {
+  case scPtrToAddr: {
     const SCEVCastExpr *PtrCast = cast<SCEVCastExpr>(this);
     const SCEV *Op = PtrCast->getOperand();
-    StringRef OpS = getSCEVType() == scPtrToAddr ? "addr" : "int";
-    OS << "(ptrto" << OpS << " " << *Op->getType() << " " << *Op << " to "
+    OS << "(ptrtoaddr " << *Op->getType() << " " << *Op << " to "
        << *PtrCast->getType() << ")";
     return;
   }
@@ -460,41 +455,6 @@ void SCEV::print(raw_ostream &OS) const {
   llvm_unreachable("Unknown SCEV kind!");
 }
 
-Type *SCEV::getType() const {
-  switch (getSCEVType()) {
-  case scConstant:
-    return cast<SCEVConstant>(this)->getType();
-  case scVScale:
-    return cast<SCEVVScale>(this)->getType();
-  case scPtrToAddr:
-  case scPtrToInt:
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend:
-    return cast<SCEVCastExpr>(this)->getType();
-  case scAddRecExpr:
-    return cast<SCEVAddRecExpr>(this)->getType();
-  case scMulExpr:
-    return cast<SCEVMulExpr>(this)->getType();
-  case scUMaxExpr:
-  case scSMaxExpr:
-  case scUMinExpr:
-  case scSMinExpr:
-    return cast<SCEVMinMaxExpr>(this)->getType();
-  case scSequentialUMinExpr:
-    return cast<SCEVSequentialMinMaxExpr>(this)->getType();
-  case scAddExpr:
-    return cast<SCEVAddExpr>(this)->getType();
-  case scUDivExpr:
-    return cast<SCEVUDivExpr>(this)->getType();
-  case scUnknown:
-    return cast<SCEVUnknown>(this)->getType();
-  case scCouldNotCompute:
-    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
-  }
-  llvm_unreachable("Unknown SCEV kind!");
-}
-
 ArrayRef<SCEVUse> SCEV::operands() const {
   switch (getSCEVType()) {
   case scConstant:
@@ -502,7 +462,6 @@ ArrayRef<SCEVUse> SCEV::operands() const {
   case scUnknown:
     return {};
   case scPtrToAddr:
-  case scPtrToInt:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
@@ -542,23 +501,30 @@ bool SCEV::isNonConstantNegative() const {
   return SC->getAPInt().isNegative();
 }
 
-SCEVCouldNotCompute::SCEVCouldNotCompute() :
-  SCEV(FoldingSetNodeIDRef(), scCouldNotCompute, 0) {}
+SCEVCouldNotCompute::SCEVCouldNotCompute()
+    : SCEV(FoldingSetNodeIDRef(), scCouldNotCompute, 0, nullptr) {}
 
 bool SCEVCouldNotCompute::classof(const SCEV *S) {
   return S->getSCEVType() == scCouldNotCompute;
 }
 
 const SCEV *ScalarEvolution::getConstant(ConstantInt *V) {
+  auto &Entry = ConstantSCEVs[V];
+  if (Entry)
+    return Entry;
+
   FoldingSetNodeID ID;
   ID.AddInteger(scConstant);
   ID.AddPointer(V);
   void *IP = nullptr;
-  if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
-  SCEV *S = new (SCEVAllocator) SCEVConstant(ID.Intern(SCEVAllocator), V);
+  if (SCEVConstant *S =
+          static_cast<SCEVConstant *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP)))
+    return Entry = S;
+  SCEVConstant *S =
+      new (SCEVAllocator) SCEVConstant(ID.Intern(SCEVAllocator), V);
   UniqueSCEVs.InsertNode(S, IP);
   S->computeAndSetCanonical(*this);
-  return S;
+  return Entry = S;
 }
 
 const SCEV *ScalarEvolution::getConstant(const APInt &Val) {
@@ -597,19 +563,12 @@ const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC,
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            SCEVUse op, Type *ty)
-    : SCEV(ID, SCEVTy, computeExpressionSize(op)), Op(op), Ty(ty) {}
+    : SCEV(ID, SCEVTy, computeExpressionSize(op), ty), Op(op) {}
 
 SCEVPtrToAddrExpr::SCEVPtrToAddrExpr(const FoldingSetNodeIDRef ID,
                                      const SCEV *Op, Type *ITy)
     : SCEVCastExpr(ID, scPtrToAddr, Op, ITy) {
-  assert(getOperand()->getType()->isPointerTy() && Ty->isIntegerTy() &&
-         "Must be a non-bit-width-changing pointer-to-integer cast!");
-}
-
-SCEVPtrToIntExpr::SCEVPtrToIntExpr(const FoldingSetNodeIDRef ID, SCEVUse Op,
-                                   Type *ITy)
-    : SCEVCastExpr(ID, scPtrToInt, Op, ITy) {
-  assert(getOperand()->getType()->isPointerTy() && Ty->isIntegerTy() &&
+  assert(getOperand()->getType()->isPointerTy() && getType()->isIntegerTy() &&
          "Must be a non-bit-width-changing pointer-to-integer cast!");
 }
 
@@ -621,21 +580,21 @@ SCEVIntegralCastExpr::SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID,
 SCEVTruncateExpr::SCEVTruncateExpr(const FoldingSetNodeIDRef ID, SCEVUse op,
                                    Type *ty)
     : SCEVIntegralCastExpr(ID, scTruncate, op, ty) {
-  assert(getOperand()->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
+  assert(getOperand()->getType()->isIntOrPtrTy() && getType()->isIntOrPtrTy() &&
          "Cannot truncate non-integer value!");
 }
 
 SCEVZeroExtendExpr::SCEVZeroExtendExpr(const FoldingSetNodeIDRef ID, SCEVUse op,
                                        Type *ty)
     : SCEVIntegralCastExpr(ID, scZeroExtend, op, ty) {
-  assert(getOperand()->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
+  assert(getOperand()->getType()->isIntOrPtrTy() && getType()->isIntOrPtrTy() &&
          "Cannot zero extend non-integer value!");
 }
 
 SCEVSignExtendExpr::SCEVSignExtendExpr(const FoldingSetNodeIDRef ID, SCEVUse op,
                                        Type *ty)
     : SCEVIntegralCastExpr(ID, scSignExtend, op, ty) {
-  assert(getOperand()->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
+  assert(getOperand()->getType()->isIntOrPtrTy() && getType()->isIntOrPtrTy() &&
          "Cannot sign extend non-integer value!");
 }
 
@@ -819,7 +778,6 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -1167,46 +1125,6 @@ public:
   }
 };
 
-const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
-  assert(Op->getType()->isPointerTy() && "Op must be a pointer");
-
-  // It isn't legal for optimizations to construct new ptrtoint expressions
-  // for non-integral pointers.
-  if (getDataLayout().isNonIntegralPointerType(Op->getType()))
-    return getCouldNotCompute();
-
-  Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
-
-  // We can only trivially model ptrtoint if SCEV's effective (integer) type
-  // is sufficiently wide to represent all possible pointer values.
-  // We could theoretically teach SCEV to truncate wider pointers, but
-  // that isn't implemented for now.
-  if (getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(Op->getType())) !=
-      getDataLayout().getTypeSizeInBits(IntPtrTy))
-    return getCouldNotCompute();
-
-  // Use the rewriter to sink the cast down to SCEVUnknown leaves.
-  const SCEV *IntOp = SCEVCastSinkingRewriter::rewrite(
-      Op, *this, IntPtrTy, [this, IntPtrTy](const SCEVUnknown *U) {
-        FoldingSetNodeID ID;
-        ID.AddInteger(scPtrToInt);
-        ID.AddPointer(U);
-        void *IP = nullptr;
-        if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-          return S;
-        SCEV *S = new (SCEVAllocator)
-            SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), U, IntPtrTy);
-        UniqueSCEVs.InsertNode(S, IP);
-        S->computeAndSetCanonical(*this);
-        registerUser(S, U);
-        return static_cast<const SCEV *>(S);
-      });
-  assert(IntOp->getType()->isIntegerTy() &&
-         "We must have succeeded in sinking the cast, "
-         "and ending up with an integer-typed expression!");
-  return IntOp;
-}
-
 const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
   assert(Op->getType()->isPointerTy() && "Op must be a pointer");
 
@@ -1239,16 +1157,6 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
          "We must have succeeded in sinking the cast, "
          "and ending up with an integer-typed expression!");
   return IntOp;
-}
-
-const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
-  assert(Ty->isIntegerTy() && "Target type must be an integer type!");
-
-  const SCEV *IntOp = getLosslessPtrToIntExpr(Op);
-  if (isa<SCEVCouldNotCompute>(IntOp))
-    return IntOp;
-
-  return getTruncateOrZeroExtend(IntOp, Ty);
 }
 
 const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
@@ -2289,8 +2197,11 @@ const SCEV *ScalarEvolution::getCastExpr(SCEVTypes Kind, const SCEV *Op,
     return getZeroExtendExpr(Op, Ty);
   case scSignExtend:
     return getSignExtendExpr(Op, Ty);
-  case scPtrToInt:
-    return getPtrToIntExpr(Op, Ty);
+  case scPtrToAddr: {
+    const SCEV *Expr = getPtrToAddrExpr(Op);
+    assert(Expr->getType() == Ty && "requested type must match");
+    return Expr;
+  }
   default:
     llvm_unreachable("Not a SCEV cast expression!");
   }
@@ -4237,8 +4148,6 @@ public:
 
   RetVal visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) { return Expr; }
 
-  RetVal visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) { return Expr; }
-
   RetVal visitTruncateExpr(const SCEVTruncateExpr *Expr) { return Expr; }
 
   RetVal visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) { return Expr; }
@@ -4288,7 +4197,6 @@ static bool scevUnconditionallyPropagatesPoisonFromOperands(SCEVTypes Kind) {
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -6324,7 +6232,7 @@ ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(Type *Ty,
       }
       auto CoerceOperand = [&](const SCEV *Op) -> const SCEV * {
         if (Op->getType()->isPointerTy()) {
-          Op = getLosslessPtrToIntExpr(Op);
+          Op = getPtrToAddrExpr(Op);
           if (isa<SCEVCouldNotCompute>(Op))
             return Op;
         }
@@ -6506,7 +6414,6 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
   case scConstant:
     return cast<SCEVConstant>(S)->getAPInt();
   case scPtrToAddr:
-  case scPtrToInt:
     return getConstantMultiple(cast<SCEVCastExpr>(S)->getOperand());
   case scUDivExpr:
   case scVScale:
@@ -6811,7 +6718,6 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
     case scZeroExtend:
     case scSignExtend:
     case scPtrToAddr:
-    case scPtrToInt:
     case scAddExpr:
     case scMulExpr:
     case scUDivExpr:
@@ -6934,8 +6840,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         SExt, SignHint,
         ConservativeResult.intersectWith(X.signExtend(BitWidth), RangeType));
   }
-  case scPtrToAddr:
-  case scPtrToInt: {
+  case scPtrToAddr: {
     const SCEVCastExpr *Cast = cast<SCEVCastExpr>(S);
     ConstantRange X = getRangeRef(Cast->getOperand(), SignHint, Depth + 1);
     return setRange(Cast, SignHint, X);
@@ -8131,6 +8036,37 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
       if (BO->Op)
         Flags = getNoWrapFlagsFromUB(BO->Op);
+
+      // Try to use ptrtoaddr for subtracts with at least one ptrtoint
+      // operand. While we don't model ptrtoint directly in SCEV, the
+      // difference between two pointer addresses is well-defined.
+      Value *PtrLHS = nullptr, *PtrRHS = nullptr;
+      bool HasPtrLHS = match(BO->LHS, m_PtrToInt(m_Value(PtrLHS)));
+      bool HasPtrRHS = match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)));
+      if (HasPtrLHS || HasPtrRHS) {
+        // Convert a ptrtoint operand (OrigOp) to ptrtoaddr of its pointer
+        // PtrOp. When only one side is ptrtoint (BothPtr is false), skip
+        // SCEVUnknown pointers since wrapping them in ptrtoaddr adds no
+        // useful structure.
+        auto GetOp = [&](bool HasPtr, Value *PtrOp, Value *OrigOp,
+                         bool BothPtr) -> const SCEV * {
+          if (!HasPtr)
+            return getSCEV(OrigOp);
+          const SCEV *PtrSCEV = getSCEV(PtrOp);
+          if (BothPtr || !isa<SCEVUnknown>(PtrSCEV)) {
+            const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
+            if (!isa<SCEVCouldNotCompute>(Addr) &&
+                getTypeSizeInBits(OrigOp->getType()) <=
+                    getTypeSizeInBits(Addr->getType()))
+              return getTruncateOrNoop(Addr, OrigOp->getType());
+          }
+          return getSCEV(OrigOp);
+        };
+        const SCEV *L = GetOp(HasPtrLHS, PtrLHS, BO->LHS, HasPtrRHS);
+        const SCEV *R = GetOp(HasPtrRHS, PtrRHS, BO->RHS, HasPtrLHS);
+        return getMinusSCEV(L, R, Flags);
+      }
+
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
       return getMinusSCEV(LHS, RHS, Flags);
@@ -8400,15 +8336,19 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   }
 
   case Instruction::PtrToInt: {
-    // Pointer to integer cast is straight-forward, so do model it.
-    const SCEV *Op = getSCEV(U->getOperand(0));
-    Type *DstIntTy = U->getType();
-    // But only if effective SCEV (integer) type is wide enough to represent
-    // all possible pointer values.
-    const SCEV *IntOp = getPtrToIntExpr(Op, DstIntTy);
-    if (isa<SCEVCouldNotCompute>(IntOp))
-      return getUnknown(V);
-    return IntOp;
+    // Keep ptrtoint as SCEVUnknown, except when the pointer operand has SCEV
+    // structure (e.g. a pointer add-rec or an offset from a known base). In
+    // that case model it via ptrtoaddr to preserve the integer structure
+    // (induction, constant folding). A bare SCEVUnknown pointer gains no
+    // structure from wrapping it in ptrtoaddr, so leave it opaque.
+    const SCEV *PtrSCEV = getSCEV(U->getOperand(0));
+    if (!isa<SCEVUnknown>(PtrSCEV)) {
+      const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
+      if (!isa<SCEVCouldNotCompute>(Addr) &&
+          getTypeSizeInBits(V->getType()) <= getTypeSizeInBits(Addr->getType()))
+        return getTruncateOrNoop(Addr, V->getType());
+    }
+    return getUnknown(V);
   }
   case Instruction::IntToPtr:
     // Just don't deal with inttoptr casts.
@@ -9573,12 +9513,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
     if (LHS->getType()->isPointerTy()) {
-      LHS = getLosslessPtrToIntExpr(LHS);
+      LHS = getPtrToAddrExpr(LHS);
       if (isa<SCEVCouldNotCompute>(LHS))
         return LHS;
     }
     if (RHS->getType()->isPointerTy()) {
-      RHS = getLosslessPtrToIntExpr(RHS);
+      RHS = getPtrToAddrExpr(RHS);
       if (isa<SCEVCouldNotCompute>(RHS))
         return RHS;
     }
@@ -9591,12 +9531,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_EQ: {                     // while (X == Y)
     // Convert to: while (X-Y == 0)
     if (LHS->getType()->isPointerTy()) {
-      LHS = getLosslessPtrToIntExpr(LHS);
+      LHS = getPtrToAddrExpr(LHS);
       if (isa<SCEVCouldNotCompute>(LHS))
         return LHS;
     }
     if (RHS->getType()->isPointerTy()) {
-      RHS = getLosslessPtrToIntExpr(RHS);
+      RHS = getPtrToAddrExpr(RHS);
       if (isa<SCEVCouldNotCompute>(RHS))
         return RHS;
     }
@@ -10220,13 +10160,6 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
 
     return nullptr;
   }
-  case scPtrToInt: {
-    const SCEVPtrToIntExpr *P2I = cast<SCEVPtrToIntExpr>(V);
-    if (Constant *CastOp = BuildConstantFromSCEV(P2I->getOperand()))
-      return ConstantExpr::getPtrToInt(CastOp, P2I->getType());
-
-    return nullptr;
-  }
   case scTruncate: {
     const SCEVTruncateExpr *ST = cast<SCEVTruncateExpr>(V);
     if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand()))
@@ -10277,7 +10210,6 @@ const SCEV *ScalarEvolution::getWithOperands(const SCEV *S,
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
     return getCastExpr(S->getSCEVType(), NewOps[0], S->getType());
   case scAddRecExpr: {
     auto *AddRec = cast<SCEVAddRecExpr>(S);
@@ -10362,7 +10294,6 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -13629,12 +13560,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *OrigStart = Start;
   const SCEV *OrigRHS = RHS;
   if (Start->getType()->isPointerTy()) {
-    Start = getLosslessPtrToIntExpr(Start);
+    Start = getPtrToAddrExpr(Start);
     if (isa<SCEVCouldNotCompute>(Start))
       return Start;
   }
   if (RHS->getType()->isPointerTy()) {
-    RHS = getLosslessPtrToIntExpr(RHS);
+    RHS = getPtrToAddrExpr(RHS);
     if (isa<SCEVCouldNotCompute>(RHS))
       return RHS;
   }
@@ -13937,12 +13868,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
   }
 
   if (Start->getType()->isPointerTy()) {
-    Start = getLosslessPtrToIntExpr(Start);
+    Start = getPtrToAddrExpr(Start);
     if (isa<SCEVCouldNotCompute>(Start))
       return Start;
   }
   if (End->getType()->isPointerTy()) {
-    End = getLosslessPtrToIntExpr(End);
+    End = getPtrToAddrExpr(End);
     if (isa<SCEVCouldNotCompute>(End))
       return End;
   }
@@ -14100,14 +14031,18 @@ bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
 /// Return the size of an element read or written by Inst.
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   Type *Ty;
-  if (StoreInst *Store = dyn_cast<StoreInst>(Inst))
+  Type *PtrTy;
+  if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
     Ty = Store->getValueOperand()->getType();
-  else if (LoadInst *Load = dyn_cast<LoadInst>(Inst))
+    PtrTy = Store->getPointerOperandType();
+  } else if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
     Ty = Load->getType();
-  else
+    PtrTy = Load->getPointerOperandType();
+  } else {
     return nullptr;
+  }
 
-  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Inst->getContext()));
+  Type *ETy = getEffectiveSCEVType(PtrTy);
   return getSizeOfExpr(ETy, Ty);
 }
 
@@ -14185,6 +14120,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       UniqueSCEVs(std::move(Arg.UniqueSCEVs)),
       UniquePreds(std::move(Arg.UniquePreds)),
       SCEVAllocator(std::move(Arg.SCEVAllocator)),
+      ConstantSCEVs(std::move(Arg.ConstantSCEVs)),
       LoopUsers(std::move(Arg.LoopUsers)),
       PredicatedSCEVRewrites(std::move(Arg.PredicatedSCEVRewrites)),
       FirstUnknown(Arg.FirstUnknown) {
@@ -14570,7 +14506,6 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -14661,7 +14596,6 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -16064,10 +15998,19 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           ConstantRange::makeExactICmpRegion(Pred, C2->getAPInt())
               .sub(C1->getAPInt());
 
-      // Bail out, unless we have a non-wrapping, monotonic range.
-      if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
-        return false;
+      // Tighten the raw range with what we already know about LHSUnknown
+      // from prior guards recorded in RewriteMap, or from SCEV's own range
+      // analysis.
       const SCEV *RewrittenLHS = GetMaybeRewritten(LHSUnknown);
+      ExactRegion = ExactRegion.intersectWith(SE.getUnsignedRange(RewrittenLHS),
+                                              ConstantRange::Unsigned);
+
+      // Bail if the guard is inconsistent with prior facts, or if the range
+      // is still not a monotonic non-wrapping interval after tightening.
+      if (ExactRegion.isEmptySet() || ExactRegion.isWrappedSet() ||
+          ExactRegion.isFullSet())
+        return false;
+
       const SCEV *RegionMin = SE.getConstant(ExactRegion.getUnsignedMin());
       const SCEV *RegionMax = SE.getConstant(ExactRegion.getUnsignedMax());
       const SCEV *ClampedLHS =
@@ -16189,8 +16132,8 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           // inequalities in a separate map, and materialize the rewrite lazily
           // when encountering a suitable subtraction while re-writing.
           if (LHS->getType()->isPointerTy()) {
-            LHS = SE.getLosslessPtrToIntExpr(LHS);
-            RHS = SE.getLosslessPtrToIntExpr(RHS);
+            LHS = SE.getPtrToAddrExpr(LHS);
+            RHS = SE.getPtrToAddrExpr(RHS);
             if (isa<SCEVCouldNotCompute>(LHS) || isa<SCEVCouldNotCompute>(RHS))
               break;
           }

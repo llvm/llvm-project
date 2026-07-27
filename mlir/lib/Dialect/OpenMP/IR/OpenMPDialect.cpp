@@ -4619,6 +4619,18 @@ LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// Spec 5.1: Error directive (2.5.4)
+//===----------------------------------------------------------------------===//
+
+LogicalResult ErrorOp::verify() {
+  if (getMessage() && getMessageExpr())
+    return emitOpError() << "the message must be provided either as a constant "
+                            "`message` attribute or as a `message_expr` "
+                            "operand, but not both";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Ordered construct
 //===----------------------------------------------------------------------===//
 

@@ -1821,10 +1821,7 @@ void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
                   V->getType(), ValueVTs);
-  SmallVector<SDValue, 4> Results;
-  for (EVT VT : ValueVTs)
-    Results.push_back(DAG.getPOISON(VT));
-  setValue(V, DAG.getMergeValues(Results, dl));
+  setValue(V, DAG.getErrorMergeValues(ValueVTs, SDValue(), dl));
 }
 
 /// getNonRegisterValue - Return an SDValue for the given Value, but
@@ -3919,16 +3916,12 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
 
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
-      case SPNB_RETURNS_NAN: break;
+      case SPNB_RETURNS_ANY:
+      case SPNB_RETURNS_NAN:
+        break;
       case SPNB_RETURNS_OTHER:
         Opc = ISD::FMINIMUMNUM;
         Flags.setNoSignedZeros(true);
-        break;
-      case SPNB_RETURNS_ANY:
-        if (TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT) ||
-            (UseScalarMinMax &&
-             TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT.getScalarType())))
-          Opc = ISD::FMINNUM;
         break;
       }
       break;
@@ -3938,16 +3931,12 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
 
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
-      case SPNB_RETURNS_NAN: break;
+      case SPNB_RETURNS_NAN:
+      case SPNB_RETURNS_ANY:
+        break;
       case SPNB_RETURNS_OTHER:
         Opc = ISD::FMAXIMUMNUM;
         Flags.setNoSignedZeros(true);
-        break;
-      case SPNB_RETURNS_ANY:
-        if (TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT) ||
-            (UseScalarMinMax &&
-             TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT.getScalarType())))
-          Opc = ISD::FMAXNUM;
         break;
       }
       break;

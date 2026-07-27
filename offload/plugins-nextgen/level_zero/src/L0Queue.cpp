@@ -65,12 +65,12 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
                             size_t Size) {
-  assert(PatternSize < Size && "PatternSize < Size is unsupported");
+  assert(PatternSize <= Size && "PatternSize > Size is unsupported");
 
   if (Size == 0 || PatternSize == 0)
     return Plugin::success();
 
-  if (llvm::isPowerOf2_64(PatternSize) &&
+  if (llvm::isPowerOf2_64(PatternSize) && (Size % PatternSize == 0) &&
       PatternSize <= Device.getMaxMemFillPatternSize()) {
     // Native L0 memory fill is possible directly.
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
