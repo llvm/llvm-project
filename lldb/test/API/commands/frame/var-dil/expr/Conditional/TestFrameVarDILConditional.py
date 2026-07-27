@@ -28,6 +28,9 @@ class TestFrameVarDILConditional(TestBase):
         self.expect_var_path("false ? 1 : sh", value="2", type="short")
         self.expect_var_path("1 + false ? 10 : 20", value="10")
         self.expect_var_path("1 + (false ? 10 : 20)", value="21")
+        self.expect_var_path("0 ? 1 ? 2 : 3 : 4 ? 5 : 6", value="5")
+        self.expect_var_path("0 ? 1 : 2 ? 3 : 4 ? 5 : 6", value="3")
+        self.expect_var_path("6 ? iref ? arr3[0] ? 5 : sh : 2 : i", value="2")
 
         # Check enums.
         self.expect_var_path("false ? b_enum : a_enum", value="kTwoA")
