@@ -5,8 +5,10 @@
 // replaced by the acc.use_device result.
 func.func @static_array() {
   %c1 = arith.constant 1 : i32
+  %c100 = arith.constant 100 : index
   %0 = fir.alloca !fir.array<100xi32> {bindc_name = "a", uniq_name = "_QFEa"}
-  %1 = fir.declare %0 {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
+  %sh = fir.shape %c100 : (index) -> !fir.shape<1>
+  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %2 = acc.copyin varPtr(%1 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
   acc.data dataOperands(%2 : !fir.ref<!fir.array<100xi32>>) {
     cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%1) : (!fir.ref<!fir.array<100xi32>>)
@@ -58,8 +60,10 @@ func.func @descriptor_array() {
 // No enclosing acc.data region: the launch must be left untouched.
 func.func @no_enclosing_data() {
   %c1 = arith.constant 1 : i32
+  %c100 = arith.constant 100 : index
   %0 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEa"}
-  %1 = fir.declare %0 {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
+  %sh = fir.shape %c100 : (index) -> !fir.shape<1>
+  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%1) : (!fir.ref<!fir.array<100xi32>>)
   return
 }
@@ -75,10 +79,12 @@ func.func @no_enclosing_data() {
 // rewrite.
 func.func @unmapped_arg() {
   %c1 = arith.constant 1 : i32
+  %c100 = arith.constant 100 : index
+  %sh = fir.shape %c100 : (index) -> !fir.shape<1>
   %0 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEa"}
-  %1 = fir.declare %0 {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
+  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %2 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEb"}
-  %3 = fir.declare %2 {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
+  %3 = fir.declare %2(%sh) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %4 = acc.copyin varPtr(%3 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "b"}
   acc.data dataOperands(%4 : !fir.ref<!fir.array<100xi32>>) {
     cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%1) : (!fir.ref<!fir.array<100xi32>>)
