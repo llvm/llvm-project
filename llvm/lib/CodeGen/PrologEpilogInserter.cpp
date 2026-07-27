@@ -1349,7 +1349,7 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)
     if (MBB.isReturnBlock())
-      TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
+      TFI.emitZeroCallUsedRegs(RegsToZero, MBB, RS);
 }
 
 /// Replace all FrameIndex operands with physical register references and actual

@@ -6,9 +6,6 @@
 HowToUseInstrMappings
 ```
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

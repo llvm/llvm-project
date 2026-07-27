@@ -214,13 +214,11 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
     }
   }
 
-  ExplodedNodeSet Tmp;
-  NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
-  Bldr.generateNode(BE, Pred, State->BindExpr(BE, Pred->getStackFrame(), V),
-                    nullptr, ProgramPoint::PostLValueKind);
+  ExplodedNode *N = Engine.makeNodeWithBinding(Pred, BE, V, State,
+                                               ProgramPoint::PostLValueKind);
 
   // FIXME: Move all post/pre visits to ::Visit().
-  getCheckerManager().runCheckersForPostStmt(Dst, Tmp, BE, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, N, BE, *this);
 }
 
 ProgramStateRef

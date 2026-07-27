@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -2466,11 +2465,19 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
-  // If the aggregate result feeds a callsite whose aggregate params were
-  // rewritten to i32 value-ids by SPIRVPrepareFunctions, mutate it to match.
+  // If the aggregate result feeds a return or callsite whose type was rewritten
+  // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
   if (NewI->getType()->isAggregateType()) {
     for (const Use &U : NewI->uses()) {
-      auto *CB = dyn_cast<CallBase>(U.getUser());
+      User *Usr = U.getUser();
+      if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
+        if (RI->getFunction()->getReturnType() != NewI->getType()) {
+          NewI->mutateType(B.getInt32Ty());
+          break;
+        }
+        continue;
+      }
+      auto *CB = dyn_cast<CallBase>(Usr);
       if (!CB || !CB->isArgOperand(&U))
         continue;
       unsigned ArgNo = CB->getArgOperandNo(&U);
@@ -3590,8 +3597,8 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
 
   // For non-shader targets without the Intel extension, emit OpLoopMerge
   // using spv_loop_merge intrinsics, mirroring the structurizer approach.
-  DominatorTree DT(F);
-  LoopInfo LI(DT);
+  LoopInfo LI;
+  LI.analyze(&F);
   if (LI.empty())
     return;
 

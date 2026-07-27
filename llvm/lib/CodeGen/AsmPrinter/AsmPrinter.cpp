@@ -2054,19 +2054,20 @@ void AsmPrinter::emitFunctionBody() {
   emitFunctionBodyStart();
 
   if (isVerbose()) {
-    // Get MachineDominatorTree or compute it on the fly if it's unavailable
     MDT = GetMDT(*MF);
-    if (!MDT) {
-      OwnedMDT = std::make_unique<MachineDominatorTree>();
-      OwnedMDT->recalculate(*MF);
-      MDT = OwnedMDT.get();
-    }
-
-    // Get MachineLoopInfo or compute it on the fly if it's unavailable
+    // Get MachineLoopInfo or compute it on the fly if it's unavailable, which
+    // needs a MachineDominatorTree only for an irreducible CFG.
     MLI = GetMLI(*MF);
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
-      OwnedMLI->analyze(*MDT);
+      OwnedMLI->calculate(*MF, [&]() -> const MachineDominatorTree & {
+        if (!MDT) {
+          OwnedMDT = std::make_unique<MachineDominatorTree>();
+          OwnedMDT->recalculate(*MF);
+          MDT = OwnedMDT.get();
+        }
+        return *MDT;
+      });
       MLI = OwnedMLI.get();
     }
   }

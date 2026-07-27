@@ -2197,6 +2197,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+    return emitBuiltinWithOneOverloadedType<2>(
+        *this, E, Intrinsic::amdgcn_s_prefetch_inst);
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf: {
     Value *Src0 = EmitScalarExpr(E->getArg(0));

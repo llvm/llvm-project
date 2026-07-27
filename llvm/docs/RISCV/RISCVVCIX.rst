@@ -2,8 +2,6 @@
 Scheduling Information for RISC-V VCIX Instructions
 ===================================================
 
-.. contents::
-   :local:
 
 Summary
 -------

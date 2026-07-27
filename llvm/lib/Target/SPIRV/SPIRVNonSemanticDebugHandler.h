@@ -67,6 +67,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DICompositeType nodes with DW_TAG_array_type and DINode::FlagVector,
   // partitioned from DebugInfoFinder.types() in beginModule().
   SmallVector<const DICompositeType *> VectorTypes;
+  // DICompositeType nodes with DW_TAG_array_type that are not vectors,
+  // partitioned in beginModule().
+  SmallVector<const DICompositeType *> ArrayTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
@@ -316,6 +319,21 @@ private:
   std::optional<MCRegister> emitDebugTypeVector(const DICompositeType *VT,
                                                 MCRegister ExtInstSetReg,
                                                 SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypeArray for the array composite type \p AT.
+  ///
+  /// Emits the element (base) type id followed by one Component Count per
+  /// \c DISubrange, in DWARF subrange order. A count that is not a
+  /// compile-time constant is emitted as 0, matching \c OpTypeRuntimeArray. A
+  /// matrix arrives here as a multi-subrange array and is emitted with one
+  /// count per dimension.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p AT's element type has not been emitted into
+  /// \c DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypeArray(const DICompositeType *AT,
+                                               MCRegister ExtInstSetReg,
+                                               SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for

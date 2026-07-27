@@ -1,8 +1,5 @@
 # The LLVM Instrumentor Pass
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

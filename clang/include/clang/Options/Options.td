@@ -4301,11 +4301,11 @@ def fno_openmp_target_new_runtime : Flag<["-"], "fno-openmp-target-new-runtime">
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
-  Visibility<[ClangOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Assert common GPU usage patterns to enable OpenMP runtime optimizations">;
 def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
-  Visibility<[ClangOption]>;
+  Visibility<[ClangOption, FlangOption]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,

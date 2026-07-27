@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c -triple=amdgcn-amd-amdhsa -verify -fsyntax-only %s
+// RUN: %clang_cc1 -x c -triple=amdgpu-amd-amdhsa -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=x86_64-pc-linux-gnu -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=spirv64-unknown-unknown -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=spir -verify -fsyntax-only %s

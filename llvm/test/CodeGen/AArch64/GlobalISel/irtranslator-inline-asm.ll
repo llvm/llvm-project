@@ -110,8 +110,8 @@ define i32 @test_specific_register_output_trunc() nounwind ssp {
   ; CHECK-LABEL: name: test_specific_register_output_trunc
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 7", attdialect, regdef, implicit-def $x0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](s64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
   ; CHECK-NEXT:   $w0 = COPY [[TRUNC]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
@@ -126,8 +126,8 @@ define zeroext i8 @test_register_output_trunc(ptr %src) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   INLINEASM &"mov ${0:w}, 32", attdialect, regdef:GPR32common, def %1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY1]](i32)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
   ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -210,8 +210,8 @@ define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY [[COPY]](p0)
   ; CHECK-NEXT:   INLINEASM &"ldtrb ${0:w}, [$1]", attdialect, regdef:GPR32common, def %1, reguse:GPR64common, [[COPY1]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY %1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY %1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY2]](i32)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
   ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -238,11 +238,11 @@ define i16 @test_anyext_input() {
   ; CHECK-LABEL: name: test_anyext_input
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](i16)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](i16)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:GPR32common, def %0, reguse:GPR32common, [[COPY]]
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
   ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
   ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -254,11 +254,11 @@ define i16 @test_anyext_input_with_matching_constraint() {
   ; CHECK-LABEL: name: test_anyext_input_with_matching_constraint
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](i16)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[C]](i16)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, regdef:GPR32common, def %0, reguse tiedto:$0, [[COPY]](tied-def 3)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY %0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
   ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i16)
   ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0

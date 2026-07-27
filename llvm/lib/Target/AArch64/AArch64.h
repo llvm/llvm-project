@@ -206,11 +206,12 @@ void initializeAArch64SRLTDefineSuperRegsLegacyPass(PassRegistry &);
 void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 
-class SVEShuffleOptsPass : public OptionalPassInfoMixin<SVEShuffleOptsPass> {
+class AArch64SVEShuffleOptsPass
+    : public OptionalPassInfoMixin<AArch64SVEShuffleOptsPass> {
   const AArch64TargetMachine &TM;
 
 public:
-  explicit SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
+  explicit AArch64SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &U);

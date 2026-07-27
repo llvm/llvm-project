@@ -155,6 +155,8 @@ features cannot lower the translation-unit ABI level;
 
 ### Modified Compiler Flags
 
+- All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -340,6 +342,7 @@ features cannot lower the translation-unit ABI level;
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 
@@ -358,6 +361,8 @@ features cannot lower the translation-unit ABI level;
   they are now correctly accepted on such pointers.
 
 #### Bug Fixes to C++ Support
+
+- Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
@@ -452,6 +457,8 @@ features cannot lower the translation-unit ABI level;
 ### clang-format
 
 ### libclang
+
+- visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
 

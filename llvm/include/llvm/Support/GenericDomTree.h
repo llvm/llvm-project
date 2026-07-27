@@ -615,11 +615,7 @@ public:
   /// \param Updates An ordered sequence of updates to perform. The current CFG
   /// and the reverse of these updates provides the pre-view of the CFG.
   ///
-  void applyUpdates(ArrayRef<UpdateType> Updates) {
-    GraphDiff<NodePtr, IsPostDominator> PreViewCFG(
-        Updates, /*ReverseApplyUpdates=*/true);
-    DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, nullptr);
-  }
+  void applyUpdates(ArrayRef<UpdateType> Updates);
 
   /// \param Updates An ordered sequence of updates to perform. The current CFG
   /// and the reverse of these updates provides the pre-view of the CFG.
@@ -627,24 +623,7 @@ public:
   /// to obtain a post-view of the CFG. The DT will be updated assuming the
   /// obtained PostViewCFG is the desired end state.
   void applyUpdates(ArrayRef<UpdateType> Updates,
-                    ArrayRef<UpdateType> PostViewUpdates) {
-    if (Updates.empty()) {
-      GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
-      DomTreeBuilder::ApplyUpdates(*this, PostViewCFG, &PostViewCFG);
-    } else {
-      // PreViewCFG needs to merge Updates and PostViewCFG. The updates in
-      // Updates need to be reversed, and match the direction in PostViewCFG.
-      // The PostViewCFG is created with updates reversed (equivalent to changes
-      // made to the CFG), so the PreViewCFG needs all the updates reverse
-      // applied.
-      SmallVector<UpdateType> AllUpdates(Updates);
-      append_range(AllUpdates, PostViewUpdates);
-      GraphDiff<NodePtr, IsPostDom> PreViewCFG(AllUpdates,
-                                               /*ReverseApplyUpdates=*/true);
-      GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
-      DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, &PostViewCFG);
-    }
-  }
+                    ArrayRef<UpdateType> PostViewUpdates);
 
   /// Inform the dominator tree about a CFG edge insertion and update the tree.
   ///
@@ -655,13 +634,7 @@ public:
   /// Note that for postdominators it automatically takes care of inserting
   /// a reverse edge internally (so there's no need to swap the parameters).
   ///
-  void insertEdge(NodeT *From, NodeT *To) {
-    assert(From);
-    assert(To);
-    assert(NodeTrait::getParent(From) == Parent);
-    assert(NodeTrait::getParent(To) == Parent);
-    DomTreeBuilder::InsertEdge(*this, From, To);
-  }
+  void insertEdge(NodeT *From, NodeT *To);
 
   /// Inform the dominator tree about a CFG edge deletion and update the tree.
   ///
@@ -673,13 +646,7 @@ public:
   /// Note that for postdominators it automatically takes care of deleting
   /// a reverse edge internally (so there's no need to swap the parameters).
   ///
-  void deleteEdge(NodeT *From, NodeT *To) {
-    assert(From);
-    assert(To);
-    assert(NodeTrait::getParent(From) == Parent);
-    assert(NodeTrait::getParent(To) == Parent);
-    DomTreeBuilder::DeleteEdge(*this, From, To);
-  }
+  void deleteEdge(NodeT *From, NodeT *To);
 
   /// Add a new node to the dominator tree information.
   ///
@@ -850,17 +817,9 @@ private:
 
 public:
   /// recalculate - compute a dominator tree for the given function
-  void recalculate(ParentType &Func) {
-    Parent = &Func;
-    updateBlockNumberEpoch();
-    DomTreeBuilder::Calculate(*this);
-  }
+  void recalculate(ParentType &Func);
 
-  void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates) {
-    Parent = &Func;
-    updateBlockNumberEpoch();
-    DomTreeBuilder::CalculateWithUpdates(*this, Updates);
-  }
+  void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates);
 
   /// Update dominator tree after renumbering blocks.
   void updateBlockNumbers() {
@@ -890,9 +849,7 @@ public:
   ///             constructed tree.
   ///             Takes O(N^2) time worst case, but is faster in practise (same
   ///             as tree construction).
-  bool verify(VerificationLevel VL = VerificationLevel::Full) const {
-    return DomTreeBuilder::Verify(*this, VL);
-  }
+  bool verify(VerificationLevel VL = VerificationLevel::Full) const;
 
   void reset() {
     DomTreeNodes.clear();

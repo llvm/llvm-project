@@ -147,6 +147,13 @@ public:
       ze_command_list_handle_t hCommandList, void *pfnHostFunction,
       void *pUserData, void *pReserved, ze_event_handle_t hSignalEvent,
       uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) = nullptr;
+
+  /// Level Zero extension function pointer for querying the driver's default
+  /// ze_context, when the extension is supported. Used by
+  /// LevelZeroPluginTy::createPluginContext to reuse the driver default
+  /// context when the user asks for every device on the driver.
+  ze_context_handle_t(ZE_APICALL *zeDriverGetDefaultContext)(
+      ze_driver_handle_t hDriver) = nullptr;
 };
 
 } // namespace llvm::omp::target::plugin

@@ -50,7 +50,8 @@ static void
 partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
                SmallVector<const DIDerivedType *> &PointerTypes,
                SmallVector<const DISubroutineType *> &SubroutineTypes,
-               SmallVector<const DICompositeType *> &VectorTypes) {
+               SmallVector<const DICompositeType *> &VectorTypes,
+               SmallVector<const DICompositeType *> &ArrayTypes) {
   if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
     BasicTypes.push_back(BT);
     return;
@@ -60,8 +61,23 @@ partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
     return;
   }
   if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
-    if (CT->getTag() == dwarf::DW_TAG_array_type && CT->isVector())
-      VectorTypes.push_back(CT);
+    if (CT->getTag() == dwarf::DW_TAG_array_type) {
+      // A vector is an array with DINode::FlagVector. A plain array is the
+      // same tag without it. A matrix is also lowered to a DW_TAG_array_type
+      // (two subranges), so it is indistinguishable from a 2D array here and
+      // is emitted as a DebugTypeArray.
+      //
+      // FIXME: Emitting a matrix as a DebugTypeArray is valid but loses the
+      // matrix shape. DWARF has no matrix tag, so distinguishing a matrix needs
+      // a new DINode flag analogous to FlagVector, set on the array, plus a way
+      // to carry column-major vs row-major traits. Array-of-vectors alone would
+      // not disambiguate a matrix from a genuine array of vectors. Once the
+      // frontend marks matrices, route them to a DebugTypeMatrix path here.
+      if (CT->isVector())
+        VectorTypes.push_back(CT);
+      else
+        ArrayTypes.push_back(CT);
+    }
     return;
   }
   const auto *DT = dyn_cast<DIDerivedType>(Ty);
@@ -194,6 +210,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   PointerTypes.clear();
   SubroutineTypes.clear();
   VectorTypes.clear();
+  ArrayTypes.clear();
   SubprogramDeclarations.clear();
   GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
@@ -247,7 +264,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   DebugInfoFinder Finder;
   Finder.processModule(*M);
   llvm::for_each(Finder.types(), [&](DIType *Ty) {
-    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes);
+    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes,
+                   ArrayTypes);
   });
 
   for (const DISubprogram *SP : Finder.subprograms()) {
@@ -712,6 +730,46 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
                      ExtInstSetReg, {BTIt->second, CountReg}, MAI);
 }
 
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
+    const DICompositeType *AT, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  // The element (base) type must already be in DebugTypeRegs. Unlike
+  // DebugTypeVector, the element may be any debug type, not only a basic type.
+  auto BaseRegOpt = lookupOptReg(DebugTypeRegs, AT->getBaseType());
+  if (!BaseRegOpt)
+    return std::nullopt;
+
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+
+  SmallVector<MCRegister> Ops;
+  Ops.push_back(*BaseRegOpt);
+
+  // One component count per DISubrange, in DWARF subrange order. Emit 0 for
+  // counts that are not a compile-time constant (dynamic arrays). This matches
+  // OpTypeRuntimeArray.
+  for (const DINode *Element : AT->getElements()) {
+    const auto *SR = dyn_cast<DISubrange>(Element);
+    if (!SR)
+      continue;
+    // A DIVariable count (a variable-length array) is not a ConstantInt, so it
+    // maps to 0 here. DebugTypeArray also allows a DebugLocalVariable or
+    // DebugGlobalVariable id for it, but no frontend we target emits one. A
+    // constant wider than 32 bits maps to 0 too, since the count operand is a
+    // 32-bit OpConstant and such an array cannot occur in a shader.
+    uint32_t Count = 0;
+    if (const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount())) {
+      const APInt &Value = CI->getValue();
+      if (Value.getActiveBits() <= 32)
+        Count = static_cast<uint32_t>(Value.getZExtValue());
+    }
+    Ops.push_back(emitOpConstantI32(Count, I32TypeReg, MAI));
+  }
+
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeArray, VoidTypeReg,
+                     ExtInstSetReg, Ops, MAI);
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (CompileUnits.empty())
@@ -875,6 +933,14 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   for (const DIDerivedType *PT : PointerTypes) {
     if (auto PtrReg = emitDebugTypePointer(PT, ExtInstSetReg, MAI))
       DebugTypeRegs[PT] = *PtrReg;
+  }
+
+  // Emit DebugTypeArray for each collected array type. Placed after the basic,
+  // vector, and pointer types so an array over any of them can resolve its
+  // element id. An array whose element type was not emitted is skipped.
+  for (const DICompositeType *AT : ArrayTypes) {
+    if (auto ArrReg = emitDebugTypeArray(AT, ExtInstSetReg, MAI))
+      DebugTypeRegs[AT] = *ArrReg;
   }
 
   // Emit DebugTypeFunction for each distinct DISubroutineType.

@@ -187,12 +187,6 @@ m_scev_ZExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>
-m_scev_PtrToInt(const Op0_t &Op0) {
-  return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
-}
-
-template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>
 m_scev_PtrToAddr(const Op0_t &Op0) {
   return SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>(Op0);
@@ -317,6 +311,13 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
     const SCEV *A;
     const SCEVMulExpr *Mul;
     if (!SCEVPatternMatch::match(Expr, m_scev_Add(m_scev_Mul(Mul), m_SCEV(A))))
+      return false;
+
+    // URem is represented as `A - ((A udiv B) * B)`. Only construct the complex
+    // SCEV expression, if the multiply of the expression to check has a UDiv
+    // operand.
+    if (none_of(Mul->operands(),
+                [](const SCEV *Op) { return isa<SCEVUDivExpr>(Op); }))
       return false;
 
     const auto MatchURemWithDivisor = [&](const SCEV *B) {

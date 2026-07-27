@@ -90,6 +90,24 @@ body:             |
 ...
 
 ---
+name:            salu16_src0_usedby_valu32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: salu16_src0_usedby_valu32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_TRUNC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_TRUNC_F16_t16_e64 0, [[DEF]].lo16, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_TRUNC_F16_t16_e64_]], %subreg.lo16, [[DEF2]], %subreg.hi16
+    ; GCN-NEXT: V_CMP_LT_F32_e32 [[REG_SEQUENCE]], [[DEF1]], implicit-def $vcc_lo, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0:vgpr_32
+    %2:sreg_32 = S_TRUNC_F16 %1:sreg_32, implicit $mode
+    %3:vgpr_32 = IMPLICIT_DEF
+    V_CMP_LT_F32_e32 %2:sreg_32, %3:vgpr_32, implicit-def $vcc, implicit $mode, implicit $exec
+...
+
+---
 name:            salu32_usedby_salu16
 body:             |
   bb.0:
@@ -155,6 +173,52 @@ body:             |
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32 = COPY %0:vgpr_32
     %2:vgpr_16 = V_TRUNC_F16_t16_e64 0, %1:sreg_32, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+---
+name:            copy_vgpr16_sreg32_usedby_valu32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_vgpr16_sreg32_usedby_valu32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]], %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[REG_SEQUENCE]], [[REG_SEQUENCE]], implicit $exec
+    %0:vgpr_16 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0:vgpr_16
+    %2:vgpr_32 = V_XOR_B32_e64 %1:sreg_32, %1:sreg_32, implicit $exec
+...
+
+---
+name:            copy_lo16_sreg32_usedby_salu32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_lo16_sreg32_usedby_salu32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].lo16, %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].lo16, %subreg.lo16, [[DEF2]], %subreg.hi16
+    ; GCN-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0.lo16
+    %2:sreg_32 = S_XOR_B32 %1:sreg_32, %1:sreg_32, implicit-def $scc
+...
+
+---
+name:            copy_hi16_sreg32_usedby_salu32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: copy_hi16_sreg32_usedby_salu32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].hi16, %subreg.lo16, [[DEF1]], %subreg.hi16
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].hi16, %subreg.lo16, [[DEF2]], %subreg.hi16
+    ; GCN-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0.hi16
+    %2:sreg_32 = S_XOR_B32 %1:sreg_32, %1:sreg_32, implicit-def $scc
 ...
 
 ---
@@ -350,4 +414,18 @@ body:             |
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32 = COPY %0:vgpr_32
     %2:sreg_32 = S_PACK_LL_B32_B16 1, %1:sreg_32, implicit-def dead $scc
+...
+
+---
+name:            v_or_b16_t16_from_hi16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: v_or_b16_t16_from_hi16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_OR_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_OR_B16_t16_e64 0, [[DEF]].lo16, 0, [[DEF1]].hi16, 0, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1.hi16
+    %3:vgpr_16 = V_OR_B16_t16_e64 0, %0.lo16, 0, killed %2, 0, implicit $exec
 ...

@@ -1,8 +1,5 @@
 # Remarks
 
-```{contents}
-:local: true
-```
 
 ## Introduction to the LLVM remark diagnostics
 

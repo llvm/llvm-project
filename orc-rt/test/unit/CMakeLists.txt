@@ -49,6 +49,7 @@ add_orc_rt_unittest(CoreTests
   SimplePackedSerializationTest.cpp
   SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
+  StringExtrasTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp

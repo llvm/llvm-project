@@ -340,7 +340,8 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   else if (FileStem.equals_insensitive(HeaderStem))
     Matching = FileStem; // example 3)
   if (!Matching.empty()) {
-    llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,
+    llvm::Regex MainIncludeRegex(llvm::Regex::escape(HeaderStem) +
+                                     Style.IncludeIsMainRegex,
                                  llvm::Regex::IgnoreCase);
     if (MainIncludeRegex.match(Matching))
       return true;

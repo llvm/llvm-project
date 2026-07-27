@@ -72,8 +72,9 @@ protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                       StringRef FS, StringTable PN,
                       ArrayRef<SubtargetFeatureKV> PF,
-                      ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
-                      const MCWriteProcResEntry *WPR,
+                      ArrayRef<SubtargetSubTypeKV> PD,
+                      ArrayRef<SubtargetSubTypeAliasKV> PA,
+                      const MCSchedModel *PSM, const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
                       const unsigned *OC, const unsigned *FP);

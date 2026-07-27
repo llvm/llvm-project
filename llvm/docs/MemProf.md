@@ -1,9 +1,5 @@
 # MemProf: Memory Profiling for LLVM
 
-```{contents}
-:depth: 2
-:local:
-```
 
 ## Introduction
 

@@ -54,8 +54,7 @@ bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec) {
     return false;
   }
   const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
-  const auto *dsa{std::get_if<DataSharingAttribute>(&defaultClause.v.u)};
-  return dsa && *dsa == DataSharingAttribute::None;
+  return defaultClause.v.v == DataSharingAttribute::None;
 }
 
 bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {

@@ -461,12 +461,28 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
 /// program order.
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
+  analyze(DomTree.getRootNode()->getBlock()->getParent(),
+          [&]() -> const DomTreeBase<BlockT> & { return DomTree; });
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyze(ParentT F) {
+  DomTreeBase<BlockT> DomTree;
+  analyze(F, [&]() -> const DomTreeBase<BlockT> & {
+    DomTree.recalculate(*F);
+    return DomTree;
+  });
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyze(
+    ParentT F, function_ref<const DomTreeBase<BlockT> &()> GetDomTree) {
   using BlockTraits = GraphTraits<BlockT *>;
   auto num = [](const BlockT *BB) {
     return GraphTraits<const BlockT *>::getNumber(BB);
   };
 
-  ParentPtr = DomTree.getRootNode()->getBlock()->getParent();
+  ParentPtr = F;
   BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
   unsigned MaxNumber = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
 
@@ -593,6 +609,9 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     // splice the header out of the chain of every other block.
     for (unsigned H : Reentries)
       Info[H].Pos = IsReentered;
+    const DomTreeBase<BlockT> &DomTree = GetDomTree();
+    assert(DomTree.getRootNode()->getBlock() ==
+           GraphTraits<ParentT>::getEntryNode(ParentPtr));
     DomTree.updateDFSNumbers();
     SmallVector<unsigned, 0> Mark(MaxNumber, NoBlock);
     SmallVector<BlockT *, 8> Worklist;

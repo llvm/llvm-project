@@ -2136,6 +2136,13 @@ class ProcessorModel<string n, SchedMachineModel m, list<SubtargetFeature> f,
   let SchedModel = m;
 }
 
+// Defines an alternate name 'n' for the processor 'alias', resolving
+// to the same subtarget features and scheduling model.
+class ProcessorAlias<string n, string alias> {
+  string Name = n;
+  string Alias = alias;
+}
+
 //===----------------------------------------------------------------------===//
 // InstrMapping - This class is used to create mapping tables to relate
 // instructions with each other based on the values specified in RowFields,

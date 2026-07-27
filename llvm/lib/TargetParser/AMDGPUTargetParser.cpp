@@ -639,6 +639,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wmma-128b-insts"] = true;
     Features["swmmac-gfx1200-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
+    Features["smem-prefetch-insts"] = true;
     break;
   case GK_GFX1170:
   case GK_GFX1171:

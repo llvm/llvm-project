@@ -2,8 +2,6 @@
 Lightweight Fault Isolation (LFI) in LLVM
 =========================================
 
-.. contents::
-   :local:
 
 Introduction
 ++++++++++++

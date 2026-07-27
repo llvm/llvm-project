@@ -758,15 +758,34 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     // generating code for a device, so that only the relevant code is emitted.
     CmdArgs.push_back("-fopenmp-is-target-device");
 
+    // -fopenmp-target-fast implies -fopenmp-assume-no-thread-state and
+    // -fopenmp-assume-no-nested-parallelism, and forces -O3 unless an
+    // explicit optimization level was requested.
+    bool TargetFastUsed =
+        Args.hasFlag(options::OPT_fopenmp_target_fast,
+                     options::OPT_fno_openmp_target_fast, false);
+
+    if (TargetFastUsed && !Args.hasArg(options::OPT_O_Group))
+      CmdArgs.push_back("-O3");
+
     // When in OpenMP offloading mode, enable debugging on the device.
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
     if (Args.hasFlag(options::OPT_fopenmp_target_debug,
                      options::OPT_fno_openmp_target_debug, /*Default=*/false))
       CmdArgs.push_back("-fopenmp-target-debug");
-    if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+
+    // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
+    if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
+                     options::OPT_fno_openmp_assume_no_thread_state,
+                     /*Default=*/TargetFastUsed))
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
-    if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+
+    // Handle -fopenmp-assume-no-nested-parallelism (implied by target-fast)
+    if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
+                     options::OPT_fno_openmp_assume_no_nested_parallelism,
+                     /*Default=*/TargetFastUsed))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+
     if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                       true))
       CmdArgs.push_back("-nogpulib");

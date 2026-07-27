@@ -1125,8 +1125,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // CUDA specific checks
   // TODO: These are disabled in OpenACC constructs, which may not be
-  // correct when the target is not a GPU.
-  if (!intrinsic &&
+  // correct when the target is not a GPU. Statement functions are inlined
+  // during lowering, so CUDA data attributes do not apply to their dummies.
+  if (!intrinsic && !procedure.isStmtFunction &&
       !dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
       !FindOpenACCConstructContaining(scope)) {
     std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;

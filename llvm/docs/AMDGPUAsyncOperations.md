@@ -2,9 +2,6 @@
 
 # AMDGPU Asynchronous Operations
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

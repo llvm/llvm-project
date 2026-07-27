@@ -1,9 +1,9 @@
+---
+tocdepth: 4
+---
+
 # LLVM Language Reference Manual
 
-```{contents}
-:local:
-:depth: 3
-```
 
 ## Abstract
 

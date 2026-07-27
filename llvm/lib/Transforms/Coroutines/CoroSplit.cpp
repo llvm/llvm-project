@@ -206,6 +206,12 @@ static void replaceSwitchResumeCoroFree(const coro::Shape &Shape,
     auto *Null = ConstantPointerNull::get(cast<PointerType>(CF->getType()));
     Value *Replacement =
         Builder.CreateSelect(IsElided, Null, FramePtr, "coro.free");
+    // Add unknown branch weights to the select since whether the frame is
+    // heap-allocated or elided cannot be determined.
+    applyProfMetadataIfEnabled(Replacement, [&](Instruction *Inst) {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                  Inst->getFunction());
+    });
     CF->replaceAllUsesWith(Replacement);
     CF->eraseFromParent();
   }

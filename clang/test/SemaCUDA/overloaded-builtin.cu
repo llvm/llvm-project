@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -aux-triple amdgpu-amd-amdhsa -fsyntax-only -verify=host -xhip %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsyntax-only -fcuda-is-device -verify=dev -xhip %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fsyntax-only -fcuda-is-device -verify=dev -xhip %s
 
 // dev-no-diagnostics
 

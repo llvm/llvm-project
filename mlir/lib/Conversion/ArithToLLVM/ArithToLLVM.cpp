@@ -314,9 +314,9 @@ struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
     // pair of FP types that are valid LLVM types.
     [[maybe_unused]] auto srcType = getElementTypeOrSelf(op.getIn().getType());
     [[maybe_unused]] auto dstType = getElementTypeOrSelf(op.getType());
-    assert((srcType.isBF16() && dstType.isF16()) ||
-           (srcType.isF16() && dstType.isBF16()) &&
-               "only bf16 <-> f16 conversions are supported");
+    assert(((srcType.isBF16() && dstType.isF16()) ||
+            (srcType.isF16() && dstType.isBF16())) &&
+           "only bf16 <-> f16 conversions are supported");
 
     Type convertedType = getTypeConverter()->convertType(op.getType());
     if (!convertedType)

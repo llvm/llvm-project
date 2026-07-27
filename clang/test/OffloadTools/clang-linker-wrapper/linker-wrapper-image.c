@@ -159,7 +159,7 @@
 // CUDA-NEXT:   ret void
 // CUDA-NEXT: }
 
-// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgpu-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \

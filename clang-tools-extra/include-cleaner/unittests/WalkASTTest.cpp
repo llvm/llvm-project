@@ -41,8 +41,9 @@ using testing::ElementsAre;
 //   Referencing: int x = ^foo();
 // There must be exactly one referencing location marked.
 // Returns target decls.
-std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
-                                 llvm::StringRef ReferencingCode) {
+std::vector<Decl::Kind>
+testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode,
+         std::vector<std::string> ExtraArgs = {"-std=c++20"}) {
   llvm::Annotations Target(TargetCode);
   llvm::Annotations Referencing(ReferencingCode);
 
@@ -50,7 +51,8 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   Inputs.ExtraFiles["target.h"] = Target.code().str();
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
-  Inputs.ExtraArgs.push_back("-std=c++20");
+  for (const auto &Arg : ExtraArgs)
+    Inputs.ExtraArgs.push_back(Arg);
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -574,6 +576,294 @@ TEST(WalkAST, OperatorNewDelete) {
 TEST(WalkAST, CleanupAttr) {
   testWalk("void* $explicit^freep(void *p);",
            "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
+}
+
+TEST(WalkAST, ObjCInterfaceTypeLoc) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      ^MyClass *obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    @implementation ^MyClass
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorLoc) {
+  testWalk(R"objc(
+    @interface MyClass
+    $explicit^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprClassReceiver) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    + (void)classMethod;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      [^MyClass classMethod];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprExplicit) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprImplicitGetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    $explicit^- (int)foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprImplicitSetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    $explicit^- (void)setFoo:(int)val;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      obj.^foo = 42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprExplicitSetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      obj.^foo = 42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprProtocol) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(id<MyProtocol> obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolInType) {
+  testWalk(R"objc(
+    @protocol $explicit^MyProtocol
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id<^MyProtocol> obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolInClassInterface) {
+  testWalk(R"objc(
+    @protocol $explicit^MyProtocol
+    @end
+  )objc",
+           R"objc(
+    @interface MyClass <^MyProtocol>
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolInProtocolInheritance) {
+  testWalk(R"objc(
+    @protocol $explicit^ParentProtocol
+    @end
+  )objc",
+           R"objc(
+    @protocol MyProtocol <^ParentProtocol>
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolExpr) {
+  testWalk(R"objc(
+    @protocol $explicit^MyProtocol
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      Protocol* p = @protocol(^MyProtocol);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCategoryDeclDependsOnInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    @interface ^MyClass (Category)
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCategoryImplDependsOnInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    @interface MyClass (Category)
+    @end
+    @implementation ^MyClass (Category)
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCategoryImplDependsOnCategoryDecl) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+    @interface $explicit^MyClass (Category)
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass (^Category)
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplicitCastToProtocolConformingCategory) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @end
+    @interface MyClass
+    @end
+    @interface $implicit^MyClass (MyCategory) <MyProtocol>
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      id<MyProtocol> p = ^obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCompatibleAliasDecl) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    ^@compatibility_alias AliasName MyClass;
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCompatibleAliasUsage) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+    @compatibility_alias AliasName MyClass;
+  )objc",
+           R"objc(
+    void test() {
+      ^AliasName *obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprExplicit) {
+  testWalk(R"objc(
+    @interface MyClass {
+      @public
+      int $explicit^foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj->^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprFree) {
+  testWalk(R"objc(
+    @interface MyClass {
+      int $explicit^foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
 }
 
 } // namespace

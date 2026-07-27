@@ -2,8 +2,6 @@
 Developer Guideline for AMDGPU
 ===============================
 
-.. contents::
-   :local:
 
 Introduction
 ============

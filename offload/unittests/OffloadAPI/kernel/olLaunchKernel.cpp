@@ -86,7 +86,7 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
     void *DevAlloc, *HstAlloc;
     size_t Size = LaunchArgs.GroupSize.x * sizeof(uint32_t);
     ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &DevAlloc));
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, Size, &HstAlloc));
+    ASSERT_SUCCESS(olMemAllocHost(Device, Size, &HstAlloc));
 
     void *ArgPtrs[] = {&DevAlloc};
     size_t ArgSizes[] = {sizeof(DevAlloc)};

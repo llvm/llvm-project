@@ -3,9 +3,6 @@
 ```{program} opt
 ```
 
-```{contents}
-:local:
-```
 
 ## Introduction --- What is a pass?
 

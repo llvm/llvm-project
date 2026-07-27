@@ -33,17 +33,12 @@ ThreadPoolRunner::~ThreadPoolRunner() {
     Worker.join();
 }
 
-void ThreadPoolRunner::operator()(orc_rt_SessionRef S, uint64_t CallId,
-                                  orc_rt_WrapperFunctionReturn Return,
-                                  orc_rt_WrapperFunction Fn,
-                                  WrapperFunctionBuffer ArgBytes) {
+void ThreadPoolRunner::operator()(move_only_function<void()> Task) {
   {
     std::scoped_lock<std::mutex> Lock(M);
     assert(!Stop &&
            "operator() called on ThreadPoolRunner after destruction begun");
-    Pending.push_back([=, ArgBytes = std::move(ArgBytes)]() mutable {
-      Fn(S, CallId, Return, ArgBytes.release());
-    });
+    Pending.push_back(std::move(Task));
   }
   CV.notify_one();
 }
