@@ -1,8 +1,5 @@
 # Exception Handling in LLVM
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
