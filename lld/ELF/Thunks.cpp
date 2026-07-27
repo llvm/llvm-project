@@ -1396,7 +1396,8 @@ void PPC32LongThunk::writeTo(uint8_t *buf) {
   write32(ctx, buf + 4, 0x4e800420); // bctr
 }
 
-void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, int64_t offset) {
+void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, uint64_t addr) {
+  uint64_t offset = addr - getPPC64TocBase(ctx);
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
 
@@ -1407,10 +1408,9 @@ void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, int64_t offset) {
 }
 
 void PPC64PltCallStub::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getGotPltVA(ctx) - getPPC64TocBase(ctx);
   // Save the TOC pointer to the save-slot reserved in the call frame.
   write32(ctx, buf + 0, 0xf8410018); // std     r2,24(r1)
-  writePPC64LoadAndBranch(ctx, buf + 4, offset);
+  writePPC64LoadAndBranch(ctx, buf + 4, destination.getGotPltVA(ctx));
 }
 
 void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
@@ -1450,10 +1450,9 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(ctx, buf + nextInstOffset + 4, BCTR);  // bctr
   } else {
     ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
-    const int64_t offsetFromTOC =
-        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-        getPPC64TocBase(ctx);
-    writePPC64LoadAndBranch(ctx, buf + 4, offsetFromTOC);
+    const uint64_t addr =
+        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend);
+    writePPC64LoadAndBranch(ctx, buf + 4, addr);
   }
 }
 
@@ -1513,10 +1512,9 @@ bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
-  int64_t offset =
-      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-      getPPC64TocBase(ctx);
-  writePPC64LoadAndBranch(ctx, buf, offset);
+  uint64_t addr =
+      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend);
+  writePPC64LoadAndBranch(ctx, buf, addr);
 }
 
 void PPC64LongBranchThunk::addSymbols(ThunkSection &isec) {
