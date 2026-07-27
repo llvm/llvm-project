@@ -93,18 +93,18 @@ features = [
     ),
     *(
         Feature(
-            name=f"has-{x}-bit-atomics",
-            when=lambda cfg, x=x: sourceBuilds(
+            name=f"has-{n}-bit-atomics",
+            when=lambda cfg, n=n: sourceBuilds(
                 cfg,
                 f"""
                 #include <atomic>
-                struct Large {{ char storage[{x}/8]; }};
+                struct Large {{ char storage[{n}/8]; }};
                 std::atomic<Large> x;
                 int main(int, char**) {{ (void)x.load(); (void)x.is_lock_free(); return 0; }}
                 """,
             ),
         )
-        for x in [64, 128, 1024]
+        for n in [64, 128, 1024]
     ),
     # Tests that require 64-bit architecture
     Feature(
