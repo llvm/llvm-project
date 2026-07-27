@@ -324,6 +324,11 @@ private:
   void addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
                    bool ForceSignedSystem);
+
+  /// Try to use the inequality \p A != \p B to tighten a non-strict bound the
+  /// system already implies to the corresponding strict bound.
+  void tightenBoundUsingNe(Value *A, Value *B, unsigned NumIn, unsigned NumOut,
+                           SmallVectorImpl<StackEntry> &DFSInStack);
 };
 
 /// Represents a (Coefficient * Variable) entry after IR decomposition.
@@ -1781,6 +1786,47 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   // If the Pred is eq/ne, also add the fact to signed system.
   if (CmpInst::isEquality(Pred))
     addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, true);
+  if (Pred == CmpInst::ICMP_NE)
+    tightenBoundUsingNe(A, B, NumIn, NumOut, DFSInStack);
+}
+
+void ConstraintInfo::tightenBoundUsingNe(
+    Value *A, Value *B, unsigned NumIn, unsigned NumOut,
+    SmallVectorImpl<StackEntry> &DFSInStack) {
+  if (!isa<ConstantInt>(B) || !A->getType()->isIntegerTy())
+    return;
+
+  for (bool IsSigned : {false, true}) {
+    // In the unsigned system `A u>= 0` holds for every A, so getConstraint
+    // already turned `A != 0` into `A u> 0`.
+    if (!IsSigned && match(B, m_Zero()))
+      continue;
+
+    // Skip if there are any unknown variables.
+    const auto &Value2Index = getValue2Index(IsSigned);
+    if (any_of(decompose(A, *this, IsSigned, DL).Vars,
+               [&Value2Index](const DecompEntry &E) {
+                 return !Value2Index.contains(E.Variable);
+               }))
+      continue;
+
+    // If the system implies `A >= B` then together with `A != B` we get the
+    // strict `A > B`; symmetrically `A <= B` becomes `A < B`.
+    for (CmpInst::Predicate NonStrict :
+         {IsSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE,
+          IsSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE}) {
+      if (!doesHold(NonStrict, A, B))
+        continue;
+      CmpInst::Predicate Strict = CmpInst::getStrictPredicate(NonStrict);
+      LLVM_DEBUG(dbgs() << "Tightening '";
+                 dumpUnpackedICmp(dbgs(), NonStrict, A, B); dbgs() << "' to '";
+                 dumpUnpackedICmp(dbgs(), Strict, A, B);
+                 dbgs() << "' using inequality\n");
+      addFactImpl(Strict, A, B, NumIn, NumOut, DFSInStack,
+                  /*ForceSignedSystem=*/false);
+      break;
+    }
+  }
 }
 
 void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
