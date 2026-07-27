@@ -533,10 +533,9 @@ static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,
   return Clamp;
 }
 
-static CallInst *emitConvergentResourceIntrinsicCall(CodeGenFunction &CGF,
-                                                     llvm::Type *RetTy,
-                                                     Intrinsic::ID ID,
-                                                     ArrayRef<Value *> Args) {
+static CallInst *emitResourceIntrinsic(CodeGenFunction &CGF, llvm::Type *RetTy,
+                                       Intrinsic::ID ID,
+                                       ArrayRef<Value *> Args) {
   SmallVector<llvm::Type *> ArgTys;
   ArgTys.reserve(Args.size());
   for (Value *Arg : Args)
@@ -680,12 +679,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *RetTy = ConvertType(E->getType());
     if (E->getNumArgs() <= 4) {
-      return emitConvergentResourceIntrinsicCall(
+      return emitResourceIntrinsic(
           *this, RetTy, CGM.getHLSLRuntime().getSampleIntrinsic(), Args);
     }
 
     Args.push_back(emitHlslClamp(*this, E, 4));
-    return emitConvergentResourceIntrinsicCall(
+    return emitResourceIntrinsic(
         *this, RetTy, CGM.getHLSLRuntime().getSampleClampIntrinsic(), Args);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_bias: {
@@ -706,12 +705,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *RetTy = ConvertType(E->getType());
     if (E->getNumArgs() <= 5) {
-      return emitConvergentResourceIntrinsicCall(
+      return emitResourceIntrinsic(
           *this, RetTy, CGM.getHLSLRuntime().getSampleBiasIntrinsic(), Args);
     }
 
     Args.push_back(emitHlslClamp(*this, E, 5));
-    return emitConvergentResourceIntrinsicCall(
+    return emitResourceIntrinsic(
         *this, RetTy, CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(), Args);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_grad: {
@@ -841,7 +840,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
 
-    return emitConvergentResourceIntrinsicCall(
+    return emitResourceIntrinsic(
         *this, ConvertType(E->getType()),
         CGM.getHLSLRuntime().getCalculateLodIntrinsic(),
         {HandleOp, SamplerOp, CoordOp});
@@ -851,7 +850,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
 
-    return emitConvergentResourceIntrinsicCall(
+    return emitResourceIntrinsic(
         *this, ConvertType(E->getType()),
         CGM.getHLSLRuntime().getCalculateLodUnclampedIntrinsic(),
         {HandleOp, SamplerOp, CoordOp});
