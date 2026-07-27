@@ -365,7 +365,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_PointerToIntegral: {
         SVal V = state->getSVal(Ex, SF);
         if (isa<nonloc::PointerToMember>(V)) {
-          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
+          Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, UnknownVal()));
           continue;
         }
         // Explicitly proceed with default handler for this case cascade.
