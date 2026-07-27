@@ -177,7 +177,8 @@ public:
     notifyDisconnected();
   }
 
-  void callController(OnControllerCallReturn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
@@ -630,7 +631,8 @@ public:
   DeadControllerAccess(Session &S) : ControllerAccess(S) {}
   void connect(BootstrapInfo) override {}
   void disconnect() override { notifyDisconnected(); }
-  void callController(OnControllerCallReturn OnComplete, HandlerTag,
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag,
                       WrapperFunctionBuffer) override {
     failControllerCallInline(std::move(OnComplete));
   }
@@ -681,7 +683,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -697,7 +699,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -718,7 +720,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -853,7 +855,7 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
@@ -873,7 +875,7 @@ TEST(ControllerAccessTest, TryAttachFailure) {
   Error CallErr = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(CallErr);
         CallErr = R.takeError();

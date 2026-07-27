@@ -8,61 +8,61 @@
 
 # Unscaled indexed loads (RV64-only widths).
 
-lxd a0, a1, a2
-# CHECK-INST: lxd a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xb5,0xc5,0x90]
+lxd a0, (a1), a2
+# CHECK-INST: lxd a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x35,0xb6,0x90]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxwu a0, a1, a2
-# CHECK-INST: lxwu a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xe5,0xc5,0x90]
+lxwu a0, (a1), a2
+# CHECK-INST: lxwu a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x65,0xb6,0x90]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
 # Scaled indexed loads (RV64-only widths).
 
-lxsd a0, a1, a2
-# CHECK-INST: lxsd a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xb5,0xc5,0xd0]
+lxsd a0, (a1), a2
+# CHECK-INST: lxsd a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x35,0xb6,0xd0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxswu a0, a1, a2
-# CHECK-INST: lxswu a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xe5,0xc5,0xd0]
+lxswu a0, (a1), a2
+# CHECK-INST: lxswu a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x65,0xb6,0xd0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
 # Scaled indexed loads with a zero-extended 32-bit index (RV64-only).
 
-lxsuwb a0, a1, a2
-# CHECK-INST: lxsuwb a0, a1, a2
-# CHECK-ENCODING: [0x2f,0x85,0xc5,0xf0]
+lxsuwb a0, (a1), a2
+# CHECK-INST: lxsuwb a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x05,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxsuwh a0, a1, a2
-# CHECK-INST: lxsuwh a0, a1, a2
-# CHECK-ENCODING: [0x2f,0x95,0xc5,0xf0]
+lxsuwh a0, (a1), a2
+# CHECK-INST: lxsuwh a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x15,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxsuww a0, a1, a2
-# CHECK-INST: lxsuww a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xa5,0xc5,0xf0]
+lxsuww a0, (a1), a2
+# CHECK-INST: lxsuww a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x25,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxsuwd a0, a1, a2
-# CHECK-INST: lxsuwd a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xb5,0xc5,0xf0]
+lxsuwd a0, (a1), a2
+# CHECK-INST: lxsuwd a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x35,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxsuwbu a0, a1, a2
-# CHECK-INST: lxsuwbu a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xc5,0xc5,0xf0]
+lxsuwbu a0, (a1), a2
+# CHECK-INST: lxsuwbu a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x45,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxsuwhu a0, a1, a2
-# CHECK-INST: lxsuwhu a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xd5,0xc5,0xf0]
+lxsuwhu a0, (a1), a2
+# CHECK-INST: lxsuwhu a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x55,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
 
-lxsuwwu a0, a1, a2
-# CHECK-INST: lxsuwwu a0, a1, a2
-# CHECK-ENCODING: [0x2f,0xe5,0xc5,0xf0]
+lxsuwwu a0, (a1), a2
+# CHECK-INST: lxsuwwu a0, (a1), a2
+# CHECK-ENCODING: [0x2f,0x65,0xb6,0xf0]
 # CHECK-ERROR: instruction requires the following: 'Zilx' (Indexed Integer Load Instructions){{$}}
