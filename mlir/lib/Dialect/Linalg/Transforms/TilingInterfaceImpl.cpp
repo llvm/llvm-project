@@ -82,6 +82,79 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
   return success();
 }
 
+/// Verify that tiling can be applied in presence of semi-affine maps.
+static LogicalResult
+validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> offsets,
+                             ArrayRef<OpFoldResult> sizes) {
+  auto isTiledDim = [&](unsigned pos) {
+    return pos < offsets.size() && !isZeroInteger(offsets[pos]);
+  };
+
+  for (AffineMap map : linalgOp.getIndexingMapsArray()) {
+    for (AffineExpr result : map.getResults()) {
+      WalkResult status = result.walk([&](AffineExpr expr) -> WalkResult {
+        auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+        if (!binExpr)
+          return WalkResult::advance();
+        AffineExprKind kind = binExpr.getKind();
+        if (kind != AffineExprKind::Mod && kind != AffineExprKind::FloorDiv &&
+            kind != AffineExprKind::CeilDiv)
+          return WalkResult::advance();
+
+        // Skip if the semi-affine expression does not involve any of the tiled
+        // dimensions.
+        bool involvesTiledDim = false;
+        for (unsigned pos = 0, e = offsets.size(); pos < e; ++pos) {
+          if (isTiledDim(pos) && expr.isFunctionOfDim(pos)) {
+            involvesTiledDim = true;
+            break;
+          }
+        }
+        if (!involvesTiledDim)
+          return WalkResult::advance();
+
+        // Allow only `d OP C` map where `d` is a dimension and `C` is a
+        // constant. A compound LHS (e.g. `(d0 + d1)`, `(d0 * 2)`, a nested
+        // semi-affine expression) or a non-constant step is not provably safe,
+        // so reject it.
+        auto dimExpr = dyn_cast<AffineDimExpr>(binExpr.getLHS());
+        auto stepExpr = dyn_cast<AffineConstantExpr>(binExpr.getRHS());
+        if (!dimExpr || !stepExpr || stepExpr.getValue() <= 0) {
+          linalgOp.emitOpError()
+              << "tiling is not supported for the semi-affine indexing map: "
+                 "only a single iteration dimension divided by a positive "
+                 "constant step can be tiled over a tiled dimension";
+          return WalkResult::interrupt();
+        }
+        unsigned dimPos = dimExpr.getPosition();
+        int64_t step = stepExpr.getValue();
+
+        // Tile boundaries stay aligned to the step only when the tile size and
+        // step divide one another.
+        // Dynamic tile sizes are assumed to be valid.
+        FailureOr<int64_t> tileSize =
+            ValueBoundsConstraintSet::computeConstantBound(
+                presburger::BoundType::UB, sizes[dimPos],
+                /*stopCondition=*/nullptr,
+                ValueBoundsOptions{/*closedUB=*/true});
+        if (succeeded(tileSize) &&
+            !(*tileSize % step == 0 || step % *tileSize == 0)) {
+          linalgOp.emitOpError()
+              << "tiling is not supported for the semi-affine indexing map: "
+                 "tile size "
+              << *tileSize << " for dimension d" << dimPos
+              << " must divide or be divisible by the step " << step;
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+      if (status.wasInterrupted())
+        return failure();
+    }
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // External Model for implementing `TilingInterface` for `LinalgOp`s.
 //===----------------------------------------------------------------------===//
@@ -138,6 +211,14 @@ struct LinalgOpTilingInterface
     // specified could lead to out of bounds accesses.
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
+    // In case of a semi-affine expression, generalized tracking of tiles would
+    // require a per-tile-position shift that cannot be expressed by the
+    // symbol-free indexing maps.
+    // Thus, tiling is allowed only when the semi-affine maps can be proven safe
+    // for the current tiling configuration. Otherwise, tiling can end up
+    // producing incorrect results.
+    if (failed(validateTilingSemiAffineMaps(linalgOp, offsets, sizes)))
+      return failure();
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
