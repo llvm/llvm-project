@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -1365,7 +1364,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         // Only do this when the target can fold the load into the call or
         // jmp.
         !Subtarget->useIndirectThunkCalls() &&
-        ((N->getOpcode() == X86ISD::CALL && !Subtarget->slowTwoMemOps()) ||
+        ((N->getOpcode() == X86ISD::CALL && !Subtarget->slowTwoMemOps() &&
+          !Subtarget->slowIndirectCall()) ||
          (N->getOpcode() == X86ISD::TC_RETURN &&
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
@@ -3561,7 +3561,8 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
                isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
-      assert(!getTargetMachine().isPositionIndependent());
+      if (getTargetMachine().isPositionIndependent())
+        return false;
       LoadGPRs -= 1; // Base is a global (immediate since this is non-PIC), no
                      // reg needed.
     }
@@ -5580,7 +5581,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::AND:
-    if (NVT.isVector() && NVT.getVectorElementType() == MVT::i1) {
+    if (NVT.isVectorOf(MVT::i1)) {
       // Try to form a masked VPTESTM. Operands can be in either order.
       SDValue N0 = Node->getOperand(0);
       SDValue N1 = Node->getOperand(1);

@@ -11,6 +11,21 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 from lldbgdbserverutils import get_lldb_server_exe
 
 
+class CaptureTee:
+    """Accumulate everything pexpect reads, for inspecting the bytes emitted
+    during a resize. Handles both str- and bytes-mode spawns."""
+
+    def __init__(self):
+        self.data = b""
+
+    def write(self, s):
+        self.data += s if isinstance(s, bytes) else s.encode("latin-1", "replace")
+        return len(s)
+
+    def flush(self):
+        pass
+
+
 # PExpect uses many timeouts internally and doesn't play well
 # under ASAN on a loaded machine..
 @skipIfAsan
@@ -106,6 +121,64 @@ class TestStatusline(PExpectTest):
 
         self.expect("set set show-statusline true", ["no target"])
 
+    def test_scripted_command_output_not_eaten(self):
+        """A scripted command's print() output must be serialized with the
+        statusline redraw. The statusline brackets its redraw with a cursor
+        save (ESC 7) and restore (ESC 8); if command output lands in between,
+        the restore rewinds the cursor back over it and the terminal
+        overwrites it, so the output is non-deterministically eaten. Assert
+        that no command output appears inside a save/restore pair."""
+        self.launch(use_colors=False)
+        self.resize()
+        self.expect("settings set show-statusline true", ["no target"])
+
+        flood = self.getSourcePath("statusline_flood.py")
+        self.expect('command script import "{}"'.format(flood))
+
+        # The statusline is redrawn on the event thread as progress events
+        # arrive, so whether a redraw overlaps the command output is a
+        # scheduling race. Widen the flood and retry until a complete redraw
+        # lands in the capture, without which there is nothing to check.
+        count = 500
+        last_marker = "MARKER_{:04d}".format(count - 1).encode()
+
+        saw_redraw = False
+        for _ in range(10):
+            tee = CaptureTee()
+            self.child.logfile_read = tee
+            self.child.sendline("statusline_flood {}".format(count))
+            self.child.expect(last_marker.decode())
+            self.child.expect("(lldb)")
+            self.child.logfile_read = None
+
+            data = tee.data
+            # A redraw brackets itself with a cursor save (ESC 7) and restore
+            # (ESC 8); command output in between means the writers interleaved.
+            # Only a complete pair counts as an observed redraw.
+            pos = 0
+            while True:
+                save = data.find(b"\x1b7", pos)
+                if save == -1:
+                    break
+                restore = data.find(b"\x1b8", save)
+                if restore == -1:
+                    break
+                saw_redraw = True
+                self.assertNotIn(
+                    b"MARKER_",
+                    data[save + 2 : restore],
+                    "scripted command output was spliced into a statusline redraw",
+                )
+                pos = restore + 2
+
+            if saw_redraw:
+                break
+
+        # No redraw overlapped the output, so the race was never exercised; skip
+        # rather than let a starved machine fail spuriously.
+        if not saw_redraw:
+            self.skipTest("statusline never redrew concurrently with the flood")
+
     @skipIfEditlineSupportMissing
     def test_resize(self):
         """Test that move the cursor when resizing."""
@@ -116,6 +189,51 @@ class TestStatusline(PExpectTest):
         # Check for the escape code to resize the scroll window.
         self.child.expect(re.escape("\x1b[1;19r"))
         self.child.expect("(lldb)")
+
+    @skipIfEditlineSupportMissing
+    def test_resize_recomputes_without_clearing(self):
+        """Resizing should recompute the statusline in place, not clear the
+        entire screen. Clearing the screen (ESC[2J) was the old workaround for
+        the statusline wrapping/duplicating on resize; it also wiped the visible
+        scrollback on every resize."""
+        self.launch()
+        self.resize()
+        self.expect("set set show-statusline true", ["no target"])
+
+        # Capture the output emitted during the resize.
+        tee = CaptureTee()
+        self.child.logfile_read = tee
+        self.resize(20, 60)
+        # Wait for the resize redraw to finish before inspecting the capture.
+        self.child.expect(re.escape("\x1b[1;19r"))
+        self.child.expect("(lldb)")
+        self.child.logfile_read = None
+
+        # The resize recomputes in place; it must not clear the whole screen.
+        self.assertNotIn(b"\x1b[2J", tee.data)
+
+    @skipIfEditlineSupportMissing
+    def test_resize_height_shrink_makes_room(self):
+        """On a height shrink the terminal can leave the prompt on the row the
+        statusline is about to occupy. The resize scrolls the content up by the
+        lost rows (a newline per row, then a cursor-up) to lift the prompt
+        clear, the same way enabling the statusline makes room for it."""
+        self.launch()
+        # Stay above the 10-row minimum terminal height on both sides.
+        self.resize(20, 60)
+        self.expect("set set show-statusline true", ["no target"])
+
+        tee = CaptureTee()
+        self.child.logfile_read = tee
+        # Shrink the height by one row.
+        self.resize(19, 60)
+        # Wait for the resize redraw (new scroll region) to finish.
+        self.child.expect(re.escape("\x1b[1;18r"))
+        self.child.expect("(lldb)")
+        self.child.logfile_read = None
+
+        # Room is made by scrolling up: a newline followed by a cursor-up.
+        self.assertIn(b"\n\x1b[1A", tee.data)
 
     @skipUnlessPlatform(["linux"])
     def test_target_symbols_add(self):

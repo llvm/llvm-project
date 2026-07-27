@@ -1941,7 +1941,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = new llvm::GlobalVariable(CGM.getModule(), VTableType,
                                     /*isConstant=*/true, VTableLinkage,
                                     /*Initializer=*/nullptr, VTableName);
-  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  if (!CGM.shouldEmitRTTI())
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Comdat *C = nullptr;
   if (!VFTableComesFromAnotherTU &&
@@ -1968,7 +1969,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
                                         /*AddressSpace=*/0, VFTableLinkage,
                                         VFTableName.str(), VTableGEP,
                                         &CGM.getModule());
-    VFTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    if (!CGM.shouldEmitRTTI())
+      VFTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   } else {
     // We don't need a GlobalAlias to be a symbol for the VTable if we won't
     // be referencing any RTTI data.
@@ -4205,18 +4207,17 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   if (SrcVal)
     Args.add(RValue::get(SrcVal), SrcParam->getType());
 
-  // Add the rest of the default arguments.
+  // Get the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
-  ArrayRef<ParmVarDecl *> params = CD->parameters().drop_front(IsCopy ? 1 : 0);
-  for (const ParmVarDecl *PD : params) {
-    assert(PD->hasDefaultArg() && "ctor closure lacks default args");
-    ArgVec.push_back(PD->getDefaultArg());
-  }
+  for (const CXXDefaultArgExpr *Expr :
+       CD->getCtorClosureDefaultArgs().drop_front(IsCopy ? 1 : 0))
+    ArgVec.push_back(Expr);
+  assert(ArgVec.size() == CD->getNumParams() - IsCopy);
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
   const auto *FPT = CD->getType()->castAs<FunctionProtoType>();
-  CGF.EmitCallArgs(Args, FPT, llvm::ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
+  CGF.EmitCallArgs(Args, FPT, ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
 
   // Insert any ABI-specific implicit constructor arguments.
   AddedStructorArgCounts ExtraArgs =
@@ -4228,8 +4229,12 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
       CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
   CGCallee Callee =
       CGCallee::forDirect(CalleePtr, GlobalDecl(CD, Ctor_Complete));
+  // Microsoft ABI constructors always use the default method calling
+  // convention (see SemaType.cpp adjustMemberFunctionCC), so no caller
+  // declaration is needed for SysV ABI selection.
   const CGFunctionInfo &CalleeInfo = CGM.getTypes().arrangeCXXConstructorCall(
-      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix);
+      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix,
+      /*ABIInfoFD=*/nullptr);
   CGF.EmitCall(CalleeInfo, Callee, ReturnValueSlot(), Args);
 
   Cleanups.ForceCleanup();
@@ -4513,7 +4518,7 @@ void MicrosoftCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
   QualType ThrowType = SubExpr->getType();
   // The exception object lives on the stack and it's address is passed to the
   // runtime function.
-  Address AI = CGF.CreateMemTemp(ThrowType);
+  Address AI = CGF.CreateMemTempWithoutCast(ThrowType);
   CGF.EmitAnyExprToMem(SubExpr, AI, ThrowType.getQualifiers(),
                        /*IsInit=*/true);
 

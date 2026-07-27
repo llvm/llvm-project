@@ -811,6 +811,12 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
         },
         Value.getStructNumFields(), "field", "fields");
 
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructVirtualBase(Index);
+        },
+        Value.getStructNumVirtualBases(), "vbase", "vbases");
     return;
   }
   case APValue::Matrix: {
@@ -966,11 +972,13 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
       OS << " '" << Name << '\'';
     else
       switch (ND->getKind()) {
-      case Decl::Decomposition: {
-        auto *DD = cast<DecompositionDecl>(ND);
-        OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
+      case Decl::Decomposition:
+        if (auto Bindings = cast<DecompositionDecl>(ND)->bindings();
+            !Bindings.empty())
+          OS << " first_binding '" << Bindings[0]->getDeclName() << '\'';
+        else
+          OS << " no_bindings";
         break;
-      }
       case Decl::Field: {
         auto *FD = cast<FieldDecl>(ND);
         OS << " field_index " << FD->getFieldIndex();
@@ -1535,6 +1543,32 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
+void TextNodeDumper::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *Node) {
+  switch (Node->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    OS << " enumerating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
+    OS << " iterating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
+    OS << " destructuring";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
+    OS << " dependent";
+    return;
+  }
+
+  llvm_unreachable("invalid expansion statement kind");
+}
+
+void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *Node) {
+  if (Node->shouldApplyLifetimeExtensionToPreamble())
+    OS << " applies_lifetime_extension";
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",
@@ -1671,6 +1705,7 @@ void TextNodeDumper::VisitInitListExpr(const InitListExpr *ILE) {
     OS << " field ";
     dumpBareDeclRef(Field);
   }
+  OS << ' ' << (ILE->isExplicit() ? "explicit" : "implicit");
 }
 
 void TextNodeDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
@@ -2209,7 +2244,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
@@ -2601,6 +2636,9 @@ void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
     break;
   case PCK_User:
     OS << "user";
+    break;
+  case PCK_Copyright:
+    OS << "copyright";
     break;
   }
   StringRef Arg = D->getArg();

@@ -1,311 +1,438 @@
 // Test without serialization:
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 \
-// RUN: 					 -ast-dump %s -ast-dump-filter test \
-// RUN: | FileCheck -strict-whitespace --match-full-lines %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++23 -ast-dump      -ast-dump-filter test %s | FileCheck --match-full-lines --check-prefix DUMP %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++23 -ast-dump=json -ast-dump-filter test %s | FileCheck --match-full-lines --check-prefix JSON %s
 
 // Test with serialization:
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 \
-// RUN:            -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 \
-// RUN:            -x c++ -include-pch %t -ast-dump-all -ast-dump-filter test /dev/null \
-// RUN: | FileCheck -strict-whitespace --match-full-lines %s
-
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++23 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++23 -x c++ -include-pch %t -ast-dump-all                -ast-dump-filter test /dev/null | FileCheck --match-full-lines --check-prefix DUMP %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++23 -x c++ -include-pch %t -ast-dump-all -ast-dump=json -ast-dump-filter test /dev/null | FileCheck --match-full-lines --check-prefix JSON %s
 
 
 template <typename... Ts> void test(Ts... a) {
   struct V {
     void f() {
-      [this] {};
-      [*this] {};
+      auto case1 = [this] {};
+      auto case2 = [*this] {};
     }
   };
-  int b, c;
-  []() {};
-  [](int a, ...) {};
-  [a...] {};
-  [=] {};
-  [=] { return b; };
-  [&] {};
-  [&] { return c; };
-  [b, &c] { return b + c; };
-  [a..., x = 12] {};
-  []() constexpr {};
-  []() mutable {};
-  []() noexcept {};
-  []() -> int { return 0; };
-  [] [[noreturn]] () {};
+  double b, c;
+  auto caseA = []() {};
+  auto caseB = [](void) {};
+  auto caseC = [] {};
+  auto caseD = [](int a, ...) {};
+  auto caseE = [a...] {};
+  auto caseF = [=] () {};
+  auto caseG = [=] { return b; };
+  auto caseH = [&] () {};
+  auto caseI = [&] { return c; };
+  auto caseJ = [b, &c] { return b + c; };
+  auto caseK = [b,c](){};
+  auto caseL = [a..., x = 12] {};
+  auto caseM = []() constexpr {};
+  auto caseN = []() mutable {};
+  auto caseO = []() noexcept {};
+  auto caseP = []() -> int { return 0; };
+  auto caseQ = [] -> int { return 0; };
+  auto caseR = [] [[noreturn]] () {};
 }
-// CHECK:Dumping test:
-// CHECK-NEXT:FunctionTemplateDecl {{.*}} <{{.*}}ast-dump-lambda.cpp:15:1, line:37:1> line:15:32{{( imported)?}} test external-linkage
-// CHECK-NEXT:|-TemplateTypeParmDecl {{.*}} <col:11, col:23> col:23{{( imported)?}} referenced typename depth 0 index 0 ... Ts
-// CHECK-NEXT:`-FunctionDecl {{.*}} <col:27, line:37:1> line:15:32{{( imported)?}} test 'void (Ts...)'
-// CHECK-NEXT:  |-ParmVarDecl {{.*}} <col:37, col:43> col:43{{( imported)?}} referenced a 'Ts...' pack
-// CHECK-NEXT:  `-CompoundStmt {{.*}} <col:46, line:37:1>
-// CHECK-NEXT:    |-DeclStmt {{.*}} <line:16:3, line:21:4>
-// CHECK-NEXT:    | `-CXXRecordDecl {{.*}} <line:16:3, line:21:3> line:16:10{{( imported)?}}{{( <undeserialized declarations>)?}} struct V definition
-// CHECK-NEXT:    |   |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
-// CHECK-NEXT:    |   | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
-// CHECK-NEXT:    |   | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    |   | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    |   | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    |   | |-MoveAssignment exists simple trivial needs_implicit
-// CHECK-NEXT:    |   | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    |   |-CXXRecordDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} implicit struct V
-// CHECK-NEXT:    |   `-CXXMethodDecl {{.*}} <line:17:5, line:20:5> line:17:10{{( imported)?}} f 'void ()' implicit-inline
-// CHECK-NEXT:    |     `-CompoundStmt {{.*}} <col:14, line:20:5>
-// CHECK-NEXT:    |       |-LambdaExpr {{.*}} <line:18:7, col:15> '(lambda at {{.*}}ast-dump-lambda.cpp:18:7)'
-// CHECK-NEXT:    |       | |-CXXRecordDecl {{.*}} <col:7> col:7{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    |       | | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
-// CHECK-NEXT:    |       | | | |-DefaultConstructor
-// CHECK-NEXT:    |       | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    |       | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    |       | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    |       | | | |-MoveAssignment
-// CHECK-NEXT:    |       | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    |       | | |-CXXMethodDecl {{.*}} <col:12, col:15> col:7{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    |       | | | `-CompoundStmt {{.*}} <col:14, col:15>
-// CHECK-NEXT:    |       | | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V *'
-// CHECK-NEXT:    |       | |-ParenListExpr {{.*}} <col:8> 'NULL TYPE'
-// CHECK-NEXT:    |       | | `-CXXThisExpr {{.*}} <col:8> 'V *' this
-// CHECK-NEXT:    |       | `-CompoundStmt {{.*}} <col:14, col:15>
-// CHECK-NEXT:    |       `-LambdaExpr {{.*}} <line:19:7, col:16> '(lambda at {{.*}}ast-dump-lambda.cpp:19:7)'
-// CHECK-NEXT:    |         |-CXXRecordDecl {{.*}} <col:7> col:7{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    |         | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
-// CHECK-NEXT:    |         | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    |         | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    |         | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    |         | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    |         | | |-MoveAssignment
-// CHECK-NEXT:    |         | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    |         | |-CXXMethodDecl {{.*}} <col:13, col:16> col:7{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    |         | | `-CompoundStmt {{.*}} <col:15, col:16>
-// CHECK-NEXT:    |         | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V'
-// CHECK-NEXT:    |         |-ParenListExpr {{.*}} <col:8> 'NULL TYPE'
-// CHECK-NEXT:    |         | `-UnaryOperator {{.*}} <col:8> 'V' lvalue prefix '*' cannot overflow
-// CHECK-NEXT:    |         |   `-CXXThisExpr {{.*}} <col:8> 'V *' this
-// CHECK-NEXT:    |         `-CompoundStmt {{.*}} <col:15, col:16>
-// CHECK-NEXT:    |-DeclStmt {{.*}} <line:22:3, col:11>
-// CHECK-NEXT:    | |-VarDecl {{.*}} <col:3, col:7> col:7{{( imported)?}} referenced b 'int'
-// CHECK-NEXT:    | `-VarDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} referenced c 'int'
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:23:3, col:9> '(lambda at {{.*}}ast-dump-lambda.cpp:23:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:6, col:9> col:3{{( imported)?}} operator() 'auto () const' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:8, col:9>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:8, col:9>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:24:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:24:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto (int, ...) const' inline
-// CHECK-NEXT:    | | | |-ParmVarDecl {{.*}} <col:6, col:10> col:10{{( imported)?}} a 'int'
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)(int, ...) 'auto (*() const noexcept)(int, ...)' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit __invoke 'auto (int, ...)' static inline
-// CHECK-NEXT:    | |   `-ParmVarDecl {{.*}} <col:6, col:10> col:10{{( imported)?}} a 'int'
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:25:3, col:11> '(lambda at {{.*}}ast-dump-lambda.cpp:25:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:11> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:10, col:11>
-// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
-// CHECK-NEXT:    | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
-// CHECK-NEXT:    | | `-DeclRefExpr {{.*}} <col:4> 'Ts' lvalue ParmVar {{.*}} 'a' 'Ts...'
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:10, col:11>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:26:3, col:8> '(lambda at {{.*}}ast-dump-lambda.cpp:26:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:8>
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:8>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:27:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:27:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
-// CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:19>
-// CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    |     `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:28:3, col:8> '(lambda at {{.*}}ast-dump-lambda.cpp:28:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:8>
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:8>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:29:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:29:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
-// CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:19>
-// CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:9, col:16>
-// CHECK-NEXT:    |     `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:30:3, col:27> '(lambda at {{.*}}ast-dump-lambda.cpp:30:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:9, col:27> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:11, col:27>
-// CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:13, col:24>
-// CHECK-NEXT:    | | |     `-BinaryOperator {{.*}} <col:20, col:24> 'int' '+'
-// CHECK-NEXT:    | | |       |-ImplicitCastExpr {{.*}} <col:20> 'int' <LValueToRValue>
-// CHECK-NEXT:    | | |       | `-DeclRefExpr {{.*}} <col:20> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    | | |       `-ImplicitCastExpr {{.*}} <col:24> 'int' <LValueToRValue>
-// CHECK-NEXT:    | | |         `-DeclRefExpr {{.*}} <col:24> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'int'
-// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'int &'
-// CHECK-NEXT:    | |-ImplicitCastExpr {{.*}} <col:4> 'int' <LValueToRValue>
-// CHECK-NEXT:    | | `-DeclRefExpr {{.*}} <col:4> 'int' lvalue Var {{.*}} 'b' 'int'
-// CHECK-NEXT:    | |-DeclRefExpr {{.*}} <col:8> 'int' lvalue Var {{.*}} 'c' 'int'
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:11, col:27>
-// CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:13, col:24>
-// CHECK-NEXT:    |     `-BinaryOperator {{.*}} <col:20, col:24> 'int' '+'
-// CHECK-NEXT:    |       |-ImplicitCastExpr {{.*}} <col:20> 'int' <LValueToRValue>
-// CHECK-NEXT:    |       | `-DeclRefExpr {{.*}} <col:20> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    |       `-ImplicitCastExpr {{.*}} <col:24> 'int' <LValueToRValue>
-// CHECK-NEXT:    |         `-DeclRefExpr {{.*}} <col:24> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:31:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:31:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
-// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int'
-// CHECK-NEXT:    | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
-// CHECK-NEXT:    | | `-DeclRefExpr {{.*}} <col:4> 'Ts' lvalue ParmVar {{.*}} 'a' 'Ts...'
-// CHECK-NEXT:    | |-IntegerLiteral {{.*}} <col:14> 'int' 12
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:32:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:32:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:19> col:3{{( imported)?}} constexpr operator() 'auto () const' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr __invoke 'auto ()' static inline
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:33:3, col:17> '(lambda at {{.*}}ast-dump-lambda.cpp:33:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:17> col:3{{( imported)?}} operator() 'auto ()' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:16, col:17>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:16, col:17>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:34:3, col:18> '(lambda at {{.*}}ast-dump-lambda.cpp:34:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:18> col:3{{( imported)?}} operator() 'auto () const noexcept' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:17, col:18>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit __invoke 'auto () noexcept' static inline
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:17, col:18>
-// CHECK-NEXT:    |-LambdaExpr {{.*}} <line:35:3, col:27> '(lambda at {{.*}}ast-dump-lambda.cpp:35:3)'
-// CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:    | | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:    | | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:    | | | |-MoveAssignment
-// CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:11, col:27> col:3{{( imported)?}} operator() 'auto () const -> int' inline
-// CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:15, col:27>
-// CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:17, col:24>
-// CHECK-NEXT:    | | |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit __invoke 'auto () -> int' static inline
-// CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:15, col:27>
-// CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:17, col:24>
-// CHECK-NEXT:    |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
-// CHECK-NEXT:    `-LambdaExpr {{.*}} <line:36:3, col:23> '(lambda at {{.*}}ast-dump-lambda.cpp:36:3)'
-// CHECK-NEXT:      |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
-// CHECK-NEXT:      | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
-// CHECK-NEXT:      | | |-DefaultConstructor defaulted_is_constexpr
-// CHECK-NEXT:      | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:      | | |-MoveConstructor exists simple trivial needs_implicit
-// CHECK-NEXT:      | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
-// CHECK-NEXT:      | | |-MoveAssignment
-// CHECK-NEXT:      | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:20, col:23> col:3{{( imported)?}} operator() 'auto () const' inline
-// CHECK-NEXT:      | | |-CompoundStmt {{.*}} <col:22, col:23>
-// CHECK-NEXT:      | | `-CXX11NoReturnAttr {{.*}} <col:8> noreturn
-// CHECK-NEXT:      | |-CXXConversionDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-// CHECK-NEXT:      | `-CXXMethodDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
-// CHECK-NEXT:      `-CompoundStmt {{.*}} <col:22, col:23>
+
+// DUMP-LABEL:     |       | `-VarDecl {{.*}} case1 'auto' cinit
+// DUMP-NEXT:      |       |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |       |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |       |     | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
+// DUMP-NEXT:      |       |     | | |-DefaultConstructor
+// DUMP-NEXT:      |       |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |       |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |       |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |       |     | | |-MoveAssignment
+// DUMP-NEXT:      |       |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |       |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |       |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |       |     | `-FieldDecl {{.*}} implicit 'V *'
+// DUMP-NEXT:      |       |     |-ParenListExpr {{.*}} 'NULL TYPE'
+// DUMP-NEXT:      |       |     | `-CXXThisExpr {{.*}} 'V *' this
+// DUMP-NEXT:      |       |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |       `-DeclStmt {{.*}}
+// DUMP-LABEL:     |         `-VarDecl {{.*}} case2 'auto' cinit
+// DUMP-NEXT:      |           `-LambdaExpr {{.*}}
+// DUMP-NEXT:      |             |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |             | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
+// DUMP-NEXT:      |             | | |-DefaultConstructor defaulted_is_constexpr
+// DUMP-NEXT:      |             | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |             | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |             | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |             | | |-MoveAssignment
+// DUMP-NEXT:      |             | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |             | |-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |             | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |             | `-FieldDecl {{.*}} implicit 'V'
+// DUMP-NEXT:      |             |-ParenListExpr {{.*}} 'NULL TYPE'
+// DUMP-NEXT:      |             | `-UnaryOperator {{.*}} 'V' lvalue prefix '*' cannot overflow
+// DUMP-NEXT:      |             |   `-CXXThisExpr {{.*}} 'V *' this
+// DUMP-NEXT:      |             `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-NEXT:      | |-VarDecl {{.*}} referenced b 'double'
+// DUMP-NEXT:      | `-VarDecl {{.*}} referenced c 'double'
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseA 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto ()' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:      | `-VarDecl {{.*}} caseB 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto ()' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseC 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)() -> auto' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto () -> auto' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseD 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto (int, ...) const' inline
+// DUMP-NEXT:      |     | | |-ParmVarDecl {{.*}} a 'int'
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)(int, ...) 'auto (*() const noexcept)(int, ...)' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto (int, ...)' static inline
+// DUMP-NEXT:      |     |   `-ParmVarDecl {{.*}} a 'int'
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseE 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | `-FieldDecl {{.*}} implicit 'Ts...'
+// DUMP-NEXT:      |     |-ParenListExpr {{.*}} 'NULL TYPE'
+// DUMP-NEXT:      |     | `-DeclRefExpr {{.*}} 'Ts' lvalue ParmVar 0x{{.*}} 'a' 'Ts...'
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseF 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} operator() 'auto () const' inline
+// DUMP-NEXT:      |     |   `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseG 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |     |   `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     |     `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |     |       `-DeclRefExpr {{.*}} 'const double' lvalue Var 0x{{.*}} 'b' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |       `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |         `-DeclRefExpr {{.*}} 'const double' lvalue Var {{.*}} 'b' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseH 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} operator() 'auto () const' inline
+// DUMP-NEXT:      |     |   `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseI 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |     |   `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     |     `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |     |       `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'c' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |       `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |         `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'c' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseJ 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda trivially_copyable literal can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |   `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |     | |     `-BinaryOperator {{.*}} 'double' '+'
+// DUMP-NEXT:      |     | |       |-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |     | |       | `-DeclRefExpr {{.*}} 'const double' lvalue Var 0x{{.*}} 'b' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |     | |       `-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |     | |         `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'c' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |     | |-FieldDecl {{.*}} implicit 'double'
+// DUMP-NEXT:      |     | `-FieldDecl {{.*}} implicit 'double &'
+// DUMP-NEXT:      |     |-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |     | `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'b' 'double'
+// DUMP-NEXT:      |     |-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'c' 'double'
+// DUMP-NEXT:      |     `-CompoundStmt{{.*}}
+// DUMP-NEXT:      |       `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |         `-BinaryOperator {{.*}} 'double' '+'
+// DUMP-NEXT:      |           |-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |           | `-DeclRefExpr {{.*}} 'const double' lvalue Var 0x{{.*}} 'b' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |           `-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |             `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'c' 'double' refers_to_enclosing_variable_or_capture
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseK 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda standard_layout trivially_copyable literal can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor defaulted_is_constexpr 
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-FieldDecl {{.*}} implicit 'double'
+// DUMP-NEXT:      |     | `-FieldDecl {{.*}} implicit 'double'
+// DUMP-NEXT:      |     |-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |     | `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'b' 'double'
+// DUMP-NEXT:      |     |-ImplicitCastExpr {{.*}} 'double' <LValueToRValue>
+// DUMP-NEXT:      |     | `-DeclRefExpr {{.*}} 'double' lvalue Var 0x{{.*}} 'c' 'double'
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseL 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda standard_layout trivially_copyable can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> auto' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-FieldDecl {{.*}} implicit 'Ts...'
+// DUMP-NEXT:      |     | `-FieldDecl {{.*}} implicit 'int'
+// DUMP-NEXT:      |     |-ParenListExpr {{.*}} 'NULL TYPE'
+// DUMP-NEXT:      |     | `-DeclRefExpr {{.*}} 'Ts' lvalue ParmVar 0x{{.*}} 'a' 'Ts...'
+// DUMP-NEXT:      |     |-IntegerLiteral {{.*}} 'int' 12
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseM 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} constexpr operator() 'auto () const' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit constexpr __invoke 'auto ()' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseN 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto ()' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto ()' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseO 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const noexcept' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto () noexcept' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseP 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> int' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |   `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |     | |     `-IntegerLiteral {{.*}} 'int' 0
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto () -> int' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |       `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |         `-IntegerLiteral {{.*}} 'int' 0
+// DUMP-NEXT:      |-DeclStmt {{.*}}
+// DUMP-LABEL:     | `-VarDecl {{.*}} caseQ 'auto' cinit
+// DUMP-NEXT:      |   `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:      |     |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:      |     | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:      |     | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:      |     | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:      |     | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:      |     | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:      |     | |-CXXMethodDecl {{.*}} operator() 'auto () const -> int' inline
+// DUMP-NEXT:      |     | | `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |     | |   `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |     | |     `-IntegerLiteral {{.*}} 'int' 0
+// DUMP-NEXT:      |     | |-CXXConversionDecl {{.*}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
+// DUMP-NEXT:      |     | `-CXXMethodDecl {{.*}} implicit __invoke 'auto () -> int' static inline
+// DUMP-NEXT:      |     `-CompoundStmt {{.*}}
+// DUMP-NEXT:      |       `-ReturnStmt {{.*}}
+// DUMP-NEXT:      |         `-IntegerLiteral {{.*}} 'int' 0
+// DUMP-NEXT:      `-DeclStmt {{.*}}
+// DUMP-LABEL:       `-VarDecl {{.*}} caseR 'auto' cinit
+// DUMP-NEXT:          `-LambdaExpr {{.*}} '(lambda at {{.*}})'
+// DUMP-NEXT:            |-CXXRecordDecl {{.*}} implicit{{( <undeserialized declarations>)?}} class definition
+// DUMP-NEXT:            | |-DefinitionData lambda empty standard_layout trivially_copyable trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+// DUMP-NEXT:            | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+// DUMP-NEXT:            | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:            | | |-MoveConstructor exists simple trivial needs_implicit
+// DUMP-NEXT:            | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+// DUMP-NEXT:            | | |-MoveAssignment exists simple trivial needs_implicit
+// DUMP-NEXT:            | | `-Destructor simple irrelevant trivial constexpr needs_implicit
+// DUMP-NEXT:            | |-CXXMethodDecl {{.*}} operator() 'auto () const' inline
+// DUMP-NEXT:            | | |-CompoundStmt {{.*}}
+// DUMP-NEXT:            | | `-CXX11NoReturnAttr {{.*}} noreturn
+// DUMP-NEXT:            | |-CXXConversionDecl {{.*}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// DUMP-NEXT:            | `-CXXMethodDecl {{.*}} implicit __invoke 'auto ()' static inline
+// DUMP-NEXT:            `-CompoundStmt {{.*}}
+
+// FIXME-LABEL: "name": "case1",
+// FIXME:           "hasExplicitParameters": false,
+// FIXME-LABEL: "name": "case2",
+// FIXME:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseA",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseB",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseC",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseD",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseE",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseF",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseG",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseH",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseI",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseJ",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseK",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseL",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseM",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseN",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseO",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseP",
+// JSON:           "hasExplicitParameters": true,
+// JSON-LABEL: "name": "caseQ",
+// JSON:           "hasExplicitParameters": false,
+// JSON-LABEL: "name": "caseR",
+// JSON:           "hasExplicitParameters": true,

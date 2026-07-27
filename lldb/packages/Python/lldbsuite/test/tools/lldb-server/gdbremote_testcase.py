@@ -116,6 +116,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         self.setUpBaseLogging()
         self.debug_monitor_extra_args = []
+        self.start_new_session = True
 
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
@@ -364,7 +365,10 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
         # Start the server.
         server = self.spawnSubprocess(
-            self.debug_monitor_exe, commandline_args, install_remote=False
+            self.debug_monitor_exe,
+            commandline_args,
+            install_remote=False,
+            start_new_session=self.start_new_session,
         )
         self.assertIsNotNone(server)
 
@@ -555,6 +559,17 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         server.send_ack()
 
     def add_verified_launch_packets(self, launch_args):
+        if os.environ.get("LLDB_LAUNCH_FLAG_USE_PIPES", "0") == "1":
+            self.test_sequence.add_log_lines(
+                [
+                    "read packet: %s"
+                    % gdbremote_packet_encode_string(
+                        "QSetSTDIOWindowSize:cols=0;rows=0"
+                    ),
+                    "send packet: $OK#00",
+                ],
+                True,
+            )
         self.test_sequence.add_log_lines(
             [
                 "read packet: %s" % build_gdbremote_A_packet(launch_args),
@@ -936,6 +951,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "SupportedCompressions",
         "MultiMemRead",
         "jMultiBreakpoint",
+        "accelerator-plugins",
     ]
 
     def parse_qSupported_response(self, context):

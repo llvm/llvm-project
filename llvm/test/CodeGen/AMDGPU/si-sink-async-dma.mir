@@ -408,17 +408,20 @@ body:             |
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sgpr_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $exec_lo, implicit-def $exec_lo
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR [[DEF1]], [[DEF2]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR [[DEF1]], [[V_MOV_B32_e32_]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $asynccnt, $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR [[DEF1]], [[DEF2]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR [[DEF1]], [[DEF3]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
   ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[COPY]], implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:

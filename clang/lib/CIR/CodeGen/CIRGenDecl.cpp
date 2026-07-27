@@ -22,6 +22,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -31,8 +32,9 @@ CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                   mlir::OpBuilder::InsertPoint ip) {
   QualType ty = d.getType();
-  if (ty.getAddressSpace() != LangAS::Default)
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
+  assert(
+      ty.getAddressSpace() == LangAS::Default ||
+      (ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
 
   mlir::Location loc = getLoc(d.getSourceRange());
   bool nrvo =
@@ -203,7 +205,7 @@ static void emitStoresForConstant(CIRGenModule &cgm, const VarDecl &d,
   // The address is usually and alloca, but there is at least one case where
   // emitAutoVarInit is called from the OpenACC codegen with an address that
   // is not an alloca.
-  auto allocaOp = addr.getDefiningOp<cir::AllocaOp>();
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   if (allocaOp)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&cgm.getMLIRContext()));
 
@@ -303,9 +305,9 @@ void CIRGenFunction::emitAutoVarInit(
     if (!emission.wasEmittedAsOffloadClause()) {
       // In case lv has uses it means we indeed initialized something
       // out of it while trying to build the expression, mark it as such.
-      mlir::Value val = lv.getAddress().getPointer();
-      assert(val && "Should have an address");
-      auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
+      Address addr = lv.getAddress();
+      assert(addr.isValid() && "Should have an address");
+      cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
       assert(allocaOp && "Address should come straight out of the alloca");
 
       if (!allocaOp.use_empty())
@@ -354,6 +356,63 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   CIRGenFunction::AutoVarEmission emission = emitAutoVarAlloca(d);
   emitAutoVarInit(emission);
   emitAutoVarCleanups(emission);
+}
+
+void CIRGenFunction::emitLoopConditionVariable(
+    const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
+  // A condition variable always has automatic storage duration, so this
+  // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. The alloca and
+  // initializer are emitted with capturing disabled so that any cleanups they
+  // introduce get their normal cir.cleanup.scope handling; only the variable's
+  // own destructor cleanup is captured for the loop's per-iteration cleanup
+  // region.
+  assert(d.hasLocalStorage() && "loop condition variable is not local");
+
+  // Mirror the diagnostic emitted by emitVarDecl on the automatic-storage path.
+  // A condition variable is implicitly in the private address space, so this is
+  // not expected to fire, but keep it to preserve emitVarDecl's behavior.
+  if (d.getType().getAddressSpace() == LangAS::opencl_local)
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitLoopConditionVariable: OpenCL local address space");
+
+  CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
+  CIRGenFunction::AutoVarEmission emission = emitAutoVarAlloca(d);
+
+  // The condition variable's destructor is captured into the loop op's
+  // per-iteration cleanup region, which structurally spans the initializer.
+  // If the initializer throws, the variable was never constructed and its
+  // destructor must not run. Classic codegen avoids this by pushing the
+  // cleanup only after the initializer, but our deferred cleanup necessarily
+  // covers the whole condition region, so guard it with an active flag that is
+  // false while the initializer runs and set to true once construction
+  // completes. The flag is stored to on every iteration, so it also resets
+  // correctly across iterations.
+  bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
+  // We will also need cleanup if lifetime markers are enabled.
+  assert(!cir::MissingFeatures::emitLifetimeMarkers());
+  Address activeFlag = Address::invalid();
+  if (needsCleanup) {
+    mlir::Location loc = getLoc(d.getSourceRange());
+    activeFlag = createTempAllocaWithoutCast(
+        builder.getBoolTy(), CharUnits::One(), loc, "cond.cleanup.isactive",
+        /*arraySize=*/nullptr,
+        builder.getBestAllocaInsertPoint(getCurFunctionEntryBlock()));
+    builder.createFlagStore(loc, false, activeFlag.getPointer());
+  }
+
+  emitAutoVarInit(emission);
+
+  if (needsCleanup) {
+    // Construction has completed, so activate the destructor cleanup.
+    mlir::Location loc = getLoc(d.getSourceRange());
+    builder.createFlagStore(loc, true, activeFlag.getPointer());
+  }
+
+  DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+  emitAutoVarCleanups(emission);
+
+  if (needsCleanup)
+    initFullExprCleanupWithFlag(activeFlag);
 }
 
 void CIRGenFunction::emitVarDecl(const VarDecl &d) {
@@ -473,6 +532,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   // need an explicit address space cast in CIR: they will get emitted when
   // lowering to LLVM IR.
 
+  setStaticLocalDeclAddress(&d, gv);
+
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.
   const Decl *dc = cast<Decl>(d.getDeclContext());
@@ -487,10 +548,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   }
 
   GlobalDecl gd;
-  if (isa<CXXConstructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ constructors static var context");
-  else if (isa<CXXDestructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ destructors static var context");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(dc))
+    gd = GlobalDecl(cd, Ctor_Base);
+  else if (const auto *dd = dyn_cast<CXXDestructorDecl>(dc))
+    gd = GlobalDecl(dd, Dtor_Base);
   else if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     gd = GlobalDecl(fd);
   else {
@@ -498,9 +559,14 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
     // never defer them.
     assert(isa<ObjCMethodDecl>(dc) && "unexpected parent code decl");
   }
-  if (gd.getDecl() && cir::MissingFeatures::openMP()) {
-    // Disable emission of the parent function for the OpenMP device codegen.
-    errorNYI(d.getSourceRange(), "OpenMP");
+  if (gd.getDecl()) {
+    if (getLangOpts().OpenMPIsTargetDevice) {
+      // Disable emission of the parent function for the OpenMP device codegen.
+      // TODO(cir): Use CGOpenMPRuntime::DisableAutoDeclareTargetRAII here.
+      errorNYI(d.getSourceRange(),
+               "OpenMP: DisableAutoDeclareTargetRAII for static local");
+    }
+    (void)getAddrOfGlobal(gd);
   }
 
   return gv;
@@ -906,6 +972,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
+  case Decl::CXXExpansionStmt:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());

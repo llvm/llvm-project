@@ -18,6 +18,8 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -144,6 +146,22 @@ public:
 
   template <typename OpTy> OpTy getDefiningOp() const {
     return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
+  /// Return the underlying alloca for this address, if any.
+  ///
+  /// Addresses may refer to an alloca through an address space cast, for
+  /// example when a target stack address space is cast to the language-visible
+  /// address space. Peel those casts so callers that need to annotate the
+  /// original alloca can still find it.
+  cir::AllocaOp getUnderlyingAllocaOp() const {
+    mlir::Value ptr = getPointer();
+    while (cir::CastOp castOp = ptr.getDefiningOp<cir::CastOp>()) {
+      if (!castOp.isAllocaPreservingCast())
+        break;
+      ptr = castOp.getSrc();
+    }
+    return ptr.getDefiningOp<cir::AllocaOp>();
   }
 
   /// Whether the pointer is known not to be null.

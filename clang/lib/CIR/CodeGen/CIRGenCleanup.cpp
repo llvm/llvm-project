@@ -122,6 +122,53 @@ CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
   }
 }
 
+/// If the alloca that backs \p addr is currently nested inside the body
+/// region of \p scope, hoist it, and any cast chain leading to it, out of the
+// scope so the alloca dominates the scope's sibling cleanup region.
+static void hoistAllocaOutOfCleanupScope(CIRGenFunction &cgf, Address addr,
+                                         cir::CleanupScopeOp scope) {
+  cir::AllocaOp alloca = addr.getUnderlyingAllocaOp();
+  if (!alloca)
+    return;
+
+  // If the alloca is not contained within the cleanup scope we're currently
+  // proccessing we don't need to hoist it.
+  auto cur = alloca->getParentOfType<cir::CleanupScopeOp>();
+  while (cur && cur != scope)
+    cur = cur->getParentOfType<cir::CleanupScopeOp>();
+  if (cur != scope)
+    return;
+
+  // Place the alloca at the canonical alloca insertion point of the block
+  // containing the cleanup scope op, so it groups with any preceding
+  // allocas / labels and dominates both the body and cleanup regions.
+  mlir::Block *parentBlock = scope->getBlock();
+  mlir::OpBuilder::InsertPoint ip =
+      CIRGenBuilderTy::getBestAllocaInsertPoint(parentBlock);
+  alloca->moveBefore(parentBlock, ip.getPoint());
+
+  // Move any cast chain that consumes the alloca's result to immediately after
+  // the alloca, so the address used by the deferred cleanup also dominates the
+  // cleanup region. We walk down the chain starting from the alloca's user
+  // that the Address was built from. This is very conservative. In practice,
+  // we should only ever see alloca or address_space(alloca) operations here.
+  mlir::Value ptr = addr.getPointer();
+  llvm::SmallVector<cir::CastOp> casts;
+  for (mlir::Operation *cur = ptr.getDefiningOp(); cur && cur != alloca;) {
+    auto cast = mlir::dyn_cast<cir::CastOp>(cur);
+    if (!cast)
+      break;
+    casts.push_back(cast);
+    cur = cast.getSrc().getDefiningOp();
+  }
+  // Move casts in source order (closest to the alloca first).
+  mlir::Operation *prev = alloca;
+  for (cir::CastOp cast : llvm::reverse(casts)) {
+    cast->moveAfter(prev);
+    prev = cast;
+  }
+}
+
 void CIRGenFunction::FullExprCleanupScope::exit(
     ArrayRef<mlir::Value *> valuesToReload) {
   assert(!exited && "FullExprCleanupScope::exit called twice");
@@ -151,9 +198,10 @@ void CIRGenFunction::FullExprCleanupScope::exit(
     cgf.builder.createStore(val.getLoc(), val, temp);
   }
 
-  // Pop any EH and lifetime-extended cleanups that were pushed during
-  // the expression (e.g. temporary destructors).
-  cleanups.forceCleanup();
+  // Pop any EH cleanups that were pushed during the expression but leave
+  // any lifetime-extended cleanups so that they can be promoted to the EH
+  // stack after we've finished emitting any deferred cleanups.
+  cleanups.forceCleanupExceptLifetimeExtended();
 
   // Make sure the cleanup scope body region has a terminator.
   {
@@ -163,6 +211,18 @@ void CIRGenFunction::FullExprCleanupScope::exit(
     if (lastBodyBlock.empty() ||
         !lastBodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
       cgf.builder.createYield(scope.getLoc());
+  }
+
+  // Each deferred conditional cleanup will reference its addr from the
+  // sibling cleanup region we are about to fill.  If the alloca that backs
+  // that addr was created inside this scope's body region, hoist it out so it
+  // dominates the cleanup region.
+  if (hasDeferredCleanups) {
+    for (const PendingCleanupEntry &entry :
+         llvm::make_range(cgf.deferredConditionalCleanupStack.begin() + oldSize,
+                          cgf.deferredConditionalCleanupStack.end())) {
+      hoistAllocaOutOfCleanupScope(cgf, entry.addr, scope);
+    }
   }
 
   // Emit any deferred cleanups.
@@ -176,6 +236,17 @@ void CIRGenFunction::FullExprCleanupScope::exit(
                cgf.deferredConditionalCleanupStack.begin() + oldSize,
                cgf.deferredConditionalCleanupStack.end()))) {
         if (entry.activeFlag.isValid()) {
+          // We may have hoisted this alloca out of the cleanup scope. If so,
+          // we will have also hoisted any casts between it and the address that
+          // we stored in the deferredConditionalCleanupStack. While I can't
+          // find a case where this actually happens, there is a theoretical
+          // possibility that we could have a second address that uses an
+          // alloca that has already been hoisted but a different cast chain.
+          // This assert guards against that possibility.
+          assert(entry.addr.getUnderlyingAllocaOp() &&
+                 (entry.addr.getUnderlyingAllocaOp()->getBlock() ==
+                  entry.addr.getPointer().getDefiningOp()->getBlock()) &&
+                 "alloca and cast are in different blocks");
           mlir::Value flag =
               cgf.builder.createLoad(scope.getLoc(), entry.activeFlag);
           cir::IfOp::create(
@@ -194,6 +265,12 @@ void CIRGenFunction::FullExprCleanupScope::exit(
 
   cgf.deferredConditionalCleanupStack.truncate(oldSize);
   cgf.builder.setInsertionPointAfter(scope);
+
+  // Promote any lifetime-extended cleanups onto the EH scope stack. The new
+  // cir.cleanup.scope ops created here will wrap any code in the enclosing
+  // scope, including reloads of any spilled values below, so the
+  // lifetime-extended destructors run at the correct point.
+  cleanups.forceLifetimeExtendedCleanups();
 
   // Reload spilled values now that the builder is after the closed scope.
   for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
@@ -278,6 +355,12 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
       skipCleanupScope = true;
   }
 
+  // While emitting a loop's condition variable, suppress cir.cleanup.scope
+  // creation. The variable's destructor is captured on the EH stack and later
+  // emitted into the loop op's per-iteration cleanup region.
+  if (capturingLoopConditionCleanups)
+    skipCleanupScope = true;
+
   cir::CleanupScopeOp cleanupScope = nullptr;
   if (!skipCleanupScope) {
     CIRGenBuilderTy &builder = cgf->getBuilder();
@@ -343,7 +426,12 @@ void EHScopeStack::popCleanup() {
       cir::YieldOp::create(cgf->getBuilder(),
                            cgf->getBuilder().getUnknownLoc());
     }
-    cgf->getBuilder().setInsertionPointAfter(cleanupScope);
+    // If the insertion point was inside the cleanup scope we just closed, move
+    // it to immediate after the scope.
+    mlir::Block *insertBlock = cgf->getBuilder().getInsertionBlock();
+    if (insertBlock &&
+        cleanupScope.getBodyRegion().findAncestorBlockInRegion(*insertBlock))
+      cgf->getBuilder().setInsertionPointAfter(cleanupScope);
   }
 
   // Destroy the cleanup.
@@ -430,21 +518,15 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   scope.setActive(false);
 }
 
-static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
-                        EHScopeStack::Cleanup *cleanup,
-                        EHScopeStack::Cleanup::Flags flags,
-                        Address activeFlag) {
+static void emitCleanupBody(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,
+                            EHScopeStack::Cleanup::Flags flags,
+                            Address activeFlag, mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Block &block = cleanupScope.getCleanupRegion().back();
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(&block);
 
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
 
   if (activeFlag.isValid()) {
-    mlir::Location loc = cleanupScope.getLoc();
     mlir::Value isActive = builder.createFlagLoad(loc, activeFlag.getPointer());
     cir::IfOp::create(builder, loc, isActive,
                       /*withElseRegion=*/false,
@@ -459,6 +541,19 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
     cleanup->emit(cgf, flags);
     assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
   }
+}
+
+static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
+                        EHScopeStack::Cleanup *cleanup,
+                        EHScopeStack::Cleanup::Flags flags,
+                        Address activeFlag) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Block &block = cleanupScope.getCleanupRegion().back();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&block);
+
+  emitCleanupBody(cgf, cleanup, flags, activeFlag, cleanupScope.getLoc());
 
   mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
   if (cleanupRegionLastBlock.empty() ||
@@ -492,8 +587,16 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
   EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
 
+  // If we pushed an EH-only cleanup but exceptions are disabled, it will leave
+  // an effectively empty cleanup on the EH stack. In that case, there is
+  // nothing to do here except pop the cleanup.
   cir::CleanupScopeOp cleanupScope = scope.getCleanupScopeOp();
-  assert(cleanupScope && "CleanupScopeOp is nullptr");
+  if (!cleanupScope) {
+    assert(!scope.isNormalCleanup() && !scope.isEHCleanup() &&
+           "missing cir.cleanup.scope for active cleanup");
+    ehStack.popCleanup();
+    return;
+  }
 
   bool requiresNormalCleanup = scope.isNormalCleanup();
   bool requiresEHCleanup = scope.isEHCleanup();
@@ -612,6 +715,53 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   ehStack.popCleanup();
   scope.markEmitted();
   emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
+}
+
+void CIRGenFunction::emitLoopConditionCleanups(
+    EHScopeStack::stable_iterator depth, mlir::Location loc) {
+  // The captured cleanups were pushed while emitting the loop's condition
+  // variable with EHScopeStack capturing condition cleanups, so they own no
+  // cir.cleanup.scope. Emit them directly into the loop's cleanup region (the
+  // current insertion point), popping each off the EH stack.
+  while (ehStack.stable_begin() != depth) {
+    assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
+    EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
+    assert(!scope.getCleanupScopeOp() &&
+           "captured loop-condition cleanup should not own a cleanup scope");
+
+    EHScopeStack::Cleanup::Flags cleanupFlags;
+    if (scope.isNormalCleanup())
+      cleanupFlags.setIsNormalCleanupKind();
+    if (scope.isEHCleanup())
+      cleanupFlags.setIsEHCleanupKind();
+
+    // The condition variable's cleanup is guarded by an active flag that is
+    // false while its initializer runs, so a throwing initializer does not
+    // destroy the not-yet-constructed variable. The single guarded emission
+    // serves both the normal per-iteration exit and the EH unwind path.
+    Address activeFlag = scope.getActiveFlag();
+
+    // Copy the cleanup emission data out before popping, since popCleanup
+    // deallocates the entry. This mirrors popCleanupBlock.
+    auto *cleanupSource = reinterpret_cast<char *>(scope.getCleanupBuffer());
+    alignas(EHScopeStack::ScopeStackAlignment) char
+        cleanupBufferStack[8 * sizeof(void *)];
+    std::unique_ptr<char[]> cleanupBufferHeap;
+    size_t cleanupSize = scope.getCleanupSize();
+    EHScopeStack::Cleanup *cleanup;
+    if (cleanupSize <= sizeof(cleanupBufferStack)) {
+      memcpy(cleanupBufferStack, cleanupSource, cleanupSize);
+      cleanup = reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferStack);
+    } else {
+      cleanupBufferHeap.reset(new char[cleanupSize]);
+      memcpy(cleanupBufferHeap.get(), cleanupSource, cleanupSize);
+      cleanup =
+          reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferHeap.get());
+    }
+
+    ehStack.popCleanup();
+    emitCleanupBody(*this, cleanup, cleanupFlags, activeFlag, loc);
+  }
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.

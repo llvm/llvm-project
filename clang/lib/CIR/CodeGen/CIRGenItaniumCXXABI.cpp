@@ -1202,8 +1202,8 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
     // From LLVM codegen => Note for the future: If we would ever like to do
     // deferred emission of RTTI, check if emitting vtables opportunistically
     // need any adjustment.
-    gv = CIRGenModule::createGlobalOp(cgm, loc, name, builder.getUInt8PtrTy(),
-                                      /*isConstant=*/true);
+    gv = cgm.createGlobalOp(loc, name, builder.getUInt8PtrTy(),
+                            /*isConstant=*/true);
     const CXXRecordDecl *rd = ty->getAsCXXRecordDecl();
     cgm.setGVProperties(gv, rd);
 
@@ -1601,9 +1601,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   // Create new global and search for an existing global.
   auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
-                                   /*isConstant=*/true);
+  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, init.getType(),
+                                        /*isConstant=*/true);
   gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is
@@ -1873,6 +1872,7 @@ CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   switch (cgm.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::GenericARM:
     return new CIRGenItaniumCXXABI(cgm);
 
   case TargetCXXABI::AppleARM64:
@@ -1960,16 +1960,17 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
                                             cgf.getPointerAlign());
     }
 
-    // Add !invariant.load md to virtual function load to indicate that
-    // function didn't change inside vtable.
+    // Set invariant on the cir.load of virtual function pointer to indicate
+    // that function didn't change inside vtable.
     // It's safe to add it without -fstrict-vtable-pointers, but it would not
     // help in devirtualization because it will only matter if we will have 2
     // the same virtual function loads from the same vtable load, which won't
     // happen without enabled devirtualization with -fstrict-vtable-pointers.
     if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers) {
-      cgm.errorNYI(loc, "getVirtualFunctionPointer: strictVTablePointers");
-    }
+        cgm.getCodeGenOpts().StrictVTablePointers)
+      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
+        loadOp.setInvariant(true);
+
     vfunc = vfuncLoad;
   }
 
@@ -2083,7 +2084,11 @@ static void emitCallToBadCast(CIRGenFunction &cgf, mlir::Location loc) {
   // TODO(cir): set the calling convention to the runtime function.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 
-  cgf.emitRuntimeCall(loc, getBadCastFn(cgf));
+  mlir::NamedAttrList attrs;
+  attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+            mlir::UnitAttr::get(&cgf.cgm.getMLIRContext()));
+
+  cgf.emitRuntimeCall(loc, getBadCastFn(cgf), {}, attrs);
   cir::UnreachableOp::create(cgf.getBuilder(), loc);
   cgf.getBuilder().clearInsertionPoint();
 }

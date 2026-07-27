@@ -1,0 +1,29 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     2>&1 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+#ignore_first_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "ignore" }, { kind = "direct" } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  cir.func @callee(%arg0: !s32i, %arg1: !s32i, %arg2: !s32i) -> !s32i
+      attributes { test_classify = #ignore_first_arg } {
+    cir.return %arg2 : !s32i
+  }
+
+  cir.func @caller(%arg0: !s32i, %arg1: !s32i, %arg2: !s32i) -> !s32i
+      attributes { test_classify = #ignore_first_arg } {
+    %0 = cir.call @callee(%arg0, %arg1, %arg2)
+        : (!s32i, !s32i, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+}
+
+// CHECK: error: 'cir.call' op variadic arguments not yet implemented in CallConvLowering

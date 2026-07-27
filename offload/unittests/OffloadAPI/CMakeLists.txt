@@ -3,6 +3,12 @@ set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
 
 add_subdirectory(device_code)
 
+add_offload_unittest("context"
+    context/olCreateContext.cpp
+    context/olDestroyContext.cpp
+    context/olGetContextInfo.cpp
+    context/olGetContextInfoSize.cpp)
+
 add_offload_unittest("device"
     device/olIterateDevices.cpp
     device/olGetDeviceInfo.cpp
@@ -23,13 +29,16 @@ target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
 
 add_offload_unittest("kernel"
     kernel/olCalculateOptimalOccupancy.cpp
-    kernel/olLaunchKernel.cpp)
+    kernel/olLaunchKernel.cpp
+    kernel/olLaunchKernelCooperative.cpp)
 
 add_offload_unittest("memory"
     memory/olMemAlloc.cpp
+    memory/olMemAllocAligned.cpp
     memory/olMemFill.cpp
     memory/olMemFree.cpp
     memory/olMemcpy.cpp
+    memory/olMemPrefetch.cpp
     memory/olGetMemInfo.cpp
     memory/olGetMemInfoSize.cpp
     memory/olMemRegister.cpp)

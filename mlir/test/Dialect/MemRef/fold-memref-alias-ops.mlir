@@ -642,6 +642,24 @@ func.func @fold_vector_load_subview(%src : memref<24x64xf32>,
 
 // -----
 
+func.func @fold_scalar_equivalent_vector_load_subview(
+  %arg0 : memref<16xf32>, %off : index, %idx : index) -> vector<1xf32> {
+  %0 = memref.subview %arg0[%off][4][2] : memref<16xf32> to memref<4xf32, strided<[2], offset: ?>>
+  %1 = vector.load %0[%idx] : memref<4xf32, strided<[2], offset: ?>>, vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK: #[[$STRIDED_INDEX:.+]] = affine_map<()[s0, s1] -> (s0 + s1 * 2)>
+// CHECK-LABEL: func @fold_scalar_equivalent_vector_load_subview
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<16xf32>
+//  CHECK-SAME:   %[[OFF:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[IDX:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[RESOLVED:.*]] = affine.apply #[[$STRIDED_INDEX]](){{\[}}%[[OFF]], %[[IDX]]]
+//       CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][%[[RESOLVED]]] : memref<16xf32>, vector<1xf32>
+//       CHECK:   return %[[LOAD]] : vector<1xf32>
+
+// -----
+
 func.func @fold_vector_maskedload_subview(
   %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3: vector<32xi1>, %arg4: vector<32xf32>) -> vector<32xf32> {
   %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
@@ -656,6 +674,21 @@ func.func @fold_vector_maskedload_subview(
 // CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<32xi1>
 // CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<32xf32>
 //      CHECK:   vector.maskedload %[[ARG0]][%[[ARG1]], %[[ARG2]]], %[[ARG3]], %[[ARG4]] : memref<12x32xf32>, vector<32xi1>, vector<32xf32> into vector<32xf32>
+
+// -----
+
+func.func @no_fold_vector_maskedload_subview_high_rank_vector(
+  %arg0 : memref<8xf32>, %idx : index,
+  %mask : vector<2x2x2xi1>, %pass : vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+  %0 = memref.subview %arg0[%idx][1][1] : memref<8xf32> to memref<1xf32, strided<[1], offset: ?>>
+  %1 = vector.maskedload %0[%idx], %mask, %pass : memref<1xf32, strided<[1], offset: ?>>, vector<2x2x2xi1>, vector<2x2x2xf32> into vector<2x2x2xf32>
+  return %1 : vector<2x2x2xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedload_subview_high_rank_vector
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<8xf32>
+//       CHECK:   %[[SUBVIEW:.*]] = memref.subview %[[ARG0]]
+//       CHECK:   vector.maskedload %[[SUBVIEW]]
 
 // -----
 
@@ -723,6 +756,41 @@ func.func @fold_vector_load_expand_shape(
 
 // -----
 
+func.func @fold_vector_load_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index) -> vector<1x8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.load %0[%arg1, %c0] : memref<4x8xf32>, vector<1x8xf32>
+  return %1 : vector<1x8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_load_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][%[[IDX]]] : memref<32xf32>, vector<8xf32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf32> to vector<1x8xf32>
+//       CHECK:   return %[[CAST]] : vector<1x8xf32>
+
+// -----
+
+func.func @fold_vector_load_expand_shape_all_unit(
+  %arg0 : memref<f32>) -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  %1 = vector.load %0[%c0] : memref<1xf32>, vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_load_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][] : memref<f32>, vector<f32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<f32> to vector<1xf32>
+//       CHECK:   return %[[CAST]] : vector<1xf32>
+
+// -----
+
 func.func @fold_vector_maskedload_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
@@ -739,6 +807,62 @@ func.func @fold_vector_maskedload_expand_shape(
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
 //       CHECK:   vector.maskedload %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_vector_maskedload_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %mask: vector<1x8xi1>,
+  %pass: vector<1x8xf32>) -> vector<1x8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.maskedload %0[%arg1, %c0], %mask, %pass : memref<4x8xf32>, vector<1x8xi1>, vector<1x8xf32> into vector<1x8xf32>
+  return %1 : vector<1x8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_maskedload_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<1x8xi1>
+//  CHECK-SAME:   %[[PASS:[a-zA-Z0-9_]+]]: vector<1x8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[MASK_CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x8xi1> to vector<8xi1>
+//       CHECK:   %[[PASS_CAST:.*]] = vector.shape_cast %[[PASS]] : vector<1x8xf32> to vector<8xf32>
+//       CHECK:   %[[LOAD:.*]] = vector.maskedload %[[ARG0]][%[[IDX]]], %[[MASK_CAST]], %[[PASS_CAST]] : memref<32xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf32> to vector<1x8xf32>
+//       CHECK:   return %[[CAST]] : vector<1x8xf32>
+
+// -----
+
+func.func @negative_fold_vector_maskedload_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %pass: vector<1xf32>)
+  -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  %1 = vector.maskedload %0[%c0], %mask, %pass : memref<1xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @negative_fold_vector_maskedload_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedload %[[EXPAND]]
+
+// -----
+
+func.func @no_fold_vector_maskedload_expand_shape_high_rank_vector(
+  %arg0 : memref<32xf32>, %arg1 : index,
+  %mask : vector<2x2x2xi1>, %pass : vector<2x2x2xf32>) -> vector<2x2x2xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.maskedload %0[%arg1, %c0], %mask, %pass : memref<4x8xf32>, vector<2x2x2xi1>, vector<2x2x2xf32> into vector<2x2x2xf32>
+  return %1 : vector<2x2x2xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedload_expand_shape_high_rank_vector
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedload %[[EXPAND]]
 
 // -----
 
@@ -759,6 +883,41 @@ func.func @fold_vector_store_expand_shape(
 
 // -----
 
+func.func @fold_vector_store_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %val : vector<1x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.store %val, %0[%arg1, %c0] : memref<4x8xf32>, vector<1x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_store_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9_]+]]: vector<1x8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[VAL]] : vector<1x8xf32> to vector<8xf32>
+//       CHECK:   vector.store %[[CAST]], %[[ARG0]][%[[IDX]]] : memref<32xf32>, vector<8xf32>
+
+// -----
+
+func.func @fold_vector_store_expand_shape_all_unit(
+  %arg0 : memref<f32>, %val : vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  vector.store %val, %0[%c0] : memref<1xf32>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_store_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9_]+]]: vector<1xf32>
+//       CHECK:   %[[CAST:.*]] = vector.shape_cast %[[VAL]] : vector<1xf32> to vector<f32>
+//       CHECK:   vector.store %[[CAST]], %[[ARG0]][] : memref<f32>, vector<f32>
+
+// -----
+
 func.func @fold_vector_maskedstore_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
   %c0 = arith.constant 0 : index
@@ -775,6 +934,112 @@ func.func @fold_vector_maskedstore_expand_shape(
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
 //       CHECK:   vector.maskedstore %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_vector_maskedstore_expand_shape_leading_unit(
+  %arg0 : memref<32xf32>, %arg1 : index, %mask: vector<1x8xi1>,
+  %val: vector<1x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.maskedstore %0[%arg1, %c0], %mask, %val : memref<4x8xf32>, vector<1x8xi1>, vector<1x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_maskedstore_expand_shape_leading_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<1x8xi1>
+//  CHECK-SAME:   %[[VAL:[a-zA-Z0-9_]+]]: vector<1x8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   %[[MASK_CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x8xi1> to vector<8xi1>
+//       CHECK:   %[[VAL_CAST:.*]] = vector.shape_cast %[[VAL]] : vector<1x8xf32> to vector<8xf32>
+//       CHECK:   vector.maskedstore %[[ARG0]][%[[IDX]]], %[[MASK_CAST]], %[[VAL_CAST]] : memref<32xf32>, vector<8xi1>, vector<8xf32>
+
+// -----
+
+func.func @no_fold_vector_maskedstore_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %val: vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  vector.maskedstore %0[%c0], %mask, %val : memref<1xf32>, vector<1xi1>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: func @no_fold_vector_maskedstore_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.maskedstore %[[EXPAND]]
+
+// -----
+
+func.func @fold_vector_expandload_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.expandload %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_expandload_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.expandload %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @no_fold_vector_expandload_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %pass: vector<1xf32>)
+  -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  %1 = vector.expandload %0[%c0], %mask, %pass : memref<1xf32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %1 : vector<1xf32>
+}
+
+// CHECK-LABEL: func @no_fold_vector_expandload_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.expandload %[[EXPAND]]
+
+// -----
+
+func.func @fold_vector_compressstore_expand_shape(
+  %arg0 : memref<32xf32>, %arg1 : index, %arg3: vector<8xi1>, %arg4: vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  vector.compressstore %0[%arg1, %c0], %arg3, %arg4 : memref<4x8xf32>, vector<8xi1>, vector<8xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_vector_compressstore_expand_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
+//  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.compressstore %[[ARG0]][%[[IDX]]], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @negative_fold_vector_compressstore_expand_shape_all_unit(
+  %arg0 : memref<f32>, %mask: vector<1xi1>, %val: vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.expand_shape %arg0 [] output_shape [1] : memref<f32> into memref<1xf32>
+  vector.compressstore %0[%c0], %mask, %val : memref<1xf32>, vector<1xi1>, vector<1xf32>
+  return
+}
+
+// CHECK-LABEL: func @negative_fold_vector_compressstore_expand_shape_all_unit
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<f32>
+//       CHECK:   %[[EXPAND:.*]] = memref.expand_shape %[[ARG0]]
+//       CHECK:   vector.compressstore %[[EXPAND]]
 
 // -----
 
@@ -863,6 +1128,21 @@ func.func @fold_vector_transfer_read_rank_mismatch(
 
 // -----
 
+func.func @fold_memref_load_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index) -> f32 {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  %1 = memref.load %0[%arg1] {nontemporal = true} : memref<32xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @fold_memref_load_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   memref.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+
+// -----
+
 func.func @fold_vector_load_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index) -> vector<8xf32> {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
@@ -873,7 +1153,7 @@ func.func @fold_vector_load_collapse_shape(
 // CHECK-LABEL: func @fold_vector_load_collapse_shape
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
 //       CHECK:   vector.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
 
 // -----
@@ -890,8 +1170,23 @@ func.func @fold_vector_maskedload_collapse_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
 //  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
-//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
 //       CHECK:   vector.maskedload %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1], %[[ARG3]], %[[ARG4]]
+
+// -----
+
+func.func @fold_memref_store_collapse_shape(
+  %arg0 : memref<4x8xf32>, %arg1 : index, %val : f32) {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
+  memref.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>
+  return
+}
+
+// CHECK-LABEL: func @fold_memref_store_collapse_shape
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   memref.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
 
 // -----
 
@@ -905,7 +1200,7 @@ func.func @fold_vector_store_collapse_shape(
 // CHECK-LABEL: func @fold_vector_store_collapse_shape
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
 //       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
 
 // -----
@@ -922,7 +1217,7 @@ func.func @fold_vector_maskedstore_collapse_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<8xi1>
 //  CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: vector<8xf32>
-//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 8)
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
 //       CHECK:   vector.maskedstore %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1], %[[ARG3]], %[[ARG4]]
 
 // -----

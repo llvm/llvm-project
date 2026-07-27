@@ -15,6 +15,8 @@
 #include <optional>
 #include <unordered_set>
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
@@ -49,7 +51,7 @@ public:
   typedef std::shared_ptr<ClassDescriptor> ClassDescriptorSP;
 
   // the information that we want to support retrieving from an ObjC class this
-  // needs to be pure virtual since there are at least 2 different
+  // needs to be pure virtual since there can be multiple
   // implementations of the runtime, and more might come
   class ClassDescriptor {
   public:
@@ -61,10 +63,10 @@ public:
 
     virtual ClassDescriptorSP GetSuperclass() = 0;
 
-    virtual ClassDescriptorSP GetMetaclass() const = 0;
+    virtual std::unique_ptr<ClassDescriptor> GetMetaclass() const = 0;
 
     // virtual if any implementation has some other version-specific rules but
-    // for the known v1/v2 this is all that needs to be done
+    // for the known runtime versions this is all that needs to be done
     virtual bool IsKVO() {
       if (m_is_kvo == eLazyBoolCalculate) {
         const char *class_name = GetClassName().AsCString(nullptr);
@@ -76,7 +78,7 @@ public:
     }
 
     // virtual if any implementation has some other version-specific rules but
-    // for the known v1/v2 this is all that needs to be done
+    // for the known runtime versions this is all that needs to be done
     virtual bool IsCFType() {
       if (m_is_cf == eLazyBoolCalculate) {
         const char *class_name = GetClassName().AsCString(nullptr);
@@ -196,7 +198,7 @@ public:
 
     virtual bool IsPossibleTaggedPointer(lldb::addr_t ptr) = 0;
 
-    virtual ObjCLanguageRuntime::ClassDescriptorSP
+    virtual std::unique_ptr<ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) = 0;
 
   protected:
@@ -223,6 +225,11 @@ public:
     return llvm::cast_or_null<ObjCLanguageRuntime>(
         process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
   }
+
+  /// Returns whether the architecture's object file format supports
+  /// Objective-C code generation. Generating Objective-C for a format that
+  /// does not aborts the compiler.
+  static bool IsSupportedForArchitecture(const ArchSpec &arch);
 
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
@@ -300,6 +307,8 @@ public:
 
   virtual ObjCISA GetParentClass(ObjCISA isa);
 
+  virtual ObjCISA GetPointerISA(ObjCISA isa) { return isa; };
+
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
   // find the offset, returns LLDB_INVALID_IVAR_OFFSET.
 
@@ -340,7 +349,7 @@ protected:
 
   bool AddClass(ObjCISA isa, const ClassDescriptorSP &descriptor_sp) {
     if (isa != 0) {
-      m_isa_to_descriptor[isa] = descriptor_sp;
+      m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
       return true;
     }
     return false;
@@ -352,8 +361,8 @@ protected:
   bool AddClass(ObjCISA isa, const ClassDescriptorSP &descriptor_sp,
                 uint32_t class_name_hash) {
     if (isa != 0) {
-      m_isa_to_descriptor[isa] = descriptor_sp;
-      m_hash_to_isa_map.insert(std::make_pair(class_name_hash, isa));
+      m_isa_to_descriptor.insert_or_assign(isa, descriptor_sp);
+      m_hash_to_isa_map[class_name_hash].push_back(isa);
       return true;
     }
     return false;
@@ -419,10 +428,17 @@ private:
 
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
-  typedef std::map<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
-  typedef std::multimap<uint32_t, ObjCISA> HashToISAMap;
+  typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
+
+  /// Keys are already djbHash values, so use identity as the hash function.
+  struct IdentityHashKeyInfo {
+    static unsigned getHashValue(uint32_t Val) { return Val; }
+    static bool isEqual(uint32_t LHS, uint32_t RHS) { return LHS == RHS; }
+  };
+
+  typedef llvm::SmallVector<ObjCISA, 2> ISAVector;
+  typedef llvm::DenseMap<uint32_t, ISAVector, IdentityHashKeyInfo> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
-  typedef HashToISAMap::iterator HashToISAIterator;
   typedef ThreadSafeDenseMap<void *, uint64_t> TypeSizeCache;
 
   MsgImplMap m_impl_cache;

@@ -15,54 +15,15 @@
 #include <cstring>
 using namespace clang;
 
-static constexpr const char *TypeTraitNames[] = {
-#define TYPE_TRAIT_1(Spelling, Name, Key) #Name,
-#include "clang/Basic/TokenKinds.def"
-#define TYPE_TRAIT_2(Spelling, Name, Key) #Name,
-#include "clang/Basic/TokenKinds.def"
-#define TYPE_TRAIT_N(Spelling, Name, Key) #Name,
-#include "clang/Basic/TokenKinds.def"
-};
-
-static constexpr const char *TypeTraitSpellings[] = {
-#define TYPE_TRAIT_1(Spelling, Name, Key) #Spelling,
-#include "clang/Basic/TokenKinds.def"
-#define TYPE_TRAIT_2(Spelling, Name, Key) #Spelling,
-#include "clang/Basic/TokenKinds.def"
-#define TYPE_TRAIT_N(Spelling, Name, Key) #Spelling,
-#include "clang/Basic/TokenKinds.def"
-};
-
-static constexpr const char *ArrayTypeTraitNames[] = {
-#define ARRAY_TYPE_TRAIT(Spelling, Name, Key) #Name,
-#include "clang/Basic/TokenKinds.def"
-};
-
-static constexpr const char *ArrayTypeTraitSpellings[] = {
-#define ARRAY_TYPE_TRAIT(Spelling, Name, Key) #Spelling,
-#include "clang/Basic/TokenKinds.def"
-};
-
-static constexpr const char *UnaryExprOrTypeTraitNames[] = {
-#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) #Name,
-#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) #Name,
-#include "clang/Basic/TokenKinds.def"
-};
-
-static constexpr const char *UnaryExprOrTypeTraitSpellings[] = {
-#define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) #Spelling,
-#define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) #Spelling,
-#include "clang/Basic/TokenKinds.def"
-};
-
-static constexpr const unsigned TypeTraitArities[] = {
-#define TYPE_TRAIT_1(Spelling, Name, Key) 1,
-#include "clang/Basic/TokenKinds.def"
-#define TYPE_TRAIT_2(Spelling, Name, Key) 2,
-#include "clang/Basic/TokenKinds.def"
-#define TYPE_TRAIT_N(Spelling, Name, Key) 0,
-#include "clang/Basic/TokenKinds.def"
-};
+// static constexpr const char *TypeTraitNames[] = {...};
+// static constexpr const char *TypeTraitSpellings[] = {...};
+// static constexpr const char *ArrayTypeTraitNames[] = {...};
+// static constexpr const char *ArrayTypeTraitSpellings[] = {...};
+// static constexpr const char *UnaryExprOrTypeTraitNames[] = {...};
+// static constexpr const char *UnaryExprOrTypeTraitSpellings[] = {...};
+// static constexpr const unsigned TypeTraitArities[] = {...};
+#define EMIT_ARRAYS
+#include "clang/Basic/Traits.inc"
 
 const char *clang::getTraitName(TypeTrait T) {
   assert(T <= TT_Last && "invalid enum value!");

@@ -101,14 +101,15 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
-  }
-
   const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 
-  /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
+  }
+
+  /// Return true if the current StackFrame has no caller context.
+  bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
@@ -147,7 +148,7 @@ public:
   }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
-    return Pred->getLocationContext()->getAnalysisDeclContext();
+    return Pred->getStackFrame()->getAnalysisDeclContext();
   }
 
   /// Get the blockID.

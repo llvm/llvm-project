@@ -67,6 +67,21 @@ static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
 }
 
+static IntegerAttr andIntegerAttrs(PatternRewriter &builder, Value res,
+                                   Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_and<APInt>());
+}
+
+static IntegerAttr orIntegerAttrs(PatternRewriter &builder, Value res,
+                                  Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_or<APInt>());
+}
+
+static IntegerAttr xorIntegerAttrs(PatternRewriter &builder, Value res,
+                                   Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_xor<APInt>());
+}
+
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
 static IntegerOverflowFlagsAttr
 mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
@@ -163,6 +178,19 @@ static Attribute getBoolAttribute(Type type, bool value) {
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
+/// Return a scalar or splat integer attribute of `type` (an integer/index type
+/// or a shaped type thereof) holding `value`. Returns a null attribute for
+/// shaped types with a dynamic shape, so callers can bail out of folding.
+static Attribute getIntegerAttrOfType(Type type, int64_t value) {
+  auto scalarAttr = IntegerAttr::get(getElementTypeOrSelf(type), value);
+  ShapedType shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return scalarAttr;
+  if (!shapedType.hasStaticShape())
+    return {};
+  return DenseElementsAttr::get(shapedType, scalarAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
@@ -216,8 +244,8 @@ void arith::ConstantOp::getAsmResultNames(
 LogicalResult arith::ConstantOp::verify() {
   auto type = getType();
   // Integer values must be signless.
-  if (llvm::isa<IntegerType>(type) &&
-      !llvm::cast<IntegerType>(type).isSignless())
+  if (auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(type));
+      intType && !intType.isSignless())
     return emitOpError("integer return type must be signless");
   // Any float or elements attribute are acceptable.
   if (!llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(getValue())) {
@@ -492,6 +520,85 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>>
+arith::SubUIExtendedOp::getShapeForUnroll() {
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+// Returns the borrow bit, assuming `lhs` and `rhs` are operands of an unsigned
+// subtraction whose mathematical result underflows iff `lhs < rhs`.
+static APInt calculateUnsignedBorrow(const APInt &lhs, const APInt &rhs) {
+  return lhs.ult(rhs) ? APInt::getAllOnes(1) : APInt::getZero(1);
+}
+
+LogicalResult
+arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  Type borrowTy = getBorrow().getType();
+  // subui_extended(x, 0) -> x, false
+  if (matchPattern(getRhs(), m_Zero())) {
+    Builder builder(getContext());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+
+    results.push_back(getLhs());
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(x, x) -> 0, false
+  if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getDiff().getType());
+    if (shapedType && !shapedType.hasStaticShape())
+      return failure();
+    Builder builder(getContext());
+    auto zeroDiff = builder.getZeroAttr(getDiff().getType());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+    if (!zeroDiff)
+      return failure();
+
+    results.push_back(zeroDiff);
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(constant_a, constant_b) -> constant_diff, constant_borrow
+  if (Attribute diffAttr = constFoldBinaryOp<IntegerAttr>(
+          adaptor.getOperands(),
+          [](APInt a, const APInt &b) { return std::move(a) - b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (matchPattern(diffAttr, ub::m_Poison())) {
+      results.push_back(diffAttr);
+      results.push_back(diffAttr);
+      return success();
+    }
+    Attribute borrowAttr = constFoldBinaryOp<IntegerAttr>(
+        adaptor.getOperands(),
+        getI1SameShape(llvm::cast<TypedAttr>(diffAttr).getType()),
+        calculateUnsignedBorrow);
+    if (!borrowAttr)
+      return failure();
+
+    results.push_back(diffAttr);
+    results.push_back(borrowAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::SubUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<SubUIExtendedToSubI>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
@@ -702,9 +809,21 @@ static Value foldDivMul(Value lhs, Value rhs,
 }
 
 OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: divui (x, 0) -> poison. Division by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // divui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // divui (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // divui (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nuw))
@@ -742,9 +861,21 @@ Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: divsi (x, 0) -> poison. Division by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // divsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // divsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // divsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nsw))
@@ -798,9 +929,21 @@ static APInt signedCeilNonnegInputs(const APInt &a, const APInt &b,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: ceildivui (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // ceildivui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // ceildivui (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // ceildivui (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -828,9 +971,21 @@ Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: ceildivsi (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // ceildivsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // ceildivsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // ceildivsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // Don't fold if it would overflow or if it requires a division by zero.
   // TODO: This hook won't fold operations where a = MININT, because
@@ -897,9 +1052,21 @@ Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: floordivsi (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // floordivsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // floordivsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // floordivsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // Don't fold if it would overflow or if it requires a division by zero.
   bool overflowOrDiv = false;
@@ -920,9 +1087,18 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: remui (x, 0) -> poison. Remainder by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // remui (x, 1) -> 0.
   if (matchPattern(adaptor.getRhs(), m_One()))
-    return Builder(getContext()).getZeroAttr(getType());
+    return getIntegerAttrOfType(getType(), 0);
+
+  // remui (0, x) -> 0 and remui (x, x) -> 0. Division by zero is UB, so
+  // refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()) || getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -947,9 +1123,18 @@ Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: remsi (x, 0) -> poison. Remainder by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // remsi (x, 1) -> 0.
   if (matchPattern(adaptor.getRhs(), m_One()))
-    return Builder(getContext()).getZeroAttr(getType());
+    return getIntegerAttrOfType(getType(), 0);
+
+  // remsi (0, x) -> 0 and remsi (x, x) -> 0. Division by zero is UB, so
+  // refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()) || getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -1064,8 +1249,13 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
   /// xor(x, x) -> 0
-  if (getLhs() == getRhs())
-    return Builder(getContext()).getZeroAttr(getType());
+  if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getType());
+    if (!shapedType || shapedType.hasStaticShape())
+      return Builder(getContext()).getZeroAttr(getType());
+  }
   /// xor(xor(x, a), a) -> x
   /// xor(xor(a, x), a) -> x
   if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>()) {
@@ -1090,7 +1280,8 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
 
 void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(context);
+  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1143,6 +1334,11 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
         result.add(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
+}
+
+void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<AddFOfNegFLhs, AddFOfNegFRhs>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1813,7 +2009,7 @@ LogicalResult arith::ScalingTruncFOp::verify() {
 
 void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<AndOfExtUI, AndOfExtSI>(context);
+  patterns.add<AndIAndIConstant, AndOfExtUI, AndOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1822,7 +2018,7 @@ void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 void arith::OrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                MLIRContext *context) {
-  patterns.add<OrOfExtUI, OrOfExtSI>(context);
+  patterns.add<OrIOrIConstant, OrOfExtUI, OrOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2634,7 +2830,13 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RedundantSelectFalse, RedundantSelectTrue, SelectNotCond,
-              SelectI1ToNot, SelectToExtUI>(context);
+              SelectI1ToNot, SelectCmpISgeToMaxSI, SelectCmpISgeToMinSI,
+              SelectCmpISgtToMaxSI, SelectCmpISgtToMinSI, SelectCmpISleToMaxSI,
+              SelectCmpISleToMinSI, SelectCmpISltToMaxSI, SelectCmpISltToMinSI,
+              SelectCmpIUgeToMaxUI, SelectCmpIUgeToMinUI, SelectCmpIUgtToMaxUI,
+              SelectCmpIUgtToMinUI, SelectCmpIUleToMaxUI, SelectCmpIUleToMinUI,
+              SelectCmpIUltToMaxUI, SelectCmpIUltToMinUI, SelectToExtUI>(
+      context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
@@ -2773,8 +2975,17 @@ LogicalResult arith::SelectOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shli(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shli(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
+  // shli(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
     return getLhs();
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
@@ -2791,9 +3002,22 @@ OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shrui(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shrui(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
+  // shrui(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+  // shrui(x, x) -> 0. For any in-range shift amount v < bitwidth, v >> v == 0
+  // (v < 2^v); out-of-range amounts yield poison, so 0 is a valid refinement.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -2809,8 +3033,26 @@ OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shrsi(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shrsi(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
+  // shrsi(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+  // shrsi(x, x) -> 0. For any in-range shift amount v < bitwidth, v is a small
+  // non-negative value and v >> v == 0; out-of-range amounts yield poison.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
+  // shrsi(-1, x) -> -1. Arithmetic shift of all-ones is all-ones for any
+  // in-range amount; out-of-range amounts yield poison.
+  if (APInt val;
+      matchPattern(adaptor.getLhs(), m_ConstantInt(&val)) && val.isAllOnes())
     return getLhs();
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;

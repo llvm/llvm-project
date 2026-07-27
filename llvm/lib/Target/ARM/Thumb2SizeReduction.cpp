@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -170,6 +171,11 @@ namespace {
 
     StringRef getPassName() const override {
       return THUMB2_SIZE_REDUCE_NAME;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -1010,7 +1016,7 @@ bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
                                 bool LiveCPSR, bool IsSelfLoop,
                                 bool SkipPrologueEpilogue) {
   unsigned Opcode = MI->getOpcode();
-  DenseMap<unsigned, unsigned>::iterator OPI = ReduceOpcodeMap.find(Opcode);
+  auto OPI = ReduceOpcodeMap.find(Opcode);
   if (OPI == ReduceOpcodeMap.end())
     return false;
   if (SkipPrologueEpilogue && (MI->getFlag(MachineInstr::FrameSetup) ||

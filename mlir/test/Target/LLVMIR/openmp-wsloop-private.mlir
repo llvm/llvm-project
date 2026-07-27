@@ -72,7 +72,7 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
 
 // Third, check that reduction init took place.
 // CHECK: [[RED_INIT_BB]]:
-// CHECK:   store float 0x{{.*}}, ptr %[[FLT]], align 4
+// CHECK:   store float f0x{{.*}}, ptr %[[FLT]], align 4
 
 // Finally, check for the private dealloc region
 // CHECK:   call void @foo_free(ptr %[[CHR]])

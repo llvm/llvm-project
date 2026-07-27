@@ -1292,6 +1292,25 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
   }
 }
 
+void Pattern::printVariableDefAttempts(const SourceMgr &SM, StringRef Buffer,
+                                       FileCheckDiagList *Diags) const {
+  if (VariableDefs.empty() && NumericVariableDefs.empty())
+    return;
+  SmallString<256> Msg;
+  raw_svector_ostream OS(Msg);
+  OS << "pattern attempts to capture variables: ";
+  llvm::ListSeparator LS;
+  for (const auto &Def : VariableDefs)
+    OS << LS << '"' << Def.first << '"';
+  for (const auto &Def : NumericVariableDefs)
+    OS << LS << '"' << Def.getKey() << '"';
+  SMLoc Start = SMLoc::getFromPointer(Buffer.data());
+  if (Diags)
+    Diags->emplace<MatchCustomNoteDiag>(OS.str());
+  else
+    SM.PrintMessage(Start, SourceMgr::DK_Note, OS.str());
+}
+
 void Pattern::printVariableDefs(const SourceMgr &SM,
                                 FileCheckDiagList *Diags) const {
   if (VariableDefs.empty() && NumericVariableDefs.empty())
@@ -1881,17 +1900,17 @@ bool FileCheck::readCheckFile(
     assert(UsedPrefix.data() == Buffer.data() &&
            "Failed to move Buffer's start forward, or pointed prefix outside "
            "of the buffer!");
+
+    [[maybe_unused]] const char *BufferEnd = Buffer.data() + Buffer.size();
     assert(AfterSuffix.data() >= Buffer.data() &&
-           AfterSuffix.data() < Buffer.data() + Buffer.size() &&
+           AfterSuffix.data() <= BufferEnd &&
            "Parsing after suffix doesn't start inside of buffer!");
+
+    // Skip the buffer to the end of the parsed directive suffix.
+    Buffer = AfterSuffix;
 
     // Location to use for error messages.
     const char *UsedPrefixStart = UsedPrefix.data();
-
-    // Skip the buffer to the end of parsed suffix (or just prefix, if no good
-    // suffix was processed).
-    Buffer = AfterSuffix.empty() ? Buffer.drop_front(UsedPrefix.size())
-                                 : AfterSuffix;
 
     // Complain about misspelled directives.
     if (CheckTy == Check::CheckMisspelled) {
@@ -2123,6 +2142,7 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
     for (StringRef ErrorMsg : ErrorMsgs)
       Diags->emplace<MatchCustomNoteDiag>(ErrorMsg);
     Pat.printSubstitutions(SM, Buffer, SearchRange, Diags);
+    Pat.printVariableDefAttempts(SM, Buffer, Diags);
   }
   if (!PrintDiag) {
     assert(!HasError && "expected to report more diagnostics for error");
@@ -2149,6 +2169,8 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   // Print additional information, which can be useful even after a pattern
   // error.
   Pat.printSubstitutions(SM, Buffer, SearchRange, nullptr);
+  Pat.printVariableDefAttempts(SM, Buffer, nullptr);
+
   if (ExpectedMatch)
     Pat.printFuzzyMatch(SM, Buffer, Diags);
   return ErrorReported::reportedOrSuccess(HasError);

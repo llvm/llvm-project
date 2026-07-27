@@ -16,18 +16,23 @@
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <map>
 #include <memory>
-#include <unordered_map>
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
+struct AArch64PostLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerLoweringImplRuleConfig;
 
 namespace llvm {
@@ -51,7 +56,7 @@ FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoLegacyPass();
-FunctionPass *createAArch64SLSHardeningPass();
+FunctionPass *createAArch64SLSHardeningLegacyPass();
 FunctionPass *createAArch64SpeculationHardeningPass();
 FunctionPass *createAArch64LoadStoreOptLegacyPass();
 ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
@@ -64,16 +69,17 @@ FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
+FunctionPass *createAArch64CodeLayoutOptPass();
 FunctionPass *createAArch64MIPeepholeOptLegacyPass();
 FunctionPass *createAArch64PostCoalescerPass();
-
+FunctionPass *createAArch64PTrueCoalescingLegacyPass();
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
-FunctionPass *createAArch64SRLTDefineSuperRegsPass();
-ModulePass *createSVEIntrinsicOptsPass();
+FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
+Pass *createSVEShuffleOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
                                  const AArch64Subtarget &,
@@ -104,6 +110,24 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AArch64PostLegalizerCombinerPass> {
+  std::unique_ptr<AArch64PostLegalizerCombinerImplRuleConfig> RuleConfig;
+  const AArch64TargetMachine *TM;
+
+public:
+  AArch64PostLegalizerCombinerPass(const AArch64TargetMachine *TM);
+  AArch64PostLegalizerCombinerPass(AArch64PostLegalizerCombinerPass &&);
+  ~AArch64PostLegalizerCombinerPass();
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Legalized);
+  }
+};
+
 class AArch64PostSelectOptimizePass
     : public OptionalPassInfoMixin<AArch64PostSelectOptimizePass> {
 public:
@@ -131,7 +155,7 @@ public:
 
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
-FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
+FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
 FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
@@ -154,11 +178,13 @@ void initializeAArch64DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAArch64DeadRegisterDefinitionsLegacyPass(PassRegistry &);
 void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
-void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
+void initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PassRegistry &);
+void initializeAArch64CodeLayoutOptPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
+void initializeAArch64PTrueCoalescingLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
-void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
+void initializeAArch64PostLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizeLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringLegacyPass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
@@ -166,7 +192,7 @@ void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationLegacyPass(PassRegistry &);
 void initializeAArch64RedundantCondBranchLegacyPass(PassRegistry &);
 void initializeAArch64SIMDInstrOptLegacyPass(PassRegistry &);
-void initializeAArch64SLSHardeningPass(PassRegistry &);
+void initializeAArch64SLSHardeningLegacyPass(PassRegistry &);
 void initializeAArch64SpeculationHardeningPass(PassRegistry &);
 void initializeAArch64StackTaggingPass(PassRegistry &);
 void initializeAArch64StackTaggingPreRALegacyPass(PassRegistry &);
@@ -176,9 +202,20 @@ void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
-void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
-void initializeSVEIntrinsicOptsPass(PassRegistry &);
+void initializeAArch64SRLTDefineSuperRegsLegacyPass(PassRegistry &);
+void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+class AArch64SVEShuffleOptsPass
+    : public OptionalPassInfoMixin<AArch64SVEShuffleOptsPass> {
+  const AArch64TargetMachine &TM;
+
+public:
+  explicit AArch64SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
+};
 
 class AArch64StackTaggingPreRAPass
     : public OptionalPassInfoMixin<AArch64StackTaggingPreRAPass> {
@@ -243,6 +280,12 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+// SelectionDAGISelPass is already a NewPM interface.
+class AArch64DAGToDAGISelPass : public SelectionDAGISelPass {
+public:
+  AArch64DAGToDAGISelPass(AArch64TargetMachine &TM);
+};
+
 class AArch64DeadRegisterDefinitionsPass
     : public OptionalPassInfoMixin<AArch64DeadRegisterDefinitionsPass> {
 public:
@@ -264,6 +307,13 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PTrueCoalescingPass
+    : public OptionalPassInfoMixin<AArch64PTrueCoalescingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class AArch64ConditionOptimizerPass
     : public OptionalPassInfoMixin<AArch64ConditionOptimizerPass> {
 public:
@@ -274,7 +324,7 @@ public:
 class AArch64SIMDInstrOptPass
     : public OptionalPassInfoMixin<AArch64SIMDInstrOptPass> {
   std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-  std::unordered_map<std::string, bool> InterlEarlyExit;
+  StringMap<bool> InterlEarlyExit;
 
 public:
   PreservedAnalyses run(MachineFunction &MF,
@@ -283,6 +333,13 @@ public:
 
 class AArch64PointerAuthPass
     : public OptionalPassInfoMixin<AArch64PointerAuthPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SLSHardeningPass
+    : public RequiredPassInfoMixin<AArch64SLSHardeningPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -307,6 +364,19 @@ class AArch64ConditionalComparesPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64SRLTDefineSuperRegsPass
+    : public OptionalPassInfoMixin<AArch64SRLTDefineSuperRegsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64LowerHomogeneousPrologEpilogPass
+    : public RequiredPassInfoMixin<AArch64LowerHomogeneousPrologEpilogPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

@@ -2,7 +2,7 @@
   "configuration": {
     "runtime_prefix": "__instrumentor_",
     "runtime_prefix.description": "The runtime API prefix.",
-    "runtime_stubs_file": "rt.c",
+    "runtime_stubs_file": "",
     "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
     "demangle_function_names": true,
     "demangle_function_names.description": "Demangle functions names passed to the runtime."

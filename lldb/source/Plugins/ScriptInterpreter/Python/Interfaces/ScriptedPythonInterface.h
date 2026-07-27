@@ -168,7 +168,7 @@ public:
 
   template <typename... Args>
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
                      StructuredData::Generic *script_obj, Args... args) {
     using namespace python;
     using Locker = ScriptInterpreterPythonImpl::Locker;
@@ -180,6 +180,8 @@ public:
               .str());
     };
 
+    m_scripted_metadata = scripted_metadata;
+    llvm::StringRef class_name = scripted_metadata.GetClassName();
     bool has_class_name = !class_name.empty();
     bool has_interpreter_dict =
         !(llvm::StringRef(m_interpreter.GetDictionaryName()).empty());
@@ -249,10 +251,15 @@ public:
       size_t num_args = sizeof...(Args);
       if (arg_info->max_positional_args != PythonCallable::ArgInfo::UNBOUNDED &&
           num_args != arg_info->max_positional_args) {
-        if (num_args != arg_info->max_positional_args - 1)
+        if (num_args != arg_info->max_positional_args - 1) {
+          // `expected_return_object` starts in an error state; consume it
+          // before we return with a different error, or its destructor
+          // will abort.
+          llvm::consumeError(expected_return_object.takeError());
           return create_error("Passed arguments ({0}) doesn't match the number "
                               "of expected arguments ({1}).",
                               num_args, arg_info->max_positional_args);
+        }
 
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
@@ -587,6 +594,12 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  template <typename T, typename = std::enable_if_t<
+                            std::is_base_of_v<StructuredData::Object, T>>>
+  python::PythonObject Transform(std::shared_ptr<T> arg) {
+    return Transform(StructuredDataImpl(arg));
+  }
+
   python::PythonObject Transform(lldb::ExecutionContextRefSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -819,9 +832,19 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
     python::PythonObject &p, Status &error);
 
 template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
     python::PythonObject &p, Status &error);
+
+template <>
+std::optional<lldb::ValueType>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    std::optional<lldb::ValueType>>(python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
 

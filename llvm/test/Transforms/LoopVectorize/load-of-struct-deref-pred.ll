@@ -19,9 +19,9 @@ define void @accesses_to_struct_dereferenceable(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr @foo, i64 0, i32 1, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr @foo, i64 0, i32 1, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[WIDE_LOAD2]], <4 x i32> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP0]], align 4
@@ -115,7 +115,7 @@ define void @accesses_to_struct_may_not_be_dereferenceable_due_to_loop_bound(ptr
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <4 x i32> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP25]], <4 x i32> [[WIDE_LOAD7]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP0]], align 4
@@ -232,7 +232,7 @@ define void @accesses_to_struct_may_not_be_dereferenceable_access_size(ptr noali
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <4 x i64> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc <4 x i64> [[TMP25]] to <4 x i32>
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr @foo, i64 0, i32 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP27]], align 4
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP26]], <4 x i32> [[WIDE_LOAD7]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP0]], align 4

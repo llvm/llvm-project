@@ -6,10 +6,6 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifdef LIBC_MATH_USE_SYSTEM_FENV
-#undef LIBC_MATH_USE_SYSTEM_FENV
-#endif // LIBC_MATH_USE_SYSTEM_FENV
-
 #include "FEnvSafeTest.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -45,8 +41,10 @@ void FEnvSafeTest::set_fenv(const fenv_t &fenv) {
   ASSERT_EQ(LIBC_NAMESPACE::fputil::set_env(&fenv), 0);
 }
 
-void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
-                                  const fenv_t &after_fenv) {
+void FEnvSafeTest::expect_fenv_eq([[maybe_unused]] const fenv_t &before_fenv,
+                                  [[maybe_unused]] const fenv_t &after_fenv) {
+#ifndef LIBC_MATH_USE_SYSTEM_FENV
+
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) && !defined(LIBC_COMPILER_IS_MSVC) && \
     defined(__ARM_FP)
   using FPState = LIBC_NAMESPACE::fputil::FEnv::FPState;
@@ -112,12 +110,9 @@ void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
   const uint32_t &before_fcsr = reinterpret_cast<const uint32_t &>(before_fenv);
   const uint32_t &after_fcsr = reinterpret_cast<const uint32_t &>(after_fenv);
   EXPECT_EQ(before_fcsr, after_fcsr);
+#endif // LIBC_TARGET_ARCH_*
 
-#else
-  // No arch-specific `fenv_t` support, so nothing to compare.
-  (void)before_fenv;
-  (void)after_fenv;
-#endif
+#endif // LIBC_MATH_USE_SYSTEM_FENV
 }
 
 } // namespace testing

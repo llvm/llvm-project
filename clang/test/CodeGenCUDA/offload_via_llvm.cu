@@ -15,6 +15,7 @@
 // HST-NEXT:    [[DOTADDR2:%.*]] = alloca ptr, align 4
 // HST-NEXT:    [[DOTADDR3:%.*]] = alloca ptr, align 4
 // HST-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[TMP0]], align 16
+// HST-NEXT:    [[KERNEL_ARGS_PTRS:%.*]] = alloca [4 x ptr], align 16
 // HST-NEXT:    [[KERNEL_LAUNCH_PARAMS:%.*]] = alloca [[TMP1]], align 16
 // HST-NEXT:    [[GRID_DIM:%.*]] = alloca [[STRUCT_DIM3:%.*]], align 8
 // HST-NEXT:    [[BLOCK_DIM:%.*]] = alloca [[STRUCT_DIM3]], align 8
@@ -25,27 +26,33 @@
 // HST-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 4
 // HST-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR3]], align 4
 // HST-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[TMP1]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 0
-// HST-NEXT:    store i64 16, ptr [[TMP4]], align 16
+// HST-NEXT:    store i32 4, ptr [[TMP4]], align 16
 // HST-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[TMP1]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 1
-// HST-NEXT:    store ptr [[KERNEL_ARGS]], ptr [[TMP5]], align 8
-// HST-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[TMP1]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 2
-// HST-NEXT:    store ptr null, ptr [[TMP6]], align 4
-// HST-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTADDR]], align 4
-// HST-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// HST-NEXT:    store i32 [[TMP7]], ptr [[TMP8]], align 16
+// HST-NEXT:    store ptr [[KERNEL_ARGS_PTRS]], ptr [[TMP5]], align 4
+// HST-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTADDR]], align 4
+// HST-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// HST-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 16
+// HST-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 0
+// HST-NEXT:    store ptr [[TMP7]], ptr [[TMP8]], align 16
 // HST-NEXT:    [[TMP9:%.*]] = load i16, ptr [[DOTADDR1]], align 2
 // HST-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // HST-NEXT:    store i16 [[TMP9]], ptr [[TMP10]], align 4
-// HST-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[DOTADDR2]], align 4
-// HST-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// HST-NEXT:    store ptr [[TMP11]], ptr [[TMP12]], align 8
-// HST-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DOTADDR3]], align 4
-// HST-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// HST-NEXT:    store ptr [[TMP13]], ptr [[TMP14]], align 4
-// HST-NEXT:    [[TMP15:%.*]] = call i32 @__llvmPopCallConfiguration(ptr [[GRID_DIM]], ptr [[BLOCK_DIM]], ptr [[SHMEM_SIZE]], ptr [[STREAM]])
-// HST-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SHMEM_SIZE]], align 4
-// HST-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[STREAM]], align 4
-// HST-NEXT:    [[CALL:%.*]] = call noundef i32 @llvmLaunchKernel(ptr noundef @_Z18__device_stub__fooisPvS_, ptr noundef byval([[STRUCT_DIM3]]) align 4 [[GRID_DIM]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[BLOCK_DIM]], ptr noundef [[KERNEL_LAUNCH_PARAMS]], i32 noundef [[TMP16]], ptr noundef [[TMP17]])
+// HST-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 1
+// HST-NEXT:    store ptr [[TMP10]], ptr [[TMP11]], align 4
+// HST-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTADDR2]], align 4
+// HST-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// HST-NEXT:    store ptr [[TMP12]], ptr [[TMP13]], align 8
+// HST-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 2
+// HST-NEXT:    store ptr [[TMP13]], ptr [[TMP14]], align 8
+// HST-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTADDR3]], align 4
+// HST-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// HST-NEXT:    store ptr [[TMP15]], ptr [[TMP16]], align 4
+// HST-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 3
+// HST-NEXT:    store ptr [[TMP16]], ptr [[TMP17]], align 4
+// HST-NEXT:    [[TMP18:%.*]] = call i32 @__llvmPopCallConfiguration(ptr [[GRID_DIM]], ptr [[BLOCK_DIM]], ptr [[SHMEM_SIZE]], ptr [[STREAM]])
+// HST-NEXT:    [[TMP19:%.*]] = load i32, ptr [[SHMEM_SIZE]], align 4
+// HST-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[STREAM]], align 4
+// HST-NEXT:    [[CALL:%.*]] = call noundef i32 @llvmLaunchKernel(ptr noundef @_Z18__device_stub__fooisPvS_, ptr noundef byval([[STRUCT_DIM3]]) align 4 [[GRID_DIM]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[BLOCK_DIM]], ptr noundef [[KERNEL_LAUNCH_PARAMS]], i32 noundef [[TMP19]], ptr noundef [[TMP20]]) #[[ATTR3:[0-9]+]]
 // HST-NEXT:    br label %[[SETUP_END:.*]]
 // HST:       [[SETUP_END]]:
 // HST-NEXT:    ret void
@@ -72,15 +79,15 @@ __global__ void foo(int, short, void *, void *) {}
 // HST-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_DIM3:%.*]], align 4
 // HST-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_DIM3]], align 4
 // HST-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 4
-// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP]], i32 noundef 3, i32 noundef 1, i32 noundef 1)
-// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP1]], i32 noundef 7, i32 noundef 1, i32 noundef 1)
-// HST-NEXT:    [[CALL:%.*]] = call i32 @__llvmPushCallConfiguration(ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP1]], i32 noundef 0, ptr noundef null)
+// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP]], i32 noundef 3, i32 noundef 1, i32 noundef 1) #[[ATTR4:[0-9]+]]
+// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP1]], i32 noundef 7, i32 noundef 1, i32 noundef 1) #[[ATTR4]]
+// HST-NEXT:    [[CALL:%.*]] = call i32 @__llvmPushCallConfiguration(ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP1]], i32 noundef 0, ptr noundef null) #[[ATTR4]]
 // HST-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[CALL]], 0
 // HST-NEXT:    br i1 [[TOBOOL]], label %[[KCALL_END:.*]], label %[[KCALL_CONFIGOK:.*]]
 // HST:       [[KCALL_CONFIGOK]]:
 // HST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 4
 // HST-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 4
-// HST-NEXT:    call void @_Z18__device_stub__fooisPvS_(i32 noundef 13, i16 noundef signext 1, ptr noundef [[TMP0]], ptr noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
+// HST-NEXT:    call void @_Z18__device_stub__fooisPvS_(i32 noundef 13, i16 noundef signext 1, ptr noundef [[TMP0]], ptr noundef [[TMP1]]) #[[ATTR4]]
 // HST-NEXT:    br label %[[KCALL_END]]
 // HST:       [[KCALL_END]]:
 // HST-NEXT:    ret void

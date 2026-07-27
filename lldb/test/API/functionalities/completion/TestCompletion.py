@@ -12,6 +12,7 @@ from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # driver cannot launch a Wasm inferior
 class CommandLineCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -81,6 +82,14 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to(
             f"{command} ptr_container->Mem", f"{command} ptr_container->MemberVar"
         )
+
+    def test_frame_variable_direct_ivar(self):
+        """Test that 'frame variable' completes members of 'this' directly."""
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "Bar")
+        self.completions_contain("frame variable ", ["t", "temp"])
+        self.complete_from_to("frame variable te", "frame variable temp")
+        self.complete_from_to("frame variable t.", "frame variable t.x")
 
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""
@@ -366,6 +375,18 @@ class CommandLineCompletionTestCase(TestBase):
     def test_settings_set_th(self):
         """Test that 'settings set thread-f' completes to 'settings set thread-format'."""
         self.complete_from_to("settings set thread-f", "settings set thread-format")
+
+    def test_settings_set_shows_description(self):
+        """Test that 'settings set' completions also offer the setting description."""
+        self.check_completion_with_desc(
+            "settings set term-w",
+            [
+                [
+                    "term-width",
+                    "The maximum number of columns to use for displaying text.",
+                ]
+            ],
+        )
 
     def test_settings_s_dash(self):
         """Test that 'settings set --g' completes to 'settings set --global'."""

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -87,6 +88,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -231,8 +233,6 @@ struct SlotWithTag {
 
 namespace llvm {
 template <> struct DenseMapInfo<SlotWithTag> {
-  static inline SlotWithTag getEmptyKey() { return {-2, -2}; }
-  static inline SlotWithTag getTombstoneKey() { return {-3, -3}; }
   static unsigned getHashValue(const SlotWithTag &V) {
     return hash_combine(DenseMapInfo<int>::getHashValue(V.FI),
                         DenseMapInfo<int>::getHashValue(V.Tag));
