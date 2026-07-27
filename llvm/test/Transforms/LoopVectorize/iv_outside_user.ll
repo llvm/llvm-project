@@ -647,7 +647,7 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw i32 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 2, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 2, [[TMP1]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

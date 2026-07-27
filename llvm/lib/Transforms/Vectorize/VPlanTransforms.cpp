@@ -1028,6 +1028,8 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   if (!StartVPV || !StepVPV)
     return nullptr;
 
+  auto *AR = cast<SCEVAddRecExpr>(IncomingSCEV);
+  VPIRFlags::WrapFlagsTy Flags = {AR->hasNoUnsignedWrap(), false};
   Type *StartTy = StartVPV->getScalarType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
   InductionDescriptor::InductionKind Kind =
@@ -1038,7 +1040,7 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
       Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
       {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
   return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartVPV, ExitCount,
-                                 StepVPV);
+                                 StepVPV, Flags);
 }
 
 void VPlanTransforms::optimizeInductionLiveOutUsers(
