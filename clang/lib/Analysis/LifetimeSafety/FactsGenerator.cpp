@@ -910,6 +910,8 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
   unsigned ImplicitObjectArgOffset = 0;
+  // Constructors are excluded because Args has no object argument for them,
+  // even though isImplicitObjectMemberFunction() is true.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
       MD && !isa<CXXConstructorDecl>(FD) &&
       MD->isImplicitObjectMemberFunction()) {
