@@ -1836,12 +1836,13 @@ let isAllocatable = 0 in {
   def MPR128  : RegisterClass<"AArch64", [untyped],  128, (add (sequence "ZAQ%u", 0, 15))> {
     let Size = 128;
   }
+
+  def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
+    let Size = 512;
+    let DiagnosticType = "InvalidLookupTable";
+  }
 }
 
-def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
-  let Size = 512;
-  let DiagnosticType = "InvalidLookupTable";
-}
 // SME Register Operands
 // There are three types of SME matrix register operands:
 // * Tiles:

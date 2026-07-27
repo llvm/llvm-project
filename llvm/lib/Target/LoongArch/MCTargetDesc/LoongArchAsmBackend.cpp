@@ -401,42 +401,29 @@ bool LoongArchAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 void LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target, uint64_t &FixedValue,
                                    bool IsResolved) {
-  auto Fallback = [&]() {
-    MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
+  // If the fixup is in a .dwo section (where relocations are forbidden), we
+  // must resolve the difference directly. The computed Value in evaluateFixup
+  // is correct based on the current layout.
+  if (F.getParent()->getName().ends_with(".dwo"))
     return;
-  };
+
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
-    // It's possible for Target to have (SymB != nullptr && SymA == nullptr).
-    // Go to the fallback path when we encounter this. See also #196927.
-    if (!Target.getAddSym())
-      return Fallback();
-
     assert(Target.getSpecifier() == 0 &&
            "relocatable SymA-SymB cannot have relocation specifier");
-    const MCSymbol &SA = *Target.getAddSym();
-    const MCSymbol &SB = *Target.getSubSym();
-
-    // Check if SubSym (SB) is in the same section as the current fragment and
-    // the PC-relative offset can be resolved. In that case, we can generate a
-    // PCRel relocation (A - PC + PC - B) instead of ADD/SUB pairs.
-    auto CanResolveSubSymAsPCRel = [&]() {
-      return SB.isInSection() && &SB.getSection() == F.getParent() &&
-             isPCRelFixupResolved(&SB, F);
+    // For generate R_LARCH_{32/64}_PCREL relocation.
+    auto Fallback = [&]() {
+      MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
+      return;
     };
-
-    if (SA.isInSection() && SB.isInSection()) {
-      const MCSection &SecA = SA.getSection();
-      if (&SecA == &SB.getSection()) {
-        // If the section is not linker-relaxable, or if the fixup is in a .dwo
-        // section (where relocations are forbidden), we must resolve the
-        // difference directly. The computed Value in evaluateFixup is correct
-        // based on the current layout.
-        if (!SecA.isLinkerRelaxable() ||
-            F.getParent()->getName().ends_with(".dwo"))
-          return;
-      }
-    }
+    // Check if SubSym (SubSym) is in the same section as the current fragment
+    // and the PC-relative offset can be resolved. In that case, we can
+    // generate a PCRel relocation (A - PC + PC - B) instead of ADD/SUB pairs.
+    auto CanResolveSubSymAsPCRel = [&]() {
+      const MCSymbol *SubSym = Target.getSubSym();
+      return SubSym->isInSection() && &SubSym->getSection() == F.getParent() &&
+             isPCRelFixupResolved(SubSym, F);
+    };
 
     std::pair<MCFixupKind, MCFixupKind> FK;
     switch (Fixup.getKind()) {
