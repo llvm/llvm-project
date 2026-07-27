@@ -274,6 +274,9 @@ int *danglingLocal() {
   // expected-warning@-1 {{Returning value bound to 's' that will go out of scope}}
   // expected-warning@-2 {{Address of stack memory associated with local variable 's' returned}}
   // expected-warning@-3 {{address of stack memory associated with local variable 's' returned}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 's' returned to caller}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 's' here}}
+  // expected-note@-6    {{Lifetime of 's' ended here}}
 }
 
 int *danglingParam(S param) {
@@ -281,5 +284,8 @@ int *danglingParam(S param) {
   // expected-warning@-1 {{Returning value bound to 'param' that will go out of scope}}
   // expected-warning@-2 {{Address of stack memory associated with local variable 'param' returned}}
   // expected-warning@-3 {{address of stack memory associated with parameter 'param' returned}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'param' returned to caller}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'param' here}}
+  // expected-note@-6    {{Lifetime of 'param' ended here}}
 }
 
