@@ -987,7 +987,7 @@ define amdgpu_kernel void @atomic_umax_i32_offset(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1012,7 +1012,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_offset(ptr addrspace(1) %out, ptr
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1045,7 +1045,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1072,7 +1072,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1104,7 +1104,7 @@ define amdgpu_kernel void @atomic_umax_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1127,7 +1127,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret(ptr addrspace(1) %out, ptr addrsp
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1158,7 +1158,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:
@@ -1183,7 +1183,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.max.i32(i32 [[IN1:%.*]], i32 1)
+; IR-NEXT:    [[IN:%.*]] = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 [[IN1:%.*]], i32 1)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       8:

@@ -660,11 +660,13 @@ static Intrinsic::ID getWaveReductionIntrinsic(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::Xor:
     return Intrinsic::amdgcn_wave_reduce_xor;
   case AtomicRMWInst::UMax:
+    return Intrinsic::amdgcn_wave_reduce_umax;
   case AtomicRMWInst::Max:
     return Intrinsic::amdgcn_wave_reduce_max;
   case AtomicRMWInst::FMax:
     return Intrinsic::amdgcn_wave_reduce_fmax;
   case AtomicRMWInst::UMin:
+    return Intrinsic::amdgcn_wave_reduce_umin;
   case AtomicRMWInst::Min:
     return Intrinsic::amdgcn_wave_reduce_min;
   case AtomicRMWInst::FMin:
@@ -782,7 +784,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   BasicBlock *ComputeEnd = nullptr;
   if (UseWaveReductionIntrinsic) {
     // Build reductions with wave-reduce intrinsics.
-    unsigned Strategy = (ScanImpl == ScanOptions::DPP) ? 2 : 1;
+    unsigned Strategy = ScanImpl == ScanOptions::DPP ? 2 : 1;
     Intrinsic::ID WaveRedIntrinsic = getWaveReductionIntrinsic(Op);
     NewV = B.CreateIntrinsic(WaveRedIntrinsic, Ty, {V, B.getInt32(Strategy)});
   } else {
