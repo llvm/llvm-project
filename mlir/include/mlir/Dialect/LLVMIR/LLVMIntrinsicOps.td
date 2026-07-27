@@ -833,7 +833,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
 
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
-    debugInfoBuilder.insertDbgValueIntrinsic(
+    debugInfoBuilder.insertDbgValue(
         moduleTranslation.lookupValue(opInst.getOperand(0)),
         llvm::cast<llvm::DILocalVariable>(
             moduleTranslation.translateDebugInfo($varInfo)),
