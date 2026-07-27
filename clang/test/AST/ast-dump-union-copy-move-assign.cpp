@@ -10,22 +10,24 @@ void odr_use(U &x, const U &y, U &&z) {
   x = static_cast<U &&>(z);
 }
 
-// The implicitly-defined defaulted union assignment operators are synthesized
-// with a whole-object __builtin_memcpy body whose pointer arguments are cast to
-// void* so the copy is not flagged by -Wnontrivial-memcall.
+// Synthesized memcpy uses typed union pointers, not a void* cast.
 
 // CHECK: CXXMethodDecl {{.*}} implicit {{.*}}operator= 'U &(const U &)
 // CHECK:   CompoundStmt
 // CHECK:     CallExpr
 // CHECK:       DeclRefExpr {{.*}} '__builtin_memcpy'
-// CHECK:       CStyleCastExpr {{.*}} 'void *'
-// CHECK:       CStyleCastExpr {{.*}} 'const void *'
+// CHECK:       ImplicitCastExpr {{.*}} 'void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'U *' prefix '&'
+// CHECK:       ImplicitCastExpr {{.*}} 'const void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'const U *' prefix '&'
 // CHECK:     ReturnStmt
 
 // CHECK: CXXMethodDecl {{.*}} implicit {{.*}}operator= 'U &(U &&)
 // CHECK:   CompoundStmt
 // CHECK:     CallExpr
 // CHECK:       DeclRefExpr {{.*}} '__builtin_memcpy'
-// CHECK:       CStyleCastExpr {{.*}} 'void *'
-// CHECK:       CStyleCastExpr {{.*}} 'const void *'
+// CHECK:       ImplicitCastExpr {{.*}} 'void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'U *' prefix '&'
+// CHECK:       ImplicitCastExpr {{.*}} 'const void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'U *' prefix '&'
 // CHECK:     ReturnStmt

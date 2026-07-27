@@ -12,22 +12,24 @@ void odr_use(U &x, const U &y, U &&z) {
   x = static_cast<U &&>(z);
 }
 
-// A defaulted union assignment operator written with a C++23 explicit object
-// parameter is synthesized with a whole-object __builtin_memcpy body whose
-// pointer arguments are cast to void* so -Wnontrivial-memcall stays quiet.
+// C++23 explicit-object form uses the same typed-pointer memcpy.
 
 // CHECK: CXXMethodDecl {{.*}} operator= 'U &(U &, const U &)
 // CHECK:   CompoundStmt
 // CHECK:     CallExpr
 // CHECK:       DeclRefExpr {{.*}} '__builtin_memcpy'
-// CHECK:       CStyleCastExpr {{.*}} 'void *'
-// CHECK:       CStyleCastExpr {{.*}} 'const void *'
+// CHECK:       ImplicitCastExpr {{.*}} 'void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'U *' prefix '&'
+// CHECK:       ImplicitCastExpr {{.*}} 'const void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'const U *' prefix '&'
 // CHECK:     ReturnStmt
 
 // CHECK: CXXMethodDecl {{.*}} operator= 'U &(U &, U &&)
 // CHECK:   CompoundStmt
 // CHECK:     CallExpr
 // CHECK:       DeclRefExpr {{.*}} '__builtin_memcpy'
-// CHECK:       CStyleCastExpr {{.*}} 'void *'
-// CHECK:       CStyleCastExpr {{.*}} 'const void *'
+// CHECK:       ImplicitCastExpr {{.*}} 'void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'U *' prefix '&'
+// CHECK:       ImplicitCastExpr {{.*}} 'const void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'U *' prefix '&'
 // CHECK:     ReturnStmt

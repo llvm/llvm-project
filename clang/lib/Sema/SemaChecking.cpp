@@ -11201,7 +11201,8 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                                 << ArgIdx << FnName << PointeeTy << 1);
         SearchNonTrivialToCopyField::diag(PointeeTy, Dest, *this);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
-                 NonTriviallyCopyableCXXRecord && ArgIdx == 0) {
+                 NonTriviallyCopyableCXXRecord && ArgIdx == 0 &&
+                 !SuppressMemaccessCheck) {
         // FIXME: Limiting this warning to dest argument until we decide
         // whether it's valid for source argument too.
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,

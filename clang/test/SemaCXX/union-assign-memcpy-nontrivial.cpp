@@ -1,11 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fsyntax-only \
 // RUN:   -Wnontrivial-memcall -verify %s
 
-// A union with a member that is not trivially copyable (here, a non-trivial
-// destructor) is itself not trivially copyable, yet its defaulted assignment
-// operators stay trivial and non-deleted.  Their synthesized whole-object
-// memcpy body must not trip -Wnontrivial-memcall.
-
 struct NonTrivialDtor {
   ~NonTrivialDtor();
 };

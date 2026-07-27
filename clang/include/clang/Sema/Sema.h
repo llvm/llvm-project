@@ -2649,6 +2649,13 @@ public:
            isConstantEvaluatedOverride;
   }
 
+  /// Set only around the compiler-synthesized whole-object memcpy for a
+  /// defaulted union copy/move assignment.  While set, CheckMemaccessArguments
+  /// skips the non-trivially-copyable record warning (warn_cxxstruct_memaccess)
+  /// for that one call, whose arguments are known correct.  It does not affect
+  /// any other memaccess check or any user code.
+  bool SuppressMemaccessCheck = false;
+
   SourceLocation getLocationOfStringLiteralByte(const StringLiteral *SL,
                                                 unsigned ByteNo) const;
 

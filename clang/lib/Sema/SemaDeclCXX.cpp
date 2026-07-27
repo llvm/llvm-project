@@ -14961,12 +14961,14 @@ public:
 /// do so. This optimization only applies for arrays of scalars, and for arrays
 /// of class type where the selected copy/move-assignment operator is trivial.
 ///
-/// \param SuppressMemaccessWarning casts the source and destination addresses
-/// to void pointers so that CheckMemaccessArguments does not warn.  A union's
-/// defaulted assignment copies the whole object representation by memcpy (like
-/// the defaulted union copy constructor), which is correct even when the union
-/// is not trivially copyable; the cast marks the copy as intentional, matching
-/// the documented (void*) silencing of -Wnontrivial-memcall.
+/// \param SuppressMemaccessWarning skips the non-trivially-copyable record
+/// warning for the synthesized call by setting Sema::SuppressMemaccessCheck
+/// across it.  A union's defaulted assignment copies the whole object
+/// representation by memcpy (like the defaulted union copy constructor), which
+/// is correct even when the union is not trivially copyable, so the
+/// -Wnontrivial-memcall diagnostic that CheckMemaccessArguments would emit is
+/// a false positive here.  The pointer arguments keep their real types, so no
+/// qualifier is dropped.
 static StmtResult
 buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
                            const ExprBuilder &ToB, const ExprBuilder &FromB,
@@ -14987,22 +14989,6 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   To = UnaryOperator::Create(
       S.Context, To, UO_AddrOf, S.Context.getPointerType(To->getType()),
       VK_PRValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
-
-  if (SuppressMemaccessWarning) {
-    // An explicit cast to void* survives IgnoreParenImpCasts, so the memaccess
-    // check sees a void pointee and skips the non-trivial-copy warning.
-    QualType ConstVoidPtr =
-        S.Context.getPointerType(S.Context.VoidTy.withConst());
-    ExprResult FromCast = S.BuildCStyleCastExpr(
-        Loc, S.Context.getTrivialTypeSourceInfo(ConstVoidPtr, Loc), Loc, From);
-    ExprResult ToCast = S.BuildCStyleCastExpr(
-        Loc, S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy, Loc), Loc,
-        To);
-    assert(FromCast.isUsable() && ToCast.isUsable() &&
-           "cast to void* cannot fail");
-    From = FromCast.get();
-    To = ToCast.get();
-  }
 
   bool NeedsCollectableMemCpy = false;
   if (auto *RD = T->getBaseElementTypeUnsafe()->getAsRecordDecl())
@@ -15029,6 +15015,14 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   Expr *CallArgs[] = {
     To, From, IntegerLiteral::Create(S.Context, Size, SizeType, Loc)
   };
+
+  // The synthesized union whole-object copy is a memcpy of a possibly
+  // non-trivially-copyable record, which is correct here; skip the memaccess
+  // warning across just this call rather than casting the arguments to void*.
+  std::optional<llvm::SaveAndRestore<bool>> DisableMemaccessCheck;
+  if (SuppressMemaccessWarning)
+    DisableMemaccessCheck.emplace(S.SuppressMemaccessCheck, true);
+
   ExprResult Call = S.BuildCallExpr(/*Scope=*/nullptr, MemCpyRef.get(),
                                     Loc, CallArgs, Loc);
 
