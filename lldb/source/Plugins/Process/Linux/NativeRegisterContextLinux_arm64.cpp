@@ -773,25 +773,10 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
   return Status::FromErrorString("Failed to write register value");
 }
 
-enum RegisterSetType : uint32_t {
-  GPR, // General purpose registers.
-  SVE, // Used for SVE registers in streaming or non-streaming mode.
-  FPR, // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE
-       // that is in non-streaming mode.
-  // Pointer authentication registers are read only, so not included here.
-  MTE,  // Memory tagging control registers.
-  TLS,  // Thread local storage registers.
-  SME,  // ZA only, because SVCR and SVG are pseudo registers.
-  SME2, // ZT only.
-  FPMR, // Floating point mode control registers.
-  GCS,  // Guarded Control Stack registers.
-  POE,  // Permission Overlay registers.
-};
-
-static uint8_t *AddRegisterSetType(uint8_t *dst,
-                                   RegisterSetType register_set_type) {
-  *(reinterpret_cast<uint32_t *>(dst)) = register_set_type;
-  return dst + sizeof(uint32_t);
+uint8_t *NativeRegisterContextLinux_arm64::AddRegisterSetType(
+    uint8_t *dst, RegisterSetType register_set_type) {
+  std::memcpy(dst, &register_set_type, sizeof(register_set_type));
+  return dst + sizeof(RegisterSetType);
 }
 
 static uint8_t *AddSavedRegistersData(uint8_t *dst, void *src, size_t size) {
@@ -799,9 +784,8 @@ static uint8_t *AddSavedRegistersData(uint8_t *dst, void *src, size_t size) {
   return dst + size;
 }
 
-static uint8_t *AddSavedRegisters(uint8_t *dst,
-                                  enum RegisterSetType register_set_type,
-                                  void *src, size_t size) {
+uint8_t *NativeRegisterContextLinux_arm64::AddSavedRegisters(
+    uint8_t *dst, RegisterSetType register_set_type, void *src, size_t size) {
   dst = AddRegisterSetType(dst, register_set_type);
   return AddSavedRegistersData(dst, src, size);
 }
@@ -962,7 +946,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
       m_sve_state != SVEState::StreamingFPSIMD) {
     dst = AddRegisterSetType(dst, RegisterSetType::SVE);
-    *(reinterpret_cast<SVEState *>(dst)) = m_sve_state;
+    std::memcpy(dst, &m_sve_state, sizeof(m_sve_state));
     dst += sizeof(m_sve_state);
     dst = AddSavedRegistersData(dst, GetSVEBuffer(), GetSVEBufferSize());
   } else {
@@ -1066,8 +1050,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   const uint8_t *end = src + data_sp->GetByteSize();
   while (src < end) {
-    const RegisterSetType kind =
-        *reinterpret_cast<const RegisterSetType *>(src);
+    RegisterSetType kind;
+    std::memcpy(&kind, src, sizeof(kind));
     src += sizeof(RegisterSetType);
 
     switch (kind) {
@@ -1078,7 +1062,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       break;
     case RegisterSetType::SVE:
       // Restore to the correct mode, streaming or not.
-      m_sve_state = static_cast<SVEState>(*src);
+      std::memcpy(&m_sve_state, src, sizeof(m_sve_state));
       src += sizeof(m_sve_state);
 
       // First write SVE header. We do not use RestoreRegisters because we do
@@ -1237,7 +1221,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         return error;
 
       uint64_t enable_bit = m_gcs_regs.features_enabled & 1UL;
-      gcs_regs new_gcs_regs = *reinterpret_cast<const gcs_regs *>(src);
+      gcs_regs new_gcs_regs;
+      std::memcpy(&new_gcs_regs, src, sizeof(new_gcs_regs));
       new_gcs_regs.features_enabled =
           (new_gcs_regs.features_enabled & ~1UL) | enable_bit;
 

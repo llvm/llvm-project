@@ -488,7 +488,11 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
 
 mlir::Type
 UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout) const {
-  llvm::ArrayRef<mlir::Type> members = getMembers();
+  return getUnionStorageType(dataLayout, getMembers());
+}
+
+mlir::Type UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
+                                          llvm::ArrayRef<mlir::Type> members) {
   if (members.empty())
     return {};
   return *std::max_element(
