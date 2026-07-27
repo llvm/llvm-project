@@ -50,17 +50,17 @@ struct TestInt {
 };
 
 TEST_CONSTEXPR_CXX23 bool test() {
-  using lim                     = std::numeric_limits<double>;
+  using lim = std::numeric_limits<double>;
 
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
   // Make sure we can call `std::isless` with mixed-type promotions with __promote_t<_A1, _A2>.
   {
-    assert(!std::isless(2.0, 1));     // double vs int
-    assert(std::isless(1, 2.0f));     // int vs float
-    assert(!std::isless(2.0L, 1.0f)); // long double vs float
-    assert(!std::isless(lim::quiet_NaN(), 1.0));   // NaN vs int
+    assert(!std::isless(2.0, 1));                // double vs int
+    assert(std::isless(1, 2.0f));                // int vs float
+    assert(!std::isless(2.0L, 1.0f));            // long double vs float
+    assert(!std::isless(lim::quiet_NaN(), 1.0)); // NaN vs int
   }
 
   return true;
