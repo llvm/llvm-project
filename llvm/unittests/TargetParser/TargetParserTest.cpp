@@ -3027,6 +3027,54 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetEUsPerCU) {
+  // GFX12.5 is CU-mode only and always has four SIMDs. GFX10+ has two SIMDs in
+  // CU mode and four in WGP mode; pre-GFX10 always has four. Second arg is the
+  // CU-mode flag.
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch600, true), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch900, false), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch908, true), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch908, false), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch942, true), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch950, false), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch1030, true), 2u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch1030, false), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(Triple::AMDGPUSubArch1250, true), 4u);
+
+  // The GPUKind overloads resolve to the same values.
+  EXPECT_EQ(AMDGPU::getEUsPerCU(AMDGPU::GK_GFX600, false), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(AMDGPU::GK_GFX908, true), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(AMDGPU::GK_GFX942, false), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(AMDGPU::GK_GFX950, true), 4u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(AMDGPU::GK_GFX1030, true), 2u);
+  EXPECT_EQ(AMDGPU::getEUsPerCU(AMDGPU::GK_GFX1250, true), 4u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
+  // GFX90A -> 8, pre-GFX10 -> 10, gfx10.1 -> 20; GFX10.3-style instructions
+  // (gfx10.3 and every later generation, gfx11+) -> 16.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch600), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch900), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch942), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch950), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1010), 20u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1030), 16u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1100), 16u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1250), 16u);
+
+  // The GPUKind overloads resolve to the same values.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX900), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX942), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX950), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1010), 20u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1030), 16u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1100), 16u);
+}
+
 TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   using AMDGPU::TargetID;
   using AMDGPU::TargetIDSetting;

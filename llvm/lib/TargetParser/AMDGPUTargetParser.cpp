@@ -422,6 +422,75 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
+unsigned AMDGPU::getEUsPerCU(GPUKind AK, bool CuMode) {
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share".
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+
+  // GFX12.5 only supports CU mode, which contains four SIMDs.
+  if (Version.Major == 12 && Version.Minor == 5) {
+    assert(CuMode);
+    return 4;
+  }
+
+  // For gfx10+ in CU mode the functional block is the CU, which contains
+  // two SIMDs.
+  if (Version.Major >= 10 && CuMode)
+    return 2;
+
+  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
+  // contains two CUs, so a total of four SIMDs.
+  return 4;
+}
+
+unsigned AMDGPU::getEUsPerCU(Triple::SubArchType SubArch, bool CuMode) {
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share".
+  IsaVersion Version = getIsaVersion(SubArch);
+
+  // GFX12.5 only supports CU mode, which contains four SIMDs.
+  if (Version.Major == 12 && Version.Minor == 5) {
+    assert(CuMode);
+    return 4;
+  }
+
+  // For gfx10+ in CU mode the functional block is the CU, which contains
+  // two SIMDs.
+  if (Version.Major >= 10 && CuMode)
+    return 2;
+
+  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
+  // contains two CUs, so a total of four SIMDs.
+  return 4;
+}
+
+// GFX10.3-style instructions are present on gfx10.3 and every later
+// generation (gfx11+). This matches the transitive expansion of the
+// FeatureGFX10_3Insts subtarget feature, which gfx11+ imply.
+static bool hasGFX10_3Insts(IsaVersion Version) {
+  return Version.Major >= 11 || (Version.Major == 10 && Version.Minor == 3);
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
+  // FIXME: Need to take scratch memory into account.
+  if (getArchAttrAMDGCN(AK) & FEATURE_AGPRS_UNIFIED_FILE)
+    return 8;
+  IsaVersion Version = getIsaVersion(getSubArch(AK));
+  if (Version.Major < 10)
+    return 10;
+  return hasGFX10_3Insts(Version) ? 16 : 20;
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(Triple::SubArchType SubArch) {
+  // FIXME: Need to take scratch memory into account.
+  if (getArchAttrAMDGCN(SubArch) & FEATURE_AGPRS_UNIFIED_FILE)
+    return 8;
+  IsaVersion Version = getIsaVersion(SubArch);
+  if (Version.Major < 10)
+    return 10;
+  return hasGFX10_3Insts(Version) ? 16 : 20;
+}
+
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   assert(T.isAMDGPU());
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);

@@ -29,6 +29,7 @@ def FEATURE_SRAMECC            : AMDGPUArchFeature<"FEATURE_SRAMECC">;
 def FEATURE_WGP                : AMDGPUArchFeature<"FEATURE_WGP">;
 def FEATURE_XNACK_ON_OFF_MODES : AMDGPUArchFeature<"FEATURE_XNACK_ON_OFF_MODES">;
 def FEATURE_SGPR_INIT_BUG      : AMDGPUArchFeature<"FEATURE_SGPR_INIT_BUG">;
+def FEATURE_AGPRS_UNIFIED_FILE : AMDGPUArchFeature<"FEATURE_AGPRS_UNIFIED_FILE">;
 
 // Marks a Processor/ProcessorModel record as a canonical GPU.
 //

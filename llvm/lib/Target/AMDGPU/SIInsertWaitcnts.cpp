@@ -3689,7 +3689,7 @@ bool SIInsertWaitcnts::run() {
               ST.getOccupancyWithNumVGPRs(
                   TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass),
                   /*IsDynamicVGPR=*/false) <
-                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+                  AMDGPU::getMaxWavesPerEU(ST.getTargetID().getGPUKind()))) {
     for (auto [MI, Flag] : EndPgmInsts) {
       if (Flag) {
         if (ST.requiresNopBeforeDeallocVGPRs()) {

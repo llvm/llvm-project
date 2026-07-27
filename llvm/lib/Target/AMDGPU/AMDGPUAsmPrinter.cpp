@@ -419,7 +419,7 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                     const MCExpr *NumVGPRs,
                                     unsigned DynamicVGPRBlockSize,
                                     const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
+  unsigned MaxWaves = AMDGPU::getMaxWavesPerEU(STM.getTargetID().getGPUKind());
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
 

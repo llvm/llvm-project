@@ -1200,32 +1200,14 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   return 32768;
 }
 
-unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share".
-
-  // GFX12.5 only supports CU mode, which contains four SIMDs.
-  if (isGFX1250(STI)) {
-    assert(STI.getFeatureBits().test(FeatureCuMode));
-    return 4;
-  }
-
-  // For gfx10 in CU mode the functional block is the CU, which contains
-  // two SIMDs.
-  if (isGFX10Plus(STI) && STI.getFeatureBits().test(FeatureCuMode))
-    return 2;
-
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
-  // contains two CUs, so a total of four SIMDs.
-  return 4;
-}
-
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
                                unsigned FlatWorkGroupSize) {
   assert(FlatWorkGroupSize != 0);
   if (!STI.getTargetTriple().isAMDGCN())
     return 8;
-  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool CuMode = STI.getFeatureBits().test(FeatureCuMode);
+  unsigned MaxWaves = getMaxWavesPerEU(Kind) * getEUsPerCU(Kind, CuMode);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
   if (N == 1) {
     // Single-wave workgroups don't consume barrier resources.
@@ -1241,19 +1223,12 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo &STI) { return 1; }
 
-unsigned getMaxWavesPerEU(const MCSubtargetInfo &STI) {
-  // FIXME: Need to take scratch memory into account.
-  if (isGFX90A(STI))
-    return 8;
-  if (!isGFX10Plus(STI))
-    return 10;
-  return hasGFX10_3Insts(STI) ? 16 : 20;
-}
-
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool CuMode = STI.getFeatureBits().test(FeatureCuMode);
   return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
-                    getEUsPerCU(STI));
+                    getEUsPerCU(Kind, CuMode));
 }
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
@@ -1291,10 +1266,10 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (Version.Major >= 10)
     return 0;
 
-  if (WavesPerEU >= getMaxWavesPerEU(STI))
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  if (WavesPerEU >= getMaxWavesPerEU(Kind))
     return 0;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   unsigned MinNumSGPRs =
       getSGPRBudgetPerWave(getTotalNumSGPRs(Kind), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
@@ -1442,9 +1417,10 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned NumVGPRs,
                                       unsigned DynamicVGPRBlockSize) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   return getNumWavesPerEUWithNumVGPRs(
       NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
-      getMaxWavesPerEU(STI), getTotalNumVGPRs(STI));
+      getMaxWavesPerEU(Kind), getTotalNumVGPRs(STI));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1467,12 +1443,12 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
 }
 
 unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
-  unsigned MaxWaves = getMaxWavesPerEU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWaves = getMaxWavesPerEU(Kind);
 
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(Kind),
                                   getSGPRAllocGranule(Kind),
                                   getSGPRTrapHandlerReserve(STI));
@@ -1490,7 +1466,8 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   if (DynamicVGPREnabled)
     return 0;
 
-  unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWavesPerEU = getMaxWavesPerEU(Kind);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 

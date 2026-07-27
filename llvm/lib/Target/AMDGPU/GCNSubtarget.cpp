@@ -245,8 +245,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
+  MaxWavesPerEU = AMDGPU::getMaxWavesPerEU(getTargetID().getGPUKind());
+  EUsPerCU = AMDGPU::getEUsPerCU(getTargetID().getGPUKind(), isCuModeEnabled());
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

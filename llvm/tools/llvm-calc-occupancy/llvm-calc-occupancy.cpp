@@ -220,8 +220,8 @@ int main(int argc, char **argv) {
 
   // Hardware characteristics.
   unsigned WaveSize = AMDGPU::IsaInfo::getWavefrontSize(STI);
-  unsigned MaxWaves = AMDGPU::IsaInfo::getMaxWavesPerEU(STI);
-  unsigned EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(STI);
+  unsigned MaxWaves = ST.getMaxWavesPerEU();
+  unsigned EUsPerCU = ST.getEUsPerCU();
   unsigned LocalMemSize = AMDGPU::IsaInfo::getLocalMemorySize(STI);
   unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
   unsigned AddrVGPRs =
