@@ -518,7 +518,8 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *Exit = L.getExitBlock();
   const PHINode *IndVar = L.getCanonicalInductionVariable();
-  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
+  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1 ||
+      !L.getLatchCmpInst())
     return "Loop not in canonical form";
   unsigned TC = SE.getSmallConstantTripCount(&L);
   if (!TC)
