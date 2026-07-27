@@ -417,9 +417,6 @@ private:
   void renderExtractCpolSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
                                int OpIdx) const;
 
-  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
-
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;
 

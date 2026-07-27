@@ -493,6 +493,10 @@ public:
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                             SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                             SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
                                int64_t R2, int64_t R2Size, SMLoc Loc) override;
@@ -2377,6 +2381,24 @@ void MCAsmStreamer::emitCFINegateRAState(SMLoc Loc) {
 void MCAsmStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   MCStreamer::emitCFINegateRAStateWithPC(Loc);
   OS << "\t.cfi_negate_ra_state_with_pc";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                          SMLoc Loc) {
+  MCStreamer::emitCFILLVMSetRAState(State, PACSym, Loc);
+  OS << "\t.cfi_set_ra_state " << State << ", ";
+  if (PACSym)
+    PACSym->print(OS, MAI);
+  else
+    OS << "0";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                          SMLoc Loc) {
+  MCStreamer::emitCFILLVMSetRAState(State, Offset, Loc);
+  OS << "\t.cfi_set_ra_state " << State << ", " << Offset;
   EmitEOL();
 }
 

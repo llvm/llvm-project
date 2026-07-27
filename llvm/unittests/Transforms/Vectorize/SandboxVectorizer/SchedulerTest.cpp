@@ -427,6 +427,34 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
 }
 
+// Top-down mirror of the TrimSchedule test. This exercises the top-down path of
+// Scheduler::trimSchedule(), where the ready list must be refilled by visiting
+// the nodes from the top of schedule down to the bottom of the DAG.
+TEST_F(SchedulerTest, TrimSchedule_TopDown) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
+  %ld = load i8, ptr %ptr0
+  %add = add i8 %ld, 0
+  store i8 %add, ptr %ptr0
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::TopDown);
+  EXPECT_TRUE(Sched.trySchedule({Load}));
+  EXPECT_TRUE(Sched.trySchedule({Store}));
+  EXPECT_TRUE(Sched.trySchedule({Add}));
+}
+
 // Make sure that instructions in  SchedBundles are always scheduled
 // back-to-back
 TEST_F(SchedulerTest, SchedBundleBackToBack) {

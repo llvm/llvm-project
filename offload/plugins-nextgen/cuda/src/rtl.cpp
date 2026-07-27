@@ -1186,7 +1186,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_WARP_SIZE, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Warp Size", TmpInt);
+      Info.add("Number of Lanes", TmpInt, "", DeviceInfo::NUM_LANES);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)

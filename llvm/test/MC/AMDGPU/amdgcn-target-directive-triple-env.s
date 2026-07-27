@@ -1,8 +1,8 @@
 // RUN: split-file %s %t
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa-llvm -mcpu=gfx802 %t/amdhsa-llvm.s | FileCheck --check-prefix=AMDHSA-LLVM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdpal-llvm -mcpu=gfx802 %t/amdpal-llvm.s | FileCheck --check-prefix=AMDPAL-LLVM %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx802 %t/amdhsa-llvm.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDHSA-ERR %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdpal -mcpu=gfx802 %t/amdpal-llvm.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDPAL-ERR %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa-llvm -mcpu=gfx802 %t/amdhsa-llvm.s | FileCheck --check-prefix=AMDHSA-LLVM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdpal-llvm -mcpu=gfx802 %t/amdpal-llvm.s | FileCheck --check-prefix=AMDPAL-LLVM %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx802 %t/amdhsa-llvm.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDHSA-ERR %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdpal -mcpu=gfx802 %t/amdpal-llvm.s -filetype=null 2>&1 | FileCheck --check-prefix=AMDPAL-ERR %s
 
 // Test that the environment component of the triple is preserved and validated
 

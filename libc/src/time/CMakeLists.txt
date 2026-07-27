@@ -194,9 +194,9 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.printf_core.writer
     libc.src.time.strftime_core.strftime_main
     libc.src.__support.macros.null_check
+    libc.src.__support.printf_core.writer
 )
 
 add_entrypoint_object(
@@ -209,9 +209,21 @@ add_entrypoint_object(
     libc.hdr.types.locale_t
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
-    libc.src.stdio.printf_core.writer
     libc.src.time.strftime_core.strftime_main
     libc.src.__support.macros.null_check
+    libc.src.__support.printf_core.writer
+)
+
+add_entrypoint_object(
+  strptime
+  SRCS
+    strptime.cpp
+  HDRS
+    strptime.h
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(

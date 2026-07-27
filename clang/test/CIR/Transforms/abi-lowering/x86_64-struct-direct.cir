@@ -1,0 +1,158 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Two = !cir.struct<"Two" {!s64i, !s64i}>
+!rec_Mixed = !cir.struct<"Mixed" {!s8i, !s32i}>
+!rec_CharBuf = !cir.struct<"CharBuf" {!cir.array<!s8i x 4>}>
+!rec_Char1 = !cir.struct<"Char1" {!cir.array<!s8i x 1>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A two-int struct (8 bytes) is coerced to a single i64 register.  The body
+  // reads a field, so the prologue that reconstitutes the record from the
+  // register is visible: the i64 is stored to a coerce slot, the slot is
+  // bitcast to the record pointer, and the record is loaded back.
+  cir.func @take_pair(%arg0: !rec_Pair) -> !s32i {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    cir.store %arg0, %0 : !rec_Pair, !cir.ptr<!rec_Pair>
+    %1 = cir.get_member %0[0] {name = "a"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
+    %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_pair(%arg0: !u64i) -> !s32i
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:   %[[REC:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:   %[[LOCAL:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:   cir.store %[[REC]], %[[LOCAL]] : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:   %[[FLD:.*]] = cir.get_member %[[LOCAL]][0] {name = "a"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
+  // CHECK:   %{{.*}} = cir.load %[[FLD]] : !cir.ptr<!s32i>, !s32i
+
+  // A two-i64 struct (16 bytes) is passed as two i64 registers (flattened).
+  // The body reads the second field: the two registers are written into a
+  // flattened coerce slot, reloaded as the record, then indexed.
+  cir.func @take_two(%arg0: !rec_Two) -> !s64i {
+    %0 = cir.alloca "t" align(8) : !cir.ptr<!rec_Two>
+    cir.store %arg0, %0 : !rec_Two, !cir.ptr<!rec_Two>
+    %1 = cir.get_member %0[1] {name = "b"} : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
+    %2 = cir.load %1 : !cir.ptr<!s64i>, !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CHECK: cir.func{{.*}} @take_two(%arg0: !s64i, %arg1: !s64i) -> !s64i
+  // CHECK:   cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[FLAT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[E0:.*]] = cir.get_member %[[FLAT]][0] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
+  // CHECK:   cir.store %arg0, %[[E0]] : !s64i, !cir.ptr<!s64i>
+  // CHECK:   %[[E1:.*]] = cir.get_member %[[FLAT]][1] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
+  // CHECK:   cir.store %arg1, %[[E1]] : !s64i, !cir.ptr<!s64i>
+  // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Two>
+  // CHECK:   %{{.*}} = cir.get_member %{{.*}}[1] {name = "b"} : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
+
+  // Mixed-alignment fields (i8 then i32) still fit one eightbyte: the i32 is
+  // placed at its aligned offset and the struct coerces to a single i64.
+  cir.func @take_mixed(%arg0: !rec_Mixed) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_mixed(%arg0: !u64i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_Mixed>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Mixed>, !rec_Mixed
+
+  // A struct wrapping a small char array is data, not an empty record: the
+  // 4-byte struct coerces to a single i32.
+  cir.func @take_charbuf(%arg0: !rec_CharBuf) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_charbuf(%arg0: !u32i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u32i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u32i, !cir.ptr<!u32i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u32i> -> !cir.ptr<!rec_CharBuf>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_CharBuf>, !rec_CharBuf
+
+  // A one-byte struct wrapping a single-element char array is data, not an
+  // empty class: it coerces to a single i8.
+  cir.func @take_char1(%arg0: !rec_Char1) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_char1(%arg0: !s8i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!s8i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !s8i, !cir.ptr<!s8i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Char1>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Char1>, !rec_Char1
+
+  // A 12-byte array argument is passed as two eightbytes (i64 then i32).  The
+  // two registers are written into a flattened coerce slot, then reloaded as
+  // the array.
+  cir.func @take_arr3(%arg0: !cir.array<!s32i x 3>) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_arr3(%arg0: !u64i, %arg1: !s32i)
+  // CHECK:   cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct1>
+  // CHECK:   %[[FLAT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct1>
+  // CHECK:   %[[E0:.*]] = cir.get_member %[[FLAT]][0] {{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[E0]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[E1:.*]] = cir.get_member %[[FLAT]][1] {{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!s32i>
+  // CHECK:   cir.store %arg1, %[[E1]] : !s32i, !cir.ptr<!s32i>
+  // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!cir.array<!s32i x 3>>
+
+  // An anonymous struct has no record-layout entry, so it defaults to
+  // can-pass-in-registers and coerces like its named counterpart.
+  cir.func @take_anon(%arg0: !cir.struct<{!s32i, !s32i}>) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_anon(%arg0: !u64i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_anon_struct2>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_anon_struct2>, !rec_anon_struct2
+
+  // The call site round-trips the record through the coercion type: the
+  // incoming i64 is reloaded as the record, then stored and reloaded as the
+  // i64 the callee expects.
+  cir.func @call_pair(%arg0: !rec_Pair) {
+    %0 = cir.call @take_pair(%arg0) : (!rec_Pair) -> !s32i
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_pair(%arg0: !u64i)
+  // CHECK:   %[[S0:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[S0]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[C0:.*]] = cir.cast bitcast %[[S0]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:   %[[REC:.*]] = cir.load %[[C0]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:   %[[S1:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:   cir.store %[[REC]], %[[S1]] : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:   %[[C1:.*]] = cir.cast bitcast %[[S1]] : !cir.ptr<!rec_Pair> -> !cir.ptr<!u64i>
+  // CHECK:   %[[U:.*]] = cir.load %[[C1]] : !cir.ptr<!u64i>, !u64i
+  // CHECK:   %{{.*}} = cir.call @take_pair(%[[U]]) : (!u64i) -> !s32i
+}
+
+// LLVM: define i32 @take_pair(i64 %{{.+}})
+// LLVM: define i64 @take_two(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define void @take_mixed(i64 %{{.+}})
+// LLVM: define void @take_charbuf(i32 %{{.+}})
+// LLVM: define void @take_char1(i8 %{{.+}})
+// LLVM: define void @take_arr3(i64 %{{.+}}, i32 %{{.+}})
+// LLVM: define void @take_anon(i64 %{{.+}})
+// LLVM: define void @call_pair(i64 %{{.+}})
+// LLVM:   %{{.+}} = call i32 @take_pair(i64 %{{.+}})

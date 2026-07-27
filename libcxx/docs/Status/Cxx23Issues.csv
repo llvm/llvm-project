@@ -249,7 +249,7 @@
 "`LWG2295 <https://wg21.link/LWG2295>`__","Locale name when the provided ``Facet`` is a ``nullptr``","2023-02 (Issaquah)","","","`#105063 <https://github.com/llvm/llvm-project/issues/105063>`__",""
 "`LWG3032 <https://wg21.link/LWG3032>`__","``ValueSwappable`` requirement missing for ``push_heap`` and ``make_heap``","2023-02 (Issaquah)","","","`#105064 <https://github.com/llvm/llvm-project/issues/105064>`__",""
 "`LWG3085 <https://wg21.link/LWG3085>`__","``char_traits::copy`` precondition too weak","2023-02 (Issaquah)","","","`#105065 <https://github.com/llvm/llvm-project/issues/105065>`__",""
-"`LWG3664 <https://wg21.link/LWG3664>`__","`LWG 3392 <https://wg21.link/LWG3392>`__ ``broke std::ranges::distance(a, a+3)``","2023-02 (Issaquah)","","","`#105066 <https://github.com/llvm/llvm-project/issues/105066>`__",""
+"`LWG3664 <https://wg21.link/LWG3664>`__","`LWG 3392 <https://wg21.link/LWG3392>`__ ``broke std::ranges::distance(a, a+3)``","2023-02 (Issaquah)","|Complete|","14","`#105066 <https://github.com/llvm/llvm-project/issues/105066>`__",""
 "`LWG3720 <https://wg21.link/LWG3720>`__","Restrict the valid types of ``arg-id`` for width and precision in ``std-format-spec``","2023-02 (Issaquah)","|Complete|","17","`#105067 <https://github.com/llvm/llvm-project/issues/105067>`__",""
 "`LWG3756 <https://wg21.link/LWG3756>`__","Is the ``std::atomic_flag`` class signal-safe?","2023-02 (Issaquah)","","","`#105068 <https://github.com/llvm/llvm-project/issues/105068>`__",""
 "`LWG3769 <https://wg21.link/LWG3769>`__","``basic_const_iterator::operator==`` causes infinite constraint recursion","2023-02 (Issaquah)","","","`#105069 <https://github.com/llvm/llvm-project/issues/105069>`__",""

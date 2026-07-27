@@ -62,21 +62,43 @@ namespace mlir {
 namespace {
 
 //===----------------------------------------------------------------------===//
-// x86_64 System V classifier bridge (scalar types)
+// x86_64 System V classifier bridge (scalar and struct/array types)
 //
-// Maps scalar CIR types to llvm::abi::Type, runs the LLVM ABI Lowering
-// Library's SysV x86_64 classifier, and converts the result back into the
+// Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's
+// SysV x86_64 classifier, and converts the result back into the
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
-// consumes.  Only integer / pointer / bool / f32 / f64 signatures are handled;
-// aggregates and other leaf types are reported NYI by classifyX86_64Function
-// so an unsupported signature fails the pass instead of being misclassified.
+// consumes.  Integer / pointer / bool / f32 / f64 scalars and struct / array
+// aggregates are handled; unions, `_BitInt`, `_Complex`, vectors, wider
+// floats, and packed or padded records are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
 
-/// The scalar CIR types the x86_64 bridge handles.  A regular integer up to
-/// 64 bits, pointer, bool, void, f32, or f64 is a single-register Direct or
-/// Extend argument.  `_BitInt`, `__int128`, and wider/other types need coercion
-/// or indirect passing, which this scalar bridge does not do.
-static bool isSupportedScalarType(mlir::Type ty) {
+/// Whether a struct's declared argument-passing kind (from the module's
+/// record-layout metadata) allows it to be passed in registers.  A record with
+/// no layout entry (e.g. an anonymous struct) has no C++ non-trivial reason to
+/// be forced to memory, so it defaults to can-pass-in-registers.
+static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
+  mlir::StringAttr name = recTy.getName();
+  if (!name)
+    return true;
+  auto dict = modOp->getAttrOfType<DictionaryAttr>(
+      cir::CIRDialect::getRecordLayoutsAttrName());
+  if (!dict)
+    return true;
+  auto layout = dict.getAs<cir::RecordLayoutAttr>(name);
+  if (!layout)
+    return true;
+  return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
+}
+
+/// The CIR types the x86_64 bridge handles.  Scalars: a regular integer up to
+/// 64 bits, pointer, bool, void, f32, or f64.  Aggregates: a complete struct
+/// whose fields are all themselves supported, or an array of a supported
+/// element type.  `_BitInt`, `__int128`, unions, `_Complex`, vectors, wider
+/// floats, and packed or padded records are not handled and are reported NYI
+/// at the reject() choke point in classifyX86_64Function.
+static bool isSupportedType(mlir::Type ty) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
   // lowered before this pass, so reject it rather than silently dropping it.
@@ -87,6 +109,23 @@ static bool isSupportedScalarType(mlir::Type ty) {
     return true;
   if (auto intTy = dyn_cast<cir::IntType>(ty))
     return !intTy.getIsBitInt() && intTy.getWidth() <= 64;
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return isSupportedType(arrTy.getElementType());
+  if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
+    // Unions and packed / padded records each need classification this bridge
+    // does not implement (a union widen fixup and pad-aware eightbyte
+    // classification), so reject them here and report NYI rather than
+    // misclassify.  A zero-field record (a C empty struct) classifies as
+    // Ignore and is dropped from the lowered signature.  CIRGen lays out an
+    // empty C++ class as a single padded byte, which the padded check rejects.
+    // A real one-byte struct such as `{char[1]}` has a field and is not
+    // padded, so it is classified normally.
+    if (recTy.isUnion() || !recTy.isComplete() || recTy.getPacked() ||
+        recTy.getPadded())
+      return false;
+    return llvm::all_of(recTy.getMembers(),
+                        [](mlir::Type m) { return isSupportedType(m); });
+  }
   return false;
 }
 
@@ -107,15 +146,28 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
       .Case([&](const llvm::abi::PointerType *) {
         return cir::PointerType::get(cir::VoidType::get(ctx));
       })
+      .Case([&](const llvm::abi::RecordType *recTy) -> mlir::Type {
+        SmallVector<mlir::Type> fieldTypes;
+        fieldTypes.reserve(recTy->getFields().size());
+        for (const auto &field : recTy->getFields()) {
+          mlir::Type fieldCIR = abiTypeToCIR(field.FieldType, ctx);
+          if (!fieldCIR)
+            return nullptr;
+          fieldTypes.push_back(fieldCIR);
+        }
+        // Coercion types are plain register tuples, not the source record.
+        return cir::StructType::get(ctx, fieldTypes, /*packed=*/false,
+                                    /*padded=*/false, /*is_class=*/false);
+      })
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }
 
-/// Map a scalar CIR type to an llvm::abi::Type.  classifyX86_64Function
-/// pre-filters the signature, so only the scalar types handled here can
+/// Map a CIR type to an llvm::abi::Type.  classifyX86_64Function pre-filters
+/// the signature, so only the scalar and struct/array types handled here can
 /// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                          mlir::abi::ABITypeMapper &typeMapper,
-                                         const DataLayout &dl) {
+                                         const DataLayout &dl, ModuleOp modOp) {
   llvm::abi::TypeBuilder &tb = typeMapper.getTypeBuilder();
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
@@ -147,17 +199,54 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         return tb.getFloatType(llvm::APFloat::IEEEdouble(),
                                llvm::Align(dl.getTypeABIAlignment(type)));
       })
+      .Case([&](cir::ArrayType arrTy) {
+        const llvm::abi::Type *elemAbi =
+            mapCIRType(arrTy.getElementType(), typeMapper, dl, modOp);
+        return tb.getArrayType(elemAbi, arrTy.getSize(),
+                               dl.getTypeSizeInBits(type).getFixedValue());
+      })
+      .Case([&](cir::RecordType recTy) -> const llvm::abi::Type * {
+        // isSupportedType rejects unions, packed / padded, and empty-for-ABI
+        // records, so this handles a plain struct: map each field at its
+        // naturally-aligned offset.
+        SmallVector<llvm::abi::FieldInfo> fields;
+        fields.reserve(recTy.getMembers().size());
+        uint64_t offsetBits = 0;
+        for (mlir::Type fieldTy : recTy.getMembers()) {
+          const llvm::abi::Type *mappedField =
+              mapCIRType(fieldTy, typeMapper, dl, modOp);
+          offsetBits =
+              llvm::alignTo(offsetBits, dl.getTypeABIAlignment(fieldTy) * 8);
+          fields.push_back(llvm::abi::FieldInfo(mappedField, offsetBits));
+          offsetBits += dl.getTypeSizeInBits(fieldTy).getFixedValue();
+        }
+        llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
+        if (recordCanPassInRegs(modOp, recTy))
+          flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
+        return tb.getRecordType(fields,
+                                llvm::TypeSize::getFixed(
+                                    dl.getTypeSizeInBits(type).getFixedValue()),
+                                llvm::Align(dl.getTypeABIAlignment(type)),
+                                llvm::abi::StructPacking::Default,
+                                /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{},
+                                flags);
+      })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
             "mapCIRType: type not pre-filtered by classifyX86_64Function");
       });
 }
 
-/// Convert an llvm::abi::ArgInfo for a scalar type into the ArgClassification
-/// consumed by CIRABIRewriteContext.
+/// Convert an llvm::abi::ArgInfo into the ArgClassification consumed by
+/// CIRABIRewriteContext.
 ///
-/// Direct: every scalar this bridge maps passes as-is, so no coercion type
-/// is needed (nullptr means "same as the original CIR type").
+/// Direct: a scalar passes as-is (nullptr coercion means "same as the
+/// original CIR type").  A struct or array is coerced to a register-friendly
+/// type; getDirect keeps canFlatten set so the rewriter can split a
+/// multi-field coerced struct into individual wire arguments.  If the
+/// classifier picks a coercion this bridge cannot represent (e.g. an SSE
+/// <2 x float> vector), std::nullopt is returned so the caller reports NYI
+/// rather than silently passing the aggregate unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// Every ArgInfo::getExtend() call site in the x86_64 classifier
@@ -165,20 +254,27 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// so a non-integer, non-bool origTy here would mean the classifier
 /// disagreed with its own source -- asserted rather than silently handled.
 ///
-/// Indirect: needed once records/_BitInt/vectors are supported (sret,
-/// byval, and large _BitInt all classify Indirect), but
-/// X86_64TargetInfo::getIndirectResult()/getIndirectReturnResult() only
-/// return Indirect for aggregates or _BitInt, neither of which the
-/// scalar-only type set this bridge accepts can produce.  Unreachable until
-/// a later PR adds those types and the record/vector/complex/int type gate
-/// that belongs here.
+/// Indirect: an aggregate that does not fit in registers is passed via a
+/// pointer (sret for returns, byval for arguments).
 ///
-/// Ignore: a void return has no register or stack slot.
-static ArgClassification convertABIArgInfo(const llvm::abi::ArgInfo &info,
-                                           MLIRContext *ctx,
-                                           mlir::Type origTy) {
-  if (info.isDirect())
-    return ArgClassification::getDirect(nullptr);
+/// Ignore: a void return has no register or stack slot, and a zero-field
+/// (empty) record is dropped from the signature.
+static std::optional<ArgClassification>
+convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
+                  mlir::Type origTy) {
+  if (info.isDirect()) {
+    // A scalar passes as-is; only an aggregate carries a coercion type.
+    if (!origTy || !isa<cir::RecordType, cir::ArrayType>(origTy))
+      return ArgClassification::getDirect(nullptr);
+    // An aggregate must coerce to a type this bridge can represent.  A coerce
+    // this bridge cannot map (an SSE vector, or a nested type it does not
+    // handle) yields a null type; report that as NYI instead of leaving the
+    // aggregate as an unchanged by-value record.
+    mlir::Type coerced = abiTypeToCIR(info.getCoerceToType(), ctx);
+    if (!coerced)
+      return std::nullopt;
+    return ArgClassification::getDirect(coerced);
+  }
   if (info.isExtend()) {
     if (origTy && isa<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
@@ -187,17 +283,21 @@ static ArgClassification convertABIArgInfo(const llvm::abi::ArgInfo &info,
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
+  if (info.isIndirect())
+    return ArgClassification::getIndirect(info.getIndirectAlign(),
+                                          info.getIndirectByVal());
   assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }
 
 /// Classify a cir.func for x86_64 SysV using the LLVM ABI library.  Returns
-/// std::nullopt and emits an NYI error if the signature uses a type the scalar
-/// bridge does not handle yet.
+/// std::nullopt and emits an NYI error if the signature uses a type the bridge
+/// does not handle yet.
 static std::optional<FunctionClassification>
 classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                        mlir::abi::ABITypeMapper &typeMapper,
-                       const llvm::abi::TargetInfo &targetInfo) {
+                       const llvm::abi::TargetInfo &targetInfo,
+                       ModuleOp modOp) {
   MLIRContext *ctx = func->getContext();
   cir::FuncType fnTy = func.getFunctionType();
   mlir::Type retCIR = fnTy.getReturnType();
@@ -205,7 +305,7 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
   bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
-    if (isSupportedScalarType(t))
+    if (isSupportedType(t))
       return false;
     func.emitOpError()
         << "x86_64 calling-convention lowering not yet implemented for type "
@@ -220,23 +320,43 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
 
   const llvm::abi::Type *retAbi =
       voidRet ? typeMapper.getTypeBuilder().getVoidType()
-              : mapCIRType(retCIR, typeMapper, dl);
+              : mapCIRType(retCIR, typeMapper, dl, modOp);
   SmallVector<const llvm::abi::Type *> argAbi;
   for (mlir::Type a : fnTy.getInputs())
-    argAbi.push_back(mapCIRType(a, typeMapper, dl));
+    argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi =
       llvm::abi::FunctionInfo::create(llvm::CallingConv::C, retAbi, argAbi);
   targetInfo.computeInfo(*fi);
 
+  // convertABIArgInfo returns nullopt when the classifier picks a coercion
+  // this bridge cannot represent (e.g. an SSE vector coerce for an all-float
+  // aggregate).  Report it as NYI rather than emitting a wrong signature.
+  auto nyiCoercion = [&](mlir::Type t) {
+    func.emitOpError() << "x86_64 calling-convention lowering not yet "
+                          "implemented for the ABI coercion of type "
+                       << t;
+  };
+
   FunctionClassification fc;
   mlir::Type origRet = voidRet ? mlir::Type() : retCIR;
-  fc.returnInfo = convertABIArgInfo(fi->getReturnInfo(), ctx, origRet);
+  std::optional<ArgClassification> retAc =
+      convertABIArgInfo(fi->getReturnInfo(), ctx, origRet);
+  if (!retAc) {
+    nyiCoercion(retCIR);
+    return std::nullopt;
+  }
+  fc.returnInfo = *retAc;
   auto inputs = fnTy.getInputs();
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
-    fc.argInfos.push_back(
-        convertABIArgInfo(fi->getArgInfo(i).Info, ctx, origArg));
+    std::optional<ArgClassification> ac =
+        convertABIArgInfo(fi->getArgInfo(i).Info, ctx, origArg);
+    if (!ac) {
+      nyiCoercion(origArg);
+      return std::nullopt;
+    }
+    fc.argInfos.push_back(*ac);
   }
   return fc;
 }
@@ -347,7 +467,7 @@ void CallConvLoweringPass::runOnOperation() {
   moduleOp.walk([&](cir::FuncOp f) {
     std::optional<FunctionClassification> fc;
     if (x86Target)
-      fc = classifyX86_64Function(f, dl, *x86TypeMapper, *x86Target);
+      fc = classifyX86_64Function(f, dl, *x86TypeMapper, *x86Target, moduleOp);
     else
       fc = classifyFunction(f, dl, target, classificationAttr);
     if (!fc) {
