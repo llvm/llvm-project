@@ -958,12 +958,6 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!isInvalidationMethod(*MD))
     return;
 
-  // Heuristics to turn-down false positives. Skip member field expressions for
-  // now. This is not a perfect filter and will still surface some false
-  // positives (e.g. `auto& r = s.v`).
-  if (!isa<DeclRefExpr>(Args[0]->IgnoreImpCasts()))
-    return;
-
   OriginList *ThisList = getOriginsList(*Args[0]);
   if (ThisList)
     CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
@@ -1071,6 +1065,27 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   }
 }
 
+static std::optional<PathElement>
+getPathElementForLifetimeBoundArg(const FunctionDecl *FD, unsigned ArgIndex,
+                                  const Expr *ArgExpr) {
+  if (!ArgExpr)
+    return std::nullopt;
+  if (ArgIndex == 0) {
+    const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+    bool IsContainerArg =
+        (Method && Method->isInstance()) || shouldTrackFirstArgument(FD);
+    if (IsContainerArg) {
+      QualType ArgType = ArgExpr->getType();
+      if (const Type *ArgTypePtr = ArgType.getTypePtrOrNull()) {
+        if (isGslOwnerType(ArgType) ||
+            (ArgTypePtr->isPointerType() &&
+             isGslOwnerType(ArgTypePtr->getPointeeType())))
+          return PathElement::getInterior();
+      }
+    }
+  }
+  return std::nullopt;
+}
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -1145,12 +1160,13 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         ArgList = getRValueOrigins(Args[I], ArgList);
       }
       if (isGslOwnerType(Args[I]->getType())) {
-        // The constructed gsl::Pointer borrows from the Owner's storage, not
-        // from what the Owner itself borrows, so only the outermost origin is
-        // needed.
+        // GSL construction creates a view that borrows from arguments.
+        // Only flow the outer origin because inner lengths may mismatch.
         CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
+        CurrentBlockFacts.push_back(FactMgr.createFact<ProjectionFact>(
+            CallList->getOuterOriginID(), PathElement::getInterior()));
         KillSrc = false;
       } else if (IsArgLifetimeBound(I)) {
         // Only flow the outer origin here. For lifetimebound args in
@@ -1164,7 +1180,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             KillSrc));
         KillSrc = false;
       }
-    } else if (shouldTrackPointerImplicitObjectArg(I)) {
+    } else if (I == 0 && shouldTrackPointerImplicitObjectArg(I)) {
       assert(ArgList->getLength() >= 2 &&
              "Object arg of pointer type should have at least two origins");
       // See through the GSLPointer reference to see the pointer's value.
@@ -1178,6 +1194,10 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       // only constrains the top-level origin.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc));
+      if (auto Element = getPathElementForLifetimeBoundArg(FD, I, Args[I])) {
+        CurrentBlockFacts.push_back(FactMgr.createFact<ProjectionFact>(
+            CallList->getOuterOriginID(), *Element));
+      }
       KillSrc = false;
     }
   }

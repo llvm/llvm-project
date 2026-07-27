@@ -72,6 +72,18 @@ Loan *LoanManager::getOrCreateExtendedLoan(LoanID BaseLoanID,
   if (It != ExtensionCache.end())
     return It->second;
   const auto *BaseLoan = getLoan(BaseLoanID);
+
+  // Stop appending if Element is already in the path to prevent infinite path
+  // accumulation (divergence) on recursive types or casts.
+  //
+  // This sound over-approximation guarantees termination at the cost of
+  // precision. Conflating infinitely deep paths into a single truncated loan
+  // may cause false positives via spurious invalidations, but never causes
+  // false negatives.
+  for (const PathElement &E : BaseLoan->getAccessPath().getElements())
+    if (E == Element)
+      return ExtensionCache[Key] = const_cast<Loan *>(BaseLoan);
+
   AccessPath ExtendedPath(BaseLoan->getAccessPath(), Element);
   Loan *NewLoan = createLoan(ExtendedPath, BaseLoan->getIssueExpr());
   BaseLoansMap[NewLoan->getID()] = BaseLoanID;
