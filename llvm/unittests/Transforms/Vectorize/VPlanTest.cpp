@@ -1898,6 +1898,99 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform));
 }
 
+TEST_F(VPUtilsTest, ReconstructSSA) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+
+  auto *Res = cast<VPPhi>(
+      vputils::reconstructSSA({{VPBB1, Def1}, {VPBB2, Def2}}, VPBB4));
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def2);
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Def1);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAFold) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def);
+
+  // Check that phis with all equal incoming values are folded away.
+  EXPECT_EQ(vputils::reconstructSSA({{VPBB2, Def}, {VPBB3, Def}}, VPBB4), Def);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSACycle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //       |
+  //     VPBB2
+  //     / | ^
+  // VPBB3 | |
+  //    \  | /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB2);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB3->appendRecipe(Def2);
+
+  auto *Phi1 = cast<VPPhi>(
+      vputils::reconstructSSA({{VPBB1, Def1}, {VPBB3, Def2}}, VPBB4));
+  EXPECT_EQ(Phi1->getIncomingValueForBlock(VPBB3), Def2);
+  EXPECT_TRUE(isa<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2)));
+
+  auto *Phi2 = cast<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2));
+  EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB4), Phi1);
+  EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB1), Def1);
+}
+
 TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
   VPlan &Plan = getPlan();
   VPBasicBlock *Preheader = Plan.getEntry();
