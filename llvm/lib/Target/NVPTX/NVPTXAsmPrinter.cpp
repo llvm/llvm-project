@@ -32,8 +32,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -90,9 +92,12 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <map>
+#include <set>
 #include <string>
 
 using namespace llvm;
@@ -138,50 +143,171 @@ static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
   (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
 }
 
-/// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
-/// depends.
+namespace {
+
+/// Return a list of GlobalVariables on which \p V depends.
 static void
 discoverDependentGlobals(const Value *V,
-                         DenseSet<const GlobalVariable *> &Globals) {
+                         SmallVectorImpl<const GlobalVariable *> &Globals,
+                         SmallPtrSetImpl<const GlobalVariable *> &Seen) {
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V)) {
-    Globals.insert(GV);
+    if (Seen.insert(GV).second)
+      Globals.push_back(GV);
+    return;
+  }
+
+  // Global values are emitted as symbols. Their operands do not contribute to
+  // the initializer expression that refers to that symbol.
+  if (isa<GlobalValue>(V))
+    return;
+
+  // lowerConstantForGV emits a GEP as its base symbol plus a constant byte
+  // offset. Symbols used to compute an index are not part of that expression.
+  if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
+    discoverDependentGlobals(GEP->getPointerOperand(), Globals, Seen);
     return;
   }
 
   if (const User *U = dyn_cast<User>(V))
     for (const auto &O : U->operands())
-      discoverDependentGlobals(O, Globals);
+      discoverDependentGlobals(O, Globals, Seen);
 }
 
-/// VisitGlobalVariableForEmission - Add \p GV to the list of GlobalVariable
-/// instances to be emitted, but only after any dependents have been added
-/// first.s
-static void
-VisitGlobalVariableForEmission(const GlobalVariable *GV,
-                               SmallVectorImpl<const GlobalVariable *> &Order,
-                               DenseSet<const GlobalVariable *> &Visited,
-                               DenseSet<const GlobalVariable *> &Visiting) {
-  // Have we already visited this one?
-  if (Visited.count(GV))
-    return;
+struct GlobalVariableDependencyNode {
+  const GlobalVariable *GV = nullptr;
+  unsigned ModuleOrder = 0;
+  SmallVector<const GlobalVariableDependencyNode *, 4> Dependencies;
+};
 
-  // Do we have a circular dependency?
-  if (!Visiting.insert(GV).second)
+class GlobalVariableDependencyGraph {
+  // scc_iterator needs a single entry node. Global initializer dependencies
+  // may be disconnected, so use a synthetic root with an edge to every global.
+  GlobalVariableDependencyNode SyntheticRoot;
+  // Edges store pointers into Nodes, so node addresses must remain stable while
+  // the graph is constructed.
+  std::map<const GlobalVariable *, GlobalVariableDependencyNode> Nodes;
+
+public:
+  explicit GlobalVariableDependencyGraph(const Module &M) {
+    unsigned ModuleOrder = 0;
+    for (const GlobalVariable &GV : M.globals()) {
+      GlobalVariableDependencyNode &Node = Nodes.try_emplace(&GV).first->second;
+      Node.GV = &GV;
+      Node.ModuleOrder = ModuleOrder++;
+      SyntheticRoot.Dependencies.push_back(&Node);
+    }
+
+    for (auto &[GV, Node] : Nodes) {
+      SmallVector<const GlobalVariable *, 4> Dependencies;
+      SmallPtrSet<const GlobalVariable *, 4> Seen;
+      for (const Use &Operand : GV->operands())
+        discoverDependentGlobals(Operand, Dependencies, Seen);
+
+      for (const GlobalVariable *Dependency : Dependencies) {
+        auto It = Nodes.find(Dependency);
+        if (It != Nodes.end())
+          Node.Dependencies.push_back(&It->second);
+      }
+    }
+  }
+
+  const GlobalVariableDependencyNode *getEntryNode() const {
+    return &SyntheticRoot;
+  }
+};
+
+struct GlobalVariableDependencyGraphTraits {
+  using NodeRef = const GlobalVariableDependencyNode *;
+  using ChildIteratorType =
+      SmallVectorImpl<const GlobalVariableDependencyNode *>::const_iterator;
+
+  static NodeRef getEntryNode(NodeRef Node) { return Node; }
+  static ChildIteratorType child_begin(NodeRef Node) {
+    return Node->Dependencies.begin();
+  }
+  static ChildIteratorType child_end(NodeRef Node) {
+    return Node->Dependencies.end();
+  }
+};
+
+using GlobalVariableSCCIterator =
+    scc_iterator<const GlobalVariableDependencyNode *,
+                 GlobalVariableDependencyGraphTraits>;
+
+static bool shouldSkipModuleLevelGlobal(const GlobalVariable &GV) {
+  if (GV.hasSection() && GV.getSection() == "llvm.metadata")
+    return true;
+  return GV.getName().starts_with("llvm.") || GV.getName().starts_with("nvvm.");
+}
+
+static bool isForwardDeclarableGlobal(const GlobalVariable *GVar) {
+  if (shouldSkipModuleLevelGlobal(*GVar) || GVar->isDeclaration() ||
+      getPTXOpaqueType(*GVar) != PTXOpaqueType::None)
+    return false;
+
+  // A PTX .extern declaration can be resolved by a later .visible, .weak, or
+  // .common definition, but not by a static definition.
+  if (GVar->hasExternalLinkage())
+    return GVar->hasInitializer();
+
+  if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
+      GVar->hasAvailableExternallyLinkage() || GVar->hasCommonLinkage())
+    return true;
+
+  return false;
+}
+
+/// Order definitions after treating references to forward-declared globals as
+/// already satisfied. A remaining cycle cannot be emitted portably because it
+/// requires an undeclared forward reference.
+static SmallVector<const GlobalVariable *, 4> orderDefinitionsInSCC(
+    ArrayRef<const GlobalVariableDependencyNode *> SCC,
+    const DenseSet<const GlobalVariableDependencyNode *> &ForwardDeclared) {
+  using Node = GlobalVariableDependencyNode;
+
+  DenseSet<const Node *> SCCSet;
+  SCCSet.insert_range(SCC);
+
+  DenseMap<const Node *, unsigned> DependencyCount;
+  DenseMap<const Node *, SmallVector<const Node *, 4>> Dependents;
+  std::set<std::pair<unsigned, const Node *>> Ready;
+
+  // Dependencies outside this SCC have already been emitted. Forward-declared
+  // dependencies are also satisfied, so only count the remaining SCC edges.
+  for (const Node *N : SCC) {
+    unsigned &Count = DependencyCount[N];
+    for (const Node *Dependency : N->Dependencies) {
+      if (!SCCSet.count(Dependency) || ForwardDeclared.count(Dependency))
+        continue;
+      ++Count;
+      Dependents[Dependency].push_back(N);
+    }
+    if (Count == 0)
+      Ready.emplace(N->ModuleOrder, N);
+  }
+
+  SmallVector<const GlobalVariable *, 4> Order;
+  while (!Ready.empty()) {
+    const Node *N = Ready.begin()->second;
+    Ready.erase(Ready.begin());
+    Order.push_back(N->GV);
+
+    auto It = Dependents.find(N);
+    if (It == Dependents.end())
+      continue;
+    for (const Node *Dependent : It->second) {
+      assert(DependencyCount[Dependent] && "Dependency already satisfied");
+      if (--DependencyCount[Dependent] == 0)
+        Ready.emplace(Dependent->ModuleOrder, Dependent);
+    }
+  }
+
+  if (Order.size() != SCC.size())
     report_fatal_error("Circular dependency found in global variable set");
-
-  // Make sure we visit all dependents first
-  DenseSet<const GlobalVariable *> Others;
-  for (const auto &O : GV->operands())
-    discoverDependentGlobals(O, Others);
-
-  for (const GlobalVariable *GV : Others)
-    VisitGlobalVariableForEmission(GV, Order, Visited, Visiting);
-
-  // Now we can visit ourself
-  Order.push_back(GV);
-  Visited.insert(GV);
-  Visiting.erase(GV);
+  return Order;
 }
+
+} // namespace
 
 void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   NVPTX_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -867,28 +993,55 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
 
   emitDeclarations(M, OS2);
 
-  // As ptxas does not support forward references of globals, we need to first
-  // sort the list of module-level globals in def-use order. We visit each
-  // global variable in order, and ensure that we emit it *after* its dependent
-  // globals. We use a little extra memory maintaining both a set and a list to
-  // have fast searches while maintaining a strict ordering.
-  SmallVector<const GlobalVariable *, 8> Globals;
-  DenseSet<const GlobalVariable *> GVVisited;
-  DenseSet<const GlobalVariable *> GVVisiting;
-
-  // Visit each global variable, in order
-  for (const GlobalVariable &I : M.globals())
-    VisitGlobalVariableForEmission(&I, Globals, GVVisited, GVVisiting);
-
-  assert(GVVisited.size() == M.global_size() && "Missed a global variable");
-  assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
-
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
 
-  // Print out module-level global variables in proper order
-  for (const GlobalVariable *GV : Globals)
-    printModuleLevelGV(GV, OS2, /*ProcessDemoted=*/false, STI);
+  // ptxas requires global symbols referenced by initializers to be known
+  // before use. Acyclic dependencies can be handled by dependency-first
+  // emission. Cyclic SCCs need compatible .extern declarations first.
+  // Edges point from each global to the globals used by its initializer.
+  // Reverse-topological SCC iteration therefore emits dependencies first.
+  GlobalVariableDependencyGraph DependencyGraph(M);
+  for (GlobalVariableSCCIterator I =
+           GlobalVariableSCCIterator::begin(DependencyGraph.getEntryNode());
+       !I.isAtEnd(); ++I) {
+    SmallVector<const GlobalVariableDependencyNode *, 4> SCC(I->begin(),
+                                                             I->end());
+
+    // Nothing points to the synthetic root, so it is always in its own SCC.
+    if (!SCC.front()->GV) {
+      assert(SCC.size() == 1 && "Synthetic root must be in its own SCC");
+      continue;
+    }
+
+    llvm::sort(SCC, [](const auto *LHS, const auto *RHS) {
+      return LHS->ModuleOrder < RHS->ModuleOrder;
+    });
+
+    const bool IsCyclic = I.hasCycle();
+    DenseSet<const GlobalVariableDependencyNode *> ForwardDeclared;
+    if (IsCyclic)
+      for (const auto *Node : SCC)
+        if (isForwardDeclarableGlobal(Node->GV))
+          ForwardDeclared.insert(Node);
+
+    // Check that declarations break every cycle before writing any output.
+    SmallVector<const GlobalVariable *, 4> OrderedGlobals =
+        IsCyclic ? orderDefinitionsInSCC(SCC, ForwardDeclared)
+                 : SmallVector<const GlobalVariable *, 4>{SCC.front()->GV};
+
+    for (const auto *Node : SCC) {
+      if (!ForwardDeclared.count(Node))
+        continue;
+      OS2 << ".extern ";
+      emitPTXGlobalVariableDefinition(Node->GV, OS2, STI,
+                                      /*EmitInitializer=*/false);
+      OS2 << ";\n";
+    }
+
+    for (const GlobalVariable *GV : OrderedGlobals)
+      printModuleLevelGV(GV, OS2, /*ProcessDemoted=*/false, STI);
+  }
 
   OS2 << '\n';
 
@@ -1005,20 +1158,9 @@ void NVPTXAsmPrinter::emitLinkageDirective(const GlobalValue *V,
 void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
                                          raw_ostream &O, bool ProcessDemoted,
                                          const NVPTXSubtarget &STI) {
-  // Skip meta data
-  if (GVar->hasSection())
-    if (GVar->getSection() == "llvm.metadata")
-      return;
-
-  // Skip LLVM intrinsic global variables
-  if (GVar->getName().starts_with("llvm.") ||
-      GVar->getName().starts_with("nvvm."))
+  // Skip metadata and LLVM intrinsic global variables.
+  if (shouldSkipModuleLevelGlobal(*GVar))
     return;
-
-  const DataLayout &DL = getDataLayout();
-
-  // GlobalVariables are always constant pointers themselves.
-  Type *ETy = GVar->getValueType();
 
   if (GVar->hasExternalLinkage()) {
     if (GVar->hasInitializer())
@@ -1134,6 +1276,17 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     return;
   }
 
+  emitPTXGlobalVariableDefinition(GVar, O, STI, /*EmitInitializer=*/true);
+  O << ";\n";
+}
+
+void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
+    const GlobalVariable *GVar, raw_ostream &O, const NVPTXSubtarget &STI,
+    bool EmitInitializer) {
+  const DataLayout &DL = getDataLayout();
+
+  Type *ETy = GVar->getValueType();
+
   O << ".";
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
@@ -1160,7 +1313,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
 
     // Ptx allows variable initilization only for constant and global state
     // spaces.
-    if (GVar->hasInitializer()) {
+    if (EmitInitializer && GVar->hasInitializer()) {
       if ((GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
           (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) {
         const Constant *Initializer = GVar->getInitializer();
@@ -1214,22 +1367,31 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
                     "' requires at least PTX ISA version 7.1");
               O << " .u8 ";
               getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize << "] = {";
-              aggBuffer.printBytes(O);
-              O << "}";
+              O << "[" << ElementSize << "]";
+              if (EmitInitializer) {
+                O << " = {";
+                aggBuffer.printBytes(O);
+                O << "}";
+              }
             } else {
               O << " .u" << ptrSize * 8 << " ";
               getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize / ptrSize << "] = {";
-              aggBuffer.printWords(O);
-              O << "}";
+              O << "[" << ElementSize / ptrSize << "]";
+              if (EmitInitializer) {
+                O << " = {";
+                aggBuffer.printWords(O);
+                O << "}";
+              }
             }
           } else {
             O << " .b8 ";
             getSymbol(GVar)->print(O, MAI);
-            O << "[" << ElementSize << "] = {";
-            aggBuffer.printBytes(O);
-            O << "}";
+            O << "[" << ElementSize << "]";
+            if (EmitInitializer) {
+              O << " = {";
+              aggBuffer.printBytes(O);
+              O << "}";
+            }
           }
         } else {
           O << " .b8 ";
@@ -1249,7 +1411,6 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       llvm_unreachable("type not supported yet");
     }
   }
-  O << ";\n";
 }
 
 void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {

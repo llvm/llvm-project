@@ -1,4 +1,4 @@
-name: "Check libc++ generated files"
+name: "[libc++] Check generated files"
 on:
   pull_request:
     paths:

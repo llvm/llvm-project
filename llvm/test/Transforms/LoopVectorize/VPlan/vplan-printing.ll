@@ -278,7 +278,7 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP4]]> * ir<4>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV nuw ir<0> + vp<[[VP4]]> * ir<4>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<4>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.AB.0> = getelementptr inbounds ir<@AB>, ir<0>, vp<[[VP6]]>
 ; CHECK-NEXT:      INTERLEAVE-GROUP with factor 4, ir<%gep.AB.0>
