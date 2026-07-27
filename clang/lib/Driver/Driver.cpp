@@ -358,6 +358,11 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   Arg *PhaseArg = nullptr;
   phases::ID FinalPhase;
 
+  // Collect -x for PCH check below
+  Arg *XArg = DAL.getLastArg(options::OPT_x);
+  types::ID XTy = XArg ? types::lookupTypeForTypeSpecifier(XArg->getValue())
+                       : types::TY_INVALID;
+
   // -{E,EP,P,M,MM} only run the preprocessor.
   if (CCCIsCPP() || (PhaseArg = DAL.getLastArg(options::OPT_E)) ||
       (PhaseArg = DAL.getLastArg(options::OPT__SLASH_EP)) ||
@@ -376,6 +381,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
                                         options::OPT_fmodule_header_EQ))) {
     FinalPhase = phases::Precompile;
+
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
@@ -401,7 +407,14 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
-  // Otherwise do everything.
+    // PCH compilation (with no -c/-S/--precompile) should not have a
+    // link final phase
+  } else if (XArg && XTy != types::TY_INVALID &&
+             types::getPrecompiledType(XTy) == types::TY_PCH) {
+    PhaseArg = XArg;
+    FinalPhase = phases::Precompile;
+
+    // Otherwise do everything.
   } else
     FinalPhase = phases::Link;
 
