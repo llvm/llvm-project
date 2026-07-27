@@ -28,13 +28,11 @@
 define void @reduce_fadd_strict_128b_types() {
 ; VSCALE-ANY-LABEL: 'reduce_fadd_strict_128b_types'
 ; VSCALE-ANY-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f16 = call half @llvm.vector.reduce.fadd.v8f16(half 0.000000e+00, <8 x half> poison)
-; VSCALE-ANY-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8bf16 = call bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> poison)
 ; VSCALE-ANY-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f32 = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> poison)
 ; VSCALE-ANY-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:10 SizeLat:6 for: %fadd_v2f64 = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> poison)
 ; VSCALE-ANY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v8f16 = call half @llvm.vector.reduce.fadd.v8f16(half 0.0, <8 x half> poison)
-  %fadd_v8bf16 = call bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.0, <8 x bfloat> poison)
   %fadd_v4f32 = call float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> poison)
   %fadd_v2f64 = call double @llvm.vector.reduce.fadd.v2f64(double 0.0, <2 x double> poison)
   ret void
@@ -43,7 +41,6 @@ define void @reduce_fadd_strict_128b_types() {
 define void @reduce_fadd_strict_256b_types() {
 ; VSCALE-1-LABEL: 'reduce_fadd_strict_256b_types'
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0.000000e+00, <16 x half> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:220 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16bf16 = call bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:22 Lat:44 SizeLat:28 for: %fadd_v8f32 = call float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:10 Lat:20 SizeLat:12 for: %fadd_v4f64 = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:8 SizeLat:4 for: %fadd_v2f128 = call fp128 @llvm.vector.reduce.fadd.v2f128(fp128 poison, <2 x fp128> poison)
@@ -51,14 +48,12 @@ define void @reduce_fadd_strict_256b_types() {
 ;
 ; VSCALE-FROM-2-LABEL: 'reduce_fadd_strict_256b_types'
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:62 CodeSize:47 Lat:94 SizeLat:62 for: %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0.000000e+00, <16 x half> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:220 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16bf16 = call bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f32 = call float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:22 SizeLat:14 for: %fadd_v4f64 = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:4 Lat:8 SizeLat:4 for: %fadd_v2f128 = call fp128 @llvm.vector.reduce.fadd.v2f128(fp128 poison, <2 x fp128> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v16f16 = call half @llvm.vector.reduce.fadd.v16f16(half 0.0, <16 x half> poison)
-  %fadd_v16bf16 = call bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.0, <16 x bfloat> poison)
   %fadd_v8f32 = call float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> poison)
   %fadd_v4f64 = call double @llvm.vector.reduce.fadd.v4f64(double 0.0, <4 x double> poison)
   %fadd_v2f128 = call fp128 @llvm.vector.reduce.fadd.v2f128(fp128 poison, <2 x fp128> poison)
@@ -68,7 +63,6 @@ define void @reduce_fadd_strict_256b_types() {
 define void @reduce_fadd_strict_512b_types() {
 ; VSCALE-1-LABEL: 'reduce_fadd_strict_512b_types'
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:92 Lat:184 SizeLat:120 for: %fadd_v32f16 = call half @llvm.vector.reduce.fadd.v32f16(half 0.000000e+00, <32 x half> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:440 CodeSize:92 Lat:184 SizeLat:120 for: %fadd_v32bf16 = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:44 Lat:88 SizeLat:56 for: %fadd_v16f32 = call float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:20 Lat:40 SizeLat:24 for: %fadd_v8f64 = call double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:8 Lat:16 SizeLat:8 for: %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
@@ -76,7 +70,6 @@ define void @reduce_fadd_strict_512b_types() {
 ;
 ; VSCALE-2-LABEL: 'reduce_fadd_strict_512b_types'
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:124 CodeSize:94 Lat:188 SizeLat:124 for: %fadd_v32f16 = call half @llvm.vector.reduce.fadd.v32f16(half 0.000000e+00, <32 x half> poison)
-; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:440 CodeSize:92 Lat:184 SizeLat:120 for: %fadd_v32bf16 = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:46 Lat:92 SizeLat:60 for: %fadd_v16f32 = call float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:22 Lat:44 SizeLat:28 for: %fadd_v8f64 = call double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:8 Lat:16 SizeLat:8 for: %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
@@ -84,14 +77,12 @@ define void @reduce_fadd_strict_512b_types() {
 ;
 ; VSCALE-FROM-4-LABEL: 'reduce_fadd_strict_512b_types'
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:126 CodeSize:95 Lat:190 SizeLat:126 for: %fadd_v32f16 = call half @llvm.vector.reduce.fadd.v32f16(half 0.000000e+00, <32 x half> poison)
-; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:440 CodeSize:92 Lat:184 SizeLat:120 for: %fadd_v32bf16 = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:62 CodeSize:47 Lat:94 SizeLat:62 for: %fadd_v16f32 = call float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:23 Lat:46 SizeLat:30 for: %fadd_v8f64 = call double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:8 Lat:16 SizeLat:8 for: %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v32f16 = call half @llvm.vector.reduce.fadd.v32f16(half 0.0, <32 x half> poison)
-  %fadd_v32bf16 = call bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.0, <32 x bfloat> poison)
   %fadd_v16f32 = call float @llvm.vector.reduce.fadd.v16f32(float 0.0, <16 x float> poison)
   %fadd_v8f64 = call double @llvm.vector.reduce.fadd.v8f64(double 0.0, <8 x double> poison)
   %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
@@ -99,22 +90,13 @@ define void @reduce_fadd_strict_512b_types() {
 }
 
 define void @reduce_fadd_fast_128b_types() {
-; VSCALE-1-LABEL: 'reduce_fadd_fast_128b_types'
-; VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0.000000e+00, <8 x half> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:87 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8bf16 = call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %fadd_v4f32 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %fadd_v2f64 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; VSCALE-FROM-2-LABEL: 'reduce_fadd_fast_128b_types'
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of 3 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0.000000e+00, <8 x half> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:57 CodeSize:27 Lat:33 SizeLat:27 for: %fadd_v8bf16 = call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of 2 for: %fadd_v4f32 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of 1 for: %fadd_v2f64 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; VSCALE-ANY-LABEL: 'reduce_fadd_fast_128b_types'
+; VSCALE-ANY-NEXT:  Cost Model: Found costs of 3 for: %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0.000000e+00, <8 x half> poison)
+; VSCALE-ANY-NEXT:  Cost Model: Found costs of 2 for: %fadd_v4f32 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> poison)
+; VSCALE-ANY-NEXT:  Cost Model: Found costs of 1 for: %fadd_v2f64 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> poison)
+; VSCALE-ANY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v8f16 = call fast half @llvm.vector.reduce.fadd.v8f16(half 0.0, <8 x half> poison)
-  %fadd_v8bf16 = call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.0, <8 x bfloat> poison)
   %fadd_v4f32 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> poison)
   %fadd_v2f64 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.0, <2 x double> poison)
   ret void
@@ -123,7 +105,6 @@ define void @reduce_fadd_fast_128b_types() {
 define void @reduce_fadd_fast_256b_types() {
 ; VSCALE-1-LABEL: 'reduce_fadd_fast_256b_types'
 ; VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0.000000e+00, <16 x half> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:124 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16bf16 = call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %fadd_v8f32 = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %fadd_v4f64 = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %fadd_v2f128 = call fast fp128 @llvm.vector.reduce.fadd.v2f128(fp128 poison, <2 x fp128> poison)
@@ -131,14 +112,12 @@ define void @reduce_fadd_fast_256b_types() {
 ;
 ; VSCALE-FROM-2-LABEL: 'reduce_fadd_fast_256b_types'
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of 2 for: %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0.000000e+00, <16 x half> poison)
-; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:44 Lat:52 SizeLat:44 for: %fadd_v16bf16 = call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.000000e+00, <16 x bfloat> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of 2 for: %fadd_v8f32 = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of 2 for: %fadd_v4f64 = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %fadd_v2f128 = call fast fp128 @llvm.vector.reduce.fadd.v2f128(fp128 poison, <2 x fp128> poison)
 ; VSCALE-FROM-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v16f16 = call fast half @llvm.vector.reduce.fadd.v16f16(half 0.0, <16 x half> poison)
-  %fadd_v16bf16 = call fast bfloat @llvm.vector.reduce.fadd.v16bf16(bfloat 0.0, <16 x bfloat> poison)
   %fadd_v8f32 = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> poison)
   %fadd_v4f64 = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.0, <4 x double> poison)
   %fadd_v2f128 = call fast fp128 @llvm.vector.reduce.fadd.v2f128(fp128 poison, <2 x fp128> poison)
@@ -148,7 +127,6 @@ define void @reduce_fadd_fast_256b_types() {
 define void @reduce_fadd_fast_512b_types() {
 ; VSCALE-1-LABEL: 'reduce_fadd_fast_512b_types'
 ; VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %fadd_v32f16 = call fast half @llvm.vector.reduce.fadd.v32f16(half 0.000000e+00, <32 x half> poison)
-; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:198 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16 = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of 5 for: %fadd_v16f32 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %fadd_v8f64 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> poison)
 ; VSCALE-1-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:2 Lat:6 SizeLat:2 for: %fadd_v4f128 = call fast fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
@@ -156,7 +134,6 @@ define void @reduce_fadd_fast_512b_types() {
 ;
 ; VSCALE-2-LABEL: 'reduce_fadd_fast_512b_types'
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %fadd_v32f16 = call fast half @llvm.vector.reduce.fadd.v32f16(half 0.000000e+00, <32 x half> poison)
-; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:138 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16 = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %fadd_v16f32 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %fadd_v8f64 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> poison)
 ; VSCALE-2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:2 Lat:6 SizeLat:2 for: %fadd_v4f128 = call fast fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
@@ -164,14 +141,12 @@ define void @reduce_fadd_fast_512b_types() {
 ;
 ; VSCALE-FROM-4-LABEL: 'reduce_fadd_fast_512b_types'
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of 2 for: %fadd_v32f16 = call fast half @llvm.vector.reduce.fadd.v32f16(half 0.000000e+00, <32 x half> poison)
-; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:127 CodeSize:77 Lat:87 SizeLat:77 for: %fadd_v32bf16 = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.000000e+00, <32 x bfloat> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of 2 for: %fadd_v16f32 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of 2 for: %fadd_v8f64 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:2 Lat:6 SizeLat:2 for: %fadd_v4f128 = call fast fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
 ; VSCALE-FROM-4-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v32f16 = call fast half @llvm.vector.reduce.fadd.v32f16(half 0.0, <32 x half> poison)
-  %fadd_v32bf16 = call fast bfloat @llvm.vector.reduce.fadd.v32bf16(bfloat 0.0, <32 x bfloat> poison)
   %fadd_v16f32 = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.0, <16 x float> poison)
   %fadd_v8f64 = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.0, <8 x double> poison)
   %fadd_v4f128 = call fast fp128 @llvm.vector.reduce.fadd.v4f128(fp128 poison, <4 x fp128> poison)
