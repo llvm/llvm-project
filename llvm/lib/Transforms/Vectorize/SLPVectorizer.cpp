@@ -17273,8 +17273,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                  ScalarCost, "Calculated costs for Tree"));
 
         InstructionCost RematAdjustment = 0;
-        for (auto *UV : UniqueValues) {
-          if (auto *Inst = dyn_cast<Instruction>(UV)) {
+        for (unsigned I : seq<unsigned>(0, Sz)) {
+          if (UsedScalars.test(I))
+            continue;
+          if (auto *Inst = dyn_cast<Instruction>(UniqueValues[I])) {
             if (auto It = ExternalUsesAsExtractCost.find(Inst);
                 It != ExternalUsesAsExtractCost.end()) {
               RematAdjustment += It->second;
