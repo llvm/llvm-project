@@ -440,10 +440,10 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     DbgVariableRecord *NewAssign;
     if (IsSplit) {
       ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-      NewAssign = cast<DbgVariableRecord>(cast<DbgRecord *>(
+      NewAssign = cast<DbgVariableRecord>(
           DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
                               Dest, DIExpression::get(Expr->getContext(), {}),
-                              DbgAssign->getDebugLoc())));
+                              DbgAssign->getDebugLoc()));
     } else {
       // The store is not split, simply steal the existing dbg_assign.
       NewAssign = DbgAssign;
