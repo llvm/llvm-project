@@ -59,11 +59,23 @@ class MyResponder(MockGDBServerResponder):
         else:
             return None, False
 
-    def qProcessInfo(self):
-        return "ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(self._triple)
+    def qfThreadInfo(self):
+        return "m47"
 
-    def qC(self):
-        return ""
+    def qsThreadInfo(self):
+        return "l"
+
+    # In the two following functions, we return a PID == PID_MAX_LIMIT so that we do not
+    # use a host program file.
+
+    def qfThreadInfo(self):
+        return "m400000"
+
+    def qProcessInfo(self):
+        return "pid:47;ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(
+        return "pid:400000;ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(
+            self._triple
+        )
 
     def setBreakpoint(self, packet):
         return "OK"
