@@ -2103,4 +2103,45 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
   });
 }
 
+// A+B u<= A+C (and u<) with bounded A,B,C: getMinusSCEV cancels the shared A to
+// a tight range Diff = C-B, proving no unsigned overflow. Subtracting the
+// overlapping A+B / A+C ranges cannot -- the shared term must cancel first.
+TEST_F(ScalarEvolutionsTest, SCEVKnownPredicateViaConstantRangeDiff) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @t(i64 %v, i64 %w, i64 %u, i64 %u2, i64 %afull) {\n"
+      "entry:\n"
+      "  %a = and i64 %v, 255\n" // A in [0, 255]  (bounded shared term)
+      "  %b = and i64 %w, 7\n"   // B in [0, 7]
+      "  %ct = and i64 %u, 7\n"
+      "  %c = add i64 %ct, 100\n" // C in [100, 107], so B u< C always
+      "  %c2t = and i64 %u2, 7\n"
+      "  %c2 = add i64 %c2t, 7\n"   // C2 in [7, 14], so Diff2 = C2-B in [0, 14]
+      "  %lhs = add i64 %a, %b\n"   // A + B, range [0, 262]
+      "  %rhs = add i64 %a, %c\n"   // A + C, range [100, 362]  (ranges overlap)
+      "  %rhs2 = add i64 %a, %c2\n" // A + C2  (Diff can be 0 when B == C2 == 7)
+      "  %flhs = add i64 %afull, %b\n"
+      "  %frhs = add i64 %afull, %c\n"
+      "  ret void\n"
+      "}\n",
+      Err, C);
+  ASSERT_TRUE(M) << "Could not parse module";
+  runWithSE(*M, "t", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *L = SE.getSCEV(getInstructionByName(F, "lhs"));
+    const SCEV *R = SE.getSCEV(getInstructionByName(F, "rhs"));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, L, R));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, L, R));
+    // Diff = C2 - B can be 0 (B == C2 == 7): u<= still holds, u< does not.
+    const SCEV *R2 = SE.getSCEV(getInstructionByName(F, "rhs2"));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, L, R2));
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, L, R2));
+    // With a full-range shared term, A + B has no unsigned bound, so the
+    // reasoning must bail and the predicate is not known.
+    const SCEV *FL = SE.getSCEV(getInstructionByName(F, "flhs"));
+    const SCEV *FR = SE.getSCEV(getInstructionByName(F, "frhs"));
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, FL, FR));
+  });
+}
+
 }  // end namespace llvm
