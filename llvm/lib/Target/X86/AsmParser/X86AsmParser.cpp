@@ -860,7 +860,7 @@ private:
         // Recognize this register as a scaled index register. This covers
         // 'scale * reg' and 'scale * (reg)', including parenthesized or
         // multi-factor scales where the accumulated value is held in TmpScale.
-        if (TmpScale.has_value()){
+        if (TmpScale.has_value()) {
           if (IndexReg)
             return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
