@@ -149,8 +149,12 @@ ABI_VER_MAJOR(22)
 /// This causes clang to:
 ///   - Ignore per-function target attributes when determining the x86 AVX ABI
 ///     level.
-///   - On MIPS, return a `_Complex` value with an integer element type in one
-///     GPR per part, instead of packing it into as few GPRs as possible.
+///   - On MIPS, return a `_Complex` value with an integer element type with one
+///     part per integer register, instead of packing it into a single register
+///     where it fits.
+///   - On MIPS N32/N64, always pass a `_Complex float` or `_Complex double`
+///     argument as its two parts, one floating-point register each, instead of
+///     packing it into integer registers once there is no room for both.
 ABI_VER_MAJOR(23)
 
 /// Conform to the underlying platform's C and C++ ABIs as closely as we can.

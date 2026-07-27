@@ -23,7 +23,8 @@ class MipsABIInfo : public ABIInfo {
   const unsigned MinABIStackAlignInBytes, StackAlignInBytes;
   void CoerceToIntArgs(uint64_t TySize,
                        SmallVectorImpl<llvm::Type *> &ArgList) const;
-  llvm::Type* HandleAggregates(QualType Ty, uint64_t TySize) const;
+  llvm::Type *HandleAggregates(QualType Ty, uint64_t TySize,
+                               bool ComplexFitsInFPRs) const;
   llvm::Type* returnAggregateInRegs(QualType RetTy, uint64_t Size) const;
   llvm::Type* getPaddingType(uint64_t Align, uint64_t Offset) const;
 
@@ -154,7 +155,8 @@ void MipsABIInfo::CoerceToIntArgs(
 
 // In N32/64, an aligned double precision floating point field is passed in
 // a register.
-llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
+llvm::Type *MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize,
+                                          bool ComplexFitsInFPRs) const {
   SmallVector<llvm::Type*, 8> ArgList, IntArgList;
 
   if (IsO32) {
@@ -162,8 +164,15 @@ llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
     return llvm::StructType::get(getVMContext(), ArgList);
   }
 
-  if (Ty->isComplexType())
-    return CGT.ConvertType(Ty);
+  // A `_Complex` value that stays in FPRs is passed as its two parts.
+  // When that does not fit, it is passed like an integer of the same size.
+  if (Ty->isComplexType()) {
+    if (ComplexFitsInFPRs)
+      return CGT.ConvertType(Ty);
+
+    CoerceToIntArgs(TySize, ArgList);
+    return llvm::StructType::get(getVMContext(), ArgList);
+  }
 
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
 
@@ -231,6 +240,26 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
   unsigned CurrOffset = llvm::alignTo(Offset, Align);
   Offset = CurrOffset + llvm::alignTo(TySize, Align * 8) / 8;
 
+  // Only pass _Complex float and _Complex double in FPRs when there are 2 free
+  // slots, otherwise use GPRs (or the stack).
+  //
+  // _Complex long double never uses GPRs. Its parts are an FPR pair each,
+  // so passing them as they are puts each part in a pair and spills to
+  // the stack the parts that don't fit.
+  bool ComplexFitsInFPRs = true;
+  if (!IsO32 && Ty->isComplexType() && isComplexGnuABI() && TySize < 256) {
+    unsigned NumArgSlots = 8;
+    uint64_t SlotsUsed = CurrOffset / MinABIStackAlignInBytes;
+    if (SlotsUsed + 2 <= NumArgSlots)
+      // Claim 2 slots. Only a `_Complex float` needs this,
+      // a `_Complex double` is already two slots.
+      Offset = CurrOffset + 2 * MinABIStackAlignInBytes;
+    else
+      // Pass like an integer of the same size, packing both parts into GPRs
+      // (or the stack).
+      ComplexFitsInFPRs = false;
+  }
+
   if (isAggregateTypeForABI(Ty) || Ty->isVectorType()) {
     // Ignore empty aggregates.
     if (TySize == 0)
@@ -246,8 +275,8 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
     // another structure type. Padding is inserted if the offset of the
     // aggregate is unaligned.
     ABIArgInfo ArgInfo =
-        ABIArgInfo::getDirect(HandleAggregates(Ty, TySize), 0,
-                              getPaddingType(OrigOffset, CurrOffset));
+        ABIArgInfo::getDirect(HandleAggregates(Ty, TySize, ComplexFitsInFPRs),
+                              0, getPaddingType(OrigOffset, CurrOffset));
     ArgInfo.setInReg(true);
     return ArgInfo;
   }
