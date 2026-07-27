@@ -191,8 +191,11 @@ void AMDGPUTargetInfo::fillValidCPUList(
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
     : TargetInfo(Triple),
-      GPUKind(Triple.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Opts.CPU)
-                                : llvm::AMDGPU::parseArchR600(Opts.CPU)),
+      GPUKind(Triple.isAMDGCN()
+                  ? (Opts.CPU.empty() ? llvm::AMDGPU::getGPUKindFromSubArch(
+                                            Triple.getSubArch())
+                                      : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
+                  : llvm::AMDGPU::parseArchR600(Opts.CPU)),
       GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
                                     : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout();
@@ -229,6 +232,16 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
       ReadOnlyFeatures.insert(F);
   }
   HalfArgsAndReturns = true;
+
+  if (Opts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["xnack"] =
+        Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
+
+  if (Opts.AMDGPUSramEccState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["sramecc"] =
+        Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,

@@ -25,31 +25,39 @@
 namespace Fortran::runtime::cuda {
 
 static bool deviceContextTornDown() {
+  // Must be transparent to the last-error seen by user code: the one-time
+  // cudaGetDriverEntryPoint() lookup below can fail (e.g. runtime newer than
+  // driver) and leave a sticky error that a later user cudaGetLastError() would
+  // misattribute. Consume an error only if the slot started clean, so we never
+  // discard a pre-existing one.
+  cudaError_t priorErr{cudaPeekAtLastError()};
+  bool tornDown{true};
   int device{0};
-  if (cudaGetDevice(&device) != cudaSuccess) {
-    return true;
-  }
-  // Driver API reports primary-context state WITHOUT lazily creating one
-  // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
-  // Only the current device is checked (single-device assumption).
-  using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
-  static GetStateFn getState{[]() -> GetStateFn {
-    void *fn{nullptr};
-    if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
-            cudaEnableDefault, nullptr) != cudaSuccess) {
-      return nullptr;
+  if (cudaGetDevice(&device) == cudaSuccess) {
+    // Driver API reports primary-context state WITHOUT lazily creating one
+    // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
+    // Only the current device is checked (single-device assumption).
+    using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
+    static GetStateFn getState{[]() -> GetStateFn {
+      void *fn{nullptr};
+      if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
+              cudaEnableDefault, nullptr) != cudaSuccess) {
+        return nullptr;
+      }
+      return reinterpret_cast<GetStateFn>(fn);
+    }()};
+    if (getState) {
+      unsigned flags{0};
+      int active{0};
+      if (getState(device, &flags, &active) == CUDA_SUCCESS) {
+        tornDown = active == 0;
+      }
     }
-    return reinterpret_cast<GetStateFn>(fn);
-  }()};
-  if (!getState) {
-    return true;
   }
-  unsigned flags{0};
-  int active{0};
-  if (getState(device, &flags, &active) != CUDA_SUCCESS) {
-    return true;
+  if (priorErr == cudaSuccess && cudaPeekAtLastError() != cudaSuccess) {
+    (void)cudaGetLastError();
   }
-  return active == 0;
+  return tornDown;
 }
 
 struct DeviceAllocation {

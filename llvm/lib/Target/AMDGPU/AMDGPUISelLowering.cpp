@@ -5527,10 +5527,11 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   if (!CFP)
     return SDValue();
 
-  // XXX - Should this flush denormals?
-  const APFloat &Val = CFP->getValueAPF();
-  APFloat One = APFloat::getOne(Val.getSemantics());
-  return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
+  std::optional<APFloat> Result = AMDGPU::evaluateRcp(CFP->getValueAPF());
+  if (!Result)
+    return SDValue();
+
+  return DCI.DAG.getConstantFP(*Result, SDLoc(N), N->getValueType(0));
 }
 
 bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
