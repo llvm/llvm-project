@@ -1156,6 +1156,14 @@ getLLVMAtomicBinOp(cir::AtomicFetchKind k, bool isInt, bool isSignedInt) {
     return mlir::LLVM::AtomicBinOp::uinc_wrap;
   case cir::AtomicFetchKind::UDecWrap:
     return mlir::LLVM::AtomicBinOp::udec_wrap;
+  case cir::AtomicFetchKind::Maximum:
+    return mlir::LLVM::AtomicBinOp::fmaximum;
+  case cir::AtomicFetchKind::Minimum:
+    return mlir::LLVM::AtomicBinOp::fminimum;
+  case cir::AtomicFetchKind::MaximumNum:
+    return mlir::LLVM::AtomicBinOp::fmaximumnum;
+  case cir::AtomicFetchKind::MinimumNum:
+    return mlir::LLVM::AtomicBinOp::fminimumnum;
   }
   llvm_unreachable("Unknown atomic fetch opcode");
 }
@@ -1183,7 +1191,12 @@ static llvm::StringLiteral getLLVMBinopForPostAtomic(cir::AtomicFetchKind k,
     llvm_unreachable("handled in buildMinMaxPostOp");
   case cir::AtomicFetchKind::UIncWrap:
   case cir::AtomicFetchKind::UDecWrap:
-    llvm_unreachable("uinc_wrap and udec_wrap are always fetch_first");
+  case cir::AtomicFetchKind::Maximum:
+  case cir::AtomicFetchKind::Minimum:
+  case cir::AtomicFetchKind::MaximumNum:
+  case cir::AtomicFetchKind::MinimumNum:
+    llvm_unreachable("uinc_wrap, udec_wrap, maximum, minimum, maximum_num, and "
+                     "minimum_num are always fetch_first");
   }
   llvm_unreachable("Unknown atomic fetch opcode");
 }
@@ -1868,7 +1881,45 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+/// The `llvm.byval`, `llvm.sret`, and `llvm.byref` argument attributes carry
+/// the pointee type as a TypeAttr.  After the CallConvLowering pass that type
+/// is still a CIR record; remap it to the lowered LLVM type so translation to
+/// LLVM IR does not encounter a CIR type in an attribute.  Returns the input
+/// unchanged when there is nothing to convert.
+static mlir::ArrayAttr
+convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
+                     const mlir::TypeConverter &converter,
+                     mlir::MLIRContext *ctx) {
+  if (!argAttrs)
+    return argAttrs;
+  bool changed = false;
+  SmallVector<mlir::Attribute> loweredArgAttrs;
+  loweredArgAttrs.reserve(argAttrs.size());
+  for (mlir::Attribute a : argAttrs) {
+    auto dict = cast<mlir::DictionaryAttr>(a);
+    SmallVector<mlir::NamedAttribute> entries(dict.begin(), dict.end());
+    for (mlir::NamedAttribute &entry : entries) {
+      StringRef name = entry.getName().strref();
+      if (name != mlir::LLVM::LLVMDialect::getByValAttrName() &&
+          name != mlir::LLVM::LLVMDialect::getStructRetAttrName() &&
+          name != mlir::LLVM::LLVMDialect::getByRefAttrName())
+        continue;
+      auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue());
+      if (!typeAttr)
+        continue;
+      mlir::Type lowered = converter.convertType(typeAttr.getValue());
+      if (lowered && lowered != typeAttr.getValue()) {
+        entry.setValue(mlir::TypeAttr::get(lowered));
+        changed = true;
+      }
+    }
+    loweredArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, entries));
+  }
+  return changed ? mlir::ArrayAttr::get(ctx, loweredArgAttrs) : argAttrs;
+}
+
 static void lowerCallAttributes(cir::CIRCallOpInterface op,
+                                const mlir::TypeConverter &converter,
                                 SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
@@ -1880,6 +1931,13 @@ static void lowerCallAttributes(cir::CIRCallOpInterface op,
       continue;
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    if (attr.getName() == CIRDialect::getArgAttrsAttrName()) {
+      auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
+      result.emplace_back(
+          attr.getName(),
+          convertTypedArgAttrs(argAttrs, converter, op->getContext()));
+      continue;
+    }
     result.push_back(attr);
   }
 }
@@ -1909,7 +1967,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                            memoryEffects, noUnwind, willReturn, noReturn);
 
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerCallAttributes(call, attributes);
+  lowerCallAttributes(call, *converter, attributes);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
 
@@ -2398,6 +2456,13 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
       continue;
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    if (attr.getName() == func.getArgAttrsAttrName()) {
+      auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
+      result.emplace_back(
+          attr.getName(),
+          convertTypedArgAttrs(argAttrs, *getTypeConverter(), getContext()));
+      continue;
+    }
     result.push_back(attr);
   }
 }
@@ -5100,12 +5165,6 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::IndirectBrOp>(
       op, targetAddr, adaptor.getSuccOperands(), op.getSuccessors());
   return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMAwaitOpLowering::matchAndRewrite(
-    cir::AwaitOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  return mlir::failure();
 }
 
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(

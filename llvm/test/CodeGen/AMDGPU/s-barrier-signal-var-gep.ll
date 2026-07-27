@@ -15,7 +15,7 @@
 define amdgpu_kernel void @signal_var_bar0() {
 ; CHECK-LABEL: signal_var_bar0:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_mov_b32 m0, 0x100001
@@ -26,7 +26,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ;
 ; CHECK-OBJ-SDAG-LABEL: signal_var_bar0:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
-; CHECK-OBJ-SDAG-NEXT:    global_wb
+; CHECK-OBJ-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-SDAG-NEXT:    v_nop
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo
@@ -41,7 +41,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 ;
 ; CHECK-OBJ-GISEL-LABEL: signal_var_bar0:
 ; CHECK-OBJ-GISEL:       ; %bb.0:
-; CHECK-OBJ-GISEL-NEXT:    global_wb
+; CHECK-OBJ-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-GISEL-NEXT:    v_nop
 ; CHECK-OBJ-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-GISEL-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 4
@@ -62,7 +62,7 @@ define amdgpu_kernel void @signal_var_bar0() {
 define amdgpu_kernel void @signal_var_bar1() {
 ; CHECK-LABEL: signal_var_bar1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_mov_b32 m0, 0x100002
@@ -73,7 +73,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ;
 ; CHECK-OBJ-SDAG-LABEL: signal_var_bar1:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
-; CHECK-OBJ-SDAG-NEXT:    global_wb
+; CHECK-OBJ-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-SDAG-NEXT:    v_nop
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+16
@@ -88,7 +88,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ;
 ; CHECK-OBJ-GISEL-LABEL: signal_var_bar1:
 ; CHECK-OBJ-GISEL:       ; %bb.0:
-; CHECK-OBJ-GISEL-NEXT:    global_wb
+; CHECK-OBJ-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-GISEL-NEXT:    v_nop
 ; CHECK-OBJ-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-GISEL-NEXT:    s_add_co_u32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 16
@@ -116,7 +116,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 define amdgpu_kernel void @signal_var_misaligned() {
 ; CHECK-LABEL: signal_var_misaligned:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    global_wb
+; CHECK-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_mov_b32 m0, 0x100001
@@ -127,7 +127,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ;
 ; CHECK-OBJ-SDAG-LABEL: signal_var_misaligned:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
-; CHECK-OBJ-SDAG-NEXT:    global_wb
+; CHECK-OBJ-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-SDAG-NEXT:    v_nop
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-SDAG-NEXT:    s_mov_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+1
@@ -142,7 +142,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ;
 ; CHECK-OBJ-GISEL-LABEL: signal_var_misaligned:
 ; CHECK-OBJ-GISEL:       ; %bb.0:
-; CHECK-OBJ-GISEL-NEXT:    global_wb
+; CHECK-OBJ-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-GISEL-NEXT:    v_nop
 ; CHECK-OBJ-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-GISEL-NEXT:    s_add_co_u32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 1
@@ -170,7 +170,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ; CHECK-SDAG-LABEL: signal_var_dynamic:
 ; CHECK-SDAG:       ; %bb.0:
-; CHECK-SDAG-NEXT:    global_wb
+; CHECK-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-SDAG-NEXT:    v_nop
 ; CHECK-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
@@ -187,7 +187,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ;
 ; CHECK-GISEL-LABEL: signal_var_dynamic:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    global_wb
+; CHECK-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-GISEL-NEXT:    v_nop
 ; CHECK-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
@@ -207,7 +207,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ;
 ; CHECK-OBJ-SDAG-LABEL: signal_var_dynamic:
 ; CHECK-OBJ-SDAG:       ; %bb.0:
-; CHECK-OBJ-SDAG-NEXT:    global_wb
+; CHECK-OBJ-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-SDAG-NEXT:    v_nop
 ; CHECK-OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
@@ -224,7 +224,7 @@ define amdgpu_kernel void @signal_var_dynamic(i32 %idx) {
 ;
 ; CHECK-OBJ-GISEL-LABEL: signal_var_dynamic:
 ; CHECK-OBJ-GISEL:       ; %bb.0:
-; CHECK-OBJ-GISEL-NEXT:    global_wb
+; CHECK-OBJ-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-OBJ-GISEL-NEXT:    v_nop
 ; CHECK-OBJ-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-OBJ-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv

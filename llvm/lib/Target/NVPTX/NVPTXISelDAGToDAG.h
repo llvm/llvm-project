@@ -78,7 +78,6 @@ private:
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryFence(SDNode *N);
-  void SelectAddrSpaceCast(SDNode *N);
   bool tryBFE(SDNode *N);
   bool tryBF16ArithToFMA(SDNode *N);
   bool tryConstantFP(SDNode *N);

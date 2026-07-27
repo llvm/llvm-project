@@ -3181,6 +3181,17 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+// FIXME: The following Swift interop attributes currently only support
+// the GNU __attribute__ syntax and lack a CXX11/C23 [[]] spelling.
+//
+// A Clang vendor namespace spelling (e.g., [[clang::swift_name]]) or a
+// Swift vendor namespace spelling (e.g., [[swift::name]]) were both
+// considered, but it was decided not to commit to either prematurely.
+// Doing so deserves more attention -- among other things, one would
+// want to avoid name stuttering (e.g., [[swift::swift_name]]).
+//
+// See https://github.com/llvm/llvm-project/pull/183484
+
 def SwiftType : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
@@ -5191,6 +5202,12 @@ def HLSLShader : InheritableAttr {
 
 def HLSLIsArray : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLIsMultiSampled : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_ms">];
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }

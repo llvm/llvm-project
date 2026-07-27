@@ -118,7 +118,10 @@ public:
 
   // Returns the absolute path of `relative_path` in this test directory.
   cpp::string absolute_path(cpp::string_view relative_path) const {
-    return path + "/" + relative_path;
+    cpp::string res = path;
+    res += "/";
+    res += relative_path;
+    return res;
   }
 
   // Returns this test directory path as a C string.

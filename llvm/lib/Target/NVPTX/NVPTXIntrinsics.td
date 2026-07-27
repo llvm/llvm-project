@@ -2749,31 +2749,61 @@ def LD_GLOBAL_NC_v4i32 : VLDG_G_ELE_V4<B32>;
 def LD_GLOBAL_NC_v4i64 : VLDG_G_ELE_V4<B64>;
 def LD_GLOBAL_NC_v8i32 : VLDG_G_ELE_V8<B32>;
 
-multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-             "cvta." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-              "cvta." # Str # ".u64">, Requires<Preds>;
+class addrspacecast_spaces<NVPTXAddressSpace src_space,
+                           NVPTXAddressSpace dst_space> :
+  PatFrag<(ops node:$a), (addrspacecast node:$a),
+    "const auto *ASC = cast<AddrSpaceCastSDNode>(N);" #
+      "return ASC->getSrcAddressSpace() == " # src_space.Enum #
+         " && ASC->getDestAddressSpace() == " # dst_space.Enum # ";">;
+
+
+multiclass CvtaFromInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                         bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<as, AddrSpaceGeneric>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+                "cvta" # as.Suffix # ".u64",
+                [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i64 (asc_pat i32:$src)),
+              (!cast<Instruction>(NAME # "_64") (CVT_u64_u32 $src, CvtNONE))>;
+  }
 }
 
-multiclass G_TO_NG<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-            "cvta.to." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-            "cvta.to." # Str # ".u64">, Requires<Preds>;
+multiclass CvtaToInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                       bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<AddrSpaceGeneric, as>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta.to" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+              "cvta.to" # as.Suffix # ".u64",
+              [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i32 (asc_pat i64:$src)),
+              (CVT_u32_u64 (!cast<Instruction>(NAME # "_64") $src), CvtNONE)>;
+  }
 }
 
-foreach space = ["local", "shared", "global", "const", "param"] in {
-  defm cvta_#space : NG_TO_G<space>;
-  defm cvta_to_#space : G_TO_NG<space>;
+multiclass CvtaInsts<NVPTXAddressSpace as, list<Predicate> preds = [],
+                     bit supports_32 = true> {
+  defm _ # as.Name : CvtaFromInsts<as, preds, supports_32>;
+  defm _to_ # as.Name : CvtaToInsts<as, preds, supports_32>;
 }
 
-defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
-defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
+foreach as = [AddrSpaceLocal, AddrSpaceShared, AddrSpaceGlobal, AddrSpaceConst] in
+  defm cvta : CvtaInsts<as>;
+
+defm cvta : CvtaInsts<AddrSpaceParam, [hasPTX<77>, hasSM<70>]>;
+defm cvta : CvtaInsts<AddrSpaceSharedCluster, [hasClusters], supports_32=false>;
 
 
 // nvvm.move intrinsicc

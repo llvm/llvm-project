@@ -1098,7 +1098,16 @@ addAlignedClause(lower::AbstractConverter &converter,
           std::get<std::optional<Aligned::Alignment>>(clause.t)) {
     mlir::Value operand = fir::getBase(
         converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
-    alignment = *fir::getIntIfConstant(operand);
+    std::optional<llvm::APInt> constantAlignment =
+        fir::getIntIfConstant(operand);
+    if (!constantAlignment)
+      fir::emitFatalError(operand.getLoc(), "alignment must be a constant");
+    std::optional<std::int64_t> constantAlignment64 =
+        constantAlignment->trySExtValue();
+    if (!constantAlignment64)
+      fir::emitFatalError(operand.getLoc(),
+                          "alignment does not fit in a 64-bit integer");
+    alignment = *constantAlignment64;
   } else {
     llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
     llvm::Triple triple = fir::getTargetTriple(builder.getModule());

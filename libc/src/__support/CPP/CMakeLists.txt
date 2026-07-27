@@ -92,6 +92,7 @@ add_header_library(
     libc.src.__support.integer_to_string
     libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memmove
     libc.src.string.memory_utils.inline_memset
     libc.src.string.string_utils
 )

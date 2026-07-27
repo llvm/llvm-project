@@ -133,7 +133,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+  I->dropUBImplyingAttrsAndUnknownMetadata(ProfileMetadataToPreserve);
 
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
