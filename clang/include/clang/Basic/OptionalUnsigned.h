@@ -31,9 +31,8 @@ template <class T> struct OptionalUnsigned {
     assert(has_value());
   }
 
-  template <typename SignedInt,
-            std::enable_if_t<std::is_signed_v<SignedInt>, bool> = false>
-  OptionalUnsigned(SignedInt) = delete;
+  template <class U, std::enable_if_t<std::is_signed_v<U>, bool> = false>
+  OptionalUnsigned(U) = delete;
 
   constexpr static OptionalUnsigned
   fromInternalRepresentation(underlying_type Rep) {
