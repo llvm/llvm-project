@@ -1701,3 +1701,11 @@ auto not_ignored2() {
 
 static_assert(__is_same(decltype(not_ignored2()), int));
 }
+
+namespace gh212088 {
+void f() {
+  struct S {};
+  template for (const int &x : []{return S();}()) {
+  }
+}
+}
