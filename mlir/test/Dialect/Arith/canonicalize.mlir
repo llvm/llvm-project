@@ -3685,6 +3685,68 @@ func.func @nofoldShrs3() -> i64 {
   return %r : i64
 }
 
+// CHECK-LABEL: @shli_zero_lhs
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]]
+func.func @shli_zero_lhs(%arg0 : i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.shli %c0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @shrui_zero_lhs_and_self
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @shrui_zero_lhs_and_self(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.shrui %c0, %arg0 : i32
+  %1 = arith.shrui %arg0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @shrsi_zero_lhs_and_self
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @shrsi_zero_lhs_and_self(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.shrsi %c0, %arg0 : i32
+  %1 = arith.shrsi %arg0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @shrsi_all_ones_lhs
+//       CHECK:   %[[CM1:.+]] = arith.constant -1 : i32
+//       CHECK:   return %[[CM1]]
+func.func @shrsi_all_ones_lhs(%arg0 : i32) -> i32 {
+  %cm1 = arith.constant -1 : i32
+  %0 = arith.shrsi %cm1, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @shift_self_vector
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant dense<0> : vector<4xi32>
+//   CHECK-DAG:   %[[CM1:.+]] = arith.constant dense<-1> : vector<4xi32>
+//       CHECK:   return %[[C0]], %[[C0]], %[[CM1]]
+func.func @shift_self_vector(%arg0 : vector<4xi32>)
+    -> (vector<4xi32>, vector<4xi32>, vector<4xi32>) {
+  %cm1 = arith.constant dense<-1> : vector<4xi32>
+  %0 = arith.shrui %arg0, %arg0 : vector<4xi32>
+  %1 = arith.shrsi %arg0, %arg0 : vector<4xi32>
+  %2 = arith.shrsi %cm1, %arg0 : vector<4xi32>
+  return %0, %1, %2 : vector<4xi32>, vector<4xi32>, vector<4xi32>
+}
+
+// A dynamic shape must bail out of the x>>x constant fold.
+// CHECK-LABEL: @shr_self_dynamic_no_fold
+//       CHECK:   arith.shrui
+//       CHECK:   arith.shrsi
+func.func @shr_self_dynamic_no_fold(%arg0 : tensor<?xi32>)
+    -> (tensor<?xi32>, tensor<?xi32>) {
+  %0 = arith.shrui %arg0, %arg0 : tensor<?xi32>
+  %1 = arith.shrsi %arg0, %arg0 : tensor<?xi32>
+  return %0, %1 : tensor<?xi32>, tensor<?xi32>
+}
+
 // -----
 
 // CHECK-LABEL: @test_negf(
