@@ -31025,16 +31025,16 @@ define bfloat @v_round_bf16(bfloat %a) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_trunc_f32_e32 v2, v1
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v2, -1.0, v0 op_sel:[0,1,0] op_sel_hi:[0,1,1]
+; GFX1250-NEXT:    v_trunc_f32_e32 v1, v0
+; GFX1250-NEXT:    v_sub_f32_e32 v2, v0, v1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_cmp_ge_f32_e64 s0, |v0|, 0.5
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
+; GFX1250-NEXT:    v_cmp_ge_f32_e64 s0, |v2|, 0.5
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v1
-; GFX1250-NEXT:    v_add_f32_e32 v0, v2, v0
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fffffff, v2, v0
+; GFX1250-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
