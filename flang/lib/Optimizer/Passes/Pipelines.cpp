@@ -489,6 +489,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
                                   MLIRToLLVMPassPipelineConfig &config,
                                   llvm::StringRef inputFilename) {
+  if (config.EnableOpenACC)
+    fir::acc::populateHLFIROpenACCPassPipeline(pm);
+
   fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
   if (config.EnableOpenMP)
     enableOpenMP = fir::EnableOpenMP::Full;

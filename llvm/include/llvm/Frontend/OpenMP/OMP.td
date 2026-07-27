@@ -147,12 +147,18 @@ def OMPC_Counts : Clause<[Spelling<"counts">]> {
   let clangClass = "OMPCountsClause";
 }
 def OMPC_Default : Clause<[Spelling<"default">]> {
+  // This is for default DSA.
+  // For the "otherwise" clause, use OMPC_DefaultVariant.
   let clangClass = "OMPDefaultClause";
   let flangClass = "OmpDefaultClause";
 }
 def OMPC_DefaultMap : Clause<[Spelling<"defaultmap">]> {
   let clangClass = "OMPDefaultmapClause";
   let flangClass = "OmpDefaultmapClause";
+}
+def OMPC_DefaultVariant : Clause<[Spelling<"default">]> {
+  let name = "default_variant";
+  let flangClass = "OmpDefaultVariantClause";
 }
 def OMPC_Depend : Clause<[Spelling<"depend">]> {
   let clangClass = "OMPDependClause";
@@ -1056,7 +1062,7 @@ def OMP_Metadirective : Directive<[Spelling<"metadirective">]> {
     VersionedClause<OMPC_When>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_Default, 50, 51>,
+    VersionedClause<OMPC_DefaultVariant, 50, 51>,
     VersionedClause<OMPC_Otherwise, 52>,
   ];
   let association = AS_None;

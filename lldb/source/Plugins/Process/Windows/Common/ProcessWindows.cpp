@@ -612,7 +612,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;
     unloaded_modules.Append(executable_module);
-    target->ModulesDidUnload(unloaded_modules, true);
+    target->ModulesDidUnload(unloaded_modules, false);
   }
 
   SetExitStatus(exit_code, /*exit_string=*/"");

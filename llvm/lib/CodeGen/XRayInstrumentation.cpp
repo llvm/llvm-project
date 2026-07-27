@@ -228,17 +228,18 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
     bool TooFewInstrs = MICount < XRayThreshold;
 
     if (!IgnoreLoops) {
-      // Get MachineDominatorTree or compute it on the fly if it's unavailable
+      // Get MachineLoopInfo or compute it on the fly if it's unavailable,
+      // which needs a MachineDominatorTree only for an irreducible CFG.
       MachineDominatorTree ComputedMDT;
-      if (!MDT) {
-        ComputedMDT.recalculate(MF);
-        MDT = &ComputedMDT;
-      }
-
-      // Get MachineLoopInfo or compute it on the fly if it's unavailable
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.analyze(*MDT);
+        ComputedMLI.calculate(MF, [&]() -> const MachineDominatorTree & {
+          if (!MDT) {
+            ComputedMDT.recalculate(MF);
+            MDT = &ComputedMDT;
+          }
+          return *MDT;
+        });
         MLI = &ComputedMLI;
       }
 
