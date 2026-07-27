@@ -504,7 +504,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     if (IsByteType) {
       // FIXME: Currently we treat undef bits as poison bits in the byte value,
       // because keeping undef bits reintroduces undef SSA values.
-      // It should be fixed by completely remove undef bits from the memory.
+      // It should be fixed by completely removing undef bits from the memory.
       LogicalByte.poisonBits(~LogicalByte.ConcreteMask);
       LogicalBytes[I / 8] = LogicalByte;
       continue;
@@ -579,7 +579,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     unsigned BitWidth = Ty->getByteBitWidth();
     if (BitWidth & 7) {
       if (!(DL.isLittleEndian() ? Bytes.back() : Bytes.front())
-               .AreHighBitsZExtd(BitWidth & 7)) {
+               .areHighBitsZExtd(BitWidth & 7)) {
         if (ContainsUndefinedBits)
           *ContainsUndefinedBits = true;
         return ByteValue::poison(BitWidth, DL.isLittleEndian());

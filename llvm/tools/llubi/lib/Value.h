@@ -117,7 +117,7 @@ struct Byte {
                 static_cast<uint8_t>(TagValue << Shift)};
   }
 
-  bool AreHighBitsZExtd(uint8_t BitsFrom) const {
+  bool areHighBitsZExtd(uint8_t BitsFrom) const {
     uint8_t Mask = static_cast<uint8_t>((~0U) << BitsFrom);
     return (ConcreteMask & Mask) == Mask && (Value & Mask) == 0 &&
            (TagMask & Mask) == 0;
@@ -270,7 +270,7 @@ public:
     }
     assert(((BitWidth & 7) == 0 ||
             ((IsLittleEndian ? this->Val.back() : this->Val.front())
-                 .AreHighBitsZExtd(BitWidth & 7))) &&
+                 .areHighBitsZExtd(BitWidth & 7))) &&
            "The caller is responsible to zero high bits for non-byte-sized "
            "values.");
   }
