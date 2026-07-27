@@ -427,6 +427,8 @@ class SVEExactFPImm<string Suffix, string ValA, string ValB> : AsmOperandClass {
 class SVEExactFPImmOperand<string Suffix, string ValA, string ValB> : Operand<i32> {
   let PrintMethod = "printExactFPImm<" # ValA # ", " # ValB # ">";
   let ParserMatchClass = SVEExactFPImm<Suffix, ValA, ValB>;
+  let OperandType = "OPERAND_IMM_UINT1";
+  let OperandNamespace = "AArch64";
 }
 
 def sve_fpimm_half_one
