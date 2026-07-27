@@ -23,10 +23,6 @@ template class llvm::DominatorTreeBase<Block, /*IsPostDom=*/false>;
 template class llvm::DominatorTreeBase<Block, /*IsPostDom=*/true>;
 template class llvm::DomTreeNodeBase<Block>;
 
-template void llvm::DomTreeBuilder::Calculate<
-    llvm::DominatorTreeBase<Block, /*IsPostDom=*/false>>(
-    llvm::DominatorTreeBase<Block, /*IsPostDom=*/false> &DT);
-
 //===----------------------------------------------------------------------===//
 // DominanceInfoBase
 //===----------------------------------------------------------------------===//
