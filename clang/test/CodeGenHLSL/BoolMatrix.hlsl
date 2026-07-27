@@ -11,12 +11,14 @@ struct S {
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[B:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[B]], align 4
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <4 x i32> [[TMP0]] to <4 x i1>
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i1> [[LOADEDV]], i32 0
-// CHECK-NEXT:    ret i1 [[MATRIXEXT]]
+// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
+// CHECK-NEXT:    store i32 [[MATRIXEXT]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i1 [[TMP1]]
 //
 bool fn1() {
   bool2x2 B = {true,true,true,true};
@@ -27,6 +29,7 @@ bool fn1() {
 // CHECK-SAME: i1 noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x i1>, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[V]] to i32
@@ -42,8 +45,9 @@ bool fn1() {
 // CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[VECINIT4]] to <4 x i32>
 // CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[A]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[A]], align 4
-// CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[TMP3]] to <4 x i1>
-// CHECK-NEXT:    ret <4 x i1> [[TRUNC]]
+// CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i1>, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret <4 x i1> [[TMP4]]
 //
 bool2x2 fn2(bool V) {
   bool2x2 A = {V, true, V, false};
@@ -54,13 +58,15 @@ bool2x2 fn2(bool V) {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z3fn3v.s, i32 20, i1 false)
 // CHECK-NEXT:    [[BM:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[BM]], align 1
-// CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[TMP0]] to <4 x i1>
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i1> [[TRUNC]], i32 0
-// CHECK-NEXT:    ret i1 [[MATRIXEXT]]
+// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
+// CHECK-NEXT:    store i32 [[MATRIXEXT]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i1 [[TMP1]]
 //
 bool fn3() {
   S s = {{true,true,false,false}, 1.0};
@@ -71,13 +77,15 @@ bool fn3() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[ARR]], ptr align 4 @constinit, i32 32, i1 false)
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [2 x <2 x i32>]], ptr [[ARR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
-// CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[TMP0]] to <4 x i1>
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i1> [[TRUNC]], i32 1
-// CHECK-NEXT:    ret i1 [[MATRIXEXT]]
+// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
+// CHECK-NEXT:    store i32 [[MATRIXEXT]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i1 [[TMP1]]
 //
 bool fn4() {
   bool2x2 Arr[2] = {{true,true,true,true}, {false,false,false,false}};
@@ -141,12 +149,14 @@ void fn7() {
 // CHECK-SAME: <16 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <16 x i1>, align 4
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i1> [[M]] to <16 x i32>
 // CHECK-NEXT:    store <16 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    [[TRUNC:%.*]] = trunc <16 x i32> [[TMP1]] to <16 x i1>
-// CHECK-NEXT:    ret <16 x i1> [[TRUNC]]
+// CHECK-NEXT:    store <16 x i32> [[TMP1]], ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i1>, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret <16 x i1> [[TMP2]]
 //
 bool4x4 fn8(bool4x4 m) {
   return m;
