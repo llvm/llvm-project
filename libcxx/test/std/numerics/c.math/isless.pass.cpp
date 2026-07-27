@@ -19,11 +19,11 @@
 struct TestFloat {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() const {
-    using lim                    = std::numeric_limits<T>;
-    TEST_CONSTEXPR_CXX23 T max   = lim::max();
-    TEST_CONSTEXPR_CXX23 T low   = lim::lowest();
-    TEST_CONSTEXPR_CXX23 T inf   = lim::infinity();
-    TEST_CONSTEXPR_CXX23 T nan   = lim::quiet_NaN();
+    using lim                  = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max = lim::max();
+    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
+    TEST_CONSTEXPR_CXX23 T inf = lim::infinity();
+    TEST_CONSTEXPR_CXX23 T nan = lim::quiet_NaN();
 
     assert(!std::isless(max, T(0)));
     assert(std::isless(T(0), max));
