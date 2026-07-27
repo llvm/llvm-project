@@ -621,7 +621,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
         state = finishObjectConstruction(state, DS, SF);
         // We constructed the object directly in the variable.
         // No need to bind anything.
-		dstEvaluated.insert(Engine.makePostStmtNode(DS, state, UpdatedN));
+        dstEvaluated.insert(Engine.makePostStmtNode(DS, state, UpdatedN));
       } else {
         // Recover some path-sensitivity if a scalar value evaluated to
         // UnknownVal.
@@ -636,11 +636,12 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
               getNumVisitedCurrent());
         }
 
-        evalBind(dstEvaluated, DS, UpdatedN, state->getLValue(VD, SF), InitVal, true);
+        evalBind(dstEvaluated, DS, UpdatedN, state->getLValue(VD, SF), InitVal,
+                 true);
       }
     }
     else {
-	  dstEvaluated.insert(Engine.makePostStmtNode(DS, state, N));
+      dstEvaluated.insert(Engine.makePostStmtNode(DS, state, N));
     }
   }
 

@@ -1112,7 +1112,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
 }
 
 void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
-                                    ExplodedNodeSet &Dst) {
+                                  ExplodedNodeSet &Dst) {
   // Get the this object region from StoreManager.
   const StackFrame *SF = Pred->getStackFrame();
   const MemRegion *R = svalBuilder.getRegionManager().getCXXThisRegion(
