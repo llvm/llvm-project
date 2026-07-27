@@ -812,8 +812,10 @@ void ExprEngine::VisitOffsetOfExpr(const OffsetOfExpr *OOE, ExplodedNode *Pred,
     assert(IV.isSigned() == OOE->getType()->isSignedIntegerType());
     SVal X = svalBuilder.makeIntVal(IV);
     Dst.insert(Engine.makeNodeWithBinding(Pred, OOE, X));
+  } else {
+    // FIXME: Handle the case where __builtin_offsetof is not a constant.
+    Dst.insert(Pred);
   }
-  // FIXME: Handle the case where __builtin_offsetof is not a constant.
 }
 
 void ExprEngine::
