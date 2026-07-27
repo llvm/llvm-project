@@ -286,7 +286,8 @@ LIBC_INLINE float expf(float x) {
   }
 
   if (LIBC_UNLIKELY(is_neg && d >= 0)) { // subnormal
-    uint64_t full_val = (uint64_t(1) << 32) | p.val[0]; // 1 + p
+    // 1 + p
+    uint64_t full_val = (uint64_t(1) << 32) | p.val[0];
 
     // add rounding bit
     full_val += (uint64_t(1) << (9 + d));
