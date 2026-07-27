@@ -21,7 +21,7 @@
 
 /// Check expected default values for device compilation when using -fsycl as
 /// well as llvm-offload-binary inputs.
-// RUN: %clang -### -fsycl -resource-dir %S/Inputs/spirv64-sycl \
+// RUN: %clang -### -fsycl --no-offloadlib \
 // RUN:   -c --target=x86_64-unknown-linux-gnu %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-DEVICE-TRIPLE %s
 // CHK-DEVICE-TRIPLE: "-cc1"{{.*}} "-triple" "spirv64-unknown-unknown"
@@ -37,46 +37,46 @@
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
-// RUN: %clang -### -fsycl -resource-dir %S/Inputs/spirv64-sycl -c %s 2>&1 \
+// RUN: %clang -### -fsycl --no-offloadlib -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST %s
-// RUN: %clang -### -fsycl -resource-dir %S/Inputs/spirv64-sycl -fsycl-device-only %s 2>&1 \
+// RUN: %clang -### -fsycl --no-offloadlib -fsycl-device-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-DEVICE %s
-// RUN: %clang_cl -### -fsycl -resource-dir %S/Inputs/spirv64-sycl -c -- %s 2>&1 \
+// RUN: %clang_cl -### -fsycl --no-offloadlib -c -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-FSYCL-IS-DEVICE,CHK-FSYCL-IS-HOST %s
-// RUN: %clang -### -fsycl -resource-dir %S/Inputs/spirv64-sycl -fsycl-host-only %s 2>&1 \
+// RUN: %clang -### -fsycl --no-offloadlib -fsycl-host-only %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FSYCL-IS-HOST %s
 // CHK-FSYCL-IS-DEVICE: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
 // CHK-FSYCL-IS-HOST: "-cc1"{{.*}} "-fsycl-is-host"
 
 // Check that --allow-partial-linkage and --create-library are not passed to
 // clang-linker-wrapper for SYCL (they are spirv-link flags, not clang-sycl-linker flags).
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NO-SPIRVLINK-FLAGS %s
 // CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--allow-partial-linkage
 // CHECK-NO-SPIRVLINK-FLAGS-NOT: --device-linker=spirv64-unknown-unknown=--create-library
 
 /// Check -fsycl-device-image-split= is forwarded to clang-sycl-linker as the
 /// corresponding --module-split-mode= value.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib \
 // RUN:   -fsycl-device-image-split=kernel %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-SPLIT-KERNEL %s
 // CHK-SPLIT-KERNEL: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=kernel"
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib \
 // RUN:   -fsycl-device-image-split=translation_unit %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-SPLIT-TU %s
 // CHK-SPLIT-TU: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=translation_unit"
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib \
 // RUN:   -fsycl-device-image-split=link_unit %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-SPLIT-LU %s
 // CHK-SPLIT-LU: clang-linker-wrapper{{.*}}"--device-linker=spirv64-unknown-unknown=--module-split-mode=link_unit"
 
 /// Check the bare -fsycl-device-image-split flag aliases to 'translation_unit'.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib \
 // RUN:   -fsycl-device-image-split %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-SPLIT-TU %s
 
 /// Check that without -fsycl-device-image-split, no --module-split-mode= is passed.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl %s 2>&1 \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NO-SPLIT %s
 // CHK-NO-SPLIT-NOT: --module-split-mode=
 
@@ -86,7 +86,7 @@
 // CHK-SPLIT-INVALID: error: invalid value 'bogus' in '-fsycl-device-image-split='
 
 /// Check -fsycl-device-image-split is unused when not linking (e.g. -c).
-// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fsycl -resource-dir %S/Inputs/spirv64-sycl \
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fsycl --no-offloadlib \
 // RUN:   -fsycl-device-image-split=kernel %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-SPLIT-UNUSED %s
 // CHK-SPLIT-UNUSED: warning: argument unused during compilation: '-fsycl-device-image-split=kernel'

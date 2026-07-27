@@ -1,8 +1,8 @@
 // Test that clang can print defines in SYCL mode.
 
-// RUN: %clangxx -fsycl -resource-dir %S/Inputs/spirv64-sycl -dM -E %s 2>&1 | FileCheck --check-prefix CHECK-PRINT-INTERNAL-DEFINES %s
+// RUN: %clangxx -fsycl --no-offloadlib -dM -E %s 2>&1 | FileCheck --check-prefix CHECK-PRINT-INTERNAL-DEFINES %s
 // CHECK-PRINT-INTERNAL-DEFINES: #define
 
 // Printing defines also works when input is stdin.
-// RUN: %clangxx -fsycl -resource-dir %S/Inputs/spirv64-sycl -dM -E - < /dev/null 2>&1 | FileCheck --check-prefixes=CHECK-PRINT-INTERNAL-DEFINES,CHECK-NO-ERROR %s
+// RUN: %clangxx -fsycl --no-offloadlib -dM -E - < /dev/null 2>&1 | FileCheck --check-prefixes=CHECK-PRINT-INTERNAL-DEFINES,CHECK-NO-ERROR %s
 // CHECK-NO-ERROR-NOT: error:
