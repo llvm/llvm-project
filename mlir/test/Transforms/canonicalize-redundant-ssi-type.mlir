@@ -7,9 +7,26 @@
 
 // CHECK-LABEL: func @redundant_ssi_arg_preserved
 // CHECK:         cf.br ^bb1(%{{.*}} : !test.ssi_type)
-// CHECK:       ^bb1(%{{.*}}: !test.ssi_type):
+// CHECK:       ^bb1(%[[V:.*]]: !test.ssi_type):
+// CHECK-NEXT:    "test.use"(%[[V]])
 // CHECK-NEXT:    return
 func.func @redundant_ssi_arg_preserved(%arg0: !test.ssi_type) {
+  cf.br ^succ(%arg0 : !test.ssi_type)
+^succ(%0: !test.ssi_type):
+  "test.use"(%0) : (!test.ssi_type) -> ()
+  return
+}
+
+// -----
+
+// Verify that a dead SSI block argument IS removed -- deadness is safe to
+// fold; only collapsing a live arg across control-flow paths is forbidden.
+
+// CHECK-LABEL: func @dead_ssi_arg_eliminated
+// CHECK:         cf.br ^bb1
+// CHECK:       ^bb1:
+// CHECK-NEXT:    return
+func.func @dead_ssi_arg_eliminated(%arg0: !test.ssi_type) {
   cf.br ^succ(%arg0 : !test.ssi_type)
 ^succ(%0: !test.ssi_type):
   return
@@ -38,10 +55,12 @@ func.func @redundant_normal_arg_eliminated(%arg0: f32) {
 
 // CHECK-LABEL: func @mixed_args_selective_preservation
 // CHECK:         "test.br"(%{{.*}})[^bb1]
-// CHECK:       ^bb1(%{{.*}}: !test.ssi_type):
+// CHECK:       ^bb1(%[[V:.*]]: !test.ssi_type):
+// CHECK-NEXT:    "test.use"(%[[V]])
 // CHECK-NEXT:    return
 func.func @mixed_args_selective_preservation(%a: !test.ssi_type, %b: f32) {
   "test.br"(%a, %b)[^succ] : (!test.ssi_type, f32) -> ()
 ^succ(%0: !test.ssi_type, %1: f32):
+  "test.use"(%0) : (!test.ssi_type) -> ()
   return
 }
