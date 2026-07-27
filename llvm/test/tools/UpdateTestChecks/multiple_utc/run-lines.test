@@ -34,3 +34,8 @@
 # RUN: %update_test_checks %t.ll
 # RUN: %update_analyze_test_checks %t.ll
 # RUN: diff -u %t.ll %S/Inputs/run-lines.both.expected
+
+## update_any_test_checks.py should dispatch to both scripts from the NOTE block.
+# RUN: cp -f %S/Inputs/run-lines.with-both-notes.ll %t.ll
+# RUN: %update_any_test_checks --path %llvm_tools_dir %t.ll
+# RUN: diff -u %t.ll %S/Inputs/run-lines.both.expected
