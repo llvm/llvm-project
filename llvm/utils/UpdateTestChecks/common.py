@@ -227,6 +227,10 @@ def parse_commandline_args(parser):
         default=[],
         help="List of regular expressions such that, for matching global value declarations, literal integer values should be encoded in hex in the associated FileCheck directives",
     )
+    parser.add_argument(
+        "--run-lines",
+        help="Comma-separated list of 1-based RUN line numbers or ranges to use",
+    )
     # FIXME: in 3.9, we can use argparse.BooleanOptionalAction. At that point,
     # we need to rename the flag to just -generate-body-for-unused-prefixes.
     parser.add_argument(
@@ -293,7 +297,9 @@ class TestInfo(object):
             _prefix_filecheck_ir_name = args.prefix_filecheck_ir_name
         self.argv = argv
         self.input_lines = input_lines
-        self.run_lines = find_run_lines(test, self.input_lines)
+        self.run_lines = filter_run_lines(
+            find_run_lines(test, self.input_lines), args.run_lines
+        )
         self.comment_prefix = comment_prefix
         if self.comment_prefix is None:
             if self.path.endswith(".mir") or self.path.endswith(".txt"):
@@ -668,6 +674,52 @@ def find_run_lines(test, lines):
     for l in run_lines:
         debug("  RUN: {}".format(l))
     return run_lines
+
+
+def parse_run_lines(run_lines_filter, num_run_lines):
+    selected = set()
+    for item in run_lines_filter.split(","):
+        item = item.strip()
+        if not item:
+            raise ValueError("empty item in --run-lines filter")
+
+        if "-" in item:
+            bounds = item.split("-", 1)
+            if len(bounds) != 2 or not bounds[0] or not bounds[1]:
+                raise ValueError(
+                    "invalid --run-lines range '{}'; expected N or N-M".format(item)
+                )
+            start = int(bounds[0])
+            end = int(bounds[1])
+        else:
+            start = end = int(item)
+
+        if start <= 0 or end <= 0:
+            raise ValueError("--run-lines entries must be positive: '{}'".format(item))
+        if start > end:
+            raise ValueError(
+                "invalid --run-lines range '{}'; start must not exceed end".format(
+                    item
+                )
+            )
+        if end > num_run_lines:
+            raise ValueError(
+                "--run-lines selects RUN line {} but only {} RUN lines exist".format(
+                    end, num_run_lines
+                )
+            )
+
+        selected.update(range(start, end + 1))
+
+    return selected
+
+
+def filter_run_lines(run_lines, run_lines_filter):
+    if run_lines_filter is None:
+        return run_lines
+
+    selected = parse_run_lines(run_lines_filter, len(run_lines))
+    return [line for (index, line) in enumerate(run_lines, start=1) if index in selected]
 
 
 def get_triple_from_march(march):
