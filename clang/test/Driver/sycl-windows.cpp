@@ -82,7 +82,7 @@
 // CHECK-LIBPATH: "-libpath:{{.*}}{{[/\\]+}}lib"
 
 /// Test 12: clang (non-clang-cl) with MSVC target uses -defaultlib:
-// RUN: %clang -### -fsycl \
+// RUN: %clang -### -fsycl --no-offloadlib \
 // RUN:   -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-CLANG-DEFAULTLIB %s
 // CHECK-CLANG-DEFAULTLIB: clang-linker-wrapper"
@@ -90,14 +90,14 @@
 // CHECK-CLANG-DEFAULTLIB: "-defaultlib:LLVMSYCL"
 
 /// Test 13: clang with -fms-runtime-lib=dll_dbg uses debug library via -defaultlib:
-// RUN: %clang -### -fsycl \
+// RUN: %clang -### -fsycl --no-offloadlib \
 // RUN:   -fms-runtime-lib=dll_dbg --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-CLANG-DEBUG %s
 // CHECK-CLANG-DEBUG: clang-linker-wrapper"
 // CHECK-CLANG-DEBUG: "-defaultlib:LLVMSYCLd"
 
 /// Test 14: Default CRT behavior - release library when no CRT flag specified
-// RUN: %clang -### -fsycl \
+// RUN: %clang -### -fsycl --no-offloadlib \
 // RUN:   -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-DEFAULT-CRT %s
 // CHECK-DEFAULT-CRT: "-cc1"
@@ -105,19 +105,19 @@
 // CHECK-DEFAULT-CRT-NOT: LLVMSYCLd
 
 /// Test 15: Separate compilation - compile step embeds --dependent-lib in object
-// RUN: %clang -### -fsycl \
+// RUN: %clang -### -fsycl --no-offloadlib \
 // RUN:   -c -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-SEP-COMPILE %s
 // CHECK-SEP-COMPILE: "--dependent-lib=LLVMSYCL"
 
 /// Test 16: Separate compilation - link step adds -libpath: and -defaultlib: for pre-compiled object
 // RUN: touch %t.obj
-// RUN: %clang -### -fsycl -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %t.obj 2>&1 \
+// RUN: %clang -### -fsycl --no-offloadlib -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %t.obj 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-SEP-LINK %s
 // CHECK-SEP-LINK: "-libpath:{{.*}}{{[/\\]+}}lib"
 // CHECK-SEP-LINK: "-defaultlib:LLVMSYCL"
 
 /// Test 17: clang (non-clang-cl) with -nolibsycl suppresses -defaultlib:LLVMSYCL
-// RUN: %clang -### -fsycl -nolibsycl -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN: %clang -### -fsycl -nolibsycl --no-offloadlib -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-CLANG-NOLIBSYCL %s
 // CHECK-CLANG-NOLIBSYCL-NOT: "-defaultlib:LLVMSYCL"
