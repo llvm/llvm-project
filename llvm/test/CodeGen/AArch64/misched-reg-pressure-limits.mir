@@ -2,8 +2,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=machine-scheduler \
 # RUN:   -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 
-# The scheduler only prints the limit diagnostic for excess pressure. Use 34
-# so the diagnostic is printed with both the old limit of 33 and the new 31.
+# Exceed the GPR32 pressure limit so the scheduler prints the limit diagnostic.
 # CHECK: Max Pressure: GPR32=34
 # CHECK: GPR32 Limit 31 Actual 34
 
