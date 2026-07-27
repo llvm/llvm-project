@@ -41,6 +41,52 @@ import re
 from UpdateTestChecks import common
 
 
+def _parse_run_lines(run_lines_filter: str, num_run_lines: int):
+    selected = set()
+    for item in run_lines_filter.split(","):
+        item = item.strip()
+        if not item:
+            raise ValueError("empty item in --run-lines filter")
+
+        if "-" in item:
+            bounds = item.split("-", 1)
+            if len(bounds) != 2 or not bounds[0] or not bounds[1]:
+                raise ValueError(
+                    "invalid --run-lines range '{}'; expected N or N-M".format(item)
+                )
+            start = int(bounds[0])
+            end = int(bounds[1])
+        else:
+            start = end = int(item)
+
+        if start <= 0 or end <= 0:
+            raise ValueError("--run-lines entries must be positive: '{}'".format(item))
+        if start > end:
+            raise ValueError(
+                "invalid --run-lines range '{}'; start must not exceed end".format(
+                    item
+                )
+            )
+        if end > num_run_lines:
+            raise ValueError(
+                "--run-lines selects RUN line {} but only {} RUN lines exist".format(
+                    end, num_run_lines
+                )
+            )
+
+        selected.update(range(start, end + 1))
+
+    return selected
+
+
+def _filter_run_lines(run_lines, run_lines_filter: str):
+    if run_lines_filter is None:
+        return run_lines
+
+    selected = _parse_run_lines(run_lines_filter, len(run_lines))
+    return [line for (index, line) in enumerate(run_lines, start=1) if index in selected]
+
+
 def update_test(opt_basename: str, ti: common.TestInfo):
     triple_in_ir = None
     for l in ti.input_lines:
@@ -49,8 +95,10 @@ def update_test(opt_basename: str, ti: common.TestInfo):
             triple_in_ir = m.groups()[0]
             break
 
+    run_lines = _filter_run_lines(ti.run_lines, ti.args.run_lines)
+
     prefix_list = []
-    for l in ti.run_lines:
+    for l in run_lines:
         if "|" not in l:
             common.warn("Skipping unparsable RUN line: " + l)
             continue
@@ -210,6 +258,10 @@ def main():
         help="The opt binary used to generate the test case",
     )
     parser.add_argument("--function", help="The function in the test file to update")
+    parser.add_argument(
+        "--run-lines",
+        help="Comma-separated list of 1-based RUN line numbers or ranges to use",
+    )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
 
