@@ -778,6 +778,9 @@ VPRegionBlock *VPRegionBlock::clone() {
   if (getHeaderMask())
     NewRegion->createHeaderMask();
 
+  if (CanIV && !hasCanonicalIVNUW())
+    NewRegion->CanIVInfo->clearNUW();
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
