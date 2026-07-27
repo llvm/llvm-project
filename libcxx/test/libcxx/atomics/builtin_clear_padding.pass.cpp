@@ -775,13 +775,15 @@ void unionTests() {
   }
 }
 
+// libc++'s __clear_padding_if_needed does not handle arrays
+// as std::atomic does not support arrays
 void arrayTests() {
   // no padding
   {
     int i1[2] = {1, 2};
     int i2[2] = {1, 2};
 
-    std::__clear_padding_if_needed(i1);
+    __builtin_clear_padding(&i1);
     assert(i1[0] == 1);
     assert(i1[1] == 2);
     assert(memcmp(&i1, &i2, 2 * sizeof(int)) == 0);
@@ -798,7 +800,7 @@ void arrayTests() {
     d2[0] = 3.0L;
     d2[1] = 4.0L;
 
-    std::__clear_padding_if_needed(d1);
+    __builtin_clear_padding(&d1);
     assert(d1[0] == 3.0L);
     assert(d2[1] == 4.0L);
     assert(memcmp(&d1, &d2, 2 * sizeof(long double)) == 0);
@@ -836,8 +838,6 @@ void arrayTests() {
     s2[1].c2 = 'd';
 
     assert(memcmp(&s1, &s2, 2 * sizeof(S)) != 0);
-    // libc++'s __clear_padding_if_needed does not handle arrays
-    // as std::atomic does not support arrays
     __builtin_clear_padding(&s1);
 
     assert(s1[0].i1 == 1);
