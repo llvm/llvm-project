@@ -12,7 +12,7 @@ declare void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %src, pt
 define amdgpu_ps void @tensor_load_to_lds_d4(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3) {
 ; GFX1250-LABEL: tensor_load_to_lds_d4:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[16:19]
@@ -24,7 +24,7 @@ define amdgpu_ps void @tensor_load_to_lds_d4(<4 x i32> inreg %D0, <8 x i32> inre
 define amdgpu_ps void @tensor_load_to_lds_d4_vector(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3) {
 ; GFX1250-SDAG-LABEL: tensor_load_to_lds_d4_vector:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
@@ -53,7 +53,7 @@ define amdgpu_ps void @tensor_load_to_lds_d4_vector(<4 x i32> %D0, <8 x i32> %D1
 ;
 ; GFX1250-GISEL-LABEL: tensor_load_to_lds_d4_vector:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
@@ -86,7 +86,7 @@ define amdgpu_ps void @tensor_load_to_lds_d4_vector(<4 x i32> %D0, <8 x i32> %D1
 define amdgpu_ps void @tensor_load_to_lds_d2(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
 ; GFX1250-LABEL: tensor_load_to_lds_d2:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11] th:TH_LOAD_BYPASS scope:SCOPE_SYS
@@ -98,7 +98,7 @@ define amdgpu_ps void @tensor_load_to_lds_d2(<4 x i32> inreg %D0, <8 x i32> inre
 define amdgpu_ps void @tensor_load_to_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1) {
 ; GFX1250-SDAG-LABEL: tensor_load_to_lds_d2_vector:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
@@ -119,7 +119,7 @@ define amdgpu_ps void @tensor_load_to_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1
 ;
 ; GFX1250-GISEL-LABEL: tensor_load_to_lds_d2_vector:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
@@ -144,7 +144,7 @@ define amdgpu_ps void @tensor_load_to_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1
 define amdgpu_ps void @tensor_store_from_lds_d4(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3) {
 ; GFX1250-LABEL: tensor_store_from_lds_d4:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
@@ -156,7 +156,7 @@ define amdgpu_ps void @tensor_store_from_lds_d4(<4 x i32> inreg %D0, <8 x i32> i
 define amdgpu_ps void @tensor_store_from_lds_d4_vector(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3) {
 ; GFX1250-SDAG-LABEL: tensor_store_from_lds_d4_vector:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
@@ -185,7 +185,7 @@ define amdgpu_ps void @tensor_store_from_lds_d4_vector(<4 x i32> %D0, <8 x i32> 
 ;
 ; GFX1250-GISEL-LABEL: tensor_store_from_lds_d4_vector:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
@@ -218,7 +218,7 @@ define amdgpu_ps void @tensor_store_from_lds_d4_vector(<4 x i32> %D0, <8 x i32> 
 define amdgpu_ps void @tensor_store_from_lds_d2(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
 ; GFX1250-LABEL: tensor_store_from_lds_d2:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11]
@@ -230,7 +230,7 @@ define amdgpu_ps void @tensor_store_from_lds_d2(<4 x i32> inreg %D0, <8 x i32> i
 define amdgpu_ps void @tensor_store_from_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1) {
 ; GFX1250-SDAG-LABEL: tensor_store_from_lds_d2_vector:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
@@ -251,7 +251,7 @@ define amdgpu_ps void @tensor_store_from_lds_d2_vector(<4 x i32> %D0, <8 x i32> 
 ;
 ; GFX1250-GISEL-LABEL: tensor_store_from_lds_d2_vector:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
@@ -282,7 +282,7 @@ define amdgpu_ps void @tensor_store_from_lds_d2_vector(<4 x i32> %D0, <8 x i32> 
 define amdgpu_ps void @tensor_load_to_lds_d5(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3, <8 x i32> inreg %D4) {
 ; GFX1250-LABEL: tensor_load_to_lds_d5:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[16:19]
@@ -294,7 +294,7 @@ define amdgpu_ps void @tensor_load_to_lds_d5(<4 x i32> inreg %D0, <8 x i32> inre
 define amdgpu_ps void @tensor_store_from_lds_d5(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3, <8 x i32> inreg %D4) {
 ; GFX1250-LABEL: tensor_store_from_lds_d5:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
@@ -312,7 +312,7 @@ define amdgpu_ps void @tensor_store_from_lds_d5(<4 x i32> inreg %D0, <8 x i32> i
 define amdgpu_ps void @tensor_load_to_lds_with_asyncmark(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
 ; GFX1250-LABEL: tensor_load_to_lds_with_asyncmark:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
@@ -329,7 +329,7 @@ define amdgpu_ps void @tensor_load_to_lds_with_asyncmark(<4 x i32> inreg %D0, <8
 define amdgpu_ps void @tensor_store_from_lds_with_asyncmark(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
 ; GFX1250-LABEL: tensor_store_from_lds_with_asyncmark:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11]
@@ -349,7 +349,7 @@ define amdgpu_ps void @tensor_store_from_lds_with_asyncmark(<4 x i32> inreg %D0,
 define amdgpu_ps void @tensor_load_to_lds_two_asyncmarks(<4 x i32> inreg %D0a, <8 x i32> inreg %D1a, <4 x i32> inreg %D0b, <8 x i32> inreg %D1b, ptr addrspace(3) %lds) {
 ; GFX1250-LABEL: tensor_load_to_lds_two_asyncmarks:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]

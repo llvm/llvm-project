@@ -2774,3 +2774,21 @@ define <2 x i16> @test_undef_v2i16() {
 ; CHECK-NEXT:    ret
   ret <2 x i16> undef
 }
+
+define <2 x i16> @test_pmulq_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulq_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulq.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulq.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulqr_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulqr_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulqr.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}

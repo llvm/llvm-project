@@ -844,7 +844,8 @@ static MCRegister getRegisterOrZero(MCRegister Reg, bool HasSVE) {
 }
 
 void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                                MachineBasicBlock &MBB) const {
+                                                MachineBasicBlock &MBB,
+                                                RegScavenger *) const {
   // Insertion point.
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
 

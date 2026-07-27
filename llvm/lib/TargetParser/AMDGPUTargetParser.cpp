@@ -427,7 +427,10 @@ static std::pair<FeatureError, StringRef>
 insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       const StringMap<bool> &DefaultFeatures,
                       StringMap<bool> &Features) {
-  const bool IsNullGPU = GPU.empty();
+  // A bare subarch triple (no -target-cpu) still pins down the target, so it is
+  // not a null GPU: DefaultFeatures has already been populated from the
+  // subarch.
+  const bool IsNullGPU = T.getSubArch() == Triple::NoSubArch && GPU.empty();
   const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
   const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
 
@@ -484,7 +487,10 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
 /// default target features with entries overridden by \p Features.
 static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
-  AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
+  // With no explicit GPU, the triple's subarch identifies the target.
+  AMDGPU::GPUKind Kind = GPU.empty() && T.getSubArch() != Triple::NoSubArch
+                             ? getGPUKindFromSubArch(T.getSubArch())
+                             : parseArchAMDGCN(GPU);
   switch (Kind) {
   case GK_GFX1310:
   case GK_GFX13_GENERIC:
@@ -633,6 +639,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wmma-128b-insts"] = true;
     Features["swmmac-gfx1200-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
+    Features["smem-prefetch-insts"] = true;
     break;
   case GK_GFX1170:
   case GK_GFX1171:
@@ -1094,11 +1101,16 @@ std::optional<TargetID> TargetID::parse(const Triple &TT,
   if (!TT.isAMDGCN())
     return std::nullopt;
 
+  // Filter out unrecognized subarch suffixes.
+  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn")
+    return std::nullopt;
+
   // A named processor (i.e. not the empty/generic wildcard, which is resolved
-  // from the triple's subarch) must be a recognized GPU.
+  // from the triple's subarch) must be a recognized GPU that is consistent with
+  // the triple's subarch.
   StringRef CPUName = ProcAndFeatures.split(':').first;
   if (!CPUName.empty() && CPUName != "generic" &&
-      parseArchAMDGCN(CPUName) == GK_NONE)
+      !isCPUValidForSubArch(TT.getSubArch(), CPUName))
     return std::nullopt;
 
   // Parse the processor and its feature modifiers, then construct directly from

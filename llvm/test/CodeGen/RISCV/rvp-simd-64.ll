@@ -6074,6 +6074,66 @@ define <4 x i16> @test_psabs_v4i16(<4 x i16> %a) {
   ret <4 x i16> %res
 }
 
+define <4 x i16> @test_pmulq_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmulq_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmulq.h a1, a1, a3
+; RV32-NEXT:    pmulq.h a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulq_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulq.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmulq.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pmulqr_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pmulqr_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmulqr.h a1, a1, a3
+; RV32-NEXT:    pmulqr.h a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulqr_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulqr.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pmulqr.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_pmulq_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pmulq_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulq a1, a1, a3
+; RV32-NEXT:    mulq a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulq_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulq.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmulq.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pmulqr_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pmulqr_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mulqr a1, a1, a3
+; RV32-NEXT:    mulqr a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmulqr_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulqr.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pmulqr.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
 define <2 x i32> @test_return_zero() {
 ; RV32-LABEL: test_return_zero:
 ; RV32:       # %bb.0:

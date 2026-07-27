@@ -133,7 +133,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+  I->dropUBImplyingAttrsAndUnknownMetadata(ProfileMetadataToPreserve);
 
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
@@ -1011,7 +1011,10 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.analyze(&F, [&]() -> const DominatorTree & {
+    return AM.getResult<DominatorTreeAnalysis>(F);
+  });
   return LI;
 }
 

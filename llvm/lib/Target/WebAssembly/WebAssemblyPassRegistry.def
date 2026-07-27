@@ -11,6 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MACHINE_MODULE_PASS
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_MODULE_PASS("wasm-mclower-prepass", WebAssemblyMCLowerPrePass())
+#undef MACHINE_MODULE_PASS
+
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
