@@ -272,3 +272,21 @@ char member_subregion_dangling_deref_increment() {
   // expected-note@-2    {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
 }
 
+void chain() {
+  int *ptr = nullptr;
+  {
+    int local = 5;
+    int *a = &local; // expected-note {{'a' initialized here}}
+    int *b = a;
+    int *c = b;
+    ptr = c;
+  }
+  *ptr = 6;
+  // expected-warning@-1 {{Use of 'local' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'local' after its lifetime ended}}
+  // expected-note@-9    {{'local' initialized to 5}}
+  // expected-note@-8    {{'b' initialized to the value of 'a'}}
+  // expected-note@-8    {{'c' initialized to the value of 'b'}}
+  // expected-note@-8    {{The value of 'c' is assigned to 'ptr'}}
+  // expected-note@-8    {{'local' is destroyed here}}
+}
