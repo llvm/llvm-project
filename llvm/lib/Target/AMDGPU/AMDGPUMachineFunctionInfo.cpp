@@ -163,10 +163,7 @@ AMDGPUMachineFunctionInfo::allocateBarrierGlobal(const DataLayout &DL,
   assert(AMDGPU::isNamedBarrier(GV));
   std::optional<unsigned> BarAddr =
       get32BitAbsoluteAddress(GV, AMDGPUAS::BARRIER);
-  if (!BarAddr) {
-    reportFatalInternalError("named barrier global variable '" + GV.getName() +
-                             "' does not have an address assigned");
-  }
+  assert(BarAddr && "Expected named barrier global to have an address!");
 
   if (*BarAddr == 0) {
     // We cannot allow this because some places in CodeGen (rightfully) assume a
