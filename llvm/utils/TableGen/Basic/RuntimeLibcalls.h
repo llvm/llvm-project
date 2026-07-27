@@ -24,9 +24,7 @@ public:
   AvailabilityPredicate(const Record *Def) : TheDef(Def) {
     if (!TheDef)
       return;
-    // The condition is a composable dag (all_of/any_of/not over
-    // LibcallPredicate leaves) lowered to a C++ boolean. An unset CondDag, or a
-    // `(?)` placeholder dag, means the libcall is always available.
+    // An unset CondDag means the libcall is always available.
     if (const RecordVal *RV = TheDef->getValue("CondDag")) {
       if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue());
           Dag && !isa<UnsetInit>(Dag->getOperator()))
