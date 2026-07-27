@@ -817,6 +817,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
+  setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
+  setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
+
   if (Subtarget.hasAltivec()) {
     for (MVT VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
       setOperationAction(ISD::AVGCEILS, VT, Legal);
@@ -1258,11 +1261,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP9Vector()) {
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
-
       // Test data class instructions store results in CR bits.
       if (Subtarget.useCRBits()) {
-        setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
-        setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::f128, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::ppcf128, Custom);
       }
@@ -1477,7 +1477,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setTargetDAGCombine({ISD::TRUNCATE, ISD::VECTOR_SHUFFLE});
 
   if (Subtarget.useCRBits()) {
-    setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
+    setTargetDAGCombine({ISD::SETCC, ISD::SELECT_CC});
   }
 
   if (Subtarget.hasP8Vector())
@@ -11962,18 +11962,78 @@ static SDValue getDataClassTest(SDValue Op, FPClassTest Mask, const SDLoc &Dl,
 
 SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
                                            SelectionDAG &DAG) const {
-  assert(Subtarget.hasP9Vector() && "Test data class requires Power9");
   SDValue LHS = Op.getOperand(0);
   uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
   FPClassTest Category = static_cast<FPClassTest>(RHSC);
-  if (LHS.getValueType() == MVT::ppcf128) {
+  EVT VT = LHS.getValueType();
+
+  assert((VT == MVT::f32 || VT == MVT::f64 ||
+          ((VT == MVT::f128 || VT == MVT::ppcf128) && Subtarget.hasVSX() &&
+           Subtarget.useCRBits())) &&
+         "invalid customize type for IS_FPCLASS.");
+  // Handle ppcf128 by extracting the higher part
+  if (VT == MVT::ppcf128) {
     // The higher part determines the value class.
     LHS = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::f64, LHS,
                       DAG.getConstant(1, Dl, MVT::i32));
+    VT = MVT::f64;
   }
 
-  return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
+  // If we have P9Vector and useCRBits, use the data class test instructions
+  if (Subtarget.hasP9Vector() && Subtarget.useCRBits()) {
+    return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
+  }
+
+  // For non-P9Vector targets, we can only check for NaN using fcmpu/xscmpudp
+  // These instructions set CR bits based on comparison with itself:
+  // - If value is NaN, the comparison is unordered (FU bit set)
+  // - If value is not NaN, the comparison is equal (EQ bit set)
+
+  if ((Category & ~fcNan) && (Category != ~fcNan)) {
+    // If not checking for NaN or non-NaN, we can't handle this without P9Vector
+    return SDValue();
+  }
+
+  // Determine which comparison instruction to use based on vector support
+  unsigned CmpOp;
+
+  if (Subtarget.hasVSX()) {
+    // Use xscmpudp for VSX targets (both f32 and f64)
+    // For f32, extend to f64 first
+    if (VT == MVT::f32) {
+      LHS = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, LHS);
+    } else if (VT != MVT::f64) {
+      return SDValue();
+    }
+    CmpOp = PPC::XSCMPUDP;
+  } else {
+    // Use fcmpu for non-VSX targets
+    // FCMPUS and FCMPUD both map to the same fcmpu instruction,
+    // just with different register classes (f4rc vs f8rc)
+    if (VT == MVT::f64) {
+      CmpOp = PPC::FCMPUD;
+    } else if (VT == MVT::f32) {
+      CmpOp = PPC::FCMPUS;
+    } else {
+      return SDValue();
+    }
+  }
+
+  // Create the comparison: fcmpu/xscmpudp CR, LHS, LHS
+  // The CR field output will be allocated by the register allocator
+  SDValue Cmp = SDValue(DAG.getMachineNode(CmpOp, Dl, MVT::i32, LHS, LHS), 0);
+
+  // Extract the unordered bit (FU) from the CR field
+  // For NaN detection: FU bit is set if operands are unordered (i.e., NaN)
+  SDValue NanCheck = SDValue(
+      DAG.getMachineNode(
+          TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
+          DAG.getTargetConstant(Category == ~fcNan ? PPC::sub_un : PPC::sub_eq,
+                                Dl, MVT::i32)),
+      0);
+
+  return DAG.getNOT(Dl, NanCheck, MVT::i1);
 }
 
 // Adjust the length value for a load/store with length to account for the
@@ -16164,7 +16224,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
     return SDValue();
 
   EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && VT != MVT::i64)
+  if (VT != MVT::i32 && (VT != MVT::i64 || !Subtarget.isPPC64()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -16184,17 +16244,14 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   SDValue X = isNullConstant(LHS) ? RHS : LHS;
   EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
 
-  if ((XVT == MVT::i64 || VT == MVT::i64) && !Subtarget.isPPC64())
+  // The type that ADDC/SUBE operate on. Reject larger types and zero-extend
+  // smaller ones.
+  MVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  if (XVT.bitsGT(OpVT))
     return SDValue();
 
-  // On PPC64, i32 carry operations use the full 64-bit XER register,
-  // so we must use i64 operations to avoid incorrect results.
-  // Use i64 operations and truncate the result if needed.
-  if (XVT != MVT::i64 && Subtarget.isPPC64())
-    // Zero-extend if input type is not 64bits.
-    X = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, X);
-
-  EVT OpVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  if (XVT.bitsLT(OpVT))
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, OpVT, X);
 
   // Generate: SUBFE(ADDC(X, -1)).
   SDValue MinusOne = DAG.getAllOnesConstant(dl, OpVT);

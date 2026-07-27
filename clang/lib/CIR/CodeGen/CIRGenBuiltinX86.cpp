@@ -811,6 +811,103 @@ static mlir::Value emitX86MaskedLoad(CIRGenBuilderTy &builder,
   return builder.createMaskedLoad(loc, ty, ptr, alignment, maskVec, ops[1]);
 }
 
+static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
+                                     mlir::Location loc,
+                                     llvm::SmallVector<mlir::Value> ops) {
+  auto inputType = cast<cir::VectorType>(ops[0].getType());
+  assert(!inputType.getIsScalable() &&
+         "This is only intended for fixed-width vectors");
+
+  const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]);
+  mlir::Value zeroVec = builder.getZero(loc, inputType);
+
+  // If both lanes are zero, return a zero result.
+  if ((imm & 0x80) && (imm & 0x08))
+    return zeroVec;
+
+  mlir::Value lanes[2];
+  llvm::SmallVector<mlir::Attribute, 64> mask;
+
+  cir::IntType i32Ty = builder.getSInt32Ty();
+  const unsigned numElts = inputType.getSize();
+  // We must evaluated each lane(128 bits) separetely
+  for (auto lane : llvm::seq(0, 2)) {
+    bool isZeroBit = imm & (1 << ((lane * 4) + 3)),
+         isSourceB = imm & (1 << ((lane * 4) + 1)),
+         isUpperHalf = imm & (1 << (lane * 4));
+
+    //  Determine the source for this lane
+    if (isZeroBit)
+      lanes[lane] = zeroVec;
+    else
+      lanes[lane] = isSourceB ? ops[1] : ops[0];
+
+    // We need to built the shuffle mask selecting the right half
+    for (auto elt : llvm::seq(0u, numElts / 2u)) {
+      unsigned idx = (lane * numElts) + elt;
+      if (isUpperHalf)
+        idx += numElts / 2;
+      mask.push_back(cir::IntAttr::get(i32Ty, idx));
+    }
+  }
+
+  return builder.createVecShuffle(loc, lanes[0], lanes[1], mask);
+}
+
+static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
+                                          unsigned builtinID,
+                                          mlir::Location loc,
+                                          llvm::ArrayRef<mlir::Value> ops,
+                                          llvm::Boolean isLeftShift) {
+  auto byteVecType = cast<cir::VectorType>(ops[0].getType());
+  assert(!byteVecType.getIsScalable() &&
+         "This is only intended for fixed-width vectors");
+
+  unsigned shiftVal = CIRGenFunction::getZExtIntValueFromConstOp(ops[1]) & 0xFF;
+  mlir::Value zeroVector = builder.getZero(loc, byteVecType);
+
+  // If pslldq is shifting the vector more than 15 bytes, emit zero.
+  // This matches the hardware behavior where shifting by 16+ bytes
+  // clears the entire 128-bit lane.
+  if (shiftVal >= 16)
+    return zeroVector;
+
+  uint64_t numElts = byteVecType.getSize();
+  assert(numElts % 16 == 0 && "Expected a multiple of 16");
+
+  llvm::SmallVector<int64_t, 64> shuffleMask;
+
+  constexpr unsigned laneSize = 16;
+  const int switchOperand = numElts - laneSize;
+
+  // 256/512-bit pslldq/psrldq operates on 128-bit lanes so we need to
+  // handle that
+  for (auto laneOffset = 0ull; laneOffset < numElts; laneOffset += laneSize) {
+    for (auto elt : llvm::seq<unsigned>(0, laneSize)) {
+      unsigned idx =
+          isLeftShift ? (numElts + elt - shiftVal) : (elt + shiftVal);
+
+      bool isZeroPadding = isLeftShift ? (idx < numElts) : (idx >= laneSize);
+      if (isZeroPadding)
+        idx += isLeftShift ? (-switchOperand) : switchOperand;
+
+      shuffleMask.push_back(idx + laneOffset);
+    }
+  }
+
+  // Perform the shuffle
+  // (left concatenating zeros on left, right concatenating zeros on right)
+  auto [firstOperand, secondOperand] = isLeftShift
+                                           ? std::make_pair(zeroVector, ops[0])
+                                           : std::make_pair(ops[0], zeroVector);
+
+  // Mask the result using circular arithmetic on concatenated buffer
+  mlir::Value shuffleResult =
+      builder.createVecShuffle(loc, firstOperand, secondOperand, shuffleMask);
+
+  return shuffleResult;
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -1801,16 +1898,19 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vperm2f128_ps256:
   case X86::BI__builtin_ia32_vperm2f128_si256:
   case X86::BI__builtin_ia32_permti256:
+    return emitX86VPerm2f128(builder, getLoc(expr->getExprLoc()), ops);
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_pslldqi512_byteshift:
+    return emitX86PackedByteShift(builder, builtinID,
+                                  getLoc(expr->getExprLoc()), ops,
+                                  /**isLeftShift=*/true);
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
   case X86::BI__builtin_ia32_psrldqi512_byteshift:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    return emitX86PackedByteShift(builder, builtinID,
+                                  getLoc(expr->getExprLoc()), ops,
+                                  /**isLeftShift=*/false);
   case X86::BI__builtin_ia32_kshiftliqi:
   case X86::BI__builtin_ia32_kshiftlihi:
   case X86::BI__builtin_ia32_kshiftlisi:

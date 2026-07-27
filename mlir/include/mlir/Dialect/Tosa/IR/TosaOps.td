@@ -68,7 +68,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax", [NoMemoryEffect]> {
 // Accumulator types.
 //===----------------------------------------------------------------------===//
 
-def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, F16, F32]>;
+def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, F16, F32, BF16]>;
 
 //===----------------------------------------------------------------------===//
 // Operator: avg_pool2d
@@ -203,7 +203,11 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3,
+               Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MX_COMMON,
+               Tosa_EXT_MX_FP4E2M1, Tosa_EXT_MX_FP6E2M3,
+               Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+               Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -221,6 +225,8 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 
 //===----------------------------------------------------------------------===//
 // Operator: conv2d_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_Conv2DBlockScaledOp : Tosa_InferShapedTypeOp<"conv2d_block_scaled", [NoMemoryEffect]> {
   let summary = "Performs two dimensional convolution using block scaled tensors.";
@@ -232,6 +238,8 @@ def Tosa_Conv2DBlockScaledOp : Tosa_InferShapedTypeOp<"conv2d_block_scaled", [No
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
+
+    // Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let arguments = (ins
@@ -463,7 +471,7 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   let description = [{
     Performs two dimensional matrix multiplications. `A` matrix is of shape
     `N x H x C`. `B` matrix is of shape `D x W x C`. This is effectively a
-    matrix multiply of `A` by the transposed `B` matrix. If the batched 
+    matrix multiply of `A` by the transposed `B` matrix. If the batched
     dimension of input `B` is of size 1, the `B` matrix is broadcast.
   }];
 
@@ -475,7 +483,9 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   list<Availability> availability =
       [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
        Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
-                  Tosa_EXT_BF16]>,
+                  Tosa_EXT_BF16, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+                  Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+                  Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -494,6 +504,8 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: matmul_t_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", [NoMemoryEffect]> {
   let summary = "Performs two dimensional matrix multiplications using block scaled tensors.";
@@ -506,6 +518,8 @@ def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", 
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let arguments = (ins
@@ -2241,7 +2255,11 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat", [Pure]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16, Tosa_EXT_INT64]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+               Tosa_EXT_INT16, Tosa_EXT_INT64,
+               Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+               Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+               Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -2334,7 +2352,11 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+               Tosa_EXT_INT64, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+               Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2,
+               Tosa_EXT_MX_FP8E4M3, Tosa_EXT_MX_FP8E5M2,
+               Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2348,6 +2370,8 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: reshape_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_ReshapeBlockScaledOp
     : Tosa_InferTensorTypeOp<"reshape_block_scaled", [Pure]> {
@@ -2360,6 +2384,8 @@ def Tosa_ReshapeBlockScaledOp
     single non-block-scaled tensor of any rank. No data conversion happens during
     a reshape operation. Reshape must retain the relationship between values
     and their scale in a block for block-scaled content.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let hasVerifier = 1;
@@ -2485,6 +2511,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile", [Pure]> {
     LogicalResult getConstantMultiples(llvm::SmallVector<int64_t> &multiples);
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 
@@ -2578,7 +2605,7 @@ def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
 
   let description = [{
     Generate a tensor based on the input indices and row_count. The number of
-    consecutive rows gathered for each index is specified in row_count. N is 
+    consecutive rows gathered for each index is specified in row_count. N is
     the number of batches, W is the number of indices in each batch, K is
     the range of each index, and C is the number of data channels for each
     index. The values tensor has shape [N, K, C] and the output tensor has shape
@@ -2596,7 +2623,15 @@ def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
   list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
                                      Extension<[Tosa_EXT_FP8E4M3,
                                                 Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
-                                                Tosa_EXT_INT16, Tosa_EXT_INT64]>,
+                                                Tosa_EXT_INT16,
+                                                Tosa_EXT_INT64,
+                                                Tosa_EXT_MX_COMMON,
+                                                Tosa_EXT_MX_FP4E2M1,
+                                                Tosa_EXT_MX_FP6E2M3,
+                                                Tosa_EXT_MX_FP6E3M2,
+                                                Tosa_EXT_MX_FP8E4M3,
+                                                Tosa_EXT_MX_FP8E5M2,
+                                                Tosa_EXT_MX_INT8]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -2608,6 +2643,8 @@ def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: row_gather_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_RowGatherBlockScaledOp
     : Tosa_InferShapedTypeOp<"row_gather_block_scaled", [NoMemoryEffect]> {
@@ -2624,11 +2661,10 @@ def Tosa_RowGatherBlockScaledOp
     - non-block-scaled: 1 input value tensor and 1 result tensor
     - block-scaled: data + scale input tensors and data + scale result tensors
 
-    This operation follows the TOSA 1.1 draft specification and may evolve as
-    the specification is updated.
-
     This operation is not pure. Undefined behaviour may occur if the specified
     indices are out of range.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let arguments = (ins Variadic<Tosa_Tensor3D>:$values,
@@ -2970,9 +3006,13 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
     Tosa_Tensor:$output
   );
 
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3,
+                  Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP,
+                  Tosa_EXT_INT64, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+                  Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+                  Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let hasFolder = 1;

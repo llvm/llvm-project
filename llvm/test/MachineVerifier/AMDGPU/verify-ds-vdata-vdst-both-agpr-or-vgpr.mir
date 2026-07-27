@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not=Bad %s
+# RUN: not --crash llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not=Bad %s
 
 ---
 name: invalid_mixed_agpr_vgpr_ops_ds_atomic

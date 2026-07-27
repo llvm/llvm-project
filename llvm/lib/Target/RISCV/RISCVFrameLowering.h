@@ -86,6 +86,8 @@ public:
                      uint64_t ProbeSize, bool DynAllocation,
                      MachineInstr::MIFlag Flag) const;
 
+  uint64_t getStackThreshold() const override;
+
 protected:
   const RISCVSubtarget &STI;
 

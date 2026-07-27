@@ -603,12 +603,20 @@ public:
   /// the module-level flags named metadata if it doesn't already exist.
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    addModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    setModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
 
   /// @}
   /// @name Materialization
@@ -652,10 +660,34 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
+  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
+    const auto It = ValueToGUIDMap.find(V);
+    if (It == ValueToGUIDMap.end())
+      return std::nullopt;
+
+    return It->getSecond();
+  }
+
+  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
+    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
+
+    (void)It, (void)WasInserted;
+#ifndef NDEBUG
+    if (!WasInserted) {
+      assert((It->second == GUID) && "insertGUID called with different value");
+    }
+#endif
+  }
+
 private:
-/// @}
-/// @name Direct access to the globals list, functions list, and symbol table
-/// @{
+  /// A mapping directly from Value to GUID. Populated from bitcode
+  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
+  /// don't load metadata.
+  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
+
+  /// @}
+  /// @name Direct access to the globals list, functions list, and symbol table
+  /// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }

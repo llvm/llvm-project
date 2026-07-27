@@ -79,6 +79,21 @@ protected:
   lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) override;
 
 private:
+  enum RegisterSetType : uint32_t {
+    GPR, // General purpose registers.
+    SVE, // Used for SVE registers in streaming or non-streaming mode.
+    FPR, // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE
+         // that is in non-streaming mode.
+    // Pointer authentication registers are read only, so not included here.
+    MTE,  // Memory tagging control registers.
+    TLS,  // Thread local storage registers.
+    SME,  // ZA only, because SVCR and SVG are pseudo registers.
+    SME2, // ZT only.
+    FPMR, // Floating point mode control registers.
+    GCS,  // Guarded Control Stack registers.
+    POE,  // Permission Overlay registers.
+  };
+
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;
   bool m_sve_buffer_is_valid;
@@ -260,6 +275,11 @@ private:
   uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
 
   Status CacheAllRegisters(uint32_t &cached_size);
+
+  uint8_t *AddRegisterSetType(uint8_t *dst, RegisterSetType register_set_type);
+
+  uint8_t *AddSavedRegisters(uint8_t *dst, RegisterSetType register_set_type,
+                             void *src, size_t size);
 };
 
 } // namespace process_linux
