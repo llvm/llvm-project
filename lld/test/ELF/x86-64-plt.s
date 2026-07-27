@@ -10,6 +10,10 @@
 # RUN: llvm-readelf -S -r %t.so | FileCheck %s --check-prefix=CHECK2
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s --check-prefixes=DISASM,DISASM2
 
+# RUN: ld.lld %t.o %t2.so -z mark-plt -z now -o %t.mark
+# RUN: llvm-readelf -S --dynamic-table -r %t.mark | FileCheck %s --check-prefix=MARK
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.mark | FileCheck %s --check-prefix=DISASM-MARK
+
 # CHECK1:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK1:      .plt      PROGBITS 00000000002012e0 0002e0 000030 00 AX   0   0 16
 # CHECK1:      .got.plt  PROGBITS 00000000002033e0 0003e0 000028 00 WA   0   0  8
@@ -23,6 +27,15 @@
 # CHECK2:      Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
 # CHECK2:      0000000000003418 {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 weak + 0
 # CHECK2-NEXT: 0000000000003420 {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 bar + 0
+
+# MARK:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# MARK:      .plt      PROGBITS 00000000002012b0 0002b0 000030 00 AX   0   0 16
+# MARK:      0x0000000070000000 (X86_64_PLT)    0x2012b0
+# MARK-NEXT: 0x0000000070000001 (X86_64_PLTSZ)  0x30
+# MARK-NEXT: 0x0000000070000003 (X86_64_PLTENT) 0x10
+# MARK:      Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
+# MARK:      {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 weak + 2012c0
+# MARK-NEXT: {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 bar + 2012d0
 
 # DISASM:       <_start>:
 # DISASM-NEXT:    callq {{.*}} <local>
@@ -65,6 +78,23 @@
 # DISASM2-NEXT:             pushq $1
 # DISASM2-NEXT:             jmp 0x1310 <.plt>
 # DISASM2-NOT:  {{.}}
+
+# DISASM-MARK:      Disassembly of section .plt:
+# DISASM-MARK-EMPTY:
+# DISASM-MARK-NEXT: <.plt>:
+# DISASM-MARK-NEXT: 2012b0:      pushq 4434(%rip)  # 0x202408
+# DISASM-MARK-NEXT:              jmpq *4436(%rip)  # 0x202410
+# DISASM-MARK-NEXT:              nopl (%rax)
+# DISASM-MARK-EMPTY:
+# DISASM-MARK: <weak@plt>:
+# DISASM-MARK-NEXT: 2012c0:      jmpq *4434(%rip)  # 0x202418
+# DISASM-MARK-NEXT:              pushq $0
+# DISASM-MARK-NEXT:              jmp 0x2012b0 <.plt>
+# DISASM-MARK-EMPTY:
+# DISASM-MARK: <bar@plt>:
+# DISASM-MARK-NEXT: 2012d0:      jmpq *4426(%rip)  # 0x202420
+# DISASM-MARK-NEXT:              pushq $1
+# DISASM-MARK-NEXT:              jmp 0x2012b0 <.plt>
 
 .global _start
 .weak weak
