@@ -256,6 +256,9 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
+- Added the `__builtin_elementwise_convert_from_*` family, which converts
+  integer-encoded `Float8E5M2`, `Float8E4M3FN`, and `Float8E5M3FNU` values,
+  scalar or in a fixed-length vector, to `_Float16`, `__bf16`, or `float`.
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 

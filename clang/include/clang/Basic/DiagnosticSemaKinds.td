@@ -11485,6 +11485,16 @@ def err_builtin_non_vector_type : Error<
 def err_convertvector_incompatible_vector : Error<
   "first two arguments to __builtin_convertvector must have the same number of elements">;
 
+def err_arbitrary_fp_source_type : Error<
+  "argument of type %0 cannot hold an '%1' encoding; expected an integer of "
+  "exactly %2 bits, a vector of such integers, or __mfp8">;
+def err_arbitrary_fp_source_width : Error<
+  "%select{argument type|vector element type}0 %1 must be exactly %2 bits "
+  "wide to hold an '%3' encoding">;
+def err_arbitrary_fp_unsupported_vector : Error<
+  "argument of type %0 has an unsupported vector kind; only GNU "
+  "'vector_size' and Clang 'ext_vector_type' vectors are supported">;
+
 def err_first_argument_to_cwsc_not_call : Error<
   "first argument to __builtin_call_with_static_chain must be a non-member call expression">;
 def err_first_argument_to_cwsc_block_call : Error<

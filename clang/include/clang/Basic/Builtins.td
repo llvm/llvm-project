@@ -1481,6 +1481,24 @@ def ConvertVector : Builtin {
   let Prototype = "void(...)";
 }
 
+// Keep the instantiations below in sync with ArbitraryFPFormats.def.
+multiclass ElementwiseConvertFromArbitraryFP<string Src> {
+  foreach Dst = ["f16", "bf16", "f32"] in {
+    def _#Dst : Builtin {
+      let Spellings = ["__builtin_elementwise_convert_from_" # Src # "_" # Dst];
+      let Attributes = [NoThrow, Const, CustomTypeChecking];
+      let Prototype = "void(...)";
+    }
+  }
+}
+
+defm ElementwiseConvertFromF8E5M2
+    : ElementwiseConvertFromArbitraryFP<"f8e5m2">;
+defm ElementwiseConvertFromF8E4M3FN
+    : ElementwiseConvertFromArbitraryFP<"f8e4m3fn">;
+defm ElementwiseConvertFromF8E5M3FNU
+    : ElementwiseConvertFromArbitraryFP<"f8e5m3fnu">;
+
 def MaskedLoad : Builtin {
   let Spellings = ["__builtin_masked_load"];
   let Attributes = [NoThrow, CustomTypeChecking];

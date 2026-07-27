@@ -897,6 +897,52 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
   }
 }
 
+bool Sema::checkFloatingPointTypeSupport(QualType Ty, SourceLocation Loc,
+                                         bool DiagnoseTarget) {
+  if (Ty->isFloat16Type()) {
+    if (!Context.getTargetInfo().hasFloat16Type()) {
+      if (!getLangOpts().CUDA &&
+          !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)) {
+        Diag(Loc, diag::err_type_unsupported) << "_Float16";
+        return true;
+      }
+      if (DiagnoseTarget)
+        return targetDiag(Loc, diag::err_type_unsupported) << "_Float16";
+    }
+    return false;
+  }
+
+  if (Ty->isBFloat16Type()) {
+    if (!Context.getTargetInfo().hasBFloat16Type()) {
+      if (!(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice) &&
+          !getLangOpts().SYCLIsDevice) {
+        Diag(Loc, diag::err_type_unsupported) << "__bf16";
+        return true;
+      }
+      if (DiagnoseTarget)
+        return targetDiag(Loc, diag::err_type_unsupported) << "__bf16";
+    }
+    return false;
+  }
+
+  if (!getLangOpts().OpenCL ||
+      (Ty != Context.DoubleTy && Ty != Context.LongDoubleTy))
+    return false;
+
+  if (!getOpenCLOptions().isSupported("cl_khr_fp64", getLangOpts())) {
+    Diag(Loc, diag::err_opencl_requires_extension)
+        << 0 << Ty
+        << (getLangOpts().getOpenCLCompatibleVersion() >= 300
+                ? "cl_khr_fp64 and __opencl_c_fp64"
+                : "cl_khr_fp64");
+    return true;
+  }
+
+  if (!getOpenCLOptions().isAvailableOption("cl_khr_fp64", getLangOpts()))
+    Diag(Loc, diag::ext_opencl_double_without_pragma);
+  return false;
+}
+
 /// Convert the specified declspec to the appropriate type
 /// object.
 /// \param state Specifies the declarator containing the declaration specifier
@@ -1161,18 +1207,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // CUDA host and device may have different _Float16 support, therefore
     // do not diagnose _Float16 usage to avoid false alarm.
     // ToDo: more precise diagnostics for CUDA.
-    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
-      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
-        << "_Float16";
+    S.checkFloatingPointTypeSupport(Context.Float16Ty, DS.getTypeSpecTypeLoc());
     Result = Context.Float16Ty;
     break;
   case DeclSpec::TST_half:    Result = Context.HalfTy; break;
   case DeclSpec::TST_BFloat16:
-    if (!S.Context.getTargetInfo().hasBFloat16Type() &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice) &&
-        !S.getLangOpts().SYCLIsDevice)
-      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__bf16";
+    S.checkFloatingPointTypeSupport(Context.BFloat16Ty,
+                                    DS.getTypeSpecTypeLoc());
     Result = Context.BFloat16Ty;
     break;
   case DeclSpec::TST_float:   Result = Context.FloatTy; break;
@@ -1181,16 +1222,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.LongDoubleTy;
     else
       Result = Context.DoubleTy;
-    if (S.getLangOpts().OpenCL) {
-      if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
-        S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
-            << 0 << Result
-            << (S.getLangOpts().getOpenCLCompatibleVersion() >= 300
-                    ? "cl_khr_fp64 and __opencl_c_fp64"
-                    : "cl_khr_fp64");
-      else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
-        S.Diag(DS.getTypeSpecTypeLoc(), diag::ext_opencl_double_without_pragma);
-    }
+    S.checkFloatingPointTypeSupport(Result, DS.getTypeSpecTypeLoc());
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
