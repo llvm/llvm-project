@@ -24,8 +24,12 @@
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -33,7 +37,8 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-optimize-live-intervals"
 
 namespace {
-class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
+class WebAssemblyOptimizeLiveIntervalsLegacy final
+    : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Optimize Live Intervals";
   }
@@ -44,7 +49,6 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreservedID(LiveVariablesID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -57,26 +61,24 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyOptimizeLiveIntervals() : MachineFunctionPass(ID) {}
+  WebAssemblyOptimizeLiveIntervalsLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyOptimizeLiveIntervals::ID = 0;
-INITIALIZE_PASS(WebAssemblyOptimizeLiveIntervals, DEBUG_TYPE,
+char WebAssemblyOptimizeLiveIntervalsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyOptimizeLiveIntervalsLegacy, DEBUG_TYPE,
                 "Optimize LiveIntervals for WebAssembly", false, false)
 
-FunctionPass *llvm::createWebAssemblyOptimizeLiveIntervals() {
-  return new WebAssemblyOptimizeLiveIntervals();
+FunctionPass *llvm::createWebAssemblyOptimizeLiveIntervalsLegacyPass() {
+  return new WebAssemblyOptimizeLiveIntervalsLegacy();
 }
 
-bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool optimizeLiveIntervals(MachineFunction &MF, LiveIntervals &LIS) {
   LLVM_DEBUG(dbgs() << "********** Optimize LiveIntervals **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   // We don't preserve SSA form.
   MRI.leaveSSA();
@@ -120,4 +122,22 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
   }
 
   return true;
+}
+
+bool WebAssemblyOptimizeLiveIntervalsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return optimizeLiveIntervals(
+      MF, getAnalysis<LiveIntervalsWrapperPass>().getLIS());
+}
+
+PreservedAnalyses WebAssemblyOptimizeLiveIntervalsPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  bool Changed =
+      optimizeLiveIntervals(MF, MFAM.getResult<LiveIntervalsAnalysis>(MF));
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<SlotIndexesAnalysis>();
 }

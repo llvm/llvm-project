@@ -2,9 +2,6 @@
 
 LLVM and API reference documentation.
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:

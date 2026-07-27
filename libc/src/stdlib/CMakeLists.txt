@@ -116,7 +116,7 @@ add_entrypoint_object(
   DEPENDS
     .str_from_util
     libc.src.__support.CPP.limits
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.error_mapper
 )
 
 add_entrypoint_object(
@@ -128,7 +128,7 @@ add_entrypoint_object(
   DEPENDS
     .str_from_util
     libc.src.__support.CPP.limits
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.error_mapper
 )
 
 add_entrypoint_object(
@@ -140,7 +140,7 @@ add_entrypoint_object(
   DEPENDS
     .str_from_util
     libc.src.__support.CPP.limits
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.error_mapper
 )
 
 add_header_library(
@@ -148,9 +148,9 @@ add_header_library(
   HDRS
     str_from_util.h
   DEPENDS
-    libc.src.stdio.printf_core.converter
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.printf_core.converter
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.writer
     libc.src.__support.str_to_integer
     libc.src.__support.CPP.type_traits
 )

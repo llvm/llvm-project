@@ -1,3 +1,14 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("PlatformWindowsProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("PlatformWindowsPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "PlatformWindowsProperties.td"
+}
+
 static_library("Windows") {
   output_name = "lldbPluginPlatformWindows"
   configs += [
@@ -5,6 +16,8 @@ static_library("Windows") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
+    ":PlatformWindowsProperties",
+    ":PlatformWindowsPropertiesEnum",
     "//lldb/source/Breakpoint",
     "//lldb/source/Core",
     "//lldb/source/Host",

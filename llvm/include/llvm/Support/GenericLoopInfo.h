@@ -51,7 +51,6 @@ namespace llvm {
 
 template <class N, class M> class LoopInfoBase;
 template <class N, class M> class LoopBase;
-template <class N, class M> class PopulateLoopsDFS;
 
 //===----------------------------------------------------------------------===//
 /// Instances of this class are used to represent loops that are detected in the
@@ -62,10 +61,25 @@ template <class BlockT, class LoopT> class LoopBase {
   // Loops contained entirely within this one.
   std::vector<LoopT *> SubLoops;
 
-  // The list of blocks in this loop. First entry is the header node.
-  std::vector<BlockT *> Blocks;
+  // The list of blocks in this loop; first entry is the header. Either borrows
+  // a slice of the owning LoopInfo's BlockLayout, marked by the
+  // BorrowedCapacity sentinel, or is a private allocation of BlockCapacity
+  // slots from its allocator.
+  //
+  // Until analyze()'s layout carve runs, PendingHeader stashes the loop header
+  // (see pendingHeader()).
+  union {
+    BlockT *PendingHeader;
+    BlockT **BlockData = nullptr;
+  };
+  unsigned BlockLen = 0;
+  unsigned BlockCapacity = 0;
 
-  SmallPtrSet<const BlockT *, 8> DenseBlockSet;
+  static constexpr unsigned BorrowedCapacity = -1u;
+
+  // The LoopInfo that owns this loop. Used to answer contains(BlockT *) from
+  // the central block-to-loop map.
+  LoopInfoBase<BlockT, LoopT> *LI = nullptr;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// Indicator that this loop is no longer a valid loop.
@@ -121,20 +135,35 @@ public:
     ParentLoop = L;
   }
 
-  /// Return true if the specified loop is contained within in this loop.
+  /// Return true if the specified loop is contained within this loop.
+  ///
+  /// This walks the parent chain and is O(depth). Deep nesting is not a
+  /// performance target (yet).
   bool contains(const LoopT *L) const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    if (L == this)
-      return true;
-    if (!L)
-      return false;
-    return contains(L->getParentLoop());
+    for (;;) {
+      if (L == this)
+        return true;
+      if (!L)
+        return false;
+      L = L->getParentLoop();
+    }
   }
 
-  /// Return true if the specified basic block is in this loop.
+  /// Return true if the specified basic block is in this loop, using LoopInfo's
+  /// block-to-loop map.
+  ///
+  /// This is only valid when that map agrees with the block lists. Avoid when
+  /// the loop nest is being restructured, when a block may appear in a loop's
+  /// block list before it is mapped to that loop. Code in such a transient
+  /// state must scan getBlocks() directly instead.
   bool contains(const BlockT *BB) const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    return DenseBlockSet.count(BB);
+    // A block from another function is never contained, and its number would
+    // otherwise index this function's map.
+    if (BB->getParent() != LI->ParentPtr)
+      return false;
+    return contains(LI->lookupLoopFor(BB));
   }
 
   /// Return true if the specified instruction is in this loop.
@@ -169,7 +198,7 @@ public:
   /// Get a list of the basic blocks which make up this loop.
   ArrayRef<BlockT *> getBlocks() const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    return Blocks;
+    return ArrayRef<BlockT *>(BlockData, BlockLen);
   }
   using block_iterator = typename ArrayRef<BlockT *>::const_iterator;
   block_iterator block_begin() const { return getBlocks().begin(); }
@@ -183,13 +212,7 @@ public:
   /// Invalidate the loop, indicating that it is no longer a loop.
   unsigned getNumBlocks() const {
     assert(!isInvalid() && "Loop not in a valid state!");
-    return Blocks.size();
-  }
-
-  /// Return a direct, immutable handle to the blocks set.
-  const SmallPtrSetImpl<const BlockT *> &getBlocksSet() const {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    return DenseBlockSet;
+    return BlockLen;
   }
 
   /// Return true if this loop is no longer valid.  The only valid use of this
@@ -389,43 +412,33 @@ public:
   /// transformations should use addBasicBlockToLoop.
   void addBlockEntry(BlockT *BB) {
     assert(!isInvalid() && "Loop not in a valid state!");
-    Blocks.push_back(BB);
-    DenseBlockSet.insert(BB);
-  }
-
-  /// interface to reverse Blocks[from, end of loop] in this loop
-  void reverseBlock(unsigned from) {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    std::reverse(Blocks.begin() + from, Blocks.end());
+    // A borrowed slice or a full private allocation grows into fresh private
+    // storage before appending.
+    if (BlockCapacity == BorrowedCapacity || BlockLen == BlockCapacity)
+      LI->reallocBlocks(*static_cast<LoopT *>(this),
+                        std::max(2 * BlockLen, 4u));
+    BlockData[BlockLen++] = BB;
   }
 
   /// interface to do reserve() for Blocks
-  void reserveBlocks(unsigned size) {
+  void reserveBlocks(unsigned Size) {
     assert(!isInvalid() && "Loop not in a valid state!");
-    Blocks.reserve(size);
+    if (BlockCapacity < Size)
+      LI->reallocBlocks(*static_cast<LoopT *>(this), Size);
   }
-
-  /// interface to do reserve() for SubLoops
-  void reserveSubLoops(unsigned Size) {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    SubLoops.reserve(Size);
-  }
-
-  /// Capacity of the block list; input to an enclosing loop's reserveBlocks()
-  /// during construction, when this loop's list is not yet fully populated.
-  unsigned getBlocksCapacity() const { return Blocks.capacity(); }
 
   /// This method is used to move BB (which must be part of this loop) to be the
   /// loop header of the loop (the block that dominates all others).
   void moveToHeader(BlockT *BB) {
     assert(!isInvalid() && "Loop not in a valid state!");
-    if (Blocks[0] == BB)
+    if (BlockData[0] == BB)
       return;
+    LI->materializeBlocks(*static_cast<LoopT *>(this));
     for (unsigned i = 0;; ++i) {
-      assert(i != Blocks.size() && "Loop does not contain BB!");
-      if (Blocks[i] == BB) {
-        Blocks[i] = Blocks[0];
-        Blocks[0] = BB;
+      assert(i != BlockLen && "Loop does not contain BB!");
+      if (BlockData[i] == BB) {
+        BlockData[i] = BlockData[0];
+        BlockData[0] = BB;
         return;
       }
     }
@@ -436,11 +449,12 @@ public:
   /// class.
   void removeBlockFromLoop(BlockT *BB) {
     assert(!isInvalid() && "Loop not in a valid state!");
-    auto I = find(Blocks, BB);
+    LI->materializeBlocks(*static_cast<LoopT *>(this));
+    MutableArrayRef<BlockT *> Blocks(BlockData, BlockLen);
+    auto *I = llvm::find(Blocks, BB);
     assert(I != Blocks.end() && "N is not in this list!");
-    Blocks.erase(I);
-
-    DenseBlockSet.erase(BB);
+    std::move(I + 1, Blocks.end(), I);
+    --BlockLen;
   }
 
   /// Verify loop structure
@@ -461,15 +475,9 @@ public:
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;
-  friend class PopulateLoopsDFS<BlockT, LoopT>;
 
   /// This creates an empty loop.
   LoopBase() : ParentLoop(nullptr) {}
-
-  explicit LoopBase(BlockT *BB) : ParentLoop(nullptr) {
-    Blocks.push_back(BB);
-    DenseBlockSet.insert(BB);
-  }
 
   // Since loop passes like SCEV are allowed to key analysis results off of
   // `Loop` pointers, we cannot re-use pointers within a loop pass manager.
@@ -488,8 +496,10 @@ protected:
     IsInvalid = true;
 #endif
     SubLoops.clear();
-    Blocks.clear();
-    DenseBlockSet.clear();
+    // The block storage is reclaimed by the owning LoopInfo.
+    BlockData = nullptr;
+    BlockLen = 0;
+    BlockCapacity = 0;
     ParentLoop = nullptr;
   }
 };
@@ -514,11 +524,16 @@ template <class BlockT, class LoopT> class LoopInfoBase {
   // occurs in (or null).
   SmallVector<LoopT *> BBMap;
 
-  using ParentT = decltype(std::declval<const BlockT *>()->getParent());
+  using ParentT = decltype(std::declval<BlockT *>()->getParent());
   ParentT ParentPtr = nullptr;
   unsigned BlockNumberEpoch;
 
   std::vector<LoopT *> TopLevelLoops;
+
+  // Shared reverse postorder layout of the in-loop blocks. Each initial loop is
+  // a slice of this array, subloop slices nested inside their parent's.
+  std::unique_ptr<BlockT *[]> BlockLayout;
+
   BumpPtrAllocator LoopAllocator;
 
   friend class LoopBase<BlockT, LoopT>;
@@ -534,9 +549,11 @@ public:
   LoopInfoBase(LoopInfoBase &&Arg)
       : BBMap(std::move(Arg.BBMap)),
         TopLevelLoops(std::move(Arg.TopLevelLoops)),
+        BlockLayout(std::move(Arg.BlockLayout)),
         LoopAllocator(std::move(Arg.LoopAllocator)) {
     ParentPtr = Arg.ParentPtr;
     BlockNumberEpoch = Arg.BlockNumberEpoch;
+    resetLoopInfoOwners();
     // We have to clear the arguments top level loops as we've taken ownership.
     Arg.TopLevelLoops.clear();
   }
@@ -549,7 +566,9 @@ public:
       L->~LoopT();
 
     TopLevelLoops = std::move(RHS.TopLevelLoops);
+    BlockLayout = std::move(RHS.BlockLayout);
     LoopAllocator = std::move(RHS.LoopAllocator);
+    resetLoopInfoOwners();
     RHS.TopLevelLoops.clear();
     return *this;
   }
@@ -560,12 +579,15 @@ public:
     for (auto *L : TopLevelLoops)
       L->~LoopT();
     TopLevelLoops.clear();
+    BlockLayout.reset();
     LoopAllocator.Reset();
   }
 
-  template <typename... ArgsTy> LoopT *AllocateLoop(ArgsTy &&...Args) {
+  LoopT *AllocateLoop() {
     LoopT *Storage = LoopAllocator.Allocate<LoopT>();
-    return new (Storage) LoopT(std::forward<ArgsTy>(Args)...);
+    LoopT *L = new (Storage) LoopT();
+    L->LI = this;
+    return L;
   }
 
   /// iterator/begin/end - The interface to the top-level loops in the current
@@ -598,8 +620,21 @@ public:
   SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder() const;
 
 private:
+  // Point every loop's owning-LoopInfo back-pointer at this object. Called
+  // after a move.
+  void resetLoopInfoOwners() {
+    SmallVector<LoopT *, 8> Worklist(TopLevelLoops.begin(),
+                                     TopLevelLoops.end());
+    while (!Worklist.empty()) {
+      LoopT *L = Worklist.pop_back_val();
+      L->LI = this;
+      Worklist.append(L->begin(), L->end());
+    }
+  }
+
   /// Verify that used block numbers are still valid.
-  void verifyBlockNumberEpoch(ParentT BBParent) const {
+  void
+  verifyBlockNumberEpoch(const std::remove_pointer_t<ParentT> *BBParent) const {
     assert(ParentPtr == BBParent &&
            "loop info queried with block of other function");
     assert(BlockNumberEpoch ==
@@ -607,13 +642,54 @@ private:
            "loop info used with outdated block numbers");
   }
 
+  // Look up BB's innermost loop in the block-to-loop map; BB must belong to
+  // this function.
+  LoopT *lookupLoopFor(const BlockT *BB) const {
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    return Number < BBMap.size() ? BBMap[Number] : nullptr;
+  }
+
+  /// AllocateLoop for analyze(): stash \p Header (see pendingHeader).
+  /// getHeader() only works once the layout carve has replaced the stash with
+  /// the loop's block list.
+  LoopT *allocateLoop(BlockT *Header) {
+    LoopT *L = AllocateLoop();
+    L->PendingHeader = Header;
+    return L;
+  }
+
+  /// The header of a loop under construction, stashed until the layout carve
+  /// builds the block list.
+  static BlockT *pendingHeader(const LoopT *L) { return L->PendingHeader; }
+
+  /// True if \p L borrows its block list from BlockLayout.
+  static bool hasBorrowedBlocks(const LoopT &L) {
+    return L.BlockCapacity == LoopT::BorrowedCapacity;
+  }
+
+  /// Replace \p L's block list with a private allocation of NewCapacity
+  /// slots. The old storage is abandoned in place so slices sharing it stay
+  /// intact; it is reclaimed when this LoopInfo is cleared.
+  void reallocBlocks(LoopT &L, unsigned NewCapacity) {
+    assert(NewCapacity >= L.BlockLen && "capacity below size");
+    BlockT **New = LoopAllocator.Allocate<BlockT *>(NewCapacity);
+    llvm::copy(L.getBlocks(), New);
+    L.BlockData = New;
+    L.BlockCapacity = NewCapacity;
+  }
+
+  /// Copy \p L's borrowed block list into private storage before a mutation.
+  void materializeBlocks(LoopT &L) {
+    if (hasBorrowedBlocks(L))
+      reallocBlocks(L, L.BlockLen);
+  }
+
 public:
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
   LoopT *getLoopFor(const BlockT *BB) const {
     verifyBlockNumberEpoch(BB->getParent());
-    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
-    return Number < BBMap.size() ? BBMap[Number] : nullptr;
+    return lookupLoopFor(BB);
   }
 
   /// Same as getLoopFor.
@@ -644,12 +720,10 @@ public:
   /// ancestors or descendants, and not the block-to-loop mapping.
   template <typename PredicateT>
   void removeBlocksIf(LoopT &L, PredicateT Pred) {
-    llvm::erase_if(L.Blocks, [&](BlockT *BB) {
-      if (!Pred(BB))
-        return false;
-      L.DenseBlockSet.erase(BB);
-      return true;
-    });
+    materializeBlocks(L);
+    L.BlockLen = llvm::remove_if(
+                     MutableArrayRef<BlockT *>(L.BlockData, L.BlockLen), Pred) -
+                 L.BlockData;
   }
 
   /// Remove every block satisfying \p Pred from \p Start and each of its
@@ -766,8 +840,19 @@ public:
     return isNotAlreadyContainedIn(SubLoop->getParentLoop(), ParentLoop);
   }
 
-  /// Create the loop forest using a stable algorithm.
+  /// Create the loop forest for a function. A dominator tree is needed only for
+  /// an irreducible CFG, where dominance reduces a loop that an edge re-enters
+  /// to the natural loop of its header's backedges.
+  ///@{
+  /// Build a dominator tree if one is needed.
+  void analyze(ParentT F);
+  /// Call \p GetDomTree if a dominator tree is needed.
+  void
+  analyze(ParentT F,
+          function_ref<const DominatorTreeBase<BlockT, false> &()> GetDomTree);
+  /// Analyze the function \p DomTree describes.
   void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
+  ///@}
 
   // Debugging
   void print(raw_ostream &OS) const;
