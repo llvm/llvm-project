@@ -18,53 +18,62 @@
 
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                    = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max   = lim::max();
+    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
+    TEST_CONSTEXPR_CXX23 T inf   = lim::infinity();
+    TEST_CONSTEXPR_CXX23 T nan   = lim::quiet_NaN();
+    TEST_CONSTEXPR_CXX23 T s_nan = lim::signaling_NaN();
+
     assert(!std::isunordered(T(1), T(2)));
     assert(!std::isunordered(T(1), T(1)));
 
-    assert(std::isunordered(std::numeric_limits<T>::quiet_NaN(), T(0)));
-    assert(std::isunordered(T(0), std::numeric_limits<T>::quiet_NaN()));
-    assert(std::isunordered(std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::quiet_NaN()));
+    assert(std::isunordered(nan, T(0)));
+    assert(std::isunordered(T(0), nan));
+    assert(std::isunordered(nan, nan));
 
-    assert(std::isunordered(std::numeric_limits<T>::signaling_NaN(), T(0)));
-    assert(!std::isunordered(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity()));
-    assert(!std::isunordered(std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest()));
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
+    assert(std::isunordered(s_nan, T(0)));
+    assert(!std::isunordered(inf, inf));
+    assert(!std::isunordered(max, low));
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                  = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max = lim::max();
+
     assert(!std::isunordered(T(1), T(2)));
     assert(!std::isunordered(T(1), T(1)));
-    assert(!std::isunordered(std::numeric_limits<T>::max(), T(0)));
-    assert(!std::isunordered(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
+    assert(!std::isunordered(max, T(0)));
+    assert(!std::isunordered(max, max));
   }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
+  using lim                     = std::numeric_limits<double>;
+  TEST_CONSTEXPR_CXX23 auto nan = lim::quiet_NaN();
+
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
+  // Make sure we can call `std::isunordered` with mixed-type promotions with __promote_t<_A1, _A2>.
+  {
+    assert(!std::isunordered(2.0, 1));     // double vs int
+    assert(!std::isunordered(1, 2.0f));    // int vs float
+    assert(!std::isunordered(2.0L, 1.0f)); // long double vs float
+    assert(std::isunordered(nan, 1.0));    // NaN vs int
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
   return 0;
 }
