@@ -75,9 +75,10 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
        " after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
-  if (S)
+  if (S) {
     if (const Expr *DerefExpr = bugreporter::getDerefExpr(S))
       bugreporter::trackExpressionValue(N, DerefExpr, *BR);
+  }
   C.emitReport(std::move(BR));
 }
 
