@@ -1,5 +1,3 @@
-# REQUIRES: x86-registered-target
-
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/binary.yaml -o %t/perf-binary-error.exe
 # RUN: touch %t/perf.data

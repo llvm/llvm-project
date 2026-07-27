@@ -1,4 +1,4 @@
-# REQUIRES: system-linux, x86-registered-target
+# REQUIRES: system-linux
 
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/binary.yaml -o %t/perfdata-redirect.exe
