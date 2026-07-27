@@ -71,6 +71,11 @@ OPTIONS
 
   Print mmap events.
 
+.. option:: --perf-binary=<filename>
+
+  Path to the ``perf`` executable used to convert ``--perfdata`` input. If this
+  option is omitted, ``llvm-profgen`` searches for ``perf`` in ``PATH``.
+
 .. option:: --show-disassembly
 
   Print disassembled code.

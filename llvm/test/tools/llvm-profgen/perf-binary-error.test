@@ -1,0 +1,48 @@
+# REQUIRES: x86-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/perf-binary-error.exe
+# RUN: touch %t/perf.data
+
+# RUN: not llvm-profgen --binary=%t/perf-binary-error.exe \
+# RUN:   --perfdata=%t/perf.data --perf-binary yaml2obj --output=/dev/null \
+# RUN:   2>&1 | FileCheck %s --check-prefix=EXIT
+# RUN: not llvm-profgen --binary=%t/perf-binary-error.exe \
+# RUN:   --perfdata=%t/perf.data --perf-binary=%t/missing-perf \
+# RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=EXEC
+
+# EXIT: error: Perf script failed with exit code 1
+# EXIT: yaml2obj
+# EXEC: error: Failed to execute perf script
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x1
+    ## ret
+    Content:      C3
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x1
