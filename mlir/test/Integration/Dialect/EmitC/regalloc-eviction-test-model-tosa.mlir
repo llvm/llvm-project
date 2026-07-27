@@ -31,6 +31,7 @@
 /// Renamed "main" to avoid:
 ///   error: 'main' should not be declared static
 ///   error: first parameter of 'main' (argument count) must be of type 'int'
+
 // CHECK-LABEL: @mock_model
 // CHECK:         for
 // CHECK:         cmp gt
