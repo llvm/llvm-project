@@ -67,50 +67,6 @@ template class LLVM_EXPORT_TEMPLATE
 
 template class llvm::cfg::Update<BasicBlock *>;
 
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::CalculateWithUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BBUpdates U);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT);
-// No CalculateWithUpdates<PostDomTree> instantiation, unless a usecase arises.
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::InsertEdge<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::DeleteEdge<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBDomTree>(
-    DomTreeBuilder::BBDomTree &DT, DomTreeBuilder::BBDomTreeGraphDiff &,
-    DomTreeBuilder::BBDomTreeGraphDiff *);
-template LLVM_EXPORT_TEMPLATE void
-llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBPostDomTree>(
-    DomTreeBuilder::BBPostDomTree &DT, DomTreeBuilder::BBPostDomTreeGraphDiff &,
-    DomTreeBuilder::BBPostDomTreeGraphDiff *);
-
-template LLVM_EXPORT_TEMPLATE bool
-llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBDomTree>(
-    const DomTreeBuilder::BBDomTree &DT,
-    DomTreeBuilder::BBDomTree::VerificationLevel VL);
-template LLVM_EXPORT_TEMPLATE bool
-llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBPostDomTree>(
-    const DomTreeBuilder::BBPostDomTree &DT,
-    DomTreeBuilder::BBPostDomTree::VerificationLevel VL);
-
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
