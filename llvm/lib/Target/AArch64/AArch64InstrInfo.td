@@ -9139,40 +9139,26 @@ defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
 defm SCVTF  : SIMDFPScalarRShift<0, 0b11100, "scvtf">;
 defm UCVTF  : SIMDFPScalarRShift<1, 0b11100, "ucvtf">;
 
-// Transformation for SIMD shift imm to fixed point imm for FPR-to-GPR result
+// Transformation for SIMD shift imm to fixed point imm for FPR-to-GPR result.
 def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
 
 multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
-  // Allow integer result to remain in GPR register
+  // Allow integer result to remain in GPR register.
   def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
           (!cast<Instruction>(INST # "SWSri") FPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
   def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
           (!cast<Instruction>(INST # "SXDri") FPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
-  def : Pat<(i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)),
-          (!cast<Instruction>(INST # "SWHri") FPR16:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
-  def : Pat<(i64 (OpN (f16 FPR16:$Rn), vecshiftR64:$imm)),
-          (!cast<Instruction>(INST # "SXHri") FPR16:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
 
   // Explicit Bitcast results kept in FP/SIMD registers.
   def : Pat<(f32 (bitconvert(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)))),
           (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
   def : Pat<(f64 (bitconvert(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)))),
           (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
-  def : Pat<(f32(bitconvert (i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)))),
-          (f32 (INSERT_SUBREG 
-            (f32 (IMPLICIT_DEF)),
-            (!cast<Instruction>(INST # "h") FPR16:$Rn, vecshiftR32:$imm), 
-              hsub))>;
-  def : Pat<(f64 (bitconvert (i64 (OpN (f16 FPR16:$Rn), vecshiftR64:$imm)))),
-          (f64 (INSERT_SUBREG
-            (f64 (IMPLICIT_DEF)),
-            (!cast<Instruction>(INST # "h") FPR16:$Rn, vecshiftR64:$imm),
-              hsub))>;
 
-  // FPR fallback patterns
+  // FPR fallback patterns.
   def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
           (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
   def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
