@@ -1,0 +1,30 @@
+//===--- ArbitraryFPFormats.def - Arbitrary FP format database --*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Source encodings exposed by the __builtin_elementwise_convert_from_* family.
+// Src is the source half of the builtin name suffix; LLVMName is the
+// llvm.convert.from.arbitrary.fp interpretation string.
+//
+// Each entry needs a matching instantiation in Builtins.td: expansions name
+// builtin IDs directly, so a stale entry fails to compile. An entry must also
+// be accepted by APFloat::getArbitraryFPSemantics, or lowering fails.
+//
+// The sub-byte encodings (Float6E3M2FN, Float6E2M3FN, Float4E2M1FN) lower but
+// are not exposed; Clang cannot spell their vector element types coherently.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef ARBITRARY_FP_FORMAT
+#define ARBITRARY_FP_FORMAT(Src, LLVMName)
+#endif
+
+ARBITRARY_FP_FORMAT(f8e5m2, "Float8E5M2")
+ARBITRARY_FP_FORMAT(f8e4m3fn, "Float8E4M3FN")
+ARBITRARY_FP_FORMAT(f8e5m3fnu, "Float8E5M3FNU")
+
+#undef ARBITRARY_FP_FORMAT
