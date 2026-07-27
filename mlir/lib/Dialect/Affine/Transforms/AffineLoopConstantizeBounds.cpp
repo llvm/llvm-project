@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include <cstdint>
 
@@ -33,16 +34,24 @@ using namespace mlir::affine;
 namespace {
 
 /// Computes the constant upper or lower bound for a given affine map expression
-/// \p map and its operands \p operands, constrained by the specified \p type.
+/// and its operands, constrained by the specified type.
 static FailureOr<int64_t> computeConstantBound(AffineMap map,
                                                ValueRange operands,
                                                presburger::BoundType type) {
   ValueBoundsConstraintSet::Variable var(map, operands);
-  return ValueBoundsConstraintSet::computeConstantBound(type, var, nullptr,
-                                                        {true, true});
+  return ValueBoundsConstraintSet::computeConstantBound(
+      type, var, nullptr, {/*closedUb=*/true, /*allowIntegerType=*/true});
 }
 
-static LogicalResult inferAffineLoopUpperConstantBound(AffineForOp forOp) {
+/// Attempts to infer a static constant upper bound for the given normalized
+/// `affine.for` loop using Value Bounds Analysis. If the dynamic upper bound's
+/// range [upperMin, upperMax] is proven to be a single constant value (upperMin
+/// == upperMax), the upper bound is directly replaced with this constant.
+/// Otherwise, if upperMin > 0, the loop is split (peeled) into a static main
+/// loop with a constant upper bound (`upperMin`) and a residual tail loop
+/// iterating from `upperMin` to the original dynamic bound.
+static LogicalResult inferAffineLoopUpperConstantBound(AffineForOp forOp,
+                                                       RewriterBase &b) {
   // Ensure the loop is normalized (lower bound is strictly 0 and step is 1).
   if (!forOp.hasConstantLowerBound() || forOp.getConstantLowerBound() != 0)
     return failure();
@@ -60,8 +69,6 @@ static LogicalResult inferAffineLoopUpperConstantBound(AffineForOp forOp) {
       presburger::BoundType::UB);
   if (failed(upperMin) || *upperMin <= 0)
     return failure();
-
-  IRRewriter b(forOp->getContext());
 
   // The upper bound is dynamic within [upperMin, upperMax]. Split the loop into
   // a static main loop (0 to upperMin) and a residual tail loop (upperMin to
@@ -97,8 +104,10 @@ void AffineLoopConstantizeBounds::runOnOperation() {
     if (succeeded(normalizeAffineFor(forOp, false)))
       loops.push_back(forOp);
   });
+
   // Infer and rewrite the upper bound into a compile-time constant for each
   // loop.
+  IRRewriter b(&getContext());
   for (AffineForOp loop : loops)
-    (void)inferAffineLoopUpperConstantBound(loop);
+    (void)inferAffineLoopUpperConstantBound(loop, b);
 }
