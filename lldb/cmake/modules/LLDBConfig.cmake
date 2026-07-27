@@ -198,7 +198,7 @@ endif()
 option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" ${default_enable_dynamic_scriptinterpreters})
 
 if (LLDB_ENABLE_PYTHON)
-  if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
   else()
     set(default_embed_python_home OFF)

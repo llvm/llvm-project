@@ -1275,8 +1275,7 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
         idx = fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
       } else {
         idx = fir::getBase(
-            createSomeExtendedExpression(loc, converter, toEvExpr(*lowerBound),
-                                         converter.getSymbolMap(), stmtCtx));
+            converter.genExprValue(toEvExpr(*lowerBound), stmtCtx, &loc));
       }
     } else {
       // Not handling vector subscripts for now.
@@ -1290,9 +1289,8 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 
       // Scalar subscripts, including reordered indices and expressions like
       // i+1 or j+2, lower directly through expression lowering.
-      idx = fir::getBase(createSomeExtendedExpression(
-          loc, converter, toEvExpr(indirect->value()), converter.getSymbolMap(),
-          stmtCtx));
+      idx = fir::getBase(
+          converter.genExprValue(toEvExpr(indirect->value()), stmtCtx, &loc));
     }
     indices.push_back(idx);
   }

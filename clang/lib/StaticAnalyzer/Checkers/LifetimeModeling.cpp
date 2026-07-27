@@ -43,6 +43,16 @@ static bool isDanglingStackSource(const MemRegion *Source,
           Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
     const StackFrame *SF = StackSpace->getStackFrame();
     const StackFrame *CurrentSF = C.getStackFrame();
+    // If any frame on the current stack belongs to a destructor
+    // the warning should be suppressed. When a lifetimebound method
+    // is called from a destructor then its return value is not expected
+    // to outlive the object being destroyed.
+    if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
+          return isa<CXXDestructorDecl>(Frame.getDecl());
+        })) {
+      return false;
+    }
+
     if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
       return true;
   }
@@ -63,7 +73,7 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
 
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
-  return State->contains<DeallocatedSourceSet>(Region);
+  return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,

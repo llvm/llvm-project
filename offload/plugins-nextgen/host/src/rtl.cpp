@@ -390,6 +390,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
              DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    Info.add("Number of Lanes", 1, "", DeviceInfo::NUM_LANES);
     auto &MaxGroupSize =
         *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
                   DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);

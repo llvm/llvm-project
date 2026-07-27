@@ -16,7 +16,7 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soff
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0x3800000
@@ -46,7 +46,7 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soff
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset_neg16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0x3800000
@@ -77,7 +77,7 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__or6710
 ;
 ; GFX1250-LABEL: raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__or67108860_soffset16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x3fffffc

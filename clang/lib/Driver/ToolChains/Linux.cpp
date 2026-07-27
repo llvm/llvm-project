@@ -317,13 +317,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
   // Hexagon linker/loader does not support .gnu.hash.
-  // SUSE SLES 11 will stop being supported Mar 2028.
-  if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE())
-      ExtraOpts.push_back("--hash-style=both");
-    else
-      ExtraOpts.push_back("--hash-style=gnu");
-  }
+  if (!IsMips && !IsHexagon)
+    ExtraOpts.push_back("--hash-style=gnu");
 
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");
