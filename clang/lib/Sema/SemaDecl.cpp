@@ -4751,10 +4751,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   adjustDeclContextForDeclaratorDecl(New, Old);
 
   // Ensure the template parameters are compatible.
-  if (NewTemplate &&
-      !TemplateParameterListsAreEqual(NewTemplate->getTemplateParameters(),
-                                      OldTemplate->getTemplateParameters(),
-                                      /*Complain=*/true, TPL_TemplateMatch))
+  if (NewTemplate && !TemplateParameterListsAreEqual(
+                         NewTemplate, NewTemplate->getTemplateParameters(),
+                         OldTemplate, OldTemplate->getTemplateParameters(),
+                         /*Complain=*/true, TPL_TemplateMatch))
     return New->setInvalidDecl();
 
   // C++ [class.mem]p1:
@@ -6419,20 +6419,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       return false;
 
     // Cannot qualify members within a class.
-    Diag(Loc, diag::err_member_qualification)
-      << Name << SS.getRange();
-    SS.clear();
-
-    // C++ constructors and destructors with incorrect scopes can break
-    // our AST invariants by having the wrong underlying types. If
-    // that's the case, then drop this declaration entirely.
-    if ((Name.getNameKind() == DeclarationName::CXXConstructorName ||
-         Name.getNameKind() == DeclarationName::CXXDestructorName) &&
-        !Context.hasSameType(
-            Name.getCXXNameType(),
-            Context.getCanonicalTagType(cast<CXXRecordDecl>(Cur))))
-      return true;
-
+    Diag(Loc, diag::err_member_qualification) << Name << SS.getRange();
     return false;
   }
 
@@ -8034,13 +8021,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
 
     if (IsVariableTemplateSpecialization) {
-      SourceLocation TemplateKWLoc =
-          TemplateParamLists.size() > 0
-              ? TemplateParamLists[0]->getTemplateLoc()
-              : SourceLocation();
       DeclResult Res = ActOnVarTemplateSpecialization(
-          S, D, TInfo, Previous, TemplateKWLoc, TemplateParams, SC,
-          IsPartialSpecialization);
+          S, D, TInfo, Previous, TemplateParams, SC, IsPartialSpecialization);
       if (Res.isInvalid())
         return nullptr;
       NewVD = cast<VarDecl>(Res.get());
@@ -8076,13 +8058,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     // If we have any template parameter lists that don't directly belong to
     // the variable (matching the scope specifier), store them.
-    // An explicit variable template specialization does not own any template
-    // parameter lists.
-    unsigned VDTemplateParamLists =
-        (TemplateParams && !IsExplicitSpecialization) ? 1 : 0;
-    if (TemplateParamLists.size() > VDTemplateParamLists)
-      NewVD->setTemplateParameterListsInfo(
-          Context, TemplateParamLists.drop_back(VDTemplateParamLists));
+    if (!TemplateParamLists.empty())
+      NewVD->setTemplateParameterListsInfo(Context, TemplateParamLists);
   }
 
   if (D.getDeclSpec().isInlineSpecified()) {
@@ -10145,6 +10122,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   bool isMemberSpecialization = false;
   bool isFunctionTemplateSpecialization = false;
 
+  TemplateParameterList *TemplateParams = nullptr;
   bool HasExplicitTemplateArgs = false;
   TemplateArgumentListInfo TemplateArgs;
 
@@ -10229,11 +10207,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
             ? D.getName().TemplateId
             : nullptr;
-    TemplateParameterList *TemplateParams =
-        MatchTemplateParametersToScopeSpecifier(
-            D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
-            D.getCXXScopeSpec(), TemplateId, TemplateParamLists, isFriend,
-            isMemberSpecialization, Invalid);
+    TemplateParamListsRef = TemplateParamLists;
+    TemplateParams = MatchTemplateParametersToScopeSpecifier(
+        D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
+        D.getCXXScopeSpec(), TemplateId, TemplateParamListsRef, isFriend,
+        isMemberSpecialization, Invalid);
+    // Some template parameter lists may have been dropped because they were
+    // extraneous.
+    TemplateParamLists.resize(TemplateParamListsRef.size());
     if (TemplateParams) {
       // Check that we can declare a template here.
       if (CheckTemplateDeclScope(S, TemplateParams))
@@ -10268,19 +10249,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                                         NewFD);
         FunctionTemplate->setLexicalDeclContext(CurContext);
         NewFD->setDescribedFunctionTemplate(FunctionTemplate);
-
-        // For source fidelity, store the other template param lists.
-        if (TemplateParamLists.size() > 1) {
-          NewFD->setTemplateParameterListsInfo(Context,
-              ArrayRef<TemplateParameterList *>(TemplateParamLists)
-                  .drop_back(1));
-        }
       } else {
         // This is a function template specialization.
         isFunctionTemplateSpecialization = true;
-        // For source fidelity, store all the template param lists.
-        if (TemplateParamLists.size() > 0)
-          NewFD->setTemplateParameterListsInfo(Context, TemplateParamLists);
+        NewFD->setInnerLocStart(TemplateParams->getTemplateLoc());
 
         // C++0x [temp.expl.spec]p20 forbids "template<> friend void foo(int);".
         if (isFriend) {
@@ -10309,6 +10281,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           TemplateArgs.setLAngleLoc(InsertLoc);
           TemplateArgs.setRAngleLoc(InsertLoc);
         }
+      }
+      // For source fidelity, store the other template param lists.
+      if (!TemplateParamLists.empty()) {
+        NewFD->setTemplateParameterListsInfo(Context, TemplateParamLists);
       }
     } else {
       // Check that we can declare a template here.
@@ -10911,11 +10887,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         // template is instantiated. In such cases, we store the declarations
         // found by name lookup and defer resolution until instantiation.
         if (CheckDependentFunctionTemplateSpecialization(
-                NewFD, ExplicitTemplateArgs, Previous))
+                NewFD, TemplateParams, ExplicitTemplateArgs, Previous))
           NewFD->setInvalidDecl();
       } else if (!NewFD->isInvalidDecl()) {
-        if (CheckFunctionTemplateSpecialization(NewFD, ExplicitTemplateArgs,
-                                                Previous))
+        if (CheckFunctionTemplateSpecialization(NewFD, TemplateParams,
+                                                ExplicitTemplateArgs, Previous))
           NewFD->setInvalidDecl();
       }
     } else if (isMemberSpecialization && !FunctionTemplate) {
@@ -11238,7 +11214,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Precalculate whether this is a friend function template with a constraint
     // that depends on an enclosing template, per [temp.friend]p9.
     if (isFriend && FunctionTemplate &&
-        FriendConstraintsDependOnEnclosingTemplate(NewFD)) {
+        FriendConstraintsDependOnEnclosingTemplate(FunctionTemplate)) {
       NewFD->setFriendConstraintRefersToEnclosingTemplate(true);
 
       // C++ [temp.friend]p9:
@@ -14372,6 +14348,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
         Diag(VDecl->getLocation(),
              diag::ext_in_class_initializer_float_type_cxx11)
             << DclT << Init->getSourceRange();
+        // FIXME: This should use `getInnerLocStart()` instead of
+        // `getBeginLoc()`, because otherwise this will insert `constexpr`
+        // before the `template` keyword for template declarations.
         Diag(VDecl->getBeginLoc(),
              diag::note_in_class_initializer_float_type_cxx11)
             << FixItHint::CreateInsertion(VDecl->getBeginLoc(), "constexpr ");
@@ -18079,7 +18058,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         DeclResult Result = CheckClassTemplate(
             S, TagSpec, TUK, KWLoc, SS, Name, NameLoc, Attrs, TemplateParams,
             AS, ModulePrivateLoc,
-            /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size() - 1,
+            /*FriendLoc*/ SourceLocation(), TemplateParameterLists.size(),
             TemplateParameterLists.data(), isMemberSpecialization, SkipBody);
         return Result.get();
       } else {

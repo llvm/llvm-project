@@ -171,6 +171,13 @@ void use() {
 }
 }
 
+namespace Redecl1 {
+  template <class> void f();
+  template void f<int>();
+  template <class> void f() {}
+  // CHECK-LABEL: define weak_odr void @_ZN7Redecl11fIiEEvv
+} // namespace Redecl1
+
 namespace DefaultedMembers {
   struct B { B(); B(const B&); ~B(); };
   template<typename T> struct A : B {

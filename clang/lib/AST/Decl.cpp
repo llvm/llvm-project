@@ -51,6 +51,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -4210,6 +4211,7 @@ bool FunctionDecl::isImplicitlyInstantiable() const {
   case TSK_ExplicitSpecialization:
     return false;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return true;
 
@@ -4330,10 +4332,19 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
   return nullptr;
 }
 
+const TemplateParameterList *
+FunctionDecl::getTemplateSpecializationParameters() const {
+  if (const auto *Info = getTemplateSpecializationInfo())
+    return Info->TemplateParameters;
+  if (const auto *Info = getDependentSpecializationInfo())
+    return Info->TemplateParameters;
+  return nullptr;
+}
+
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
     TemplateArgumentList *TemplateArgs, void *InsertPos,
-    TemplateSpecializationKind TSK,
+    TemplateSpecializationKind TSK, const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
   assert((TemplateOrSpecialization.isNull() ||
@@ -4347,8 +4358,8 @@ void FunctionDecl::setFunctionTemplateSpecialization(
          "Member specialization must be an explicit specialization");
   FunctionTemplateSpecializationInfo *Info =
       FunctionTemplateSpecializationInfo::Create(
-          C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
-          PointOfInstantiation,
+          C, this, Template, TSK, TemplateArgs, TemplateParams,
+          TemplateArgsAsWritten, PointOfInstantiation,
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
@@ -4357,11 +4368,12 @@ void FunctionDecl::setFunctionTemplateSpecialization(
 
 void FunctionDecl::setDependentTemplateSpecialization(
     ASTContext &Context, const UnresolvedSetImpl &Templates,
+    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgs) {
   assert(TemplateOrSpecialization.isNull());
   DependentFunctionTemplateSpecializationInfo *Info =
-      DependentFunctionTemplateSpecializationInfo::Create(Context, Templates,
-                                                          TemplateArgs);
+      DependentFunctionTemplateSpecializationInfo::Create(
+          Context, Templates, TemplateParams, TemplateArgs);
   TemplateOrSpecialization = Info;
 }
 
@@ -4374,19 +4386,22 @@ FunctionDecl::getDependentSpecializationInfo() const {
 DependentFunctionTemplateSpecializationInfo *
 DependentFunctionTemplateSpecializationInfo::Create(
     ASTContext &Context, const UnresolvedSetImpl &Candidates,
+    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TArgs) {
   const auto *TArgsWritten =
       TArgs ? ASTTemplateArgumentListInfo::Create(Context, *TArgs) : nullptr;
   return new (Context.Allocate(
       totalSizeToAlloc<FunctionTemplateDecl *>(Candidates.size())))
-      DependentFunctionTemplateSpecializationInfo(Candidates, TArgsWritten);
+      DependentFunctionTemplateSpecializationInfo(Candidates, TemplateParams,
+                                                  TArgsWritten);
 }
 
 DependentFunctionTemplateSpecializationInfo::
     DependentFunctionTemplateSpecializationInfo(
         const UnresolvedSetImpl &Candidates,
+        const TemplateParameterList *TemplateParams,
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
-    : NumCandidates(Candidates.size()),
+    : NumCandidates(Candidates.size()), TemplateParameters(TemplateParams),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
   std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
                  [](NamedDecl *ND) {
@@ -4544,6 +4559,17 @@ bool FunctionDecl::isOutOfLine() const {
   }
 
   return false;
+}
+
+SourceLocation FunctionDecl::getFunctionLocStart() const {
+  if (const TemplateParameterList *TemplateParams =
+          getTemplateSpecializationParameters()) {
+    const ASTContext &Ctx = getASTContext();
+    return Lexer::findNextToken(TemplateParams->getSourceRange().getEnd(),
+                                Ctx.getSourceManager(), Ctx.getLangOpts())
+        ->getLocation();
+  }
+  return getInnerLocStart();
 }
 
 SourceRange FunctionDecl::getSourceRange() const {

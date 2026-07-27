@@ -138,7 +138,8 @@ namespace cwg727 { // cwg727: partial
       //   expected-note@#cwg727-C {{explicitly specialized declaration is here}}
       template<> void A::f<double>();
       // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
-      // expected-error@-2 {{no function template matches function template specialization 'f'}}
+      // expected-error@-2 {{function template specialization of 'f' not in class 'A' or an enclosing namespace}}
+      //   expected-note@#cwg727-f {{explicitly specialized declaration is here}}
       template<> int A::N<double>;
       // expected-error@-1 {{non-friend class member 'N' cannot have a qualified name}}
       // expected-error@-2 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}

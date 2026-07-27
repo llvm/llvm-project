@@ -13965,10 +13965,13 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       }
 
       if (!Invalid && OldDecl && !OldDecl->isInvalidDecl()) {
-        if (TemplateParameterListsAreEqual(TemplateParams,
-                                           OldDecl->getTemplateParameters(),
-                                           /*Complain=*/true,
-                                           TPL_TemplateMatch))
+        // It's ok that we don't pass the declarations corresponding to the
+        // template parameter lists here, because type alias templates cannot be
+        // declared out-of-line.
+        if (TemplateParameterListsAreEqual(
+                /*NewInstFrom=*/nullptr, TemplateParams,
+                /*OldInstFrom=*/nullptr, OldDecl->getTemplateParameters(),
+                /*Complain=*/true, TPL_TemplateMatch))
           OldTemplateParams =
               OldDecl->getMostRecentDecl()->getTemplateParameters();
         else
@@ -18138,7 +18141,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
       return CheckClassTemplate(S, TagSpec, TagUseKind::Friend, TagLoc, SS,
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
-                                FriendLoc, TempParamLists.size() - 1,
+                                FriendLoc, TempParamLists.size(),
                                 TempParamLists.data(), IsMemberSpecialization)
           .get();
     } else {

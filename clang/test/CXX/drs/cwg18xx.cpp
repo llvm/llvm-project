@@ -283,16 +283,20 @@ auto e = [] {
 namespace cwg1821 { // cwg1821: 2.9
 struct A {
   template <typename> struct B {
-    void f();
+    void f(); // #cwg1821-B-f
   };
   template <typename T> void B<T>::f(){};
   // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+  // expected-error@-2 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1821-B-f {{previous declaration is here}}
 
   struct C {
-    void f();
+    void f(); // #cwg1821-C-f
   };
   void C::f() {}
   // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+  // expected-error@-2 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1821-C-f {{previous declaration is here}}
 };
 } // namespace cwg1821
 
