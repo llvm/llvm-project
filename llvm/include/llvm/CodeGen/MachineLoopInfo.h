@@ -96,9 +96,6 @@ private:
   /// Returns true if the given physreg has no defs inside the loop.
   bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
-  explicit MachineLoop(MachineBasicBlock *MBB)
-    : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
-
   MachineLoop() = default;
 };
 
