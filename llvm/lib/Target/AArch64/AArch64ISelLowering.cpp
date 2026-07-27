@@ -27525,6 +27525,46 @@ static SDValue
 performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG);
 
+static SDValue tryNarrowWidenedSmallVectorStore(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  SDValue Value = ST->getValue();
+  if (!DCI.isBeforeLegalize() || Value->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      !isNullConstant(Value.getOperand(1)))
+    return SDValue();
+  SDValue WideValue = Value.getOperand(0);
+  unsigned int WideValueOpcode = WideValue.getOpcode();
+  // Only MinMax intrinsics have support for widening of the specific types
+  // currently
+  if (WideValueOpcode != ISD::SMIN && WideValueOpcode != ISD::SMAX &&
+      WideValueOpcode != ISD::UMIN && WideValueOpcode != ISD::UMAX)
+    return SDValue();
+
+  unsigned SubRegType;
+  MVT SubRegWidth;
+  EVT ValueVT = Value.getValueType();
+  if (!ValueVT.isSimple())
+    return SDValue();
+  switch (ValueVT.getSimpleVT().SimpleTy) {
+  case MVT::v2i8:
+    SubRegType = AArch64::hsub;
+    SubRegWidth = MVT::f16;
+    break;
+  case MVT::v4i8:
+  case MVT::v2i16:
+    SubRegType = AArch64::ssub;
+    SubRegWidth = MVT::f32;
+    break;
+  default:
+    return SDValue();
+  }
+  SDLoc DL(ST);
+  SDValue SubReg =
+      DAG.getTargetExtractSubreg(SubRegType, DL, SubRegWidth, WideValue);
+
+  return DAG.getStore(ST->getChain(), DL, SubReg, ST->getBasePtr(),
+                      ST->getMemOperand());
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -27553,6 +27593,8 @@ static SDValue performSTORECombine(SDNode *N,
                         ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
                         ST->getAAInfo());
 
+  if (SDValue Res = tryNarrowWidenedSmallVectorStore(ST, DCI, DAG))
+    return Res;
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
     return Res;
 
@@ -31068,11 +31110,53 @@ static unsigned getReductionForOpcode(unsigned Op) {
   }
 }
 
+SDValue
+tryWidenSmallVectorMinMaxLoadStore(SDNode *N, SelectionDAG &DAG,
+                                   const AArch64TargetLowering &TLI,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (!DCI.isBeforeLegalize() || !Subtarget.isNeonAvailable() ||
+      !N->hasOneUse())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  EVT WideVT;
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::v2i8:
+  case MVT::v4i8:
+    WideVT = MVT::v8i8;
+    break;
+  case MVT::v2i16:
+    WideVT = MVT::v4i16;
+    break;
+  default:
+    return SDValue();
+  };
+  SDLoc DL(N);
+  auto WidenArg = [&](SDValue V) -> SDValue {
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, DAG.getPOISON(WideVT),
+                       V, DAG.getVectorIdxConstant(0, DL));
+  };
+  SDValue WideArg0 = WidenArg(N->getOperand(0));
+  SDValue WideArg1 = WidenArg(N->getOperand(1));
+  SDValue WideMinMax =
+      DAG.getNode(N->getOpcode(), DL, WideVT, WideArg0, WideArg1);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, WideMinMax,
+                     DAG.getVectorIdxConstant(0, DL));
+}
+
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
-                                    const AArch64TargetLowering &TLI) {
+                                    const AArch64TargetLowering &TLI,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
   using namespace llvm::SDPatternMatch;
   if (SDValue V = trySQDMULHCombine(N, DAG))
     return V;
+
+  // For small types used within a Min/Max Intrinsic, with a small VF such as
+  // 2, it is better to legalize the type via widening rather than promotion.
+  if (SDValue V = tryWidenSmallVectorMinMaxLoadStore(N, DAG, TLI, DCI)) {
+    return V;
+  }
 
   unsigned ReductionOpcode = getReductionForOpcode(N->getOpcode());
   if (!TLI.isOperationLegalOrCustom(ReductionOpcode, MVT::v2i64))
@@ -31155,7 +31239,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UMIN:
   case ISD::SMAX:
   case ISD::SMIN:
-    return performMINMAXCombine(N, DAG, *this);
+    return performMINMAXCombine(N, DAG, *this, DCI);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case ISD::CTTZ:
