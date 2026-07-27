@@ -297,9 +297,7 @@ class TestInfo(object):
             _prefix_filecheck_ir_name = args.prefix_filecheck_ir_name
         self.argv = argv
         self.input_lines = input_lines
-        self.run_lines = filter_run_lines(
-            find_run_lines(test, self.input_lines), args.run_lines
-        )
+        self.run_lines = find_run_lines(test, self.input_lines, args.run_lines)
         self.comment_prefix = comment_prefix
         if self.comment_prefix is None:
             if self.path.endswith(".mir") or self.path.endswith(".txt"):
@@ -661,7 +659,7 @@ def debug(*args, **kwargs):
         print(*args, **kwargs)
 
 
-def find_run_lines(test, lines):
+def find_run_lines(test, lines, run_lines_filter=None):
     debug("Scanning for RUN lines in test file:", test)
     raw_lines = [m.group(1) for m in [RUN_LINE_RE.match(l) for l in lines] if m]
     run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
@@ -670,6 +668,11 @@ def find_run_lines(test, lines):
             run_lines[-1] = run_lines[-1].rstrip("\\") + " " + l
         else:
             run_lines.append(l)
+    if run_lines_filter is not None:
+        selected = parse_run_lines(run_lines_filter, len(run_lines))
+        run_lines = [
+            line for (index, line) in enumerate(run_lines, start=1) if index in selected
+        ]
     debug("Found {} RUN lines in {}:".format(len(run_lines), test))
     for l in run_lines:
         debug("  RUN: {}".format(l))
@@ -712,14 +715,6 @@ def parse_run_lines(run_lines_filter, num_run_lines):
         selected.update(range(start, end + 1))
 
     return selected
-
-
-def filter_run_lines(run_lines, run_lines_filter):
-    if run_lines_filter is None:
-        return run_lines
-
-    selected = parse_run_lines(run_lines_filter, len(run_lines))
-    return [line for (index, line) in enumerate(run_lines, start=1) if index in selected]
 
 
 def get_triple_from_march(march):
