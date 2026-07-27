@@ -3756,21 +3756,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
 /// Return true if this a load/store that we have a RegRegScale instruction for.
 static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
                                      const RISCVSubtarget &Subtarget) {
-  if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE)
+  unsigned UserOpc = User->getOpcode();
+  if (UserOpc != ISD::LOAD && UserOpc != ISD::STORE)
     return false;
   EVT VT = cast<MemSDNode>(User)->getMemoryVT();
   // Zilx only provides indexed loads, so it must not enable reg+reg-scale
   // address folding for stores. XTheadMemIdx and Xqcisls have scaled stores.
   bool HasScalarIntegerMemIdx =
       Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls() ||
-      (Subtarget.hasStdExtZilx() && User->getOpcode() == ISD::LOAD);
+      (Subtarget.hasStdExtZilx() && UserOpc == ISD::LOAD);
   if (!(VT.isScalarInteger() && HasScalarIntegerMemIdx) &&
       !((VT == MVT::f32 || VT == MVT::f64) &&
         Subtarget.hasVendorXTHeadFMemIdx()))
     return false;
   // Don't allow stores of the value. It must be used as the address.
-  if (User->getOpcode() == ISD::STORE &&
-      cast<StoreSDNode>(User)->getValue() == Add)
+  if (UserOpc == ISD::STORE && cast<StoreSDNode>(User)->getValue() == Add)
     return false;
 
   return true;
