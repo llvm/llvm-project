@@ -274,10 +274,9 @@ struct CountTrailingZerosPattern final
     Value val0 = spirv::ConstantOp::getZero(type, loc, rewriter);
     Type elemType = getElementTypeOrSelf(type);
     Attribute bwAttr = IntegerAttr::get(elemType, bitwidth);
-    Attribute bwSplat = bwAttr;
     if (auto vecType = dyn_cast<VectorType>(type))
-      bwSplat = SplatElementsAttr::get(vecType, bwAttr);
-    Value valBitwidth = spirv::ConstantOp::create(rewriter, loc, type, bwSplat);
+      bwAttr = SplatElementsAttr::get(vecType, bwAttr);
+    Value valBitwidth = spirv::ConstantOp::create(rewriter, loc, type, bwAttr);
 
     Value lsb = spirv::GLFindILsbOp::create(rewriter, loc, input);
     Value isZero = spirv::IEqualOp::create(rewriter, loc, input, val0);
