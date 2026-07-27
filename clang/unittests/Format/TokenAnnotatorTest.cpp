@@ -4570,7 +4570,7 @@ TEST_F(TokenAnnotatorTest, AttributeSquares) {
 }
 
 TEST_F(TokenAnnotatorTest, CSharpUtf8StringLiterals) {
-  const auto Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  const auto Style = getLLVMStyle(FormatStyle::LK_CSharp);
   auto Tokens = annotate("var text = \"text/plain\"u8;", Style);
 
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
@@ -4580,6 +4580,12 @@ TEST_F(TokenAnnotatorTest, CSharpUtf8StringLiterals) {
 
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::utf8_string_literal, TT_CSharpStringLiteral);
+
+  Tokens = annotate("var text = $\"text/plain\" u8;", Style);
+
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
 }
 
 } // namespace

@@ -461,11 +461,11 @@ bool FormatTokenLexer::tryMergeCSharpUtf8StringLiteral() {
   if (Tokens.size() < 2)
     return false;
 
-  auto Suffix = Tokens.back();
-  if (Suffix->isNot(tok::identifier) || Suffix->TokenText != "u8")
+  const auto *Suffix = Tokens.back();
+  if (Suffix->TokenText != "u8" || Suffix->hasWhitespaceBefore())
     return false;
 
-  const auto String = *(Tokens.end() - 2);
+  auto *String = *(Tokens.end() - 2);
   if (String->isNot(tok::string_literal))
     return false;
 
