@@ -494,6 +494,7 @@ private:
 
 public:
   bool initGCNSchedStage() override;
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   RewriteMFMAFormStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
