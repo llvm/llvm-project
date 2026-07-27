@@ -13544,6 +13544,52 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
 }
 
+SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDValue V = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Node->getValueType(0);
+  EVT ScalarVT = VecVT.getScalarType();
+  EVT MaskScalarVT = Mask.getValueType().getScalarType();
+
+  // Needs to be handled by targets that have scalable vector types.
+  if (VecVT.isScalableVector())
+    report_fatal_error(
+        "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  // Expand through memory:
+  //  Alloca VecVT Ptr
+  //  Store V, Ptr
+  //  Res[i] = Load Ptr + umin(zext(Mask[i]), NumElts - 1) * sizeof(Elt)
+  // Clamping the index keeps out-of-range loads in-bounds; those lanes are
+  // poison, so any in-bounds element is a valid result.
+  Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
+  SDValue StackPtr = DAG.CreateStackTemporary(VecVT.getStoreSize(), Alignment);
+  auto &MF = DAG.getMachineFunction();
+  auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+  SDValue Chain =
+      DAG.getStore(DAG.getEntryNode(), DL, V, StackPtr, PtrInfo, Alignment);
+
+  MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
+  unsigned NumElts = VecVT.getVectorNumElements();
+  SmallVector<SDValue, 16> Elts;
+  Elts.reserve(NumElts);
+  for (unsigned I = 0; I < NumElts; ++I) {
+    SDValue Idx = DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I);
+    // Freeze in case we have poison/undef mask entries.
+    Idx = DAG.getFreeze(Idx);
+    Idx = DAG.getZExtOrTrunc(Idx, DL, IdxVT);
+    SDValue EltPtr = getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
+    Elts.push_back(DAG.getLoad(ScalarVT, DL, Chain, EltPtr,
+                               MachinePointerInfo::getUnknownStack(MF)));
+  }
+  return DAG.getBuildVector(VecVT, DL, Elts);
+}
+
 SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);

@@ -7612,7 +7612,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
+  // VECTOR_SHUFFLE_VAR is skipped because it is not elementwise: lane I of the
+  // result does not come from lane I of its source.
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
+      Opcode == ISD::VECTOR_SHUFFLE_VAR)
     return SDValue();
 
   unsigned NumOps = Ops.size();
@@ -8798,6 +8801,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstant(Val.extractBits(ElementSize, Shift), DL, VT);
     }
     break;
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    assert(VT == N1.getValueType() &&
+           "VECTOR_SHUFFLE_VAR result and source types don't match.");
+    assert(VT.isVector() && MaskVT.isVector() &&
+           "VECTOR_SHUFFLE_VAR operands must be vectors.");
+    assert(MaskVT.getVectorElementType().isInteger() &&
+           "VECTOR_SHUFFLE_VAR mask must be a vector of integers.");
+    assert(VT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "VECTOR_SHUFFLE_VAR mask has the wrong number of elements.");
+    break;
+  }
   case ISD::EXTRACT_SUBVECTOR: {
     EVT N1VT = N1.getValueType();
     assert(VT.isVector() && N1VT.isVector() &&

@@ -954,6 +954,10 @@ void TargetLoweringBase::initActions() {
     // Only some target support these vector operations. Default them to Expand.
     setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
 
+    // Dynamic shuffles default to expand; targets with native variable
+    // permutes should mark this Legal/Custom.
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Expand);
+
     // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
