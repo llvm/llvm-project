@@ -616,16 +616,19 @@ public:
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
   Value *SimplifyDemandedUseFPClass(Instruction *I, FPClassTest DemandedMask,
-                                    KnownFPClass &Known, const SimplifyQuery &Q,
-                                    unsigned Depth = 0);
+                                    KnownFPClass &Known,
+                                    const APInt &DemandedElts,
+                                    const SimplifyQuery &Q, unsigned Depth = 0);
   Value *SimplifyMultipleUseDemandedFPClass(Instruction *I,
                                             FPClassTest DemandedMask,
                                             KnownFPClass &Known,
+                                            const APInt &DemandedElts,
                                             const SimplifyQuery &Q,
                                             unsigned Depth);
 
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
+                               const APInt &DemandedElts,
                                const SimplifyQuery &Q, unsigned Depth = 0);
 
   bool SimplifyDemandedInstructionFPClass(Instruction &Inst);

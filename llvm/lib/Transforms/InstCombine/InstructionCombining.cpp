@@ -4224,8 +4224,12 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   if (ReturnClass == fcNone)
     return nullptr;
 
+  auto *FVTy = dyn_cast<FixedVectorType>(RetTy);
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+
   KnownFPClass KnownClass;
-  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass,
+  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass, DemandedElts,
                               SQ.getWithInstruction(&RI)))
     return &RI;
 
