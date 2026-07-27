@@ -191,10 +191,12 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
   // Check that AMDGCN targets don't add already declared address space 15.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p15:32:32", "amdgcn"),
             "m:e-e-p:64:64-p15:32:32-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:"
-            "128:48-p9:192:256:256:32");
+            "128:48-p9:192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-"
+            "p14:32:32");
   EXPECT_EQ(UpgradeDataLayoutString("p15:32:32-G2-e-p:64:64", "amdgcn"),
             "m:e-p15:32:32-G2-e-p:64:64-ni:7:8:9-p7:160:256:256:32-p8:128:128:"
-            "128:48-p9:192:256:256:32");
+            "128:48-p9:192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-"
+            "p14:32:32");
 
   // Check that SPIR & SPIRV targets don't add -G1 if there is already a -G
   // flag.
