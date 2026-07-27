@@ -385,6 +385,7 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: |
+            .github/workflows/require-team-membership
             .github/workflows/upload-release-artifact
             .github/workflows/validate-release-version
             llvm/utils/release/github-upload-release.py
