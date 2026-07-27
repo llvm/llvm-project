@@ -412,17 +412,6 @@ static bool sinkScalarOperands(VPlan &Plan) {
   return Changed;
 }
 
-/// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
-/// the mask.
-static VPValue *getPredicatedMask(VPRegionBlock *R) {
-  auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
-  if (!EntryBB || EntryBB->size() != 1 ||
-      !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
-    return nullptr;
-
-  return cast<VPBranchOnMaskRecipe>(&*EntryBB->begin())->getOperand(0);
-}
-
 /// If \p R is a triangle region, return the 'then' block of the triangle.
 static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
   auto *EntryBB = cast<VPBasicBlock>(R->getEntry());
@@ -467,8 +456,8 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     if (!Region2 || !Region2->isReplicator())
       continue;
 
-    VPValue *Mask1 = getPredicatedMask(Region1);
-    VPValue *Mask2 = getPredicatedMask(Region2);
+    VPValue *Mask1 = Region1->getEntryBranchOnMask()->getOperand(0);
+    VPValue *Mask2 = Region2->getEntryBranchOnMask()->getOperand(0);
     if (!Mask1 || Mask1 != Mask2)
       continue;
 
@@ -795,11 +784,17 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
+    VPIRFlags::WrapFlagsTy WrapFlags;
+    // We can preserve nuw when the step is non-negative.
+    const APInt *Step;
+    if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
+      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
+                   false};
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder);
+        WideIV->getDebugLoc(), Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -5463,14 +5458,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
-  // Widen unmasked unit-stride consecutive accesses, matching the legacy CM.
-  // Both forward (stride +1) and reverse (stride -1) accesses are handled.
+  // Widen unit-stride consecutive accesses, matching the legacy CM. Both
+  // forward (stride +1) and reverse (stride -1) accesses are handled.
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
-        if (RecipeBuilder.isPredicatedInst(I))
-          return false;
-
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
@@ -5481,13 +5473,28 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return false;
         bool Reverse = Stride == -1;
 
+        // A predicated access can only be widened (rather than scalarized) if
+        // the target supports a masked load/store for it.
+        // TODO: Determine if a load/store needs predication directly in VPlan.
+        bool IsPredicated = RecipeBuilder.isPredicatedInst(I);
+        if (IsPredicated && !CostCtx.Config.isLegalMaskedLoadOrStore(
+                                IsLoad, ScalarTy, getLoadStoreAlignment(I),
+                                getLoadStoreAddressSpace(I)))
+          return false;
+
         VPBuilder Builder(VPI);
         VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
             Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
+
+        VPValue *Mask = IsPredicated ? VPI->getMask() : nullptr;
+        // Reverse the mask so it matches the reversed access order.
+        if (Reverse && Mask)
+          Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask,
+                                      VPI->getDebugLoc());
+
         if (IsLoad) {
           VPSingleDefRecipe *Load = Builder.createWidenLoad(
-              *cast<LoadInst>(I), VectorPtr,
-              /*Mask=*/nullptr,
+              *cast<LoadInst>(I), VectorPtr, Mask,
               /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
           // Reverse the loaded values back into program order.
           if (Reverse)
@@ -5503,8 +5510,8 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                            VPI->getDebugLoc());
 
         auto *StoreR = Builder.createWidenStore(
-            *cast<StoreInst>(I), VectorPtr, StoredVal,
-            /*Mask=*/nullptr, /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+            *cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
+            /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
         return ReplaceWith(VPI, StoreR);
       });
 

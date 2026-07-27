@@ -201,7 +201,7 @@ void InProcessControllerAccess::disconnect() {
 }
 
 void InProcessControllerAccess::callController(
-    OnControllerCallReturn OnComplete, HandlerTag T,
+    OnControllerCallReturn OnComplete, orc_rt_ControllerHandlerTag T,
     WrapperFunctionBuffer ArgBytes) {
   assert(C && "callController called before connect");
   if (C->EnterMessageScope(C)) {
