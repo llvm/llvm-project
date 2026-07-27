@@ -23140,6 +23140,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           // Follow all insert element instructions from the current buildvector
           // sequence.
           Instruction *Ins = VL0;
+          Instruction *Op;
           do {
             std::optional<unsigned> InsertIdx = getElementIndex(Ins);
             if (!InsertIdx)
@@ -23148,14 +23149,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
-            auto *User =
+            Op = Ins;
+            Ins =
                 dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
-            // Only continue while the user extends the same buildvector, i.e.
-            // it inserts into the value built so far.
-            if (!User || User->getOperand(0) != Ins)
-              break;
-            Ins = User;
-          } while (true);
+          } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
           SmallBitVector IsFirstPoison =
