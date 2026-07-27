@@ -3897,6 +3897,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
+  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
+            Call.getFunction()->isStrictFP(),
+        "call site marked strictfp without caller function marked strictfp",
+        Call);
+
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4593,6 +4598,8 @@ void Verifier::visitLoadInst(LoadInst &LI) {
 
     Type *ScalarTy = ElTy;
     if (LI.isElementwise()) {
+      Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise load cannot be sequentially consistent.", &LI);
       auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
       Check(VecTy,
             "atomic elementwise load operand must have fixed vector type!", &LI,
@@ -4728,6 +4735,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   Type *ElTy = RMWI.getOperand(1)->getType();
   Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
+    Check(RMWI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+          "atomicrmw elementwise cannot be sequentially consistent.", &RMWI);
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
