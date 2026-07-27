@@ -1313,7 +1313,7 @@ static BitModeTy getBitMode(const char *RawBitMode) {
       .Case("64", BitModeTy::Bit64)
       .Case("32_64", BitModeTy::Bit32_64)
       .Case("any", BitModeTy::Any)
-      .Default(BitModeTy::Any);
+      .Default(BitModeTy::Unknown);
 }
 
 static const char *matchFlagWithArg(StringRef Expected,
@@ -1369,7 +1369,7 @@ static int ar_main(int argc, char **argv) {
   if (object::Archive::getDefaultKind() == object::Archive::K_AIXBIG) {
     BitMode = getBitMode(getenv("OBJECT_MODE"));
     if (BitMode == BitModeTy::Unknown)
-      BitMode = BitModeTy::Bit32;
+      BitMode = BitModeTy::Any;
   }
 
   for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
