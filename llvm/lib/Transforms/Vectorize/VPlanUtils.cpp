@@ -908,7 +908,6 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
-  case scPtrToInt:
   case scPtrToAddr: {
     auto *Cast = cast<SCEVCastExpr>(S);
     VPValue *Op = tryToExpand(Cast->getOperand());
@@ -924,9 +923,6 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       break;
     case scSignExtend:
       Opcode = Instruction::SExt;
-      break;
-    case scPtrToInt:
-      Opcode = Instruction::PtrToInt;
       break;
     case scPtrToAddr:
       Opcode = Instruction::PtrToAddr;

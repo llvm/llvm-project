@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple x86_64-mingw64 -emit-llvm-bc -target-cpu x86-64 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -o %t.bc -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-mingw64 -emit-llvm-bc -target-cpu x86-64 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa -o %t.bc -x c++ %s
 // RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -aux-triple x86_64-mingw64 -fsyntax-only -fopenmp -fopenmp-is-target-device -fopenmp-host-ir-file-path %t.bc -x c++ %s
 // expected-no-diagnostics
 

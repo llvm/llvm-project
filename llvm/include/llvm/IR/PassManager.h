@@ -500,7 +500,7 @@ public:
       return false;
 
     // Construct a new model around the instance returned by the builder.
-    PassPtr.reset(new PassModelT(PassBuilder()));
+    PassPtr = PassModelT::create(PassBuilder());
     return true;
   }
 
@@ -556,7 +556,7 @@ private:
 
   /// Map type from analysis pass ID to pass concept pointer.
   using AnalysisPassMapT =
-      DenseMap<AnalysisKey *, std::unique_ptr<PassConceptT>>;
+      DenseMap<AnalysisKey *, typename PassConceptT::unique_ptr>;
 
   /// Collection of analysis passes, indexed by ID.
   AnalysisPassMapT AnalysisPasses;

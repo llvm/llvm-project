@@ -1802,9 +1802,13 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   public:
     enum Point : char { Pre = 0, Post = 1 };
 
-    struct ContextSwitchScope {
+    class ContextSwitchScope {
       DualLocalVarContext &DC;
       Point LastPoint;
+
+    public:
+      ContextSwitchScope(DualLocalVarContext &DC, Point LastPoint)
+          : DC(DC), LastPoint(LastPoint) {}
       ContextSwitchScope(const ContextSwitchScope &) = delete;
       ContextSwitchScope &operator=(const ContextSwitchScope &) = delete;
       ~ContextSwitchScope() { DC.switchContextTo(LastPoint); }
@@ -1814,7 +1818,7 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
     [[nodiscard]] ContextSwitchScope switchToContextForScope(Point P) {
       Point PriorPoint = CurrPoint;
       switchContextTo(P);
-      return ContextSwitchScope{*this, PriorPoint};
+      return ContextSwitchScope(*this, PriorPoint);
     }
 
     /// Update the pre- and post-contexts to be associated with the next Stmt \p

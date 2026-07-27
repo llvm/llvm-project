@@ -15,6 +15,15 @@ include "mlir/Dialect/Arith/IR/ArithOps.td"
 // Create zero attribute of type matching the argument's type.
 def GetZeroAttr : NativeCodeCall<"$_builder.getZeroAttr($0.getType())">;
 
+// A value whose type is a scalar or has a static shape, i.e. one for which a
+// splat constant can be built. Guards patterns that materialize a constant via
+// GetZeroAttr, which asserts on a dynamically-shaped type.
+def IsScalarOrHasStaticShape :
+    Constraint<CPred<"!::llvm::isa<::mlir::ShapedType>($0.getType()) || "
+                     "::llvm::cast<::mlir::ShapedType>($0.getType())"
+                     ".hasStaticShape()">,
+               "type is a scalar or has a static shape">;
+
 // Add two integer attributes and create a new one with the result.
 def AddIntAttrs : NativeCodeCall<"addIntegerAttrs($_builder, $0, $1, $2)">;
 
@@ -193,7 +202,8 @@ def SubILHSSubConstantLHS :
 def SubISubILHSRHSLHS :
     Pat<(Arith_SubIOp:$res (Arith_SubIOp $x, $y, $ovf1), $x, $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(IsScalarOrHasStaticShape $y)]>;
 
 //===----------------------------------------------------------------------===//
 // MulSIExtendedOp
