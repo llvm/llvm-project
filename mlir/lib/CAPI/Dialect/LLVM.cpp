@@ -590,9 +590,10 @@ MlirAttribute mlirLLVMMDConstantAttrGetValue(MlirAttribute attr) {
   return wrap((Attribute)cast<MDConstantAttr>(unwrap(attr)).getValue());
 }
 
-MlirAttribute mlirLLVMMDGlobalValueAttrGet(MlirContext ctx, MlirAttribute name) {
-  return wrap(
-      MDGlobalValueAttr::get(unwrap(ctx), cast<FlatSymbolRefAttr>(unwrap(name))));
+MlirAttribute mlirLLVMMDGlobalValueAttrGet(MlirContext ctx,
+                                           MlirAttribute name) {
+  return wrap(MDGlobalValueAttr::get(unwrap(ctx),
+                                     cast<FlatSymbolRefAttr>(unwrap(name))));
 }
 
 bool mlirLLVMAttrIsAMDGlobalValueAttr(MlirAttribute attr) {
