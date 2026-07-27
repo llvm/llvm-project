@@ -24,9 +24,12 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -45,30 +48,18 @@ namespace {
 /// as a data-clause pointer
 static Value getMappedVar(Value value) {
   while (true) {
-    if (auto convert = value.getDefiningOp<fir::ConvertOp>()) {
-      value = convert.getValue();
-      continue;
-    }
-    if (auto coor = value.getDefiningOp<fir::ArrayCoorOp>()) {
-      value = coor.getMemref();
-      continue;
-    }
-    if (auto coor = value.getDefiningOp<fir::CoordinateOp>()) {
-      value = coor.getRef();
-      continue;
-    }
-    if (auto designate = value.getDefiningOp<hlfir::DesignateOp>()) {
-      value = designate.getMemref();
+    Operation *def = value.getDefiningOp();
+    // Stop at the variable OpenACC maps as the data-clause pointer.
+    if (isa_and_nonnull<fir::DeclareOp, hlfir::DeclareOp>(def))
+      return value;
+    if (auto view = dyn_cast_or_null<fir::FortranObjectViewOpInterface>(def)) {
+      value = view.getViewSource(cast<OpResult>(value));
       continue;
     }
     // Descriptor-based (allocatable/pointer) variables: the data address is
     // extracted from the descriptor via box_addr(load(<descriptor ref>)). Peel
     // both so the walk reaches the descriptor variable, which is what OpenACC
     // maps as the data-clause varPtr for such variables.
-    if (auto boxAddr = value.getDefiningOp<fir::BoxAddrOp>()) {
-      value = boxAddr.getVal();
-      continue;
-    }
     if (auto load = value.getDefiningOp<fir::LoadOp>()) {
       // Only a load that produces a descriptor is part of the addressing
       // chain; scalar loads are ordinary values, not addressing steps.
@@ -77,27 +68,23 @@ static Value getMappedVar(Value value) {
         continue;
       }
     }
-    if (isa_and_nonnull<fir::DeclareOp, hlfir::DeclareOp>(
-            value.getDefiningOp()))
-      return value;
     return {};
   }
 }
 
-/// Checks if mappedVar is present due to an enclosing acc.data region.
-static bool isMappedInEnclosingAccData(Value mappedVar,
-                                       cuf::KernelLaunchOp launch) {
-  if (!mappedVar)
-    return false;
-  for (auto dataOp = launch->getParentOfType<acc::DataOp>(); dataOp;
-       dataOp = dataOp->getParentOfType<acc::DataOp>()) {
-    for (Value dataOperand : dataOp.getDataClauseOperands()) {
-      if (Value hostVar = acc::getVar(dataOperand.getDefiningOp()))
-        if (getMappedVar(hostVar) == mappedVar)
-          return true;
-    }
-  }
-  return false;
+/// Collects the host variables made present by an
+/// OpenACC data directive that dominates `launch`. The result is
+/// computed once per launch, then queried per argument.
+static llvm::DenseSet<Value>
+collectPresentAccVars(cuf::KernelLaunchOp launch, DominanceInfo &domInfo,
+                      PostDominanceInfo &postDomInfo) {
+  llvm::DenseSet<Value> presentVars;
+  for (Value dataClause :
+       acc::getDominatingDataClauses(launch, domInfo, postDomInfo))
+    if (Value hostVar = acc::getVar(dataClause.getDefiningOp()))
+      if (Value mappedVar = getMappedVar(hostVar))
+        presentVars.insert(mappedVar);
+  return presentVars;
 }
 
 /// Reconstructs the addressing chain that produced `value` from `mappedVar`,
@@ -110,16 +97,15 @@ static Value rebuildOnDevice(OpBuilder &builder, Value value, Value mappedVar,
     return deviceVar;
 
   Operation *def = value.getDefiningOp();
-  if (!def || !isa<fir::ConvertOp, fir::ArrayCoorOp, fir::CoordinateOp,
-                   hlfir::DesignateOp, fir::BoxAddrOp, fir::LoadOp>(def))
-    return value;
-
+  bool isViewStep = isa_and_nonnull<fir::FortranObjectViewOpInterface>(def);
+  bool isDescriptorLoad = false;
   // Mirror getMappedVar: only a descriptor load is part of the addressing
   // chain and must be rebuilt on the device descriptor; any other load is a
   // live-in and is reused as-is.
-  if (auto load = dyn_cast<fir::LoadOp>(def))
-    if (!mlir::isa<fir::BaseBoxType>(load.getType()))
-      return value;
+  if (auto load = dyn_cast_or_null<fir::LoadOp>(def))
+    isDescriptorLoad = isa<fir::BaseBoxType>(load.getType());
+  if (!isViewStep && !isDescriptorLoad)
+    return value;
 
   IRMapping map;
   for (Value operand : def->getOperands())
@@ -154,12 +140,18 @@ private:
     llvm::SmallVector<MappedArg> mappedArgs;
     llvm::SetVector<Value> mappedVars;
 
+    DominanceInfo domInfo;
+    PostDominanceInfo postDomInfo;
+    llvm::DenseSet<Value> presentAccVars =
+        collectPresentAccVars(launch, domInfo, postDomInfo);
+
     for (OpOperand &operand : launch.getArgsMutable()) {
       Value arg = operand.get();
       if (!fir::isa_ref_type(arg.getType()))
         continue;
       Value mappedVar = getMappedVar(arg);
-      if (!isMappedInEnclosingAccData(mappedVar, launch))
+      // Check if mappedVar is present due to an enclosing OpenACC data region.
+      if (!mappedVar || !presentAccVars.contains(mappedVar))
         continue;
       mappedArgs.push_back({&operand, mappedVar});
       mappedVars.insert(mappedVar);
