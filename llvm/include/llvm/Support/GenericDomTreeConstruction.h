@@ -1663,19 +1663,18 @@ void DominatorTreeBase<NodeT, IsPostDom>::applyUpdates(
   if (Updates.empty()) {
     GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
     DomTreeBuilder::ApplyUpdates(*this, PostViewCFG, &PostViewCFG);
-  } else {
-    // PreViewCFG needs to merge Updates and PostViewCFG. The updates in
-    // Updates need to be reversed, and match the direction in PostViewCFG.
-    // The PostViewCFG is created with updates reversed (equivalent to changes
-    // made to the CFG), so the PreViewCFG needs all the updates reverse
-    // applied.
-    SmallVector<UpdateType> AllUpdates(Updates);
-    append_range(AllUpdates, PostViewUpdates);
-    GraphDiff<NodePtr, IsPostDom> PreViewCFG(AllUpdates,
-                                             /*ReverseApplyUpdates=*/true);
-    GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
-    DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, &PostViewCFG);
+    return;
   }
+  // PreViewCFG needs to merge Updates and PostViewCFG. The updates in Updates
+  // need to be reversed, and match the direction in PostViewCFG. The
+  // PostViewCFG is created with updates reversed (equivalent to changes made
+  // to the CFG), so the PreViewCFG needs all the updates reverse applied.
+  SmallVector<UpdateType> AllUpdates(Updates);
+  append_range(AllUpdates, PostViewUpdates);
+  GraphDiff<NodePtr, IsPostDom> PreViewCFG(AllUpdates,
+                                           /*ReverseApplyUpdates=*/true);
+  GraphDiff<NodePtr, IsPostDom> PostViewCFG(PostViewUpdates);
+  DomTreeBuilder::ApplyUpdates(*this, PreViewCFG, &PostViewCFG);
 }
 
 template <typename NodeT, bool IsPostDom>
