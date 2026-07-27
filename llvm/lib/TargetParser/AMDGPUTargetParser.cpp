@@ -14,6 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,16 +30,22 @@ constexpr unsigned NumAMDGPUSubArches =
 
 // Per-GPU data for the AMDGCN GPUKinds, from the generated table below.
 struct GPUInfo {
-  StringRef Name;
+  StringTable::Offset Name;
   Triple::SubArchType SubArch;
   unsigned ArchFeatures;
   IsaVersion Version;
-  StringRef FamilyName;
+  StringTable::Offset FamilyName;
 };
 
+#define GET_AMDGPU_NAME_TABLE
 #define GET_AMDGPU_GPU_TABLE
 #define GET_AMDGPU_MAJOR_SUBARCH
+#define GET_AMDGPU_SUBARCH_NAME
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
+
+// The string table shared by every generated table that stores GPU-name-derived
+// strings as offsets.
+constexpr StringTable AMDGPUNameStrTab = AMDGPUNameTable;
 
 // Look up the GPUInfo row for an AMDGCN GPUKind, or nullptr for GK_NONE / a
 // non-AMDGCN (R600) kind.
@@ -80,11 +87,21 @@ constexpr std::array<Triple::SubArchType, NumAMDGPUSubArches>
         Map[Entry.SubArch - Triple::FirstAMDGPUSubArch] = Entry.Major;
       return Map;
     }();
+
+// SubArch -> name-offset, indexed by (SubArch - FirstAMDGPUSubArch). Unmapped
+// subarches keep offset 0 (the empty string).
+constexpr std::array<StringTable::Offset, NumAMDGPUSubArches>
+    AMDGPUSubArchNameOffsets = [] {
+      std::array<StringTable::Offset, NumAMDGPUSubArches> Map{};
+      for (const AMDGPUSubArchNameEntry &Entry : AMDGPUSubArchNames)
+        Map[Entry.SubArch - Triple::FirstAMDGPUSubArch] = Entry.NameOffset;
+      return Map;
+    }();
 } // namespace
 
 StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? Info->FamilyName : "";
+  return Info ? AMDGPUNameStrTab[Info->FamilyName] : "";
 }
 
 Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
@@ -191,52 +208,15 @@ std::string AMDGPU::mergeSubArch(const Triple &A, const Triple &B) {
 
 StringRef llvm::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? Info->Name : "";
+  return Info ? AMDGPUNameStrTab[Info->Name] : "";
 }
-
-// Canonical GPU name for each AMDGPU subarch, indexed by SubArch -
-// Triple::FirstAMDGPUSubArch.
-static const StringLiteral AMDGPUSubArchNames[Triple::LastAMDGPUSubArch -
-                                              Triple::FirstAMDGPUSubArch + 1] =
-    {"gfx600", // AMDGPUSubArch6 (no generic target)
-     "gfx600",          "gfx601",  "gfx602",
-
-     "gfx700", // AMDGPUSubArch7 (no generic target)
-     "gfx700",          "gfx701",  "gfx702",  "gfx703",          "gfx704",
-     "gfx705",
-
-     "gfx801", // AMDGPUSubArch8 (no generic target)
-     "gfx801",          "gfx802",  "gfx803",  "gfx805",
-
-     "gfx810",
-
-     "gfx9-generic",    "gfx900",  "gfx902",  "gfx904",          "gfx906",
-     "gfx909",          "gfx90c",
-
-     "gfx908",          "gfx90a",
-
-     "gfx9-4-generic",  "gfx942",  "gfx950",
-
-     "gfx10-1-generic", "gfx1010", "gfx1011", "gfx1012",         "gfx1013",
-
-     "gfx10-3-generic", "gfx1030", "gfx1031", "gfx1032",         "gfx1033",
-     "gfx1034",         "gfx1035", "gfx1036",
-
-     "gfx11-generic",   "gfx1100", "gfx1101", "gfx1102",         "gfx1103",
-     "gfx1150",         "gfx1151", "gfx1152", "gfx1153",         "gfx1154",
-
-     "gfx11-7-generic", "gfx1170", "gfx1171", "gfx1172",
-
-     "gfx12-generic",   "gfx1200", "gfx1201", "gfx12-5-generic", "gfx1250",
-     "gfx1251",
-
-     "gfx13-generic",   "gfx1310"};
 
 StringRef llvm::AMDGPU::getArchNameFromSubArch(Triple::SubArchType SubArch) {
   if (SubArch < Triple::FirstAMDGPUSubArch ||
       SubArch > Triple::LastAMDGPUSubArch)
     return "";
-  return AMDGPUSubArchNames[SubArch - Triple::FirstAMDGPUSubArch];
+  return AMDGPUNameStrTab[AMDGPUSubArchNameOffsets[SubArch -
+                                                   Triple::FirstAMDGPUSubArch]];
 }
 
 StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
