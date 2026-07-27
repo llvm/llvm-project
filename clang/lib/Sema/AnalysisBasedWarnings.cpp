@@ -2759,21 +2759,57 @@ sema::AnalysisBasedWarnings::Policy
 sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   using namespace diag;
   DiagnosticsEngine &D = S.getDiagnostics();
+
+  // This runs at the end of every function definition, and the checks below
+  // resolve Loc against the pragma diagnostic state (and system header/macro
+  // classification) once per queried diagnostic. Those inputs fully determine
+  // the result, so cache the policy on them instead (PolicyOverrides are
+  // transient per-function state and are applied after the cache lookup).
+  const bool Cacheable = !D.hasDiagSuppressionMapping();
+  const void *StateKey = nullptr;
+  unsigned SysIdx = 0;
+  if (Cacheable) {
+    StateKey = D.getDiagStateKeyForLoc(Loc);
+    if (Loc.isValid() && D.hasSourceManager()) {
+      const SourceManager &SM = D.getSourceManager();
+      SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
+               (SM.isInSystemMacro(Loc) ? 1u : 0u);
+    }
+    auto It = PolicyCache[SysIdx].find(StateKey);
+    if (It != PolicyCache[SysIdx].end()) {
+      Policy P = It->second;
+      P.enableCheckUnreachable |= PolicyOverrides.enableCheckUnreachable;
+      P.enableThreadSafetyAnalysis |=
+          PolicyOverrides.enableThreadSafetyAnalysis;
+      P.enableConsumedAnalysis |= PolicyOverrides.enableConsumedAnalysis;
+      return P;
+    }
+  }
+
   Policy P;
 
   // Note: The enabled checks should be kept in sync with the switch in
   // SemaPPCallbacks::PragmaDiagnostic().
   P.enableCheckUnreachable =
-      PolicyOverrides.enableCheckUnreachable ||
       areAnyEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
                     warn_unreachable_return, warn_unreachable_loop_increment);
 
-  P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
-                                 areAnyEnabled(D, Loc, warn_double_lock);
+  P.enableThreadSafetyAnalysis = areAnyEnabled(D, Loc, warn_double_lock);
 
-  P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
-                             areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+  P.enableConsumedAnalysis = areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+
+  if (Cacheable)
+    PolicyCache[SysIdx][StateKey] = P;
+
+  P.enableCheckUnreachable |= PolicyOverrides.enableCheckUnreachable;
+  P.enableThreadSafetyAnalysis |= PolicyOverrides.enableThreadSafetyAnalysis;
+  P.enableConsumedAnalysis |= PolicyOverrides.enableConsumedAnalysis;
   return P;
+}
+
+void sema::AnalysisBasedWarnings::clearPolicyCache() {
+  for (auto &M : PolicyCache)
+    M.clear();
 }
 
 void sema::AnalysisBasedWarnings::clearOverrides() {

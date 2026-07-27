@@ -583,6 +583,17 @@ private:
       DiagSuppressionMapping;
 
 public:
+  /// Returns a cache key representing the diagnostic state at \p Loc.
+  const void *getDiagStateKeyForLoc(SourceLocation Loc) const {
+    return GetDiagStateForLoc(Loc);
+  }
+
+  /// True if an active diagnostic suppression mapping makes severity dependent
+  /// on the file path.
+  bool hasDiagSuppressionMapping() const {
+    return static_cast<bool>(DiagSuppressionMapping);
+  }
+
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
                              DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
