@@ -276,8 +276,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
   // For the computations below, make sure they don't unsigned wrap.
-  // FIXME: for a negative step this holds the HIGHEST accessed address, not
-  // the lowest
+  // FIXME: for a negative step LowestAddr should be evaluated at the last
+  // iteration as AR->evaluateAtIteration(MaxBTC, SE).
   const SCEV *LowestAddr = AR->getStart();
   if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, LowestAddr, StartPtr))
     return false;
@@ -320,9 +320,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       return false;
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
   } else {
-    // FIXME: LowestOffset here is actually the HIGHEST offset (see FIXME
-    // above). Lower check is over-strict by EltSize, upper is under-counted
-    // by EltSize.
+    // FIXME: two independent off-by-EltSize bugs on this branch:
+    //  1. LowestOffset here is actually the HIGHEST offset, because
+    //     LowestAddr is computed from AR->getStart() rather than
+    //     AR->evaluateAtIteration(MaxBTC, SE) (see FIXME above).
+    //  2. The lower check is over-strict by EltSize and the upper is
+    //     under-counted by EltSize.
     assert(SE.isKnownNegative(Step) && "must be known negative");
     if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, LowestOffset, SpanBytes))
       return false;

@@ -47,11 +47,11 @@ exit.done:
 }
 
 ; Reverse i32 loop whose top read spills one byte past the deref end.
-; The IR is UB by construction: top i32 read at byte 13 covers [13, 17),
-; but deref(16) only guarantees [0, 16).
+; The top i32 read at byte 13 covers [13, 17), but deref(16) only
+; guarantees [0, 16) — bytes at/after 16 may or may not be dereferenceable.
 ;
-; TODO: LAA should reject this AR (top access exits the deref region)
-; and fall back to the wide low bound.
+; TODO: LAA must not assume the AR fits in the deref region and should
+; fall back to the wide low bound.
 ;
 ; Pseudocode:
 ;   for (i64 i = 13; i > 1; i -= 4) {
