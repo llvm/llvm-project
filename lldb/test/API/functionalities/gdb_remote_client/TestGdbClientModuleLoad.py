@@ -59,9 +59,6 @@ class MyResponder(MockGDBServerResponder):
         else:
             return None, False
 
-    def qfThreadInfo(self):
-        return "m47"
-
     def qsThreadInfo(self):
         return "l"
 
