@@ -83,6 +83,10 @@ features cannot lower the translation-unit ABI level;
   Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
   `isKindInformative` and `isKindResultType`.
 
+- `CompletionString.availability` now returns instances of `AvailabilityKind`.
+  As a result, the `__str__` representation of its return values changed.
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
@@ -414,9 +418,6 @@ features cannot lower the translation-unit ABI level;
 #### X86 Support
 
 #### Arm and AArch64 Support
-
-- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
-  now uses the B-key by default.
 
 #### Android Support
 
