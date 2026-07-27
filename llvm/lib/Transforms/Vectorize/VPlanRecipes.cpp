@@ -3261,7 +3261,20 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer";
   printFlags(O);
-  printOperands(O, SlotTracker);
+  assert(getNumOperands() >= 2 && "Expected at least two operands!");
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getSourceElementType()->print(O);
+  O << " x ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+
+  if (getNumOperands() == 2)
+    return;
+
+  O << ", ";
+  interleaveComma(
+      drop_begin(operands(), 2), O,
+      [&O, &SlotTracker](VPValue *Op) { Op->printAsOperand(O, SlotTracker); });
 }
 #endif
 

@@ -1248,7 +1248,7 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep>, ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep>, float x ir<1>
 ; CHECK-NEXT:      WIDEN ir<%0> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%pred> = fcmp une ir<%0>, ir<0.000000e+00>
 ; CHECK-NEXT:    Successor(s): pred.store

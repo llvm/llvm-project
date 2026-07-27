@@ -28,14 +28,14 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.body.split:
 ; INITIAL-NEXT:      CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.a>, ir<1>
+; INITIAL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.a>, i8 x ir<1>
 ; INITIAL-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP6]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.b>, ir<1>
+; INITIAL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.b>, i8 x ir<1>
 ; INITIAL-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP7]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
 ; INITIAL-NEXT:      CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.c>, ir<1>
+; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.c>, i8 x ir<1>
 ; INITIAL-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; INITIAL-NEXT:      CLONE ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%n>

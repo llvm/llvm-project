@@ -26,11 +26,11 @@ define void @wide_call_attrs(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>, ir<1>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>, double x ir<1>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
 ; CHECK-NEXT:      WIDEN-CALL ir<%call> = call @acos(ir<%in>) (using library function: vec_acos)
 ; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>, ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>, double x ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%exitcond> = icmp eq ir<%iv.next>, ir<1000>
@@ -90,12 +90,12 @@ define void @test_intrinsic_with_arg_and_ret_attrs(ptr noalias %A, ptr noalias %
 ; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, ir<%i>
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, ir<%i>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%gep.A>, ir<1>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%gep.A>, float x ir<1>
 ; CHECK-NEXT:      WIDEN ir<%a> = load vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.B>, ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.B>, float x ir<1>
 ; CHECK-NEXT:      WIDEN ir<%b> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%m> = call llvm.minnum(ir<%a>, ir<%b>)
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%gep.A>, ir<1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%gep.A>, float x ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%m>
 ; CHECK-NEXT:      EMIT ir<%i.next> = add ir<%i>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%cond> = icmp eq ir<%i.next>, ir<%n>
