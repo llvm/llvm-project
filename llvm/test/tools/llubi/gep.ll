@@ -11,8 +11,8 @@ define ptr @dead_stack_object() {
 }
 
 define void @main() {
-  %alloc = alloca i32
-  %alloc_struct = alloca %struct
+  %alloc = alloca i32, align 8
+  %alloc_struct = alloca %struct, align 16
 
   %gep = getelementptr i8, ptr %alloc, i64 3
   %gep_poison_base = getelementptr i8, ptr poison, i64 1
@@ -93,8 +93,8 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
-; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x10 [alloc_struct]
+; CHECK-NEXT:   %alloc = alloca i32, align 8 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc_struct = alloca %struct, align 16 => ptr 0x10 [alloc_struct]
 ; CHECK-NEXT:   %gep = getelementptr i8, ptr %alloc, i64 3 => ptr 0xB [alloc + 3]
 ; CHECK-NEXT:   %gep_poison_base = getelementptr i8, ptr poison, i64 1 => poison
 ; CHECK-NEXT:   %gep_poison_idx = getelementptr i8, ptr %alloc, i64 poison => poison

@@ -13,13 +13,13 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %var = alloca i32, align 4 => ptr 0x8 [var]
+; CHECK-NEXT:   %var = alloca i32, align 4 => ptr 0xC [var]
 ; CHECK-NEXT: Entering function: identity
-; CHECK-NEXT:   ptr %p = ptr 0x10 [p]
+; CHECK-NEXT:   ptr %p = ptr 0x14 [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity
-; CHECK-NEXT:   %p = call ptr @identity(ptr byval(i32) %var) => ptr 0x10 [p]
+; CHECK-NEXT:   %p = call ptr @identity(ptr byval(i32) %var) => ptr 0x14 [p]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   store i32 0, ptr %p, align 4 at @main <stdin>:11
-; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object at address 0x10.
+; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object at address 0x14.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

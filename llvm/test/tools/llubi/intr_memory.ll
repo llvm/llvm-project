@@ -2,7 +2,7 @@
 ; RUN: llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
-  %src = alloca [8 x i8], align 1
+  %src = alloca [8 x i8], align 8
   %dst = alloca [8 x i8], align 1
   call void @llvm.memset.p0.i16(ptr %src, i8 17, i16 8, i1 false)
   call void @llvm.memcpy.p0.p0.i8(ptr %dst, ptr %src, i8 8, i1 false)
@@ -24,7 +24,7 @@ define void @main() {
   %p5 = getelementptr i8, ptr %dst, i64 5
   %v5 = load i8, ptr %p5, align 1
 
-  %move = alloca [6 x i8], align 1
+  %move = alloca [6 x i8], align 2
   store i8 1, ptr %move, align 1
   %m1 = getelementptr i8, ptr %move, i64 1
   store i8 2, ptr %m1, align 1
@@ -68,7 +68,7 @@ define void @main() {
 }
 
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %src = alloca [8 x i8], align 1 => ptr 0x8 [src]
+; CHECK-NEXT:   %src = alloca [8 x i8], align 8 => ptr 0x8 [src]
 ; CHECK-NEXT:   %dst = alloca [8 x i8], align 1 => ptr 0x11 [dst]
 ; CHECK-NEXT:   call void @llvm.memset.p0.i16(ptr %src, i8 17, i16 8, i1 false)
 ; CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i8(ptr %dst, ptr %src, i8 8, i1 false)
@@ -86,7 +86,7 @@ define void @main() {
 ; CHECK-NEXT:   %v4 = load i8, ptr %p4, align 1 => i8 34
 ; CHECK-NEXT:   %p5 = getelementptr i8, ptr %dst, i64 5 => ptr 0x16 [dst + 5]
 ; CHECK-NEXT:   %v5 = load i8, ptr %p5, align 1 => i8 17
-; CHECK-NEXT:   %move = alloca [6 x i8], align 1 => ptr 0x1A [move]
+; CHECK-NEXT:   %move = alloca [6 x i8], align 2 => ptr 0x1A [move]
 ; CHECK-NEXT:   store i8 1, ptr %move, align 1
 ; CHECK-NEXT:   %m1 = getelementptr i8, ptr %move, i64 1 => ptr 0x1B [move + 1]
 ; CHECK-NEXT:   store i8 2, ptr %m1, align 1
@@ -111,7 +111,7 @@ define void @main() {
 ; CHECK-NEXT:   %prov_copy = load ptr, ptr %prov_dst, align 8 => ptr 0x41 [prov_ptr]
 ; CHECK-NEXT:   store i8 0, ptr %prov_copy, align 1
 ; CHECK-NEXT:   %dead_src = alloca [4 x i8], align 1 => ptr 0x43 [dead_src (dead)]
-; CHECK-NEXT:   %dead_dst = alloca [4 x i8], align 1 => ptr 0x48 [dead_dst]
+; CHECK-NEXT:   %dead_dst = alloca [4 x i8], align 1 => ptr 0x49 [dead_dst]
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %dead_src)
 ; CHECK-NEXT:   call void @llvm.memset.p0.i8(ptr %dead_src, i8 51, i8 4, i1 false)
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %dead_src)

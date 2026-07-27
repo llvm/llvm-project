@@ -10,8 +10,8 @@ define i32 @main() {
   ret i32 0
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0x8 [p]
+; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0xC [p]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @free(ptr %p) at @main <stdin>:8
-; CHECK-NEXT: Immediate UB detected: freeing a non-heap allocation at 0x8.
+; CHECK-NEXT: Immediate UB detected: freeing a non-heap allocation at 0xc.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

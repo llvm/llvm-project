@@ -2,13 +2,13 @@
 ; RUN: not llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
-  %p = alloca i32
-  %res = load i32, ptr %p, !noundef !{}
+  %alloca = alloca i32
+  store i32 0, ptr %alloca, align 8
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0xC [p]
+; CHECK-NEXT:   %alloca = alloca i32, align 4 => ptr 0xC [alloca]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %res = load i32, ptr %p, align 4, !noundef !0 at @main <stdin>:6
-; CHECK-NEXT: Immediate UB detected: The value loaded contains undefined bits.
+; CHECK-NEXT: #0   store i32 0, ptr %alloca, align 8 at @main <stdin>:6
+; CHECK-NEXT: Immediate UB detected: Misaligned memory access. Address: 0xc, Required alignment: 8.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

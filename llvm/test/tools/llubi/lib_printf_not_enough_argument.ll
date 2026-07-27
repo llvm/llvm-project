@@ -12,7 +12,7 @@ define i32 @main() {
   ret i32 0
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %fmt = alloca [18 x i8], align 1 => ptr 0x8 [fmt]
+; CHECK-NEXT:   %fmt = alloca [18 x i8], align 1 => ptr 0x9 [fmt]
 ; CHECK-NEXT:   store [18 x i8] c"Ints: %d, %i, %u\0A\00", ptr %fmt, align 1
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   %1 = call i32 (ptr, ...) @printf(ptr %fmt, i32 42, i32 -42) at @main <stdin>:10

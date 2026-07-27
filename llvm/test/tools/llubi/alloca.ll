@@ -24,18 +24,18 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0xC [alloc]
 ; CHECK-NEXT:   %alloc_large_align = alloca i32, align 64 => ptr 0x40 [alloc_large_align]
 ; CHECK-NEXT: Entering function: count
 ; CHECK-NEXT:   ret i32 4
 ; CHECK-NEXT: Exiting function: count
 ; CHECK-NEXT:   %count = call i32 @count() => i32 4
-; CHECK-NEXT:   %alloc_dyn = alloca i32, i32 %count, align 4 => ptr 0x48 [alloc_dyn]
-; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x60 [alloc_struct]
+; CHECK-NEXT:   %alloc_dyn = alloca i32, i32 %count, align 4 => ptr 0x4C [alloc_dyn]
+; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x68 [alloc_struct]
 ; CHECK-NEXT: Entering function: stack_address
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x7C [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x84 [alloc]
 ; CHECK-NEXT:   ret ptr %alloc
 ; CHECK-NEXT: Exiting function: stack_address
-; CHECK-NEXT:   %ptr = call ptr @stack_address() => ptr 0x7C [alloc (dangling)]
+; CHECK-NEXT:   %ptr = call ptr @stack_address() => ptr 0x84 [alloc (dangling)]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

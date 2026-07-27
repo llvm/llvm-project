@@ -10,9 +10,9 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0xC [alloc]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr null, i64 4294967297) ]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i64 4294967296) ] at @main <stdin>:9
-; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x8 [alloc] violates align(4294967296) assumption.
+; CHECK-NEXT: Immediate UB detected: The pointer ptr 0xC [alloc] violates align(4294967296) assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

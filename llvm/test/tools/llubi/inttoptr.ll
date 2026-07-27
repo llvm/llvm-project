@@ -7,7 +7,7 @@ define void @main() {
   %ptr1 = inttoptr i64 0 to ptr
   %ptr2 = inttoptr i8 255 to ptr
   %ptr3 = inttoptr i128 -1 to ptr
-  %alloc = alloca i32
+  %alloc = alloca i32, align 8
   %off = ptrtoint ptr %alloc to i64
   %gep = getelementptr i8, ptr %ptr1, i64 %off
   %cast = inttoptr i64 %off to ptr
@@ -17,7 +17,7 @@ define void @main() {
 ; CHECK-NEXT:   %ptr1 = inttoptr i64 0 to ptr => ptr 0x0 [nullary]
 ; CHECK-NEXT:   %ptr2 = inttoptr i8 -1 to ptr => ptr 0xFF [nullary]
 ; CHECK-NEXT:   %ptr3 = inttoptr i128 -1 to ptr => ptr 0xFFFFFFFFFFFFFFFF [nullary]
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %off = ptrtoint ptr %alloc to i64 => i64 8
 ; CHECK-NEXT:   %gep = getelementptr i8, ptr %ptr1, i64 %off => ptr 0x8 [nullary]
 ; CHECK-NEXT:   %cast = inttoptr i64 %off to ptr => ptr 0x8 [wildcard]

@@ -2,7 +2,7 @@
 ; RUN: not llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
-  %alloc = alloca i32
+  %alloc = alloca i64
   %ptr = inttoptr i64 -8 to ptr
   call void @llvm.assume(i1 true) ["align"(ptr %alloc, i32 17, i32 8)]
   call void @llvm.assume(i1 true) ["align"(ptr %ptr, i32 17, i8 -8)]
@@ -10,7 +10,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i64, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %ptr = inttoptr i64 -8 to ptr => ptr 0xFFFFFFFFFFFFFFF8 [nullary]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i32 17, i32 8) ]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i32 17, i8 -8) ]

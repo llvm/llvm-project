@@ -17,7 +17,7 @@ define void @callee(ptr byval(%struct) %p) {
   ret void
 }
 
-@g = global [12 x i8] zeroinitializer
+@g = global [12 x i8] zeroinitializer, align 8
 
 define void @main() {
   %p_padding1 = getelementptr i8, ptr @g, i64 1
@@ -33,13 +33,13 @@ define void @main() {
 ; CHECK-NEXT:   %p_padding2 = getelementptr i8, ptr @g, i64 9 => ptr 0x11 [@g + 9]
 ; CHECK-NEXT:   store i8 12, ptr %p_padding2, align 1
 ; CHECK-NEXT: Entering function: callee
-; CHECK-NEXT:   ptr %p = ptr 0x18 [p]
+; CHECK-NEXT:   ptr %p = ptr 0x1C [p]
 ; CHECK-NEXT:   %concrete_zero1 = load i8, ptr %p, align 1 => i8 0
 ; CHECK-NEXT:   %concrete_zero2 = load i8, ptr %p, align 1 => i8 0
-; CHECK-NEXT:   %p_padding1 = getelementptr i8, ptr %p, i64 1 => ptr 0x19 [p + 1]
+; CHECK-NEXT:   %p_padding1 = getelementptr i8, ptr %p, i64 1 => ptr 0x1D [p + 1]
 ; CHECK-NEXT:   %def1_padding1 = load i8, ptr %p_padding1, align 1 => i8 10
 ; CHECK-NEXT:   %def2_padding1 = load i8, ptr %p_padding1, align 1 => i8 10
-; CHECK-NEXT:   %p_padding2 = getelementptr i8, ptr %p, i64 9 => ptr 0x21 [p + 9]
+; CHECK-NEXT:   %p_padding2 = getelementptr i8, ptr %p, i64 9 => ptr 0x25 [p + 9]
 ; CHECK-NEXT:   %def1_padding2 = load i8, ptr %p_padding2, align 1 => i8 12
 ; CHECK-NEXT:   %def2_padding2 = load i8, ptr %p_padding2, align 1 => i8 12
 ; CHECK-NEXT:   ret void

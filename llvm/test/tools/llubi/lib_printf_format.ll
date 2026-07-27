@@ -44,29 +44,29 @@ entry:
   ret i32 0
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %fmt_int = alloca [36 x i8], align 1 => ptr 0x8 [fmt_int]
+; CHECK-NEXT:   %fmt_int = alloca [36 x i8], align 1 => ptr 0x9 [fmt_int]
 ; CHECK-NEXT:   store [36 x i8] c"Ints: %d, %i, %u, %o, %x, %X, %05d\0A\00", ptr %fmt_int, align 1
-; CHECK-NEXT:   %fmt_len = alloca [35 x i8], align 1 => ptr 0x2D [fmt_len]
+; CHECK-NEXT:   %fmt_len = alloca [35 x i8], align 1 => ptr 0x2F [fmt_len]
 ; CHECK-NEXT:   store [35 x i8] c"Lengths: %ld, %lld, %hd, %hhu, %c\0A\00", ptr %fmt_len, align 1
-; CHECK-NEXT:   %fmt_str_ptr = alloca [18 x i8], align 1 => ptr 0x51 [fmt_str_ptr]
+; CHECK-NEXT:   %fmt_str_ptr = alloca [18 x i8], align 1 => ptr 0x53 [fmt_str_ptr]
 ; CHECK-NEXT:   store [18 x i8] c"Str: %s, Ptr: %p\0A\00", ptr %fmt_str_ptr, align 1
-; CHECK-NEXT:   %fmt_pct = alloca [15 x i8], align 1 => ptr 0x64 [fmt_pct]
+; CHECK-NEXT:   %fmt_pct = alloca [15 x i8], align 1 => ptr 0x67 [fmt_pct]
 ; CHECK-NEXT:   store [15 x i8] c"Percent: %d%%\0A\00", ptr %fmt_pct, align 1
-; CHECK-NEXT:   %dummy_str = alloca [6 x i8], align 1 => ptr 0x74 [dummy_str]
+; CHECK-NEXT:   %dummy_str = alloca [6 x i8], align 1 => ptr 0x77 [dummy_str]
 ; CHECK-NEXT:   store [6 x i8] c"llubi\00", ptr %dummy_str, align 1
-; CHECK-NEXT:   %fmt_float = alloca [20 x i8], align 1 => ptr 0x7B [fmt_float]
+; CHECK-NEXT:   %fmt_float = alloca [20 x i8], align 1 => ptr 0x7F [fmt_float]
 ; CHECK-NEXT:   store [20 x i8] c"Floats: %f, %e, %g\0A\00", ptr %fmt_float, align 1
-; CHECK-NEXT:   %fmt_n = alloca [15 x i8], align 1 => ptr 0x90 [fmt_n]
+; CHECK-NEXT:   %fmt_n = alloca [15 x i8], align 1 => ptr 0x95 [fmt_n]
 ; CHECK-NEXT:   store [15 x i8] c"Count: %nDone\0A\00", ptr %fmt_n, align 1
-; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xA0 [fmt_n_out]
+; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xA5 [fmt_n_out]
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
-; CHECK-NEXT:   %n_count = alloca i32, align 4 => ptr 0xA8 [n_count]
+; CHECK-NEXT:   %n_count = alloca i32, align 4 => ptr 0xAC [n_count]
 ; CHECK-NEXT:   store i32 0, ptr %n_count, align 4
 ; CHECK-NEXT: Ints: 42, -42, 255, 377, ff, FF, 00042
 ; CHECK-NEXT:   %0 = call i32 (ptr, ...) @printf(ptr %fmt_int, i32 42, i32 -42, i32 255, i32 255, i32 255, i32 255, i32 42) => i32 39
 ; CHECK-NEXT: Lengths: 123456789, 987654321, 100, 50, A
 ; CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr %fmt_len, i64 123456789, i64 987654321, i32 100, i32 50, i32 65) => i32 42
-; CHECK-NEXT: Str: llubi, Ptr: 0x74
+; CHECK-NEXT: Str: llubi, Ptr: 0x77
 ; CHECK-NEXT:   %2 = call i32 (ptr, ...) @printf(ptr %fmt_str_ptr, ptr %dummy_str, ptr %dummy_str) => i32 22
 ; CHECK-NEXT: Percent: 100%
 ; CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr %fmt_pct, i32 100) => i32 14

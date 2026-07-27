@@ -8,7 +8,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0x8 [p]
+; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0xC [p]
 ; CHECK-NEXT:   store i32 poison, ptr %p, align 4
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   %res = load i32, ptr %p, align 4, !noundef !0 at @main <stdin>:7

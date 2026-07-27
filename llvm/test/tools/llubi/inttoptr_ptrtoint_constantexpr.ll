@@ -3,8 +3,8 @@
 
 target datalayout = "e-p:64:64:64"
 
-@g = global i32 0
-@gp = global i64 ptrtoint (ptr @g to i64)
+@g = global i32 0, align 8
+@gp = global i64 ptrtoint (ptr @g to i64), align 16
 @g2 = global i32 0
 
 define void @main() {

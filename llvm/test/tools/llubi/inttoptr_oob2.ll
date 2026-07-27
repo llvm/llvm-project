@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64"
 
 define void @main() {
-  %alloc = alloca i32
+  %alloc = alloca i32, align 8
   ; Another memory object with high address.
   %alloc2 = alloca i32, align 256
   %int = ptrtoint ptr %alloc to i64
@@ -20,7 +20,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %alloc2 = alloca i32, align 256 => ptr 0x100 [alloc2]
 ; CHECK-NEXT:   %int = ptrtoint ptr %alloc to i64 => i64 8
 ; CHECK-NEXT:   %ptr = inttoptr i64 %int to ptr => ptr 0x8 [wildcard]

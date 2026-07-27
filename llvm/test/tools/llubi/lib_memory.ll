@@ -23,7 +23,7 @@ entry:
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr1 = call ptr @malloc(i64 4) => ptr 0x10 [ptr1]
 ; CHECK-NEXT:   store i32 100, ptr %ptr1, align 4
-; CHECK-NEXT:   %ptr2 = call ptr @calloc(i64 1, i64 4) => ptr 0x20 [ptr2]
+; CHECK-NEXT:   %ptr2 = call ptr @calloc(i64 1, i64 4) => ptr 0x30 [ptr2]
 ; CHECK-NEXT:   %val1 = load i32, ptr %ptr1, align 4 => i32 100
 ; CHECK-NEXT:   %val2 = load i32, ptr %ptr2, align 4 => i32 0
 ; CHECK-NEXT:   call void @free(ptr %ptr1)

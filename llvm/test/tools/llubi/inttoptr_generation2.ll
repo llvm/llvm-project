@@ -5,8 +5,8 @@ target datalayout = "e-p:64:64:64"
 
 define void @main() {
   ; Assume the pointer address is 8.
-  %alloc = alloca i32
-  %alloc2 = alloca i32
+  %alloc = alloca i32, align 8
+  %alloc2 = alloca i32, align 16
   ; We expose the provenance of another object so that the slow path is hitted.
   %tmp = ptrtoint ptr %alloc2 to i64
   %ptr1 = inttoptr i64 8 to ptr
@@ -24,8 +24,8 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
-; CHECK-NEXT:   %alloc2 = alloca i32, align 4 => ptr 0x10 [alloc2]
+; CHECK-NEXT:   %alloc = alloca i32, align 8 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc2 = alloca i32, align 16 => ptr 0x10 [alloc2]
 ; CHECK-NEXT:   %tmp = ptrtoint ptr %alloc2 to i64 => i64 16
 ; CHECK-NEXT:   %ptr1 = inttoptr i64 8 to ptr => ptr 0x8 [wildcard]
 ; CHECK-NEXT:   %int = ptrtoint ptr %alloc to i64 => i64 8

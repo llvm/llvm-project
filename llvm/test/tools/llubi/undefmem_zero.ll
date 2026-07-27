@@ -9,7 +9,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0xC [alloc]
 ; CHECK-NEXT:   %load_undef1 = load i32, ptr %alloc, align 4 => i32 0
 ; CHECK-NEXT:   %load_undef2 = load i32, ptr %alloc, align 4 => i32 0
 ; CHECK-NEXT: Stacktrace:

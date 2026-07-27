@@ -16,7 +16,7 @@ define void @memcpy_misaligned_dst() {
 }
 
 define void @memcpy_misaligned_src() {
-  %src = alloca [4 x i8], align 1
+  %src = alloca [4 x i8], align 2
   %dst = alloca [4 x i8], align 2
   %src1 = getelementptr i8, ptr %src, i64 1
   call void @llvm.memcpy.p0.p0.i8(ptr align 1 %dst, ptr align 2 %src1, i8 1, i1 false)
@@ -24,7 +24,7 @@ define void @memcpy_misaligned_src() {
 }
 
 define void @memset_misaligned_dst() {
-  %dst = alloca [4 x i8], align 1
+  %dst = alloca [4 x i8], align 2
   %dst1 = getelementptr i8, ptr %dst, i64 1
   call void @llvm.memset.p0.i8(ptr align 2 %dst1, i8 0, i8 1, i1 false)
   ret void

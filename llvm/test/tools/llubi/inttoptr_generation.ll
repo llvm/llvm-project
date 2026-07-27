@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64"
 
 define void @main() {
   ; Assume the pointer address is 8.
-  %alloc = alloca i32
+  %alloc = alloca i32, align 8
   %ptr1 = inttoptr i64 8 to ptr
   %int = ptrtoint ptr %alloc to i64
   %ptr2 = inttoptr i64 %int to ptr
@@ -21,7 +21,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %ptr1 = inttoptr i64 8 to ptr => ptr 0x8 [nullary]
 ; CHECK-NEXT:   %int = ptrtoint ptr %alloc to i64 => i64 8
 ; CHECK-NEXT:   %ptr2 = inttoptr i64 %int to ptr => ptr 0x8 [wildcard]

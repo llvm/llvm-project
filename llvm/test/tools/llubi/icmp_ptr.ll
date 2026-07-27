@@ -18,12 +18,12 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x10 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x14 [alloc]
 ; CHECK-NEXT:   %icmp1 = icmp eq ptr @global, %alloc => F
 ; CHECK-NEXT:   %icmp2 = icmp ne ptr @global, %alloc => T
 ; CHECK-NEXT:   %icmp3 = icmp eq ptr %alloc, poison => poison
 ; CHECK-NEXT:   %icmp4 = icmp sle ptr @global, %alloc => T
-; CHECK-NEXT:   %neg = getelementptr i8, ptr @global, i64 -100 => ptr 0xFFFFFFFFFFFFFFA4 [@global + -100]
+; CHECK-NEXT:   %neg = getelementptr i8, ptr @global, i64 -100 => ptr 0xFFFFFFFFFFFFFFA8 [@global + -100]
 ; CHECK-NEXT:   %icmp5 = icmp samesign ule ptr %neg, @global => poison
 ; CHECK-NEXT:   %icmp6 = icmp samesign ule ptr %alloc, @global => F
 ; CHECK-NEXT:   %icmp7 = icmp eq <4 x ptr> <ptr @global, ptr @global, ptr null, ptr @global>, <ptr @global, ptr null, ptr null, ptr poison> => { T, F, T, poison }
