@@ -1,0 +1,1053 @@
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
+# RUN:     -run-pass=machine-scheduler \
+# RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
+# RUN:     %s -o - | FileCheck %s
+
+--- |
+  define void @test_src2_backedge_bypass_excluded() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_subreg_overwrite_cross_bb() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_src2_avmov_agprform_rewrite() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_src2_buffer_load_early_safe_rewrite() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_src2_selfref_avmov_init() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_dst_subreg_loop_copy_consumer() #0 {
+  entry:
+    br label %loop
+  loop:
+    br i1 undef, label %loop, label %exit
+  exit:
+    ret void
+  }
+  define void @test_dst_subreg_copy_valu_consumer() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_partial_exclude_avmov_src2() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_src2_shared_diamond_joint_coverage() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_earlysafe_connectivity_fragment() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_src2_loop_partial_def_coverage_excluded() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_skip_bridge_coverage_vs_connectivity() #0 {
+  entry:
+    unreachable
+  }
+  define void @test_src2_partial_live_lanes_covered() #1 {
+  entry:
+    unreachable
+  }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+  attributes #1 = { "amdgpu-flat-work-group-size"="1,256" }
+...
+
+---
+#
+# Loop with bypass path triggers hasSrc2BridgeConflict.
+#
+# CFG:
+#   bb.0 ──► bb.1 (preheader) ──► bb.2 (loop) ──► bb.3 (bridge) ──► (ret)
+#   (entry)                              ↑___________|
+#     │                              (back-edge)
+#     └────────────────────────────────────────────► bb.3   (bypass)
+#
+# %acc reaching defs for MFMA_A src2: {AV_MOV×4 (bb.1, non-MAI), MFMA_C (bb.2, MAI)}.
+# hasSrc2BridgeConflict: bb.1 does not dominate bb.3 (bypass skips bb.1) → excluded.
+# MFMA_C excluded by backward propagation; MFMA_B by forward propagation.
+# All three loop MFMAs stay in vreg form.
+#
+# Without exclusion: %acc reclassified to AGPR; the AV_MOV subreg inits in bb.1
+# have no bridge-copy reader and are DCE'd to dead undef.  On the first iteration
+# (bb.0→bb.1→bb.2) MFMA_A reads the IMPLICIT_DEF garbage from bb.0 instead of
+# the intended initial accumulator → silent wrong result on iteration 1.
+#
+# CHECK-LABEL: name: test_src2_backedge_bypass_excluded
+# CHECK: bb.2:
+# CHECK:   %r1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK:   %r2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK:   %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK-NOT: V_MFMA_F32_16X16X4F32_e64
+name:            test_src2_backedge_bypass_excluded
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    ; 9 × vreg_1024 = 288 ArchVGPRs > gfx90a limit 256 → excess pressure.
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    ; IMPLICIT_DEF covers %acc on the bypass path (bb.0→bb.3) so the verifier
+    ; is satisfied. bb.1's AV_MOVs kill this def before bb.2, so it does not
+    ; appear in findReachingDefs at MFMA_A and is absent from BridgeCopyBlocks.
+    %acc:vreg_128_align2 = IMPLICIT_DEF
+
+    SCHED_BARRIER 0
+
+    S_CBRANCH_SCC1 %bb.3, implicit undef $scc
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    ; Subreg init of %acc (AV_MOV, non-MAI). Creates SubRanges on %acc:
+    ; findReachingDefs returns these as non-MAI reaching defs for MFMA_A src2=%acc.
+    undef %acc.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub1:vreg_128_align2       = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub2:vreg_128_align2       = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub3:vreg_128_align2       = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+
+    ; MFMA_A: src2=%acc — hasSrc2BridgeConflict fires: bb.1 not dom bb.3 (bypass).
+    %r1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; MFMA_B: excluded by forward propagation from MFMA_A.
+    %r2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %r1:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; MFMA_C: redefines %acc (MAI, back-edge def). Excluded by backward propagation.
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %r2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    S_CBRANCH_SCC1 %bb.3, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.3:
+    ; Explicit use of %acc: hasSrc2BridgeConflict sees this use in bb.3, which is
+    ; not dominated by bb.1 (preheader) due to the bypass path → conflict.
+    %bridge_use:vreg_128_align2 = COPY %acc:vreg_128_align2
+
+    KILL %bridge_use
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_ENDPGM 0
+
+---
+#
+# Test: diamond CFG with non-MAI subreg overwrites of MFMA dst blocks rewrite.
+#
+# CFG (diamond):
+#
+#          bb.0  ← %acc = MFMA(...)
+#         /    \
+#       bb.1  bb.2  ← bb.1: %acc.sub0 = V_MOV 1  (non-MAI subreg overwrite)
+#         \    /       bb.2: %acc.sub1 = V_MOV 2  (non-MAI subreg overwrite)
+#          bb.3  ← %res = MFMA(..., %acc), %res2 = MFMA(..., %res)
+#
+# %acc dst has non-MAI subreg overwrites (V_MOV in bb.1/bb.2) → excluded.
+# %res/%res2 excluded by propagation (src2 = excluded dst).
+#
+# Primary coverage: computeExclusionSet HasDstSubregDef path — %acc's MFMA has
+# an immediate src2 so hasSrc2BridgeConflict never runs; hasDstSubregConflict is
+# the sole trigger and the root of the entire exclusion chain.
+#
+# Without exclusion: %acc reclassified to AGPR → bridge COPYs inserted in both
+# bb.1 and bb.2 define the same vreg without a PHI; MachineVerifier aborts with
+# "Virtual register defs don't dominate all uses" (dominator violation crash).
+#
+# CHECK-LABEL: name: test_subreg_overwrite_cross_bb
+# CHECK: bb.0:
+# CHECK:   %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: bb.3:
+# CHECK:   %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK:   %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+name:            test_subreg_overwrite_cross_bb
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    ; MAI full-reg def of %acc (all 4 lanes) — contributes MAI to ResultSet.
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    SCHED_BARRIER 0
+
+    S_CMP_EQ_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  ; bb.1: non-MAI sub0 overwrite — contributes non-MAI to ResultSet.
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %acc.sub0:vreg_128_align2 = V_MOV_B32_e32 1, implicit $exec
+
+    S_BRANCH %bb.3
+
+  ; bb.2: non-MAI sub1 overwrite — contributes non-MAI to ResultSet.
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %acc.sub1:vreg_128_align2 = V_MOV_B32_e32 2, implicit $exec
+
+    S_BRANCH %bb.3
+
+  ; bb.3: %res/%res2 already excluded by forward propagation from %acc's MFMA.
+  bb.3:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Chain the result into another MFMA (MAI use of %res -> CopyForUse = 0).
+    %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %res:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+
+    S_ENDPGM 0
+
+---
+#
+# Diamond CFG where hasSrc2BridgeConflict passes.
+#
+# CFG (diamond):
+#
+#          bb.0  ← %acc.subN = AV_MOV_B32_IMM_PSEUDO 0  (per-lane AGPR-form init)
+#         /    \
+#       bb.1  bb.2  ← bb.1: %acc live-through (no def)
+#         \    /       bb.2: %acc = MFMA_prev(a, b, 0)  [MAI]
+#          bb.3  ← %res = MFMA_target(a, b, %acc), %res2 = MFMA_chain(a, b, %res)
+#
+# reaching defs for %res src2=%acc: {AV_MOV(bb.0, non-MAI), MFMA_prev(bb.2, MAI)}.
+# hasSrc2BridgeConflict: Check1 NO (bb.2 does not dominate bb.0),
+#                       Check2 NO (bb.0 dominates bb.3 → bridge covered) → not excluded.
+# AV_MOV and MFMA_prev both AGPR-form → CopyCost=0 → rewrite fires.
+#
+# CHECK-LABEL: name: test_src2_avmov_agprform_rewrite
+# CHECK-NOT: COPY
+# CHECK: bb.2:
+# CHECK:   %acc:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK: bb.3:
+# CHECK:   %res:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK:   {{.*}}:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+name:            test_src2_avmov_agprform_rewrite
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    ; 9 × vreg_1024 = 288 ArchVGPRs pressure (> gfx90a limit 256).
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+    %p9:vreg_1024  = IMPLICIT_DEF
+    %p10:vreg_1024 = IMPLICIT_DEF
+    %p11:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    undef %acc.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    S_CMP_EQ_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+  bb.3:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %res:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8, %p9, %p10, %p11
+
+    S_ENDPGM 0
+
+---
+#
+# Test: RewriteMFMAFormStage — hasSrc2BridgeConflict early-safe return with diamond CFG.
+#
+# CFG (diamond):
+#
+#          bb.0  (entry: pressure fill + branch)
+#         /    \
+#       bb.1  bb.2  ← bb.1: %acc = BUFFER_LOAD         (non-MAI)
+#         \    /       bb.2: %acc = MFMA_prev(a, b, 0)  (MAI, src2=imm → candidate)
+#          bb.3  ← %res = MFMA_target(a, b, %acc), %res2 = MFMA_chain(a, b, %res)
+#
+# hasSrc2BridgeConflict for MFMA_target: reaching defs = {BUFFER_LOAD, MFMA_prev}.
+#   Check 1: MFMA_prev(bb.2) does not dominate BUFFER_LOAD(bb.1) → false.
+#   Early-safe return: MFMA_prev is a candidate and BUFFER_LOAD(bb.1) does not
+#   dominate MFMA_prev(bb.2) → AllParallelAndCandidates=true → return false;
+#   Check 2 not reached.  All three MFMAs are rewrite candidates.
+#
+# 9 × vreg_1024 = 288 ArchVGPRs > 256 limit → ExcessArchVGPR fires; rewrite fires.
+# Bridge copy inserted in bb.1 after BUFFER_LOAD.
+# CHECK-LABEL: name: test_src2_buffer_load_early_safe_rewrite
+# CHECK: bb.1:
+# CHECK:   %acc:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFSET
+# CHECK:   {{.*}}:areg_128_align2 = COPY %acc
+# CHECK: bb.2:
+# CHECK:   {{.*}}:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK: bb.3:
+# CHECK:   %res:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK-NOT: vgprcd
+name:            test_src2_buffer_load_early_safe_rewrite
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    ; 9 × vreg_1024 = 288 ArchVGPRs (> gfx90a limit 256); KILL in bb.3 keeps them live.
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32  = IMPLICIT_DEF
+    %srcb:vgpr_32  = IMPLICIT_DEF
+    %rsrc:sgpr_128 = IMPLICIT_DEF
+    %soff:sgpr_32  = IMPLICIT_DEF
+
+    S_CMP_EQ_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %acc:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFSET %rsrc:sgpr_128, %soff:sgpr_32, 0, 0, 0, implicit $exec :: (load (s128))
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+  bb.3:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %res:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+
+    S_ENDPGM 0
+
+---
+#
+# Self-referential MFMA (dst == src2) with subreg AV_MOV init in entry block.
+#
+# CFG:
+#   bb.0 (entry) ──► bb.1 (loop) ──► bb.2 (exit)
+#                         ↑___________|
+#                      (back-edge)
+#
+# src2=%acc reaching defs: {AV_MOV×4 (bb.0, non-MAI), MFMA_A back-edge (MAI)}.
+# hasSrc2BridgeConflict: bb.0 dominates bb.1 → Check 2 covered → false.
+# AV_MOV and MFMA_A both AGPR-form → no bridge copy. Both MFMAs rewritten.
+#
+# CHECK-LABEL: name: test_src2_selfref_avmov_init
+# CHECK-NOT: COPY
+# CHECK: bb.1:
+# CHECK:   %acc:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK:   %r2:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+name:            test_src2_selfref_avmov_init
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    undef %acc.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub1:vreg_128_align2       = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub2:vreg_128_align2       = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub3:vreg_128_align2       = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    SCHED_BARRIER 0
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7e000000), %bb.2(0x02000000)
+
+    ; MFMA_A: self-ref (dst=%acc == src2=%acc). Back-edge def is AGPR-form.
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; MFMA_B: src2=%acc is MFMA_A output (AGPR-form) → no bridge copy.
+    %r2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+    S_BRANCH %bb.1
+
+  bb.2:
+    KILL %r2
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_ENDPGM 0
+
+---
+#
+# Test: MFMA with non-MAI subreg overwrite on dst is excluded from rewrite;
+# sibling MFMA without subreg overwrite is rewritten.
+#
+# %dst1: %dst1.sub0 = V_MOV in same BB after MFMA → excluded (stays vgprcd).
+#   Without exclusion: %dst1 reclassified to AGPR; V_MOV still writes vreg sub0,
+#   then a bridge COPY reads the whole %dst1:vreg with mixed AGPR/VGPR lanes →
+#   wrong result (sub1~sub3 sourced from AGPR, sub0 from VGPR V_MOV partial write).
+# %dst0: no subreg overwrite → rewritten to AGPR form.
+#
+# CHECK-LABEL: name: test_dst_subreg_loop_copy_consumer
+# CHECK: bb.1.loop:
+# CHECK: V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: %dst1.sub0:vreg_128_align2 = V_MOV_B32_e32 1
+# CHECK: V_MFMA_F32_16X16X4F32_e64
+name:            test_dst_subreg_loop_copy_consumer
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    %f0:vgpr_32 = IMPLICIT_DEF
+    %f1:vgpr_32 = IMPLICIT_DEF
+    %f2:vgpr_32 = IMPLICIT_DEF
+    %f3:vgpr_32 = IMPLICIT_DEF
+    undef %src2.sub0:vreg_128_align2 = COPY %f0:vgpr_32
+    %src2.sub1:vreg_128_align2 = COPY %f1:vgpr_32
+    %src2.sub2:vreg_128_align2 = COPY %f2:vgpr_32
+    %src2.sub3:vreg_128_align2 = COPY %f3:vgpr_32
+
+    S_BRANCH %bb.1
+
+  bb.1.loop:
+    successors: %bb.1(0x78000000), %bb.2(0x08000000)
+
+    SCHED_BARRIER 0
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %dst0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %src2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %dst1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %src2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %dst1.sub0:vreg_128_align2 = V_MOV_B32_e32 1, implicit $exec
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.2.exit:
+    %tmp0:vreg_128_align2 = COPY %dst0:vreg_128_align2
+    %tmp1:vreg_128_align2 = COPY %dst1:vreg_128_align2
+    S_ENDPGM 0, implicit %tmp0, implicit %tmp1
+
+---
+#
+# Test: hasDstSubregConflict Phase 2 — MFMA dst subreg written by COPY (agnostic,
+# Phase 1 safe) but read by V_MUL (non-agnostic orphan use) → excluded.
+# propagateExclusionForward excludes downstream chain c0..c3; no rewrite.
+#
+# Without exclusion: %mfma reclassified to AGPR; COPY %mfma.sub2 lowers to
+# v_accvgpr_read, but V_MUL reads the sub-register as VGPR — the bridge COPY
+# inserted after the agnostic subreg def is not jointly dominated by all defs
+# of %mfma → "Use not jointly dominated by defs" LIS crash.
+# CHECK-LABEL: name: test_dst_subreg_copy_valu_consumer
+# CHECK: %mfma:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: %mfma.sub2:vreg_128_align2 = COPY %val
+# CHECK: %c0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: %c1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: %c2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: %c3:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+name:            test_dst_subreg_copy_valu_consumer
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %val:vgpr_32 = IMPLICIT_DEF
+
+    %mfma:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    %mfma.sub2:vreg_128_align2 = COPY %val:vgpr_32
+
+    %result:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %mfma.sub2:vreg_128_align2, implicit $mode, implicit $exec
+
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7e000000), %bb.2(0x02000000)
+
+    %c0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %mfma:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %c1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %c0:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %c2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %c1:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %c3:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %c2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+    S_BRANCH %bb.1
+
+  bb.2:
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    KILL %c3, %result
+    S_ENDPGM 0
+
+---
+#
+# Test: RewriteMFMAFormStage — hasUseRequiringVGPR uses pre-exclusion RewriteSet,
+# leading to %acc being directly reclassified to AGPR without a bridge copy for
+# the excluded MFMA_B.
+#
+# Bug trigger path:
+#   %acc is initialized via AV_MOV_B32_IMM_PSEUDO subreg writes (AGPR-form).
+#   No candidate MFMA writes %acc, so Case 2 (dst-use bridge copies) never
+#   processes %acc — the only bridge-copy opportunity is Case 1 (src2 bridge).
+#
+#   hasUseRequiringVGPR({AV_MOV×4}, RewriteSet):
+#     findReachingUses(AV_MOV.subN) → {MFMA_A, MFMA_B}.
+#     MFMA_B: isMAI && in pre-exclusion RewriteSet → "safe" → returns false.
+#     → Src2NeedsVGPR=false (WRONG: MFMA_B is excluded and stays VGPR form).
+#
+#   isReachingDefAGPRForm(AV_MOV) = true → Src2DefsReplace={}.
+#   → %acc directly reclassified to AGPR.
+#   → No bridge copy inserted for MFMA_B's src2.
+#   → MFMA_B (vgprcd, excluded) reads %acc as AGPR → illegal instruction.
+#
+# MFMA_B is excluded due to HasDstSubregDef (V_MOV subreg write of its dst),
+# NOT HasConflict, so backward propagation does NOT run — no cascade.
+# hasSrc2BridgeConflict for MFMA_B: {AV_MOV×4} all in bb.0 which dominates bb.1
+# → all uses covered → HasConflict=false. HasDstSubregDef=true → excluded.
+#
+# Correct behavior (with fix):
+#   hasUseRequiringVGPR treats MFMA_B (excluded) as VGPR-requiring.
+#   Src2NeedsVGPR=true → bridge copy for %acc inserted in bb.0.
+#   %acc stays VGPR; MFMA_A reads %mapped (AGPR); MFMA_B reads %acc (VGPR).
+#
+# CHECK-LABEL: name: test_partial_exclude_avmov_src2
+# CHECK:      bb.0:
+# CHECK:        {{.*}}:areg_128_align2 = COPY %acc
+# CHECK:        %res_a:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK:      bb.1:
+# CHECK:        %res_b:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca, %srcb, %acc
+name:            test_partial_exclude_avmov_src2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    ; Pressure: 9 × vreg_1024 = 288 ArchVGPRs > gfx90a limit 256 → rewrite fires.
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    %acc:vreg_128_align2 = IMPLICIT_DEF
+    %acc.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    SCHED_BARRIER 0
+
+    %res_a:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+  bb.1:
+    %res_b:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    %res_b.sub0:vreg_128_align2 = V_MOV_B32_e32 0, implicit $exec
+
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8, %res_b
+    S_ENDPGM 0, implicit %res_a
+...
+
+---
+#
+# Shared-src2 diamond where the bridge blocks JOINTLY cover the merge use, but
+# no single block dominates it.  This is the opt_bug shape and it exercises the
+# whole-register bridge-set union in computeExclusionSet / hasSrc2BridgeConflict.
+#
+# CFG (diamond):
+#
+#          bb.0
+#         /    \
+#       bb.1   bb.2   ← bb.1: %acc.subN = AV_MOV 0 (non-MAI init, left branch)
+#         \    /         bb.2: %acc.subN = AV_MOV 0 (non-MAI init, right branch)
+#          bb.3   ← %res  = MFMA(a, b, %acc)   (src2 = %acc)
+#                    %res2 = MFMA(a, b, %acc)   (src2 = %acc, second consumer)
+#
+# %acc has two non-MAI def blocks: bb.1 (left) and bb.2 (right).  Neither
+# dominates bb.3, but together they cover every entry->bb.3 path.  The old
+# per-candidate check built BridgeCopyBlocks from a single candidate's reaching
+# defs and wrongly reported "uncovered".  The union across both candidates that
+# share %acc as src2 covers bb.3 → no conflict → both MFMAs rewrite to AGPR.
+#
+# CHECK-LABEL: name: test_src2_shared_diamond_joint_coverage
+# CHECK: bb.3:
+# CHECK:   %res:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK:   %res2:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+# CHECK-NOT: vgprcd
+name:            test_src2_shared_diamond_joint_coverage
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    ; 9 x vreg_1024 = 288 ArchVGPRs pressure (> gfx90a limit 256).
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    S_CMP_EQ_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  ; Left branch: full-width non-MAI init of %acc.
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    undef %acc.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    S_BRANCH %bb.3
+
+  ; Right branch: full-width non-MAI init of %acc.
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    undef %acc.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %acc.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+    S_BRANCH %bb.3
+
+  ; Merge: two MFMAs share %acc as src2.  Each is reached by only one branch's
+  ; init in its own reaching-def set; only the cross-candidate union covers bb.3.
+  bb.3:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+
+    S_ENDPGM 0
+...
+
+---
+#
+# The early-safe path (skipping the bridge dominance/coverage checks) must NOT
+# suppress the connectivity check.  bb.5's MAI def is parallel to every non-MAI
+# def, so hasSrc2BridgeConflict takes the early-safe path and skips bridge
+# coverage -- but connectivity still runs: the two agnostic partial-subreg COPY
+# defs in bb.2/bb.3, neither dominating the bb.6 use, fragment %acc's live range
+# -> conflict -> both MFMAs stay in vgprcd form.
+#
+# CFG:
+#
+#            bb.0
+#           /    \
+#         bb.1   bb.5   ← bb.5: %acc = MFMA (MAI full-reg def, candidate)
+#        /    \     \
+#      bb.2  bb.3    \   ← bb.2/bb.3: %acc.subN = COPY (agnostic partial defs)
+#        \    /       \
+#         bb.4         \
+#           \          /
+#            \        /
+#             bb.6        ← %res = MFMA(a, b, %acc)  (src2 = %acc)
+#
+# CHECK-LABEL: name: test_earlysafe_connectivity_fragment
+# CHECK: bb.5:
+# CHECK:   %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: bb.6:
+# CHECK:   %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK-NOT: V_MFMA_F32_16X16X4F32_e64
+name:            test_earlysafe_connectivity_fragment
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.5(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    ; 9 x vreg_1024 = 288 ArchVGPRs pressure (> gfx90a limit 256).
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %accinit:vreg_128_align2 = IMPLICIT_DEF
+    %cpsrc0:vgpr_32 = IMPLICIT_DEF
+    %cpsrc1:vgpr_32 = IMPLICIT_DEF
+    %cpsrc2:vgpr_32 = IMPLICIT_DEF
+    %cpsrc3:vgpr_32 = IMPLICIT_DEF
+
+    S_CBRANCH_SCC1 %bb.5, implicit undef $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    S_CBRANCH_SCC1 %bb.3, implicit undef $scc
+    S_BRANCH %bb.2
+
+  ; branch A: agnostic partial-subreg def (fragments live range, not a subreg-def conflict).
+  bb.2:
+    successors: %bb.4(0x80000000)
+    undef %acc.sub0:vreg_128_align2 = COPY %cpsrc0:vgpr_32
+    %acc.sub1:vreg_128_align2 = COPY %cpsrc1:vgpr_32
+    %acc.sub2:vreg_128_align2 = COPY %cpsrc2:vgpr_32
+    %acc.sub3:vreg_128_align2 = COPY %cpsrc3:vgpr_32
+    S_BRANCH %bb.4
+
+  ; branch B: agnostic partial-subreg def (fragments live range).
+  bb.3:
+    successors: %bb.4(0x80000000)
+    undef %acc.sub0:vreg_128_align2 = COPY %cpsrc0:vgpr_32
+    %acc.sub1:vreg_128_align2 = COPY %cpsrc1:vgpr_32
+    %acc.sub2:vreg_128_align2 = COPY %cpsrc2:vgpr_32
+    %acc.sub3:vreg_128_align2 = COPY %cpsrc3:vgpr_32
+    S_BRANCH %bb.4
+
+  bb.4:
+    successors: %bb.6(0x80000000)
+    S_BRANCH %bb.6
+
+  bb.5:
+    successors: %bb.6(0x80000000)
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %accinit:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.6
+
+  bb.6:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_ENDPGM 0
+...
+
+---
+#
+# MFMA in a loop body reading a full-width src2 that has a single partial def
+# (sub0/sub1 only) inside the loop.  The bridge defs don't cover the MFMA's live
+# src2 (sub2/sub3 never written), so the Coverage check in hasSrc2BridgeConflict
+# excludes the chain and both MFMAs stay vgprcd (VGPR).
+#
+# CHECK-LABEL: name: test_src2_loop_partial_def_coverage_excluded
+# CHECK: bb.1:
+# CHECK:   %dst0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK:   %dst1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK-NOT: areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+name:            test_src2_loop_partial_def_coverage_excluded
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %f0:vgpr_32 = IMPLICIT_DEF
+    %f1:vgpr_32 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1(0x78000000), %bb.2(0x08000000)
+
+    SCHED_BARRIER 0
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    ; single def-BB, partial subreg writes only (sub0/sub1); sub2/sub3 never
+    ; written -> bridge defs don't cover the MFMA's full-width live src2 ->
+    ; excluded by the Coverage check, MFMAs stay vgprcd.
+    undef %src2.sub0:vreg_128_align2 = COPY %f0:vgpr_32
+    %src2.sub1:vreg_128_align2 = COPY %f1:vgpr_32
+
+    %dst0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %src2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %dst1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %src2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.2:
+    %tmp0:vreg_128_align2 = COPY %dst0:vreg_128_align2
+    S_ENDPGM 0, implicit %tmp0
+...
+
+---
+#
+# SkipBridgeCoverage must not skip the connectivity (Check 3) exclusion.
+#
+#        bb.0
+#       /    \
+#     bb.1   bb.5   ← bb.5: %acc = MFMA(...)  (MAI reaching def, candidate)
+#     /  \     |
+#  bb.2  bb.3  |    ← bb.2/bb.3: %acc.subN = COPY %cpsrcN  (agnostic, non-
+#     \  /     |       AGPR-form partial subreg defs; source is not a candidate
+#     bb.4     |       src2, so isReachingDefAGPRForm is false -> RedefPartial)
+#       \     /
+#        bb.6        ← %res = MFMA(a, b, %acc)   (src2 = %acc)
+#
+# %acc's src2 reaching defs: one candidate MFMA (bb.5, MAI, supplies its own AGPR
+# value) plus
+# two agnostic COPY partial subreg defs (bb.2/bb.3, non-MAI) that fragment %acc's
+# live interval (RedefPartialBlocks == 2, no single dominator).  COPYs are chosen
+# so hasDstSubregConflict does not fire first, leaving Check 3 as the only guard.
+#
+# SkipBridgeCoverage reasons only about the MAI def and may skip Check 2, but
+# must not skip Check 3: doing so would rewrite %acc to AGPR and produce machine
+# IR that fails the verifier's def-dominates-use invariant.  Check 3 excludes the
+# MFMA, which stays in vgprcd (VGPR) form.
+#
+# CHECK-LABEL: name: test_skip_bridge_coverage_vs_connectivity
+# CHECK: bb.6:
+# CHECK: %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK-NOT: %res:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64
+name:            test_skip_bridge_coverage_vs_connectivity
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.5(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %accinit:vreg_128_align2 = IMPLICIT_DEF
+    %cpsrc0:vgpr_32 = IMPLICIT_DEF
+    %cpsrc1:vgpr_32 = IMPLICIT_DEF
+    %cpsrc2:vgpr_32 = IMPLICIT_DEF
+    %cpsrc3:vgpr_32 = IMPLICIT_DEF
+
+    S_CBRANCH_SCC1 %bb.5, implicit undef $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    S_CBRANCH_SCC1 %bb.3, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+    undef %acc.sub0:vreg_128_align2 = COPY %cpsrc0:vgpr_32
+    %acc.sub1:vreg_128_align2 = COPY %cpsrc1:vgpr_32
+    %acc.sub2:vreg_128_align2 = COPY %cpsrc2:vgpr_32
+    %acc.sub3:vreg_128_align2 = COPY %cpsrc3:vgpr_32
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+    undef %acc.sub0:vreg_128_align2 = COPY %cpsrc0:vgpr_32
+    %acc.sub1:vreg_128_align2 = COPY %cpsrc1:vgpr_32
+    %acc.sub2:vreg_128_align2 = COPY %cpsrc2:vgpr_32
+    %acc.sub3:vreg_128_align2 = COPY %cpsrc3:vgpr_32
+    S_BRANCH %bb.4
+
+  bb.4:
+    successors: %bb.6(0x80000000)
+    S_BRANCH %bb.6
+
+  bb.5:
+    successors: %bb.6(0x80000000)
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %accinit:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.6
+
+  bb.6:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_ENDPGM 0
+...
+
+---
+#
+# Both MFMAs read the whole %src2, but only sub0|sub2 are ever defined (bb.1
+# writes sub0, bb.2 writes sub2); sub1/sub3 are undef and so have no live
+# subrange.  hasSrc2BridgeConflict's Coverage check therefore compares the bridge
+# defs (sub0|sub2) against LiveLanes = the union of %src2's subranges (sub0|sub2,
+# not the full register): they match, so no lane gap and the candidate is not
+# excluded.  A skip edge (bb.0 -> bb.4) drops the per-BB bridge COPY cost, so
+# both MFMAs are rewritten to AGPR form.
+#
+# CHECK-LABEL: name: test_src2_partial_live_lanes_covered
+# CHECK: bb.1:
+# CHECK:   undef %src2.sub0:vreg_128_align2 = COPY
+# CHECK:   undef [[BR:%[0-9]+]].sub0:areg_128_align2 = COPY %src2.sub0
+# CHECK: bb.2:
+# CHECK:   undef %src2.sub2:vreg_128_align2 = COPY
+# CHECK:   [[BR]].sub2:areg_128_align2 = COPY %src2.sub2
+# CHECK: bb.3:
+# CHECK:   dead %dst0:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64 %srca, %srcb, [[BR]]
+# CHECK:   dead %dst1:areg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_e64 %srca, %srcb, [[BR]]
+# CHECK-NOT: vgprcd
+name:            test_src2_partial_live_lanes_covered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.4(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+    %f0:vgpr_32 = IMPLICIT_DEF
+    %f2:vgpr_32 = IMPLICIT_DEF
+    S_CMP_EQ_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.4, implicit $scc
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    ; def-BB #1: writes sub0 only
+    undef %src2.sub0:vreg_128_align2 = COPY %f0:vgpr_32
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    ; def-BB #2: writes sub2 -> union sub0|sub2, leaving sub1/sub3 undefined but
+    ; unread, so AllLanesCovered stays true.
+    %src2.sub2:vreg_128_align2 = COPY %f2:vgpr_32
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+    %dst0:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %src2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    dead %dst1:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %src2:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+    S_ENDPGM 0
+...

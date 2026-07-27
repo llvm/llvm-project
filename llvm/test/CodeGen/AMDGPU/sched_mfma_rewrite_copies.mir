@@ -2470,6 +2470,7 @@ body:             |
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[DEF11]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[DS_READ_B128_gfx9_]]
   ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF14:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
@@ -2481,27 +2482,34 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_1:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_2:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_3:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_4:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_5:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_1:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_2:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_3:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_4:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_5:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   KILL [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_1]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_2]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_3]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_4]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_5]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_5]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_2]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_4]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_1]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_3]]
+  ; CHECK-NEXT:   KILL [[COPY2]], [[COPY5]], [[COPY3]], [[COPY6]], [[COPY4]], [[COPY1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   DS_WRITE_B128_gfx9 [[DEF11]], [[DS_READ_B128_gfx9_]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vreg_128_align2 = COPY [[COPY]]
+  ; CHECK-NEXT:   DS_WRITE_B128_gfx9 [[DEF11]], [[COPY7]], 0, 0, implicit $exec
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF14]], [[DEF16]], [[DS_READ_B128_gfx9_]]
+  ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF14]], [[DEF16]], [[COPY7]]
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -2592,6 +2600,7 @@ body:             |
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[DEF11]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[DS_READ_B128_gfx9_]]
   ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF14:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
@@ -2603,27 +2612,35 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_1:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_2:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_3:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_4:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_5:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF12]], [[DEF13]], [[DS_READ_B128_gfx9_]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_1:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_2:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_3:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_4:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_5:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF12]], [[DEF13]], [[COPY]], 4, 4, [[DEF15]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   KILL [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_1]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_2]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_3]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_4]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_5]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_5]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_2]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_4]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_1]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_3]]
+  ; CHECK-NEXT:   KILL [[COPY2]], [[COPY5]], [[COPY3]], [[COPY6]], [[COPY4]], [[COPY1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF16]].sub1, [[DS_READ_B128_gfx9_]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF16]].sub1, [[COPY7]], implicit $exec
   ; CHECK-NEXT:   SCHED_BARRIER 0
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_128_align2 = COPY [[COPY]]
   ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF14]], [[DEF16]], [[DS_READ_B128_gfx9_]], [[V_ADD_U32_e32_]]
+  ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF14]], [[DEF16]], [[COPY8]], [[V_ADD_U32_e32_]]
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -5434,6 +5451,10 @@ body:             |
     S_ENDPGM 0
 ...
 
+# Stays in vgprcd form on cost, not safe-guard exclusion: the rewrite is legal
+# (nothing excluded) but %20's dst partially escapes to a VALU (V_ADD %20.sub0),
+# forcing extra VGPR<->AGPR bridge COPYs whose cost exceeds the spill savings, so
+# getRewriteCost > 0 and the VGPR form is preferred.
 ---
 name:            noncandidate_mfma_def_feeds_candidate_src2
 tracksRegLiveness: true
@@ -5479,18 +5500,16 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF11]], [[DEF12]], [[DEF16]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_]]
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF11]], [[DEF12]], [[COPY]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_1:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF11]], [[DEF12]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_2:%[0-9]+]]:areg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF11]], [[DEF12]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_1]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_1:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF11]], [[DEF12]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_2:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF11]], [[DEF12]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_1]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_3:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF11]], [[DEF12]], [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_2]], 4, 4, [[DEF14]].sub0, [[DEF15]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_]].sub0, [[DEF15]], implicit $exec
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64_2]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_128_align2 = COPY [[V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64_3]]
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF13]], [[DEF16]], [[V_ADD_U32_e32_]], [[COPY2]]
+  ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF13]], [[DEF16]], [[V_ADD_U32_e32_]], [[COPY]]
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
