@@ -59,7 +59,7 @@ bool Pointer::isNullPtr(unsigned AS, const DataLayout &DL) const {
   return Address == DL.getNullPtrValue(AS);
 }
 
-void AnyValue::print(raw_ostream &OS) const {
+void AnyValue::print(Context &Ctx, raw_ostream &OS) const {
   switch (Kind) {
   case StorageKind::Integer:
     if (IntVal.getBitWidth() == 1) {
@@ -129,7 +129,7 @@ void AnyValue::print(raw_ostream &OS) const {
     for (size_t I = 0, E = AggVal.size(); I != E; ++I) {
       if (I != 0)
         OS << ", ";
-      AggVal[I].print(OS);
+      AggVal[I].print(Ctx, OS);
     }
     OS << " }";
     break;

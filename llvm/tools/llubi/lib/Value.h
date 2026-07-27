@@ -248,7 +248,7 @@ public:
   AnyValue &operator=(AnyValue &&);
   ~AnyValue() { destroy(); }
 
-  void print(raw_ostream &OS) const;
+  void print(Context &Ctx, raw_ostream &OS) const;
 
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
@@ -324,10 +324,22 @@ public:
   }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
-  V.print(OS);
-  return OS;
-}
+class AnyValuePrinter {
+  Context &Ctx;
+  raw_ostream &OS;
+
+public:
+  AnyValuePrinter(Context &Ctx, raw_ostream &OS) : Ctx(Ctx), OS(OS) {}
+  AnyValuePrinter &operator<<(const AnyValue &V) {
+    V.print(Ctx, OS);
+    return *this;
+  }
+  template <typename T> AnyValuePrinter &operator<<(const T &Val) {
+    OS << Val;
+    return *this;
+  }
+  operator raw_ostream &() { return OS; }
+};
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
   P.print(OS);

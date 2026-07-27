@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1609,6 +1611,80 @@ static std::string Join(StringRef A, StringRef B, StringRef C, StringRef D) {
   Str += '-';
   Str += D;
   return Str;
+}
+
+TEST(TripleTest, DefaultFloatABI) {
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-none-eabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-gnueabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-gnueabihft64").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-musleabihf").getDefaultFloatABI());
+
+  // Non-hard EABI environments are soft, regardless of OS.
+  EXPECT_EQ(FloatABI::Soft, Triple("arm-none-none-eabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-gnueabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-musleabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-android").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("armv7-apple-ios").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("armv7-apple-macosx").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("armv7-unknown-fuchsia").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("arm-unknown-openbsd").getDefaultFloatABI());
+
+  // MachO M-profile v7em is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7em-apple-darwin").getDefaultFloatABI());
+
+  // Windows is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7-unknown-windows-msvc").getDefaultFloatABI());
+
+  // The AAPCS16 (watchOS) ABI is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7k-apple-watchos").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard, Triple("thumbv7k-apple-ios").getDefaultFloatABI());
+
+  // The Thumb arch goes through the same ARM logic.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7-none-linux-gnueabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("thumbv7-none-linux-gnueabi").getDefaultFloatABI());
+
+  // PowerPC, SystemZ and SPARC default to hard float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("powerpc64le-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("s390x-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("sparc-unknown-linux-gnu").getDefaultFloatABI());
+
+  // MIPS defaults to hard float, except on FreeBSD which uses soft float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("mips-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("mips-unknown-freebsd").getDefaultFloatABI());
+
+  // Defaults to soft float.
+  EXPECT_EQ(FloatABI::Soft, Triple("avr-unknown-unknown").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("csky-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("msp430-unknown-unknown").getDefaultFloatABI());
+
+  // Targets without a special case default to hard float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("x86_64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("aarch64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("riscv64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard, Triple("amdgpu-amd-amdhsa").getDefaultFloatABI());
 }
 
 TEST(TripleTest, Normalization) {
@@ -3745,6 +3821,36 @@ TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
 
   EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
+TEST(DataLayoutTest, NVPTX) {
+  Triple TT32 = Triple("nvptx-nvidia-cuda");
+  Triple TT64 = Triple("nvptx64-nvidia-cuda");
+
+  auto PointerLayoutSpecs = [](StringRef DataLayout) {
+    SmallVector<std::string, 8> Specs;
+    for (StringRef Spec : split(DataLayout, '-'))
+      if (Spec.starts_with("p"))
+        Specs.emplace_back(Spec);
+    return Specs;
+  };
+
+  // The 32-bit target uses a single 32-bit pointer specification and is
+  // unaffected by the ABI name.
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("")),
+              testing::ElementsAre("p:32:32"));
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("shortptr")),
+              testing::ElementsAre("p:32:32"));
+
+  // The default 64-bit target only shrinks Tensor Memory (addrspace:6).
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("")),
+              testing::ElementsAre("p6:32:32"));
+
+  // In shortptr mode the extra address spaces become 32-bit. The pointer
+  // specifications must remain sorted by address space.
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
+              testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
+                                   "p6:32:32", "p7:32:32", "p101:32:32"));
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {

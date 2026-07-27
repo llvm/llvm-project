@@ -2733,6 +2733,13 @@ private:
             StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
       }
 
+      if (ASTLayout.hasOwnVBPtr()) {
+        auto Offset = ASTLayout.getVBPtrOffset().getQuantity();
+        auto StartVBPtr = StartBitOffset + Offset * CharWidth;
+        OccuppiedIntervals.push_back(
+            BitInterval{StartVBPtr, StartVBPtr + DL.getPointerSizeInBits()});
+      }
+
       const auto VisitBase = [&ASTLayout, StartBitOffset, this](
                                  const CXXBaseSpecifier &Base, auto GetOffset) {
         auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();

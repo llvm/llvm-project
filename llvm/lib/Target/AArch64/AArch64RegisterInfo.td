@@ -222,8 +222,11 @@ def GPR64sp : RegisterClass<"AArch64", [i64], 64, (add GPR64common, SP)> {
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::GPR64spRegClassID,0, 32>";
 }
 
-def GPR32sponly : RegisterClass<"AArch64", [i32], 32, (add WSP)>;
-def GPR64sponly : RegisterClass<"AArch64", [i64], 64, (add SP)>;
+// SP/WSP are always reserved.
+let isAllocatable = 0 in {
+  def GPR32sponly : RegisterClass<"AArch64", [i32], 32, (add WSP)>;
+  def GPR64sponly : RegisterClass<"AArch64", [i64], 64, (add SP)>;
+}
 
 def GPR64spPlus0Operand : AsmOperandClass {
   let Name = "GPR64sp0";
@@ -246,7 +249,6 @@ def GPR64z : RegisterOperand<GPR64> {
 }
 
 // GPR argument registers.
-def GPR32arg : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 7)>;
 def GPR64arg : RegisterClass<"AArch64", [i64], 64, (sequence "X%u", 0, 7)>;
 
 // GPR register classes which include WZR/XZR AND SP/WSP. This is not a
@@ -1833,12 +1835,13 @@ let isAllocatable = 0 in {
   def MPR128  : RegisterClass<"AArch64", [untyped],  128, (add (sequence "ZAQ%u", 0, 15))> {
     let Size = 128;
   }
+
+  def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
+    let Size = 512;
+    let DiagnosticType = "InvalidLookupTable";
+  }
 }
 
-def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
-  let Size = 512;
-  let DiagnosticType = "InvalidLookupTable";
-}
 // SME Register Operands
 // There are three types of SME matrix register operands:
 // * Tiles:

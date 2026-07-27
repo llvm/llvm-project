@@ -70,9 +70,6 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AArch64 Backend
 
-* On AArch64 Windows targets, return address signing now uses the B-key by
-  default because Windows unwind information only supports B-key signing.
-
 * Added support for hardening return address signing against PACMAN attacks.
   Functions with the `"sign-return-address-harden"="load-return-address"`
   attribute perform a load of the return address before returning, reducing the
@@ -118,6 +115,8 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
 
