@@ -1,14 +1,14 @@
 # REQUIRES: aarch64
-## -z sort-thunks orders a thunk section's forward thunks by descending destination so promoting
+## By default a thunk section's forward thunks are sorted by descending destination so promoting
 ## one to its long form cannot push another out of range. In creation order the promotions cascade,
 ## one per pass, and exceed convergence limit (issue #61250).
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
-# RUN: ld.lld -T lds a.o -z sort-thunks -o out
+# RUN: ld.lld -T lds a.o -o out
 # RUN: llvm-objdump -d --no-show-raw-insn out | FileCheck %s
-## The default keeps creation order and does not converge.
-# RUN: not ld.lld -T lds a.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+## -z nosort-thunks keeps creation order and does not converge.
+# RUN: not ld.lld -T lds a.o -z nosort-thunks -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR: error: address assignment did not converge
 
 ## One thunk section holds both directions: backward thunks first, in creation
