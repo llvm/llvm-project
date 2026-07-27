@@ -9512,9 +9512,8 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
 
     NewPattern = CXXExpansionStmtPattern::CreateIterating(
         SemaRef.Context, NewESD, Init, ExpansionVar.getAs<DeclStmt>(),
-        RangeVarDS, Begin.getAs<DeclStmt>(),
-        Iter.getAs<DeclStmt>(), S->getLParenLoc(), S->getColonLoc(),
-        S->getRParenLoc(), Size);
+        RangeVarDS, Begin.getAs<DeclStmt>(), Iter.getAs<DeclStmt>(),
+        S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc(), Size);
 
     SemaRef.ApplyForRangeOrExpansionStatementLifetimeExtension(
         NewPattern->getRangeVar(), LifetimeExtendTemps);

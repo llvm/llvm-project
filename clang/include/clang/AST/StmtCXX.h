@@ -685,8 +685,7 @@ private:
     return getNumSubStmts();
   }
 
-  size_t
-  numTrailingObjects(OverloadToken<ExpansionSize>) const {
+  size_t numTrailingObjects(OverloadToken<ExpansionSize>) const {
     return CXXExpansionStmtPatternBits.HasExpansionSize;
   }
 
@@ -958,13 +957,13 @@ public:
   }
 
   child_range children() {
-    return child_range(getTrailingObjects<Stmt*>(),
-                       getTrailingObjects<Stmt*>() + getNumSubStmts());
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() + getNumSubStmts());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects<Stmt*>(),
-                             getTrailingObjects<Stmt*>() + getNumSubStmts());
+    return const_child_range(getTrailingObjects<Stmt *>(),
+                             getTrailingObjects<Stmt *>() + getNumSubStmts());
   }
 
   static bool classof(const Stmt *T) {
@@ -980,12 +979,12 @@ private:
   static unsigned getNumSubStmts(ExpansionStmtKind Kind);
   Stmt *getSubStmt(unsigned Idx) const {
     assert(Idx < getNumSubStmts());
-    return getTrailingObjects<Stmt*>()[Idx];
+    return getTrailingObjects<Stmt *>()[Idx];
   }
 
   Stmt *&getSubStmt(unsigned Idx) {
     assert(Idx < getNumSubStmts());
-    return getTrailingObjects<Stmt*>()[Idx];
+    return getTrailingObjects<Stmt *>()[Idx];
   }
 };
 
