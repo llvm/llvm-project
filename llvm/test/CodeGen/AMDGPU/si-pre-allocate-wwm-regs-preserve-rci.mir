@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu9.0a -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgpu9.0a -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
 
 # INFO: Test that WWM preallocation updates MachineRegisterClassInfo in place
 # instead of invalidating it, so the analysis is not recomputed afterwards.
