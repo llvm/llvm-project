@@ -1,0 +1,45 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_classless_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llvm-ir2vec triplets --mode=mir %s -o /dev/null
+
+# Generic (GlobalISel) virtual registers also belong to no register class
+# until instruction selection has assigned one -- they instead carry an LLT
+# (printed as class `_`) or, after RegBankSelect, a register bank.
+# MachineRegisterInfo::getRegClass() asserts in that case, so
+# MIRVocabulary::getRegisterOperandIndex() must treat these the same way as
+# the classless physical registers in classless-physreg.mir: report no
+# vocabulary entry rather than crashing.
+
+--- |
+  define i32 @g(i32 %a) { ret i32 0 }
+...
+---
+name:            g
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+body:             |
+  bb.0:
+    liveins: $edi
+
+    %0:_(s32) = COPY $edi
+    RET 0
+...
+
+# The vocabulary gives COPY = [0.5 0.5 0.5], RET = [0.9 0.9 0.9], and the
+# common "Immediate" operand = [0.01 0.01 0.01]. Neither the generic
+# (classless) vreg %0 nor $edi (a GR32 physical register, for which the
+# vocabulary also has no entry) contribute anything, so the COPY embedding is
+# exactly its opcode embedding. RET's "0" operand is an immediate, so its
+# embedding is the opcode plus the common Immediate operand embedding:
+#   [0.9 0.9 0.9] + [0.01 0.01 0.01] = [0.91 0.91 0.91]
+
+# CHECK: MIR2Vec embeddings for machine function g:
+# CHECK: Machine basic block: g:BB0:
+# CHECK-NEXT:  [ 1.41  1.41  1.41 ]
+# CHECK-NEXT: Machine instruction vectors:
+# CHECK-NEXT: Machine instruction: %0:_(s32) = COPY $edi
+# CHECK-NEXT:  [ 0.50  0.50  0.50 ]
+# CHECK-NEXT: Machine instruction: RET 0
+# CHECK-NEXT:  [ 0.91  0.91  0.91 ]
