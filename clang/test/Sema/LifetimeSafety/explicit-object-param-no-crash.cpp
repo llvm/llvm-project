@@ -13,6 +13,38 @@ struct Foo {
   int field;
 };
 
+struct Base {};
+struct Derived : Base {
+  int base(this Base &&, int);
+};
+
+template <typename T>
+struct Crtp {
+  template <typename Self>
+  int deduced(this Self &&self, T) {
+    return self.field;
+  }
+};
+
+struct Widget : Crtp<int> {
+  int field;
+};
+
+struct NoMove {
+  NoMove() = default;
+  NoMove(NoMove &&) = delete;
+  NoMove(const NoMove &) = delete;
+
+  int get(this NoMove &&self, int) {
+    return self.field;
+  }
+
+  int field;
+};
+
 void call() {
   Foo().get(0);
+  Derived().base(0);
+  Widget().deduced(0);
+  NoMove().get(0);
 }
