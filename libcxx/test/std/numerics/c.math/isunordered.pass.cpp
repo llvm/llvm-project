@@ -19,42 +19,35 @@
 struct TestFloat {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() const {
-    using lim                    = std::numeric_limits<T>;
-    TEST_CONSTEXPR_CXX23 T max   = lim::max();
-    TEST_CONSTEXPR_CXX23 T low   = lim::lowest();
-    TEST_CONSTEXPR_CXX23 T inf   = lim::infinity();
-    TEST_CONSTEXPR_CXX23 T nan   = lim::quiet_NaN();
-    TEST_CONSTEXPR_CXX23 T s_nan = lim::signaling_NaN();
+    using lim = std::numeric_limits<T>;
 
     assert(!std::isunordered(T(1), T(2)));
     assert(!std::isunordered(T(1), T(1)));
 
-    assert(std::isunordered(nan, T(0)));
-    assert(std::isunordered(T(0), nan));
-    assert(std::isunordered(nan, nan));
+    assert(std::isunordered(lim::quiet_NaN(), T(0)));
+    assert(std::isunordered(T(0), lim::quiet_NaN()));
+    assert(std::isunordered(lim::quiet_NaN(), lim::quiet_NaN()));
 
-    assert(std::isunordered(s_nan, T(0)));
-    assert(!std::isunordered(inf, inf));
-    assert(!std::isunordered(max, low));
+    assert(std::isunordered(lim::signaling_NaN(), T(0)));
+    assert(!std::isunordered(lim::infinity(), lim::infinity()));
+    assert(!std::isunordered(lim::max(), lim::lowest()));
   }
 };
 
 struct TestInt {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() const {
-    using lim                  = std::numeric_limits<T>;
-    TEST_CONSTEXPR_CXX23 T max = lim::max();
+    using lim = std::numeric_limits<T>;
 
     assert(!std::isunordered(T(1), T(2)));
     assert(!std::isunordered(T(1), T(1)));
-    assert(!std::isunordered(max, T(0)));
-    assert(!std::isunordered(max, max));
+    assert(!std::isunordered(lim::max(), T(0)));
+    assert(!std::isunordered(lim::max(), lim::max()));
   }
 };
 
 TEST_CONSTEXPR_CXX23 bool test() {
-  using lim                     = std::numeric_limits<double>;
-  TEST_CONSTEXPR_CXX23 auto nan = lim::quiet_NaN();
+  using lim = std::numeric_limits<double>;
 
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
@@ -64,7 +57,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
     assert(!std::isunordered(2.0, 1));     // double vs int
     assert(!std::isunordered(1, 2.0f));    // int vs float
     assert(!std::isunordered(2.0L, 1.0f)); // long double vs float
-    assert(std::isunordered(nan, 1.0));    // NaN vs int
+    assert(std::isunordered(lim::quiet_NaN(), 1.0));    // NaN vs int
   }
 
   return true;
