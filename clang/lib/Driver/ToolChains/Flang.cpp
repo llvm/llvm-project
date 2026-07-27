@@ -776,8 +776,7 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
 }
 
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
-                                    ArgStringList &CmdArgs,
-                                    const llvm::Triple &Triple) {
+                                    ArgStringList &CmdArgs) {
   StringRef FPContract;
   bool HonorINFs = true;
   bool HonorNaNs = true;
@@ -952,30 +951,13 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   if (ReciprocalMath)
     CmdArgs.push_back("-freciprocal-math");
 
-  // Set the initial floating-point exception halting mode for the main program.
-  if (const Arg *A = Args.getLastArg(options::OPT_ffpe_trap_EQ)) {
-    // Halting on floating-point exceptions is implemented in flang-rt only for
-    // x86 targets and for glibc-based (Linux) targets. Warn if the target
-    // cannot honor the request; the runtime otherwise ignores it.
-    if (!Triple.isX86() && !Triple.isOSLinux()) {
-      D.Diag(diag::warn_drv_unsupported_option_for_target)
-          << A->getAsString(Args) << Triple.str();
-    } else if (!Triple.isX86()) {
-      // The "denormal" exception is an x86-only extension. On other (otherwise
-      // supported) targets it cannot be trapped, so warn if it is requested.
-      llvm::SmallVector<StringRef, 6> Traps;
-      StringRef(A->getValue())
-          .split(Traps, ',', /*MaxSplit=*/-1,
-                 /*KeepEmpty=*/false);
-      for (StringRef Trap : Traps)
-        if (Trap == "denormal") {
-          D.Diag(diag::warn_drv_unsupported_option_for_target)
-              << "-ffpe-trap=denormal" << Triple.str();
-          break;
-        }
-    }
+  // Forward -ffpe-trap= to the frontend unchanged. The value is parsed and
+  // validated in the frontend (flang -fc1 is a supported entry point, so it
+  // validates its own arguments): that is where an unknown mnemonic becomes an
+  // error and where the target-support warnings are emitted. See
+  // parseFloatingPointArgs() in flang/lib/Frontend/CompilerInvocation.cpp.
+  if (const Arg *A = Args.getLastArg(options::OPT_ffpe_trap_EQ))
     A->render(Args, CmdArgs);
-  }
 }
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
@@ -1152,7 +1134,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   addPicOptions(Args, CmdArgs);
 
   // Floating point related options
-  addFloatingPointOptions(D, Args, CmdArgs, Triple);
+  addFloatingPointOptions(D, Args, CmdArgs);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

@@ -142,6 +142,12 @@ uint32_t RTNAME(fegetexcept)() {
 
 // Check if the processor has the ability to control whether to halt or
 // continue execution when a given exception is raised.
+//
+// TODO: Support halting on x86 without glibc. The MXCSR helpers above (guarded
+// by _MM_EXCEPT_DENORM) already provide the machinery, so this gate could be
+// widened to `#if defined(__USE_GNU) || defined(_MM_EXCEPT_DENORM)` to cover
+// x86_64 macOS/BSD and musl-Linux. Doing so also needs the x87 control word for
+// REAL(10), 32-bit x86 (__i386__), and Windows SEH handling; see PR discussion.
 bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #ifdef __USE_GNU
   except = RTNAME(MapException)(except);

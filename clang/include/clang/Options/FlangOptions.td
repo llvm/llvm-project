@@ -329,10 +329,12 @@ defm real_sum_reassociation
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
   HelpText<"Set the initial floating-point exception halting mode for the main program">,
   DocBrief<[{The ``-ffpe-trap=[list]`` option sets the initial floating-point
-exception halting mode for the main program unit. ``[list]`` is a comma-separated
-list of the exceptions to halt on: ``invalid``, ``zero``, ``overflow``,
-``underflow``, and ``inexact``, corresponding to the Fortran 2023 (17.6)
-``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
+exception halting mode for the main program unit. This is the halting mode in
+effect when the main program begins execution; the program may subsequently
+change it (for example, with ``IEEE_SET_HALTING_MODE``). ``[list]`` is a
+comma-separated list of the exceptions to halt on: ``invalid``, ``zero``,
+``overflow``, ``underflow``, and ``inexact``, corresponding to the Fortran 2023
+(17.6) ``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
 ``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``. As a non-standard
 GFortran-compatible extension, ``denormal`` halts on the hardware denormal
 (subnormal) operand exception. An empty list, or the value ``none``, disables
@@ -340,18 +342,37 @@ halting. In the absence of this option, the program runs with traps disabled
 (equivalent to passing ``none``). Multiple occurrences are allowed; only the
 last ``-ffpe-trap=`` takes effect.
 
-Halting is enabled only for exceptions the target's floating-point environment
-can trap on. Halting control is implemented for x86 targets and for glibc-based
-(Linux) targets; for other targets the compiler emits a warning that the option
-is ignored. The ``denormal`` exception is an x86-only extension, so requesting
-it for a non-x86 target likewise produces a warning and is ignored.
+Run-time halting relies on glibc's ``feenableexcept`` (exposed as
+``IEEE_SUPPORT_HALTING``). The compile-time warning is a conservative
+approximation from the target triple; the runtime is the definitive authority on
+which exceptions can be trapped.
 
-The warning is based on the target triple and is intentionally conservative: it
-is emitted only when the target is known not to support halting. On a non-x86
-target whose C library does not provide the required support (for example, a
-non-glibc Linux such as musl), the option may still be silently ignored at run
-time without a compile-time warning. The runtime is the definitive authority on
-which exceptions can be trapped.}]>;
+The table below summarizes the halting behavior for different system
+configurations. In it, ``halts`` = the exception is trapped, ``ignored`` = no
+run-time effect, "Standard" = ``invalid``, ``zero``, ``overflow``,
+``underflow``, ``inexact`` exceptions, and "Others" = any non-x86 architecture
+(AArch64, PowerPC, RISC-V, ...):
+
++--------+-----------+----------+----------+-------------------+
+| Arch   | C library | Standard | denormal | Warning           |
++========+===========+==========+==========+===================+
+| x86    | glibc     | halts    | halts    | none              |
++--------+-----------+----------+----------+-------------------+
+| Others | glibc     | halts    | ignored  | ``denormal`` only |
++--------+-----------+----------+----------+-------------------+
+| x86    | non-glibc | ignored  | ignored  | none (silent)     |
++--------+-----------+----------+----------+-------------------+
+| Others | non-glibc | ignored  | ignored  | always            |
++--------+-----------+----------+----------+-------------------+
+
+Notes:
+
+* On non-x86 targets, an exception halts only if the target's glibc
+  ``feenableexcept`` supports it; the runtime probes each requested exception at
+  start-up (via ``IEEE_SUPPORT_HALTING``) and enables only those it can.
+* ``denormal`` is honored only on x86_64; on 32-bit x86 it is silently ignored.
+* The "always" case excludes non-glibc *Linux* (for example musl), where -- as
+  on the x86 rows -- the option is silently ignored without a warning.}]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
