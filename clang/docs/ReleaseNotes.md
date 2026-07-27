@@ -73,11 +73,19 @@ features cannot lower the translation-unit ABI level;
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
   The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- Remove the deprecated `SPELLING_CACHE` alias.
+  All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
+  Note that this uses `CompletionChunkKind` enumeration as keys, instead of integer values.
+
 - Remove the deprecated `CompletionChunk.isKind...` methods.
   Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
 
   Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
   `isKindInformative` and `isKindResultType`.
+
+- `CompletionString.availability` now returns instances of `AvailabilityKind`.
+  As a result, the `__str__` representation of its return values changed.
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
 
 ### OpenCL Potentially Breaking Changes
 
@@ -138,6 +146,10 @@ features cannot lower the translation-unit ABI level;
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
+
+- Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
+  the C++ standard library selected by the driver and the include directories
+  added for it.
 
 ### Deprecated Compiler Flags
 
@@ -364,6 +376,10 @@ features cannot lower the translation-unit ABI level;
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash when computing the implicit deletion of a defaulted comparison
+  operator required an access check that ran while an enclosing declaration
+  was still being parsed. (#GH210692)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -373,6 +389,7 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+- Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 
 ### OpenACC Specific Changes
 
@@ -401,9 +418,6 @@ features cannot lower the translation-unit ABI level;
 #### X86 Support
 
 #### Arm and AArch64 Support
-
-- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
-  now uses the B-key by default.
 
 #### Android Support
 

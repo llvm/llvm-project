@@ -2664,7 +2664,6 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
 
   DefinedSVal V = X.castAs<DefinedSVal>();
 
-  ProgramStateRef StTrue, StFalse;
   return State->assume(V);
 }
 
