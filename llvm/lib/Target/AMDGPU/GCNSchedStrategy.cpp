@@ -2581,7 +2581,6 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
 bool RewriteMFMAFormStage::rewrite(
     ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
-  DenseMap<MachineInstr *, unsigned> LastMIToRegion;
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     RegionBoundaries Entry = DAG.Regions[Region];
@@ -2589,8 +2588,6 @@ bool RewriteMFMAFormStage::rewrite(
       continue;
 
     FirstMIToRegion[&*Entry.first] = Region;
-    if (Entry.second != Entry.first->getParent()->end())
-      LastMIToRegion[&*Entry.second] = Region;
   }
 
   // Rewrite the MFMAs to AGPR, and insert any copies as needed.
@@ -2713,14 +2710,6 @@ bool RewriteMFMAFormStage::rewrite(
                     .addDef(MappedReg, {}, 0)
                     .addUse(Src2Reg, {}, 0);
             DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-            // If this reaching def was the last MI in the region, update the
-            // region boundaries.
-            if (LastMIToRegion.contains(RD)) {
-              unsigned UpdateRegion = LastMIToRegion[RD];
-              DAG.Regions[UpdateRegion].second = VGPRCopy;
-              LastMIToRegion.erase(RD);
-            }
           }
         }
       }
@@ -2803,15 +2792,6 @@ bool RewriteMFMAFormStage::rewrite(
                   .addDef(MappedReg, {}, 0)
                   .addUse(DstReg, {}, 0);
           DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-          // If this reaching def was the last MI in the region, update the
-          // region boundaries.
-          auto LMI = LastMIToRegion.find(RD);
-          if (LMI != LastMIToRegion.end()) {
-            unsigned UpdateRegion = LMI->second;
-            DAG.Regions[UpdateRegion].second = VGPRCopy;
-            LastMIToRegion.erase(RD);
-          }
         }
       }
     }
@@ -2838,10 +2818,16 @@ bool RewriteMFMAFormStage::rewrite(
               .addDef(NewUseReg, {}, 0)
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
+      // If UseInst was the first MI of a region, update the boundary.
+      if (auto FI = FirstMIToRegion.find(UseInst);
+          FI != FirstMIToRegion.end()) {
+        DAG.Regions[FI->second].first = VGPRCopy;
+        FirstMIToRegion.erase(FI);
+      }
       // Since we know this use has only one reaching def, we can replace the
       // use reg.
       RU->setReg(NewUseReg);
-      // Track the copy source operand for r eplacement.
+      // Track the copy source operand for replacement.
       DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
@@ -2884,11 +2870,10 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If this UseInst was the first MI in the region, update the region
       // boundaries.
-      auto FI = FirstMIToRegion.find(UseInst);
-      if (FI != FirstMIToRegion.end()) {
-        unsigned UpdateRegion = FI->second;
-        DAG.Regions[UpdateRegion].first = VGPRCopy;
-        FirstMIToRegion.erase(UseInst);
+      if (auto FI = FirstMIToRegion.find(UseInst);
+          FI != FirstMIToRegion.end()) {
+        DAG.Regions[FI->second].first = VGPRCopy;
+        FirstMIToRegion.erase(FI);
       }
 
       // Replace the operand for all users.
