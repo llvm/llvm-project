@@ -64,9 +64,21 @@ const RegisterSet *RegisterContextWasm::GetRegisterSet(size_t reg_set) {
 
 bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
                                        RegisterValue &value) {
-  // The only real registers is the PC.
-  if (reg_info->name)
+  // The only real register is the PC.
+  if (reg_info->name) {
+    // A caller frame's PC is the unwound return address, which the base
+    // register context cannot provide because it only sees the innermost
+    // frame's live PC. Use the PC the unwinder recorded for this frame.
+    if (m_concrete_frame_idx > 0) {
+      ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
+      lldb::addr_t pc = wasm_thread.GetConcreteFramePC(m_concrete_frame_idx);
+      if (pc != LLDB_INVALID_ADDRESS) {
+        value.SetUInt(pc, reg_info->byte_size);
+        return true;
+      }
+    }
     return GDBRemoteRegisterContext::ReadRegister(reg_info, value);
+  }
 
   // Read the virtual registers.
   ThreadWasm *thread = static_cast<ThreadWasm *>(&GetThread());
