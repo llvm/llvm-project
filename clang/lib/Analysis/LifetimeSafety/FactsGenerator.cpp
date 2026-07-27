@@ -1019,7 +1019,8 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   // FIXME: Add support for capture_by on constructors.
   if (isa<CXXConstructorDecl>(FD))
     return;
-  bool HasImplicitThisParam = hasImplicitObjectParameter(FD);
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  bool HasImplicitThisParam = MD && MD->isImplicitObjectMemberFunction();
   auto processArgAttrs = [&](unsigned I, auto Callback) {
     if (HasImplicitThisParam) {
       if (I == 0) {
@@ -1033,12 +1034,18 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
         }
         return;
       }
-      --I;
+      if (I - 1 < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I - 1);
+        for (const auto *A : PVD->specific_attrs<LifetimeCaptureByAttr>())
+          Callback(A);
+      }
+    } else {
+      if (I < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I);
+        for (const auto *A : PVD->specific_attrs<LifetimeCaptureByAttr>())
+          Callback(A);
+      }
     }
-    if (I < FD->getNumParams())
-      for (const auto *A :
-           FD->getParamDecl(I)->specific_attrs<LifetimeCaptureByAttr>())
-        Callback(A);
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
     OriginList *CapturedOriginList = nullptr;

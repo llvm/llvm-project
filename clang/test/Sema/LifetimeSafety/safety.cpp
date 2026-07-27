@@ -4285,13 +4285,14 @@ struct S {
   void cap_overload(int *p [[clang::lifetime_capture_by(c)]], int *&c);
   void cap_overload(double *p [[clang::lifetime_capture_by(c)]], double *&c);
 
-  void cap_multi(int *p [[clang::lifetime_capture_by(c1, c2)]], int *&c1, int *&c2);
+  void cap_multi(int *p [[clang::lifetime_capture_by(c1, c2)]], int *&c1,
+                 int *&c2);
   void cap_reordered(int *&c, int *p [[clang::lifetime_capture_by(c)]]);
 };
 
 namespace ns {
-  void cap_ns(int *p [[clang::lifetime_capture_by(c)]], int *&c);
-}
+void cap_ns(int *p [[clang::lifetime_capture_by(c)]], int *&c);
+} // namespace ns
 
 void test_member_capture_by() {
   S s;
@@ -4308,4 +4309,3 @@ void test_member_capture_by() {
   ns::cap_ns(&i, c);
 }
 } // namespace member_capture_by_param
-
