@@ -184,7 +184,9 @@ if asan_rtlib:
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
 elif config.osx_xcrun:
-    osx_sysroot = subprocess.check_output([config.osx_xcrun, "--show-sdk-path"], text=True)
+    osx_sysroot = subprocess.check_output(
+        [config.osx_xcrun, "--show-sdk-path"], text=True
+    )
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, osx_sysroot)
 
 ocamlc_command = "%s ocamlc -cclib -L%s %s" % (
