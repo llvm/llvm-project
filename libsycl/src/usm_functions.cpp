@@ -156,6 +156,19 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
                 propList);
 }
 
+void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
+                    const device &syclDevice, const context &syclContext,
+                    usm::alloc kind, const property_list &propList = {}) {
+  // TODO: this is the important function to implement
+}
+
+void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
+                    const queue &syclQueue, usm::alloc kind,
+                    const property_list &propList = {}) {
+  return aligned_alloc(alignment, numBytes, syclQueue.get_device(),
+                       syclQueue.get_context(), kind, propList);
+}
+
 // SYCL 2020 4.8.3.6. Memory deallocation functions.
 
 void free(void *ptr, const context &ctxt) {
