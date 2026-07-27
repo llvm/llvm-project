@@ -13,7 +13,6 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PLUGIN_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PLUGIN_H
 
-#include "L0Defs.h"
 #include "L0Device.h"
 #include "L0Memory.h"
 #include "L0Options.h"

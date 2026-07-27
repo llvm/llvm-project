@@ -16,7 +16,7 @@
 namespace llvm::omp::target::plugin {
 
 Error L0ContextTy::init() {
-  auto cleanupOnError = [&]() {
+  auto CleanupOnError = [&]() {
     if (zeContext) {
       zeContextDestroy(zeContext);
       zeContext = nullptr;
@@ -41,13 +41,13 @@ Error L0ContextTy::init() {
 
   if (auto Err = EventPool.init(zeContext, UseCounterBasedEvents,
                                 /* Flags */ 0)) {
-    cleanupOnError();
+    CleanupOnError();
     return Err;
   }
   if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions())) {
     if (auto DeinitErr = EventPool.deinit())
       Err = joinErrors(std::move(Err), std::move(DeinitErr));
-    cleanupOnError();
+    CleanupOnError();
     return Err;
   }
 
