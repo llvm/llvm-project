@@ -1,5 +1,4 @@
 ; REQUIRES: systemz-registered-target
-; REQUIRES: target=s390x{{.*}}
 
 ; RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %s -o %t.o
 ; RUN: llvm-nm --no-sort %t.o | FileCheck %s --check-prefix=TYPES
