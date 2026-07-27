@@ -41,19 +41,38 @@ define i32 @fcvtzs_f32_i32_32(float %flt) {
   ret i32 %cvt
 }
 
-define float @fcvtzs_f32_i32_fpr(float %flt) {
-; CHECK-SD-LABEL: fcvtzs_f32_i32_fpr:
+define float @fcvtzs_f32_i32_7_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzs_f32_i32_7_fpr:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, s0, #7
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fcvtzs_f32_i32_fpr:
+; CHECK-GI-LABEL: fcvtzs_f32_i32_7_fpr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzs s0, s0
 ; CHECK-GI-NEXT:    ret
   %fix = fmul float %flt, 128.0
+  %cvt = fptosi float %fix to i32
+  %bc = bitcast i32 %cvt to float
+  ret float %bc
+}
+
+define float @fcvtzs_f32_i32_32_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzs_f32_i32_32_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs s0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_f32_i32_32_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul float %flt, 4294967296.0
   %cvt = fptosi float %fix to i32
   %bc = bitcast i32 %cvt to float
   ret float %bc
@@ -166,13 +185,13 @@ define i64 @fcvtzs_f64_i64_64(double %dbl) {
   ret i64 %cvt
 }
 
-define double @fcvtzs_f64_i64_fpr(double %dbl) {
-; CHECK-SD-LABEL: fcvtzs_f64_i64_fpr:
+define double @fcvtzs_f64_i64_7_fpr(double %dbl) {
+; CHECK-SD-LABEL: fcvtzs_f64_i64_7_fpr:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, d0, #7
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fcvtzs_f64_i64_fpr:
+; CHECK-GI-LABEL: fcvtzs_f64_i64_7_fpr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, #4638707616191610880 // =0x4060000000000000
 ; CHECK-GI-NEXT:    fmov d1, x8
@@ -180,6 +199,25 @@ define double @fcvtzs_f64_i64_fpr(double %dbl) {
 ; CHECK-GI-NEXT:    fcvtzs d0, d0
 ; CHECK-GI-NEXT:    ret
   %fix = fmul double %dbl, 128.0
+  %cvt = fptosi double %fix to i64
+  %bc = bitcast i64 %cvt to double
+  ret double %bc
+}
+
+define double @fcvtzs_f64_i64_64_fpr(double %dbl) {
+; CHECK-SD-LABEL: fcvtzs_f64_i64_64_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs d0, d0, #64
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_f64_i64_64_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #4895412794951729152 // =0x43f0000000000000
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmul d0, d0, d1
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul double %dbl, 18446744073709551616.0
   %cvt = fptosi double %fix to i64
   %bc = bitcast i64 %cvt to double
   ret double %bc
@@ -203,8 +241,8 @@ define i32 @fcvtzs_f16_i32_7(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI10_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI10_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI12_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI12_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -231,8 +269,8 @@ define i32 @fcvtzs_f16_i32_15(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI11_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI11_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI13_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI13_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -259,8 +297,8 @@ define i64 @fcvtzs_f16_i64_7(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI12_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI14_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI14_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -287,8 +325,8 @@ define i64 @fcvtzs_f16_i64_15(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI13_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI15_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI15_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -316,24 +354,6 @@ define i32 @fcvtzu_f32_i32_7(float %flt) {
   ret i32 %cvt
 }
 
-define float @fcvtzu_f32_i32_fpr(float %flt) {
-; CHECK-SD-LABEL: fcvtzu_f32_i32_fpr:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu s0, s0, #7
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcvtzu_f32_i32_fpr:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-GI-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NEXT:    fcvtzu s0, s0
-; CHECK-GI-NEXT:    ret
-  %fix = fmul float %flt, 128.0
-  %cvt = fptoui float %fix to i32
-  %bc = bitcast i32 %cvt to float
-  ret float %bc
-}
-
 define i32 @fcvtzu_f32_i32_32(float %flt) {
 ; CHECK-SD-LABEL: fcvtzu_f32_i32_32:
 ; CHECK-SD:       // %bb.0:
@@ -350,6 +370,43 @@ define i32 @fcvtzu_f32_i32_32(float %flt) {
   %fix = fmul float %flt, 4294967296.0
   %cvt = fptoui float %fix to i32
   ret i32 %cvt
+}
+
+define float @fcvtzu_f32_i32_7_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzu_f32_i32_7_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu s0, s0, #7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_f32_i32_7_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu s0, s0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul float %flt, 128.0
+  %cvt = fptoui float %fix to i32
+  %bc = bitcast i32 %cvt to float
+  ret float %bc
+}
+
+define float @fcvtzu_f32_i32_32_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzu_f32_i32_32_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu s0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_f32_i32_32_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu s0, s0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul float %flt, 4294967296.0
+  %cvt = fptoui float %fix to i32
+  %bc = bitcast i32 %cvt to float
+  ret float %bc
 }
 
 define i64 @fcvtzu_f32_i64_7(float %flt) {
@@ -496,8 +553,8 @@ define i32 @fcvtzu_f16_i32_7(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI24_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI24_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI27_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI27_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -524,8 +581,8 @@ define i32 @fcvtzu_f16_i32_15(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI25_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI25_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI28_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -552,8 +609,8 @@ define i64 @fcvtzu_f16_i64_7(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI26_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI26_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI29_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -580,8 +637,8 @@ define i64 @fcvtzu_f16_i64_15(half %flt) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI27_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI30_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -763,8 +820,8 @@ define half @scvtf_f16_i32_7(i32 %int) {
 ; CHECK-GI-FP16-LABEL: scvtf_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    scvtf h0, w0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI36_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI36_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI39_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI39_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = sitofp i32 %int to half
@@ -801,8 +858,8 @@ define half @scvtf_f16_i32_15(i32 %int) {
 ; CHECK-GI-FP16-LABEL: scvtf_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    scvtf h0, w0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI37_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI37_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI40_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI40_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = sitofp i32 %int to half
@@ -839,8 +896,8 @@ define half @scvtf_f16_i64_7(i64 %long) {
 ; CHECK-GI-FP16-LABEL: scvtf_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    scvtf h0, x0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI38_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI38_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI41_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI41_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = sitofp i64 %long to half
@@ -877,8 +934,8 @@ define half @scvtf_f16_i64_15(i64 %long) {
 ; CHECK-GI-FP16-LABEL: scvtf_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    scvtf h0, x0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI39_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI39_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI42_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI42_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = sitofp i64 %long to half
@@ -1059,8 +1116,8 @@ define half @ucvtf_f16_i32_7(i32 %int) {
 ; CHECK-GI-FP16-LABEL: ucvtf_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    ucvtf h0, w0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI48_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI48_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI51_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI51_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = uitofp i32 %int to half
@@ -1097,8 +1154,8 @@ define half @ucvtf_f16_i32_15(i32 %int) {
 ; CHECK-GI-FP16-LABEL: ucvtf_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    ucvtf h0, w0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI49_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI49_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI52_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI52_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = uitofp i32 %int to half
@@ -1135,8 +1192,8 @@ define half @ucvtf_f16_i64_7(i64 %long) {
 ; CHECK-GI-FP16-LABEL: ucvtf_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    ucvtf h0, x0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI50_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI50_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI53_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI53_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = uitofp i64 %long to half
@@ -1173,8 +1230,8 @@ define half @ucvtf_f16_i64_15(i64 %long) {
 ; CHECK-GI-FP16-LABEL: ucvtf_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    ucvtf h0, x0
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI51_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI51_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI54_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI54_0]
 ; CHECK-GI-FP16-NEXT:    fdiv h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    ret
   %cvt = uitofp i64 %long to half
@@ -1227,19 +1284,38 @@ define i32 @fcvtzs_sat_f32_i32_32(float %flt) {
   ret i32 %cvt
 }
 
-define float @fcvtzs_sat_f32_i32_fpr(float %flt) {
-; CHECK-SD-LABEL: fcvtzs_sat_f32_i32_fpr:
+define float @fcvtzs_sat_f32_i32_7_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzs_sat_f32_i32_7_fpr:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs s0, s0, #7
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fcvtzs_sat_f32_i32_fpr:
+; CHECK-GI-LABEL: fcvtzs_sat_f32_i32_7_fpr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzs s0, s0
 ; CHECK-GI-NEXT:    ret
   %fix = fmul float %flt, 128.0
+  %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %fix)
+  %bc = bitcast i32 %cvt to float
+  ret float %bc
+}
+
+define float @fcvtzs_sat_f32_i32_32_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzs_sat_f32_i32_32_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs s0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_sat_f32_i32_32_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul float %flt, 4294967296.0
   %cvt = call i32 @llvm.fptosi.sat.i32.f32(float %fix)
   %bc = bitcast i32 %cvt to float
   ret float %bc
@@ -1335,13 +1411,13 @@ define i64 @fcvtzs_sat_f64_i64_64(double %dbl) {
   ret i64 %cvt
 }
 
-define double @fcvtzs_sat_f64_i64_fpr(double %dbl) {
-; CHECK-SD-LABEL: fcvtzs_sat_f64_i64_fpr:
+define double @fcvtzs_sat_f64_i64_7_fpr(double %dbl) {
+; CHECK-SD-LABEL: fcvtzs_sat_f64_i64_7_fpr:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs d0, d0, #7
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fcvtzs_sat_f64_i64_fpr:
+; CHECK-GI-LABEL: fcvtzs_sat_f64_i64_7_fpr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, #4638707616191610880 // =0x4060000000000000
 ; CHECK-GI-NEXT:    fmov d1, x8
@@ -1353,6 +1429,26 @@ define double @fcvtzs_sat_f64_i64_fpr(double %dbl) {
   %bc = bitcast i64 %cvt to double
   ret double %bc
 }
+
+define double @fcvtzs_sat_f64_i64_64_fpr(double %dbl) {
+; CHECK-SD-LABEL: fcvtzs_sat_f64_i64_64_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs d0, d0, #64
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzs_sat_f64_i64_64_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #4895412794951729152 // =0x43f0000000000000
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmul d0, d0, d1
+; CHECK-GI-NEXT:    fcvtzs d0, d0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul double %dbl, 18446744073709551616.0
+  %cvt = call i64 @llvm.fptosi.sat.i64.f64(double %fix)
+  %bc = bitcast i64 %cvt to double
+  ret double %bc
+}
+
 
 define i32 @fcvtzs_sat_f16_i32_7(half %dbl) {
 ; CHECK-NO16-LABEL: fcvtzs_sat_f16_i32_7:
@@ -1372,8 +1468,8 @@ define i32 @fcvtzs_sat_f16_i32_7(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI61_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI61_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI66_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI66_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1400,8 +1496,8 @@ define i32 @fcvtzs_sat_f16_i32_15(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI62_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI62_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI67_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI67_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1428,8 +1524,8 @@ define i64 @fcvtzs_sat_f16_i64_7(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI63_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI63_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI68_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI68_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1456,8 +1552,8 @@ define i64 @fcvtzs_sat_f16_i64_15(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI64_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI64_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI69_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI69_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1510,19 +1606,38 @@ define i32 @fcvtzu_sat_f32_i32_32(float %flt) {
   ret i32 %cvt
 }
 
-define float @fcvtzu_sat_f32_i32_fpr(float %flt) {
-; CHECK-SD-LABEL: fcvtzu_sat_f32_i32_fpr:
+define float @fcvtzu_sat_f32_i32_7_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzu_sat_f32_i32_7_fpr:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu s0, s0, #7
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fcvtzu_sat_f32_i32_fpr:
+; CHECK-GI-LABEL: fcvtzu_sat_f32_i32_7_fpr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzu s0, s0
 ; CHECK-GI-NEXT:    ret
   %fix = fmul float %flt, 128.0
+  %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %fix)
+  %bc = bitcast i32 %cvt to float
+  ret float %bc
+}
+
+define float @fcvtzu_sat_f32_i32_32_fpr(float %flt) {
+; CHECK-SD-LABEL: fcvtzu_sat_f32_i32_32_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu s0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_sat_f32_i32_32_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu s0, s0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul float %flt, 4294967296.0
   %cvt = call i32 @llvm.fptoui.sat.i32.f32(float %fix)
   %bc = bitcast i32 %cvt to float
   ret float %bc
@@ -1618,13 +1733,13 @@ define i64 @fcvtzu_sat_f64_i64_64(double %dbl) {
   ret i64 %cvt
 }
 
-define double @fcvtzu_sat_f64_i64_fpr(double %dbl) {
-; CHECK-SD-LABEL: fcvtzu_sat_f64_i64_fpr:
+define double @fcvtzu_sat_f64_i64_7_fpr(double %dbl) {
+; CHECK-SD-LABEL: fcvtzu_sat_f64_i64_7_fpr:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzu d0, d0, #7
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fcvtzu_sat_f64_i64_fpr:
+; CHECK-GI-LABEL: fcvtzu_sat_f64_i64_7_fpr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, #4638707616191610880 // =0x4060000000000000
 ; CHECK-GI-NEXT:    fmov d1, x8
@@ -1636,6 +1751,26 @@ define double @fcvtzu_sat_f64_i64_fpr(double %dbl) {
   %bc = bitcast i64 %cvt to double
   ret double %bc
 }
+
+define double @fcvtzu_sat_f64_i64_64_fpr(double %dbl) {
+; CHECK-SD-LABEL: fcvtzu_sat_f64_i64_64_fpr:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu d0, d0, #64
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcvtzu_sat_f64_i64_64_fpr:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #4895412794951729152 // =0x43f0000000000000
+; CHECK-GI-NEXT:    fmov d1, x8
+; CHECK-GI-NEXT:    fmul d0, d0, d1
+; CHECK-GI-NEXT:    fcvtzu d0, d0
+; CHECK-GI-NEXT:    ret
+  %fix = fmul double %dbl, 18446744073709551616.0
+  %cvt = call i64 @llvm.fptoui.sat.i64.f64(double %fix)
+  %bc = bitcast i64 %cvt to double
+  ret double %bc
+}
+
 
 define i32 @fcvtzu_sat_f16_i32_7(half %dbl) {
 ; CHECK-NO16-LABEL: fcvtzu_sat_f16_i32_7:
@@ -1655,8 +1790,8 @@ define i32 @fcvtzu_sat_f16_i32_7(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI74_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI74_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI81_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI81_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1683,8 +1818,8 @@ define i32 @fcvtzu_sat_f16_i32_15(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI75_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI75_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI82_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI82_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu w0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1711,8 +1846,8 @@ define i64 @fcvtzu_sat_f16_i64_7(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI76_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI76_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI83_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI83_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1739,8 +1874,8 @@ define i64 @fcvtzu_sat_f16_i64_15(half %dbl) {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI77_0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI77_0]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI84_0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI84_0]
 ; CHECK-GI-FP16-NEXT:    fmul h0, h0, h1
 ; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
 ; CHECK-GI-FP16-NEXT:    ret
@@ -1748,6 +1883,151 @@ define i64 @fcvtzu_sat_f16_i64_15(half %dbl) {
   %cvt = call i64 @llvm.fptoui.sat.i64.f16(half %fix)
   ret i64 %cvt
 }
+
+define i32 @neon_fcvtzs_f32_i32_7(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzs_f32_i32_7:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs w0, s0, #7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzs_f32_i32_7:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzs w0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 128.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %mul)
+  ret i32 %r
+}
+
+define i32 @neon_fcvtzs_f32_i32_32(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzs_f32_i32_32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs w0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzs_f32_i32_32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzs w0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 4294967296.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %mul)
+  ret i32 %r
+}
+
+define float @neon_fcvtzs_f32_i32_7_bitcast(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzs_f32_i32_7_bitcast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs s0, s0, #7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzs_f32_i32_7_bitcast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 128.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %mul)
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define float @neon_fcvtzs_f32_i32_32_bitcast(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzs_f32_i32_32_bitcast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzs s0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzs_f32_i32_32_bitcast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzs s0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 4294967296.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %mul)
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define i32 @neon_fcvtzu_f32_i32_7(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzu_f32_i32_7:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu w0, s0, #7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzu_f32_i32_7:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu w0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 128.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float %mul)
+  ret i32 %r
+}
+
+define i32 @neon_fcvtzu_f32_i32_32(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzu_f32_i32_32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu w0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzu_f32_i32_32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu w0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 4294967296.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float %mul)
+  ret i32 %r
+}
+
+define float @neon_fcvtzu_f32_i32_7_bitcast(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzu_f32_i32_7_bitcast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu s0, s0, #7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzu_f32_i32_7_bitcast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu s0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 128.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float %mul)
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define float @neon_fcvtzu_f32_i32_32_bitcast(float %a) {
+; CHECK-SD-LABEL: neon_fcvtzu_f32_i32_32_bitcast:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcvtzu s0, s0, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neon_fcvtzu_f32_i32_32_bitcast:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fcvtzu s0, s0
+; CHECK-GI-NEXT:    ret
+  %mul = fmul float %a, 4294967296.0
+  %r = call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float %mul)
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
 ; CHECK-FP16: {{.*}}

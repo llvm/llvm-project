@@ -9252,9 +9252,8 @@ class fixedpoint_vec_f32<ValueType FloatVT>
 class fixedpoint_vec_f16<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<16>">;
     
-// Shared by scalar and vector fixed-point FCVT patterns. 
-// Allows transformation of fixedpoint -> vecshift. The imm
-// value we want is already in V from SelectCVTFixedPointVec.
+// This thing just allows us to change the type of the node produced. 
+// The imm value we want is already in V from SelectCVTFixedPointVec.
 def fixedpoint_vec_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
