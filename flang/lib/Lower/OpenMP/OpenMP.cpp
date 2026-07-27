@@ -2847,11 +2847,13 @@ static void genWsloopClauses(
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
 
-static void genAllocateDirOp(
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ObjectList &objects, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
+static void genAllocateDirOp(lower::AbstractConverter &converter,
+                             semantics::SemanticsContext &semaCtx,
+                             lower::StatementContext &stmtCtx,
+                             lower::pft::Evaluation &eval, mlir::Location loc,
+                             const ObjectList &objects,
+                             const ConstructQueue &queue,
+                             ConstructQueue::const_iterator item) {
   ObjectList supportedObjects;
   supportedObjects.reserve(objects.size());
   for (const Object &object : objects) {
@@ -2860,10 +2862,11 @@ static void genAllocateDirOp(
     const semantics::Symbol &ultimate = sym->GetUltimate();
     if (semantics::omp::IsCommonBlock(ultimate) ||
         ultimate.attrs().test(semantics::Attr::SAVE)) {
-      mlir::emitWarning(loc,
-                "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
-                "COMMON blocks is not yet supported, ignoring the ALLOCATE "
-                "directive for '" + sym->name().ToString() + "'");
+      mlir::emitWarning(
+          loc, "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
+               "COMMON blocks is not yet supported, ignoring the ALLOCATE "
+               "directive for '" +
+                   sym->name().ToString() + "'");
       continue;
     }
     supportedObjects.push_back(object);
