@@ -2,500 +2,373 @@
 Test lldb-dap evaluate request
 """
 
-import re
+from typing import Optional
 
-import lldbdap_testcase
 from lldbsuite.test.decorators import skipIfWindows
 from lldbsuite.test.lldbtest import line_number
-from typing import TypedDict, Optional
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.session_helpers import ExpectEval, FrameContext
+from lldbsuite.test.tools.lldb_dap.types import EvaluateContext, LaunchArgs, ValueFormat
 
 
-class EvaluateResponseBody(TypedDict, total=False):
-    result: str
-    variablesReference: int
-    type: Optional[str]
-    memoryReference: Optional[str]
-    valueLocationReference: Optional[int]
+class TestDAP_evaluate(DAPTestCaseBase):
+    # The frame that `assert_eval*` functions calls evaluate in.
+    _eval_frame: Optional[FrameContext] = None
 
+    def set_evaluation_frame(self, frame: Optional[FrameContext]):
+        """Set the frame that `assert_eval*` functions calls evaluate in."""
+        self._eval_frame = frame
 
-class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
-    def assertEvaluate(
+    def run_evaluate_expressions(
         self,
-        expression,
-        result: str,
-        want_type="",
-        want_varref=False,
-        want_memref=True,
-        want_locref=False,
-        frame_index: Optional[int] = 0,
-        is_hex=None,
+        context: Optional[EvaluateContext] = None,
+        enableAutoVariableSummaries: bool = False,
     ):
-        resp = self.dap_server.request_evaluate(
-            expression, context=self.context, is_hex=is_hex, frameIndex=frame_index
+        self.set_evaluation_frame(None)
+        is_result_expanded = context == "repl"
+        is_result_brief = context == "clipboard"
+        is_result_summary = (
+            not is_result_expanded
+            and not is_result_brief
+            and enableAutoVariableSummaries
         )
-        self.assertTrue(
-            resp["success"],
-            f"Failed to evaluate expression {expression!r} in frame {frame_index}",
-        )
-        body: EvaluateResponseBody = resp["body"]
-        self.assertRegex(
-            body["result"],
-            result,
-            f"Unexpected 'result' for expression {expression!r} in response body {body}",
-        )
-        if want_varref:
-            self.assertNotEqual(
-                body["variablesReference"],
-                0,
-                f"Unexpected 'variablesReference' for expression {expression!r} in response body {body}",
-            )
-        else:
-            self.assertEqual(
-                body["variablesReference"],
-                0,
-                f"Unexpected 'variablesReference' for expression {expression!r} in response body {body}",
-            )
-        if want_type:
-            self.assertEqual(
-                body["type"],
-                want_type,
-                f"Unexpected 'type' for expression {expression!r} in response body {body}",
-            )
-        if want_memref:
-            self.assertIn(
-                "memoryReference",
-                body,
-                f"Unexpected 'memoryReference' for expression {expression!r} in response body {body}",
-            )
-        if want_locref:
-            self.assertIn(
-                "valueLocationReference",
-                body,
-                f"Unexpected 'valueLocationReference' for expression {expression!r} in response body {body}",
+        context_parses_expressions = context != "hover"
+        session = self.build_and_create_session()
+
+        def assert_eval(expression: str, matches: str, *, as_hex=False, **expects):
+            fmt = ValueFormat(hex=True) if as_hex else None
+            if eval_frame := self._eval_frame:
+                body = eval_frame.evaluate(expression, context=context, format=fmt)
+            else:
+                body = session.evaluate(expression, context=context, format=fmt)
+            expects.setdefault("has_mem_ref", True)
+            session.verify_evaluate(body, ExpectEval(matches=matches, **expects))
+            return body
+
+        def assert_eval_fails(expression: str):
+            frame_id = self._eval_frame.id if self._eval_frame else None
+            session.do_evaluate(expression, frameId=frame_id, context=context).error(
+                f"expected {expression!r} to fail using {context=!r} in {frame_id=!r}"
             )
 
-    def assertEvaluateFailure(self, expression):
-        response = self.dap_server.request_evaluate(expression, context=self.context)
-        self.assertFalse(
-            response["success"],
-            f"Expression:'{expression}' should fail in {self.context} context, got {response!r}",
-        )
-        self.assertNotIn(
-            "result",
-            response["body"],
-        )
-
-    def isResultExpandedDescription(self):
-        return self.context == "repl"
-
-    def isResultShortDescription(self):
-        return self.context == "clipboard"
-
-    def isExpressionParsedExpected(self):
-        return self.context != "hover"
-
-    def run_test_evaluate_expressions(
-        self, context=None, enableAutoVariableSummaries=False
-    ):
-        """
-        Tests the evaluate expression request at different breakpoints
-        """
-        self.context = context
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(
-            program,
-            enableAutoVariableSummaries=enableAutoVariableSummaries,
-        )
         source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
         breakpoint_lines = [
-            line_number(source, "// breakpoint 1"),
-            line_number(source, "// breakpoint 2"),
-            line_number(source, "// breakpoint 3"),
-            line_number(source, "// breakpoint 4"),
-            line_number(source, "// breakpoint 5"),
-            line_number(source, "// breakpoint 6"),
-            line_number(source, "// breakpoint 7"),
-            line_number(source, "// breakpoint 8"),
+            line_number(source, f"// breakpoint 1"),
+            line_number(source, f"// breakpoint 2"),
+            line_number(source, f"// breakpoint 3"),
+            line_number(source, f"// breakpoint 4"),
+            line_number(source, f"// breakpoint 5"),
+            line_number(source, f"// breakpoint 6"),
+            line_number(source, f"// breakpoint 7"),
+            line_number(source, f"// breakpoint 8"),
         ]
-        breakpoint_ids = self.set_source_breakpoints(source, breakpoint_lines)
 
-        self.assertEqual(
-            len(breakpoint_ids),
-            len(breakpoint_lines),
-            "Did not resolve all the breakpoints.",
+        launch = LaunchArgs(
+            program, enableAutoVariableSummaries=enableAutoVariableSummaries
         )
-        breakpoint_1 = breakpoint_ids[0]
-        breakpoint_2 = breakpoint_ids[1]
-        breakpoint_3 = breakpoint_ids[2]
-        breakpoint_4 = breakpoint_ids[3]
-        breakpoint_5 = breakpoint_ids[4]
-        breakpoint_6 = breakpoint_ids[5]
-        breakpoint_7 = breakpoint_ids[6]
-        breakpoint_8 = breakpoint_ids[7]
-        self.continue_to_breakpoint(breakpoint_1)
+        with session.configure(launch) as cfg:
+            bp_ids = session.resolve_source_breakpoints(source, breakpoint_lines)
+        bp1, bp2, bp3, bp4, bp5, bp6, bp7, bp8 = bp_ids
 
-        # Expressions at breakpoint 1, which is in main
-        self.assertEvaluate("var1", "20", want_type="int")
-        # Empty expression should equate to the previous expression.
+        # Expression at breakpoint 1: In main.
+        stop_event = session.verify_stopped_on_breakpoint(bp1, after=cfg.process_event)
+        main_frames = session.thread_context_from(stop_event).frames(levels=2)
+        main_frame, caller_frame = main_frames[0], main_frames[1]
+        self.set_evaluation_frame(main_frame)
+
+        assert_eval("var1", "20", type="int")
+
+        # In repl context, an empty expression repeats the previous expression.
         if context == "repl":
-            self.assertEvaluate("", "20")
+            assert_eval("", "20")
         else:
-            self.assertEvaluateFailure("")
-        self.assertEvaluate("var2", "21", want_type="int")
+            assert_eval_fails("")
+
+        assert_eval("var2", "21", type="int")
         if context == "repl":
-            self.assertEvaluate("", "21", want_type="int")
-            self.assertEvaluate("", "21", want_type="int")
-        self.assertEvaluate("static_int", "0x0000002a", want_type="int", is_hex=True)
-        self.assertEvaluate(
-            "non_static_int", "0x0000002b", want_type="int", is_hex=True
-        )
-        self.assertEvaluate("struct1.foo", "0x0000000f", want_type="int", is_hex=True)
-        self.assertEvaluate("struct2->foo", "0x00000010", want_type="int", is_hex=True)
-        self.assertEvaluate("static_int", "42", want_type="int")
-        self.assertEvaluate("non_static_int", "43", want_type="int")
-        self.assertEvaluate("struct1.foo", "15", want_type="int")
-        self.assertEvaluate("struct2->foo", "16", want_type="int")
+            assert_eval("", "21", type="int")
+            assert_eval("", "21", type="int")
 
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "struct1",
-                r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
-                want_type="my_struct",
-                want_varref=True,
-            )
-            self.assertEvaluate(
-                "struct2",
-                r"\(my_struct \*\) (struct2|\$\d+) = 0x.*",
-                want_type="my_struct *",
-                want_varref=True,
-            )
-            self.assertEvaluate(
-                "struct3",
-                r"\(my_struct \*\) (struct3|\$\d+) = nullptr",
-                want_type="my_struct *",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "struct1",
-                "(foo = 15)",
-                want_type="my_struct",
-                want_varref=True,
-            )
-            self.assertEvaluate(
-                "struct2",
-                r"0x.*",
-                want_type="my_struct *",
-                want_varref=True,
-            )
-            self.assertEvaluate(
-                "struct3",
-                "nullptr",
-                want_type="my_struct *",
-                want_varref=True,
-            )
+        # Verify hex and decimal formatting.
+        assert_eval("static_int", "0x0000002a", type="int", as_hex=True)
+        assert_eval("static_int", "42", type="int")
+        assert_eval("non_static_int", "0x0000002b", type="int", as_hex=True)
+        assert_eval("non_static_int", "43", type="int")
+        assert_eval("struct1.foo", "0x0000000f", type="int", as_hex=True)
+        assert_eval("struct1.foo", "15", type="int")
+        assert_eval("struct2->foo", "0x00000010", type="int", as_hex=True)
+        assert_eval("struct2->foo", "16", type="int")
+
+        if is_result_expanded:
+            struct1_match = r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)"
+        elif is_result_brief:
+            struct1_match = r"\(foo = 15\)"
+        elif is_result_summary:
+            struct1_match = r"\{foo:15\}"
         else:
-            self.assertEvaluate(
-                "struct1",
-                (re.escape("{foo:15}") if enableAutoVariableSummaries else "my_struct"),
-                want_varref=True,
-            )
-            self.assertEvaluate(
-                "struct2",
-                "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*",
-                want_varref=True,
-                want_type="my_struct *",
-            )
-            self.assertEvaluate(
-                "struct3", "0x.*0", want_varref=True, want_type="my_struct *"
-            )
+            struct1_match = "my_struct"
+        assert_eval("struct1", struct1_match, type="my_struct", has_var_ref=True)
 
-        if context == "repl" or context is None:
+        if is_result_expanded:
+            struct2_match = r"\(my_struct \*\) (struct2|\$\d+) = 0x.*"
+        elif is_result_summary:
+            struct2_match = r"0x.* \{foo:16\}"
+        else:
+            struct2_match = r"0x.*"
+        assert_eval("struct2", struct2_match, type="my_struct *", has_var_ref=True)
+
+        if is_result_expanded:
+            struct3_match = r"\(my_struct \*\) (struct3|\$\d+) = nullptr"
+        elif is_result_brief:
+            struct3_match = "nullptr"
+        else:
+            struct3_match = r"0x.*0"
+        assert_eval("struct3", struct3_match, type="my_struct *", has_var_ref=True)
+
+        if context in ("repl", None):
             # In repl or unknown context expressions may be interpreted as lldb
             # commands since no variables have the same name as the command.
-            self.assertEvaluate("list", r".*", want_memref=False)
-            # Changing the frame index should not make a difference
-            self.assertEvaluate(
-                "version", r".*lldb.+", want_memref=False, frame_index=1
-            )
-
+            eval_body = main_frame.evaluate("list")
+            session.verify_evaluate(eval_body, matches=r".*", has_mem_ref=False)
+            # Changing the frame should not make a difference.
+            eval_body = caller_frame.evaluate("version")
+            session.verify_evaluate(eval_body, matches=r".*lldb.+", has_mem_ref=False)
         else:
-            self.assertEvaluateFailure("list")  # local variable of a_function
+            assert_eval_fails("list")  # local variable of a_function.
+            assert_eval_fails("version")
 
-        self.assertEvaluateFailure("my_struct")  # type name
-        self.assertEvaluateFailure("int")  # type name
-        self.assertEvaluateFailure("foo")  # member of my_struct
+        # Identifiers and variables not in scope should fail.
+        assert_eval_fails("my_struct")  # struct name.
+        assert_eval_fails("int")  # type name.
+        assert_eval_fails("foo")  # member variable of my_struct.
 
-        if self.isExpressionParsedExpected():
-            self.assertEvaluate(
+        if context_parses_expressions:
+            assert_eval(
                 "a_function",
-                "0x.*a.out`a_function.*",
-                want_type="int (*)(int)",
-                want_varref=True,
-                want_memref=False,
-                want_locref=True,
+                r"0x.*a.out`a_function.*",
+                type="int (*)(int)",
+                has_var_ref=True,
+                has_mem_ref=False,
+                has_loc_ref=True,
             )
-            self.assertEvaluate(
-                "a_function(1)", "1", want_memref=False, want_type="int"
-            )
-            self.assertEvaluate("var2 + struct1.foo", "36", want_memref=False)
-            self.assertEvaluate(
+            assert_eval("a_function(1)", "1", type="int", has_mem_ref=False)
+            assert_eval("var2 + struct1.foo", "36", has_mem_ref=False)
+            assert_eval(
                 "foo_func",
-                "0x.*a.out`foo_func.*",
-                want_type="int (*)()",
-                want_varref=True,
-                want_memref=False,
-                want_locref=True,
-            )
-            self.assertEvaluate("foo_var", "44")
-        else:
-            self.assertEvaluateFailure("a_function")
-            self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("var2 + struct1.foo")
-            self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("(float) var2")
-            self.assertEvaluate("foo_var", "44")
-
-        # Expressions at breakpoint 2, which is an anonymous block
-        self.continue_to_breakpoint(breakpoint_2)
-        self.assertEvaluate("var1", "20")
-        self.assertEvaluate("var2", "2")  # different variable with the same name
-        self.assertEvaluate("static_int", "42")
-        self.assertEvaluate(
-            "non_static_int", "10"
-        )  # different variable with the same name
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "struct1",
-                r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
-                want_type="my_struct",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "struct1",
-                "(foo = 15)",
-                want_type="my_struct",
-                want_varref=True,
+                r"0x.*a.out`foo_func.*",
+                type="int (*)()",
+                has_var_ref=True,
+                has_mem_ref=False,
+                has_loc_ref=True,
             )
         else:
-            self.assertEvaluate(
-                "struct1",
-                (re.escape("{foo:15}") if enableAutoVariableSummaries else "my_struct"),
-                want_type="my_struct",
-                want_varref=True,
-            )
-        self.assertEvaluate("struct1.foo", "15")
-        self.assertEvaluate("struct2->foo", "16")
+            assert_eval_fails("a_function")
+            assert_eval_fails("a_function(1)")
+            assert_eval_fails("var2 + struct1.foo")
+            assert_eval_fails("foo_func")
+            assert_eval_fails("(float) var2")
 
-        if self.isExpressionParsedExpected():
-            self.assertEvaluate(
+        # foo_var is a global variable and should evaluate.
+        assert_eval("foo_var", "44")
+
+        # Expressions at breakpoint 2: In an anonymous block.
+        stop_event = session.continue_to_breakpoint(bp2)
+        self.set_evaluation_frame(session.top_frame_from(stop_event))
+
+        assert_eval("var1", "20")
+        assert_eval("var2", "2")  # shadowed variable.
+        assert_eval("static_int", "42")
+        assert_eval("non_static_int", "10")  # shadowed variable.
+        assert_eval("struct1", struct1_match, type="my_struct", has_var_ref=True)
+        assert_eval("struct1.foo", "15")
+        assert_eval("struct2->foo", "16")
+
+        if context_parses_expressions:
+            assert_eval(
                 "a_function",
-                "0x.*a.out`a_function.*",
-                want_type="int (*)(int)",
-                want_varref=True,
-                want_memref=False,
-                want_locref=True,
+                r"0x.*a.out`a_function.*",
+                type="int (*)(int)",
+                has_var_ref=True,
+                has_mem_ref=False,
+                has_loc_ref=True,
             )
-            self.assertEvaluate("a_function(1)", "1", want_memref=False)
-            self.assertEvaluate("var2 + struct1.foo", "17", want_memref=False)
-            self.assertEvaluate(
-                "foo_func", "0x.*a.out`foo_func.*", want_varref=True, want_memref=False
+            assert_eval("a_function(1)", "1", has_mem_ref=False)
+            assert_eval("var2 + struct1.foo", "17", has_mem_ref=False)
+            assert_eval(
+                "foo_func",
+                r"0x.*a.out`foo_func.*",
+                has_var_ref=True,
+                has_mem_ref=False,
             )
-            self.assertEvaluate("foo_var", "44")
         else:
-            self.assertEvaluateFailure("a_function")
-            self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("var2 + struct1.foo")
-            self.assertEvaluateFailure("foo_func")
-            self.assertEvaluate("foo_var", "44")
+            assert_eval_fails("a_function")
+            assert_eval_fails("a_function(1)")
+            assert_eval_fails("var2 + struct1.foo")
+            assert_eval_fails("foo_func")
+        assert_eval("foo_var", "44")
 
-        # Expressions at breakpoint 3, which is inside a_function
-        self.continue_to_breakpoint(breakpoint_3)
-        self.assertEvaluate("list", "42")
-        self.assertEvaluate("static_int", "42")
-        self.assertEvaluate("non_static_int", "43")
-        # variable from a different frame
-        self.assertEvaluate("var1", "20", frame_index=1)
+        # Expressions at breakpoint 3: In a_function.
+        stop_event = session.continue_to_breakpoint(bp3)
+        a_function_frames = session.thread_context_from(stop_event).frames(levels=2)
+        a_frame, a_function_parent_frame = a_function_frames[0], a_function_frames[1]
+        self.set_evaluation_frame(a_frame)
 
-        if self.isExpressionParsedExpected():
-            # access global variable without a frame
-            # Run in variable mode to avoid interpreting it as a command
-            res = self.dap_server.request_evaluate(
-                "`lldb-dap repl-mode variable", context="repl"
-            )
-            self.assertTrue(res["success"])
-            self.assertEvaluate("static_int", "42", frame_index=None, want_memref=False)
-            res = self.dap_server.request_evaluate(
-                "`lldb-dap repl-mode auto", context="repl"
-            )
-            self.assertTrue(res["success"])
+        assert_eval("list", "42")
+        assert_eval("static_int", "42")
+        assert_eval("non_static_int", "43")
+        # Verify variable from a different frame.
+        eval_body = a_function_parent_frame.evaluate("var1", context=context)
+        session.verify_evaluate(eval_body, matches="20")
 
-        self.assertEvaluateFailure("var1")
-        self.assertEvaluateFailure("var2")
-        self.assertEvaluateFailure("struct1")
-        self.assertEvaluateFailure("struct1.foo")
-        self.assertEvaluateFailure("struct2->foo")
-        self.assertEvaluateFailure("var2 + struct1.foo")
+        if context_parses_expressions:
+            # Access global variable without a frame
+            # Run in variable mode to avoid interpreting it as a command.
+            session.evaluate("`lldb-dap repl-mode variable", context="repl")
 
-        if self.isExpressionParsedExpected():
-            self.assertEvaluate(
+            eval_body = session.evaluate("static_int", context=context)
+            session.verify_evaluate(eval_body, matches="42", type="int")
+
+            session.evaluate("`lldb-dap repl-mode auto", context="repl")
+
+        # In a_function's own frame these names are out of scope.
+        assert_eval_fails("var1")
+        assert_eval_fails("var2")
+        assert_eval_fails("struct1")
+        assert_eval_fails("struct1.foo")
+        assert_eval_fails("struct2->foo")
+        assert_eval_fails("var2 + struct1.foo")
+
+        if context_parses_expressions:
+            assert_eval(
                 "a_function",
-                "0x.*a.out`a_function.*",
-                want_varref=True,
-                want_memref=False,
-                want_locref=True,
+                r"0x.*a.out`a_function.*",
+                has_var_ref=True,
+                has_mem_ref=False,
+                has_loc_ref=True,
             )
-            self.assertEvaluate("a_function(1)", "1", want_memref=False)
-            self.assertEvaluate("list + 1", "43", want_memref=False)
-            self.assertEvaluate(
-                "foo_func", "0x.*a.out`foo_func.*", want_varref=True, want_memref=False
+            assert_eval("a_function(1)", "1", has_mem_ref=False)
+            assert_eval("list + 1", "43", has_mem_ref=False)
+            assert_eval(
+                "foo_func",
+                r"0x.*a.out`foo_func.*",
+                has_var_ref=True,
+                has_mem_ref=False,
             )
-            self.assertEvaluate("foo_var", "44")
         else:
-            self.assertEvaluateFailure("a_function")
-            self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("list + 1")
-            self.assertEvaluateFailure("foo_func")
-            self.assertEvaluate("foo_var", "44")
+            assert_eval_fails("a_function")
+            assert_eval_fails("a_function(1)")
+            assert_eval_fails("list + 1")
+            assert_eval_fails("foo_func")
+        assert_eval("foo_var", "44")
 
-        # Now we check that values are updated after stepping
-        self.continue_to_breakpoint(breakpoint_4)
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_vec",
-                r"\(std::vector<int>\) \$\d+ = size=2 {\n  \[0\] = 1\n  \[1\] = 2\n}",
-                want_varref=True,
+        # Expressions at breakpoints 4-7.
+        # Now we check that values are updated after stepping.
+        stop_event = session.continue_to_breakpoint(bp4)
+        self.set_evaluation_frame(session.top_frame_from(stop_event))
+        if is_result_expanded:
+            my_vec_match = (
+                r"\(std::vector<int>\) \$\d+ = size=2 \{\n  \[0\] = 1\n  \[1\] = 2\n\}"
             )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_vec", r"size=2 {\n  \[0\] = 1\n  \[1\] = 2\n}", want_varref=True
-            )
+        elif is_result_brief:
+            my_vec_match = r"size=2 \{\n  \[0\] = 1\n  \[1\] = 2\n\}"
         else:
-            self.assertEvaluate("my_vec", "size=2", want_varref=True)
-        self.continue_to_breakpoint(breakpoint_5)
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_vec",
-                r"\(std::vector<int>\) \$\d+ = size=3 {\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n}",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_vec",
-                r"size=3 {\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n}",
-                want_varref=True,
-            )
-        else:
-            self.assertEvaluate("my_vec", "size=3", want_varref=True)
+            my_vec_match = "size=2"
+        assert_eval("my_vec", my_vec_match, has_var_ref=True)
 
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_map",
-                r"\(std::map<int, int>\) \$\d+ = size=2 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n}",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_map",
-                r"size=2 {\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n}",
-                want_varref=True,
-            )
+        stop_event = session.continue_to_breakpoint(bp5)
+        self.set_evaluation_frame(session.top_frame_from(stop_event))
+        if is_result_expanded:
+            my_vec_match = r"\(std::vector<int>\) \$\d+ = size=3 \{\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n\}"
+        elif is_result_brief:
+            my_vec_match = r"size=3 \{\n  \[0\] = 1\n  \[1\] = 2\n  \[2\] = 3\n\}"
         else:
-            self.assertEvaluate("my_map", "size=2", want_varref=True)
-        self.continue_to_breakpoint(breakpoint_6)
-        self.assertEvaluate("my_map", "size=3", want_varref=True)
+            my_vec_match = "size=3"
+        assert_eval("my_vec", my_vec_match, has_var_ref=True)
 
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_bool_vec",
-                r"\(std::vector<bool>\) \$\d+ = size=1 {\n  \[0\] = true\n}",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_bool_vec", r"size=1 {\n  \[0\] = true\n}", want_varref=True
-            )
+        if is_result_expanded:
+            my_map_match = r"\(std::map<int, int>\) \$\d+ = size=2 \{\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n\}"
+        elif is_result_brief:
+            my_map_match = r"size=2 \{\n  \[0\] = \(first = 1, second = 2\)\n  \[1\] = \(first = 2, second = 3\)\n\}"
         else:
-            self.assertEvaluate("my_bool_vec", "size=1", want_varref=True)
-        self.continue_to_breakpoint(breakpoint_7)
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_bool_vec",
-                r"\(std::vector<bool>\) \$\d+ = size=2 {\n  \[0\] = true\n  \[1\] = false\n}",
-                want_varref=True,
-            )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_bool_vec",
-                r"size=2 {\n  \[0\] = true\n  \[1\] = false\n}",
-                want_varref=True,
-            )
-        else:
-            self.assertEvaluate("my_bool_vec", "size=2", want_varref=True)
+            my_map_match = "size=2"
+        assert_eval("my_map", my_map_match, has_var_ref=True)
 
-        self.continue_to_breakpoint(breakpoint_8)
-        # Test memory read, especially with 'empty' repeat commands.
+        stop_event = session.continue_to_breakpoint(bp6)
+        self.set_evaluation_frame(session.top_frame_from(stop_event))
+        assert_eval("my_map", "size=3", has_var_ref=True)
+
+        if is_result_expanded:
+            my_bool_match = r"\(std::vector<bool>\) \$\d+ = size=1 {\n  \[0\] = true\n}"
+        elif is_result_brief:
+            my_bool_match = r"size=1 \{\n  \[0\] = true\n\}"
+        else:
+            my_bool_match = "size=1"
+        assert_eval("my_bool_vec", my_bool_match, has_var_ref=True)
+
+        stop_event = session.continue_to_breakpoint(bp7)
+        self.set_evaluation_frame(session.top_frame_from(stop_event))
+        if is_result_expanded:
+            my_bool_match = r"\(std::vector<bool>\) \$\d+ = size=2 \{\n  \[0\] = true\n  \[1\] = false\n\}"
+        elif is_result_brief:
+            my_bool_match = r"size=2 \{\n  \[0\] = true\n  \[1\] = false\n\}"
+        else:
+            my_bool_match = "size=2"
+        assert_eval("my_bool_vec", my_bool_match, has_var_ref=True)
+
+        # Expressions at breakpoint 8.
+        stop_event = session.continue_to_breakpoint(bp8)
+        self.set_evaluation_frame(session.top_frame_from(stop_event))
+
         if context == "repl":
-            self.assertEvaluate(
-                "memory read -c 1 &my_ints", ".* 05 .*\n", want_memref=False
-            )
-            self.assertEvaluate("", ".* 0a .*\n", want_memref=False)
-            self.assertEvaluate("", ".* 0f .*\n", want_memref=False)
-            self.assertEvaluate("", ".* 14 .*\n", want_memref=False)
-            self.assertEvaluate("", ".* 19 .*\n", want_memref=False)
+            # In repl, empty expressions repeat the previous lldb command,
+            # so each call reads the next byte of my_ints.
+            assert_eval("memory read -c 1 &my_ints", r".* 05 .*\n", has_mem_ref=False)
+            assert_eval("", r".* 0a .*\n", has_mem_ref=False)
+            assert_eval("", r".* 0f .*\n", has_mem_ref=False)
+            assert_eval("", r".* 14 .*\n", has_mem_ref=False)
+            assert_eval("", r".* 19 .*\n", has_mem_ref=False)
 
-        if self.isResultExpandedDescription():
-            self.assertEvaluate(
-                "my_longs",
-                r"\(long\[3\]\) \$\d+ = \(\[0\] = 5, \[1\] = 6, \[2\] = 7\)",
-                want_varref=True,
+        if is_result_expanded:
+            my_longs_match = (
+                r"\(long\[3\]\) \$\d+ = \(\[0\] = 5, \[1\] = 6, \[2\] = 7\)"
             )
-        elif self.isResultShortDescription():
-            self.assertEvaluate(
-                "my_longs",
-                r"\(\[0\] = 5, \[1\] = 6, \[2\] = 7\)",
-                want_varref=True,
-            )
+        elif is_result_brief:
+            my_longs_match = r"\(\[0\] = 5, \[1\] = 6, \[2\] = 7\)"
+        elif is_result_summary:
+            my_longs_match = r"\{5, 6, 7\}"
         else:
-            self.assertEvaluate(
-                "my_longs",
-                "{5, 6, 7}" if enableAutoVariableSummaries else r"long\[3\]",
-                want_varref=True,
-            )
+            my_longs_match = r"long\[3\]"
+        assert_eval("my_longs", my_longs_match, has_var_ref=True)
 
-        self.continue_to_exit()
+        session.continue_to_exit()
 
     @skipIfWindows
     def test_generic_evaluate_expressions(self):
-        # Tests context-less expression evaluations
-        self.run_test_evaluate_expressions(enableAutoVariableSummaries=False)
+        # Tests context-less expression evaluations.
+        self.run_evaluate_expressions(enableAutoVariableSummaries=False)
 
     @skipIfWindows
     def test_repl_evaluate_expressions(self):
-        # Tests expression evaluations that are triggered from the Debug Console
-        self.run_test_evaluate_expressions("repl", enableAutoVariableSummaries=False)
+        # Tests expression evaluations that are triggered from the Debug Console.
+        self.run_evaluate_expressions("repl", enableAutoVariableSummaries=False)
 
     @skipIfWindows
     def test_watch_evaluate_expressions(self):
-        # Tests expression evaluations that are triggered from a watch expression
-        self.run_test_evaluate_expressions("watch", enableAutoVariableSummaries=True)
+        # Tests expression evaluations that are triggered from a watch expression.
+        self.run_evaluate_expressions("watch", enableAutoVariableSummaries=True)
 
     @skipIfWindows
     def test_hover_evaluate_expressions(self):
-        # Tests expression evaluations that are triggered when hovering on the editor
-        self.run_test_evaluate_expressions("hover", enableAutoVariableSummaries=False)
+        # Tests expression evaluations that are triggered when hovering on the editor.
+        self.run_evaluate_expressions("hover", enableAutoVariableSummaries=False)
 
     @skipIfWindows
     def test_variable_evaluate_expressions(self):
-        # Tests expression evaluations that are triggered in the variable explorer
-        self.run_test_evaluate_expressions(
-            "variables", enableAutoVariableSummaries=True
-        )
+        # Tests expression evaluations that are triggered in the variable explorer.
+        self.run_evaluate_expressions("variables", enableAutoVariableSummaries=True)
 
     @skipIfWindows
     def test_clipboard_evaluate_expressions(self):
-        # Tests expression evaluations that are triggered when value copied in editor
-        self.run_test_evaluate_expressions(
-            "clipboard", enableAutoVariableSummaries=False
-        )
+        # Tests expression evaluations that are triggered when value copied in editor.
+        self.run_evaluate_expressions("clipboard", enableAutoVariableSummaries=False)
