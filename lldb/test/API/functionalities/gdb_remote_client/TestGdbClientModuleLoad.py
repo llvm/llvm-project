@@ -59,16 +59,8 @@ class MyResponder(MockGDBServerResponder):
         else:
             return None, False
 
-    def qfThreadInfo(self):
-        return "m47"
-
-    def qsThreadInfo(self):
-        return "l"
-
     def qProcessInfo(self):
-        return "pid:47;ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(
-            self._triple
-        )
+        return "ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(self._triple)
 
     def setBreakpoint(self, packet):
         return "OK"
