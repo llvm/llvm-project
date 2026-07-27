@@ -2480,11 +2480,19 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
-  // If the aggregate result feeds a callsite whose aggregate params were
-  // rewritten to i32 value-ids by SPIRVPrepareFunctions, mutate it to match.
+  // If the aggregate result feeds a return or callsite whose type was rewritten
+  // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
   if (NewI->getType()->isAggregateType()) {
     for (const Use &U : NewI->uses()) {
-      auto *CB = dyn_cast<CallBase>(U.getUser());
+      User *Usr = U.getUser();
+      if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
+        if (RI->getFunction()->getReturnType() != NewI->getType()) {
+          NewI->mutateType(B.getInt32Ty());
+          break;
+        }
+        continue;
+      }
+      auto *CB = dyn_cast<CallBase>(Usr);
       if (!CB || !CB->isArgOperand(&U))
         continue;
       unsigned ArgNo = CB->getArgOperandNo(&U);

@@ -578,7 +578,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attrType)) {
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify or MethodAttr::verify. Don't need to repeat here.
     return success();
@@ -4268,9 +4269,23 @@ LogicalResult cir::AtomicFetchOp::verify() {
       getBinop() != cir::AtomicFetchKind::Sub &&
       getBinop() != cir::AtomicFetchKind::Max &&
       getBinop() != cir::AtomicFetchKind::Min &&
+      getBinop() != cir::AtomicFetchKind::Maximum &&
+      getBinop() != cir::AtomicFetchKind::Minimum &&
+      getBinop() != cir::AtomicFetchKind::MaximumNum &&
+      getBinop() != cir::AtomicFetchKind::MinimumNum &&
       !mlir::isa<cir::IntType>(getVal().getType()))
-    return emitError("only atomic add, sub, max, and min operation could "
-                     "operate on floating-point values");
+    return emitError("only atomic add, sub, max, min, maximum, minimum, "
+                     "maximum_num, and minimum_num operation could operate on "
+                     "floating-point values");
+
+  if ((getBinop() == cir::AtomicFetchKind::Maximum ||
+       getBinop() == cir::AtomicFetchKind::Minimum ||
+       getBinop() == cir::AtomicFetchKind::MaximumNum ||
+       getBinop() == cir::AtomicFetchKind::MinimumNum) &&
+      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+    return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
+                     "operation could only operate on floating-point values");
+
   return success();
 }
 
@@ -4687,6 +4702,18 @@ static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
   p.printNewline();
 
   p << "]";
+}
+
+//===----------------------------------------------------------------------===//
+// Standard library op signature matching
+//===----------------------------------------------------------------------===//
+
+bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
+                                      mlir::TypeRange results) {
+  if (operands.size() != getNumArgs() || results.size() != 1)
+    return false;
+  mlir::Type iterTy = operands[0];
+  return iterTy == operands[1] && iterTy == operands[2] && iterTy == results[0];
 }
 
 //===----------------------------------------------------------------------===//

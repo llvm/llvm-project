@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -825,7 +826,21 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
           std::get_if<Fortran::evaluate::StructureConstructor>(&constantExpr.u))
     return Fortran::lower::genInlinedStructureCtorLit(converter, loc,
                                                       *structCtor);
-  fir::emitFatalError(loc, "not a constant derived type expression");
+  // Initializer folding preserves parentheses around a derived constant or a
+  // structure constructor (e.g. "type(t) :: x = (t(7))"). Look through them.
+  // UnwrapConstantValue cannot see through Parentheses<SomeDerived> because a
+  // StructureConstructor is not a Constant<SomeDerived>.
+  if (const auto *parens = std::get_if<
+          Fortran::evaluate::Parentheses<Fortran::evaluate::SomeDerived>>(
+          &constantExpr.u))
+    return genConstantValue(converter, loc, parens->left());
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // exactly the forms handled above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
+  fir::emitFatalError(loc, "expected a constant derived type expression in "
+                           "initializer, but got: " +
+                               constantExpr.AsFortran());
 }
 
 template <Fortran::common::TypeCategory TC, int KIND>
@@ -834,11 +849,20 @@ static fir::ExtendedValue genConstantValue(
     const Fortran::evaluate::Expr<Fortran::evaluate::Type<TC, KIND>>
         &constantExpr) {
   using T = Fortran::evaluate::Type<TC, KIND>;
+  // Initializer folding preserves parentheses around a scalar constant (e.g.
+  // "integer :: i = (42)"). UnwrapConstantValue looks through them.
   if (const auto *constant =
-          std::get_if<Fortran::evaluate::Constant<T>>(&constantExpr.u))
+          Fortran::evaluate::UnwrapConstantValue<T>(constantExpr))
     return Fortran::lower::convertConstant(converter, loc, *constant,
                                            /*outline=*/false);
-  fir::emitFatalError(loc, "not an evaluate::Constant<T>");
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // a Constant<T>, possibly parenthesized, once the derived-type forms are
+  // handled by the overload above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
+  fir::emitFatalError(loc, "expected a constant expression in initializer, "
+                           "but got: " +
+                               constantExpr.AsFortran());
 }
 
 static fir::ExtendedValue
@@ -865,6 +889,12 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
         }
       },
       constantExpr.u);
+}
+
+fir::ExtendedValue Fortran::lower::genConstantExprValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::SomeExpr &expr) {
+  return genConstantValue(converter, loc, expr);
 }
 
 fir::ExtendedValue Fortran::lower::genInlinedStructureCtorLit(

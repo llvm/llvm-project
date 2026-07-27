@@ -4016,7 +4016,6 @@ bool AArch64InstructionSelector::selectExtractElt(
   const LLT NarrowTy = MRI.getType(DstReg);
   const Register SrcReg = I.getOperand(1).getReg();
   const LLT WideTy = MRI.getType(SrcReg);
-  (void)WideTy;
   assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
          "source register size too small!");
   assert(!NarrowTy.isVector() && "cannot extract vector into vector!");
@@ -4025,19 +4024,42 @@ bool AArch64InstructionSelector::selectExtractElt(
   MachineOperand &LaneIdxOp = I.getOperand(2);
   assert(LaneIdxOp.isReg() && "Lane index operand was not a register?");
 
-  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Cannot extract into GPR.\n");
-    return false;
-  }
-
   // Find the index to extract from.
   auto VRegAndVal = getIConstantVRegValWithLookThrough(LaneIdxOp.getReg(), MRI);
   if (!VRegAndVal)
     return false;
   unsigned LaneIdx = VRegAndVal->Value.getSExtValue();
 
-
   const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  if (DstRB.getID() == AArch64::GPRRegBankID) {
+    unsigned Opcode;
+    switch (WideTy.getScalarSizeInBits()) {
+    case 8:
+      Opcode = AArch64::UMOVvi8;
+      break;
+    case 16:
+      Opcode = AArch64::UMOVvi16;
+      break;
+    case 32:
+      Opcode = AArch64::UMOVvi32;
+      break;
+    default:
+      return false;
+    }
+
+    if (WideTy.getSizeInBits() != 128) {
+      MachineInstr *ScalarToVector = emitScalarToVector(
+          WideTy.getSizeInBits(), &AArch64::FPR128RegClass, SrcReg, MIB);
+      assert(ScalarToVector && "Didn't expect emitScalarToVector to fail!");
+      I.getOperand(1).setReg(ScalarToVector->getOperand(0).getReg());
+    }
+
+    I.setDesc(TII.get(Opcode));
+    I.getOperand(2).ChangeToImmediate(LaneIdx);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
+  }
+
   MachineInstr *Extract = emitExtractVectorElt(DstReg, DstRB, NarrowTy, SrcReg,
                                                LaneIdx, MIB);
   if (!Extract)

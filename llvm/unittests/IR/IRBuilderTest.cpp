@@ -1040,12 +1040,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILocalVariable *VarY =
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
     { /* dbg.value | DbgVariableRecord::Value */
-      ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
-                                              VarLoc, I->getIterator()),
+      ExpectOrder(DIB.insertDbgValue(I, VarX, DIB.createExpression(), VarLoc,
+                                     I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
-      DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
-          I, VarX, DIB.createExpression(), VarLoc, BB);
+      DbgInstPtr VarXValue =
+          DIB.insertDbgValue(I, VarX, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarXValue, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);

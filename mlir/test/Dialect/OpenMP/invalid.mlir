@@ -4913,3 +4913,10 @@ func.func @omp_unroll_partial_factor_negative(%cli : !omp.cli) -> () {
   omp.unroll_partial(%cli) {unroll_factor = -1 : i64}
   return
 }
+
+// -----
+func.func @omp_error_message_and_message_expr(%msg : !llvm.ptr) -> () {
+  // expected-error @below {{the message must be provided either as a constant `message` attribute or as a `message_expr` operand, but not both}}
+  omp.error severity(warning) message("a warning") message_expr(%msg : !llvm.ptr)
+  return
+}
