@@ -4272,3 +4272,40 @@ void test_cyclic_cfg(int n) {
   }         // expected-note {{local variable 'a' is destroyed here}}
   v.use();  // expected-note {{later used here}}
 }
+
+namespace member_capture_by_param {
+struct S {
+  void cap(int *p [[clang::lifetime_capture_by(c)]], int *&c);
+  void cap_const(int *p [[clang::lifetime_capture_by(c)]], int *&c) const;
+  static void cap_static(int *p [[clang::lifetime_capture_by(c)]], int *&c);
+
+  template <typename T>
+  void cap_template(T *p [[clang::lifetime_capture_by(c)]], T *&c);
+
+  void cap_overload(int *p [[clang::lifetime_capture_by(c)]], int *&c);
+  void cap_overload(double *p [[clang::lifetime_capture_by(c)]], double *&c);
+
+  void cap_multi(int *p [[clang::lifetime_capture_by(c1, c2)]], int *&c1, int *&c2);
+  void cap_reordered(int *&c, int *p [[clang::lifetime_capture_by(c)]]);
+};
+
+namespace ns {
+  void cap_ns(int *p [[clang::lifetime_capture_by(c)]], int *&c);
+}
+
+void test_member_capture_by() {
+  S s;
+  int i;
+  int *c;
+  s.cap(&i, c);
+  s.cap_const(&i, c);
+  S::cap_static(&i, c);
+  s.cap_template(&i, c);
+  s.cap_overload(&i, c);
+  int *c2;
+  s.cap_multi(&i, c, c2);
+  s.cap_reordered(c, &i);
+  ns::cap_ns(&i, c);
+}
+} // namespace member_capture_by_param
+
