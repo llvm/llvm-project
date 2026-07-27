@@ -1496,6 +1496,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     ErrAlways(ctx) << "invalid codegen optimization level for LTO: " << ltoCgo;
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  ctx.arg.ltoPartitionsCacheDir =
+      args.getLastArgValue(OPT_lto_partitions_cache_dir);
+  ctx.arg.ltoPartitionsCachePolicy =
+      CHECK(parseCachePruningPolicy(
+                args.getLastArgValue(OPT_lto_partitions_cache_pruning)),
+            "--lto-partitions-cache-pruning: invalid cache policy");
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   ctx.arg.ltoBBAddrMap =
       args.hasFlag(OPT_lto_basic_block_address_map,

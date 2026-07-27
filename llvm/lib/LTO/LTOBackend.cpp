@@ -36,6 +36,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SHA1.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -512,14 +513,43 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     report_fatal_error(std::move(Err));
 }
 
+static std::string computeLTOPartitionCacheKey(const Config &C,
+                                               const SmallString<0> &BC) {
+  SHA1 Hasher;
+
+  // Hash the LTO configuration as that affects code-gen.
+  SmallVector<uint8_t, 20> ConfigHash;
+  computeLTOConfigHash(C, ConfigHash);
+  Hasher.update(ConfigHash);
+
+  // Hash the module bitcode as a whole.
+  Hasher.update(BC);
+
+  return toHex(Hasher.result());
+}
+
+static AddStreamFn getCachedAddStream(const Config &C, SmallString<0> &BC,
+                                      FileCache &PartitionsFC, unsigned Task,
+                                      StringRef ModuleName) {
+  std::string Key = computeLTOPartitionCacheKey(C, BC);
+  Expected<AddStreamFn> CacheAddStreamOrErr =
+      PartitionsFC(Task, Key, ModuleName);
+  if (Error Err = CacheAddStreamOrErr.takeError())
+    reportFatalInternalError(std::move(Err));
+  return *CacheAddStreamOrErr;
+}
+
 static void splitCodeGen(const Config &C, TargetMachine *TM,
-                         AddStreamFn AddStream,
+                         AddStreamFn AddStream, FileCache &PartitionsFC,
                          unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                          const ModuleSummaryIndex &CombinedIndex) {
   DefaultThreadPool CodegenThreadPool(
       heavyweight_hardware_concurrency(ParallelCodeGenParallelismLevel));
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
+
+  LLVM_DEBUG(dbgs() << "splitCodeGen for " << ParallelCodeGenParallelismLevel
+                    << " partitions\n");
 
   const auto HandleModulePartition =
       [&](std::unique_ptr<Module> MPart) {
@@ -533,9 +563,34 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
         raw_svector_ostream BCOS(BC);
         WriteBitcodeToFile(*MPart, BCOS);
 
+        unsigned Task = ThreadCount++;
+        AddStreamFn PartitionAddStream = AddStream;
+        if (PartitionsFC.isValid()) {
+          std::string ModuleIDStr = MPart->getModuleIdentifier();
+          AddStreamFn CacheAddStream =
+              getCachedAddStream(C, BC, PartitionsFC, Task, ModuleIDStr);
+
+          // Cache hit, object was added to the stream.
+          if (!CacheAddStream) {
+            LLVM_DEBUG(dbgs() << "  - splitCodeGen FileCache hit for "
+                              << ModuleIDStr << "\n");
+            return;
+          }
+
+          LLVM_DEBUG(dbgs() << "  - splitCodeGen FileCache missed for "
+                            << ModuleIDStr << "\n");
+
+          // Cache miss, compile and add to the cache stream instead of
+          // `AddStream`.
+          PartitionAddStream = std::move(CacheAddStream);
+        } else {
+          LLVM_DEBUG(dbgs() << "  - splitCodeGen FileCache not valid\n");
+        }
+
         // Enqueue the task
         CodegenThreadPool.async(
-            [&](const SmallString<0> &BC, unsigned ThreadId) {
+            [&, PartitionAddStream](const SmallString<0> &BC,
+                                    unsigned ThreadId) {
               LTOLLVMContext Ctx(C);
               Expected<std::unique_ptr<Module>> MOrErr =
                   parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
@@ -546,12 +601,12 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
               std::unique_ptr<TargetMachine> TM =
                   createTargetMachine(C, T, *MPartInCtx);
 
-              codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
+              codegen(C, TM.get(), PartitionAddStream, ThreadId, *MPartInCtx,
                       CombinedIndex);
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
-            std::move(BC), ThreadCount++);
+            std::move(BC), Task);
       };
 
   // Try target-specific module splitting first, then fallback to the default.
@@ -593,6 +648,7 @@ Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
 }
 
 Error lto::backend(const Config &C, AddStreamFn AddStream,
+                   FileCache &PartitionsFC,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                    ModuleSummaryIndex &CombinedIndex,
                    ArrayRef<StringRef> BitcodeLibFuncs) {
@@ -614,8 +670,8 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   if (ParallelCodeGenParallelismLevel == 1) {
     codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
   } else {
-    splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
-                 CombinedIndex);
+    splitCodeGen(C, TM.get(), AddStream, PartitionsFC,
+                 ParallelCodeGenParallelismLevel, Mod, CombinedIndex);
   }
   return Error::success();
 }

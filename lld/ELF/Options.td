@@ -660,6 +660,11 @@ def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
   HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
+def lto_partitions_cache_dir: JJ<"lto-partitions-cache-dir=">,
+  HelpText<"Path to cache directory for regular LTO codegen partitions "
+           "(only used when --lto-partitions > 1)">;
+defm lto_partitions_cache_pruning: EEq<"lto-partitions-cache-policy",
+  "Pruning policy for the --lto-partitions-cache-dir directory">;
 def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
