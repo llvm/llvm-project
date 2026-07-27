@@ -173,9 +173,9 @@ add_fp_unittest(
   SRCS
     sprintf_test.cpp
   DEPENDS
-    libc.src.stdio.printf_core.printf_config
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.printf_core.printf_config
     libc.include.inttypes
     ${wchar_deps}
   COMPILE_OPTIONS
@@ -503,6 +503,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       fdopen_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
@@ -607,6 +609,5 @@ if(LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 
-add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 add_subdirectory(testdata)

@@ -140,6 +140,17 @@ typedef enum {
   LLVMDWARFSourceLanguageMove,
   LLVMDWARFSourceLanguageHylo,
   LLVMDWARFSourceLanguageMetal,
+  LLVMDWARFSourceLanguageC_plus_plus_23,
+  LLVMDWARFSourceLanguageOdin,
+  LLVMDWARFSourceLanguageP4,
+  LLVMDWARFSourceLanguageC23,
+  LLVMDWARFSourceLanguageFortran23,
+  LLVMDWARFSourceLanguageV,
+  LLVMDWARFSourceLanguageAlgol68,
+  LLVMDWARFSourceLanguageNim,
+  LLVMDWARFSourceLanguageErlang,
+  LLVMDWARFSourceLanguageElixir,
+  LLVMDWARFSourceLanguageGleam,
 
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,

@@ -893,3 +893,23 @@ entry:
   %res = select i1 %x, i32 %val, i32 %b
   ret i32 %res
 }
+
+define i32 @branch_with_uimmSFB_mv(i32 %a, i32 %c, i32 %d) {
+; RV32I-LABEL: branch_with_uimmSFB_mv:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    li a3, 24
+; RV32I-NEXT:    bltu a2, a3, .LBB34_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:  .LBB34_2: # %entry
+; RV32I-NEXT:    ret
+;
+; RV32I-SFB-WITH-IMM-LABEL: branch_with_uimmSFB_mv:
+; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
+; RV32I-SFB-WITH-IMM-NEXT:    qc.mvgeui a0, a2, 24, a1
+; RV32I-SFB-WITH-IMM-NEXT:    ret
+entry:
+  %x = icmp ult i32 %d, 24
+  %sel = select i1 %x, i32 %a, i32 %c
+  ret i32 %sel
+}

@@ -1,0 +1,24 @@
+// Test the --help output for the `static-library` subcommand.
+
+// RUN: clang-ssaf-linker static-library --help-list-hidden \
+// RUN:           | FileCheck %s --match-full-lines
+
+// CHECK:      OVERVIEW: SSAF Linker
+// CHECK-EMPTY:
+// CHECK-NEXT: SUBCOMMAND 'static-library': Operations on StaticLibraries
+// CHECK-EMPTY:
+// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} static-library [options] <verb> <TU summary files>
+// CHECK-EMPTY:
+// CHECK-NEXT: OPTIONS:
+// CHECK-NEXT:   -h                       - Alias for --help
+// CHECK-NEXT:   --help                   - Display available options (--help-hidden for more)
+// CHECK-NEXT:   --help-hidden            - Display all available options
+// CHECK-NEXT:   --help-list              - Display list of available options (--help-list-hidden for more)
+// CHECK-NEXT:   --help-list-hidden       - Display list of all available options
+// CHECK-NEXT:   --namespace=<name>       - Namespace name for the StaticLibrary (defaults to output file stem)
+// CHECK-NEXT:   -o <path>                - Output file path
+// CHECK-NEXT:   --print-all-options      - Print all option values after command line parsing
+// CHECK-NEXT:   --print-options          - Print non-default options after command line parsing
+// CHECK-NEXT:   --target-triple=<triple> - Target triple (defaults to inputs' triple; must match all inputs when set)
+// CHECK-NEXT:   --time                   - Enable timing
+// CHECK-NEXT:   --verbose                - Enable verbose output

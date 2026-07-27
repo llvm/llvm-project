@@ -265,6 +265,14 @@ static cl::opt<std::string> DWPPathName("dwp",
                                         cl::Hidden, cl::init(""),
                                         cl::cat(BoltCategory));
 
+static cl::opt<bool> AccurateDebugRanges(
+    "accurate-debug-ranges",
+    cl::desc("with --update-debug-sections, track DWARF lexical-scope "
+             "boundaries so scope ranges are translated precisely (instead of "
+             "via input-relative block offsets). Disable to trade range "
+             "accuracy for lower memory/time."),
+    cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<bool>
 UseGnuStack("use-gnu-stack",
   cl::desc("use GNU_STACK program header for new segment (workaround for "
@@ -2805,28 +2813,16 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
+    // Check if this relocation targets an address within a function. This
+    // happens with indirect goto.
     const uint64_t ReferencedAddress = SymbolAddress + Addend;
-    BinaryFunction *Func =
-        BC->getBinaryFunctionContainingAddress(ReferencedAddress);
-
-    if (Relocation::isRelative(RType) && SymbolAddress == 0) {
-      if (Func) {
-        if (!Func->isInConstantIsland(ReferencedAddress)) {
-          if (const uint64_t ReferenceOffset =
-                  ReferencedAddress - Func->getAddress()) {
-            Func->addEntryPointAtOffset(ReferenceOffset);
-          }
-        } else {
-          BC->errs() << "BOLT-ERROR: referenced address at 0x"
-                     << Twine::utohexstr(ReferencedAddress)
-                     << " is in constant island of function " << *Func << "\n";
-          exit(1);
-        }
+    if (Relocation::isRelative(RType)) {
+      if (SymbolAddress != 0) {
+        BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
+                      "relocation type\n";
+        exit(1);
       }
-    } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
-      BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
-                    "relocation type\n";
-      exit(1);
+      handleRelativeDynamicRelocation(Rel.getOffset(), ReferencedAddress);
     }
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
@@ -2859,6 +2855,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: R_*_RELATIVE relocation at 0x"
                       << Twine::utohexstr(Address) << " to 0x"
                       << Twine::utohexstr(Addend) << '\n';);
+    handleRelativeDynamicRelocation(Address, Addend);
     BC->addDynamicRelocation(Address, nullptr, RType, Addend, /*Value=*/0,
                              /*IsRELR=*/true);
   };
@@ -2883,6 +2880,27 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
 
       Address = StartAddress + MaxDelta;
     }
+  }
+}
+
+void RewriteInstance::handleRelativeDynamicRelocation(
+    uint64_t RelOffset, uint64_t ReferencedAddress) {
+  BinaryFunction *Func =
+      BC->getBinaryFunctionContainingAddress(ReferencedAddress);
+  if (!Func)
+    return;
+
+  if (Func->isInConstantIsland(ReferencedAddress)) {
+    BC->errs() << "BOLT-ERROR: referenced address at 0x"
+               << Twine::utohexstr(ReferencedAddress)
+               << " is in constant island of function " << *Func << "\n";
+    exit(1);
+  }
+
+  if (const uint64_t ReferenceOffset = ReferencedAddress - Func->getAddress()) {
+    assert(!BC->getBinaryFunctionContainingAddress(RelOffset) &&
+           "Relative relocation to code only from data");
+    Func->registerInternalRefDataRelocation(ReferenceOffset, RelOffset);
   }
 }
 
@@ -3586,6 +3604,12 @@ void RewriteInstance::readDebugInfo() {
     return;
 
   BC->preprocessDebugInfo();
+
+  if (opts::AccurateDebugRanges) {
+    NamedRegionTimer T("readDebugRanges", "read debug ranges", TimerGroupName,
+                       TimerGroupDesc, opts::TimeRewrite);
+    BC->collectDebugScopeBoundaries();
+  }
 }
 
 void RewriteInstance::preprocessProfileData() {
@@ -5211,7 +5235,7 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   NewEhdr.e_shoff = SHTOffset;
   NewEhdr.e_shnum = OutputSections.size();
   NewEhdr.e_shstrndx = NewSectionIndex[NewEhdr.e_shstrndx];
-  OS.pwrite(reinterpret_cast<const char *>(&NewEhdr), sizeof(NewEhdr), 0);
+  safePWrite(OS, reinterpret_cast<const char *>(&NewEhdr), sizeof(NewEhdr), 0);
 }
 
 template <typename ELFT, typename WriteFuncTy, typename StrTabFuncTy>
@@ -5691,13 +5715,10 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   if (DynSymSection) {
     updateELFSymbolTable(
         File,
-        /*IsDynSym=*/true,
-        *DynSymSection,
-        NewSectionIndex,
+        /*IsDynSym=*/true, *DynSymSection, NewSectionIndex,
         [&](size_t Offset, const ELFSymTy &Sym) {
-          Out->os().pwrite(reinterpret_cast<const char *>(&Sym),
-                           sizeof(ELFSymTy),
-                           DynSymSection->sh_offset + Offset);
+          safePWrite(Out->os(), reinterpret_cast<const char *>(&Sym),
+                     sizeof(ELFSymTy), DynSymSection->sh_offset + Offset);
         },
         [](StringRef) -> size_t { return 0; });
   }
@@ -5783,7 +5804,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
     if (!Addend)
       return;
 
-    OS.pwrite(reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
+    safePWrite(OS, reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
   };
 
   // Fill new relative relocation offsets set
@@ -5821,8 +5842,8 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       exit(1);
     }
 
-    OS.pwrite(reinterpret_cast<const char *>(&Value), DynamicRelrEntrySize,
-              RelrDynOffset);
+    safePWrite(OS, reinterpret_cast<const char *>(&Value), DynamicRelrEntrySize,
+               RelrDynOffset);
     RelrDynOffset += DynamicRelrEntrySize;
   };
 
@@ -5884,7 +5905,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   DynamicRelativeRelocationsCount = 0;
 
   auto writeRela = [&OS](const Elf_Rela *RelA, uint64_t &Offset) {
-    OS.pwrite(reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
+    safePWrite(OS, reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
     Offset += sizeof(*RelA);
   };
 
@@ -5995,9 +6016,9 @@ void RewriteInstance::patchELFGOT(ELFObjectFile<ELFT> *File) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: patching GOT entry 0x"
                         << Twine::utohexstr(*GOTEntry) << " with 0x"
                         << Twine::utohexstr(NewAddress) << '\n');
-      OS.pwrite(reinterpret_cast<const char *>(&NewAddress), sizeof(NewAddress),
-                reinterpret_cast<const char *>(GOTEntry) -
-                    File->getData().data());
+      safePWrite(
+          OS, reinterpret_cast<const char *>(&NewAddress), sizeof(NewAddress),
+          reinterpret_cast<const char *>(GOTEntry) - File->getData().data());
     }
   }
 }
@@ -6089,8 +6110,8 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
       break;
     }
     if (ShouldPatch)
-      OS.pwrite(reinterpret_cast<const char *>(&NewDE), sizeof(NewDE),
-                DynamicOffset + (&Dyn - DTB) * sizeof(Dyn));
+      safePWrite(OS, reinterpret_cast<const char *>(&NewDE), sizeof(NewDE),
+                 DynamicOffset + (&Dyn - DTB) * sizeof(Dyn));
   }
 
   if (BC->RequiresZNow && !ZNowSet) {
@@ -6239,13 +6260,17 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
   if (const BinaryFunction *BF =
           BC->getBinaryFunctionContainingAddress(OldAddress)) {
     if (BF->isEmitted()) {
-      // If OldAddress is the another entry point of
-      // the function, then BOLT could get the new address.
-      if (BF->isMultiEntry()) {
-        for (const BinaryBasicBlock &BB : *BF)
-          if (BB.isEntryPoint() &&
-              (BF->getAddress() + BB.getOffset()) == OldAddress)
+      // If OldAddress is another entry point of the function or the target of
+      // an indirect goto, then BOLT could get the new address.
+      bool HasInternalRelocationTarget =
+          BF->hasInternalReferenceAt(OldAddress - BF->getAddress());
+      if (HasInternalRelocationTarget || BF->isMultiEntry()) {
+        for (const BinaryBasicBlock &BB : *BF) {
+          const uint64_t BBAddr = BF->getAddress() + BB.getOffset();
+          if ((HasInternalRelocationTarget || BB.isEntryPoint()) &&
+              BBAddr == OldAddress)
             return BB.getOutputStartAddress();
+        }
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
@@ -6299,8 +6324,8 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
     if (opts::Verbosity >= 2)
       BC->outs() << "BOLT: rewriting function \"" << *Function << "\"\n";
 
-    OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
-              Function->getImageSize(), Function->getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function->getImageAddress()),
+               Function->getImageSize(), Function->getFileOffset());
 
     // Write nops at the end of the function.
     if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
@@ -6323,8 +6348,8 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
 
     for (const FunctionFragment &FF :
          Function->getLayout().getSplitFragments()) {
-      OS.pwrite(reinterpret_cast<char *>(FF.getImageAddress()),
-                FF.getImageSize(), FF.getFileOffset());
+      safePWrite(OS, reinterpret_cast<char *>(FF.getImageAddress()),
+                 FF.getImageSize(), FF.getFileOffset());
     }
   }
 

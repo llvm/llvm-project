@@ -1345,6 +1345,8 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInit(const Stmt *InitStmt,
     // Allow assignment operator call.
     if (CE->getOperator() != OO_Equal)
       return DiagLoopVar();
+    if (CE->getNumArgs() < 1)
+      return DiagLoopVar();
 
     const Expr *LHS = CE->getArg(0)->IgnoreParenImpCasts();
     if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
@@ -1437,6 +1439,9 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForCond(const Stmt *CondStmt,
     if (!CE->isComparisonOp() || CE->getOperator() == OO_Spaceship)
       return DiagCondVar();
 
+    if (CE->getNumArgs() < 1)
+      DiagCondVar();
+
     // Same logic here: Assign it to the LHS, unless the LHS comes back null or
     // not equal to the init var.
     CondVar = getDeclFromExpr(CE->getArg(0));
@@ -1506,6 +1511,11 @@ bool isValidForIncRHSAssign(const ValueDecl *InitVar, const Expr *RHS) {
     OverloadedOperatorKind Op = CE->getOperator();
     if (Op != OO_Plus && Op != OO_Minus)
       return false;
+    // Despite Plus/Minus otherwise only being possible with 2 arguments, error
+    // recovery will sometimes leave us with only 1 here, so fail out if we
+    // don't have the correct number of args.
+    if (CE->getNumArgs() != 2)
+      return false;
     return isValid(InitVar, CE->getArg(0), CE->getArg(1), Op == OO_Plus);
   }
 
@@ -1565,6 +1575,9 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
     }
     IncVar = getDeclFromExpr(BO->getLHS());
   } else if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(IncStmt)) {
+    if (CE->getNumArgs() < 1)
+      return DiagIncVar();
+
     switch (CE->getOperator()) {
     default:
       return DiagIncVar();
@@ -1576,7 +1589,8 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
     case OO_Equal:
       // For assignment we also allow InitVar = InitVar + N, InitVar = N +
       // InitVar, and InitVar = InitVar - N;  BUT only if 'N' is integral.
-      if (!isValidForIncRHSAssign(InitVar, CE->getArg(1)))
+      if (CE->getNumArgs() != 2 ||
+          !isValidForIncRHSAssign(InitVar, CE->getArg(1)))
         return DiagIncVar();
       break;
     }
@@ -2734,6 +2748,9 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
                                                   IK == InitKind::AllOnes ||
                                                   IK == InitKind::Largest),
                                                  Ty, ExprRange.getBegin()));
+    } else if (Ty->isNullPtrType()) {
+      Exprs.push_back(new (Context)
+                          CXXNullPtrLiteralExpr(Ty, ExprRange.getBegin()));
     } else {
       Exprs.push_back(IntegerLiteral::Create(
           Context, getInitIntValue(Context, IK, Ty), Ty, ExprRange.getBegin()));

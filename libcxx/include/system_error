@@ -98,7 +98,7 @@ public:
     // observers:
     int value() const noexcept;
     const error_category& category() const noexcept;
-    string message() const noexcept;
+    string message() const;
     explicit operator bool() const noexcept;
 };
 

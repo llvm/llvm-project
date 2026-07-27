@@ -16,7 +16,7 @@
 
 #include "hdr/types/struct_tm.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/time/strftime_core/composite_converter.h"
 #include "src/time/strftime_core/core_structs.h"
 #include "src/time/strftime_core/num_converter.h"

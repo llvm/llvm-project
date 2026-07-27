@@ -13,6 +13,18 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 24.0
+------------
+
+* [libc++] Optimize standard streams with sync_with_stdio(false)
+
+  All platforms
+  -------------
+  Symbol added: _ZTINSt3__113basic_filebufIwNS_11char_traitsIwEEEE
+  Symbol added: _ZTSNSt3__113basic_filebufIwNS_11char_traitsIwEEEE
+  Symbol added: _ZTVNSt3__113basic_filebufIwNS_11char_traitsIwEEEE
+
+------------
 Version 23.0
 ------------
 

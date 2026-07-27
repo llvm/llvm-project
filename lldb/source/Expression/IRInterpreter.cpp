@@ -135,7 +135,7 @@ public:
   std::string SummarizeValue(const Value *value) {
     lldb_private::StreamString ss;
 
-    ss.Printf("%s", PrintValue(value).c_str());
+    ss.PutCString(PrintValue(value).c_str());
 
     ValueMap::iterator i = m_values.find(value);
 
@@ -267,7 +267,12 @@ public:
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)
           return false;
-        value = APInt(m_target_data.getPointerSizeInBits(), addr);
+        // A resolved symbol address may be wider than a target pointer when we
+        // store extra information in the high bits, such as an address-space
+        // tag. Truncate to the pointer width rather than asserting. When the
+        // address already fits this is a no-op.
+        value = APInt(m_target_data.getPointerSizeInBits(), addr,
+                      /*isSigned=*/false, /*implicitTrunc=*/true);
         return true;
       }
       break;
