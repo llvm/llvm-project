@@ -17,7 +17,9 @@
     "runtime_bitcode": "",
     "runtime_bitcode.description": "Link runtime bitcode",
     "inline_runtime": true,
-    "inline_runtime.description": "Inline runtime function calls eagerly"
+    "inline_runtime.description": "Inline runtime function calls eagerly",
+    "runtime_export_symbols": [],
+    "runtime_export_symbols.description": "Runtime symbols that remain externally visible after linking."
   },
   "module_pre": {
     "module": {
