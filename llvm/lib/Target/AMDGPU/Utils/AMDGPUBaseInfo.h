@@ -1695,8 +1695,9 @@ LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
 
 LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
 
-/// Packed instrucion with operand 64-bit or larger.
-LLVM_READONLY bool isWidePackedInst(unsigned Opc);
+/// Packed instructions that read a single SGPR for SGPR operands, except for
+/// 64-bit elements which read two SGPRs.
+LLVM_READONLY bool isSingleSGPRReadInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
