@@ -345,17 +345,17 @@ class WttReport(Report):
         end_ticks = int(elapsed)
 
         def rc(ref_ctx):
-            return '\t<rti id="" />\n\t<ctx id="%s" />\n' % ref_ctx
+            return f'\t<rti id="" />\n\t<ctx id="{ref_ctx}" />\n'
 
         file.write('<?xml version="1.0" encoding="utf-16"?>\n')
         file.write("<WTT-Logger>\n")
 
         file.write(
-            '<RTI ID="" Machine="%s" ProcessName="lit" '
-            'ProcessID="%d" ThreadID="0" '
-            'BaseTime="%s" Frequency="1" />\n' % (machine, pid, base_time)
+            f'<RTI ID="" Machine="{machine}" ProcessName="lit" '
+            f'ProcessID="{pid}" ThreadID="0" '
+            f'BaseTime="{base_time}" Frequency="1" />\n'
         )
-        file.write('<CTX ID="%d" Current="WTTLOG" Parent="ROOT" />\n' % root_ctx)
+        file.write(f'<CTX ID="{root_ctx}" Current="WTTLOG" Parent="ROOT" />\n')
 
         passed = 0
         failed = 0
@@ -369,17 +369,15 @@ class WttReport(Report):
 
             code = test.result.code
             name = test.getFullName()
-            ca, la = times(test)
+            created_at, logged_at = times(test)
 
             # UNSUPPORTED: report as Pass (feature not applicable on this device).
             if code == lit.Test.UNSUPPORTED:
-                file.write('<CTX ID="" Current=%s Parent="WTTLOG" />\n' % _wtt_attr(name))
-                file.write('<StartTest Title=%s TUID="" CA="%d" LA="%d">\n%s</StartTest>\n'
-                    % (_wtt_attr(name), ca, ca, rc("")))
-                file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
-                    % (_wtt_attr("UNSUPPORTED on this device; reported as Pass (not applicable)."), la, la, rc("")))
-                file.write('<EndTest Title=%s TUID="" Result="Pass" Repro="" CA="%d" LA="%d">\n%s</EndTest>\n'
-                    % (_wtt_attr(name), la, la, rc("")))
+                file.write(f'<CTX ID="" Current={_wtt_attr(name)} Parent="WTTLOG" />\n')
+                file.write(f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n')
+                unsupported_msg = _wtt_attr("UNSUPPORTED on this device; reported as Pass (not applicable).")
+                file.write(f'<Msg UserText={unsupported_msg} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Msg>\n')
+                file.write(f'<EndTest Title={_wtt_attr(name)} TUID="" Result="Pass" Repro="" CA="{logged_at}" LA="{logged_at}">\n{rc("")}</EndTest>\n')
                 unsupported += 1
                 continue
 
@@ -398,45 +396,43 @@ class WttReport(Report):
                 result = "Fail"
                 failed += 1
 
-            file.write('<CTX ID="" Current=%s Parent="WTTLOG" />\n' % _wtt_attr(name))
-            file.write('<StartTest Title=%s TUID="" CA="%d" LA="%d">\n%s</StartTest>\n'
-                % (_wtt_attr(name), ca, ca, rc("")))
+            file.write(f'<CTX ID="" Current={_wtt_attr(name)} Parent="WTTLOG" />\n')
+            file.write(f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n')
 
             # Write error output for failures (WTT uses <Error>, not <Err>).
             if result == "Fail" and test.result.output:
-                file.write('<Error UserText=%s CA="%d" LA="%d">\n%s</Error>\n'
-                    % (_wtt_attr(test.result.output[:4096]), la, la, rc("")))
+                error_text = _wtt_attr(test.result.output[:4096])
+                file.write(f'<Error UserText={error_text} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Error>\n')
 
             if result == "Pass" and test.result.output:
-                file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
-                    % (_wtt_attr(test.result.output[:1024]), la, la, rc("")))
+                pass_text = _wtt_attr(test.result.output[:1024])
+                file.write(f'<Msg UserText={pass_text} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Msg>\n')
 
-            file.write('<EndTest Title=%s TUID="" Result="%s" Repro="" CA="%d" LA="%d">\n%s</EndTest>\n'
-                % (_wtt_attr(name), result, la, la, rc("")))
+            file.write(f'<EndTest Title={_wtt_attr(name)} TUID="" Result="{result}" Repro="" CA="{logged_at}" LA="{logged_at}">\n{rc("")}</EndTest>\n')
 
         # Tally of UNSUPPORTED tests reported as Pass.
         if unsupported > 0:
-            file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
-                % (_wtt_attr(
-                    "%d test(s) were UNSUPPORTED on this device and reported as "
-                    "Pass (not applicable)." % unsupported), end_ticks, end_ticks, rc(root_ctx)))
+            tally = _wtt_attr(
+                f"{unsupported} test(s) were UNSUPPORTED on this device and "
+                f"reported as Pass (not applicable).")
+            file.write(f'<Msg UserText={tally} CA="{end_ticks}" LA="{end_ticks}">\n{rc(root_ctx)}</Msg>\n')
 
         # Tally of tests omitted from results.
         not_run = excluded + skipped
         if not_run > 0:
             parts = []
             if excluded:
-                parts.append("%d excluded" % excluded)
+                parts.append(f"{excluded} excluded")
             if skipped:
-                parts.append("%d skipped" % skipped)
-            file.write('<Msg UserText=%s CA="%d" LA="%d">\n%s</Msg>\n'
-                % (_wtt_attr(
-                    "%d test(s) were not run (%s) and are omitted from the "
-                    "pass/fail results." % (not_run, ", ".join(parts))), end_ticks, end_ticks, rc(root_ctx)))
+                parts.append(f"{skipped} skipped")
+            tally = _wtt_attr(
+                f"{not_run} test(s) were not run ({', '.join(parts)}) and are "
+                f"omitted from the pass/fail results.")
+            file.write(f'<Msg UserText={tally} CA="{end_ticks}" LA="{end_ticks}">\n{rc(root_ctx)}</Msg>\n')
 
         total = passed + failed + unsupported
         file.write(
-            '<PFRollup Total="%d" Passed="%d" Failed="%d" '
-            'Blocked="0" Warned="0" Skipped="0" CA="%d" LA="%d">\n%s</PFRollup>\n'
-            % (total, passed + unsupported, failed, end_ticks, end_ticks, rc(root_ctx)))
+            f'<PFRollup Total="{total}" Passed="{passed + unsupported}" Failed="{failed}" '
+            f'Blocked="0" Warned="0" Skipped="0" CA="{end_ticks}" LA="{end_ticks}">\n'
+            f'{rc(root_ctx)}</PFRollup>\n')
         file.write("</WTT-Logger>\n")
