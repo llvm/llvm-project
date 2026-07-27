@@ -835,6 +835,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a case where function effect analysis (`nonblocking` etc.) did not visit a destructor invoked from a `delete` expression. (#GH184460)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
 - Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
+- Fixed USR generation for declarations whose signature mentions a class-type
+  non-type template parameter. (#GH212351)
 
 #### Bug Fixes to Compiler Builtins
 
