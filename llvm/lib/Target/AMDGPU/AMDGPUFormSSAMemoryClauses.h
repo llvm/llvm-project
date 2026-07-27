@@ -1,4 +1,4 @@
-//===- SSASIFormMemoryClauses.h ---------------------------------*- C++ -*-===//
+//===- AMDGPUFormSSAMemoryClauses.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_SSASIFORMMEMORYCLAUSES_H
-#define LLVM_LIB_TARGET_AMDGPU_SSASIFORMMEMORYCLAUSES_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUFORMSSAMEMORYCLASSES_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUFORMSSAMEMORYCLASSES_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SSASIFormMemoryClausesPass
-    : public OptionalPassInfoMixin<SSASIFormMemoryClausesPass> {
+class AMDGPUFormSSAMemoryClausesPass
+    : public OptionalPassInfoMixin<AMDGPUFormSSAMemoryClausesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_SSASIFORMMEMORYCLAUSES_H
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUFORMSSAMEMORYCLASSES_H

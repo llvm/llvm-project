@@ -23,6 +23,7 @@
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUExportKernelRuntimeHandles.h"
+#include "AMDGPUFormSSAMemoryClauses.h"
 #include "AMDGPUHazardLatency.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
@@ -68,7 +69,6 @@
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
 #include "SIWholeQuadMode.h"
-#include "SSASIFormMemoryClauses.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -577,7 +577,7 @@ static cl::opt<bool> EnablePreRAOptimizations(
     cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
     cl::Hidden);
 
-static cl::opt<bool> EnableSSASIFormMemoryClauses(
+static cl::opt<bool> EnableAMDGPUFormSSAMemoryClauses(
     "amdgpu-enable-ssa-form-memory-clauses",
     cl::desc("Enable SSA form memory clause pass (before PHI elimination)"),
     cl::init(false), cl::Hidden);
@@ -733,7 +733,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesLegacyPass(*PR);
-  initializeSSASIFormMemoryClausesLegacyPass(*PR);
+  initializeAMDGPUFormSSAMemoryClausesLegacyPass(*PR);
   initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDLegacyPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesLegacyPass(*PR);
@@ -1873,15 +1873,15 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less &&
-      !EnableSSASIFormMemoryClauses)
+      !EnableAMDGPUFormSSAMemoryClauses)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
   // Run the SSA form of the memory clause pass before PHI elimination.
   // MachineLoopInfo is the last pass before PHIElimination in the base
   // pipeline, so this places the pass as late as possible while the function
   // is still in SSA form.
-  if (EnableSSASIFormMemoryClauses)
-    insertPass(&MachineLoopInfoID, &SSASIFormMemoryClausesID);
+  if (EnableAMDGPUFormSSAMemoryClauses)
+    insertPass(&MachineLoopInfoID, &AMDGPUFormSSAMemoryClausesID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }

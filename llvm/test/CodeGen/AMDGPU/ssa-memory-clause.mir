@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+xnack -run-pass=ssa-si-form-memory-clauses -verify-machineinstrs -simplify-mir -o - %s | FileCheck -check-prefix=XNACK %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-xnack -run-pass=ssa-si-form-memory-clauses -verify-machineinstrs -simplify-mir -o - %s | FileCheck -check-prefix=NOXNACK %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+xnack -run-pass=amdgpu-form-ssa-memory-clauses -verify-machineinstrs -simplify-mir -o - %s | FileCheck -check-prefix=XNACK %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-xnack -run-pass=amdgpu-form-ssa-memory-clauses -verify-machineinstrs -simplify-mir -o - %s | FileCheck -check-prefix=NOXNACK %s
 
 # Verify basic behavior of the SSA-form memory clause pass. This pass is
 # similar to SIFormMemoryClauses, but runs before PHI elimination.

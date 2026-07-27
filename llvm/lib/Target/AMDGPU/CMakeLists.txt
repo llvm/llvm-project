@@ -163,7 +163,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFixVGPRCopies.cpp
   SIFoldOperands.cpp
   SIFormMemoryClauses.cpp
-  SSASIFormMemoryClauses.cpp
+  AMDGPUFormSSAMemoryClauses.cpp
   SIFrameLowering.cpp
   SIInsertHardClauses.cpp
   SIInsertWaitcnts.cpp
