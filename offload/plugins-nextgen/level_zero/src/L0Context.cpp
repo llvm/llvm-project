@@ -16,7 +16,7 @@
 namespace llvm::omp::target::plugin {
 
 Error L0ContextTy::init() {
-  auto cleanupOnError = [&]() {
+  auto CleanupOnError = [&]() {
     if (zeContext) {
       zeContextDestroy(zeContext);
       zeContext = nullptr;
@@ -28,14 +28,26 @@ Error L0ContextTy::init() {
 
   ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
   CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);
-  if (auto Err = EventPool.init(zeContext, 0)) {
-    cleanupOnError();
+
+  const auto &Options = Plugin.getOptions();
+  bool UseCounterBasedEvents = Options.CommandMode == CommandModeTy::InOrder ||
+                               Options.CommandMode == CommandModeTy::Sync;
+  if (UseCounterBasedEvents)
+    ODBG(OLDT_Init) << "Using counter-based events for "
+                    << (Options.CommandMode == CommandModeTy::InOrder
+                            ? "InOrder"
+                            : "Sync")
+                    << " command mode";
+
+  if (auto Err = EventPool.init(zeContext, UseCounterBasedEvents,
+                                /* Flags */ 0)) {
+    CleanupOnError();
     return Err;
   }
   if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions())) {
     if (auto DeinitErr = EventPool.deinit())
       Err = joinErrors(std::move(Err), std::move(DeinitErr));
-    cleanupOnError();
+    CleanupOnError();
     return Err;
   }
 
@@ -44,6 +56,17 @@ Error L0ContextTy::init() {
           "zexKernelGetArgumentSize", (void **)&zexKernelGetArgumentSize);
   if (RC != ZE_RESULT_SUCCESS)
     zexKernelGetArgumentSize = nullptr;
+
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeCommandListAppendHostFunction",
+          (void **)&zeCommandListAppendHostFunction);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeCommandListAppendHostFunction = nullptr;
+
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeDriverGetDefaultContext", (void **)&zeDriverGetDefaultContext);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeDriverGetDefaultContext = nullptr;
 
   return Plugin::success();
 }

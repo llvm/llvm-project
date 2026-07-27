@@ -14,7 +14,7 @@ void test_vla_ptr_add(int n, int i) {
 }
 
 // CIR-LABEL: @test_vla_ptr_add
-// CIR:         cir.alloca {{.*}} ["arr"]
+// CIR:         cir.alloca "arr"
 // CIR:         %[[N2:.*]] = cir.load{{.*}} !cir.ptr<!s32i>, !s32i
 // CIR:         %[[VLA_SIZE:.*]] = cir.cast integral %[[N2]] : !s32i -> !u64i
 // CIR:         %[[P:.*]] = cir.load{{.*}} !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -38,7 +38,7 @@ void test_vla_ptr_inc(int n) {
 }
 
 // CIR-LABEL: @test_vla_ptr_inc
-// CIR:         cir.alloca {{.*}} ["arr"]
+// CIR:         cir.alloca "arr"
 // CIR:         %[[N2:.*]] = cir.load{{.*}} !cir.ptr<!s32i>, !s32i
 // CIR:         %[[VLA_SIZE:.*]] = cir.cast integral %[[N2]] : !s32i -> !u64i
 // CIR:         %[[P:.*]] = cir.load{{.*}} !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -57,7 +57,7 @@ void test_vla_ptr_dec(int n) {
 }
 
 // CIR-LABEL: @test_vla_ptr_dec
-// CIR:         cir.alloca {{.*}} ["arr"]
+// CIR:         cir.alloca "arr"
 // CIR:         %[[N2:.*]] = cir.load{{.*}} !cir.ptr<!s32i>, !s32i
 // CIR:         %[[VLA_SIZE:.*]] = cir.cast integral %[[N2]] : !s32i -> !u64i
 // CIR:         %[[P:.*]] = cir.load{{.*}} !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>

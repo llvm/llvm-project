@@ -67,7 +67,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
     return true;
 
   // Data Member and method are ALWAYS illegal.
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attr))
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attr))
     return false;
 
   return llvm::TypeSwitch<mlir::Attribute, bool>(attr)
@@ -332,12 +333,10 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type allocaPtrTy = op.getType();
-  mlir::Type allocaTy = op.getAllocaType();
   mlir::Type loweredAllocaPtrTy = getTypeConverter()->convertType(allocaPtrTy);
-  mlir::Type loweredAllocaTy = getTypeConverter()->convertType(allocaTy);
 
   cir::AllocaOp loweredOp = cir::AllocaOp::create(
-      rewriter, op.getLoc(), loweredAllocaPtrTy, loweredAllocaTy, op.getName(),
+      rewriter, op.getLoc(), loweredAllocaPtrTy, op.getName(),
       op.getAlignmentAttr(), /*dynAllocSize=*/adaptor.getDynAllocSize());
   loweredOp.setInit(op.getInit());
   loweredOp.setConstant(op.getConstant());
@@ -396,6 +395,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
   if (mlir::isa<cir::DataMemberType>(ty)) {
+    // Members without a CIR field index (e.g. no_unique_address empty fields)
+    // are represented by an explicit byte offset instead of a field path.
+    if (auto offsetVal =
+            mlir::dyn_cast_if_present<cir::DataMemberOffsetAttr>(initVal))
+      return lowerModule->getCXXABI().lowerDataMemberOffsetConstant(offsetVal,
+                                                                    layout, tc);
     auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
     return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
                                                             layout, tc);
@@ -486,6 +491,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
     if (auto gva = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(initVal))
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
                                       gva.getIndices());
+
+    if (auto blockAddr =
+            mlir::dyn_cast_if_present<cir::BlockAddrInfoAttr>(initVal)) {
+      assert(convertedTy == ptrTy && "BlockAddrInfo type should not change");
+      return blockAddr;
+    }
 
     auto constPtr = mlir::cast_if_present<cir::ConstPtrAttr>(initVal);
     if (!constPtr)

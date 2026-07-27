@@ -100,7 +100,7 @@ ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
 
 OperandRange transform::AlternativesOp::getEntrySuccessorOperands(
     RegionSuccessor successor) {
-  if (!successor.isParent() && getOperation()->getNumOperands() == 1)
+  if (!successor.isOperation() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -118,12 +118,12 @@ void transform::AlternativesOp::getSuccessorRegions(
     regions.emplace_back(&alternative);
   }
   if (!point.isParent())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getOperation()->getResults();
   return successor.getSuccessor()->getArguments();
 }
@@ -1711,12 +1711,12 @@ void transform::ForeachOp::getSuccessorRegions(
              &getBody() &&
          "unexpected region index");
   regions.emplace_back(bodyRegion);
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange transform::ForeachOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults())
-                              : ValueRange(getBody().getArguments());
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getBody().getArguments());
 }
 
 OperandRange
@@ -2966,14 +2966,14 @@ void transform::SequenceOp::getSuccessorRegions(
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::SequenceOp::getSuccessorInputs(RegionSuccessor successor) {
   if (getNumOperands() == 0)
     return ValueRange();
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }

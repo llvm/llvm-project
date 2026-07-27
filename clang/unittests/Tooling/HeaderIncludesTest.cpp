@@ -144,6 +144,20 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
   EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
 }
 
+TEST_F(HeaderIncludesTest, InsertAfterMainHeaderWithSpecialChars) {
+  std::string Code = "#include \"fix+bar.h\"\n"
+                     "\n"
+                     "int main() {}";
+  std::string Expected = "#include \"fix+bar.h\"\n"
+                         "#include <a>\n"
+                         "\n"
+                         "int main() {}";
+  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
+              .IncludeStyle;
+  FileName = "fix+bar.cpp";
+  EXPECT_EQ(Expected, insert(Code, "<a>"));
+}
+
 TEST_F(HeaderIncludesTest, InsertMainHeader) {
   Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
               .IncludeStyle;
@@ -678,7 +692,6 @@ int main() {
     std::vector<int> ints {};
 })cpp";
 
-  auto InsertedCode = insert(Code, "<vector>");
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgpu12.50--amdpal <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 4
@@ -118,7 +118,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
@@ -130,7 +130,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
@@ -142,7 +142,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK:    .registers:      {}

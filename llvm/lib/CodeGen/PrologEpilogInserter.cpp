@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PEI.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -67,7 +68,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "prologepilog"
+#define DEBUG_TYPE "prolog-epilog"
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
@@ -164,6 +165,7 @@ void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -523,7 +525,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
         // the TargetRegisterClass if the stack alignment is smaller. Use the
         // min.
         Alignment = std::min(Alignment, TFI->getStackAlign());
-        FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
+        FrameIdx = MFI.CreateStackObject(Size, Alignment, true, nullptr,
+                                         RegInfo->getSpillStackID(*RC));
         MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
       } else {
         // Spill it to the stack where we must.
@@ -1277,8 +1280,11 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
     // Want only registers used for arguments.
     if (OnlyArg) {
       if (OnlyUsed) {
-        if (!LiveIns[Reg.id()])
-          continue;
+        for (MCRegister LiveReg : LiveIns.set_bits()) {
+          if (TRI.regsOverlap(Reg, LiveReg))
+            RegsToZero.set(LiveReg);
+        }
+        continue;
       } else if (!TRI.isArgumentRegister(MF, Reg)) {
         continue;
       }
@@ -1343,7 +1349,7 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)
     if (MBB.isReturnBlock())
-      TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
+      TFI.emitZeroCallUsedRegs(RegsToZero, MBB, RS);
 }
 
 /// Replace all FrameIndex operands with physical register references and actual

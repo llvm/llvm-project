@@ -177,7 +177,7 @@ public:
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsicWithoutFolding(
         Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
@@ -700,6 +700,17 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerSample(Function &F, bool HasClamp) {
+    return lowerSampleOp(F, OpCode::Sample, /*CoordsIdx=*/2, /*OffsetsIdx=*/3,
+                         [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                                    SmallVectorImpl<Value *> &Args) {
+                           // Clamp
+                           Args.push_back(
+                               HasClamp ? CI->getArgOperand(4)
+                                        : UndefValue::get(IRB.getFloatTy()));
+                         });
+  }
+
   [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
     return lowerSampleOp(
         F, OpCode::SampleBias, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
@@ -710,6 +721,15 @@ public:
           // Clamp
           Args.push_back(HasClamp ? CI->getArgOperand(5)
                                   : UndefValue::get(IRB.getFloatTy()));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleLevel(Function &F) {
+    return lowerSampleOp(
+        F, OpCode::SampleLevel, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [](IRBuilder<> &, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+          // LOD is operand 3.
+          Args.push_back(CI->getArgOperand(3));
         });
   }
 
@@ -957,6 +977,43 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerResourceAtomicBinOp(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      // Cast the target-extension typed handle to `%dx.types.Handle`, tracked
+      // via CleanupCasts so the pair is reconciled by `cleanupHandleCasts`.
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *BinOp = CI->getArgOperand(1);
+      Value *Coord0 = CI->getArgOperand(2);
+      Value *Coord1 = CI->getArgOperand(3);
+      Value *NewValue = CI->getArgOperand(4);
+
+      std::array<Value *, 6> Args{
+          Handle,  BinOp, Coord0, Coord1, ConstantInt::get(IRB.getInt32Ty(), 0),
+          NewValue};
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          dxil::OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
+      if (Error E = OpCall.takeError()) {
+        // Preserve the DXIL op error text but attach it as a
+        // DiagnosticInfoUnsupported so we don't crash with a dangling call.
+        std::string Message(toString(std::move(E)));
+        CI->getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+        CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
+        CI->eraseFromParent();
+        return Error::success();
+      }
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerCtpopToCountBits(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -1137,6 +1194,7 @@ public:
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
+      case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
@@ -1151,11 +1209,20 @@ public:
       case Intrinsic::dx_resource_load_level:
         HasErrors |= lowerTextureLoad(F);
         break;
+      case Intrinsic::dx_resource_sample:
+        HasErrors |= lowerSample(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_sample_clamp:
+        HasErrors |= lowerSample(F, /*HasClamp=*/true);
+        break;
       case Intrinsic::dx_resource_samplebias:
         HasErrors |= lowerSampleBias(F, /*HasClamp=*/false);
         break;
       case Intrinsic::dx_resource_samplebias_clamp:
         HasErrors |= lowerSampleBias(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplelevel:
+        HasErrors |= lowerSampleLevel(F);
         break;
       case Intrinsic::dx_resource_samplegrad:
         HasErrors |= lowerSampleGrad(F, /*HasClamp=*/false);
@@ -1179,6 +1246,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_resource_atomic_binop:
+        HasErrors |= lowerResourceAtomicBinOp(F);
         break;
       case Intrinsic::dx_resource_getdimensions_x:
         HasErrors |= lowerGetDimensionsX(F);

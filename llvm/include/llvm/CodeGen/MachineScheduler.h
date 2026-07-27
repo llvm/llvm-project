@@ -151,7 +151,7 @@ struct LLVM_ABI MachineSchedContext {
   LiveIntervals *LIS = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
 
-  RegisterClassInfo *RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   MachineSchedContext();
   MachineSchedContext &operator=(const MachineSchedContext &other) = delete;

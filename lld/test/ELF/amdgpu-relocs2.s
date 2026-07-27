@@ -1,6 +1,6 @@
 # REQUIRES: amdgpu
 # RUN: split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=amdgcn--amdhsa -mcpu=fiji %t/asm -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=amdgpu8.03--amdhsa %t/asm -o %t.o
 # RUN: ld.lld %t.o -o %t/out --script %t/script
 # RUN: llvm-objdump -d %t/out | FileCheck %s
 

@@ -201,6 +201,12 @@ if(WIN32 AND NOT MINGW AND NOT CYGWIN)
 endif()
 
 macro(test_targets)
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")
+    set(COMPILER_RT_TARGET_AMDGPU TRUE)
+  else()
+    set(COMPILER_RT_TARGET_AMDGPU FALSE)
+  endif()
+
   # Find and run MSVC (not clang-cl) and get its version. This will tell clang-cl
   # what version of MSVC to pretend to be so that the STL works.
   set(MSVC_VERSION_FLAG "")
@@ -243,8 +249,8 @@ macro(test_targets)
           test_target_arch(x86_64 "" "")
         endif()
       endif()
-    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
-      test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
+    elseif(COMPILER_RT_TARGET_AMDGPU)
+      test_target_arch(amdgpu "" "--target=amdgpu-amd-amdhsa" "-nogpulib"
                        "-flto" "-Xclang -mcode-object-version=none")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
       test_target_arch(hexagon "" "")

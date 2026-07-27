@@ -353,6 +353,7 @@ Clang-Tidy Checks
    :doc:`openmp-use-default-none <openmp/use-default-none>`,
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
    :doc:`performance-enum-size <performance/enum-size>`,
+   :doc:`performance-expensive-value-or <performance/expensive-value-or>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
@@ -418,6 +419,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-lambda-parameter-list <readability/redundant-lambda-parameter-list>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
+   :doc:`readability-redundant-nested-if <readability/redundant-nested-if>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-qualified-alias <readability/redundant-qualified-alias>`, "Yes"
@@ -433,6 +435,7 @@ Clang-Tidy Checks
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
    :doc:`readability-trailing-comma <readability/trailing-comma>`, "Yes"
+   :doc:`readability-trivial-switch <readability/trivial-switch>`,
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,

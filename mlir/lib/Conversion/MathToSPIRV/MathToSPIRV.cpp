@@ -128,6 +128,12 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
         failed(res))
       return res;
 
+    // Defer to the CL copysign op on Kernel targets.
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (typeConverter.getTargetEnv().allows(spirv::Capability::Kernel))
+      return rewriter.notifyMatchFailure(copySignOp,
+                                         "Kernel target has native CL op");
+
     Type type = getTypeConverter()->convertType(copySignOp.getType());
     if (!type)
       return failure();
@@ -647,6 +653,7 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
            CheckedElementwiseOpPattern<math::AbsFOp, spirv::GLFAbsOp>,
            CheckedElementwiseOpPattern<math::AbsIOp, spirv::GLSAbsOp>,
            CheckedElementwiseOpPattern<math::AtanOp, spirv::GLAtanOp>,
+           CheckedElementwiseOpPattern<math::Atan2Op, spirv::GLAtan2Op>,
            CheckedElementwiseOpPattern<math::CeilOp, spirv::GLCeilOp>,
            CheckedElementwiseOpPattern<math::ClampFOp, spirv::GLFClampOp>,
            CheckedElementwiseOpPattern<math::CosOp, spirv::GLCosOp>,
@@ -683,6 +690,7 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       CheckedElementwiseOpPattern<math::Atan2Op, spirv::CLAtan2Op>,
       CheckedElementwiseOpPattern<math::CbrtOp, spirv::CLCbrtOp>,
       CheckedElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
+      CheckedElementwiseOpPattern<math::CopySignOp, spirv::CLCopysignOp>,
       CheckedElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
       CheckedElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,
       CheckedElementwiseOpPattern<math::ErfcOp, spirv::CLErfcOp>,

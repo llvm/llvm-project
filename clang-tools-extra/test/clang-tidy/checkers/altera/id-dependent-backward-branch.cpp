@@ -1,10 +1,11 @@
 // RUN: %check_clang_tidy %s altera-id-dependent-backward-branch %t -- -header-filter=.* "--" -cl-std=CLC++1.0 -c
 // RUN: %check_clang_tidy -std=c++20-or-later %s altera-id-dependent-backward-branch %t -- -header-filter=.* --
 
-unsigned long get_local_id(unsigned);
 int foo(int);
 
 #ifndef __OPENCL_CPP_VERSION__
+unsigned long get_local_id(unsigned);
+
 namespace std {
 typedef decltype(sizeof(0)) size_t;
 
