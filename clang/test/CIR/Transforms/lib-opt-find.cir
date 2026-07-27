@@ -32,6 +32,14 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK: cir.std.find
 // CHECK-NOT: cir.libc.memchr
 
+  cir.func @keeps_no_builtin_marked_call(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i> {nobuiltin}
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_no_builtin_marked_call
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+
   cir.func @keeps_enclosing_no_builtin(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> attributes {nobuiltins = ["memchr"]} {
     %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
     cir.return %0 : !cir.ptr<!u8i>
@@ -47,6 +55,14 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK-LABEL: @keeps_builtin_marked_function
 // CHECK: cir.std.find
 // CHECK-NOT: cir.libc.memchr
+
+  cir.func @transforms_in_no_builtin_marked_function(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> attributes {nobuiltin} {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @transforms_in_no_builtin_marked_function
+// CHECK-NOT: cir.std.find
+// CHECK: cir.libc.memchr
 }
 
 // -----

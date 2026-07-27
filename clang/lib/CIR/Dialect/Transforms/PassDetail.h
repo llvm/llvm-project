@@ -18,10 +18,10 @@
 
 namespace cir {
 
-// A nobuiltin mark or list forbids `name`, and an empty list forbids all.
-inline bool noBuiltinsForbid(mlir::Operation *op, llvm::StringRef name) {
-  if (op->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
-    return true;
+// Reads only the `nobuiltins` list attribute, where an empty list disables
+// every builtin. The `nobuiltin` unit mark is a different attribute, on a
+// function it describes calls to the function itself, not its body.
+inline bool noBuiltinListDisables(mlir::Operation *op, llvm::StringRef name) {
   auto noBuiltins = op->getAttrOfType<mlir::ArrayAttr>(
       cir::CIRDialect::getNoBuiltinsAttrName());
   if (!noBuiltins)
@@ -33,11 +33,14 @@ inline bool noBuiltinsForbid(mlir::Operation *op, llvm::StringRef name) {
          });
 }
 
-// The call form, where a builtin mark wins over the nobuiltin state.
+// This is the form for calls, where a `builtin` mark wins, a `nobuiltin`
+// mark disables every builtin, and otherwise the `nobuiltins` list decides.
 inline bool isNoBuiltin(mlir::Operation *op, llvm::StringRef name) {
   if (op->hasAttr(cir::CIRDialect::getBuiltinAttrName()))
     return false;
-  return noBuiltinsForbid(op, name);
+  if (op->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
+    return true;
+  return noBuiltinListDisables(op, name);
 }
 
 } // namespace cir

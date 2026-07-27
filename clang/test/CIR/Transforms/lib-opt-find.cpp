@@ -14,6 +14,8 @@
 // RUN: FileCheck %s --input-file=%t.nvptx.cir --check-prefix=NOXFORM --implicit-check-not=cir.libc.memchr
 // RUN: %clang_cc1 -std=c++17 -triple bpfel -fclangir -O1 -clangir-enable-idiom-recognizer -clangir-lib-opt -emit-cir %s -o %t.bpf.cir
 // RUN: FileCheck %s --input-file=%t.bpf.cir --check-prefix=NOXFORM --implicit-check-not=cir.libc.memchr
+// RUN: %clang_cc1 -std=c++17 -triple spir64-unknown-unknown -fclangir -O1 -clangir-enable-idiom-recognizer -clangir-lib-opt -emit-cir %s -o %t.spir64.cir
+// RUN: FileCheck %s --input-file=%t.spir64.cir --check-prefix=NOXFORM --implicit-check-not=cir.libc.memchr
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -ffreestanding -fclangir -O1 -clangir-enable-idiom-recognizer -clangir-lib-opt -emit-cir %s -o %t.free.cir
 // RUN: FileCheck %s --input-file=%t.free.cir --check-prefix=NOXFORM --implicit-check-not=cir.libc.memchr
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fno-builtin-memchr -fclangir -O1 -clangir-enable-idiom-recognizer -clangir-lib-opt -emit-cir %s -o %t.nomemchr.cir

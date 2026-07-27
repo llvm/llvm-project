@@ -63,7 +63,7 @@ mlir::LogicalResult LibOptPass::initializeOptions(
   return mlir::success();
 }
 
-static void xformStdFindIntoMemchr(StdFindOp findOp,
+static void rewriteStdFindToMemchr(StdFindOp findOp,
                                    mlir::SymbolTableCollection &symbolTables) {
   auto iterTy = mlir::dyn_cast<cir::PointerType>(findOp.getResult().getType());
   if (!iterTy || iterTy.getAddrSpace())
@@ -80,7 +80,7 @@ static void xformStdFindIntoMemchr(StdFindOp findOp,
   // No builtin state rides on both the raised call and the enclosing function.
   auto enclosing = findOp->getParentOfType<cir::FuncOp>();
   if (isNoBuiltin(findOp, "memchr") ||
-      (enclosing && noBuiltinsForbid(enclosing, "memchr"))) {
+      (enclosing && noBuiltinListDisables(enclosing, "memchr"))) {
     return;
   }
 
@@ -95,22 +95,27 @@ static void xformStdFindIntoMemchr(StdFindOp findOp,
   }
 
   // cir.libc.memchr fixes the value and length widths at 32 and 64 bits.
-  // Logical SPIR-V and the PS3 pair 64 bit pointers with a 32 bit size_t.
-  // The GPU targets and BPF ship no C library that could provide the call.
   // TODO(cir): gate on the target size type and libcall availability.
-  auto module = findOp->getParentOfType<mlir::ModuleOp>();
-  auto tripleAttr = module ? module->getAttrOfType<mlir::StringAttr>(
-                                 cir::CIRDialect::getTripleAttrName())
-                           : nullptr;
+  auto moduleOp = findOp->getParentOfType<mlir::ModuleOp>();
+  auto tripleAttr = moduleOp ? moduleOp->getAttrOfType<mlir::StringAttr>(
+                                   cir::CIRDialect::getTripleAttrName())
+                             : nullptr;
   if (!tripleAttr)
     return;
   llvm::Triple triple(tripleAttr.getValue().str());
-  if (!triple.isArch64Bit() || triple.isX32() || triple.isABIN32() ||
-      triple.getEnvironment() == llvm::Triple::GNUILP32 || triple.isSPIRV() ||
-      triple.isAMDGPU() || triple.isNVPTX() || triple.isBPF() ||
-      triple.getOS() == llvm::Triple::Lv2) {
+
+  // size_t is not 64 bits on the 32 bit archs, the ILP32 on 64 ABIs, and
+  // the PS3, so the length argument would have the wrong width there.
+  bool sizeTypeMismatch = !triple.isArch64Bit() || triple.isX32() ||
+                          triple.isABIN32() ||
+                          triple.getEnvironment() == llvm::Triple::GNUILP32 ||
+                          triple.getOS() == llvm::Triple::Lv2;
+
+  // These targets ship no C library that could provide the new call.
+  bool noCLibrary = triple.isGPU() || triple.isBPF();
+
+  if (sizeTypeMismatch || noCLibrary)
     return;
-  }
 
   mlir::Location loc = findOp.getLoc();
   mlir::Value first = findOp.getFirst();
@@ -136,7 +141,7 @@ static void xformStdFindIntoMemchr(StdFindOp findOp,
 void LibOptPass::runOnOperation() {
   mlir::SymbolTableCollection symbolTables;
   getOperation()->walk(
-      [&](StdFindOp findOp) { xformStdFindIntoMemchr(findOp, symbolTables); });
+      [&](StdFindOp findOp) { rewriteStdFindToMemchr(findOp, symbolTables); });
 }
 
 std::unique_ptr<Pass> mlir::createLibOptPass() {
