@@ -2601,6 +2601,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
+    // Lower scalar bf16 arithmetic by widening to a vector op and extracting
+    // the low element.
+    setOperationAction(ISD::FADD, MVT::bf16, Custom);
+    setOperationAction(ISD::FSUB, MVT::bf16, Custom);
+    setOperationAction(ISD::FMUL, MVT::bf16, Custom);
+    setOperationAction(ISD::FDIV, MVT::bf16, Custom);
+    setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
+    setOperationAction(ISD::FMA, MVT::bf16, Custom);
+
     setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
     setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
     setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
@@ -34513,6 +34522,37 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
 }
 
+/// Lower a scalar bf16 arithmetic node whose type is being soft-promoted.
+///
+/// AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
+/// soft-promoted-half type, so scalar ops would otherwise be promoted to f32.
+/// Instead widen each operand to a v8bf16 vector, perform the legal packed
+/// operation, and extract the low element afterwards.
+///
+/// Each operand is reinterpreted as f16 before building the vector. bf16 has no
+/// scalar register class of its own, but f16 does (FR16X), and bf16/f16 share
+/// the same bits and vector register class (VR128X). Going through f16 keeps the
+/// value in an XMM register: bf16->f16 bitcast, f16->v8f16 SCALAR_TO_VECTOR
+/// (a free COPY_TO_REGCLASS), and v8f16->v8bf16 bitcast are all free. Feeding a
+/// scalar bf16 to SCALAR_TO_VECTOR directly would instead route through bf16's
+/// i16 soft-promote carrier, forcing xmm<->GPR vmovw roundtrips.
+///
+/// Returns a bf16-typed value.
+static SDValue LowerScalarBF16ArithViaVector(SDNode *N, SelectionDAG &DAG) {
+  SDLoc dl(N);
+  assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
+  SmallVector<SDValue, 3> VecOps;
+  for (const SDValue &Op : N->ops()) {
+    SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
+    SDValue VecF16 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, AsF16);
+    VecOps.push_back(DAG.getBitcast(MVT::v8bf16, VecF16));
+  }
+  SDValue Vec =
+      DAG.getNode(N->getOpcode(), dl, MVT::v8bf16, VecOps, N->getFlags());
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::bf16, Vec,
+                     DAG.getVectorIdxConstant(0, dl));
+}
+
 /// Replace a node with an illegal result type with a new node built out of
 /// custom code.
 void X86TargetLowering::ReplaceNodeResults(SDNode *N,
@@ -34531,6 +34571,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     N->dump(&DAG);
 #endif
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FSQRT:
+  case ISD::FDIV:
+  case ISD::FMA:
+    if (N->getValueType(0) == MVT::bf16) {
+      // Scalar bf16 arithmetic is soft-promoted; widen to a legal packed op
+      // instead of promoting to f32. See LowerScalarBF16ArithViaVector.
+      Results.push_back(LowerScalarBF16ArithViaVector(N, DAG));
+    }
+    return;
   case X86ISD::CVTPH2PS: {
     EVT VT = N->getValueType(0);
     SDValue Lo, Hi;
