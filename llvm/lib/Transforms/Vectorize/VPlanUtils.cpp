@@ -400,7 +400,6 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::Select:
   case VPInstruction::Not:
   case VPInstruction::Broadcast:
-  case VPInstruction::MaskedCond:
   case VPInstruction::PtrAdd:
     return true;
   default:
@@ -1142,4 +1141,39 @@ void vputils::detail::pullOutPermutationsImpl(
           Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }
+}
+
+/// Implements the algorithm described in "Simple and Efficient Construction of
+/// Static Single Assignment Form" by Braun et al.
+static VPValue *reconstructSSAImpl(VPBasicBlock *VPBB,
+                                   DenseMap<VPBlockBase *, VPValue *> &Defs) {
+  if (VPValue *Def = Defs.lookup(VPBB))
+    return Def;
+
+  if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
+    return reconstructSSAImpl(cast<VPBasicBlock>(Pred), Defs);
+
+  // Multiple predecessors, create a join.
+  Type *Ty = Defs.begin()->second->getScalarType();
+  auto *Phi = new VPPhi({}, {}, {}, "", Ty);
+  VPBB->insert(Phi, VPBB->getFirstNonPhi());
+  Defs[VPBB] = Phi;
+  for (auto *Pred : VPBB->predecessors())
+    Phi->addIncoming(reconstructSSAImpl(cast<VPBasicBlock>(Pred), Defs));
+
+  // Fold away trivial phis.
+  if (all_equal(Phi->incoming_values())) {
+    VPValue *Common = Phi->getIncomingValue(0);
+    Phi->replaceAllUsesWith(Common);
+    Phi->eraseFromParent();
+    Defs[VPBB] = Common;
+    return Common;
+  }
+
+  return Phi;
+}
+
+VPValue *vputils::reconstructSSA(DenseMap<VPBlockBase *, VPValue *> Defs,
+                                 VPBasicBlock *VPBB) {
+  return reconstructSSAImpl(VPBB, Defs);
 }

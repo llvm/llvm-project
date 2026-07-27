@@ -505,9 +505,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     AssertOperandType(1, Op0Ty);
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::MaskedCond:
-    assert(Op0Ty->isIntegerTy(1) && "expected bool operand");
-    return IntegerType::get(Ctx, 1);
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
     assert(Op0Ty->isIntegerTy(1) && "expected bool operand");
@@ -643,7 +640,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
-  case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
@@ -1636,7 +1632,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
-  case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
@@ -1790,9 +1785,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExitingIVValue:
     O << "exiting-iv-value";
-    break;
-  case VPInstruction::MaskedCond:
-    O << "masked-cond";
     break;
   case VPInstruction::ExtractLane:
     O << "extract-lane";

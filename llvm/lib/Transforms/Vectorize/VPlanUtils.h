@@ -214,6 +214,11 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
+/// Insert phis to reconstruct SSA starting from \p VPBB, looking up
+/// definitions from \p Defs. Use if the CFG has been modified such that a def
+/// no longer dominates all its uses.
+VPValue *reconstructSSA(DenseMap<VPBlockBase *, VPValue *> Defs,
+                        VPBasicBlock *VPBB);
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
