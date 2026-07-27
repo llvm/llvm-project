@@ -552,6 +552,11 @@ arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
 
   // subui_extended(x, x) -> 0, false
   if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getDiff().getType());
+    if (shapedType && !shapedType.hasStaticShape())
+      return failure();
     Builder builder(getContext());
     auto zeroDiff = builder.getZeroAttr(getDiff().getType());
     auto falseValue = builder.getZeroAttr(borrowTy);
@@ -1244,8 +1249,13 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
   /// xor(x, x) -> 0
-  if (getLhs() == getRhs())
-    return Builder(getContext()).getZeroAttr(getType());
+  if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getType());
+    if (!shapedType || shapedType.hasStaticShape())
+      return Builder(getContext()).getZeroAttr(getType());
+  }
   /// xor(xor(x, a), a) -> x
   /// xor(xor(a, x), a) -> x
   if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>()) {
@@ -2965,8 +2975,17 @@ LogicalResult arith::SelectOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shli(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shli(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
+  // shli(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
     return getLhs();
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
@@ -2983,9 +3002,22 @@ OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shrui(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shrui(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
+  // shrui(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+  // shrui(x, x) -> 0. For any in-range shift amount v < bitwidth, v >> v == 0
+  // (v < 2^v); out-of-range amounts yield poison, so 0 is a valid refinement.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -3001,8 +3033,26 @@ OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shrsi(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shrsi(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
+  // shrsi(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+  // shrsi(x, x) -> 0. For any in-range shift amount v < bitwidth, v is a small
+  // non-negative value and v >> v == 0; out-of-range amounts yield poison.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
+  // shrsi(-1, x) -> -1. Arithmetic shift of all-ones is all-ones for any
+  // in-range amount; out-of-range amounts yield poison.
+  if (APInt val;
+      matchPattern(adaptor.getLhs(), m_ConstantInt(&val)) && val.isAllOnes())
     return getLhs();
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;

@@ -750,13 +750,15 @@ template <class PltSection, class GotPltSection>
 static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
+  RelExpr expr = sym.isPreemptible ? R_ADDEND : R_ABS;
+  if (!ctx.target->usesGotPlt) {
+    rel.addReloc(
+        {type, &plt, sym.getPltOffset(ctx), sym.isPreemptible, sym, 0, expr});
+    return;
+  }
   gotPlt.addEntry(sym);
-  if (sym.isPreemptible)
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
-  else
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
+  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx), sym.isPreemptible, sym,
+                0, expr});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {

@@ -31,10 +31,10 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %11 = arith.xori %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : vector<4xi64>
   %12 = arith.shli %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : vector<4xi64>
-  %13 = arith.shrsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : vector<4xi64>
-  %14 = arith.shrui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg3 : vector<4xi64>
+  %13 = arith.shrsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg3 : vector<4xi64>
+  %14 = arith.shrui %arg2, %arg3 : vector<4xi64>
   return %1 : vector<4xf32>
 }
 
