@@ -132,23 +132,7 @@ extern cl::opt<bool> SupportsHotColdNew;
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
-// Computes a unique hash for the Module considering the current list of
-// export/import and other global analysis results.
-// Returns the hash in its hexadecimal representation.
-std::string llvm::computeLTOCacheKey(
-    const Config &Conf, const ModuleSummaryIndex &Index, StringRef ModuleID,
-    const FunctionImporter::ImportMapTy &ImportList,
-    const FunctionImporter::ExportSetTy &ExportList,
-    const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-    const GVSummaryMapTy &DefinedGlobals,
-    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
-    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
-  // Compute the unique hash for this entry.
-  // This is based on the current compiler version, the module itself, the
-  // export list, the hash for every single module in the import list, the
-  // list of ResolvedODR for the module, and the list of preserved symbols.
-  SHA1 Hasher;
-
+static void hashLTOConfig(const lto::Config &Conf, SHA1 &Hasher) {
   // Start with the compiler revision
   Hasher.update(LLVM_VERSION_STRING);
 #ifdef LLVM_REVISION
@@ -163,11 +147,6 @@ std::string llvm::computeLTOCacheKey(
   auto AddUnsigned = [&](unsigned I) {
     uint8_t Data[4];
     support::endian::write32le(Data, I);
-    Hasher.update(Data);
-  };
-  auto AddUint64 = [&](uint64_t I) {
-    uint8_t Data[8];
-    support::endian::write64le(Data, I);
     Hasher.update(Data);
   };
   auto AddUint8 = [&](const uint8_t I) {
@@ -204,6 +183,66 @@ std::string llvm::computeLTOCacheKey(
   AddString(Conf.DefaultTriple);
   AddString(Conf.DwoDir);
   AddUint8(Conf.Dtlto);
+
+  if (!Conf.SampleProfile.empty()) {
+    auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
+    if (FileOrErr) {
+      Hasher.update(FileOrErr.get()->getBuffer());
+
+      if (!Conf.ProfileRemapping.empty()) {
+        FileOrErr = MemoryBuffer::getFile(Conf.ProfileRemapping);
+        if (FileOrErr)
+          Hasher.update(FileOrErr.get()->getBuffer());
+      }
+    }
+  }
+}
+
+void llvm::computeLTOConfigHash(const lto::Config &Conf,
+                                SmallVectorImpl<uint8_t> &Out) {
+  SHA1 Hasher;
+  hashLTOConfig(Conf, Hasher);
+  std::array<uint8_t, 20> Res = Hasher.result();
+  Out.append(Res.begin(), Res.end());
+}
+
+// Computes a unique hash for the Module considering the current list of
+// export/import and other global analysis results.
+// Returns the hash in its hexadecimal representation.
+std::string llvm::computeLTOCacheKey(
+    const Config &Conf, const ModuleSummaryIndex &Index, StringRef ModuleID,
+    const FunctionImporter::ImportMapTy &ImportList,
+    const FunctionImporter::ExportSetTy &ExportList,
+    const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+    const GVSummaryMapTy &DefinedGlobals,
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
+  // Compute the unique hash for this entry.
+  // This is based on the current compiler version, the module itself, the
+  // export list, the hash for every single module in the import list, the
+  // list of ResolvedODR for the module, and the list of preserved symbols.
+  SHA1 Hasher;
+
+  hashLTOConfig(Conf, Hasher);
+
+  // Include the parts of the LTO configuration that affect code generation.
+  auto AddString = [&](StringRef Str) {
+    Hasher.update(Str);
+    Hasher.update(ArrayRef<uint8_t>{0});
+  };
+  auto AddUnsigned = [&](unsigned I) {
+    uint8_t Data[4];
+    support::endian::write32le(Data, I);
+    Hasher.update(Data);
+  };
+  auto AddUint64 = [&](uint64_t I) {
+    uint8_t Data[8];
+    support::endian::write64le(Data, I);
+    Hasher.update(Data);
+  };
+  auto AddUint8 = [&](const uint8_t I) {
+    Hasher.update(ArrayRef<uint8_t>(&I, 1));
+  };
 
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
@@ -374,19 +413,6 @@ std::string llvm::computeLTOCacheKey(
   AddUnsigned(UsedCfiDecls.size());
   for (auto &V : UsedCfiDecls)
     AddUint64(V);
-
-  if (!Conf.SampleProfile.empty()) {
-    auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
-    if (FileOrErr) {
-      Hasher.update(FileOrErr.get()->getBuffer());
-
-      if (!Conf.ProfileRemapping.empty()) {
-        FileOrErr = MemoryBuffer::getFile(Conf.ProfileRemapping);
-        if (FileOrErr)
-          Hasher.update(FileOrErr.get()->getBuffer());
-      }
-    }
-  }
 
   return toHex(Hasher.result());
 }
@@ -1319,7 +1345,8 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
-Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+Error LTO::run(AddStreamFn AddStream, FileCache ThinLTOCache,
+               FileCache RegularLTOCache) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
@@ -1371,11 +1398,11 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   if (SupportsHotColdNew)
     ThinLTO.CombinedIndex.setWithSupportsHotColdNew();
 
-  Error Result = runRegularLTO(AddStream);
+  Error Result = runRegularLTO(AddStream, RegularLTOCache);
   if (!Result)
     // This will reset the GlobalResolutions optional once done with it to
     // reduce peak memory before importing.
-    Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
+    Result = runThinLTO(AddStream, ThinLTOCache, GUIDPreservedSymbols);
 
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
@@ -1383,7 +1410,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   return Result;
 }
 
-Error LTO::runRegularLTO(AddStreamFn AddStream) {
+Error LTO::runRegularLTO(AddStreamFn AddStream, FileCache &LTOPartitionsCache) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
 
@@ -1500,9 +1527,10 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   }
 
   if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
-    if (Error Err = backend(
-            Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-            *RegularLTO.CombinedModule, ThinLTO.CombinedIndex, BitcodeLibFuncs))
+    if (Error Err = backend(Conf, AddStream, LTOPartitionsCache,
+                            RegularLTO.ParallelCodeGenParallelismLevel,
+                            *RegularLTO.CombinedModule, ThinLTO.CombinedIndex,
+                            BitcodeLibFuncs))
       return Err;
   }
 

@@ -343,6 +343,17 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
                              createAddBufferFn(files, filenames)));
 
+  FileCache partitionsCache;
+  if (!ctx.arg.ltoPartitionsCacheDir.empty())
+    partitionsCache = check(localCache(
+        "LTOPartitions", "LTOPartition", ctx.arg.ltoPartitionsCacheDir,
+        [&](unsigned task, const Twine &moduleName,
+            std::unique_ptr<MemoryBuffer> mb) {
+          // TODO: Creates a copy for a bit, is that fine?
+          buf[task].second = mb->getBuffer();
+          buf[task].first = moduleName.str();
+        }));
+
   if (!ctx.bitcodeFiles.empty())
     checkError(ctx.e, ltoObj->run(
                           [&](size_t task, const Twine &moduleName) {
@@ -351,7 +362,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
                                 std::make_unique<raw_svector_ostream>(
                                     buf[task].second));
                           },
-                          cache));
+                          cache, partitionsCache));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   if (ctx.arg.thinLTOModulesToCompile.empty()) {
@@ -381,6 +392,16 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   if (!ctx.arg.thinLTOCacheDir.empty())
     check(
         pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
+
+  if (!ctx.arg.ltoPartitionsCacheDir.empty()) {
+    std::vector<std::unique_ptr<MemoryBuffer>> ltoPartitionBuffers;
+    for (auto &e : buf) {
+      ltoPartitionBuffers.push_back(
+          MemoryBuffer::getMemBuffer(e.second, "", false));
+    }
+    check(pruneCache(ctx.arg.ltoPartitionsCacheDir,
+                     ctx.arg.ltoPartitionsCachePolicy, ltoPartitionBuffers));
+  }
 
   if (!ctx.arg.ltoObjPath.empty()) {
     saveBuffer(buf[0].second, ctx.arg.ltoObjPath);

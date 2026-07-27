@@ -106,7 +106,8 @@ Error lto::DTLTO::performThinLink() {
 }
 
 // Runs the DTLTO pipeline.
-LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
+LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam,
+                               FileCache /*RegularLTOCache*/) {
   scope_exit CleanUp([this]() { cleanup(); });
 
   AddStreamFunc = AddStream;
