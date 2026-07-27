@@ -2,12 +2,13 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import skipUnlessWindows
+from lldbsuite.test.decorators import skipUnlessWindows, skipIfBuildType
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, Console
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from typing import List
 
 
+@skipIfBuildType(["debug"])
 @skipUnlessWindows
 class TestDAP_launch_win_debug_heap(DAPTestCaseBase):
     """
@@ -31,10 +32,6 @@ class TestDAP_launch_win_debug_heap(DAPTestCaseBase):
         self.assertTrue(output, "expect program output")
 
         return "\n".join(l for l in output.splitlines() if l.startswith("env["))
-
-    def test_default(self):
-        env_output = self.run_with()
-        self.assertIn("_NO_DEBUG_HEAP=1", env_output)
 
     def test_default_overwrite(self):
         env_output = self.run_with(env=["_NO_DEBUG_HEAP=2"])

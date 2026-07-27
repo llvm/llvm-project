@@ -539,7 +539,12 @@ class _LocalProcess(_BaseProcess):
 class _RemoteProcess(_BaseProcess):
     def __init__(self, install_remote):
         self._pid = None
+        self._args = None
         self._install_remote = install_remote
+
+    @property
+    def args(self):
+        assert self._args
 
     @property
     def pid(self):
@@ -582,6 +587,7 @@ class _RemoteProcess(_BaseProcess):
                 "remote_platform.Launch('%s', '%s') failed: %s" % (dst_path, args, err)
             )
         self._pid = launch_info.GetProcessID()
+        self._args = args
 
     def terminate(self):
         lldb.remote_platform.Kill(self._pid)
