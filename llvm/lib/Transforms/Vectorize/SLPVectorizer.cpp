@@ -23148,9 +23148,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
-            Ins =
+            auto *User =
                 dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
-          } while (Ins);
+            // Only continue while the user extends the same buildvector, i.e.
+            // it inserts into the value built so far.
+            if (!User || User->getOperand(0) != Ins)
+              break;
+            Ins = User;
+          } while (true);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
           SmallBitVector IsFirstPoison =
