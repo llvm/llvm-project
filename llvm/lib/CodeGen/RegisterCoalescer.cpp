@@ -466,6 +466,25 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     return false;
   Partial = SrcSub || DstSub;
 
+  // Do not coalesce restore instructions.
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const TargetInstrInfo *TII = MI->getMF()->getSubtarget().getInstrInfo();
+  int FrameIndex = 0;
+  if (TII->isLoadFromStackSlot(*MI, FrameIndex))
+    return false;
+
+  // Do not coalesce registers with uses in spill instructions.
+  for (const MachineOperand &MO : MI->defs()) {
+    if (!MO.isReg())
+      continue;
+
+    for (MachineInstr &U : MRI.use_nodbg_instructions(MO.getReg())) {
+      if (TII->isStoreToStackSlot(U, FrameIndex)) {
+        return false;
+      }
+    }
+  }
+
   // If one register is a physreg, it must be Dst.
   if (Src.isPhysical()) {
     if (Dst.isPhysical())
@@ -475,7 +494,6 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     Flipped = true;
   }
 
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
 
   if (Dst.isPhysical()) {
@@ -560,6 +578,25 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
   unsigned SrcSub = 0, DstSub = 0;
   if (!isMoveInstr(TRI, MI, Src, Dst, SrcSub, DstSub))
     return false;
+
+  // Do not coalesce restore instructions.
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const TargetInstrInfo *TII = MI->getMF()->getSubtarget().getInstrInfo();
+  int FrameIndex = 0;
+  if (TII->isLoadFromStackSlot(*MI, FrameIndex))
+    return false;
+
+  // Do not coalesce registers with uses in spill instructions.
+  for (const MachineOperand &MO : MI->defs()) {
+    if (!MO.isReg())
+      continue;
+
+    for (MachineInstr &U : MRI.use_nodbg_instructions(MO.getReg())) {
+      if (TII->isStoreToStackSlot(U, FrameIndex)) {
+        return false;
+      }
+    }
+  }
 
   // Find the virtual register that is SrcReg.
   if (Dst == SrcReg) {
