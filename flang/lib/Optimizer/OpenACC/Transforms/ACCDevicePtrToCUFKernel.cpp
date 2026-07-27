@@ -147,8 +147,6 @@ private:
 
     for (OpOperand &operand : launch.getArgsMutable()) {
       Value arg = operand.get();
-      if (!fir::isa_ref_type(arg.getType()))
-        continue;
       Value mappedVar = getMappedVar(arg);
       // Check if mappedVar is present due to an enclosing OpenACC data region.
       if (!mappedVar || !presentAccVars.contains(mappedVar))
