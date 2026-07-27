@@ -16312,7 +16312,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         TPL->containsUnexpandedParameterPack();
   }
 
-  LSI->BeforeCompoundStatement = true;
   TypeLocBuilder NewCallOpTLBuilder;
   TypeLoc OldCallOpTypeLoc =
       E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
