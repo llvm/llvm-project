@@ -295,8 +295,8 @@ namespace clang {
     bool OldVal;
 
   public:
-    GenericAssociationTypeRAIIObject(Parser &p, bool Value = true)
-        : P(p), OldVal(P.ParsingGenericAssociationType) {
+    GenericAssociationTypeRAIIObject(Parser &P, bool Value = true)
+        : P(P), OldVal(P.ParsingGenericAssociationType) {
       P.ParsingGenericAssociationType = Value;
     }
 

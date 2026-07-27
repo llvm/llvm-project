@@ -8690,7 +8690,7 @@ private:
     return isCXXTypeId(Context, isAmbiguous);
   }
 
-  bool isNextCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous);
+  bool isNextCXXTypeId(TentativeCXXTypeIdContext Context, bool &IsAmbiguous);
 
   bool isNextCXXTypeId(TentativeCXXTypeIdContext Context) {
     bool isAmbiguous;

@@ -617,11 +617,10 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 }
 
 bool Parser::isNextCXXTypeId(TentativeCXXTypeIdContext Context,
-                             bool &isAmbiguous) {
+                             bool &IsAmbiguous) {
   RevertingTentativeParsingAction PA(*this);
   ConsumeToken();
-  bool ret = isCXXTypeId(Context, isAmbiguous);
-  return ret;
+  return isCXXTypeId(Context, IsAmbiguous);
 }
 
 CXX11AttributeKind
