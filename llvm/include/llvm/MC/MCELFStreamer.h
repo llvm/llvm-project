@@ -72,9 +72,6 @@ public:
   void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
   void emitBundleUnlock(const MCSubtargetInfo &STI) override;
-  bool isBundleLocked() const {
-    return getCurrentSectionOnly()->isBundleLocked();
-  }
 
   // This is final. Override MCTargetStreamer::finish instead for
   // target-specific code.

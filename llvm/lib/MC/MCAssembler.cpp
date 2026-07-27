@@ -992,22 +992,23 @@ static bool needPadding(uint64_t StartAddr, uint64_t Size,
          isAgainstBoundary(StartAddr, Size, BoundaryAlignment);
 }
 
-uint64_t
-MCAssembler::computeBoundaryAlignSize(const MCBoundaryAlignFragment &BF) const {
-  if (!BF.getLastFragment())
-    return 0;
+/// Compute the padding size to boundary-align the fragments BF is responsible
+/// for.
+static uint64_t computeBoundaryAlignSize(const MCAssembler &Asm,
+                                         const MCBoundaryAlignFragment &BF) {
+  assert(BF.getLastFragment() && "the fragment range to align must be known");
 
-  uint64_t AlignedOffset = getFragmentOffset(BF);
+  uint64_t AlignedOffset = Asm.getFragmentOffset(BF);
   uint64_t AlignedSize = 0;
   for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
-    AlignedSize += computeFragmentSize(*F);
+    AlignedSize += Asm.computeFragmentSize(*F);
     if (F == BF.getLastFragment())
       break;
   }
 
   Align BoundaryAlignment = BF.getAlignment();
 
-  if (!isBundlingEnabled())
+  if (!Asm.isBundlingEnabled())
     return needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
                ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
                : 0U;
@@ -1026,7 +1027,7 @@ void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
   if (!BF.getLastFragment())
     return;
 
-  uint64_t NewSize = computeBoundaryAlignSize(BF);
+  uint64_t NewSize = computeBoundaryAlignSize(*this, BF);
   if (NewSize == BF.getSize())
     return;
   BF.setSize(NewSize);

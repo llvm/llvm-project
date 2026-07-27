@@ -81,7 +81,7 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
   MCFragment *CF = getCurrentFragment();
-  if (Asm.isBundlingEnabled() && isBundleLocked()) {
+  if (Asm.isBundlingEnabled() && CF->getParent()->isBundleLocked()) {
     getContext().reportError(getStartTokLoc(),
                              "unterminated .bundle_lock when changing a "
                              "section");
@@ -379,7 +379,7 @@ void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
         getStartTokLoc(), ".bundle_unlock forbidden when bundling is disabled");
     return;
   }
-  if (!isBundleLocked()) {
+  if (!Sec.isBundleLocked()) {
     getContext().reportError(getStartTokLoc(),
                              ".bundle_unlock without matching lock");
     return;
