@@ -6,8 +6,6 @@ define void @simple_copy(ptr %dest, ptr %p, ptr %dest2, ptr %dest3) {
 ; DEFAULT-LABEL: define void @simple_copy(
 ; DEFAULT-SAME: ptr [[DEST:%.*]], ptr [[P:%.*]], ptr [[DEST2:%.*]], ptr [[DEST3:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    [[INC7:%.*]] = getelementptr inbounds float, ptr [[P]], i64 7
-; DEFAULT-NEXT:    [[TMP3:%.*]] = load float, ptr [[INC7]], align 2
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[P]], align 4
 ; DEFAULT-NEXT:    store <8 x float> [[TMP0]], ptr [[DEST]], align 4
 ; DEFAULT-NEXT:    [[D4:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 4
@@ -16,6 +14,7 @@ define void @simple_copy(ptr %dest, ptr %p, ptr %dest2, ptr %dest3) {
 ; DEFAULT-NEXT:    [[D7:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 7
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DEST2]], align 4
+; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP0]], i32 7
 ; DEFAULT-NEXT:    store float [[TMP3]], ptr [[D7]], align 2
 ; DEFAULT-NEXT:    ret void
 ;

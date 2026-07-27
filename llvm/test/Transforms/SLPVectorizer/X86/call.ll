@@ -131,12 +131,11 @@ define void @sqrt_libm_no_errno(ptr %a, ptr %b) {
 
 define void @sqrt_libm_errno(ptr %a, ptr %b) {
 ; CHECK-LABEL: @sqrt_libm_errno(
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[TMP2]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #[[ATTR4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[TMP3]]) #[[ATTR4]]
 ; CHECK-NEXT:    store double [[SQRT1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
 ; CHECK-NEXT:    store double [[SQRT2]], ptr [[IDX2]], align 8
@@ -156,11 +155,11 @@ define void @sqrt_libm_errno(ptr %a, ptr %b) {
 ; Negative test case
 define void @round_custom(ptr %a, ptr %b) {
 ; CHECK-LABEL: @round_custom(
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr [[IDX1]], align 8
-; CHECK-NEXT:    [[A0:%.*]] = load i64, ptr [[A]], align 8
-; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[TMP2]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[TMP3]]) #[[ATTR5]]
 ; CHECK-NEXT:    store i64 [[ROUND1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 1
 ; CHECK-NEXT:    store i64 [[ROUND2]], ptr [[IDX2]], align 8

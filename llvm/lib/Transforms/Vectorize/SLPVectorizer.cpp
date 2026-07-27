@@ -1038,13 +1038,7 @@ static bool isValidForAlternation(unsigned Opcode) {
 static bool isDeferredExtractable(Value *Scalar) {
   if (isa<VectorType>(Scalar->getType()))
     return false;
-  if (isa<LoadInst>(Scalar))
-    return true;
-  if (auto *CI = dyn_cast<CastInst>(Scalar)) {
-    auto *LI = dyn_cast<LoadInst>(CI->getOperand(0));
-    return LI && LI->hasOneUse();
-  }
-  return false;
+  return isa<LoadInst>(Scalar);
 }
 
 namespace {
@@ -20237,10 +20231,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // Track cases where extraction is more profitable and convert those to
     // extracts in a late cleanup step.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
-        Entry->getOpcode() == Instruction::Load ||
-        (Entry->getOpcode() == Instruction::ZExt &&
-         getOperandEntry(Entry, 0)->getOperations().valid() &&
-         getOperandEntry(Entry, 0)->getOpcode() == Instruction::Load)) {
+        Entry->getOpcode() == Instruction::Load) {
       // Checks if the user of the external scalar is phi in loop body.
       auto IsPhiInLoop = [&](const ExternalUser &U) {
         if (auto *Phi = dyn_cast_if_present<PHINode>(U.User)) {
@@ -20318,8 +20309,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             }) <= 2;
         if (IsProfitablePHIUser) {
           KeepScalar = true;
-        } else if (KeepScalar && !isDeferredExtractable(EU.Scalar) &&
-                   ScalarCost != TTI::TCC_Free &&
+        } else if (KeepScalar && ScalarCost != TTI::TCC_Free &&
                    ExtraCost - ScalarCost <= TTI::TCC_Basic &&
                    (!GatheredLoadsEntriesFirst.has_value() ||
                     Entry->Idx < *GatheredLoadsEntriesFirst)) {
@@ -25027,32 +25017,18 @@ Value *BoUpSLP::vectorizeTree(
       VectorToInsertElement.try_emplace(Vec, IE);
       return Vec;
     };
-    auto GetUnderlyingInsts =
-        [](Value *Extract,
-           Value *Remat) -> std::pair<ExtractElementInst *, Instruction *> {
-      auto *ExtractCast = dyn_cast<CastInst>(Extract);
-      if (ExtractCast) {
-        auto *RematCast = dyn_cast<CastInst>(Remat);
-        assert(RematCast && "Expected Remat to be extended if extract is");
-        Extract = ExtractCast->getOperand(0);
-        Remat = RematCast->getOperand(0);
-      }
-      return {dyn_cast<ExtractElementInst>(Extract),
-              dyn_cast<Instruction>(Remat)};
-    };
     auto TrackDeferredExtract = [&](Instruction *Inst, Value *Replacement,
                                     llvm::User *User) {
       if (!Inst)
         return;
       if (ExternalUsesAsOriginalScalar.contains(Inst)) {
-        if (CouldBeExtract.contains(Replacement))
-          return;
         ExtractAnyways = true;
         Value *ReplacedExtract = ExtractAndExtendIfNeeded(Vec);
-        auto P = GetUnderlyingInsts(ReplacedExtract, Replacement);
-        auto *EI = P.first;
-        auto *RI = P.second;
+        auto *EI = dyn_cast<ExtractElementInst>(ReplacedExtract);
+        auto *RI = dyn_cast<Instruction>(Replacement);
         assert(EI && RI && "Expected to find underlying instructions");
+        if (CouldBeExtract.contains(RI))
+          return;
         if (ExternalUsesAsRematCostTmp.contains(Inst)) {
           InstructionCost RematCost = ExternalUsesAsRematCostTmp.lookup(Inst);
           ExternalUsesAsRematCost.try_emplace(EI, RematCost);
@@ -25062,13 +25038,11 @@ Value *BoUpSLP::vectorizeTree(
         ExtractAnyways = false;
         return;
       }
-      if (!ExternalUsesAsExtract.contains(Inst) ||
-          CouldBeExtract.contains(Inst))
-        return;
-      auto P = GetUnderlyingInsts(Replacement, Inst);
-      auto *EI = P.first;
-      auto *RI = P.second;
+      auto *EI = dyn_cast<ExtractElementInst>(Replacement);
+      auto *RI = Inst;
       assert(EI && RI && "Expected to find underlying instructions");
+      if (!ExternalUsesAsExtract.contains(RI) || CouldBeExtract.contains(RI))
+        return;
       if (ExternalUsesAsExtractCostTmp.contains(Inst)) {
         InstructionCost ExtractCost = ExternalUsesAsExtractCostTmp.lookup(Inst);
         ExternalUsesAsExtractCost.try_emplace(RI, ExtractCost);
