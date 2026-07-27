@@ -1,4 +1,4 @@
-//===-- SSASIFormMemoryClauses.cpp ----------------------------------------===//
+//===-- AMDGPUFormSSAMemoryClauses.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SSASIFormMemoryClauses.h"
+#include "AMDGPUFormSSAMemoryClauses.h"
 #include "AMDGPU.h"
 #include "GCNRegPressure.h"
 #include "SIMachineFunctionInfo.h"
@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "ssa-si-form-memory-clauses"
+#define DEBUG_TYPE "amdgpu-form-ssa-memory-clauses"
 
 // Clauses longer then 15 instructions would overflow one of the counters
 // and stall. They can stall even earlier if there are outstanding counters.
@@ -34,14 +34,13 @@ static cl::opt<unsigned> SSAMaxClause(
 
 namespace {
 
-class SSASIFormMemoryClausesImpl {
+class AMDGPUFormSSAMemoryClausesImpl {
   using RegUse = DenseMap<unsigned, std::pair<RegState, LaneBitmask>>;
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
   bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT);
-  void collectRegUses(const MachineInstr &MI, RegUse &Defs,
-                      RegUse &Uses) const;
+  void collectRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
                       GCNDownwardRPTracker &RPT);
 
@@ -56,20 +55,20 @@ class SSASIFormMemoryClausesImpl {
   unsigned MaxSGPRs;
 
 public:
-  SSASIFormMemoryClausesImpl(LiveIntervals *LS) : LIS(LS) {}
+  AMDGPUFormSSAMemoryClausesImpl(LiveIntervals *LS) : LIS(LS) {}
   bool run(MachineFunction &MF);
 };
 
-class SSASIFormMemoryClausesLegacy : public MachineFunctionPass {
+class AMDGPUFormSSAMemoryClausesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SSASIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {}
+  AMDGPUFormSSAMemoryClausesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
-    return "SSA SI Form memory clauses";
+    return "AMDGPU Form SSA Memory Clauses";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -84,18 +83,18 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SSASIFormMemoryClausesLegacy, DEBUG_TYPE,
-                      "SSA SI Form memory clauses", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUFormSSAMemoryClausesLegacy, DEBUG_TYPE,
+                      "AMDGPU Form SSA Memory Clauses", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(SSASIFormMemoryClausesLegacy, DEBUG_TYPE,
-                    "SSA SI Form memory clauses", false, false)
+INITIALIZE_PASS_END(AMDGPUFormSSAMemoryClausesLegacy, DEBUG_TYPE,
+                    "AMDGPU Form SSA Memory Clauses", false, false)
 
-char SSASIFormMemoryClausesLegacy::ID = 0;
+char AMDGPUFormSSAMemoryClausesLegacy::ID = 0;
 
-char &llvm::SSASIFormMemoryClausesID = SSASIFormMemoryClausesLegacy::ID;
+char &llvm::AMDGPUFormSSAMemoryClausesID = AMDGPUFormSSAMemoryClausesLegacy::ID;
 
-FunctionPass *llvm::createSSASIFormMemoryClausesLegacyPass() {
-  return new SSASIFormMemoryClausesLegacy();
+FunctionPass *llvm::createAMDGPUFormSSAMemoryClausesLegacyPass() {
+  return new AMDGPUFormSSAMemoryClausesLegacy();
 }
 
 static bool isVMEMClauseInst(const MachineInstr &MI) {
@@ -152,9 +151,9 @@ static RegState getMopState(const MachineOperand &MO) {
 
 // Returns false if there is a use of a def already in the map.
 // In this case we must break the clause.
-bool SSASIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
-                                           const RegUse &Defs,
-                                           const RegUse &Uses) const {
+bool AMDGPUFormSSAMemoryClausesImpl::canBundle(const MachineInstr &MI,
+                                               const RegUse &Defs,
+                                               const RegUse &Uses) const {
   // Check interference with defs.
   for (const MachineOperand &MO : MI.operands()) {
     // TODO: Prologue/Epilogue Insertion pass does not process bundled
@@ -190,8 +189,8 @@ bool SSASIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
 // Since all defs in the clause are early clobber we can run out of registers.
 // Function returns false if pressure would hit the limit if instruction is
 // bundled into a memory clause.
-bool SSASIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
-                                               GCNDownwardRPTracker &RPT) {
+bool AMDGPUFormSSAMemoryClausesImpl::checkPressure(const MachineInstr &MI,
+                                                   GCNDownwardRPTracker &RPT) {
   // NB: skip advanceBeforeNext() call. Since all defs will be marked
   // early-clobber they will all stay alive at least to the end of the
   // clause. Therefore we should not decrease pressure even if a load
@@ -221,9 +220,9 @@ bool SSASIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
 }
 
 // Collect register defs and uses along with their lane masks and states.
-void SSASIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
-                                                RegUse &Defs,
-                                                RegUse &Uses) const {
+void AMDGPUFormSSAMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
+                                                    RegUse &Defs,
+                                                    RegUse &Uses) const {
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
@@ -248,9 +247,9 @@ void SSASIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
 // Check register def/use conflicts, occupancy limits and collect def/use maps.
 // Return true if instruction can be bundled with previous. If it cannot
 // def/use maps are not updated.
-bool SSASIFormMemoryClausesImpl::processRegUses(const MachineInstr &MI,
-                                                RegUse &Defs, RegUse &Uses,
-                                                GCNDownwardRPTracker &RPT) {
+bool AMDGPUFormSSAMemoryClausesImpl::processRegUses(const MachineInstr &MI,
+                                                    RegUse &Defs, RegUse &Uses,
+                                                    GCNDownwardRPTracker &RPT) {
   if (!canBundle(MI, Defs, Uses))
     return false;
 
@@ -261,7 +260,7 @@ bool SSASIFormMemoryClausesImpl::processRegUses(const MachineInstr &MI,
   return true;
 }
 
-bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF) {
+bool AMDGPUFormSSAMemoryClausesImpl::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->isXNACKEnabled())
     return false;
@@ -417,18 +416,19 @@ bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
-bool SSASIFormMemoryClausesLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUFormSSAMemoryClausesLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
   LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  return SSASIFormMemoryClausesImpl(LIS).run(MF);
+  return AMDGPUFormSSAMemoryClausesImpl(LIS).run(MF);
 }
 
 PreservedAnalyses
-SSASIFormMemoryClausesPass::run(MachineFunction &MF,
-                                MachineFunctionAnalysisManager &MFAM) {
+AMDGPUFormSSAMemoryClausesPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  SSASIFormMemoryClausesImpl(&LIS).run(MF);
+  AMDGPUFormSSAMemoryClausesImpl(&LIS).run(MF);
   return PreservedAnalyses::all();
 }

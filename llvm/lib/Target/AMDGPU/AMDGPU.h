@@ -108,7 +108,7 @@ FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
-FunctionPass *createSSASIFormMemoryClausesLegacyPass();
+FunctionPass *createAMDGPUFormSSAMemoryClausesLegacyPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
@@ -605,8 +605,8 @@ extern char &SIInsertWaitcntsID;
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
-void initializeSSASIFormMemoryClausesLegacyPass(PassRegistry &);
-extern char &SSASIFormMemoryClausesID;
+void initializeAMDGPUFormSSAMemoryClausesLegacyPass(PassRegistry &);
+extern char &AMDGPUFormSSAMemoryClausesID;
 
 void initializeSIPostRABundlerLegacyPass(PassRegistry &);
 extern char &SIPostRABundlerLegacyID;
