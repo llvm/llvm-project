@@ -222,8 +222,11 @@ private:
                                 const Twine &Comment = "");
   void emitEncodedUnsignedInteger(const uint64_t &Value,
                                   const Twine &Comment = "");
+  void emitEncodedAPSInt(const APSInt &Value, const Twine &Comment = "");
+
   Error writeEncodedSignedInteger(const int64_t &Value);
   Error writeEncodedUnsignedInteger(const uint64_t &Value);
+  Error writeEncodedAPSInt(const APSInt &Value);
 
   void incrStreamedLen(const uint64_t &Len) {
     if (isStreaming())

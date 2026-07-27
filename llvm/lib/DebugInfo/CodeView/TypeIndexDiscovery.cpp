@@ -42,23 +42,43 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
   if (N < LF_NUMERIC)
     return 2;
 
-  assert(N <= LF_UQUADWORD);
+  switch (N) {
+  case LF_CHAR:
+    return 2 + 1;
 
-  constexpr uint32_t Sizes[] = {
-      1,  // LF_CHAR
-      2,  // LF_SHORT
-      2,  // LF_USHORT
-      4,  // LF_LONG
-      4,  // LF_ULONG
-      4,  // LF_REAL32
-      8,  // LF_REAL64
-      10, // LF_REAL80
-      16, // LF_REAL128
-      8,  // LF_QUADWORD
-      8,  // LF_UQUADWORD
-  };
+  case LF_SHORT:
+  case LF_USHORT:
+    return 2 + 2;
 
-  return 2 + Sizes[N - LF_NUMERIC];
+  case LF_LONG:
+  case LF_ULONG:
+  case LF_REAL32:
+  case LF_COMPLEX32:
+    return 2 + 4;
+
+  case LF_REAL48:
+    return 2 + 6;
+
+  case LF_REAL64:
+  case LF_COMPLEX64:
+  case LF_QUADWORD:
+  case LF_UQUADWORD:
+    return 2 + 8;
+
+  case LF_REAL80:
+  case LF_COMPLEX80:
+    return 2 + 10;
+
+  case LF_REAL128:
+  case LF_COMPLEX128:
+  case LF_OCTWORD:
+  case LF_UOCTWORD:
+    return 2 + 16;
+
+  default:
+    assert(false && "Unknown numeric type");
+    return 2;
+  }
 }
 
 static inline uint32_t getCStringLength(ArrayRef<uint8_t> Data) {

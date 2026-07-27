@@ -3376,8 +3376,8 @@ void CodeViewDebug::emitConstantSymbolRecord(const DIType *DTy, APSInt &Value,
 
   OS.AddComment("Value");
 
-  // Encoded integers shouldn't need more than 10 bytes.
-  uint8_t Data[10];
+  // Encoded integers shouldn't need more than 18 bytes.
+  uint8_t Data[18];
   BinaryStreamWriter Writer(Data, llvm::endianness::little);
   CodeViewRecordIO IO(Writer);
   cantFail(IO.mapEncodedInteger(Value));

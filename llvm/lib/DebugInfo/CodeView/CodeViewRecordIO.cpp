@@ -190,19 +190,11 @@ Error CodeViewRecordIO::mapEncodedInteger(uint64_t &Value,
 }
 
 Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value, const Twine &Comment) {
-  if (isStreaming()) {
-    // FIXME: We also need to handle big values here, but it's
-    //        not clear how we can excercise this code path yet.
-    if (Value.isSigned())
-      emitEncodedSignedInteger(Value.getSExtValue(), Comment);
-    else
-      emitEncodedUnsignedInteger(Value.getZExtValue(), Comment);
-  } else if (isWriting()) {
-    if (Value.isSigned())
-      return writeEncodedSignedInteger(
-          Value.isSingleWord() ? Value.getSExtValue() : INT64_MIN);
-    return writeEncodedUnsignedInteger(Value.getLimitedValue());
-  } else
+  if (isStreaming())
+    emitEncodedAPSInt(Value, Comment);
+  else if (isWriting())
+    return writeEncodedAPSInt(Value);
+  else
     return consume(*Reader, Value);
   return Error::success();
 }
@@ -390,4 +382,51 @@ Error CodeViewRecordIO::writeEncodedUnsignedInteger(const uint64_t &Value) {
   }
 
   return Error::success();
+}
+
+Error CodeViewRecordIO::writeEncodedAPSInt(const APSInt &Value) {
+  if (LLVM_LIKELY(Value.isSingleWord())) {
+    if (Value.isSigned())
+      return writeEncodedSignedInteger(Value.getSExtValue());
+    return writeEncodedUnsignedInteger(Value.getZExtValue());
+  }
+
+  // Width > 64 bit, write a 128 bit integer.
+  TypeLeafKind Leaf = Value.isSigned() ? LF_OCTWORD : LF_UOCTWORD;
+  if (auto EC = Writer->writeInteger<uint16_t>(Leaf))
+    return EC;
+
+  APSInt Trunc = Value.extOrTrunc(128);
+  if constexpr (endianness::native == endianness::big)
+    Trunc = Trunc.byteSwap();
+
+  if (auto EC = Writer->writeBytes(
+          {reinterpret_cast<const uint8_t *>(Trunc.getRawData()), 16}))
+    return EC;
+
+  return Error::success();
+}
+
+void CodeViewRecordIO::emitEncodedAPSInt(const APSInt &Value,
+                                         const Twine &Comment) {
+  if (LLVM_LIKELY(Value.isSingleWord())) {
+    if (Value.isSigned())
+      emitEncodedSignedInteger(Value.getSExtValue(), Comment);
+    else
+      emitEncodedUnsignedInteger(Value.getZExtValue(), Comment);
+
+    return;
+  }
+
+  // Width > 64 bit, write a 128 bit integer.
+  TypeLeafKind Leaf = Value.isSigned() ? LF_OCTWORD : LF_UOCTWORD;
+  Streamer->emitIntValue(Leaf, 2);
+  emitComment(Comment);
+  APSInt Trunc = Value.extOrTrunc(128);
+  if constexpr (endianness::native == endianness::big)
+    Trunc = Trunc.byteSwap();
+
+  Streamer->emitBinaryData(
+      {reinterpret_cast<const char *>(Value.getRawData()), 16});
+  incrStreamedLen(2 + 16);
 }

@@ -19,32 +19,42 @@
 ;
 ; ASM-LABEL: .short	4359                            # Record kind: S_CONSTANT
 ; ASM-NEXT:  .long	4110                            # Type
-; ASM-NEXT:  .byte	0x0a, 0x80, 0xff, 0xff          # Value
-; ASM-NEXT:  .byte	0xff, 0xff, 0xff, 0xff
-; ASM-NEXT:  .byte	0xff, 0xff
+; ASM-NEXT:  .byte	0x18, 0x80, 0x00, 0x00          # Value
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
+; ASM-NEXT:  .byte	0x00, 0x00, 0x01, 0x00
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
+; ASM-NEXT:  .byte	0x00, 0x00
 ; ASM-NEXT:  .asciz	"test::u128"                    # Name
 ; ASM-NEXT:  .p2align	2
 ;
 ; ASM-LABEL: .short	4359                            # Record kind: S_CONSTANT
 ; ASM-NEXT:  .long	4111                            # Type
-; ASM-NEXT:  .byte	0x09, 0x80, 0x00, 0x00          # Value
+; ASM-NEXT:  .byte	0x17, 0x80, 0x00, 0x00          # Value
 ; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
-; ASM-NEXT:  .byte	0x00, 0x80
+; ASM-NEXT:  .byte	0x00, 0x00, 0xff, 0xff
+; ASM-NEXT:  .byte	0xff, 0xff, 0xff, 0xff
+; ASM-NEXT:  .byte	0xff, 0xff
 ; ASM-NEXT:  .asciz	"test::s128"                    # Name
 ; ASM-NEXT:  .p2align	2
 ;
 ; ASM-LABEL: .short	0x1203                          # Record kind: LF_FIELDLIST
 ; ASM-NEXT:  .short	0x1502                          # Member kind: Enumerator ( LF_ENUMERATE )
 ; ASM-NEXT:  .short	0x3                             # Attrs: Public
-; ASM-NEXT:  .short	0x800a
-; ASM-NEXT:  .quad	0xffffffffffffffff              # EnumValue
+; ASM-NEXT:  .short	0x8018
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00          # EnumValue
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
+; ASM-NEXT:  .byte	0x01, 0x00, 0x00, 0x00
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
 ; ASM-NEXT:  .asciz	"unsval"                        # Name
 ;
 ; ASM-LABEL: .short	0x1203                          # Record kind: LF_FIELDLIST
 ; ASM-NEXT:  .short	0x1502                          # Member kind: Enumerator ( LF_ENUMERATE )
 ; ASM-NEXT:  .short	0x3                             # Attrs: Public
-; ASM-NEXT:  .short	0x8009
-; ASM-NEXT:  .quad	0x8000000000000000              # EnumValue
+; ASM-NEXT:  .short	0x8017
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00          # EnumValue
+; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
+; ASM-NEXT:  .byte	0xff, 0xff, 0xff, 0xff
+; ASM-NEXT:  .byte	0xff, 0xff, 0xff, 0xff
 ; ASM-NEXT:  .asciz	"sigval"                        # Name
 
 ; ------------------------------------------------------------------------------
