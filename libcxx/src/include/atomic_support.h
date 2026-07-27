@@ -60,6 +60,16 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange(
   return __atomic_compare_exchange_n(__val, __expected, __after, true, __success_order, __fail_order);
 }
 
+template <class _ValueType>
+inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
+    _ValueType* __val,
+    _ValueType* __expected,
+    _ValueType __after,
+    int __success_order = _AO_Seq,
+    int __fail_order    = _AO_Seq) {
+  return __atomic_compare_exchange_n(__val, __expected, __after, false, __success_order, __fail_order);
+}
+
 #else // _LIBCPP_HAS_THREADS
 
 enum __libcpp_atomic_order { _AO_Relaxed, _AO_Consume, _AO_Acquire, _AO_Release, _AO_Acq_Rel, _AO_Seq };
@@ -95,6 +105,17 @@ __libcpp_atomic_exchange(_ValueType* __target, _ValueType __value, int = _AO_Seq
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI bool
 __libcpp_atomic_compare_exchange(_ValueType* __val, _ValueType* __expected, _ValueType __after, int = 0, int = 0) {
+  if (*__val == *__expected) {
+    *__val = __after;
+    return true;
+  }
+  *__expected = *__val;
+  return false;
+}
+
+template <class _ValueType>
+inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
+    _ValueType* __val, _ValueType* __expected, _ValueType __after, int = 0, int = 0) {
   if (*__val == *__expected) {
     *__val = __after;
     return true;
