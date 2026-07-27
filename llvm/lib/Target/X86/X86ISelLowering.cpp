@@ -1387,6 +1387,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
       setOperationAction(ISD::CTLZ,             VT, Custom);
     }
+
+    // Dynamic shuffles of 128-bit vectors can be lowered with PSHUFB.
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32,
+                    MVT::v2f64})
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
     setOperationAction(ISD::BITREVERSE,        MVT::i128, Custom);
 
     // These might be better off as horizontal vector ops.
@@ -1713,6 +1718,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setLoadExtAction(LoadExtOp, MVT::v4i64,  MVT::v4i16, Legal);
         setLoadExtAction(LoadExtOp, MVT::v4i64,  MVT::v4i32, Legal);
       }
+
+      // Dynamic shuffles of 256-bit vectors with 32/64-bit elements can be
+      // lowered with VPERMPS/VPERMD.
+      for (auto VT : {MVT::v8i32, MVT::v4i64, MVT::v8f32, MVT::v4f64})
+        setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
     }
 
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
@@ -2337,6 +2347,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.hasVBMI2() && Subtarget.hasVLX())
       for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v32i8, MVT::v16i16})
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Legal);
+
+    // Dynamic shuffles can be lowered with VPERMV/VPERMV3. The lowering
+    // checks the subtarget features required for each element type and falls
+    // back to the generic expansion where they are missing.
+    for (MVT VT : {MVT::v16i32, MVT::v8i64, MVT::v16f32, MVT::v8f64})
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
+    if (Subtarget.hasBWI())
+      for (MVT VT : {MVT::v32i16, MVT::v16i16})
+        setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
+    if (Subtarget.hasVBMI())
+      for (MVT VT : {MVT::v64i8, MVT::v32i8})
+        setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with
@@ -18827,6 +18849,88 @@ static SDValue lowerVECTOR_COMPRESS(SDValue Op, const X86Subtarget &Subtarget,
   return SDValue();
 }
 
+// Lower a dynamic shuffle to native variable permutes: VPERMV/VPERMV3 on
+// AVX512, VPERMPS/VPERMD plus a select on AVX2, and PSHUFB on SSSE3.
+// Out-of-range indices may produce any value since those lanes are poison,
+// which is what the hardware's modulo (VPERMV*), zeroing (PSHUFB), or
+// concatenated-modulo (VPERMV3) behavior provides for free.
+static SDValue lowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                       const X86Subtarget &Subtarget,
+                                       SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltBits = VT.getScalarSizeInBits();
+  MVT IdxVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits), NumElts);
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+
+  // AVX512: a single VPERMV (vpermd/ps/q/pd/w/b), whose index-modulo-NumElts
+  // behavior for out-of-range indices lands only on poison lanes.
+  if (Subtarget.hasAVX512() && (VT.is512BitVector() || Subtarget.hasVLX()) &&
+      (EltBits >= 32 || (EltBits == 16 && Subtarget.hasBWI()) ||
+       (EltBits == 8 && Subtarget.hasVBMI()))) {
+    // VPERMD/VPERMPS/VPERMQ/VPERMPD have no 128-bit form; VPERMW/VPERMB do.
+    // Where there is none, VPERMV3 over two copies of the source does the same
+    // job: indices >= NumElts select the second copy instead of yielding
+    // poison, which poison permits.
+    if (!VT.is128BitVector() || EltBits <= 16)
+      return DAG.getNode(X86ISD::VPERMV, DL, VT, Idx, V);
+    return DAG.getNode(X86ISD::VPERMV3, DL, VT, V, Idx, V);
+  }
+
+  // AVX2: 256-bit 32/64-bit elements via VPERMD/VPERMPS, which shuffle across
+  // lanes with indices modulo 8. 64-bit elements are shuffled as pairs of
+  // 32-bit elements with indices {2i, 2i+1}.
+  if (VT.is256BitVector() && Subtarget.hasInt256() &&
+      (EltBits == 32 || EltBits == 64)) {
+    MVT PermVT = VT.isFloatingPoint() ? MVT::v8f32 : MVT::v8i32;
+    if (EltBits == 64) {
+      // {2i, 2i+1} in each pair of 32-bit lanes. The multiply overflows into
+      // the high half only for out-of-range (poison) indices.
+      SDValue Two =
+          DAG.getConstant(APInt(64, 0x0000000200000002ULL), DL, IdxVT);
+      SDValue Off =
+          DAG.getConstant(APInt(64, 0x0000000100000000ULL), DL, IdxVT);
+      Idx = DAG.getNode(ISD::ADD, DL, IdxVT,
+                        DAG.getNode(ISD::MUL, DL, IdxVT, Idx, Two), Off);
+    }
+    Idx = DAG.getBitcast(MVT::v8i32, Idx);
+    return DAG.getBitcast(VT, DAG.getNode(X86ISD::VPERMV, DL, PermVT, Idx,
+                                          DAG.getBitcast(PermVT, V)));
+  }
+
+  // SSSE3: 128-bit vectors of any element width via a single PSHUFB on byte
+  // indices. PSHUFB zeroes a lane whose index has bit 7 set and otherwise uses
+  // the low 4 bits; both only affect out-of-range (poison) lanes.
+  if (VT.is128BitVector() && Subtarget.hasSSSE3()) {
+    SDValue ByteIdx = Idx;
+    if (EltBits > 8) {
+      // Turn element indices into per-byte indices: replicate idx * EltBytes
+      // into each byte of the lane and add the ascending byte offsets. The
+      // replication overflows only for out-of-range (poison) indices.
+      unsigned EltBytes = EltBits / 8;
+      APInt Repl(EltBits, 0), Offs(EltBits, 0);
+      for (unsigned I = 0; I != EltBytes; ++I) {
+        Repl.insertBits(APInt(8, EltBytes), I * 8);
+        Offs.insertBits(APInt(8, I), I * 8);
+      }
+      ByteIdx = DAG.getNode(ISD::ADD, DL, IdxVT,
+                            DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
+                                        DAG.getConstant(Repl, DL, IdxVT)),
+                            DAG.getConstant(Offs, DL, IdxVT));
+    }
+    ByteIdx = DAG.getBitcast(MVT::v16i8, ByteIdx);
+    return DAG.getBitcast(VT,
+                          DAG.getNode(X86ISD::PSHUFB, DL, MVT::v16i8,
+                                      DAG.getBitcast(MVT::v16i8, V), ByteIdx));
+  }
+
+  return SDValue();
+}
+
 /// Try to lower a VSELECT instruction to a vector shuffle.
 static SDValue lowerVSELECTtoVectorShuffle(SDValue Op,
                                            const X86Subtarget &Subtarget,
@@ -34500,6 +34604,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, Subtarget, DAG);
   case ISD::VECTOR_COMPRESS:    return lowerVECTOR_COMPRESS(Op, Subtarget, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return lowerVECTOR_SHUFFLE_VAR(Op, Subtarget, DAG);
   case ISD::VSELECT:            return LowerVSELECT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:  return LowerINSERT_VECTOR_ELT(Op, DAG);
