@@ -8693,8 +8693,8 @@ private:
   bool isNextCXXTypeId(TentativeCXXTypeIdContext Context, bool &IsAmbiguous);
 
   bool isNextCXXTypeId(TentativeCXXTypeIdContext Context) {
-    bool isAmbiguous;
-    return isNextCXXTypeId(Context, isAmbiguous);
+    bool IsAmbiguous;
+    return isNextCXXTypeId(Context, IsAmbiguous);
   }
 
   /// TPResult - Used as the result value for functions whose purpose is to
