@@ -288,7 +288,9 @@ private:
   // If needed, replace G with an alias to F if possible, or a thunk to F if
   // profitable. Returns false if neither is the case. If \p G is not needed
   // (i.e. it is discardable and not used), \p G is removed directly.
-  bool writeThunkOrAliasIfNeeded(Function *F, Function *G);
+  // \p MergeProfile must be true when G's profile should be preserved, it is
+  // merged into F before G is erased or rewritten.
+  bool writeThunkOrAliasIfNeeded(Function *F, Function *G, bool MergeProfile);
 
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
@@ -857,23 +859,64 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
   ++NumAliasesWritten;
 }
 
+static DenseSet<GlobalValue::GUID> unionImportGUIDs(const Function &F,
+                                                    const Function &G) {
+  DenseSet<GlobalValue::GUID> AllImports = F.getImportGUIDs();
+  DenseSet<GlobalValue::GUID> GImports = G.getImportGUIDs();
+  AllImports.insert(GImports.begin(), GImports.end());
+  return AllImports;
+}
+
+static void mergeEntryCountsAndImportsInto(Function &F, Function &G) {
+  std::optional<uint64_t> FEntryCount = F.getEntryCount();
+  std::optional<uint64_t> GEntryCount = G.getEntryCount();
+  DenseSet<GlobalValue::GUID> AllImports = unionImportGUIDs(F, G);
+  if (!FEntryCount && !GEntryCount && AllImports.empty())
+    return;
+
+  // -1 is a safe placeholder here, getEntryCount() already treats it as
+  // "unknown" (same sentinel SamplePGO uses for no-sample functions), so
+  // it won't look hot to anyone reading the count back.
+  uint64_t Sum = static_cast<uint64_t>(-1);
+  if (FEntryCount || GEntryCount)
+    Sum = SaturatingAdd(FEntryCount ? *FEntryCount : uint64_t{0},
+                        GEntryCount ? *GEntryCount : uint64_t{0});
+  F.setEntryCount(Sum, AllImports.empty() ? nullptr : &AllImports);
+}
+
 // If needed, replace G with an alias to F if possible, or a thunk to F if
 // profitable. Returns false if neither is the case. If \p G is not needed (i.e.
-// it is discardable and unused), \p G is removed directly.
-bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
-  if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
+// it is discardable and unused), \p G is removed directly. If \p MergeProfile
+// is set, G's profile metadata is merged into F.
+bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
+                                               bool MergeProfile) {
+  bool ShouldErase =
+      G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
+  bool ShouldAlias = canCreateAliasFor(G);
+  bool ShouldThunk = canCreateThunkFor(F);
+
+  if (!ShouldErase && !ShouldAlias && !ShouldThunk)
+    return false;
+
+  if (MergeProfile) {
+    mergeEntryCountsAndImportsInto(*F, *G);
+  }
+
+  if (ShouldErase) {
     G->eraseFromParent();
     return true;
   }
-  if (canCreateAliasFor(G)) {
+
+  if (ShouldAlias) {
     writeAlias(F, G);
     return true;
   }
-  if (canCreateThunkFor(F)) {
+  if (ShouldThunk) {
     writeThunk(F, G);
     return true;
   }
-  return false;
+
+  llvm_unreachable("Erase, alias or thunk must apply");
 }
 
 /// Returns true if \p F is either weak_odr or linkonce_odr.
@@ -881,35 +924,10 @@ static bool isODR(const Function *F) {
   return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
 }
 
-static DenseSet<GlobalValue::GUID> unionImportGUIDs(const Function *F,
-                                                    const Function *G) {
-  DenseSet<GlobalValue::GUID> AllImports = F->getImportGUIDs();
-  DenseSet<GlobalValue::GUID> GImports = G->getImportGUIDs();
-  AllImports.insert(GImports.begin(), GImports.end());
-  return AllImports;
-}
-
-static void
-mergeEntryCountsAndImportsInto(Function *F, std::optional<uint64_t> FC,
-                               std::optional<uint64_t> GC,
-                               const DenseSet<GlobalValue::GUID> &Imports) {
-  if (!FC && !GC && Imports.empty())
-    return;
-
-  uint64_t Sum;
-  if (!FC && !GC)
-    Sum = static_cast<uint64_t>(-1);
-  else
-    Sum = SaturatingAdd(FC ? *FC : uint64_t{0}, GC ? *GC : uint64_t{0});
-  F->setEntryCount(Sum, Imports.empty() ? nullptr : &Imports);
-}
-
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
-  std::optional<uint64_t> FEC = F->getEntryCount();
-  std::optional<uint64_t> GEC = G->getEntryCount();
-  DenseSet<GlobalValue::GUID> AllImports = unionImportGUIDs(F, G);
+  std::optional<uint64_t> FEntryCount = F->getEntryCount();
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
@@ -952,19 +970,19 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     const MaybeAlign NewFAlign = NewF->getAlign();
     const MaybeAlign GAlign = G->getAlign();
 
-    writeThunkOrAliasIfNeeded(F, G);
-    if (FEC)
-      NewF->setEntryCount(*FEC);
-    writeThunkOrAliasIfNeeded(F, NewF);
+    // Merge !prof, while G still has its body.
+    writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true);
+    if (FEntryCount)
+      NewF->setEntryCount(*FEntryCount);
+    // NewF becomes thunk/alias to the shared body F, it has no profile to be
+    // merged.
+    writeThunkOrAliasIfNeeded(F, NewF, /*MergeProfile*/ false);
 
     if (NewFAlign || GAlign)
       F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
     else
       F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
-    // The private shared implementation accumulates both symbols' entries
-    // (FEC + GEC), while each ODR thunk retains its own per-symbol entry count.
-    mergeEntryCountsAndImportsInto(F, FEC, GEC, AllImports);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
@@ -992,14 +1010,13 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
-      mergeEntryCountsAndImportsInto(F, FEC, GEC, AllImports);
+      mergeEntryCountsAndImportsInto(*F, *G);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
-    if (writeThunkOrAliasIfNeeded(F, G)) {
-      mergeEntryCountsAndImportsInto(F, FEC, GEC, AllImports);
+    if (writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true)) {
       ++NumFunctionsMerged;
     }
   }
