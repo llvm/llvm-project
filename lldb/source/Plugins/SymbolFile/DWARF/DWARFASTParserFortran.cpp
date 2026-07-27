@@ -126,7 +126,7 @@ FortranArrayMetadata ParseArray(const DWARFDIE &parent_die,
       case DW_AT_byte_stride:
         if (DWARFFormValue::IsBlockForm(form_value.Form())) {
           byte_stride = GetDWARFExpression(die, form_value, module);
-          array_info.is_dynamic = false;
+          array_info.is_dynamic = true;
         } else
           byte_stride = form_value.Unsigned();
         break;
@@ -134,16 +134,15 @@ FortranArrayMetadata ParseArray(const DWARFDIE &parent_die,
       case DW_AT_lower_bound:
         if (DWARFFormValue::IsBlockForm(form_value.Form())) {
           lower_bound = GetDWARFExpression(die, form_value, module);
-          array_info.is_dynamic = false;
+          array_info.is_dynamic = true;
         } else
           lower_bound = form_value.Signed();
         break;
 
       case DW_AT_upper_bound:
         upper_bound_valid = true;
-        // TODO: Handle cases where we have to read the dope vector
         if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-          array_info.is_dynamic = false;
+          array_info.is_dynamic = true;
           upper_bound = GetDWARFExpression(die, form_value, module);
         } else
           upper_bound = form_value.Signed();
@@ -259,6 +258,8 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(const SymbolContext &sc,
           uint64_t total_elements = 1;
           if (array_element_type.GetCompleteType()) {
             FortranArrayMetadata array_info = ParseArray(die, nullptr);
+
+            array_info.element_type = array_element_type;
             // We need to calculate the total array size, if it is known
             // at compile time
             if (!array_info.is_dynamic) {

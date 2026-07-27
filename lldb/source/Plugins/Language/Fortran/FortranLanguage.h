@@ -37,6 +37,8 @@ public:
 
   static llvm::StringRef GetPluginNameStatic();
 
+  static void LoadFortranFormatters(lldb::TypeCategoryImplSP cpp_category_sp);
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
@@ -45,6 +47,9 @@ public:
   uint32_t GetPluginVersion();
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
+
+  HardcodedFormatters::HardcodedSyntheticFinder
+  GetHardcodedSynthetics() override;
 };
 
 }; // namespace lldb_private

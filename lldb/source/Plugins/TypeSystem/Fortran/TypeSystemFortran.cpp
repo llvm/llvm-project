@@ -305,12 +305,94 @@ CompilerType TypeSystemFortran::CreateArrayType(FortranArrayMetadata array_info,
       CreateArrayTypeName(array_info.element_type, array_shapes,
                           array_info.is_allocatable, array_info.is_star);
 
-  FortranArray *array_type = new FortranArray(
+  FortranArray *child_type = new FortranArray(
       array_info.element_type, array_shapes, array_type_name, total_array_size,
       array_info.is_allocatable, array_info.is_dynamic, total_elements,
-      *array_info.allocated_exp, *array_info.data_location_exp);
+      array_info.allocated_exp, array_info.data_location_exp);
 
-  return CompilerType(weak_from_this(), (void *)array_type);
+  return CompilerType(weak_from_this(), (void *)child_type);
+}
+
+llvm::Expected<CompilerType> TypeSystemFortran::GetChildCompilerTypeAtIndex(
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
+    bool transparent_pointers, bool omit_empty_base_classes,
+    bool ignore_array_bounds, std::string &child_name,
+    uint32_t &child_byte_size, int32_t &child_byte_offset,
+    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
+    bool &child_is_base_class, bool &child_is_deref_of_parent,
+    ValueObject *valobj, uint64_t &language_flags) {
+  if (!type)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Failed to craft intermediate Fortran array type: type is null.");
+
+  FortranType *super_type = static_cast<FortranType *>(type);
+
+  if (super_type->GetKind() != FortranType::KIND_ARRAY)
+    return CompilerType();
+
+  FortranArray *fortran_type = static_cast<FortranArray *>(super_type);
+
+  if (!fortran_type)
+    return CompilerType();
+
+  if (fortran_type->IsDynamic())
+    return CompilerType();
+  llvm::ArrayRef<ArrayShape> old_dimensions = fortran_type->GetDimensions();
+  int64_t ub = old_dimensions.front().GetUpperBound().GetBound();
+  int64_t lb = old_dimensions.front().GetLowerBound().GetBound();
+  uint64_t num_elements = old_dimensions.front().GetNumberOfElements();
+
+  if (idx >= num_elements)
+    return CompilerType();
+
+  if (old_dimensions.size() > 1) {
+
+    llvm::SmallVector<ArrayShape, 2> new_dimensions(old_dimensions.begin() + 1,
+                                                    old_dimensions.end());
+
+    ArrayShape old_first_dimension = old_dimensions.front();
+    uint64_t new_byte_stride;
+
+    if (old_first_dimension.GetByteStride() != 0)
+      new_byte_stride = old_first_dimension.GetNumberOfElements() *
+                        old_first_dimension.GetByteStride();
+    else
+      new_byte_stride = old_first_dimension.GetNumberOfElements() *
+                        fortran_type->GetElementByteSize();
+
+    new_dimensions.front().SetByteStride(new_byte_stride);
+    bool is_star = new_dimensions.back().GetLowerBound().IsStar();
+    bool is_allocatable = fortran_type->IsAllocatable();
+    uint64_t new_total_elements = fortran_type->GetTotalElements() /
+                                  old_first_dimension.GetNumberOfElements();
+    if (old_dimensions.front().GetByteStride() != 0)
+      child_byte_offset = idx * old_dimensions.front().GetByteStride();
+    else
+      child_byte_offset = idx * fortran_type->GetElementByteSize();
+
+    uint64_t last_dim_stride = new_dimensions.back().GetByteStride();
+
+    if (last_dim_stride != 0) {
+      child_byte_size =
+          new_dimensions.back().GetNumberOfElements() * last_dim_stride;
+    } else {
+      child_byte_size = new_total_elements * fortran_type->GetElementByteSize();
+    }
+    child_name = llvm::formatv("[{0}]", lb + idx);
+    ConstString type_name =
+        CreateArrayTypeName(fortran_type->GetElementType(), new_dimensions,
+                            is_allocatable, is_star);
+    FortranArray *array_type = new FortranArray(
+        fortran_type->GetElementType(), new_dimensions, type_name,
+        child_byte_size, false, false, new_total_elements,
+        DWARFExpressionList(), DWARFExpressionList());
+    return CompilerType(weak_from_this(), (void *)array_type);
+  } else {
+    child_byte_offset = idx * old_dimensions.front().GetByteStride();
+    child_byte_size = fortran_type->GetElementByteSize();
+    return fortran_type->GetElementType();
+  }
 }
 
 /// Returns the type name upper-cased to follow Fortran's general style
@@ -465,11 +547,74 @@ TypeSystemFortran::GetNumChildren(opaque_compiler_type_t type,
           "Couldn't get number of children, bad Fortran type.");
 
     // Fetch the number of elements
-    return fortran_array->GetDimensions().front().GetNumberOfElements();
+    if (!fortran_array->IsDynamic())
+      return fortran_array->GetDimensions().front().GetNumberOfElements();
+    return 0;
   }
   default:
     return 0;
   }
+}
+
+CompilerType
+TypeSystemFortran::GetPointeeType(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return CompilerType();
+  FortranType *fortran_type = static_cast<FortranType *>(type);
+  if (fortran_type->GetKind() != FortranType::KIND_POINTER)
+    return CompilerType();
+  FortranPointer *pointer_type = static_cast<FortranPointer *>(fortran_type);
+  FortranType *pointee_type = pointer_type->GetPointee();
+  if (!pointee_type)
+    return CompilerType();
+
+  return CompilerType(weak_from_this(), (void *)pointee_type);
+}
+
+CompilerType
+TypeSystemFortran::GetPointerType(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return CompilerType();
+
+  FortranType *pointee_type = static_cast<FortranType *>(type);
+  if (!pointee_type)
+    return CompilerType();
+  std::string ptr_name = pointee_type->GetName().GetStringRef().str() + " *";
+  FortranPointer *pointer_type =
+      new FortranPointer(pointee_type, ConstString(ptr_name));
+  return CompilerType(weak_from_this(), (void *)pointer_type);
+}
+
+llvm::Expected<CompilerType> TypeSystemFortran::GetDereferencedType(
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+    std::string &deref_name, uint32_t &deref_byte_size,
+    int32_t &deref_byte_offset, ValueObject *valobj, uint64_t &language_flags) {
+  if (!type)
+    return createStringError(inconvertibleErrorCode(),
+                             "Couldn't get dereferenced type, type is null.");
+
+  FortranType *fortran_type = static_cast<FortranType *>(type);
+
+  if (!fortran_type)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Couldn't get dereferenced type, type is not a fortran type.");
+
+  if (fortran_type->GetKind() != FortranType::KIND_POINTER)
+    return CompilerType();
+
+  CompilerType pointee_type = GetPointeeType(type);
+
+  deref_byte_offset = 0;
+
+  if (exe_ctx && pointee_type.IsValid()) {
+    llvm::Expected<uint64_t> size_or_err =
+        pointee_type.GetByteSize(exe_ctx->GetBestExecutionContextScope());
+    if (size_or_err)
+      deref_byte_size = *size_or_err;
+  }
+
+  return pointee_type;
 }
 
 bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
@@ -503,6 +648,9 @@ bool TypeSystemFortran::IsArrayType(lldb::opaque_compiler_type_t type,
 
   FortranType *super_type = static_cast<FortranType *>(type);
   if (!super_type)
+    return false;
+
+  if (super_type->GetKind() != FortranType::KIND_ARRAY)
     return false;
 
   FortranArray *array_type = static_cast<FortranArray *>(super_type);

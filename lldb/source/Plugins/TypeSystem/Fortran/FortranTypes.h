@@ -40,8 +40,8 @@ struct FortranArrayMetadata {
   bool is_allocatable = false;
   bool is_dynamic = false;
   bool is_star = false;
-  std::optional<DWARFExpressionList> allocated_exp;
-  std::optional<DWARFExpressionList> data_location_exp;
+  DWARFExpressionList allocated_exp;
+  DWARFExpressionList data_location_exp;
 };
 
 /// A simplified internal representation of a Fortran type.
@@ -55,6 +55,7 @@ public:
     KIND_COMPLEX,
     KIND_FUNCTION,
     KIND_ARRAY,
+    KIND_POINTER,
     KIND_UNKNOWN
   };
   FortranType(int kind, const ConstString &name, uint64_t bitsize)
@@ -98,6 +99,8 @@ public:
   bool IsColon() const { return m_category == Category::Colon; }
 
   void SetCategory(Category c) { m_category = c; }
+
+  bool IsBoundKnown() const { return m_is_bound_known; }
 
   int64_t GetBound() const {
     assert(m_is_bound_known && "Can't get the bound if it is not explicit");
@@ -221,6 +224,18 @@ private:
   bool m_is_dynamic;
   DWARFExpressionList m_allocated_exp;
   DWARFExpressionList m_data_location_exp;
+};
+
+class FortranPointer : public FortranType {
+public:
+  FortranPointer(FortranType *pointee, ConstString type_name)
+      : m_pointee(pointee), FortranType(KIND_POINTER, type_name, 64) {}
+
+  void SetPointee(FortranType *pointee) { m_pointee = pointee; }
+  FortranType *GetPointee() const { return m_pointee; }
+
+private:
+  FortranType *m_pointee;
 };
 
 inline ConstString CreateArrayTypeName(const CompilerType &element_type,

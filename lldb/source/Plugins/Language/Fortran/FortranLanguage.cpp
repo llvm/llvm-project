@@ -10,7 +10,11 @@
 
 #include "FortranLanguage.h"
 
+#include "DynamicArray.h"
+
 #include "lldb/Core/PluginManager.h"
+#include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 
 #include "Plugins/TypeSystem/Fortran/TypeSystemFortran.h"
 
@@ -43,7 +47,6 @@ StringRef FortranLanguage::GetPluginName() { return GetPluginNameStatic(); }
 uint32_t FortranLanguage::GetPluginVersion() { return 1; }
 
 Language *FortranLanguage::CreateInstance(LanguageType language) {
-  // FIXME: Should Fortran 77 be supported???
   if (Language::LanguageIsFortran(language)) {
     return new FortranLanguage();
   }
@@ -57,4 +60,44 @@ bool FortranLanguage::IsSourceFile(StringRef file_path) const {
       return true;
   }
   return false;
+}
+
+static lldb::SyntheticChildrenSP
+FortranDynamicArrayFinder(ValueObject &valobj,
+                          lldb::DynamicValueType use_dynamic) {
+  CompilerType type = valobj.GetCompilerType();
+
+  // 1. Query if it is actually an array type according to DWARF
+  if (type.IsValid() && type.IsArrayType(nullptr, nullptr, nullptr)) {
+
+    // 2. Setup the flags
+    SyntheticChildren::Flags flags;
+    flags.SetCascades(true)
+        .SetSkipPointers(false)
+        .SetSkipReferences(false)
+        .SetFrontEndWantsDereference();
+
+    // 3. Bind and return your custom frontend creator
+    return lldb::SyntheticChildrenSP(new CXXSyntheticChildren(
+        flags, "fortran array synthetic children",
+        lldb_private::formatters::FortranDynamicArraySyntheticFrontEndCreator));
+  }
+
+  // Return null if it's not an array, so LLDB can try other formatters
+  return nullptr;
+}
+
+// Implement the Language plugin override
+HardcodedFormatters::HardcodedSyntheticFinder
+FortranLanguage::GetHardcodedSynthetics() {
+  HardcodedFormatters::HardcodedSyntheticFinder formatters;
+
+  // Push our structural finder into the formatters list
+  formatters.push_back([](lldb_private::ValueObject &valobj,
+                          lldb::DynamicValueType use_dynamic,
+                          FormatManager &fmt_mgr) -> lldb::SyntheticChildrenSP {
+    return FortranDynamicArrayFinder(valobj, use_dynamic);
+  });
+
+  return formatters;
 }
