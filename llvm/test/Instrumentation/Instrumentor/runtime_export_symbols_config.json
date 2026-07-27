@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "runtime_prefix": "__runtime_export_",
+    "runtime_bitcode": "runtime_export_symbols_rt.bc",
+    "inline_runtime": false,
+    "runtime_export_symbols": ["runtime_export"]
+  },
+  "instruction_pre": {
+    "numeric": {
+      "enabled": true,
+      "size": true,
+      "id": true
+    }
+  }
+}
