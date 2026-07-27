@@ -20721,14 +20721,7 @@ static SDValue performVEXT_VLCombine(SDNode *N,
                                        m_Specific(VL)))))
     return SDValue();
 
-  MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = N->getSimpleValueType(0);
-  unsigned Factor = DstVT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
-
-  // Only vf2, vf4, vf8 are legal with RVV.
-  if (Factor != 2 && Factor != 4 && Factor != 8)
-    return SDValue();
-
   return DCI.DAG.getNode(Opcode, SDLoc(N), DstVT, Src, Mask, VL);
 }
 
