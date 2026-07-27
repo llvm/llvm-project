@@ -404,8 +404,7 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   // A statically out-of-range dword offset is an out-of-bounds (undefined
   // behavior) access of the VGPR "as memory" (address space 13) region. Rather
   // than diagnose it or emit an invalid register, mask the base into the
-  // addressable VGPR range below so the access is accepted and verifier-clean,
-  // matching the downstream implementation.
+  // addressable VGPR range below so the access is accepted and verifier-clean.
   unsigned NumAddressableVGPRs = ST->getAddressableNumVGPRs(
       MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 #ifndef NDEBUG
