@@ -19237,6 +19237,29 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
+  case AMDGPUISD::REG_LOAD:
+  case AMDGPUISD::REG_STORE: {
+    const SIMachineFunctionInfo *MFI =
+        DCI.DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+    unsigned NumAddressableVGPRs =
+        Subtarget->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
+    APInt IndexMask =
+        APInt::getLowBitsSet(32, Log2_32_Ceil(NumAddressableVGPRs));
+
+    unsigned IndexOpIdx = 0;
+    switch (N->getOpcode()) {
+    case AMDGPUISD::REG_LOAD:
+      IndexOpIdx = 1;
+      break;
+    case AMDGPUISD::REG_STORE:
+      IndexOpIdx = 2;
+      break;
+    }
+
+    if (SimplifyDemandedBits(N->getOperand(IndexOpIdx), IndexMask, DCI))
+      return SDValue(N, 0);
+    break;
+  }
   case ISD::LOAD: {
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;
