@@ -1,6 +1,9 @@
 // Check that the fortified _chk interceptors keep honoring the destination size
 // argument. The write below is in bounds for the allocation, so nothing but the
 // fortification bound can detect it.
+//
+// The interceptors hand the overflow to the real fortified function, so the
+// libc aborts exactly like it would without a sanitizer, hence "not --crash".
 
 // RUN: %clangxx -O0 %s -o %t && not --crash %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx -O2 %s -o %t && not --crash %run %t 2>&1 | FileCheck %s

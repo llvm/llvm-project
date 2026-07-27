@@ -92,12 +92,24 @@
   }
 #endif
 
-// __{memset,memmove,memcpy}_chk(dst, ..., size, dst_size) is defined as:
-// abort via __chk_fail() when size > dst_size, and otherwise behave exactly
+// __{memset,memmove,memcpy}_chk(dst, ..., size, dst_size) abort when the
+// operation would write more than dst_size bytes, and otherwise behave exactly
 // like the corresponding plain function. So the overflow case is forwarded to
-// the real fortified function, which keeps the _FORTIFY_SOURCE check intact,
-// and every other case is handled by the tool's normal implementation, which
-// is semantically identical and applies the usual instrumentation.
+// the real fortified function, and every other case is handled by the tool's
+// normal implementation, which is semantically identical and applies the usual
+// instrumentation.
+//
+// The overflow case deliberately calls the real function rather than Die() or
+// the libc's failure hook directly:
+//   - Portability. glibc exports __chk_fail(), but Bionic (__fortify_fatal),
+//     Apple (__chk_fail_overflow) and FreeBSD all use different, mostly
+//     unexported entry points, and glibc's __fortify_fail is GLIBC_PRIVATE.
+//   - Diagnostics. Each libc prints its own message, and Bionic even reports
+//     the offending sizes. Delegating reproduces that for free.
+//   - Consistency. Termination stays identical to an uninstrumented build, and
+//     to the tools which do not intercept these at all (e.g. lsan and ubsan).
+//     Die() would instead exit silently, and only under some of the tools.
+// A stack trace is still available for the resulting abort via handle_abort=1.
 #ifndef COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size) \
     {                                                                     \
