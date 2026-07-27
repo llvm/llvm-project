@@ -23,6 +23,10 @@ long double  g8  = __builtin_nanl("");
 __float128   g8_2 = __builtin_nanf128("");
 #endif
 
+// expected-error@+2 {{incompatible pointer types passing}}
+// expected-error@+1 {{initializer element is not a compile-time constant}}
+char         g8_3 = __builtin_nanf(L"");
+
 // GCC constant folds these too (via native strtol):
 //double       g6_1  = __builtin_nan("1");
 //float        g7_1  = __builtin_nanf("1");
