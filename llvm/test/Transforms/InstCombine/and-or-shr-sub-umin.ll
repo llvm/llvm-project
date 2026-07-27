@@ -11,10 +11,7 @@
 define i32 @umin_i32_lshr(i32 range(i32 0, 8388608) %x) {
 ; CHECK-LABEL: define i32 @umin_i32_lshr(
 ; CHECK-SAME: i32 range(i32 0, 8388608) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 23
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub i32 255, %x
@@ -28,10 +25,7 @@ define i32 @umin_i32_lshr(i32 range(i32 0, 8388608) %x) {
 define i32 @umin_i32_ashr(i32 range(i32 0, 8388608) %x) {
 ; CHECK-LABEL: define i32 @umin_i32_ashr(
 ; CHECK-SAME: i32 range(i32 0, 8388608) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 23
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub i32 255, %x
@@ -45,10 +39,7 @@ define i32 @umin_i32_ashr(i32 range(i32 0, 8388608) %x) {
 define i32 @umin_i32_or_commuted(i32 range(i32 0, 8388608) %x) {
 ; CHECK-LABEL: define i32 @umin_i32_or_commuted(
 ; CHECK-SAME: i32 range(i32 0, 8388608) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 23
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[SHR]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub i32 255, %x
@@ -62,10 +53,7 @@ define i32 @umin_i32_or_commuted(i32 range(i32 0, 8388608) %x) {
 define i8 @umin_i8(i8 range(i8 0, 16) %x) {
 ; CHECK-LABEL: define i8 @umin_i8(
 ; CHECK-SAME: i8 range(i8 0, 16) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 7, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[SUB]], 4
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[OR]], 7
+; CHECK-NEXT:    [[AND:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 7)
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
   %sub = sub i8 7, %x
@@ -79,10 +67,7 @@ define i8 @umin_i8(i8 range(i8 0, 16) %x) {
 define i32 @umin_tight_boundary(i32 range(i32 0, 65536) %x) {
 ; CHECK-LABEL: define i32 @umin_tight_boundary(
 ; CHECK-SAME: i32 range(i32 0, 65536) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 32767, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 16
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 32767
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 32767)
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub i32 32767, %x
@@ -113,10 +98,7 @@ define i33 @umin_tight_boundary_i33(i33 range(i33 0, 65536) %x) {
 define i33 @umin_near_tight_i33(i33 range(i33 0, 131072) %x) {
 ; CHECK-LABEL: define i33 @umin_near_tight_i33(
 ; CHECK-SAME: i33 range(i33 0, 131072) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i33 32767, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i33 [[SUB]], 17
-; CHECK-NEXT:    [[OR:%.*]] = or i33 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i33 [[OR]], 32767
+; CHECK-NEXT:    [[AND:%.*]] = call i33 @llvm.umin.i33(i33 [[X]], i33 32767)
 ; CHECK-NEXT:    ret i33 [[AND]]
 ;
   %sub = sub i33 32767, %x
@@ -130,10 +112,7 @@ define i33 @umin_near_tight_i33(i33 range(i33 0, 131072) %x) {
 define <2 x i32> @umin_v2i32(<2 x i32> range(i32 0, 8388608) %x) {
 ; CHECK-LABEL: define <2 x i32> @umin_v2i32(
 ; CHECK-SAME: <2 x i32> range(i32 0, 8388608) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> splat (i32 255), [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[SUB]], splat (i32 23)
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[OR]], splat (i32 255)
+; CHECK-NEXT:    [[AND:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X]], <2 x i32> splat (i32 255))
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %sub = sub <2 x i32> splat (i32 255), %x
@@ -147,10 +126,7 @@ define <2 x i32> @umin_v2i32(<2 x i32> range(i32 0, 8388608) %x) {
 define i32 @umin_i32_shamt_below_max(i32 range(i32 0, 1048576) %x) {
 ; CHECK-LABEL: define i32 @umin_i32_shamt_below_max(
 ; CHECK-SAME: i32 range(i32 0, 1048576) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 20
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub i32 255, %x
@@ -201,10 +177,7 @@ define i32 @neg_unbounded(i32 %x) {
 define i32 @umin_i32_shamt22_in_range(i32 range(i32 0, 4194304) %x) {
 ; CHECK-LABEL: define i32 @umin_i32_shamt22_in_range(
 ; CHECK-SAME: i32 range(i32 0, 4194304) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 255, [[X]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 22
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
+; CHECK-NEXT:    [[AND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub i32 255, %x

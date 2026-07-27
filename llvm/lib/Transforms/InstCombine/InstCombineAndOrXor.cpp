@@ -2673,6 +2673,31 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         }
       }
     }
+
+    // and (or (shr (sub C, X), ShAmt), X), C  -->  umin(X, C)
+    // The fold holds when all of:
+    // - C is a low-bit mask: C = (1<<S)-1
+    // - S u<= ShAmt       -- When X u<= C, sub(C, X) u< 1<<ShAmt, so shr is 0
+    // - ShAmt + S u<= BW  -- the borrow's all-ones run reaches up to bit S-1
+    // - X u< 1<<ShAmt     -- bounds X - C u< 1<<ShAmt in the X u> C case
+    // Then shr(sub(C, X), ShAmt) is 0 when X u<= C and has all of C's bits set
+    // when X u> C, so (shr | X) & C clamps X to C. The bound on X also means
+    // ashr and lshr have the same result.
+    const APInt *ShAmtC;
+    if (C->isMask() &&
+        match(Op0,
+              m_OneUse(m_c_Or(
+                  m_OneUse(m_Shr(m_OneUse(m_Sub(m_SpecificInt(*C), m_Value(X))),
+                                 m_APInt(ShAmtC))),
+                  m_Deferred(X)))) &&
+        ShAmtC->ult(Width)) {
+      unsigned S = C->popcount();
+      unsigned ShAmt = ShAmtC->getZExtValue();
+      if (S <= ShAmt && ShAmt + S <= Width &&
+          MaskedValueIsZero(X, APInt::getBitsSetFrom(Width, ShAmt), &I))
+        return replaceInstUsesWith(
+            I, Builder.CreateBinaryIntrinsic(Intrinsic::umin, X, Op1));
+    }
   }
 
   // If we are clearing the sign bit of a floating-point value, convert this to
