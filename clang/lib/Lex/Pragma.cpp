@@ -945,11 +945,10 @@ void Preprocessor::HandlePragmaSetPPState(PragmaIntroducer Introducer,
   }
 
   // Update the state.
-  if (MacroName == Ident__GLIBCXX__) {
+  if (MacroName->getName() == "__GLIBCXX__")
     setStdLibCxxVersion(Value);
-  } else {
+  else
     llvm_unreachable("forgot to handle a possible argument to __set_pp_state");
-  }
 
   if (Callbacks)
     Callbacks->PragmaSetPPState(Introducer.Loc, MacroName, Value);

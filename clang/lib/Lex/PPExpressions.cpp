@@ -1027,7 +1027,7 @@ void Preprocessor::setStdLibCxxVersion(std::uint64_t Version) {
 
 bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
   assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
-         "invalid libstdc++ version number");
+         "invalid value for __GLIBCXX__");
   std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
   if (!Ver)
     return false;

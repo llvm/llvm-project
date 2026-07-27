@@ -159,7 +159,6 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_AbnormalTermination = nullptr;
   }
 
-  Ident__set_pp_state = getIdentifierInfo("__set_pp_state");
   Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
 
   // Default incremental processing to -fincremental-extensions, clients can

@@ -2980,7 +2980,6 @@ private:
   void HandlePragmaDirective(PragmaIntroducer Introducer);
 
   // Cached identifiers used to implement __set_pp_state.
-  IdentifierInfo *Ident__set_pp_state;
   IdentifierInfo *Ident__GLIBCXX__;
 
 public:
