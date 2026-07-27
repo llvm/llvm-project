@@ -1192,7 +1192,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   // If none of the tests which can return false are possible, fold to true.
   // fp_class (nnan x), ~(qnan|snan) -> true
   // fp_class (ninf x), ~(ninf|pinf) -> true
-  if (Mask == Known.KnownFPClasses)
+  if (Known.isKnownAlways(Mask))
     return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
 
   return nullptr;
