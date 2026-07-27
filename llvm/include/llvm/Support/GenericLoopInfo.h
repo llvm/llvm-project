@@ -840,8 +840,19 @@ public:
     return isNotAlreadyContainedIn(SubLoop->getParentLoop(), ParentLoop);
   }
 
-  /// Create the loop forest using a stable algorithm.
+  /// Create the loop forest for a function. A dominator tree is needed only for
+  /// an irreducible CFG, where dominance reduces a loop that an edge re-enters
+  /// to the natural loop of its header's backedges.
+  ///@{
+  /// Build a dominator tree if one is needed.
+  void analyze(ParentT F);
+  /// Call \p GetDomTree if a dominator tree is needed.
+  void
+  analyze(ParentT F,
+          function_ref<const DominatorTreeBase<BlockT, false> &()> GetDomTree);
+  /// Analyze the function \p DomTree describes.
   void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
+  ///@}
 
   // Debugging
   void print(raw_ostream &OS) const;

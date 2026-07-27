@@ -2,9 +2,6 @@
 
 # AMDGPU DMA Operations
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

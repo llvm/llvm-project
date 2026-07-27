@@ -1011,7 +1011,10 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.analyze(&F, [&]() -> const DominatorTree & {
+    return AM.getResult<DominatorTreeAnalysis>(F);
+  });
   return LI;
 }
 

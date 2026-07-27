@@ -91,10 +91,6 @@ public:
   /// pool.
   using DispatchFn = move_only_function<void(Task)>;
 
-  /// Tag used to identify executor-callable functions in the controller.
-  /// See callController.
-  using HandlerTag = void *;
-
   /// Provides access to the controller.
   class ControllerAccess {
     friend class Session;
@@ -103,8 +99,6 @@ public:
     virtual ~ControllerAccess();
 
   protected:
-    using HandlerTag = Session::HandlerTag;
-
     /// Opaque wrapper for a controller-call result handler.
     ///
     /// ControllerAccess implementations hold these for pending calls but cannot
@@ -218,7 +212,8 @@ public:
     /// managed-code caller's token still covers the handler, and a non-managed
     /// caller needs none (a handler that re-enters managed code must acquire
     /// its own token and handle denial).
-    virtual void callController(OnControllerCallReturn OnComplete, HandlerTag T,
+    virtual void callController(OnControllerCallReturn OnComplete,
+                                orc_rt_ControllerHandlerTag T,
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
     /// Send the result of the given wrapper function call to the controller.
@@ -485,7 +480,8 @@ public:
   /// This method can be called directly, but is expected to be more commonly
   /// called via WrapperFunction::call using a ControllerCaller object (returned
   /// by the controllerCaller method).
-  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete,
+                      orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
       TmpCA->callController(std::move(OnComplete), T, std::move(ArgBytes));
@@ -500,7 +496,7 @@ public:
   /// Useable as a Caller implementation with WrapperFunction::call.
   class ControllerCaller {
   public:
-    ControllerCaller(Session &S, HandlerTag T) : S(S), T(T) {}
+    ControllerCaller(Session &S, orc_rt_ControllerHandlerTag T) : S(S), T(T) {}
 
     void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
@@ -509,12 +505,12 @@ public:
 
   private:
     Session &S;
-    HandlerTag T;
+    orc_rt_ControllerHandlerTag T;
   };
 
   /// Get a WrapperFunction::call-compatible Caller that will call the given
   /// handler in the controller via Session::callController.
-  ControllerCaller controllerCaller(HandlerTag T) noexcept {
+  ControllerCaller controllerCaller(orc_rt_ControllerHandlerTag T) noexcept {
     return ControllerCaller(*this, T);
   }
 

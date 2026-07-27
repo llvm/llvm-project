@@ -274,7 +274,7 @@ public:
   }
 
   /// Check whether the CPU string is valid.
-  virtual bool isCPUStringValid(StringRef CPU) const {
+  bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
     return Found != ProcDesc.end() && StringRef(Found->key()) == CPU;
   }
