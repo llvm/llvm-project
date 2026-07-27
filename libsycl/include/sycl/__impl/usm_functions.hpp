@@ -98,7 +98,8 @@ T *malloc_device(std::size_t count, const queue &syclQueue,
 /// \return a pointer to the newly allocated memory, which is allocated on
 /// syclDevice and which must eventually be deallocated with sycl::free in order
 /// to avoid a memory leak.
-void *aligned_alloc_device(size_t alignment, size_t numBytes,
+_LIBSYCL_EXPORT
+void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
                            const device &syclDevice, const context &syclContext,
                            const property_list &propList = {});
 
@@ -114,7 +115,7 @@ void *aligned_alloc_device(size_t alignment, size_t numBytes,
 /// syclDevice and which must eventually be deallocated with sycl::free in order
 /// to avoid a memory leak.
 template <typename T>
-T *aligned_alloc_device(size_t alignment, size_t count,
+T *aligned_alloc_device(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
                         const property_list &propList = {}) {
   return static_cast<T *>(aligned_alloc_device(
@@ -130,7 +131,8 @@ T *aligned_alloc_device(size_t alignment, size_t count,
 /// \return a pointer to the newly allocated memory, which is allocated on
 /// syclDevice and which must eventually be deallocated with sycl::free in order
 /// to avoid a memory leak.
-void *aligned_alloc_device(size_t alignment, size_t numBytes,
+_LIBSYCL_EXPORT
+void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
                            const queue &syclQueue,
                            const property_list &propList = {});
 
@@ -144,7 +146,8 @@ void *aligned_alloc_device(size_t alignment, size_t numBytes,
 /// syclDevice and which must eventually be deallocated with sycl::free in order
 /// to avoid a memory leak.
 template <typename T>
-T *aligned_alloc_device(size_t alignment, size_t count, const queue &syclQueue,
+T *aligned_alloc_device(std::size_t alignment, std::size_t count,
+                        const queue &syclQueue,
                         const property_list &propList = {}) {
   return alligned_alloc_device<T>(alignment, count, syclQueue.get_device(),
                                   syclQueue.get_context(), propList);
@@ -216,7 +219,8 @@ T *malloc_host(std::size_t count, const queue &syclQueue,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *aligned_alloc_host(size_t alignment, size_t numBytes,
+_LIBSYCL_EXPORT
+void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
                          const context &syclContext,
                          const property_list &propList = {});
 
@@ -230,7 +234,7 @@ void *aligned_alloc_host(size_t alignment, size_t numBytes,
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
 template <typename T>
-T *aligned_alloc_host(size_t alignment, size_t count,
+T *aligned_alloc_host(std::size_t alignment, std::size_t count,
                       const context &syclContext,
                       const property_list &propList = {}) {
   return static_cast<T *>(
@@ -245,7 +249,8 @@ T *aligned_alloc_host(size_t alignment, size_t count,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *aligned_alloc_host(size_t alignment, size_t numBytes,
+_LIBSYCL_EXPORT
+void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
                          const queue &syclQueue,
                          const property_list &propList = {});
 
@@ -258,7 +263,8 @@ void *aligned_alloc_host(size_t alignment, size_t numBytes,
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
 template <typename T>
-T *aligned_alloc_host(size_t alignment, size_t count, const queue &syclQueue,
+T *aligned_alloc_host(std::size_t alignment, std::size_t count,
+                      const queue &syclQueue,
                       const property_list &propList = {}) {
   return aligned_alloc_host<T>(alignment, count, syclQueue.get_context(),
                                propList);
@@ -337,7 +343,8 @@ T *malloc_shared(std::size_t count, const queue &syclQueue,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *aligned_alloc_shared(size_t alignment, size_t numBytes,
+_LIBSYCL_EXPORT
+void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
                            const device &syclDevice, const context &syclContext,
                            const property_list &propList = {});
 
@@ -352,7 +359,7 @@ void *aligned_alloc_shared(size_t alignment, size_t numBytes,
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
 template <typename T>
-T *aligned_alloc_shared(size_t alignment, size_t count,
+T *aligned_alloc_shared(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
                         const property_list &propList = {}) {
   return static_cast<T *>(aligned_alloc_shared(
@@ -367,7 +374,8 @@ T *aligned_alloc_shared(size_t alignment, size_t count,
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
-void *aligned_alloc_shared(size_t alignment, size_t numBytes,
+_LIBSYCL_EXPORT
+void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
                            const queue &syclQueue,
                            const property_list &propList = {});
 
@@ -380,7 +388,8 @@ void *aligned_alloc_shared(size_t alignment, size_t numBytes,
 /// \return a pointer to the newly allocated memory, which must eventually be
 /// deallocated with sycl::free in order to avoid a memory leak.
 template <typename T>
-T *aligned_alloc_shared(size_t alignment, size_t count, const queue &syclQueue,
+T *aligned_alloc_shared(std::size_t alignment, std::size_t count,
+                        const queue &syclQueue,
                         const property_list &propList = {}) {
   return aligned_alloc_shared<T>(alignment, count, syclQueue.get_device(),
                                  syclQueue.get_context(), propList);
@@ -459,6 +468,82 @@ T *malloc(std::size_t count, const queue &syclQueue, usm::alloc kind,
   return malloc<T>(count, syclQueue.get_device(), syclQueue.get_context(), kind,
                    propList);
 }
+
+/// Allocates USM of type `kind` with specified alignment.
+///
+/// \param alignment the alignment of the allocated memory.
+/// \param numBytes the number of bytes to allocate.
+/// \param syclDevice the device to use for the allocation. The syclDevice
+/// parameter is ignored if kind is usm::alloc::host.
+/// \param syclContext a context containing syclDevice or its parent device if
+/// syclDevice is a subdevice.
+/// \param kind the type of memory to allocate.
+/// \param propList the list of properties for the allocation.
+/// \return a pointer to the newly allocated memory, which must eventually be
+/// deallocated with sycl::free in order to avoid a memory leak. If there are
+/// not enough resources to allocate the requested memory, these functions
+/// return nullptr.
+_LIBSYCL_EXPORT
+void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
+                    const device &syclDevice, const context &syclContext,
+                    usm::alloc kind, const property_list &propList = {});
+
+/// Allocates USM of type `kind` with specified alignment.
+///
+/// \param alignment the alignment of the allocated memory.
+/// \param count the number of elements of type T to allocate.
+/// \param syclDevice the device to use for the allocation. The syclDevice
+/// parameter is ignored if kind is usm::alloc::host.
+/// \param syclContext a context containing syclDevice or its parent device if
+/// syclDevice is a subdevice.
+/// \param kind the type of memory to allocate.
+/// \param propList the list of properties for the allocation.
+/// \return a pointer to the newly allocated memory, which must eventually be
+/// deallocated with sycl::free in order to avoid a memory leak. If there are
+/// not enough resources to allocate the requested memory, these functions
+/// return nullptr.
+template <typename T>
+T *aligned_alloc(std::size_t alignment, std::size_t count,
+                 const device &syclDevice, const context &syclContext,
+                 usm::alloc kind, const property_list &propList = {}) {
+  return static_cast<T *>(aligned_alloc(
+      alignment, count * sizeof(T), syclDevice, syclContext, kind, propList));
+}
+
+/// Allocates USM of type `kind` with specified alignment.
+/// \param alignment the alignment of the allocated memory.
+/// \param numBytes the number of bytes to allocate.
+/// \param syclQueue a queue that provides the device and context.
+/// \param kind the type of memory to allocate.
+/// \param propList the list of properties for the allocation.
+/// \return a pointer to the newly allocated memory, which must eventually be
+/// deallocated with sycl::free in order to avoid a memory leak. If there are
+/// not enough resources to allocate the requested memory, these functions
+/// return nullptr.
+_LIBSYCL_EXPORT
+void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
+                    const queue &syclQueue, usm::alloc kind,
+                    const property_list &propList = {});
+
+/// Allocates USM of type `kind` with specified alignment.
+///
+/// \param alignment the alignment of the allocated memory.
+/// \param count the number of elements of type T to allocate.
+/// \param syclQueue a queue that provides the device and context.
+/// \param kind the type of memory to allocate.
+/// \param propList the list of properties for the allocation.
+/// \return a pointer to the newly allocated memory, which must eventually be
+/// deallocated with sycl::free in order to avoid a memory leak. If there are
+/// not enough resources to allocate the requested memory, these functions
+/// return nullptr.
+template <typename T>
+T *aligned_alloc(std::size_t alignment, std::size_t count,
+                 const queue &syclQueue, usm::alloc kind,
+                 const property_list &propList = {}) {
+  return aligned_alloc<T>(alignment, count, syclQueue.get_device(),
+                          syclQueue.get_context(), kind, propList);
+}
+
 /// @}
 
 /// \name  SYCL 2020 4.8.3.6. Memory deallocation functions.
