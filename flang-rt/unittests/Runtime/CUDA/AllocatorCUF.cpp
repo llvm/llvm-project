@@ -72,3 +72,15 @@ TEST(AllocatableCUFTest, DescriptorAllocationTest) {
   EXPECT_TRUE(desc != nullptr);
   RTNAME(CUFFreeDescriptor)(desc);
 }
+
+TEST(AllocatableCUFTest, DeviceIsActiveKeepsLastErrorClean) {
+  // CUFDeviceIsActive() is emitted around scope-exit device cleanup. Its
+  // internal context probing (e.g. the one-time driver-entry-point lookup)
+  // must not leave a sticky error behind: user code performing its own
+  // cudaGetLastError() after a subsequent kernel launch would otherwise
+  // misattribute that stale error to the launch. The boolean result depends
+  // on whether a primary context is active in this process and is not checked.
+  (void)cudaGetLastError(); // start from a clean error state
+  (void)RTNAME(CUFDeviceIsActive)();
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess);
+}
