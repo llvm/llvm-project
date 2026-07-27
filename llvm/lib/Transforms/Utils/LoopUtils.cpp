@@ -441,6 +441,9 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+    return TM_SuppressedByUser;
+
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 
@@ -598,7 +601,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
   } else {
-    assert(L->hasNoExitBlocks() &&
+    assert((!LI || LI->hasNoExitBlocks(*L)) &&
            "Loop should have either zero or one exit blocks.");
 
     Builder.SetInsertPoint(OldTerm);

@@ -10736,6 +10736,14 @@ void llvm::findValuesAffectedByCondition(
         }
       }
 
+      auto AddNuwSquareOperand = [&AddAffected](Value *Op) {
+        Value *SquareOp = nullptr;
+        if (match(Op, m_NUWMul(m_Value(SquareOp), m_Deferred(SquareOp))))
+          AddAffected(SquareOp);
+      };
+      AddNuwSquareOperand(A);
+      AddNuwSquareOperand(B);
+
       if (HasRHSC && match(A, m_Ctpop(m_Value(X))))
         AddAffected(X);
     } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {

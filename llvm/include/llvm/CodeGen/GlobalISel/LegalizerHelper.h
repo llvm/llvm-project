@@ -134,12 +134,12 @@ public:
   LLVM_ABI LegalizeResult moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                              LLT MoreTy);
 
-  /// Cast the given value to an LLT::scalar with an equivalent size. Returns
+  /// Cast the given value to an LLT::integer with an equivalent size. Returns
   /// the register to use if an instruction was inserted. Returns the original
   /// register if no coercion was necessary.
   //
   // This may also fail and return Register() if there is no legal way to cast.
-  LLVM_ABI Register coerceToScalar(Register Val);
+  LLVM_ABI Register coerceToInteger(Register Val);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by extending the operand's type to \p WideTy using the specified \p

@@ -2940,14 +2940,8 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
-  bool HasForcedDistribution = false;
-  std::optional<const MDOperand *> Value =
-      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
-  if (Value) {
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
-  }
+  bool HasForcedDistribution =
+      getBooleanLoopAttribute(TheLoop, "llvm.loop.distribute.enable");
 
   const std::string Info =
       HasForcedDistribution

@@ -789,6 +789,16 @@ let Predicates = [HasSVE_or_SME] in {
   defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", AArch64umax_p>;
   defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", AArch64umin_p>;
 
+  // zext(cmpne(x, splat(0))) -> umin(x, 1)
+  def : Pat<(nxv16i8 (zext (AArch64setcc_z (SVEAllActive), nxv16i8:$LHS, (SVEDup0), SETNE))),
+            (UMIN_ZI_B $LHS, 1)>;
+  def : Pat<(nxv8i16 (zext (AArch64setcc_z (SVEAllActive), nxv8i16:$LHS, (SVEDup0), SETNE))),
+            (UMIN_ZI_H $LHS, 1)>;
+  def : Pat<(nxv4i32 (zext (AArch64setcc_z (SVEAllActive), nxv4i32:$LHS, (SVEDup0), SETNE))),
+            (UMIN_ZI_S $LHS, 1)>;
+  def : Pat<(nxv2i64 (zext (AArch64setcc_z (SVEAllActive), nxv2i64:$LHS, (SVEDup0), SETNE))),
+            (UMIN_ZI_D $LHS, 1)>;
+
   defm MUL_ZI     : sve_int_arith_imm2<"mul", AArch64mul_p>;
   defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul",   "MUL_ZPZZ",   AArch64mul_m1,         DestructiveBinaryComm>;
   defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", "SMULH_ZPZZ", int_aarch64_sve_smulh, DestructiveBinaryComm>;
@@ -839,14 +849,14 @@ let Predicates = [HasSVE_or_SME] in {
   defm FNEG_ZPmZ : sve_int_un_pred_arit_bitwise_fp<0b101, "fneg", AArch64fneg_mt>;
 
   // zext(cmpeq(x, splat(0))) -> cnot(x)
-  def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive):$Pg), nxv16i8:$Op2, (SVEDup0), SETEQ)))),
-            (CNOT_ZPmZ_B $Op2, $Pg, $Op2)>;
-  def : Pat<(nxv8i16 (zext (nxv8i1 (AArch64setcc_z (nxv8i1 (SVEAllActive):$Pg), nxv8i16:$Op2, (SVEDup0), SETEQ)))),
-            (CNOT_ZPmZ_H $Op2, $Pg, $Op2)>;
-  def : Pat<(nxv4i32 (zext (nxv4i1 (AArch64setcc_z (nxv4i1 (SVEAllActive):$Pg), nxv4i32:$Op2, (SVEDup0), SETEQ)))),
-            (CNOT_ZPmZ_S $Op2, $Pg, $Op2)>;
-  def : Pat<(nxv2i64 (zext (nxv2i1 (AArch64setcc_z (nxv2i1 (SVEAllActive):$Pg), nxv2i64:$Op2, (SVEDup0), SETEQ)))),
-            (CNOT_ZPmZ_D $Op2, $Pg, $Op2)>;
+  def : Pat<(nxv16i8 (zext (AArch64setcc_z (SVEAllActive):$Pg, nxv16i8:$LHS, (SVEDup0), SETEQ))),
+            (CNOT_ZPmZ_B $LHS, $Pg, $LHS)>;
+  def : Pat<(nxv8i16 (zext (AArch64setcc_z (SVEAllActive):$Pg, nxv8i16:$LHS, (SVEDup0), SETEQ))),
+            (CNOT_ZPmZ_H $LHS, $Pg, $LHS)>;
+  def : Pat<(nxv4i32 (zext (AArch64setcc_z (SVEAllActive):$Pg, nxv4i32:$LHS, (SVEDup0), SETEQ))),
+            (CNOT_ZPmZ_S $LHS, $Pg, $LHS)>;
+  def : Pat<(nxv2i64 (zext (AArch64setcc_z (SVEAllActive):$Pg, nxv2i64:$LHS, (SVEDup0), SETEQ))),
+            (CNOT_ZPmZ_D $LHS, $Pg, $LHS)>;
 
   defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax", "SMAX_ZPZZ", AArch64smax_m1, DestructiveBinaryComm>;
   defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax", "UMAX_ZPZZ", AArch64umax_m1, DestructiveBinaryComm>;
@@ -4701,41 +4711,48 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 // Promote NEON operations to SVE when an SVE immediate form can be used.
 class PromoteNEONToSVEImm
   <SDNode Opc, ValueType VT, ComplexPattern ImmPat, Instruction SVEImmInst, ValueType ImmType>
-  : Pat<(Opc (VT V128:$Vm), (VT (ImmPat ImmType:$imm))),
+  : Pat<(Opc VT:$Vm, (VT (ImmPat ImmType:$imm))),
       (EXTRACT_SUBREG (SVEImmInst
-        (INSERT_SUBREG (IMPLICIT_DEF), (VT V128: $Vm), zsub), ImmType:$imm), zsub)>;
+        (INSERT_SUBREG (IMPLICIT_DEF), $Vm, NEONType<VT>.ZPRsubreg), ImmType:$imm), NEONType<VT>.ZPRsubreg)>;
+
 // Same as PromoteNEONToSVEImm but accepts immediates with a shift (for ADD/SUB).
 class PromoteNEONToSVEImmWithShift
   <SDNode Opc, ValueType VT, ComplexPattern ImmPat, Instruction SVEImmInst>
-  : Pat<(Opc (VT V128:$Vm), (VT (ImmPat i32:$imm, i32:$shift))),
+  : Pat<(Opc VT:$Vm, (VT (ImmPat i32:$imm, i32:$shift))),
       (EXTRACT_SUBREG (SVEImmInst
-        (INSERT_SUBREG (IMPLICIT_DEF), (VT V128: $Vm), zsub), i32:$imm, i32:$shift), zsub)>;
+        (INSERT_SUBREG (IMPLICIT_DEF), $Vm, NEONType<VT>.ZPRsubreg), i32:$imm, i32:$shift), NEONType<VT>.ZPRsubreg)>;
 
 let Predicates = [HasSVE_or_SME] in {
-  foreach VT = [v2i64, v4i32, v8i16, v16i8] in {
+  foreach VT = [v1i64, v2i64, v2i32, v4i32, v4i16, v8i16, v8i8, v16i8] in {
     // Logical operations
     def : PromoteNEONToSVEImm<and, VT, NEONSplatOfSVELogicalImmPat, AND_ZI_PSEUDO, i64>;
     def : PromoteNEONToSVEImm<xor, VT, NEONSplatOfSVELogicalImmPat, EOR_ZI_PSEUDO, i64>;
     def : PromoteNEONToSVEImm< or, VT, NEONSplatOfSVELogicalImmPat, ORR_ZI_PSEUDO, i64>;
   }
 
-  // Arith operations: ADD
-  def : PromoteNEONToSVEImmWithShift<add, v2i64, NEONSplatOfSVEAddSubImm, ADD_ZI_D_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<add, v4i32, NEONSplatOfSVEAddSubImm, ADD_ZI_S_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<add, v8i16, NEONSplatOfSVEAddSubImm, ADD_ZI_H_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<add, v16i8, NEONSplatOfSVEAddSubImm, ADD_ZI_B_PSEUDO>;
+  foreach VT = [v1i64, v2i64] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_D_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_D_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEAddSubImm, MUL_ZI_D_PSEUDO, i32>;
+  }
 
-  // Arith operations: SUB
-  def : PromoteNEONToSVEImmWithShift<sub, v2i64, NEONSplatOfSVEAddSubImm, SUB_ZI_D_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<sub, v4i32, NEONSplatOfSVEAddSubImm, SUB_ZI_S_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<sub, v8i16, NEONSplatOfSVEAddSubImm, SUB_ZI_H_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<sub, v16i8, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
+  foreach VT = [v2i32, v4i32] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_S_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_S_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_S_PSEUDO, i32>;
+  }
 
-  // Arith operations: MUL
-  def : PromoteNEONToSVEImm<mul, v2i64, NEONSplatOfSVEAddSubImm, MUL_ZI_D_PSEUDO, i32>;
-  def : PromoteNEONToSVEImm<mul, v4i32, NEONSplatOfSVEArithSImm, MUL_ZI_S_PSEUDO, i32>;
-  def : PromoteNEONToSVEImm<mul, v8i16, NEONSplatOfSVEArithSImm, MUL_ZI_H_PSEUDO, i32>;
-  def : PromoteNEONToSVEImm<mul, v16i8, NEONSplatOfSVEArithSImm, MUL_ZI_B_PSEUDO, i32>;
+  foreach VT = [v4i16, v8i16] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_H_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_H_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_H_PSEUDO, i32>;
+  }
+
+  foreach VT = [v8i8, v16i8] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_B_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_B_PSEUDO, i32>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

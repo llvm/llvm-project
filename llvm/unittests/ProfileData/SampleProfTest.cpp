@@ -476,6 +476,32 @@ TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
 
+TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
+  const char *Args[] = {"SampleProfTest", "--md5-prof-sym-list=true"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, Args, StringRef(), &llvm::nulls());
+
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+
+  const char *ArgsFalse[] = {"SampleProfTest", "--md5-prof-sym-list=false"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+}
+
+TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
+  const char *Args[] = {"SampleProfTest",
+                        "--sample-profile-write-eytzinger-name-tables=true"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, Args, StringRef(), &llvm::nulls());
+
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
+
+  const char *ArgsFalse[] = {
+      "SampleProfTest", "--sample-profile-write-eytzinger-name-tables=false"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+}
+
 TEST_F(SampleProfTest, remap_text_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Text, true, false);
 }
@@ -608,10 +634,6 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x11112222ULL), 100);
   EXPECT_EQ(Table.lookup(0x33334444ULL), 200);
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x11112222ULL), std::nullopt);
 }
 
 TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
@@ -651,10 +673,6 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
 
   // Test non-existent key
   EXPECT_EQ(Table.lookup(0x9999999999999999ULL), std::nullopt);
-
-  // Test clear
-  Table.clear();
-  EXPECT_EQ(Table.lookup(0x1111111122222222ULL), std::nullopt);
 }
 
 // Verify that requesting format version 103 results in a version 103 profile.
@@ -693,6 +711,22 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion105) {
   auto Buffer = writeRawHeaderToBuffer(105);
   auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
+}
+
+TEST_F(SampleProfTest, ProfileSymbolListMD5) {
+  std::vector<uint64_t> Keys = {FunctionId("foo").getHashCode(),
+                                FunctionId("bar").getHashCode()};
+  auto Table =
+      llvm::EytzingerTable<support::ulittle64_t>::create(std::move(Keys));
+
+  ProfileSymbolList List;
+  List.setColdGUIDTable(
+      EytzingerTableSpan<support::ulittle64_t>(Table.data(), Table.size()));
+
+  EXPECT_TRUE(List.contains("foo"));
+  EXPECT_TRUE(List.contains("bar"));
+  EXPECT_FALSE(List.contains("baz"));
+  EXPECT_EQ(2u, List.size());
 }
 
 } // end anonymous namespace

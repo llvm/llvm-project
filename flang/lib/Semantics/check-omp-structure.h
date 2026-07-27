@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 
 using OmpClauseSet =
@@ -60,6 +61,7 @@ public:
   OmpStructureChecker(SemanticsContext &context);
 
   void Enter(const parser::ProgramUnit &);
+  void Leave(const parser::ProgramUnit &);
   void Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
   void Enter(const parser::BlockData &);
@@ -74,10 +76,15 @@ public:
   void Enter(const parser::EndFunctionStmt &);
   void Enter(const parser::MpSubprogramStmt &);
   void Enter(const parser::EndMpSubprogramStmt &);
+  void Enter(const parser::Block &);
+  void Leave(const parser::Block &);
   void Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
   void Enter(const parser::ModuleSubprogram &);
+  void Enter(const parser::ModuleSubprogramPart &);
+  void Enter(const parser::InterfaceBody &);
+  void Leave(const parser::InterfaceBody &);
 
   void Enter(const parser::SpecificationPart &);
   void Leave(const parser::SpecificationPart &);
@@ -282,8 +289,11 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
+  void BeginMetadirectiveVariantScope();
+  void EndMetadirectiveVariantScope();
+
   // check-omp-variant.cpp
-  void CheckMetadirectiveVariantsWithoutLoop();
+  void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
   void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
@@ -458,6 +468,17 @@ private:
   int directiveNest_[LastType + 1] = {0};
 
   std::set<std::pair<const Symbol *, const Symbol *>> declareVariantPairs_;
+  // For each variant procedure: its construct-selector-set as an ordered list
+  // of elements (a leaf construct directive plus a normalized rendering of any
+  // properties), and the source of the DECLARE VARIANT directive that first
+  // established the set.
+  std::map<const Symbol *,
+      std::pair<
+          llvm::SmallVector<std::pair<llvm::omp::Directive, std::string>, 4>,
+          parser::CharBlock>>
+      declareVariantConstructSets_;
+  // Tracks the procedures that appear as a base in DECLARE VARIANT.
+  std::set<const Symbol *> declareVariantBases_;
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
@@ -497,6 +518,7 @@ private:
     const parser::OmpDirectiveSpecification *spec;
   };
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
+  std::vector<std::size_t> metadirectiveVariantScopeStarts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
       nullptr};
 

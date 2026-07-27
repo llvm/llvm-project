@@ -2139,13 +2139,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   }
 }
 
-Register LegalizerHelper::coerceToScalar(Register Val) {
+Register LegalizerHelper::coerceToInteger(Register Val) {
   LLT Ty = MRI.getType(Val);
   if (Ty.isScalar())
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLT NewTy = LLT::scalar(Ty.getSizeInBits());
+  LLT NewTy = LLT::integer(Ty.getSizeInBits());
   if (Ty.isPointer()) {
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       return Register();
@@ -3640,6 +3640,26 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     return Legalized;
   }
+  case TargetOpcode::G_BITCAST:
+    if (WideTy.isVector())
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_TRUNC);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    Observer.changedInstr(MI);
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    if (MRI.getType(Dst) == MRI.getType(Src)) {
+      Observer.changingAllUsesOfReg(MRI, Dst);
+      MRI.replaceRegWith(Dst, Src);
+      Observer.finishedChangingAllUsesOfReg();
+      MI.eraseFromParent();
+    }
+
+    return Legalized;
   }
 }
 
@@ -8779,7 +8799,7 @@ LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const LLT S1 = LLT::scalar(1);
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
 
   auto [Dst, Src] = MI.getFirst2Regs();
   assert(MRI.getType(Dst).getScalarType() == LLT::float16() &&
@@ -8790,7 +8810,7 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
 
   if (MI.getFlag(MachineInstr::FmAfn)) {
     unsigned Flags = MI.getFlags();
-    auto Src32 = MIRBuilder.buildFPTrunc(S32, Src, Flags);
+    auto Src32 = MIRBuilder.buildFPTrunc(LLT::float32(), Src, Flags);
     MIRBuilder.buildFPTrunc(Dst, Src32, Flags);
     MI.eraseFromParent();
     return Legalized;
@@ -8800,91 +8820,91 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const unsigned ExpBiasf64 = 1023;
   const unsigned ExpBiasf16 = 15;
 
-  auto Unmerge = MIRBuilder.buildUnmerge(S32, Src);
+  auto Unmerge = MIRBuilder.buildUnmerge(I32, Src);
   Register U = Unmerge.getReg(0);
   Register UH = Unmerge.getReg(1);
 
-  auto E = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 20));
-  E = MIRBuilder.buildAnd(S32, E, MIRBuilder.buildConstant(S32, ExpMask));
+  auto E = MIRBuilder.buildLShr(I32, UH, MIRBuilder.buildConstant(I32, 20));
+  E = MIRBuilder.buildAnd(I32, E, MIRBuilder.buildConstant(I32, ExpMask));
 
   // Subtract the fp64 exponent bias (1023) to get the real exponent and
   // add the f16 bias (15) to get the biased exponent for the f16 format.
   E = MIRBuilder.buildAdd(
-    S32, E, MIRBuilder.buildConstant(S32, -ExpBiasf64 + ExpBiasf16));
+      I32, E, MIRBuilder.buildConstant(I32, -ExpBiasf64 + ExpBiasf16));
 
-  auto M = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 8));
-  M = MIRBuilder.buildAnd(S32, M, MIRBuilder.buildConstant(S32, 0xffe));
+  auto M = MIRBuilder.buildLShr(I32, UH, MIRBuilder.buildConstant(I32, 8));
+  M = MIRBuilder.buildAnd(I32, M, MIRBuilder.buildConstant(I32, 0xffe));
 
-  auto MaskedSig = MIRBuilder.buildAnd(S32, UH,
-                                       MIRBuilder.buildConstant(S32, 0x1ff));
-  MaskedSig = MIRBuilder.buildOr(S32, MaskedSig, U);
+  auto MaskedSig =
+      MIRBuilder.buildAnd(I32, UH, MIRBuilder.buildConstant(I32, 0x1ff));
+  MaskedSig = MIRBuilder.buildOr(I32, MaskedSig, U);
 
-  auto Zero = MIRBuilder.buildConstant(S32, 0);
+  auto Zero = MIRBuilder.buildConstant(I32, 0);
   auto SigCmpNE0 = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, MaskedSig, Zero);
-  auto Lo40Set = MIRBuilder.buildZExt(S32, SigCmpNE0);
-  M = MIRBuilder.buildOr(S32, M, Lo40Set);
+  auto Lo40Set = MIRBuilder.buildZExt(I32, SigCmpNE0);
+  M = MIRBuilder.buildOr(I32, M, Lo40Set);
 
   // (M != 0 ? 0x0200 : 0) | 0x7c00;
-  auto Bits0x200 = MIRBuilder.buildConstant(S32, 0x0200);
+  auto Bits0x200 = MIRBuilder.buildConstant(I32, 0x0200);
   auto CmpM_NE0 = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, M, Zero);
-  auto SelectCC = MIRBuilder.buildSelect(S32, CmpM_NE0, Bits0x200, Zero);
+  auto SelectCC = MIRBuilder.buildSelect(I32, CmpM_NE0, Bits0x200, Zero);
 
-  auto Bits0x7c00 = MIRBuilder.buildConstant(S32, 0x7c00);
-  auto I = MIRBuilder.buildOr(S32, SelectCC, Bits0x7c00);
+  auto Bits0x7c00 = MIRBuilder.buildConstant(I32, 0x7c00);
+  auto I = MIRBuilder.buildOr(I32, SelectCC, Bits0x7c00);
 
   // N = M | (E << 12);
-  auto EShl12 = MIRBuilder.buildShl(S32, E, MIRBuilder.buildConstant(S32, 12));
-  auto N = MIRBuilder.buildOr(S32, M, EShl12);
+  auto EShl12 = MIRBuilder.buildShl(I32, E, MIRBuilder.buildConstant(I32, 12));
+  auto N = MIRBuilder.buildOr(I32, M, EShl12);
 
   // B = clamp(1-E, 0, 13);
-  auto One = MIRBuilder.buildConstant(S32, 1);
-  auto OneSubExp = MIRBuilder.buildSub(S32, One, E);
-  auto B = MIRBuilder.buildSMax(S32, OneSubExp, Zero);
-  B = MIRBuilder.buildSMin(S32, B, MIRBuilder.buildConstant(S32, 13));
+  auto One = MIRBuilder.buildConstant(I32, 1);
+  auto OneSubExp = MIRBuilder.buildSub(I32, One, E);
+  auto B = MIRBuilder.buildSMax(I32, OneSubExp, Zero);
+  B = MIRBuilder.buildSMin(I32, B, MIRBuilder.buildConstant(I32, 13));
 
-  auto SigSetHigh = MIRBuilder.buildOr(S32, M,
-                                       MIRBuilder.buildConstant(S32, 0x1000));
+  auto SigSetHigh =
+      MIRBuilder.buildOr(I32, M, MIRBuilder.buildConstant(I32, 0x1000));
 
-  auto D = MIRBuilder.buildLShr(S32, SigSetHigh, B);
-  auto D0 = MIRBuilder.buildShl(S32, D, B);
+  auto D = MIRBuilder.buildLShr(I32, SigSetHigh, B);
+  auto D0 = MIRBuilder.buildShl(I32, D, B);
 
   auto D0_NE_SigSetHigh = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1,
                                              D0, SigSetHigh);
-  auto D1 = MIRBuilder.buildZExt(S32, D0_NE_SigSetHigh);
-  D = MIRBuilder.buildOr(S32, D, D1);
+  auto D1 = MIRBuilder.buildZExt(I32, D0_NE_SigSetHigh);
+  D = MIRBuilder.buildOr(I32, D, D1);
 
   auto CmpELtOne = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, E, One);
-  auto V = MIRBuilder.buildSelect(S32, CmpELtOne, D, N);
+  auto V = MIRBuilder.buildSelect(I32, CmpELtOne, D, N);
 
-  auto VLow3 = MIRBuilder.buildAnd(S32, V, MIRBuilder.buildConstant(S32, 7));
-  V = MIRBuilder.buildLShr(S32, V, MIRBuilder.buildConstant(S32, 2));
+  auto VLow3 = MIRBuilder.buildAnd(I32, V, MIRBuilder.buildConstant(I32, 7));
+  V = MIRBuilder.buildLShr(I32, V, MIRBuilder.buildConstant(I32, 2));
 
   auto VLow3Eq3 = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1, VLow3,
-                                       MIRBuilder.buildConstant(S32, 3));
-  auto V0 = MIRBuilder.buildZExt(S32, VLow3Eq3);
+                                       MIRBuilder.buildConstant(I32, 3));
+  auto V0 = MIRBuilder.buildZExt(I32, VLow3Eq3);
 
   auto VLow3Gt5 = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, S1, VLow3,
-                                       MIRBuilder.buildConstant(S32, 5));
-  auto V1 = MIRBuilder.buildZExt(S32, VLow3Gt5);
+                                       MIRBuilder.buildConstant(I32, 5));
+  auto V1 = MIRBuilder.buildZExt(I32, VLow3Gt5);
 
-  V1 = MIRBuilder.buildOr(S32, V0, V1);
-  V = MIRBuilder.buildAdd(S32, V, V1);
+  V1 = MIRBuilder.buildOr(I32, V0, V1);
+  V = MIRBuilder.buildAdd(I32, V, V1);
 
-  auto CmpEGt30 = MIRBuilder.buildICmp(CmpInst::ICMP_SGT,  S1,
-                                       E, MIRBuilder.buildConstant(S32, 30));
-  V = MIRBuilder.buildSelect(S32, CmpEGt30,
-                             MIRBuilder.buildConstant(S32, 0x7c00), V);
+  auto CmpEGt30 = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, S1, E,
+                                       MIRBuilder.buildConstant(I32, 30));
+  V = MIRBuilder.buildSelect(I32, CmpEGt30,
+                             MIRBuilder.buildConstant(I32, 0x7c00), V);
 
-  auto CmpEGt1039 = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1,
-                                         E, MIRBuilder.buildConstant(S32, 1039));
-  V = MIRBuilder.buildSelect(S32, CmpEGt1039, I, V);
+  auto CmpEGt1039 = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1, E,
+                                         MIRBuilder.buildConstant(I32, 1039));
+  V = MIRBuilder.buildSelect(I32, CmpEGt1039, I, V);
 
   // Extract the sign bit.
-  auto Sign = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 16));
-  Sign = MIRBuilder.buildAnd(S32, Sign, MIRBuilder.buildConstant(S32, 0x8000));
+  auto Sign = MIRBuilder.buildLShr(I32, UH, MIRBuilder.buildConstant(I32, 16));
+  Sign = MIRBuilder.buildAnd(I32, Sign, MIRBuilder.buildConstant(I32, 0x8000));
 
   // Insert the sign bit
-  V = MIRBuilder.buildOr(S32, Sign, V);
+  V = MIRBuilder.buildOr(I32, Sign, V);
 
   MIRBuilder.buildTrunc(Dst, V);
   MI.eraseFromParent();
@@ -9322,7 +9342,7 @@ LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
   auto [DstReg, DstTy, Src0Reg, Src0Ty] = MI.getFirst2RegLLTs();
   unsigned PartSize = Src0Ty.getSizeInBits();
 
-  LLT WideTy = LLT::scalar(DstTy.getSizeInBits());
+  LLT WideTy = LLT::integer(DstTy.getSizeInBits());
   Register ResultReg = MIRBuilder.buildZExt(WideTy, Src0Reg).getReg(0);
 
   for (unsigned I = 2; I != NumOps; ++I) {
@@ -9363,7 +9383,7 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   if (DstTy.isPointer())
     return UnableToLegalize; // TODO
 
-  SrcReg = coerceToScalar(SrcReg);
+  SrcReg = coerceToInteger(SrcReg);
   if (!SrcReg)
     return UnableToLegalize;
 
@@ -9538,7 +9558,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
 
   Register LastWriteVal;
   std::optional<APInt> PassthruSplatVal =
-      isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);
+      isConstantOrConstantSplatVector(Passthru, MRI);
 
   if (PassthruSplatVal.has_value()) {
     LastWriteVal =
@@ -9714,7 +9734,7 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
     Register ResultReg = DstReg;
     if (DstTy.isPointer())
       ResultReg =
-          MRI.createGenericVirtualRegister(LLT::scalar(DstTy.getSizeInBits()));
+          MRI.createGenericVirtualRegister(LLT::integer(DstTy.getSizeInBits()));
 
     if (Offset == 0)
       MIRBuilder.buildTrunc(ResultReg, SrcReg);
@@ -10856,9 +10876,10 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
   for (unsigned I = 0; I < MemOps.size(); I++) {
     LLT Ty = MemOps[I];
     unsigned TySize = Ty.getSizeInBytes();
+
     if (TySize > Size) {
-      // Issuing an unaligned load / store pair that overlaps with the previous
-      // pair. Adjust the offset accordingly.
+      // Issuing a load / store pair that overlaps with the previous pair.
+      // Adjust the offset accordingly.
       assert(I == MemOps.size() - 1 && I != 0);
       DstOff -= TySize - Size;
     }
@@ -10949,16 +10970,20 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
-    // Issuing an unaligned load / store pair  that overlaps with the previous
-    // pair. Adjust the offset accordingly.
-    if (CopyTy.getSizeInBytes() > Size)
-      CurrOffset -= CopyTy.getSizeInBytes() - Size;
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a load / store pair that overlaps with the previous pair. Adjust
+    // the offset accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memcpy load/store spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
 
     // Construct MMOs for the accesses.
-    auto *LoadMMO =
-        MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
-    auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *LoadMMO = MF.getMachineMemOperand(&SrcMMO, CurrOffset, TySize);
+    auto *StoreMMO = MF.getMachineMemOperand(&DstMMO, CurrOffset, TySize);
 
     // Create the load.
     Register LoadPtr = Src;
@@ -10979,8 +11004,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
-    CurrOffset += CopyTy.getSizeInBytes();
-    Size -= CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
 
   MI.eraseFromParent();
@@ -11031,11 +11056,22 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   // Apart from that, this loop is pretty much doing the same thing as the
   // memcpy codegen function.
   unsigned CurrOffset = 0;
+  unsigned Size = KnownLen;
   SmallVector<Register, 16> LoadVals;
   for (auto CopyTy : MemOps) {
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a load that overlaps with the previous load. Adjust the offset
+    // accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memmove load spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
+
     // Construct MMO for the load.
-    auto *LoadMMO =
-        MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *LoadMMO = MF.getMachineMemOperand(&SrcMMO, CurrOffset, TySize);
 
     // Create the load.
     Register LoadPtr = Src;
@@ -11046,15 +11082,27 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
-    CurrOffset += CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
 
   CurrOffset = 0;
+  Size = KnownLen;
   for (unsigned I = 0; I < MemOps.size(); ++I) {
     LLT CopyTy = MemOps[I];
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a store that overlaps with the previous store. Adjust the offset
+    // accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memmove store spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
+
     // Now store the values loaded.
-    auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *StoreMMO = MF.getMachineMemOperand(&DstMMO, CurrOffset, TySize);
 
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
@@ -11064,7 +11112,8 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
-    CurrOffset += CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
   MI.eraseFromParent();
   return Legalized;

@@ -97,7 +97,7 @@ add_unittest_framework_library(
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
-if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
+if (LIBC_TEST_SUBPROCESS_TESTS)
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
 endif()
 
@@ -183,8 +183,8 @@ add_unittest_framework_library(
     LibcTest
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.printf_config
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.printf_config
     libc.test.UnitTest.string_utils
 )
 
@@ -221,4 +221,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
+)
+
+add_header_library(
+  ConstraintHandlerCheckingTest
+  HDRS
+    ConstraintHandlerCheckingTest.h
+  DEPENDS
+    libc.hdr.types.constraint_handler_t
+    libc.hdr.types.errno_t
+    libc.src.stdlib.set_constraint_handler_s
 )

@@ -927,6 +927,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
             IgnoreAlignment);
   if (const LoadInst *LI = dyn_cast<LoadInst>(I1))
     return LI->isVolatile() == cast<LoadInst>(I2)->isVolatile() &&
+           LI->isElementwise() == cast<LoadInst>(I2)->isElementwise() &&
            (LI->getAlign() == cast<LoadInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            LI->getOrdering() == cast<LoadInst>(I2)->getOrdering() &&
@@ -1500,6 +1501,14 @@ void Instruction::swapProfMetadata() {
   Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
+}
+
+void Instruction::copyProfileAndDebugMetadata(const Instruction &SrcInst) {
+  // TODO: Include additional metadata in the future if appropriate.
+  static const unsigned SafeIDs[] = {
+      LLVMContext::MD_dbg, LLVMContext::MD_prof, LLVMContext::MD_memprof,
+      LLVMContext::MD_callsite};
+  copyMetadata(SrcInst, SafeIDs);
 }
 
 void Instruction::copyMetadata(const Instruction &SrcInst,

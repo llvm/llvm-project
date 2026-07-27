@@ -109,7 +109,7 @@ public:
   /// If addr is compatible with the iN that will be used for an atomic
   /// operation, bitcast it. Otherwise, create a temporary that is suitable and
   /// copy the value across.
-  Address convertToAtomicIntPointer(Address addr) const;
+  Address convertToAtomicIntPointer(Address addr, mlir::Location loc) const;
 
   /// Turn an atomic-layout object into an r-value.
   RValue convertAtomicTempToRValue(Address addr, AggValueSlot resultSlot,
@@ -199,13 +199,27 @@ bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
   llvm_unreachable("bad evaluation kind");
 }
 
-Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
+Address AtomicInfo::convertToAtomicIntPointer(Address addr,
+                                              mlir::Location loc) const {
   mlir::Type ty = addr.getElementType();
   uint64_t sourceSizeInBits = cgf.cgm.getDataLayout().getTypeSizeInBits(ty);
   if (sourceSizeInBits != atomicSizeInBits) {
-    cgf.cgm.errorNYI(
-        loc,
-        "AtomicInfo::convertToAtomicIntPointer: convert through temp alloca");
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+
+    Address tmp = createTempAlloca();
+    mlir::Value zero = builder.getConstInt(loc, cgf.cgm.uInt8Ty, 0);
+    unsigned size =
+        cgf.getContext().toCharUnitsFromBits(atomicSizeInBits).getQuantity();
+    mlir::Value memSetSize = builder.getConstInt(loc, cgf.cgm.uInt64Ty, size);
+    addr = addr.withElementType(builder, cgf.cgm.voidTy);
+    builder.createMemSet(loc, addr, zero, memSetSize);
+
+    tmp = tmp.withElementType(builder, cgf.cgm.voidTy);
+    builder.createMemCpy(
+        loc, tmp.getPointer(), addr.getPointer(),
+        builder.getConstInt(loc, cgf.cgm.uInt64Ty,
+                            std::min(atomicSizeInBits, sourceSizeInBits) / 8));
+    addr = tmp;
   }
 
   return castToAtomicIntPointer(addr);
@@ -1530,24 +1544,24 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   // The inlined atomics only function on iN types, where N is a power of 2. We
   // need to make sure (via temporaries if necessary) that all incoming values
   // are compatible.
+  mlir::Location loc = getLoc(e->getSourceRange());
   LValue atomicValue = makeAddrLValue(ptr, atomicTy);
-  AtomicInfo atomics(*this, atomicValue, getLoc(e->getSourceRange()));
+  AtomicInfo atomics(*this, atomicValue, loc);
 
   if (shouldCastToIntPtrTy) {
     ptr = atomics.castToAtomicIntPointer(ptr);
     if (val1.isValid())
-      val1 = atomics.convertToAtomicIntPointer(val1);
+      val1 = atomics.convertToAtomicIntPointer(val1, loc);
     if (val2.isValid())
-      val2 = atomics.convertToAtomicIntPointer(val2);
+      val2 = atomics.convertToAtomicIntPointer(val2, loc);
   }
   if (dest.isValid()) {
     if (shouldCastToIntPtrTy)
       dest = atomics.castToAtomicIntPointer(dest);
   } else if (e->isCmpXChg()) {
-    dest = createMemTemp(resultTy, getLoc(e->getSourceRange()), "cmpxchg.bool");
+    dest = createMemTemp(resultTy, loc, "cmpxchg.bool");
   } else if (e->getOp() == AtomicExpr::AO__atomic_test_and_set) {
-    dest = createMemTemp(resultTy, getLoc(e->getSourceRange()),
-                         "test_and_set.bool");
+    dest = createMemTemp(resultTy, loc, "test_and_set.bool");
   } else if (!resultTy->isVoidType()) {
     dest = atomics.createTempAlloca();
     if (shouldCastToIntPtrTy)

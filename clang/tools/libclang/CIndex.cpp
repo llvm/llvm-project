@@ -1738,6 +1738,10 @@ bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
+bool CursorVisitor::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -2533,6 +2537,8 @@ void OMPClauseEnqueue::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
 
 void OMPClauseEnqueue::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  if (const Expr *Modifier = C->getModifierExpr())
+    Visitor->AddStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }

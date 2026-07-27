@@ -749,6 +749,19 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       Check(ETy->isPointerTy(), "wrong type for intrinsic global variable",
             &GV);
     }
+
+    auto *Init = GV.hasInitializer()
+                     ? dyn_cast<ConstantArray>(GV.getInitializer())
+                     : nullptr;
+    if (Init) {
+      for (const Use &U : Init->operands()) {
+        auto *Structor = dyn_cast<ConstantStruct>(U);
+        if (!Structor || Structor->getNumOperands() != 3)
+          continue;
+        Check(!isa<ConstantPtrAuth>(Structor->getOperand(1)),
+              "signing of ctors/dtors should be requested via module flags");
+      }
+    }
   }
 
   if (GV.hasName() && (GV.getName() == "llvm.used" ||
@@ -994,6 +1007,14 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             "smaller",
             CurrentMD);
     }
+
+    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
+         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expected one operand for llvm.loop.distribute metadata",
+            CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
@@ -1822,26 +1843,52 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  uint64_t PAuthABIPlatform = -1;
-  uint64_t PAuthABIVersion = -1;
+
+  // Either both aarch64-elf-pauthabi-* flags should be set or none at all.
+  std::optional<uint64_t> PAuthABIPlatform;
+  std::optional<uint64_t> PAuthABIVersion;
+  // Signing of init/fini pointers: address diversity implies basic signing.
+  uint64_t HasPtrauthInitFini = 0;
+  uint64_t HasPtrauthInitFiniAddr = 0;
+
   for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
     if (MDN->getNumOperands() != 3)
       continue;
+
     if (const auto *FlagName = dyn_cast_or_null<MDString>(MDN->getOperand(1))) {
-      if (FlagName->getString() == "aarch64-elf-pauthabi-platform") {
-        if (const auto *PAP =
+      auto GetFlagNamed = [&](StringRef Name) -> std::optional<uint64_t> {
+        if (FlagName->getString() != Name)
+          return std::nullopt;
+        if (const auto *FlagValue =
                 mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
-          PAuthABIPlatform = PAP->getZExtValue();
-      } else if (FlagName->getString() == "aarch64-elf-pauthabi-version") {
-        if (const auto *PAV =
-                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
-          PAuthABIVersion = PAV->getZExtValue();
-      }
+          return FlagValue->getZExtValue();
+
+        CheckFailed(Name + ": module flag expects integer value");
+        return std::nullopt;
+      };
+
+      if (auto Value = GetFlagNamed("aarch64-elf-pauthabi-platform"))
+        PAuthABIPlatform = *Value;
+      else if (auto Value = GetFlagNamed("aarch64-elf-pauthabi-version"))
+        PAuthABIVersion = *Value;
+      else if (auto Value = GetFlagNamed("ptrauth-init-fini"))
+        HasPtrauthInitFini = *Value;
+      else if (auto Value =
+                   GetFlagNamed("ptrauth-init-fini-address-discrimination"))
+        HasPtrauthInitFiniAddr = *Value;
     }
   }
 
-  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+  Check(llvm::is_contained({0u, 1u}, HasPtrauthInitFini),
+        "ptrauth-init-fini must be 0 or 1");
+  Check(llvm::is_contained({0u, 1u}, HasPtrauthInitFiniAddr),
+        "ptrauth-init-fini-address-discrimination must be 0 or 1, if set");
+  if (HasPtrauthInitFiniAddr)
+    Check(HasPtrauthInitFini, "ptrauth-init-fini-address-discrimination module "
+                              "flag requires ptrauth-init-fini");
+
+  if (PAuthABIPlatform.has_value() != PAuthABIVersion.has_value())
     CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
                 "'aarch64-elf-pauthabi-version' module flags must be present");
 
@@ -4543,15 +4590,29 @@ void Verifier::visitLoadInst(LoadInst &LI) {
     Check(LI.getOrdering() != AtomicOrdering::Release &&
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
-    Check(ElTy->getScalarType()->isIntOrPtrTy() ||
-              ElTy->getScalarType()->isByteTy() ||
-              ElTy->getScalarType()->isFloatingPointTy(),
+
+    Type *ScalarTy = ElTy;
+    if (LI.isElementwise()) {
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise load operand must have fixed vector type!", &LI,
+            ElTy);
+      if (VecTy) {
+        checkAtomicMemAccessSize(ScalarTy, &LI);
+        ScalarTy = VecTy->getElementType();
+      }
+    }
+
+    Check(ScalarTy->getScalarType()->isIntOrPtrTy() ||
+              ScalarTy->getScalarType()->isByteTy() ||
+              ScalarTy->getScalarType()->isFloatingPointTy(),
           "atomic load operand must have integer, byte, pointer, floating "
           "point, or vector type!",
           ElTy, &LI);
 
-    checkAtomicMemAccessSize(ElTy, &LI);
+    checkAtomicMemAccessSize(ScalarTy, &LI);
   } else {
+    Check(!LI.isElementwise(), "non-atomic load cannot be elementwise", &LI);
     Check(LI.getSyncScopeID() == SyncScope::System,
           "Non-atomic load cannot have SynchronizationScope specified", &LI);
   }
@@ -4665,30 +4726,29 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Type *ScalarTy = ElTy;
+  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
-    if (VecTy)
-      ScalarTy = VecTy->getElementType();
   }
 
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
-              ScalarTy->isPointerTy(),
+    Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
+           ElTy->isPtrOrPtrVectorTy()),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer or floating point type!",
+              " operand must be an integer type, a floating-point type, a "
+              "pointer type, or a fixed vector of any of these types!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isFPOrFPVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have floating-point or fixed vector of "
               "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isIntOrIntVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);
@@ -5420,17 +5480,11 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
           Op);
     auto *CallgraphMD = cast<MDNode>(Op);
     Check(CallgraphMD->getNumOperands() == 1,
-          "Well-formed generalized callgraph metadata must contain exactly one "
+          "Well-formed callgraph metadata must contain exactly one "
           "operand",
           Op);
     Check(isa<MDString>(CallgraphMD->getOperand(0)),
           "The operand of callgraph metadata for functions must be an MDString",
-          Op);
-    Check(cast<MDString>(CallgraphMD->getOperand(0))
-              ->getString()
-              .ends_with(".generalized"),
-          "Only generalized callgraph metadata can be part of the callee_type "
-          "metadata list",
           Op);
   }
 }
@@ -5867,6 +5921,17 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
     visitMemCacheHintMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.expected.active.lanes must have exactly one operand", &I,
+          MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.expected.active.lanes operand must be an i32 constant", &I,
+          MD);
+  }
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
@@ -6610,7 +6675,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::matrix_column_major_load:
   case Intrinsic::matrix_column_major_store: {
     Function *IF = Call.getCalledFunction();
-    ConstantInt *Stride = nullptr;
+    Value *Stride = nullptr;
     ConstantInt *NumRows;
     ConstantInt *NumColumns;
     VectorType *ResultTy;
@@ -6647,14 +6712,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
       break;
     case Intrinsic::matrix_column_major_load: {
-      Stride = dyn_cast<ConstantInt>(Call.getArgOperand(1));
+      Stride = Call.getArgOperand(1);
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
       ResultTy = cast<VectorType>(Call.getType());
       break;
     }
     case Intrinsic::matrix_column_major_store: {
-      Stride = dyn_cast<ConstantInt>(Call.getArgOperand(2));
+      Stride = Call.getArgOperand(2);
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
       ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
@@ -6686,12 +6751,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               NumRows->getZExtValue() * NumColumns->getZExtValue(),
           "Result of a matrix operation does not fit in the returned vector!");
 
-    if (Stride) {
-      Check(Stride->getBitWidth() <= 64, "Stride bitwidth cannot exceed 64!",
-            IF);
-      Check(Stride->getZExtValue() >= NumRows->getZExtValue(),
-            "Stride must be greater or equal than the number of rows!", IF);
-    }
+    if (Stride)
+      Check(Stride->getType()->getIntegerBitWidth() <= 64,
+            "Stride bitwidth cannot exceed 64!", IF);
 
     break;
   }

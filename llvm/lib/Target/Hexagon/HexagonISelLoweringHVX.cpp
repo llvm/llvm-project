@@ -149,6 +149,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,              T, Legal);
       setOperationAction(ISD::FMINIMUMNUM, T, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, T, Legal);
+      setOperationAction(ISD::FMINNUM, T, Legal);
+      setOperationAction(ISD::FMAXNUM, T, Legal);
 
       setOperationAction(ISD::INSERT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, T, Custom);
@@ -218,6 +220,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINIMUMNUM, P, Custom);
       setOperationAction(ISD::FMAXIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMINNUM, P, Custom);
+      setOperationAction(ISD::FMAXNUM, P, Custom);
       setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
@@ -2562,10 +2566,23 @@ HexagonTargetLowering::LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const {
   SDValue StoreLo =
       getInstr(StoreOpc, dl, MVT::Other,
                {MaskU.first, Base, Offset0, ValueU.first, Chain}, DAG);
+  DAG.setNodeMemRefs(cast<MachineSDNode>(StoreLo.getNode()), {MemOp});
+
+  // If the store fits within one HwLen-aligned block, the high half's predicate
+  // is always all-zeros and the vmem(Base+HwLen) can be elided entirely.
+  // Proof: addr % StoreAlign == 0 and StoreMemSize <= StoreAlign implies
+  //        addr % HwLen <= HwLen - StoreAlign, so addr % HwLen + StoreMemSize
+  //        <= HwLen.
+  // Without this guard, Hexagon v73+ probes the TLB for vmem(Base+HwLen) even
+  // when the predicate is all-zeros, causing a TLBMISS if that page is
+  // unmapped.
+  uint64_t StoreMemSize = MaskN->getMemoryVT().getStoreSize().getFixedValue();
+  if (StoreMemSize <= MaskN->getAlign().value())
+    return StoreLo;
+
   SDValue StoreHi =
       getInstr(StoreOpc, dl, MVT::Other,
                {MaskU.second, Base, Offset1, ValueU.second, Chain}, DAG);
-  DAG.setNodeMemRefs(cast<MachineSDNode>(StoreLo.getNode()), {MemOp});
   DAG.setNodeMemRefs(cast<MachineSDNode>(StoreHi.getNode()), {MemOp});
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, {StoreLo, StoreHi});
 }
@@ -3644,8 +3661,9 @@ HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
                           {DAG.getConstant(ValueLen, dl, MVT::i32)}, DAG);
   MachineFunction &MF = DAG.getMachineFunction();
   auto *MemOp = MF.getMachineMemOperand(StoreN->getMemOperand(), 0, HwLen);
-  return DAG.getMaskedStore(Chain, dl, Value, Base, Offset, Mask, ty(Value),
-                            MemOp, ISD::UNINDEXED, false, false);
+  return DAG.getMaskedStore(Chain, dl, Value, Base, Offset, Mask,
+                            StoreN->getMemoryVT(), MemOp, ISD::UNINDEXED, false,
+                            false);
 }
 
 SDValue
@@ -3744,6 +3762,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FMUL:
       case ISD::FMINIMUMNUM:
       case ISD::FMAXIMUMNUM:
+      case ISD::FMINNUM:
+      case ISD::FMAXNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:

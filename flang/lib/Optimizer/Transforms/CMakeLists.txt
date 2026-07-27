@@ -91,7 +91,6 @@ add_flang_library(FIRTransforms
   MLIRMathTransforms
   MLIRNVVMDialect
   MLIROpenACCDialect
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
   MLIRTransformUtils
 )

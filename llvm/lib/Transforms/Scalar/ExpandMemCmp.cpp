@@ -56,6 +56,16 @@ static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
 
 namespace {
 
+// Return the known alignment of the pointer argument \p ArgNo of \p CI,
+// combining the alignment of the underlying pointer value with any align
+// attribute on the call site itself.
+static Align getMemCmpArgAlignment(const CallInst *CI, unsigned ArgNo,
+                                   const DataLayout &DL) {
+  Align A = CI->getArgOperand(ArgNo)->getPointerAlignment(DL);
+  if (MaybeAlign ParamAlign = CI->getParamAlign(ArgNo))
+    A = std::max(A, *ParamAlign);
+  return A;
+}
 
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
@@ -318,8 +328,8 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   // Get the memory source at offset `OffsetBytes`.
   Value *LhsSource = CI->getArgOperand(0);
   Value *RhsSource = CI->getArgOperand(1);
-  Align LhsAlign = LhsSource->getPointerAlignment(DL);
-  Align RhsAlign = RhsSource->getPointerAlignment(DL);
+  Align LhsAlign = getMemCmpArgAlignment(CI, 0, DL);
+  Align RhsAlign = getMemCmpArgAlignment(CI, 1, DL);
   if (OffsetBytes > 0) {
     auto *ByteType = Type::getInt8Ty(CI->getContext());
     LhsSource = Builder.CreateConstGEP1_64(ByteType, LhsSource, OffsetBytes);
@@ -859,6 +869,37 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
 
   if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmp;
+
+  // Keep only the load sizes the target can actually access given the
+  // statically known common alignment of both pointers: either the access is
+  // naturally aligned, or the target allows a misaligned access of that width.
+  // This lets strict-alignment targets expand compares whose pointers happen to
+  // be sufficiently aligned, while still falling back to the libcall when no
+  // load size fits. Because the greedy load sequence only places a load of size
+  // S at an offset that is a multiple of S, a load that does not exceed the
+  // base alignment is guaranteed to be naturally aligned.
+  //
+  // Note we query whether the access is *allowed*, not whether it is *fast*:
+  // this matches the historical behavior of forming unaligned loads whenever
+  // the target permits them, so it is a no-op for targets that allow unaligned
+  // access even when it is slow.
+  const Align LhsAlign = getMemCmpArgAlignment(CI, 0, *DL);
+  const Align RhsAlign = getMemCmpArgAlignment(CI, 1, *DL);
+  const Align MinAlign = std::min(LhsAlign, RhsAlign);
+  LLVMContext &Context = CI->getContext();
+  unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
+  llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
+    if (MinAlign >= LoadSize)
+      return false;
+    return !TTI->allowsMisalignedMemoryAccesses(Context, LoadSize * 8, AS,
+                                                MinAlign);
+  });
+  // If the filter removed every load size, bail out to the libcall: the
+  // MemCmpExpansion constructor asserts that at least one load size remains.
+  // In practice all in-tree targets include a byte load size, which is
+  // accessible at any alignment and therefore always survives the filter.
+  if (Options.LoadSizes.empty())
+    return false;
 
   MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU);
 

@@ -864,6 +864,8 @@ define void @atomics(ptr %word) {
   ;; Atomic w/o alignment
   %atomicrmw_no_align.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
   ; CHECK: %atomicrmw_no_align.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
+  %atomicrmw_no_align.vector.xchg = atomicrmw xchg ptr %word, <2 x i16> <i16 12, i16 13> monotonic
+  ; CHECK: %atomicrmw_no_align.vector.xchg = atomicrmw xchg ptr %word, <2 x i16> <i16 12, i16 13> monotonic
   %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
   ; CHECK: %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
   %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
@@ -1035,6 +1037,12 @@ define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) 
 
 ; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
   %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
+; CHECK: %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+  %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+
+; CHECK: %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word seq_cst, align 4
+  %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word seq_cst, align 4
 
   ret void
 }

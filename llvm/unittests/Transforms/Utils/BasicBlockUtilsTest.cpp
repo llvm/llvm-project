@@ -20,6 +20,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -651,7 +652,9 @@ bb4:
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*F, LI);
+  CycleInfo CI;
+  CI.compute(*F);
+  BranchProbabilityInfo BPI(*F, CI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/true,
@@ -693,7 +696,9 @@ bb4:
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*F, LI);
+  CycleInfo CI;
+  CI.compute(*F);
+  BranchProbabilityInfo BPI(*F, CI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/false,
@@ -794,8 +799,9 @@ L19:
 )IR");
   Function *F = M->getFunction("edge_probability");
   DominatorTree DT(*F);
-  LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*F, LI);
+  CycleInfo CI;
+  CI.compute(*F);
+  BranchProbabilityInfo BPI(*F, CI);
 
   // Check that the unreachable block has the minimal probability.
   const BasicBlock *EntryBB = getBasicBlockByName(*F, "entry");

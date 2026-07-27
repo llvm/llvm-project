@@ -1424,8 +1424,23 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
     }
     for (const auto &name : names) {
       if (Symbol * sym{ResolveFctName(name)}) {
-        Symbol &ultimate{sym->GetUltimate()};
-        AddRoutineInfoToSymbol(ultimate, x);
+        Symbol *target{&sym->GetUltimate()};
+        // OpenACC ties the named argument of a ROUTINE directive to a
+        // subroutine or function. A pure generic interface name is not a
+        // valid target. However, a generic may share its name with a specific
+        // procedure (common with interface bodies); in that case the name
+        // denotes the specific, not the generic.
+        if (auto *generic{target->detailsIf<GenericDetails>()}) {
+          if (Symbol * specific{generic->specific()}) {
+            target = &specific->GetUltimate();
+          } else {
+            context_.Say(name.source,
+                "A generic interface name may not appear in an ACC ROUTINE clause: %s"_err_en_US,
+                name.source);
+            continue;
+          }
+        }
+        AddRoutineInfoToSymbol(*target, x);
       } else {
         context_.Say(name.source,
             "No function or subroutine declared for '%s'"_err_en_US,

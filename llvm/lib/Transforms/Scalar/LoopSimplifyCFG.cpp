@@ -77,7 +77,6 @@ static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
                                  Loop *LastLoop = nullptr) {
   assert((!LastLoop || LastLoop->contains(FirstLoop->getHeader())) &&
          "First loop is supposed to be inside of last loop!");
-  assert(FirstLoop->contains(BB) && "Must be a loop block!");
   for (Loop *Current = FirstLoop; Current != LastLoop;
        Current = Current->getParentLoop())
     Current->removeBlockFromLoop(BB);

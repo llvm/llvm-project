@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -emit-llvm %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -fopenmp -emit-llvm %s -o - | FileCheck %s
 
 ! Combinational testing of control flow graph and builder insertion points
 ! in mlir-to-llvm conversion:
@@ -148,7 +148,7 @@ end subroutine
 ! CHECK:       omp.par.region31:                                 ; preds = %omp.par.region29
 ! CHECK-NEXT:    br label %omp.region.cont28
 
-! CHECK:       omp.region.cont28:                                ; preds = %omp.par.region30, %omp.par.region31
+! CHECK:       omp.region.cont28:                                ; preds = %omp.par.region31
 !                [omp parallel region done, call into the runtime to complete reduction]
 ! CHECK:         %[[VAL_233:.*]] = call i32 @__kmpc_reduce(
 ! CHECK:         switch i32 %[[VAL_233]], label %reduce.finalize [
@@ -197,6 +197,7 @@ end subroutine
 
 ! CHECK:       omp.par.region30:                                 ; preds = %omp.par.region29
 ! CHECK-NEXT:    call void @_FortranAStopStatement
+! CHECK-NEXT:    unreachable
 
 ! CHECK:       omp.reduction.neutral25:                          ; preds = %omp.reduction.neutral24
 !                [source length was zero: finish initializing array]

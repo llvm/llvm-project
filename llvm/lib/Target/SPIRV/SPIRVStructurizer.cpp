@@ -23,12 +23,12 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include <optional>
 #include <stack>
 
 using namespace llvm;
@@ -36,14 +36,6 @@ using namespace SPIRV;
 
 using BlockSet = SmallPtrSet<BasicBlock *, 0>;
 using Edge = std::pair<BasicBlock *, BasicBlock *>;
-
-// Helper function to do a partial order visit from the block |Start|, calling
-// |Op| on each visited node.
-static void partialOrderVisit(BasicBlock &Start,
-                              std::function<bool(BasicBlock *)> Op) {
-  PartialOrderingVisitor V(*Start.getParent());
-  V.partialOrderVisit(Start, std::move(Op));
-}
 
 // Returns the exact convergence region in the tree defined by `Node` for which
 // `BB` is the header, nullptr otherwise.
@@ -282,7 +274,10 @@ static void replaceBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
 namespace {
 // Given a reducible CFG, produces a structurized CFG in the SPIR-V sense,
 // adding merge instructions when required.
-class SPIRVStructurizer : public FunctionPass {
+class SPIRVStructurizerImpl {
+  LoopInfo &LI;
+  ConvergenceRegionInfo &RegionInfo;
+
   struct DivergentConstruct;
   // Represents a list of condition/loops/switch constructs.
   // See SPIR-V 2.11.2. Structured Control-flow Constructs for the list of
@@ -311,12 +306,14 @@ class SPIRVStructurizer : public FunctionPass {
     LoopInfo &LI;
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
+    std::optional<PartialOrderingVisitor> POV;
 
     Splitter(Function &F, LoopInfo &LI) : F(F), LI(LI) { invalidate(); }
 
     void invalidate() {
       PDT.recalculate(F);
       DT.recalculate(F);
+      POV.emplace(F);
     }
 
     // Returns the list of blocks that belong to a SPIR-V loop construct,
@@ -325,7 +322,7 @@ class SPIRVStructurizer : public FunctionPass {
                                                      BasicBlock *Merge) {
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
         if (BB == Merge)
           return false;
         if (DT.dominates(Merge, BB) || !DT.dominates(Header, BB))
@@ -351,7 +348,7 @@ class SPIRVStructurizer : public FunctionPass {
       }
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
         if (OutsideBlocks.count(BB) != 0)
           return false;
         if (DT.dominates(Node->Merge, BB) || !DT.dominates(Node->Header, BB))
@@ -368,7 +365,7 @@ class SPIRVStructurizer : public FunctionPass {
       assert(DT.dominates(Header, Merge));
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
         // the blocks structurally dominated by a switch header,
         if (!DT.dominates(Header, BB))
           return false;
@@ -388,7 +385,7 @@ class SPIRVStructurizer : public FunctionPass {
       assert(DT.dominates(Target, Merge));
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Target, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Target, [&](BasicBlock *BB) {
         // the blocks structurally dominated by an OpSwitch Target or Default
         // block
         if (!DT.dominates(Target, BB))
@@ -514,11 +511,7 @@ class SPIRVStructurizer : public FunctionPass {
 
   // Add OpLoopMerge instruction on cycles.
   bool addMergeForLoops(Function &F) {
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *TopLevelRegion =
-        getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
-            .getRegionInfo()
-            .getTopLevelRegion();
+    auto *TopLevelRegion = RegionInfo.getTopLevelRegion();
 
     bool Modified = false;
     for (auto &BB : F) {
@@ -605,7 +598,7 @@ class SPIRVStructurizer : public FunctionPass {
   // than another when its target merge block post-dominates the other target's
   // merge block. (This ordering should match the nesting ordering of the source
   // HLSL).
-  bool sortSelectionMerge(Function &F, BasicBlock &Block) {
+  bool sortSelectionMerge(PartialOrderingVisitor &Visitor, BasicBlock &Block) {
     std::vector<Instruction *> MergeInstructions;
     for (Instruction &I : Block)
       if (isMergeInstruction(&I))
@@ -616,7 +609,6 @@ class SPIRVStructurizer : public FunctionPass {
 
     Instruction *InsertionPoint = *MergeInstructions.begin();
 
-    PartialOrderingVisitor Visitor(F);
     llvm::sort(MergeInstructions,
                [&Visitor](Instruction *Left, Instruction *Right) {
                  if (Left == Right)
@@ -639,8 +631,9 @@ class SPIRVStructurizer : public FunctionPass {
   // the one designated by A.
   bool sortSelectionMergeHeaders(Function &F) {
     bool Modified = false;
+    PartialOrderingVisitor Visitor(F);
     for (BasicBlock &BB : F) {
-      Modified |= sortSelectionMerge(F, BB);
+      Modified |= sortSelectionMerge(Visitor, BB);
     }
     return Modified;
   }
@@ -875,7 +868,6 @@ class SPIRVStructurizer : public FunctionPass {
   }
 
   bool splitCriticalEdges(Function &F) {
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     Splitter S(F, LI);
 
     DivergentConstruct Root;
@@ -935,6 +927,16 @@ class SPIRVStructurizer : public FunctionPass {
       auto It = SI->case_begin();
       while (It != SI->case_end()) {
         BasicBlock *Target = It->getCaseSuccessor();
+
+        // Don't Split. Just remove cases branching to the default destination
+        // to prevent spurious extra successors thus preserving single-exit
+        // convergence regions (i.e. if a merged exit is default & a case).
+        if (Target == SI->getDefaultDest()) {
+          Modified = true;
+          It = SI->removeCase(It);
+          continue;
+        }
+
         if (Seen.count(Target) == 0) {
           Seen.insert(Target);
           ++It;
@@ -1070,11 +1072,10 @@ class SPIRVStructurizer : public FunctionPass {
   }
 
 public:
-  static char ID;
+  SPIRVStructurizerImpl(LoopInfo &LI, ConvergenceRegionInfo &RegionInfo)
+      : LI(LI), RegionInfo(RegionInfo) {}
 
-  SPIRVStructurizer() : FunctionPass(ID) {}
-
-  bool runOnFunction(Function &F) override {
+  bool run(Function &F) {
     bool Modified = false;
 
     // In LLVM, Switches are allowed to have several cases branching to the same
@@ -1140,15 +1141,6 @@ public:
     return Modified;
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
-
-    AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
-    FunctionPass::getAnalysisUsage(AU);
-  }
-
   void createOpSelectMerge(IRBuilder<> *Builder, BlockAddress *MergeAddress) {
     Instruction *BBTerminatorInst = Builder->GetInsertBlock()->getTerminator();
 
@@ -1166,6 +1158,30 @@ public:
 
     Builder->CreateIntrinsic(Intrinsic::spv_selection_merge,
                              {MergeAddress->getType()}, Args);
+  }
+};
+
+class SPIRVStructurizer : public FunctionPass {
+public:
+  static char ID;
+
+  SPIRVStructurizer() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &F) override {
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    ConvergenceRegionInfo &RegionInfo =
+        getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
+            .getRegionInfo();
+    return SPIRVStructurizerImpl(LI, RegionInfo).run(F);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
+
+    AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
+    FunctionPass::getAnalysisUsage(AU);
   }
 };
 } // anonymous namespace
@@ -1187,14 +1203,11 @@ FunctionPass *llvm::createSPIRVStructurizerPass() {
 }
 
 PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
-                                                FunctionAnalysisManager &AF) {
-
-  auto FPM = legacy::FunctionPassManager(F.getParent());
-  FPM.add(createSPIRVStructurizerPass());
-
-  if (!FPM.run(F))
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+                                                FunctionAnalysisManager &AM) {
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  ConvergenceRegionInfo &RegionInfo =
+      AM.getResult<SPIRVConvergenceRegionAnalysis>(F);
+  return SPIRVStructurizerImpl(LI, RegionInfo).run(F)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

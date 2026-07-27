@@ -377,4 +377,22 @@ def FallbackModifierAttr : OpenMP_EnumAttr<FallbackModifier,
   let assemblyFormat = "`(` $value `)`";
 }
 
+//===----------------------------------------------------------------------===//
+// interop_type for interop construct
+//===----------------------------------------------------------------------===//
+
+def InteropTypeTarget : I32EnumAttrCase<"target", 0>;
+def InteropTypeTargetSync : I32EnumAttrCase<"targetsync", 1>;
+
+def InteropType : OpenMP_I32EnumAttr<
+    "InteropType",
+    "interop type", [
+      InteropTypeTarget,
+      InteropTypeTargetSync
+    ]>;
+
+def InteropTypeAttr : OpenMP_EnumAttr<InteropType, "interop_type"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
 #endif // OPENMP_ENUMS

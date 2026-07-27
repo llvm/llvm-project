@@ -122,7 +122,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
 
-  CodeModel::Model CM = TgtM.getCodeModel();
+  const CodeModel::Model CM = TgtM.getCodeModel();
   InitializeELF(TgtM.Options.UseInitArray);
 
   switch (TgtM.getTargetTriple().getArch()) {
@@ -150,27 +150,37 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                               dwarf::DW_EH_PE_sdata4
                         : dwarf::DW_EH_PE_absptr;
     break;
-  case Triple::x86_64:
+  case Triple::x86_64: {
+    // The large EH encoding forces 64-bit-wide EH pointers regardless of the
+    // code model, so treat it like the Large code model when selecting
+    // encodings below.
+    const CodeModel::Model EHCM =
+        TgtM.Options.MCOptions.LargeEHEncoding ? CodeModel::Large : CM;
     if (isPositionIndependent()) {
-      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-        ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+      PersonalityEncoding =
+          dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+          ((EHCM == CodeModel::Small || EHCM == CodeModel::Medium)
+               ? dwarf::DW_EH_PE_sdata4
+               : dwarf::DW_EH_PE_sdata8);
       LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-        (CM == CodeModel::Small
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                     (EHCM == CodeModel::Small ? dwarf::DW_EH_PE_sdata4
+                                               : dwarf::DW_EH_PE_sdata8);
       TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-        ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                      ((EHCM == CodeModel::Small || EHCM == CodeModel::Medium)
+                           ? dwarf::DW_EH_PE_sdata4
+                           : dwarf::DW_EH_PE_sdata8);
     } else {
       PersonalityEncoding =
-        (CM == CodeModel::Small || CM == CodeModel::Medium)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
-      LSDAEncoding = (CM == CodeModel::Small)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
-      TTypeEncoding = (CM == CodeModel::Small)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+          (EHCM == CodeModel::Small || EHCM == CodeModel::Medium)
+              ? dwarf::DW_EH_PE_udata4
+              : dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = (EHCM == CodeModel::Small) ? dwarf::DW_EH_PE_udata4
+                                                : dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = (EHCM == CodeModel::Small) ? dwarf::DW_EH_PE_udata4
+                                                 : dwarf::DW_EH_PE_absptr;
     }
     break;
+  }
   case Triple::hexagon:
     PersonalityEncoding = dwarf::DW_EH_PE_absptr;
     LSDAEncoding = dwarf::DW_EH_PE_absptr;
@@ -816,34 +826,14 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM,
   return {Group, IsComdat, Flags, Type, EntrySize};
 }
 
-static StringRef handlePragmaClangSection(const GlobalObject *GO,
-                                          SectionKind Kind) {
-  // Check if '#pragma clang section' name is applicable.
-  // Note that pragma directive overrides -ffunction-section, -fdata-section
-  // and so section name is exactly as user specified and not uniqued.
-  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
-  if (GV && GV->hasImplicitSection()) {
-    auto Attrs = GV->getAttributes();
-    if (Attrs.hasAttribute("bss-section") && Kind.isBSS())
-      return Attrs.getAttribute("bss-section").getValueAsString();
-    else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())
-      return Attrs.getAttribute("rodata-section").getValueAsString();
-    else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel())
-      return Attrs.getAttribute("relro-section").getValueAsString();
-    else if (Attrs.hasAttribute("data-section") && Kind.isData())
-      return Attrs.getAttribute("data-section").getValueAsString();
-  }
-
-  return GO->getSection();
-}
-
 static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
                                               SectionKind Kind,
                                               const TargetMachine &TM,
                                               MCContext &Ctx, Mangler &Mang,
                                               unsigned &NextUniqueID,
                                               bool Retain, bool ForceUnique) {
-  StringRef SectionName = handlePragmaClangSection(GO, Kind);
+  StringRef SectionName =
+      TargetLoweringObjectFile::getCustomSectionName(GO, TM);
 
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
@@ -1384,7 +1374,8 @@ static void checkMachOComdat(const GlobalValue *GV) {
 MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
 
-  StringRef SectionName = handlePragmaClangSection(GO, Kind);
+  StringRef SectionName =
+      TargetLoweringObjectFile::getCustomSectionName(GO, TM);
 
   // Parse the section specifier and create it if valid.
   StringRef Segment, Section;
@@ -1750,7 +1741,7 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  StringRef Name = handlePragmaClangSection(GO, Kind);
+  StringRef Name = TargetLoweringObjectFile::getCustomSectionName(GO, TM);
   if (Name == getInstrProfSectionName(IPSK_covmap, Triple::COFF,
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covfun, Triple::COFF,

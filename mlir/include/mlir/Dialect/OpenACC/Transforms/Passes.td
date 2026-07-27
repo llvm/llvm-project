@@ -157,6 +157,10 @@ def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mli
     that device code can reference them.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", "false",
+           "Emit declaration-only device globals for CUDA unified memory.">
+  ];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
@@ -539,6 +543,35 @@ def ACCBindRoutine
     call target.
   }];
   let options = [ AccDeviceTypeOption ];
+}
+
+def ACCCGToGPU : InterfacePass<"acc-cg-to-gpu", "mlir::FunctionOpInterface"> {
+  let summary = "Lower acc.compute_region to gpu.launch";
+  let description = [{
+    Generate GPU code for acc.compute_region loop nests by converting them to
+    gpu.launch and mapping acc.par_dims parallelism to GPU block and thread
+    dimensions.
+  }];
+  let options = [
+    AccDeviceTypeOption,
+    Option<"maxWorkgroupSharedMemory", "max-workgroup-shared-memory", "int64_t",
+        "49152",
+        "Maximum workgroup shared memory budget in bytes.">,
+    Option<"maxThreadPrivateStack", "max-thread-private-stack", "int64_t",
+        "16384",
+        "Maximum thread-private stack allocation in bytes.">,
+    Option<"subgroupSize", "subgroup-size", "int64_t", "32",
+        "Subgroup size used for block-dimension alignment and reductions.">
+  ];
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::complex::ComplexDialect",
+    "mlir::gpu::GPUDialect",
+    "mlir::acc::OpenACCDialect",
+    "mlir::scf::SCFDialect",
+    "mlir::NVVM::NVVMDialect",
+    "mlir::memref::MemRefDialect"
+  ];
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES
