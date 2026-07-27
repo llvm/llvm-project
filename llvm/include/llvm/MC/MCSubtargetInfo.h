@@ -22,6 +22,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -104,9 +105,28 @@ struct SubtargetSubTypeKV {
   }
 };
 
-template <size_t NumSubTypes, size_t SubTypeStrTabSize>
+/// Maps a CPU alias name to the index of the processor it resolves to.
+struct SubtargetSubTypeAliasKV {
+  uint16_t KeyStrOff;  ///< Relative offset to the alias name.
+  uint16_t SubTypeIdx; ///< Index into the SubtargetSubTypeKV array.
+
+  constexpr SubtargetSubTypeAliasKV(uint16_t KeyStrOff, uint16_t SubTypeIdx)
+      : KeyStrOff(KeyStrOff), SubTypeIdx(SubTypeIdx) {}
+
+  SubtargetSubTypeAliasKV(const SubtargetSubTypeAliasKV &) = delete;
+  SubtargetSubTypeAliasKV &operator=(const SubtargetSubTypeAliasKV &) = delete;
+
+  const char *key() const {
+    return reinterpret_cast<const char *>(this) + KeyStrOff;
+  }
+
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
+};
+
+template <size_t NumSubTypes, size_t NumAliases, size_t SubTypeStrTabSize>
 struct SubtargetSubTypeKVStorage {
   SubtargetSubTypeKV SubTypes[NumSubTypes];
+  std::array<SubtargetSubTypeAliasKV, NumAliases> Aliases;
   char Strings[SubTypeStrTabSize];
 };
 
@@ -121,6 +141,7 @@ class LLVM_ABI MCSubtargetInfo {
   StringTable ProcNames; // Processor list, including aliases
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
+  ArrayRef<SubtargetSubTypeAliasKV> ProcAliases; // CPU alias -> processor map
   const MCSchedModel *ProcSchedModels;    ///< Processor scheduling models.
 
   // Scheduler machine model
@@ -139,7 +160,8 @@ public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                   StringRef FS, StringTable PN, ArrayRef<SubtargetFeatureKV> PF,
-                  ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
+                  ArrayRef<SubtargetSubTypeKV> PD,
+                  ArrayRef<SubtargetSubTypeAliasKV> PA, const MCSchedModel *PSM,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
                   const unsigned *OC, const unsigned *FP);
@@ -273,11 +295,12 @@ public:
     return 0;
   }
 
+  /// Look up the processor entry for a CPU name, resolving aliases. Returns
+  /// nullptr if the name matches neither a processor nor an alias.
+  const SubtargetSubTypeKV *resolveCPU(StringRef CPU) const;
+
   /// Check whether the CPU string is valid.
-  bool isCPUStringValid(StringRef CPU) const {
-    auto Found = llvm::lower_bound(ProcDesc, CPU);
-    return Found != ProcDesc.end() && StringRef(Found->key()) == CPU;
-  }
+  bool isCPUStringValid(StringRef CPU) const { return resolveCPU(CPU); }
 
   /// Return processor descriptions.
   ArrayRef<SubtargetSubTypeKV> getAllProcessorDescriptions() const {
