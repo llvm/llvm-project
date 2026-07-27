@@ -3651,6 +3651,34 @@ static bool hasDeducedReturnType(FunctionDecl *FD) {
   return FPT->getReturnType()->isUndeducedType();
 }
 
+/// Determine whether a return statement encountered in the current context
+/// is allowed to partake in return type deduction.
+static bool AllowReturnTypeDeductionInCurrentContext(Sema &S) {
+  // C++1z: discarded return statements are not considered when deducing a
+  // return type.
+  //
+  // Also ignore return statements within an unexpanded expansion statement
+  // since we'll revisit them anyway once we expand it; this way, we don't
+  // have to try and compute the expansion size ahead of time to figure out
+  // if it is 0 (and if the expansion statement body is thus discarded).
+  return !S.ExprEvalContexts.back().isDiscardedStatementContext() &&
+         !S.CurContext->isExpansionStmt();
+}
+
+/// Build a return statement that is in a discarded context.
+static StmtResult BuildDiscardedReturnStmt(Sema &S, Expr *RetValExp,
+                                           SourceLocation ReturnLoc) {
+  if (RetValExp) {
+    ExprResult ER =
+        S.ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue=*/false);
+    if (ER.isInvalid())
+      return StmtError();
+    RetValExp = ER.get();
+  }
+  return ReturnStmt::Create(S.Context, ReturnLoc, RetValExp,
+                            /* NRVOCandidate=*/nullptr);
+}
+
 StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
                                          Expr *RetValExp,
                                          NamedReturnInfo &NRInfo,
@@ -3665,18 +3693,9 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   bool HasDeducedReturnType =
       CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 
-  if (ExprEvalContexts.back().isDiscardedStatementContext() &&
-      (HasDeducedReturnType || CurCap->HasImplicitReturnType)) {
-    if (RetValExp) {
-      ExprResult ER =
-          ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue*/ false);
-      if (ER.isInvalid())
-        return StmtError();
-      RetValExp = ER.get();
-    }
-    return ReturnStmt::Create(Context, ReturnLoc, RetValExp,
-                              /* NRVOCandidate=*/nullptr);
-  }
+  if ((HasDeducedReturnType || CurCap->HasImplicitReturnType) &&
+      !AllowReturnTypeDeductionInCurrentContext(*this))
+    return BuildDiscardedReturnStmt(*this, RetValExp, ReturnLoc);
 
   if (HasDeducedReturnType) {
     FunctionDecl *FD = CurLambda->CallOperator;
@@ -4012,7 +4031,7 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
-  if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
+  if (R.isInvalid() || !AllowReturnTypeDeductionInCurrentContext(*this))
     return R;
 
   VarDecl *VD =
@@ -4122,20 +4141,9 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     }
   }
 
-  // C++1z: discarded return statements are not considered when deducing a
-  // return type.
-  if (ExprEvalContexts.back().isDiscardedStatementContext() &&
-      FnRetType->getContainedAutoType()) {
-    if (RetValExp) {
-      ExprResult ER =
-          ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue*/ false);
-      if (ER.isInvalid())
-        return StmtError();
-      RetValExp = ER.get();
-    }
-    return ReturnStmt::Create(Context, ReturnLoc, RetValExp,
-                              /* NRVOCandidate=*/nullptr);
-  }
+  if (FnRetType->getContainedAutoType() &&
+      !AllowReturnTypeDeductionInCurrentContext(*this))
+    return BuildDiscardedReturnStmt(*this, RetValExp, ReturnLoc);
 
   // FIXME: Add a flag to the ScopeInfo to indicate whether we're performing
   // deduction.
