@@ -20,7 +20,14 @@ void main(uint3 Tid : SV_DispatchThreadID) {
     Buf.Store(Tid.x * 4, 99);
 }
 
-// Binding wrapper for GBuf0 (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}__createFromBinding{{.*}}@_ZL5GBuf0,
-// Binding wrapper for GBuf1 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}__createFromBinding{{.*}}@_ZL5GBuf1,
+// Buf is initialized from GBuf0 and reassigned to GBuf1 in the continue-branch.
+// Verify the actual bindings that Buf carries, not just that the global wrappers exist.
+// CHECK-LABEL: define {{.*}}@_Z4mainDv3_j(
+// CHECK: %Buf = alloca %"class.hlsl::RWByteAddressBuffer"
+// Init: Buf is copy-constructed from GBuf0.
+// CHECK: call void @{{.*}}RWByteAddressBufferC1{{.*}}(ptr {{.*}} %Buf, ptr {{.*}} @_ZL5GBuf0
+// Reassign in the continue-branch: Buf is copy-assigned from GBuf1.
+// CHECK: call {{.*}}ptr @{{.*}}RWByteAddressBufferaS{{.*}}(ptr {{.*}} %Buf, ptr {{.*}} @_ZL5GBuf1
+// Both Stores go through Buf (never through a global directly).
+// CHECK: call void @{{.*}}RWByteAddressBuffer5Store{{.*}}(ptr {{.*}} %Buf,
+// CHECK: call void @{{.*}}RWByteAddressBuffer5Store{{.*}}(ptr {{.*}} %Buf,

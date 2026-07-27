@@ -9,7 +9,7 @@ void DoStore(RWByteAddressBuffer Buf) {
     Buf.Store(0, 42);
 }
 void DoStore(RWStructuredBuffer<uint> Buf) {
-    Buf[0] = 42;
+    Buf[0] = 77;
 }
 
 [numthreads(1,1,1)]
@@ -21,7 +21,10 @@ void main() {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for GSB (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// LocalBuf is bound to GBuf (u0, space0) and Stores 42; LocalSB is bound to GSB (u1, space0) and Stores 77.
+// CHECK: %[[HB:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[HS:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// CHECK: %[[PB:[^ ]+]] = call {{.*}}ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HB]], i32 0)
+// CHECK: store i32 42, ptr %[[PB]]
+// CHECK: %[[PS:[^ ]+]] = call {{.*}}ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HS]], i32 0)
+// CHECK: store i32 77, ptr %[[PS]]

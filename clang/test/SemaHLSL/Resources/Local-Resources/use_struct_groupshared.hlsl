@@ -4,17 +4,16 @@
 // expected-no-diagnostics
 RWByteAddressBuffer GOut  : register(u3);
 
-uint DoStore(RWByteAddressBuffer Buf, uint Offset, uint Value) {
+void DoStore(RWByteAddressBuffer Buf, uint Offset, uint Value) {
     Buf.Store(Offset, Value);
-    return Value;
 }
 
 struct PassBufStruct { RWByteAddressBuffer Buf; };
 
 groupshared PassBufStruct SharedStruct;
 
-uint Use_PassSharedStruct(uint Idx) {
-    return DoStore(SharedStruct.Buf, Idx * 4, 1);
+void Use_PassSharedStruct(uint Idx) {
+    DoStore(SharedStruct.Buf, Idx * 4, 1);
 }
 
 [numthreads(8,8,1)]

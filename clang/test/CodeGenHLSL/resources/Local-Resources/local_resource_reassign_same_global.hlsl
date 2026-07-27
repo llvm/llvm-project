@@ -15,7 +15,12 @@ void main(uint3 Tid : SV_DispatchThreadID) {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for In (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for Out0 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// In (u0, space0) is loaded from and Out0 (u1, space0) is stored to; Out only ever holds Out0.
+// CHECK: %[[HI:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[HO:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// In.Load(0) reads via In's handle.
+// CHECK: %[[PI:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HI]], i32 0)
+// CHECK: %[[V:[^ ]+]] = load i32, ptr %[[PI]]
+// Out.Store(0, In.Load(0)) writes via Out0's handle.
+// CHECK: %[[PO:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HO]], i32 0)
+// CHECK: store i32 %[[V]], ptr %[[PO]]

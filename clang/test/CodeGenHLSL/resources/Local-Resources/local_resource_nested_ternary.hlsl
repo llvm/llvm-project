@@ -5,12 +5,10 @@
 RWByteAddressBuffer GBuf0 : register(u0);
 RWByteAddressBuffer GBuf1 : register(u1);
 
-uint Pass_IfAlias(bool Cond, uint Idx) {
+void Pass_IfAlias(bool Cond, uint Idx) {
     RWByteAddressBuffer Buf;
     Buf = Cond ? GBuf0 : GBuf1;
     Buf.Store(Idx * 4, 14);
-
-    return 14;
 }
 
 [numthreads(8,8,1)]

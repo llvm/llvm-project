@@ -4,7 +4,7 @@
 RWByteAddressBuffer GBuf1 : register(u1);
 RWByteAddressBuffer GBuf2 : register(u2);
 
-uint Pass_NestedBlocks(uint Cond, uint Idx) {
+void Pass_NestedBlocks(uint Cond, uint Idx) {
 // expected-note@+1 {{variable 'Buf' is declared here}}
     RWByteAddressBuffer Buf;
     {
@@ -15,7 +15,6 @@ uint Pass_NestedBlocks(uint Cond, uint Idx) {
         }
     }
     Buf.Store(Idx * 4, 32);
-    return 32;
 }
 
 [numthreads(8,8,1)]

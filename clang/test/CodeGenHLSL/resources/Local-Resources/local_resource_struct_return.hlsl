@@ -19,5 +19,7 @@ void main() {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// GBuf's handle (u0, space0) flows into the Store of 42 at offset 0.
+// CHECK: %[[H:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[P:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H]], i32 0)
+// CHECK: store i32 42, ptr %[[P]]

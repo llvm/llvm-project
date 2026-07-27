@@ -12,7 +12,12 @@ void main() {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for In (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for space0_u1 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// In (u0, space0) is loaded from; OutArr[0] (u1, space0) is stored to; the ternary always folds to OutArr[0].
+// CHECK: %[[HI:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[HO:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// In.Load(0)
+// CHECK: %[[PI:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HI]], i32 0)
+// CHECK: %[[V:[^ ]+]] = load i32, ptr %[[PI]]
+// OutArr[0].Store(0, In.Load(0))
+// CHECK: %[[PO:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HO]], i32 0)
+// CHECK: store i32 %[[V]], ptr %[[PO]]

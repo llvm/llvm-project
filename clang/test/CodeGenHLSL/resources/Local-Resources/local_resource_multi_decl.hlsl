@@ -13,7 +13,10 @@ void main() {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf0 (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for GBuf1 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// A holds GBuf0 (u0, space0) and B holds GBuf1 (u1, space0), each stored to at offset 0 with value 42.
+// CHECK: %[[H0:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[H1:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// CHECK: %[[P0:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H0]], i32 0)
+// CHECK: store i32 42, ptr %[[P0]]
+// CHECK: %[[P1:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H1]], i32 0)
+// CHECK: store i32 42, ptr %[[P1]]

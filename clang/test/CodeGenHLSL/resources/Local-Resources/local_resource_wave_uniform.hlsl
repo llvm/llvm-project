@@ -5,13 +5,11 @@
 RWByteAddressBuffer GBuf0 : register(u0);
 RWByteAddressBuffer GBuf1 : register(u1);
 
-uint Fail_WaveUniform(uint Offset, uint Value) {
+void Fail_WaveUniform(uint Offset, uint Value) {
     RWByteAddressBuffer Buf = GBuf0;
     if (WaveActiveAllTrue(true))
         Buf = GBuf1;
     Buf.Store(Offset, Value);
-
-    return Value;
 }
 
 [numthreads(1,1,1)]

@@ -15,7 +15,12 @@ void main(uint3 Tid : SV_DispatchThreadID) {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf0 (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for GBuf1 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// After (true ? A : B) = GBuf0, A stays bound to GBuf0 (u0) and B stays bound to GBuf1 (u1).
+// CHECK: %[[H0:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[H1:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// A.Store(Tid.x*4, 1) writes through GBuf0.
+// CHECK: %[[PA:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H0]], i32 %{{[^,)]+}})
+// CHECK: store i32 1, ptr %[[PA]]
+// B.Store(Tid.x*4, 2) writes through GBuf1.
+// CHECK: %[[PB:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H1]], i32 %{{[^,)]+}})
+// CHECK: store i32 2, ptr %[[PB]]

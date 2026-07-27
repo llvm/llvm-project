@@ -5,11 +5,9 @@
 RWByteAddressBuffer GBuf0 : register(u0);
 RWByteAddressBuffer GBuf1 : register(u1);
 
-uint Pass_TernaryInit(bool Cond, uint Idx) {
+void Pass_TernaryInit(bool Cond, uint Idx) {
     RWByteAddressBuffer Buf = Cond ? GBuf0 : GBuf1;
     Buf.Store(Idx * 4, 2);
-
-    return 2;
 }
 
 [numthreads(8,8,1)]

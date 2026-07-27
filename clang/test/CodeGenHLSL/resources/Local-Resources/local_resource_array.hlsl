@@ -8,14 +8,18 @@ RWByteAddressBuffer Aux : register(u1);
 [numthreads(1,1,1)]
 void main() {
     RWByteAddressBuffer Arr[2];
+    RWByteAddressBuffer Arr2[1];
     Arr[0] = Out;
-    Arr[1] = Aux;
+    Arr2[0] = Aux;
     Arr[0].Store(0, 42);
-    Arr[1].Store(4, 99);
+    Arr2[0].Store(4, 99);
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for Out (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for Aux (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// Out's handle (u0, space0) flows into Store 42 at offset 0; Aux's (u1, space0) into Store 99 at offset 4.
+// CHECK: %[[H0:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[H1:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// CHECK: %[[P0:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H0]], i32 0)
+// CHECK: store i32 42, ptr %[[P0]]
+// CHECK: %[[P1:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H1]], i32 4)
+// CHECK: store i32 99, ptr %[[P1]]

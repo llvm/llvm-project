@@ -17,7 +17,12 @@ void main() {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf0 (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for GBuf1 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// After swap, A holds GBuf1 (u1, space0) and B holds GBuf0 (u0, space0).
+// CHECK: %[[H0:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[H1:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// A.Store(0, 1) writes through GBuf1's handle.
+// CHECK: %[[PA:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H1]], i32 0)
+// CHECK: store i32 1, ptr %[[PA]]
+// B.Store(0, 2) writes through GBuf0's handle.
+// CHECK: %[[PB:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H0]], i32 0)
+// CHECK: store i32 2, ptr %[[PB]]

@@ -5,10 +5,9 @@
 // expected-note@*:* {{candidate function not viable: 'this' object is in address space 'groupshared', but method expects object in generic address space}}
 groupshared RWByteAddressBuffer SharedBuf;
 
-uint Use_SharedDirect(uint Idx) {
+void Use_SharedDirect(uint Idx) {
 // expected-error@+1 {{no matching member function for call to 'Store'}}
     SharedBuf.Store(Idx * 4, 1);
-    return 1;
 }
 
 [numthreads(8,8,1)]

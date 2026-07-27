@@ -4,9 +4,9 @@
 // expected-no-diagnostics
 RWByteAddressBuffer GBuf0 : register(u0);
 
-uint Fail_StaticConst(uint Idx) {
+void Fail_StaticConst(uint Idx) {
     static const RWByteAddressBuffer Buf = GBuf0;
-    return Buf.Load(Idx * 4);
+    Buf.Load(Idx * 4);
 }
 
 [numthreads(1,1,1)]

@@ -9,13 +9,20 @@ RWByteAddressBuffer GBuf1 : register(u1);
 void main() {
     RWByteAddressBuffer Buf = GBuf0;
     {
+        // Inner scope shadow: Buf refers to GBuf1 here.
         RWByteAddressBuffer Buf = GBuf1;
         Buf.Store(0, 42);
     }
+    // Outer scope: after the inner block exits, Buf refers to GBuf0 again.
+    Buf.Store(4, 99);
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf1 (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
-// Local resource resolves unambiguously; GBuf0's binding is folded away.
-// CHECK-NOT: handlefrombinding{{.*}}(i32 0, i32 0,
+// Inner-scope Buf resolves to GBuf1 (u1) — Store(0, 42) writes through GBuf1's handle.
+// Outer-scope Buf (after inner block) resolves to GBuf0 (u0) — Store(4, 99) writes through GBuf0's handle.
+// CHECK: %[[H0:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[H1:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// CHECK: %[[PIN:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H1]], i32 0)
+// CHECK: store i32 42, ptr %[[PIN]]
+// CHECK: %[[POUT:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H0]], i32 4)
+// CHECK: store i32 99, ptr %[[POUT]]

@@ -14,7 +14,18 @@ void main() {
     Dst[0].Store(0, 42);
 }
 
-// Binding wrapper for Out (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}__createFromBinding{{.*}}@_ZL3Out,
-// Binding wrapper for Aux (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}__createFromBinding{{.*}}@_ZL3Aux,
+// Verify the actual binding chain: Src[0]<-Out, Src[1]<-Aux, and Dst[0].Store
+// goes through a %Dst-derived pointer (so Dst[0] carries Out's binding via the array copy).
+// CHECK-LABEL: define {{.*}}@_Z4mainv(
+// CHECK: %Src = alloca [2 x %"class.hlsl::RWByteAddressBuffer"]
+// CHECK: %Dst = alloca [2 x %"class.hlsl::RWByteAddressBuffer"]
+// After the default-init arrayctor loop, Src[0] is copy-assigned from Out and Src[1] from Aux.
+// CHECK: arrayctor.cont:
+// CHECK: %[[SRC0:[^ ]+]] = getelementptr inbounds {{.*}}ptr %Src, i32 0, i32 0
+// CHECK-NEXT: %{{.*}} = call {{.*}}RWByteAddressBufferaS{{.*}}(ptr {{.*}} %[[SRC0]], ptr {{.*}} @_ZL3Out
+// CHECK: %[[SRC1:[^ ]+]] = getelementptr inbounds {{.*}}ptr %Src, i32 0, i32 1
+// CHECK-NEXT: %{{.*}} = call {{.*}}RWByteAddressBufferaS{{.*}}(ptr {{.*}} %[[SRC1]], ptr {{.*}} @_ZL3Aux
+// After the elementwise Dst = Src copy loop, the Store must go through Dst[0].
+// CHECK: arrayinit.end:
+// CHECK: %[[DST0:[^ ]+]] = getelementptr inbounds {{.*}}ptr %Dst, i32 0, i32 0
+// CHECK-NEXT: call void @{{.*}}RWByteAddressBuffer5Store{{.*}}(ptr {{.*}} %[[DST0]],

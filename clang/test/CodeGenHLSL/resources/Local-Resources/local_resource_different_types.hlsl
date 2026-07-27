@@ -14,7 +14,10 @@ void main() {
 }
 
 // CHECK-LABEL: define {{.*}}@main(
-// Binding for GBuf (register(u0, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
-// Binding for GSB (register(u1, space0)) is emitted.
-// CHECK-DAG: call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// GBuf (u0, space0): LocalBuf.Store(0, 42). GSB (u1, space0): LocalSB[0] = 99.
+// CHECK: %[[HB:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
+// CHECK: %[[HS:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
+// CHECK: %[[PB:[^ ]+]] = call {{.*}}ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HB]], i32 0)
+// CHECK: store i32 42, ptr %[[PB]]
+// CHECK: %[[PS:[^ ]+]] = call {{.*}}ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[HS]], i32 0)
+// CHECK: store i32 99, ptr %[[PS]]

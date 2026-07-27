@@ -5,7 +5,7 @@ RWByteAddressBuffer GBuf0 : register(u0);
 RWByteAddressBuffer GBuf1 : register(u1);
 RWByteAddressBuffer GBuf2 : register(u2);
 
-uint Pass_Switch(int V, uint Idx) {
+void Pass_Switch(int V, uint Idx) {
 // expected-note@+1 2 {{variable 'Buf' is declared here}}
     RWByteAddressBuffer Buf = GBuf0;
     switch (V) {
@@ -15,7 +15,6 @@ uint Pass_Switch(int V, uint Idx) {
         case 2: Buf = GBuf2; break;
     }
     Buf.Store(Idx * 4, 20);
-    return 20;
 }
 
 [numthreads(8,8,1)]

@@ -5,15 +5,13 @@
 RWByteAddressBuffer GBuf0 : register(u0);
 RWByteAddressBuffer GBufArray[4] : register(u10);
 
-uint Pass_LoopCarried(int Iterations, uint Idx) {
+void Pass_LoopCarried(int Iterations, uint Idx) {
     RWByteAddressBuffer Buf = GBuf0;
 
-    for (int I=0;I<Iterations;I++)
+    for (int I = 0; I < Iterations; I++)
         Buf = GBufArray[I & 3];
 
     Buf.Store(Idx * 4, 26);
-
-    return 26;
 }
 
 [numthreads(8,8,1)]
