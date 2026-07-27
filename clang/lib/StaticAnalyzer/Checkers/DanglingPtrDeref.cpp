@@ -3,16 +3,18 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
 using namespace ento;
 
 namespace {
-class DanglingPtrDeref : public Checker<check::Location> {
+class DanglingPtrDeref : public Checker<check::Location, check::PostCall> {
 public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
+  void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
@@ -48,13 +50,37 @@ void DanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   }
 }
 
+void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
+                                     CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  // Only check calls arguments if it is not inlined by the engine. In case a
+  // function is inlined checkLocation handles any dereference in its body.
+  if (C.wasInlined)
+    return;
+
+  for (unsigned Idx = 0; Idx < Call.getNumArgs(); Idx++) {
+    if (const MemRegion *ArgRegion = Call.getArgSVal(Idx).getAsRegion())
+      if (lifetime_modeling::isDeallocated(State, ArgRegion))
+        if (ExplodedNode *N = C.generateNonFatalErrorNode())
+          reportUseAfterScope(ArgRegion, N, C);
+  }
+}
+
+static std::string getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string &RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  llvm_unreachable("unhandled region");
+}
+
 void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
                                            ExplodedNode *N,
                                            CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Use of '") + Region->getString() +
-       "' after its lifetime ended."),
+      (llvm::Twine("Use of ") + getRegionName(Region) +
+       " after its lifetime ended."),
       N);
   BR->addVisitor<DanglingPtrDerefBRVisitor>(Region);
   C.emitReport(std::move(BR));
@@ -81,8 +107,7 @@ DanglingPtrDerefBRVisitor::VisitNode(const ExplodedNode *N,
       S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (llvm::Twine("'") + SourceRegion->getString() + "' is destroyed here")
-          .str(),
+      (getRegionName(SourceRegion) + llvm::Twine(" is destroyed here")).str(),
       true);
 }
 

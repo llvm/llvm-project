@@ -497,6 +497,7 @@ private:
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;

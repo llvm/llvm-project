@@ -1155,8 +1155,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   FPTruncActions.scalarize(0).lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
-      .legalFor({{S64, S32}, {S32, S16}})
-      .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32))
+      .legalFor({{F64, F32}, {F32, F16}})
+      .narrowScalarFor({{F64, F16}}, changeElementSizeTo(0, F32))
+      .lowerFor({{F32, BF16}, {F64, BF16}})
       .scalarize(0);
 
   auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
