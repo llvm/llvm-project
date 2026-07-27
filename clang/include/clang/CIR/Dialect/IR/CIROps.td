@@ -4717,6 +4717,7 @@ class CIR_CoroIntrinsicOp<string mnem, dag ins, dag outs,
     `(` operands `)` `:` functional-type(operands, results) attr-dict
   }];
 }
+
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic IdOp
 //===----------------------------------------------------------------------===//
@@ -4758,11 +4759,12 @@ def CIR_CoroIntrinsicAllocOp : CIR_CoroIntrinsicOp<"alloc",
   }];
 }
 
-// TODO: Replace the `id` operand with MLIR's `token` type once it becomes
-// available. This operand corresponds to the token produced by `llvm.coro.id`.
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic BeginOp
 //===----------------------------------------------------------------------===//
+
+// TODO: Replace the `id` operand with MLIR's `token` type once it becomes
+// available. This operand corresponds to the token produced by `llvm.coro.id`.
 def CIR_CoroIntrinsicBeginOp : CIR_CoroIntrinsicOp<"begin",
     (ins CIR_UInt32:$id, CIR_VoidPtrType:$coroframeAddr),
     (outs CIR_VoidPtrType:$result)> {
@@ -4777,6 +4779,7 @@ def CIR_CoroIntrinsicBeginOp : CIR_CoroIntrinsicOp<"begin",
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic EndOp
 //===----------------------------------------------------------------------===//
+
 def CIR_CoroIntrinsicEndOp : CIR_CoroIntrinsicOp<"end",
     (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind),
     (outs CIR_AnyBoolType:$result)> {
@@ -4791,11 +4794,12 @@ def CIR_CoroIntrinsicEndOp : CIR_CoroIntrinsicOp<"end",
   }];
 }
 
-// TODO: Replace the `id` operand with MLIR's `token` type once it becomes
-// available. This operand corresponds to the token produced by `llvm.coro.id`.
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic FreeOp
 //===----------------------------------------------------------------------===//
+
+// TODO: Replace the `id` operand with MLIR's `token` type once it becomes
+// available. This operand corresponds to the token produced by `llvm.coro.id`.
 def CIR_CoroIntrinsicFreeOp : CIR_CoroIntrinsicOp<"free",
     (ins CIR_AnyIntType:$id, CIR_VoidPtrType:$coroframe),
     (outs CIR_VoidPtrType:$result)> {
@@ -4811,21 +4815,13 @@ def CIR_CoroIntrinsicFreeOp : CIR_CoroIntrinsicOp<"free",
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic SizeOp
 //===----------------------------------------------------------------------===//
+
 def CIR_CoroIntrinsicSizeOp : CIR_CoroIntrinsicOp<"size",
     (ins), (outs CIR_UInt64:$result)> {
   let summary = "Represents llvm.coro.size";
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
-}
-
-//===----------------------------------------------------------------------===//
-// Coroutine intrinsic IsInRampOp
-//===----------------------------------------------------------------------===//
-
-def CIR_CoroIntrinsicIsInRampOp : CIR_CoroIntrinsicOp<"is_in_ramp",
-    (ins), (outs CIR_AnyBoolType:$result), [Pure]> {
-  let summary = "";
 }
 
 //===----------------------------------------------------------------------===//

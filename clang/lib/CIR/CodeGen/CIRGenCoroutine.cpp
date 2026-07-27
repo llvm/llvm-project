@@ -233,9 +233,9 @@ CIRGenFunction::emitCoroIDBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
 
   llvm::SmallVector<mlir::Value, 4> args;
-  for (auto const *arg : e->arguments()) {
+  for (const Expr *arg : e->arguments())
     args.push_back(emitScalarExpr(arg));
-  }
+
   auto coroId = cir::CoroIntrinsicIdOp::create(cgm.getBuilder(), loc, args);
   createCoroData(*this, curCoro, coroId, e);
   return coroId;
@@ -266,9 +266,9 @@ CIRGenFunction::emitCoroBeginBuiltinCall(const CallExpr *e) {
   }
   llvm::SmallVector<mlir::Value, 2> args;
   args.push_back(curCoro.data->coroId.getResult());
-  for (auto const *arg : e->arguments()) {
+  for (const Expr *arg : e->arguments())
     args.push_back(emitScalarExpr(arg));
-  }
+
   auto coroBegin =
       cir::CoroIntrinsicBeginOp::create(cgm.getBuilder(), loc, args);
   curCoro.data->coroBegin = coroBegin;
@@ -286,17 +286,19 @@ CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
 cir::CoroIntrinsicFreeOp
 CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
+
   if (!curCoro.data || !curCoro.data->coroId) {
     cgm.error(e->getBeginLoc(), "this builtin expect that __builtin_coro_id has"
                                 " been used earlier in this function");
     return {};
   }
+
   auto coroFree = cir::CoroIntrinsicFreeOp::create(
       cgm.getBuilder(), loc,
       mlir::ValueRange{curCoro.data->coroId.getResult(),
                        curCoro.data->coroBegin});
-  if (curCoro.data)
-    curCoro.data->lastCoroFree = coroFree;
+
+  curCoro.data->lastCoroFree = coroFree;
   return coroFree;
 }
 
