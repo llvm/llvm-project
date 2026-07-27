@@ -12,14 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Opts.inc"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -28,7 +26,6 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
 #include <cctype>
-#include <fstream>
 #include <string>
 
 using namespace llvm;
