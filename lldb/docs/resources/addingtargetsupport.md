@@ -349,7 +349,7 @@ The one example we support right now is AArch64's Scalable Matrix Extension
 We handle this by showing a fake zero value at these times, with a separate
 mode bit in another register so users can tell a real zero from a fake zero.
 
-The more fundemental and the more numerous the registers are, the more
+The more fundamental and the more numerous the registers are, the more
 likely you are to confuse users by showing them even when they are unusable.
 For instance if you have two execution modes that use separate register sets,
 showing both all the time may be confusing for users.
