@@ -4,9 +4,9 @@
 // if there is no target specified.
 
 // RUN: %clang_cc1 -triple amdgcn -emit-llvm -o - %s | FileCheck --check-prefix=NOCPU %s
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx942 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1100 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1200 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.42 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu11.00 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu12.00 -emit-llvm -o - %s | FileCheck %s
 
 __attribute__((target("gws,image-insts,vmem-to-lds-load-insts"))) void test() {}
 
