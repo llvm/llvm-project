@@ -510,9 +510,10 @@ Use of these attributes has been deprecated.
 
 ### Function Pointers
 
-Thread safety attributes may also be applied to function pointer variables and
-fields. The attributes describe the locking behavior of calling through that
-pointer, and the analysis will check calls through the pointer accordingly.
+Thread safety attributes may also be applied to variables, fields, and
+parameters of function pointer (or, in C++, function reference) type. The
+attributes describe the locking behavior of calling through that pointer, and
+the analysis will check calls through the pointer accordingly.
 
 ```c++
 Mutex mu;
@@ -533,14 +534,33 @@ void test(Ops *ops) {
 }
 ```
 
-Note that the attributes are on the *variable* (or field), not on the function
-pointer type. Assigning a function with different (or no) attributes to an
-annotated function pointer variable is not diagnosed. The analysis trusts the
-annotations on the variable at the call site.
+On a parameter, the attributes describe the function reached through the
+parameter, not a capability that the argument stands for: they are checked
+where the parameter is called, and are neither requirements on nor effects for
+callers of the enclosing function. (Contrast this with a parameter of
+`scoped_lockable` reference type, where the attributes describe the locks that
+the passed scope object holds; see {ref}`scoped_capability`.)
 
-This support is limited to plain function pointers. Pointers-to-member
-functions, blocks, and wrapper types such as `std::function` are not
-supported yet.
+```c++
+void visit_all(void (*visit)(int) REQUIRES(mu), int n) {
+  visit(n); // warning: calling function 'visit' requires holding mutex 'mu'
+}
+
+void visit_cb(int) REQUIRES(mu);
+
+void test_param(int n) {
+  visit_all(visit_cb, n); // OK: passing a callee is not a use of 'mu'
+}
+```
+
+Note that the attributes are on the *variable* (or field, or parameter), not on
+the function pointer type. Assigning a function with different (or no)
+attributes to an annotated function pointer variable is not diagnosed. The
+analysis trusts the annotations on the variable at the call site.
+
+This support is limited to plain function pointers and function references.
+Pointers-to-member functions, blocks, and wrapper types such as `std::function`
+are not supported yet.
 
 ### Warning flags
 

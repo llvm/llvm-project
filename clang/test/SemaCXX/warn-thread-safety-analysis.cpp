@@ -8206,4 +8206,97 @@ void test_attr_refers_to_param(Mutex *m) {
   m->Unlock();
 }
 
+// Function references name a function to call just like function pointers do.
+void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+void unlock_impl(void) UNLOCK_FUNCTION(mu);
+void requires_impl(void) EXCLUSIVE_LOCKS_REQUIRED(mu);
+
+void (&lock_ref)(void) EXCLUSIVE_LOCK_FUNCTION(mu) = lock_impl;
+void (&unlock_ref)(void) UNLOCK_FUNCTION(mu) = unlock_impl;
+void (&requires_ref)(void) EXCLUSIVE_LOCKS_REQUIRED(mu) = requires_impl;
+
+void testReferenceAcquireRelease() {
+  lock_ref();
+  x = 1;
+  requires_ref();
+  unlock_ref();
+}
+
+void testReferenceRequiresFail() {
+  requires_ref(); // expected-warning {{calling function 'requires_ref' requires holding mutex 'mu' exclusively}}
+}
+
 } // namespace FunctionPointers
+
+namespace FunctionPointerParams {
+
+// Capability attributes on a parameter that names a function to call -- a
+// function pointer, a function reference, or a reference to either -- describe
+// the function reached through the parameter, not a capability that the bound
+// argument stands for. They are checked where the parameter is called, and are
+// neither requirements on nor effects for callers of the enclosing function.
+
+Mutex mu;
+int x GUARDED_BY(mu);
+
+void callback(int) EXCLUSIVE_LOCKS_REQUIRED(mu);
+
+void takes_ptr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+void takes_ref(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+void takes_ptr_ref(void (*&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+
+// Passing an annotated callee is not itself a use of the capability.
+void testPassCallback(void (*&pcb)(int), int n) {
+  takes_ptr(callback, n);
+  takes_ptr(&callback, n);
+  takes_ref(callback, n);
+  takes_ptr_ref(pcb, n);
+}
+
+// The attributes are checked at the indirect call instead ...
+void testCallPtr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+void testCallRef(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+void testCallPtrRef(void (*&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+// ... where the enclosing function's own requirements can satisfy them.
+void testCallRefLocked(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n)
+    EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  cb(n);
+}
+
+// Acquire and release likewise describe the function called through the
+// parameter, so calling the enclosing function neither acquires nor releases.
+void takes_locker(void (&lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu));
+void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+
+void testAcquireNotTransferred() {
+  takes_locker(lock_impl);
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void testCallAcquires(void (&lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu)) {
+  lock();
+  x = 1;
+  mu.Unlock();
+}
+
+// A dependent parameter type is classified after instantiation.
+template <typename F>
+void callDependent(F cb EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning 2 {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+void testDependent(int n) {
+  callDependent<void (*)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointerParams::callDependent<void (*)(int)>' requested here}}
+  callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointerParams::callDependent<void (&)(int)>' requested here}}
+}
+
+} // namespace FunctionPointerParams

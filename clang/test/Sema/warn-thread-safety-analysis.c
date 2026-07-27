@@ -322,19 +322,19 @@ void test_fp_ops_fail(struct FPOps *ops) {
 // Function pointer parameters. The attributes constrain the function reached
 // through the pointer, so they are checked where the pointer is called, and
 // must not be mistaken for requirements of the enclosing function's callers
-// (nor for scoped-lockable parameter annotations).
+// (nor for scoped-lockable parameter annotations). SemaCXX's
+// warn-thread-safety-analysis.cpp covers the C++ spellings of this.
 typedef void (*visit_fn)(int);
 
+void visit_cb(int x) EXCLUSIVE_LOCKS_REQUIRED(mu1);
 void visit_all(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n);
-void visit_all_locked_fp(void (*visit)(int) EXCLUSIVE_LOCKS_REQUIRED(mu1), int n)
+void visit_all_locked_fp(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n)
     EXCLUSIVE_LOCKS_REQUIRED(mu1) {
   visit(n);
 }
-void visit_all_unlocked_fp(void (*visit)(int) EXCLUSIVE_LOCKS_REQUIRED(mu1), int n) {
+void visit_all_unlocked_fp(visit_fn visit EXCLUSIVE_LOCKS_REQUIRED(mu1), int n) {
   visit(n); // expected-warning {{calling function 'visit' requires holding mutex 'mu1' exclusively}}
 }
-
-void visit_cb(int x) EXCLUSIVE_LOCKS_REQUIRED(mu1);
 
 // Passing an annotated callee is not itself a use of the capability, so these
 // calls do not require mu1 to be held here.
