@@ -1136,6 +1136,19 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   // make sure we have a token we can turn into an annotation token
   if (PP.isBacktrackEnabled()) {
     PP.RevertCachedTokens(1);
+    if (DS.getTypeSpecType() == TST_error && PP.hasCachedTokenLocation()) {
+      // The decltype-specifier failed to parse (e.g. 'decltype' not followed
+      // by '('), so error recovery may have skipped tokens to resynchronize.
+      // The EndLoc computed before that skip is now stale and would no longer
+      // match the most recent cached token, tripping the invariant in
+      // Preprocessor::AnnotatePreviousCachedTokens. Annotate up to the last
+      // cached token instead, mirroring AnnotateExistingIndexedTypeNamePack.
+      // Unlike that pack-indexing path (which needs several lookahead tokens
+      // to be reached), this one can fire with just 'decltype' cached, so the
+      // cache may be empty after RevertCachedTokens; the guard avoids
+      // querying a location that does not exist.
+      EndLoc = PP.getLastCachedTokenLocation();
+    }
   } else
     PP.EnterToken(Tok, /*IsReinject*/ true);
 

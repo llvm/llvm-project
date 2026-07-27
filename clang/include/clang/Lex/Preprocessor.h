@@ -1991,6 +1991,10 @@ public:
     return CachedTokens[CachedLexPos-1].getLastLoc();
   }
 
+  /// Whether there is a cached token that getLastCachedTokenLocation() can
+  /// return the location of (i.e. the backtracking cache is non-empty).
+  bool hasCachedTokenLocation() const { return CachedLexPos != 0; }
+
   /// Whether \p Tok is the most recent token (`CachedLexPos - 1`) in
   /// CachedTokens.
   bool IsPreviousCachedToken(const Token &Tok) const;

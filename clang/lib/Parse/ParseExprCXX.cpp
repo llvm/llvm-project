@@ -169,14 +169,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     SourceLocation DeclLoc = Tok.getLocation();
     SourceLocation EndLoc  = ParseDecltypeSpecifier(DS);
 
-    // Drop an invalid decltype-specifier instead of annotating it as a
-    // nested-name-specifier: the EndLoc may be stale from error recovery,
-    // which would trip an assertion in
-    // Preprocessor::AnnotatePreviousCachedTokens. Mirrors the pack-indexing
-    // check below.
-    if (DS.getTypeSpecType() == DeclSpec::TST_error)
-      return false;
-
     SourceLocation CCLoc;
     // Work around a standard defect: 'decltype(auto)::' is not a
     // nested-name-specifier.
