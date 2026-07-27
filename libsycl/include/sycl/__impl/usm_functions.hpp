@@ -56,6 +56,8 @@ T *malloc_device(std::size_t count, const device &syclDevice,
                  const property_list &propList = {}) {
   // TODO: to rewrite with aligned_malloc_device once it's supported in
   // liboffload.
+  // Why does this need to be rewrited to use aligned version when there is
+  // explicit aligned_malloc_device ?
   return static_cast<T *>(
       malloc_device(count * sizeof(T), syclDevice, syclContext, propList));
 }
