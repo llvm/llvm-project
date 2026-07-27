@@ -12,6 +12,11 @@ class ScriptedHook(metaclass=ABCMeta):
     always be attached as a stop-hook; `handle_module_loaded` and
     `handle_module_unloaded` are optional and only called for hooks
     registered via `target hook add -P`.
+
+    Methods in this class hook into target events and also provide additional
+    hooks to add functionality to the target. Target events are sent to methods
+    whose names start with "handle_". Methods that extend target functionality
+    have names that start with "do_".
     """
 
     target: lldb.SBTarget
@@ -32,6 +37,9 @@ class ScriptedHook(metaclass=ABCMeta):
     def handle_module_loaded(self, stream: lldb.SBStream) -> None:
         """Called whenever a module is loaded into the target.
 
+        Type:
+            Target event notificaton.
+
         Args:
             stream (lldb.SBStream): The stream to which the hook can write
                 output that will be reported to the user.
@@ -40,6 +48,9 @@ class ScriptedHook(metaclass=ABCMeta):
 
     def handle_module_unloaded(self, stream: lldb.SBStream) -> None:
         """Called whenever a module is unloaded from the target.
+
+        Type:
+            Target event notificaton.
 
         Args:
             stream (lldb.SBStream): The stream to which the hook can write
@@ -54,6 +65,9 @@ class ScriptedHook(metaclass=ABCMeta):
         """Called whenever the process stops, before control is returned to
         the user.
 
+        Type:
+            Target event notificaton.
+
         Args:
             exe_ctx (lldb.SBExecutionContext): The execution context at the
                 point of the stop.
@@ -63,5 +77,33 @@ class ScriptedHook(metaclass=ABCMeta):
         Returns:
             bool: `True` if the process should stop and control should be
             returned to the user, `False` if the process should keep running.
+        """
+        pass
+
+
+    def do_resolve_addr(
+        self, load_addr: int, stream: lldb.SBStream) -> lldb.SBAddress:
+        """Called whenever the target is not able to resolve a load address to
+        a section offset address.
+
+        Type:
+            Target functionality extension.
+
+
+        Clients can implement a JIT loader plugin using this method. Anytime the
+        target fails to resolve an address, this method will be called. The
+        function can find the file for the module that contains the address,
+        load it into the target, and return the resolved address. If the
+        address cannot be resolved, return a default construct lldb.SBAddress.
+
+        Args:
+            load_addr (int): The load address to attempt to resolve.
+            stream (lldb.SBStream): The stream to which the hook can write
+                output that will be reported to the user.
+
+        Returns:
+            lldb.SBAddress: If the address was resolved, return a SBAddress
+            that has been resolved to a section offset address, or return a
+            default constructed SBAddress if the address could not be resolved.
         """
         pass

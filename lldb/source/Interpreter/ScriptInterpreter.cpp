@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
@@ -149,6 +151,13 @@ SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
     const lldb::SBSymbolContext &sb_sym_ctx) const {
   if (sb_sym_ctx.m_opaque_up)
     return *sb_sym_ctx.m_opaque_up;
+  return {};
+}
+
+Address ScriptInterpreter::GetOpaqueTypeFromSBAddress(
+    const lldb::SBAddress &sb_addr) const {
+  if (sb_addr.m_opaque_up)
+    return *sb_addr.m_opaque_up;
   return {};
 }
 

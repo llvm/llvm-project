@@ -652,6 +652,8 @@ public:
   SymbolContext
   GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
 
+  Address GetOpaqueTypeFromSBAddress(const lldb::SBAddress &addr) const;
+
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
 

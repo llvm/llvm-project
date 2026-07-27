@@ -59,6 +59,10 @@ PythonObject SWIGBridge::ToSWIGWrapper(const StructuredDataImpl &data_impl) {
   return ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData>(new lldb::SBStructuredData(data_impl)));
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(const Address &addr) {
+  return ToSWIGHelper(new lldb::SBAddress(addr), SWIGTYPE_p_lldb__SBAddress);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ThreadSP thread_sp) {
   return ToSWIGHelper(new lldb::SBThread(std::move(thread_sp)),
                       SWIGTYPE_p_lldb__SBThread);

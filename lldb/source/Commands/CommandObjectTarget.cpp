@@ -5127,8 +5127,8 @@ public:
 Deletes the stop hook by index.
 
 At any given stop, all enabled stop hooks that pass the stop filter will
-get a chance to run.  That means if one stop-hook deletes another stop hook 
-while executing, the deleted stop hook will still fire for the stop at which 
+get a chance to run.  That means if one stop-hook deletes another stop hook
+while executing, the deleted stop hook will still fire for the stop at which
 it was deleted.
         )");
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
@@ -5557,7 +5557,8 @@ Python class hooks:
             pass
         def handle_stop(self, exe_ctx, stream):
             return True  # True = should_stop, False = continue
-
+        def do_resolve_addr(self, load_addr, stream):
+            return lldb.SBAddress()  # Invalid defailt constructed address.
 Filter options:
 ---------------
   Filters (-s, -f, -l, -e, -c, -n, -x, -t, -T, -q) restrict when the hook
@@ -5913,6 +5914,8 @@ protected:
       return Target::Hook::kModulesUnloaded;
     if (name == "stop")
       return Target::Hook::kProcessStop;
+    if (name == "resolve-addr")
+      return Target::Hook::kResolveAddress;
     return 0;
   }
 

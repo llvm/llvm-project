@@ -12,6 +12,12 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBAddress {
@@ -103,6 +109,9 @@ protected:
   friend class SBThreadPlan;
   friend class SBValue;
   friend class SBQueueItem;
+
+  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::python::SWIGBridge;
 
   lldb_private::Address *operator->();
 

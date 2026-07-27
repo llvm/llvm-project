@@ -533,6 +533,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObjec
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBAddress(PyObject * data) {
+  lldb::SBAddress *sb_ptr = nullptr;
+
+//   int valid_cast =
+//       SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBAddress, 0);
+
+//   if (valid_cast == -1)
+//     return NULL;
+
+//   return sb_ptr;
+// }
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data) {
   lldb::SBValue *sb_ptr = NULL;
 
@@ -605,8 +617,8 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *
   if (valid_cast == -1)
     return NULL;
 
-  return sb_ptr;                                                                                                                                                                                  
-}                                                                                                                                                                                                 
+  return sb_ptr;
+}
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger, const char *args,
