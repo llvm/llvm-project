@@ -378,10 +378,10 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
 
 MCRegister SPIRVNonSemanticDebugHandler::emitAndCacheScopePathOpStringReg(
     const DIScope *Scope, SPIRV::ModuleAnalysisInfo &MAI) {
-  MCRegister Reg = emitOpStringIfNew(getDebugFullPath(Scope), MAI);
-  if (Scope)
-    ScopeToPathOpStringReg[Scope] = Reg;
-  return Reg;
+  auto [It, Inserted] = ScopeToPathOpStringReg.try_emplace(Scope, MCRegister());
+  if (Inserted)
+    It->second = emitOpStringIfNew(getDebugFullPath(Scope), MAI);
+  return It->second;
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getCachedScopePathOpStringReg(
