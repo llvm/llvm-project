@@ -982,6 +982,18 @@ def TextureLoad : DXILOp<66, textureLoad> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def TextureStore : DXILOp<67, textureStore> {
+  let Doc = "writes to an RWTexture";
+  // Handle, Coord0, Coord1, Coord2, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy,
+    OverloadTy, Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def BufferLoad : DXILOp<68, bufferLoad> {
   let Doc = "reads from a TypedBuffer";
   // Handle, Coord0, Coord1

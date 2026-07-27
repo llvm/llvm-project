@@ -555,6 +555,51 @@ Examples:
    call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v2f64_1_0_0t(
        target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
 
+For Textures, the coordinates are a scalar for 1D textures and a vector of 2 or
+3 elements for the higher dimensional and array textures. Like TypedBuffer, a
+store writes a whole texel, so partial writes have to be expressed as a
+read-modify-write of the full value.
+
+Examples:
+
+.. list-table:: ``@llvm.dx.resource.store.texture``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - ``void``
+     -
+   * - ``%texture``
+     - 0
+     - ``target(dx.Texture, ...)``
+     - The texture to store into
+   * - ``%coords``
+     - 1
+     - ``i32`` or a 2- or 3-element vector of ``i32``
+     - Coordinates into the texture
+   * - ``%data``
+     - 2
+     - Scalar or vector of the type of the texture
+     - The data to store
+
+Examples:
+
+.. code-block:: llvm
+
+   call void @llvm.dx.resource.store.texture.tdx.Texture_v4f32_1_0_0_1t.i32.v4f32(
+       target("dx.Texture", <4 x float>, 1, 0, 0, 1) %tex,
+       i32 %coord, <4 x float> %data)
+   call void @llvm.dx.resource.store.texture.tdx.Texture_v4f32_1_0_0_2t.v2i32.v4f32(
+       target("dx.Texture", <4 x float>, 1, 0, 0, 2) %tex,
+       <2 x i32> %coords, <4 x float> %data)
+   call void @llvm.dx.resource.store.texture.tdx.Texture_v4f32_1_0_0_4t.v3i32.v4f32(
+       target("dx.Texture", <4 x float>, 1, 0, 0, 4) %tex,
+       <3 x i32> %coords, <4 x float> %data)
+
 For RawBuffer, we need two indices and we accept scalars and vectors of 4 or
 fewer elements. Note that we do allow vectors of 4 64-bit elements here.
 
