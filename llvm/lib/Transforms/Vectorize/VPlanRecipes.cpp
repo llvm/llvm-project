@@ -535,6 +535,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     AssertOperandType(1, Op0Ty);
     return IntegerType::get(Ctx, 1);
   case VPInstruction::MaskedCond:
+  case VPInstruction::MaskBeforeFirst:
     assert(Op0Ty->isIntegerTy(1) && "expected bool operand");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::LogicalAnd:
@@ -676,6 +677,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::MaskBeforeFirst:
   case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::Reverse:
@@ -890,6 +892,13 @@ Value *VPInstruction::generate(VPTransformState &State,
     Value *NumActive =
         Builder.CreateUnaryIntrinsic(Intrinsic::vector_reduce_add, ZExt);
     return NumActive;
+  }
+  case VPInstruction::MaskBeforeFirst: {
+    Value *Cond = State.get(getOperand(0));
+    if (State.VF.isScalar())
+      return Builder.CreateNot(Cond, Name);
+    return Builder.CreateUnaryIntrinsic(Intrinsic::mask_beforefirst, Cond, {},
+                                        Name);
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     // Generate code to combine the previous and current values in vector v3.
@@ -1558,6 +1567,14 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   {ArgTy, ArgTy});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::MaskBeforeFirst: {
+    if (VF.isScalar())
+      return Ctx.TTI.getArithmeticInstrCost(
+          Instruction::Xor, Type::getInt1Ty(Ctx.LLVMCtx), Ctx.CostKind);
+    Type *MaskTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::mask_beforefirst, MaskTy, MaskTy);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
   case VPInstruction::ExplicitVectorLength: {
     Type *Arg0Ty = getOperand(0)->getScalarType();
     Type *I32Ty = Type::getInt32Ty(Ctx.LLVMCtx);
@@ -1782,6 +1799,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
+  case VPInstruction::MaskBeforeFirst:
   case VPInstruction::MaskedCond:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
@@ -1983,6 +2001,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::NumActiveLanes:
     O << "num-active-lanes";
+    break;
+  case VPInstruction::MaskBeforeFirst:
+    O << "mask-before-first";
     break;
   case VPInstruction::WideIVStep:
     O << "wide-iv-step";
