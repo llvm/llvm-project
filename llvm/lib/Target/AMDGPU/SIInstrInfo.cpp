@@ -10930,16 +10930,7 @@ MachineInstr *SIInstrInfo::createPHIDestinationCopy(
 MachineInstr *SIInstrInfo::createPHISourceCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
     const DebugLoc &DL, Register Src, unsigned SrcSubReg, Register Dst) const {
-  static const std::unordered_set<unsigned> SI_CONTROL_FLOW_OPCODES = {
-      AMDGPU::S_CBRANCH_EXECZ,         AMDGPU::S_CBRANCH_EXECNZ,
-      AMDGPU::S_OR_SAVEEXEC_B32,       AMDGPU::S_OR_SAVEEXEC_B64,
-      AMDGPU::S_ANDN2_SAVEEXEC_B32,    AMDGPU::S_ANDN2_SAVEEXEC_B64,
-      AMDGPU::S_AND_SAVEEXEC_B32,      AMDGPU::S_AND_SAVEEXEC_B64,
-      AMDGPU::S_AND_SAVEEXEC_B32_term, AMDGPU::S_AND_SAVEEXEC_B64_term, };
-
-  if (InsPt != MBB.end() &&
-      (SI_CONTROL_FLOW_OPCODES.count(InsPt->getOpcode()) ||
-       InsPt->definesRegister(AMDGPU::EXEC, nullptr)) &&
+  if (InsPt != MBB.end() && isBasicBlockPrologue(*InsPt) &&
       InsPt->definesRegister(Src, /*TRI=*/nullptr)) {
     InsPt++;
     return BuildMI(MBB, InsPt, DL,
