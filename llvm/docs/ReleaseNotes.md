@@ -455,7 +455,7 @@ Makes programs 10x faster by doing Special New Thing.
   a pre-filled GitHub issue, pointing at the bundle to attach. The GitHub reporter is built by
   default and can be disabled with the `LLDB_ENABLE_GITHUB_BUG_REPORTER=OFF` CMake option.
 * The script interpreter plugins are now built as shared libraries by default on Darwin and FreeBSD
-  (`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS=ON`).
+  (`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS=ON`). This can be opted into on Linux also.
 
 #### Deprecated APIs
 
