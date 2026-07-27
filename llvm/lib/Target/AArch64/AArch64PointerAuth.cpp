@@ -364,10 +364,10 @@ void AArch64PointerAuthImpl::authenticateLR(
       emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
                                       AArch64::X15);
 
-      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
       unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
       BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
           .setMIFlag(MachineInstr::FrameDestroy);
+      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
 
       emitMOV(AArch64::LR, AArch64::X17);
     } else if (MFnI->branchProtectionPAuthLR()) {
@@ -385,10 +385,10 @@ void AArch64PointerAuthImpl::authenticateLR(
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameDestroy);
 
-      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
       unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
       BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
           .setMIFlag(MachineInstr::FrameDestroy);
+      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
 
       emitMOV(AArch64::LR, AArch64::X17);
     } else if (Subtarget->hasPAuth()) {
@@ -436,11 +436,11 @@ void AArch64PointerAuthImpl::authenticateLR(
 
   if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
     assert(PACSym && "No PAC instruction to refer to");
-    emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
     BuildMI(MBB, MBBI, DL,
             TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
         .addSym(PACSym)
         .setMIFlag(MachineInstr::FrameDestroy);
+    emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
   } else {
     if (MFnI->branchProtectionPAuthLR()) {
       emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
@@ -448,13 +448,11 @@ void AArch64PointerAuthImpl::authenticateLR(
 
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameDestroy);
-      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
     }
     BuildMI(MBB, MBBI, DL,
             TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
         .setMIFlag(MachineInstr::FrameDestroy);
-    if (!MFnI->branchProtectionPAuthLR())
-      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
+    emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
   }
 
   if (NeedsWinCFI) {

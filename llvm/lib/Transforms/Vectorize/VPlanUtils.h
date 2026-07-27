@@ -185,12 +185,11 @@ VPValue *findIncomingAliasMask(const VPlan &Plan);
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
 /// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
 /// non-null, inserting recipes via \p Builder.
-VPScalarIVStepsRecipe *
-createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
-                    Instruction::BinaryOps InductionOpcode,
-                    FPMathOperator *FPBinOp, Instruction *TruncI,
-                    VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-                    VPBuilder &Builder);
+VPScalarIVStepsRecipe *createScalarIVSteps(
+    VPlan &Plan, InductionDescriptor::InductionKind Kind,
+    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
+    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
