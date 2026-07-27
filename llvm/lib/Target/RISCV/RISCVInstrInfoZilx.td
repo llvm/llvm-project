@@ -52,9 +52,8 @@ def LXSBU : ZilxLoad<0b11010, 0b100, "lxsbu">,
             Sched<[WriteLDB, ReadMemBase, ReadMemBase]>;
 def LXSHU : ZilxLoad<0b11010, 0b101, "lxshu">,
             Sched<[WriteLDH, ReadMemBase, ReadMemBase]>;
-} // Predicates = [HasStdExtZilx]
 
-let Predicates = [HasStdExtZilx, IsRV64] in {
+let append Predicates = [IsRV64] in {
 // Unscaled indexed loads (RV64-only widths).
 def LXD  : ZilxLoad<0b10010, 0b011, "lxd">,
            Sched<[WriteLDD, ReadMemBase, ReadMemBase]>;
@@ -83,7 +82,9 @@ def LXSUWHU : ZilxLoad<0b11110, 0b101, "lxsuwhu">,
               Sched<[WriteLDH, ReadMemBase, ReadMemBase]>;
 def LXSUWWU : ZilxLoad<0b11110, 0b110, "lxsuwwu">,
               Sched<[WriteLDW, ReadMemBase, ReadMemBase]>;
-} // Predicates = [HasStdExtZilx, IsRV64]
+} // append Predicates = [IsRV64]
+
+} // Predicates = [HasStdExtZilx]
 
 // `lxb`/`lxbu` are assembler pseudoinstructions for the scaled byte loads.
 // They are parse-only aliases (EmitPriority 0) so the disassembler still prints
@@ -162,9 +163,8 @@ def : ScaledIndexLoadPat<sextloadi16, LXSH, 1>;
 def : ScaledIndexLoadPat<zextloadi16, LXSHU, 1>;
 
 def : ScaledIndexLoadPat<load, LXSW, 2, i32>;
-} // Predicates = [HasStdExtZilx]
 
-let Predicates = [HasStdExtZilx, IsRV64] in {
+let append Predicates = [IsRV64] in {
 def : UnscaledIndexLoadPat<extloadi32, LXW, i64>;
 def : UnscaledIndexLoadPat<sextloadi32, LXW, i64>;
 def : UnscaledIndexLoadPat<zextloadi32, LXWU, i64>;
@@ -193,4 +193,6 @@ def : ScaledZextIndexLoadPat<sextloadi32, LXSUWW, 2, i64>;
 def : ScaledZextIndexLoadPat<zextloadi32, LXSUWWU, 2, i64>;
 
 def : ScaledZextIndexLoadPat<load, LXSUWD, 3, i64>;
-} // Predicates = [HasStdExtZilx, IsRV64]
+} // append Predicates = [IsRV64]
+
+} // Predicates = [HasStdExtZilx]
