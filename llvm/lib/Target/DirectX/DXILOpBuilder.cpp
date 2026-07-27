@@ -275,6 +275,13 @@ static StructType *getFouri32sType(LLVMContext &Context) {
                                {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Context);
 }
 
+static StructType *getTwoI32Type(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.twoi32"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.twoi32");
+}
+
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
                                     Type *OverloadTy) {
   switch (Kind) {
@@ -336,6 +343,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getDimensionsType(Ctx);
   case OpParamType::Fouri32s:
     return getFouri32sType(Ctx);
+  case OpParamType::TwoI32Ty:
+    return getTwoI32Type(Ctx);
   }
 
   llvm_unreachable("Invalid parameter kind");

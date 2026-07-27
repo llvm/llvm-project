@@ -2086,7 +2086,7 @@ static SectionSP FindMatchingSection(const SectionList &section_list,
   SectionSP sect_sp;
 
   addr_t vm_addr = section->GetFileAddress();
-  ConstString name = section->GetName();
+  llvm::StringRef name = section->GetName();
   offset_t byte_size = section->GetByteSize();
   bool thread_specific = section->IsThreadSpecific();
   uint32_t permissions = section->GetPermissions();
@@ -2165,7 +2165,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     elf::elf_xword log2align =
         (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
 
-    SectionSP section_sp(new Section(
+    SectionSP section_sp = std::make_shared<Section>(
         InfoOr->Segment, GetModule(), // Module to which this section belongs.
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
@@ -2175,9 +2175,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
-        file_size,         // Size of the section as found in the file.
-        log2align,         // Alignment of the section
-        header.sh_flags)); // Flags for this section.
+        file_size,        // Size of the section as found in the file.
+        log2align,        // Alignment of the section
+        header.sh_flags); // Flags for this section.
 
     section_sp->SetPermissions(GetPermissions(header));
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
@@ -2215,8 +2215,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (m_gnu_debug_data_object_file != nullptr)
     return m_gnu_debug_data_object_file;
 
-  SectionSP section =
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"));
+  SectionSP section = GetSectionList()->FindSectionByName(".gnu_debugdata");
   if (!section)
     return nullptr;
 
@@ -2436,7 +2435,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_type == eSymbolTypeInvalid && symbol.getType() != STT_SECTION) {
       if (symbol_section_sp) {
-        ConstString sect_name = symbol_section_sp->GetName();
+        llvm::StringRef sect_name = symbol_section_sp->GetName();
         if (sect_name == text_section_name || sect_name == init_section_name ||
             sect_name == fini_section_name || sect_name == ctors_section_name ||
             sect_name == dtors_section_name) {
@@ -3265,8 +3264,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  if (!symtab ||
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
+  if (!symtab || GetSectionList()->FindSectionByName(".gnu_debugdata")) {
     Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
@@ -3373,7 +3371,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
 
 void ObjectFileELF::RelocateSection(lldb_private::Section *section)
 {
-  static const char *debug_prefix = ".debug";
+  static llvm::StringRef debug_prefix(".debug");
 
   // Set relocated bit so we stop getting called, regardless of whether we
   // actually relocate.
@@ -3383,24 +3381,24 @@ void ObjectFileELF::RelocateSection(lldb_private::Section *section)
   if (CalculateType() != eTypeObjectFile)
     return;
 
-  const char *section_name = section->GetName().GetCString();
+  llvm::StringRef section_name = section->GetName();
   // Can't relocate that which can't be named
-  if (section_name == nullptr)
+  if (section_name.empty())
     return;
 
   // We don't relocate non-debug sections at the moment
-  if (strncmp(section_name, debug_prefix, strlen(debug_prefix)))
+  if (!section_name.starts_with(debug_prefix))
     return;
 
   // Relocation section names to look for
-  std::string needle = std::string(".rel") + section_name;
-  std::string needlea = std::string(".rela") + section_name;
+  std::string needle = std::string(".rel") + section_name.str();
+  std::string needlea = std::string(".rela") + section_name.str();
 
   for (SectionHeaderCollIter I = m_section_headers.begin();
        I != m_section_headers.end(); ++I) {
     if (I->sh_type == SHT_RELA || I->sh_type == SHT_REL) {
-      const char *hay_name = I->section_name.GetCString();
-      if (hay_name == nullptr)
+      llvm::StringRef hay_name = I->section_name.GetStringRef();
+      if (hay_name.empty())
         continue;
       if (needle == hay_name || needlea == hay_name) {
         const ELFSectionHeader &reloc_header = *I;
@@ -3960,7 +3958,7 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString loader_section_name(".interp");
+        llvm::StringRef loader_section_name(".interp");
         SectionSP loader_section =
             section_list->FindSectionByName(loader_section_name);
         if (loader_section) {
@@ -4029,15 +4027,14 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
     return result;
 
   auto Decompressor = llvm::object::Decompressor::create(
-      section->GetName().GetStringRef(),
+      section->GetName(),
       {reinterpret_cast<const char *>(section_data.GetDataStart()),
        size_t(section_data.GetByteSize())},
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
     GetModule()->ReportWarning(
         "unable to initialize decompressor for section '{0}': {1}",
-        section->GetName().GetCString(),
-        llvm::toString(Decompressor.takeError()).c_str());
+        section->GetName(), llvm::toString(Decompressor.takeError()).c_str());
     section_data.Clear();
     return 0;
   }
@@ -4047,7 +4044,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   if (auto error = Decompressor->decompress(
           {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
     GetModule()->ReportWarning("decompression of section '{0}' failed: {1}",
-                               section->GetName().GetCString(),
+                               section->GetName(),
                                llvm::toString(std::move(error)).c_str());
     section_data.Clear();
     return 0;

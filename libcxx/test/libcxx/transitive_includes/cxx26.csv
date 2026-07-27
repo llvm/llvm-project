@@ -655,11 +655,14 @@ mutex tuple
 mutex version
 new version
 numbers version
+numeric cctype
 numeric climits
 numeric compare
 numeric cstdint
 numeric cstring
 numeric ctime
+numeric cwchar
+numeric cwctype
 numeric initializer_list
 numeric limits
 numeric optional

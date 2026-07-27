@@ -51,7 +51,6 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
-    "utils/lit/lit.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
@@ -852,22 +851,18 @@ cc_binary(
 
 cc_binary(
     name = "llvm-min-tblgen",
-    srcs = [
+    srcs = glob(["utils/TableGen/Basic/*.h"]) + [
         "utils/TableGen/Basic/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
-        "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
-        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
-        "utils/TableGen/Basic/SDNodeProperties.h",
-        "utils/TableGen/Basic/SequenceToOffsetTable.h",
         "utils/TableGen/Basic/TableGen.cpp",
-        "utils/TableGen/Basic/TableGen.h",
         "utils/TableGen/Basic/VTEmitter.cpp",
         "utils/TableGen/llvm-min-tblgen.cpp",
     ],
@@ -3706,18 +3701,24 @@ gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = {
-        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPreLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPostLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPURegBankCombiner",
+            "-gisel-extended-llt",
         ],
     },
     tblgen = ":llvm-tblgen",
@@ -6590,11 +6591,13 @@ cc_library(
     ],
 )
 
-py_binary(
+# Compatibility alias: the lit sources have moved to //llvm/utils/lit:lit
+# (a py_library, matching where the upstream tool actually lives). Kept
+# here so downstream callers of `//llvm:lit` don't break.
+alias(
     name = "lit",
     testonly = True,
-    srcs = ["utils/lit/lit.py"] + glob(["utils/lit/lit/**/*.py"]),
-    imports = ["utils/lit"],
+    actual = "//llvm/utils/lit:lit_bin",
 )
 
 py_binary(

@@ -95,6 +95,8 @@ LLVMInitializeAMDGPUAsmPrinter() {
                                      llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getTheGCNLegacyTarget(),
+                                     createAMDGPUAsmPrinterPass);
 }
 
 namespace {
@@ -202,30 +204,6 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // emitFunctionBodyStart?
   if (!getTargetStreamer()->getTargetID())
     initializeTargetID(*F.getParent());
-
-  const auto &FunctionTargetID = STM.getTargetID();
-  // Make sure function's xnack settings are compatible with module's
-  // xnack settings.
-  if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
-      FunctionTargetID.getXnackSetting() !=
-          getTargetStreamer()->getTargetID()->getXnackSetting()) {
-    OutContext.reportError(
-        {}, "xnack setting of '" + Twine(MF->getName()) +
-                "' function does not match module xnack setting");
-    return;
-  }
-  // Make sure function's sramecc settings are compatible with module's
-  // sramecc settings.
-  if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
-      FunctionTargetID.getSramEccSetting() !=
-          getTargetStreamer()->getTargetID()->getSramEccSetting()) {
-    OutContext.reportError(
-        {}, "sramecc setting of '" + Twine(MF->getName()) +
-                "' function does not match module sramecc setting");
-    return;
-  }
 
   if (!MFI.isEntryFunction())
     return;
@@ -448,8 +426,9 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   // Bake the per-function SGPR budget into the operands so the late-evaluated
   // MCExpr stays arithmetic. The trap reservation in particular is implicit on
   // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
-  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
-  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  AMDGPU::GPUKind Kind = STM.getTargetID().getGPUKind();
+  unsigned SGPRTotal = AMDGPU::getTotalNumSGPRs(Kind);
+  unsigned SGPRGranule = AMDGPU::getSGPRAllocGranule(Kind);
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
@@ -1203,31 +1182,39 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
 
 // TODO: Fold this into emitFunctionBodyStart.
 void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
-  // In the beginning all features are either 'Any' or 'NotSupported',
-  // depending on global target features. This will cover empty modules.
-  getTargetStreamer()->initializeTargetID(*getGlobalSTI(),
-                                          getGlobalSTI()->getFeatureString());
+  getTargetStreamer()->initializeTargetID(*getGlobalSTI());
 
-  // If module is empty, we are done.
-  if (M.empty())
-    return;
+  auto &TSTargetID = getTargetStreamer()->getTargetID();
 
-  // If module is not empty, need to find first 'Off' or 'On' feature
-  // setting per feature from functions in module.
-  for (auto &F : M) {
-    auto &TSTargetID = getTargetStreamer()->getTargetID();
-    if ((!TSTargetID->isXnackSupported() || TSTargetID->isXnackOnOrOff()) &&
-        (!TSTargetID->isSramEccSupported() || TSTargetID->isSramEccOnOrOff()))
-      break;
+  // Error if -mattr specified xnack or sramecc.
+  // TODO: Remove this when subtarget features removed.
+  StringRef FeatureString = getGlobalSTI()->getFeatureString();
+  if (FeatureString.contains("xnack")) {
+    M.getContext().diagnose(DiagnosticInfoGeneric(
+        "xnack/sramecc should be specified via module flags. "
+        "Use module flag 'amdgpu.xnack' instead of subtarget feature",
+        DS_Error));
+  }
+  if (FeatureString.contains("sramecc")) {
+    M.getContext().diagnose(DiagnosticInfoGeneric(
+        "xnack/sramecc should be specified via module flags. "
+        "Use module flag 'amdgpu.sramecc' instead of subtarget feature",
+        DS_Error));
+  }
 
-    const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
-    if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
-        TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
-    if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
-        TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
+  // Apply xnack/sramecc settings from module flags.
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes)) {
+    AMDGPU::TargetIDSetting Setting =
+        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
+    if (Setting != AMDGPU::TargetIDSetting::Any)
+      TSTargetID->setXnackSetting(Setting);
+  }
+
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSupportsSRAMECC)) {
+    AMDGPU::TargetIDSetting Setting =
+        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+    if (Setting != AMDGPU::TargetIDSetting::Any)
+      TSTargetID->setSramEccSetting(Setting);
   }
 }
 
@@ -1280,7 +1267,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
   ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
-  ProgInfo.TgSplit = STM.isTgSplitEnabled();
+  ProgInfo.TgSplit =
+      STM.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF.getFunction());
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
   ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
   ProgInfo.VCCUsed = GetSymRefExpr(RIK::RIK_UsesVCC);

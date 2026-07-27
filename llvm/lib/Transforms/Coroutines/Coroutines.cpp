@@ -294,6 +294,7 @@ void coro::Shape::analyze(Function &F,
     ABI = coro::ABI::Switch;
     SwitchLowering.HasFinalSuspend = HasFinalSuspend;
     SwitchLowering.HasUnwindCoroEnd = HasUnwindCoroEnd;
+    SwitchLowering.HasCoroElideNoAllocVariant = false;
 
     auto SwitchId = getSwitchCoroId();
     SwitchLowering.ResumeSwitch = nullptr;

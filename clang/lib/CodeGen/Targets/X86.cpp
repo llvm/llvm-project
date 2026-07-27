@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
@@ -1384,6 +1385,8 @@ public:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override;
+  unsigned getX86ABIAVXLevel(const FunctionDecl *FD,
+                             const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -1403,6 +1406,8 @@ public:
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
+  unsigned getX86ABIAVXLevel(const FunctionDecl *FD,
+                             const FunctionType::ExtInfo &Info) const override;
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -1509,6 +1514,9 @@ public:
                             const FunctionDecl *Caller,
                             const FunctionDecl *Callee, const CallArgList &Args,
                             QualType ReturnType) const override;
+
+  void checkFunctionABI(CodeGenModule &CGM,
+                        const FunctionDecl *FD) const override;
 };
 } // namespace
 
@@ -1569,6 +1577,65 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                                 "avx", IsArgument);
 
   return false;
+}
+
+void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
+                                               const FunctionDecl *FD) const {
+  auto GetReturnTypeLoc = [](const FunctionDecl *FD) {
+    if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
+      TypeLoc TL = TSI->getTypeLoc();
+
+      if (auto FTL = TL.IgnoreParens().getAs<FunctionTypeLoc>()) {
+        SourceLocation Loc = FTL.getReturnLoc().getBeginLoc();
+        if (Loc.isValid())
+          return Loc;
+      }
+    }
+
+    SourceLocation Loc = FD->getLocation();
+    if (Loc.isValid())
+      return Loc;
+
+    return FD->getBeginLoc();
+  };
+
+  auto Check = [&](QualType Ty, SourceLocation Loc, bool IsReturn) {
+    if (!Ty->isVectorType())
+      return false;
+    if (CGM.getContext().getTypeSize(Ty) <= 128)
+      return false;
+
+    StringRef Feature =
+        CGM.getContext().getTypeSize(Ty) > 256 ? "avx512f" : "avx";
+
+    llvm::StringMap<bool> FeatureMap;
+    CGM.getContext().getFunctionFeatureMap(FeatureMap, FD);
+    if (!FeatureMap.lookup(Feature)) {
+      CGM.getDiags().Report(Loc, diag::warn_avx_calling_convention)
+          << !IsReturn << Ty << Feature;
+      return true;
+    }
+
+    return false;
+  };
+
+  // psABI warnings & errors for function definitions that are only visible
+  // in this translation unit are handled at call site by checkFunctionCallABI.
+  if (!FD->isExternallyVisible())
+    return;
+
+  // First check the return type and emit diagnostic if required.
+  Check(FD->getReturnType(), GetReturnTypeLoc(FD), true);
+
+  // Go through the parameters and emit a warning for the first vector found
+  // without the matching function AVX level attribute.
+  for (const ParmVarDecl *P : FD->parameters()) {
+    SourceLocation Loc = P->getLocation();
+    if (Loc.isInvalid())
+      Loc = P->getBeginLoc();
+    if (Check(P->getType(), Loc, false))
+      return;
+  }
 }
 
 void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
@@ -1757,6 +1824,32 @@ void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
     Lo = Memory;
   if (Hi == SSEUp && Lo != SSE)
     Hi = SSE;
+}
+
+static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT,
+                                                 X86AVXABILevel GlobalAVXLevel,
+                                                 const FunctionDecl *FD) {
+  // Always return global AVX level on PlayStation.
+  if (CGT.getTarget().getTriple().isPS() ||
+      CGT.getContext().getLangOpts().getClangABICompat() <=
+          LangOptions::ClangABI::Ver23) {
+    return GlobalAVXLevel;
+  }
+
+  X86AVXABILevel Level = GlobalAVXLevel;
+  // TargetVersionAttr does not apply to x86.
+  // FIXME: Handling TargetClonesAttr and CPUSpecificAttr is intentionally
+  // deferred to a follow-up.
+  if (!FD || !FD->hasAttr<TargetAttr>())
+    return Level;
+
+  llvm::StringMap<bool> FeatureMap;
+  CGT.getCGM().getContext().getFunctionFeatureMap(FeatureMap, FD);
+  if (FeatureMap.lookup("avx512f"))
+    return std::max(Level, X86AVXABILevel::AVX512);
+  if (FeatureMap.lookup("avx"))
+    return std::max(Level, X86AVXABILevel::AVX);
+  return Level;
 }
 
 X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
@@ -2961,8 +3054,13 @@ X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
       llvm::StructType::get(getVMContext(), CoerceElts));
 }
 
-void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
+unsigned
+X86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
+                                 const FunctionType::ExtInfo &Info) const {
+  return static_cast<unsigned>(getEffectiveX86AVXABILevel(CGT, AVXLevel, FD));
+}
 
+void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   const unsigned CallingConv = FI.getCallingConvention();
   // It is possible to force Win64 calling convention on any x86_64 target by
   // using __attribute__((ms_abi)). In such case to correctly emit Win64
@@ -2970,6 +3068,17 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (CallingConv == llvm::CallingConv::Win64) {
     WinX86_64ABIInfo Win64ABIInfo(CGT, AVXLevel);
     Win64ABIInfo.computeInfo(FI);
+    return;
+  }
+
+  assert(FI.getX86ABIAVXLevel() <=
+             static_cast<unsigned>(X86AVXABILevel::AVX512) &&
+         "Unexpected X86 AVX ABI level");
+  X86AVXABILevel EffectiveAVXLevel =
+      static_cast<X86AVXABILevel>(FI.getX86ABIAVXLevel());
+  if (EffectiveAVXLevel != AVXLevel) {
+    X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
+    EffectiveABIInfo.computeInfo(FI);
     return;
   }
 
@@ -3493,6 +3602,16 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   }
 
   return ABIArgInfo::getDirect();
+}
+
+unsigned
+WinX86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
+                                    const FunctionType::ExtInfo &Info) const {
+  if (Info.getCC() == CC_X86_64SysV) {
+    return static_cast<unsigned>(getEffectiveX86AVXABILevel(CGT, AVXLevel, FD));
+  }
+
+  return static_cast<unsigned>(AVXLevel);
 }
 
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {

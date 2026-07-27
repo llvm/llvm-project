@@ -518,6 +518,154 @@ public:
                                                exit);
   }
 
+  // Rewrite a loop that has a per-iteration cleanup region into a loop whose
+  // condition is always 'true' and whose body is a cir.cleanup.scope enclosing
+  // the original condition, body, and step regions.
+  //
+  // The condition test is sunk to the top of the scope body (a false
+  // result becomes a cir.break out of the loop) and, for a for loop, the step
+  // is appended to the end of the scope body. The loop's cleanup region becomes
+  // the cleanup region of a cir.cleanup.scope enclosing the new body.
+  //
+  // For example, a while loop:
+  //
+  //   cir.while { <cond>; cir.condition(%c) }
+  //          do { <body> }
+  //     cleanup all { <cleanup> }
+  //
+  // becomes:
+  //
+  //   cir.while { cir.condition(%true) } do {
+  //     cir.cleanup.scope {
+  //       <cond>
+  //       cir.brcond %c ^body, ^cond_false
+  //     ^cond_false:
+  //       cir.break
+  //     ^body:
+  //       <body>
+  //     } cleanup all { <cleanup> }
+  //     cir.yield
+  //   }
+  //
+  // A for loop is the same, except the step region is appended to the scope
+  // body (after the body) and both the body's normal end and any continue are
+  // redirected into the step so that the step runs before the cleanup. The init
+  // section of a for loop is already outside the loop op.
+  mlir::LogicalResult
+  rewriteLoopWithCleanup(cir::LoopOpInterface op,
+                         mlir::PatternRewriter &rewriter) const {
+    mlir::Location loc = op.getLoc();
+    mlir::Region *stepRegion = op.maybeGetStep();
+
+    cir::CleanupKindAttr cleanupKind = op.maybeGetCleanupKind();
+    assert(cleanupKind && "loop cleanup region without a cleanup kind");
+
+    mlir::Region &condRegion = op.getCond();
+    mlir::Region &bodyRegion = op.getBody();
+    mlir::Region &cleanupRegion = *op.maybeGetCleanup();
+
+    // The cir.condition is the terminator of the condition region's last block
+    // (there can be more than one block if a nested scope was already
+    // flattened within the condition).
+    auto conditionOp =
+        cast<cir::ConditionOp>(condRegion.back().getTerminator());
+    mlir::Value condVal = conditionOp.getCondition();
+
+    // Capture block references and exit terminators before moving blocks
+    // around. Block pointers stay valid across region inlining because blocks
+    // are reparented, not recreated.
+    mlir::Block *bodyFront = &bodyRegion.front();
+    mlir::Block *stepFront = stepRegion ? &stepRegion->front() : nullptr;
+
+    // For a for loop the body's normal end and any continue must run the step
+    // before the cleanup, so collect them to redirect into the step region. For
+    // a while loop they are genuine cleanup-scope exits and are left untouched.
+    llvm::SmallVector<cir::YieldOp> bodyYieldsToStep;
+    llvm::SmallVector<cir::ContinueOp> continuesToStep;
+    if (stepRegion) {
+      for (mlir::Block &blk : bodyRegion.getBlocks())
+        if (auto y = dyn_cast<cir::YieldOp>(blk.getTerminator()))
+          bodyYieldsToStep.push_back(y);
+      op.walkBodySkippingNestedLoops([&](mlir::Operation *o) {
+        if (auto c = dyn_cast<cir::ContinueOp>(o)) {
+          continuesToStep.push_back(c);
+          return mlir::WalkResult::skip();
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
+
+    // Assemble the per-iteration blocks into the condition region, in
+    // execution order: [ cond blocks..., body blocks..., step blocks... ].
+    rewriter.inlineRegionBefore(bodyRegion, condRegion, condRegion.end());
+    if (stepRegion)
+      rewriter.inlineRegionBefore(*stepRegion, condRegion, condRegion.end());
+
+    // Replace cir.condition(%c) with a conditional branch into the body whose
+    // false edge breaks out of the loop.
+    mlir::Block *breakBlock =
+        rewriter.createBlock(&condRegion, condRegion.end());
+    rewriter.setInsertionPointToEnd(breakBlock);
+    cir::BreakOp::create(rewriter, conditionOp.getLoc());
+
+    rewriter.setInsertionPoint(conditionOp);
+    rewriter.replaceOpWithNewOp<cir::BrCondOp>(conditionOp, condVal, bodyFront,
+                                               breakBlock);
+
+    // For a for loop, redirect the body's normal end and any continue to the
+    // step. The step's own yield remains the normal end of the iteration.
+    for (cir::YieldOp y : bodyYieldsToStep)
+      lowerTerminator(y, stepFront, rewriter);
+    for (cir::ContinueOp c : continuesToStep)
+      lowerTerminator(c, stepFront, rewriter);
+
+    // Build the trivial loop body: a single cir.cleanup.scope followed by a
+    // yield, in a fresh block (the body region's blocks were moved out above).
+    mlir::Block *newBodyBlock = rewriter.createBlock(&bodyRegion);
+    rewriter.setInsertionPointToEnd(newBodyBlock);
+    auto emitYield = [](mlir::OpBuilder &b, mlir::Location l) {
+      cir::YieldOp::create(b, l);
+    };
+    auto scope = cir::CleanupScopeOp::create(
+        rewriter, loc, cleanupKind.getValue(), emitYield, emitYield);
+    cir::YieldOp::create(rewriter, loc);
+
+    // Move the assembled per-iteration blocks into the scope's body region and
+    // the loop's cleanup blocks into the scope's cleanup region, discarding the
+    // placeholder blocks the builder created.
+    mlir::Block *bodyPlaceholder = &scope.getBodyRegion().front();
+    rewriter.inlineRegionBefore(condRegion, bodyPlaceholder);
+    rewriter.eraseBlock(bodyPlaceholder);
+
+    mlir::Block *cleanupPlaceholder = &scope.getCleanupRegion().front();
+    rewriter.inlineRegionBefore(cleanupRegion, cleanupPlaceholder);
+    rewriter.eraseBlock(cleanupPlaceholder);
+
+    // Rebuild the loop condition region with an always-true condition.
+    mlir::Block *newCondBlock = rewriter.createBlock(&condRegion);
+    rewriter.setInsertionPointToEnd(newCondBlock);
+    mlir::Value trueVal = cir::ConstantOp::create(
+        rewriter, loc, cir::BoolAttr::get(rewriter.getContext(), true));
+    cir::ConditionOp::create(rewriter, loc, trueVal);
+
+    // For a for loop, rebuild the (now empty) step region with a trivial yield.
+    if (stepRegion) {
+      mlir::Block *newStepBlock = rewriter.createBlock(stepRegion);
+      rewriter.setInsertionPointToEnd(newStepBlock);
+      cir::YieldOp::create(rewriter, loc);
+    }
+
+    // Drop the cleanup-kind attribute now that the loop's cleanup region is
+    // empty, so the trivial loop verifies and takes the no-cleanup flattening
+    // path when the greedy driver revisits it.
+    if (auto whileOp = mlir::dyn_cast<cir::WhileOp>(op.getOperation()))
+      whileOp.removeCleanupKindAttr();
+    else if (auto forOp = mlir::dyn_cast<cir::ForOp>(op.getOperation()))
+      forOp.removeCleanupKindAttr();
+
+    return mlir::success();
+  }
+
   mlir::LogicalResult
   matchAndRewrite(cir::LoopOpInterface op,
                   mlir::PatternRewriter &rewriter) const final {
@@ -528,6 +676,17 @@ public:
     for (mlir::Region &region : op->getRegions())
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
+
+    // Loops with a per-iteration cleanup region need every iteration-exit edge
+    // routed through that cleanup, including the false-condition exit and any
+    // exceptions that might be thrown from the step region. Rather than trying
+    // to figure out all of the cleanup routing here, we sink the condition into
+    // the body region, hoist the step region (if any) and create a new
+    // cir.cleanup.scope enclosing the body region. Subsequent passes of the
+    // greedy driver will flatten the cir.cleanup.scope and the loop reusing
+    // the normal handlers.
+    if (op.maybeGetCleanup())
+      return rewriteLoopWithCleanup(op, rewriter);
 
     // Setup CFG blocks.
     mlir::Block *entry = rewriter.getInsertionBlock();

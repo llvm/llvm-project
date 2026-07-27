@@ -78,6 +78,26 @@ def ClauseDependAttr : OpenMP_EnumAttr<ClauseDepend, "clause_depend"> {
 }
 
 //===----------------------------------------------------------------------===//
+// severity enum.
+//===----------------------------------------------------------------------===//
+
+// The values match the `severity` argument expected by the `__kmpc_error`
+// runtime entry point (1 = warning, 2 = fatal).
+def ClauseSeverityWarning : I32EnumAttrCase<"warning", 1>;
+def ClauseSeverityFatal : I32EnumAttrCase<"fatal", 2>;
+
+def ClauseSeverity : OpenMP_I32EnumAttr<
+    "ClauseSeverity",
+    "severity clause", [
+      ClauseSeverityWarning,
+      ClauseSeverityFatal
+    ]>;
+
+def ClauseSeverityAttr : OpenMP_EnumAttr<ClauseSeverity, "clause_severity"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
 // clause_requires enum.
 //===----------------------------------------------------------------------===//
 
@@ -374,6 +394,24 @@ def FallbackModifier : OpenMP_I32EnumAttr<
 
 def FallbackModifierAttr : OpenMP_EnumAttr<FallbackModifier,
                                             "fallback_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
+// interop_type for interop construct
+//===----------------------------------------------------------------------===//
+
+def InteropTypeTarget : I32EnumAttrCase<"target", 0>;
+def InteropTypeTargetSync : I32EnumAttrCase<"targetsync", 1>;
+
+def InteropType : OpenMP_I32EnumAttr<
+    "InteropType",
+    "interop type", [
+      InteropTypeTarget,
+      InteropTypeTargetSync
+    ]>;
+
+def InteropTypeAttr : OpenMP_EnumAttr<InteropType, "interop_type"> {
   let assemblyFormat = "`(` $value `)`";
 }
 

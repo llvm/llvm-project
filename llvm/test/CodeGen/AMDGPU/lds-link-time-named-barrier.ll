@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-enable-object-linking -passes=amdgpu-lower-exec-sync,amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -amdgpu-enable-object-linking -passes=amdgpu-lower-exec-sync,amdgpu-lower-module-lds < %s | FileCheck %s
 
 ; Verify that with object linking enabled:
 ; 1. AMDGPULowerExecSync externalizes named barriers and emits
