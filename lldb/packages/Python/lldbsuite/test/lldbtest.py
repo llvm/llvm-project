@@ -453,6 +453,11 @@ class _LocalProcess(_BaseProcess):
         self._delayafterterminate = 0.1
 
     @property
+    def args(self):
+        assert self._proc is not None, "No process"
+        return self._proc.args
+
+    @property
     def pid(self):
         assert self._proc is not None, "No process"
         return self._proc.pid
