@@ -81,42 +81,28 @@ def TuneMOVIMMJumpXqciFusion
 
 // Fuse load-immediate/move-immediate followed by long accumulate operation.
 def TuneMOVIMMLongAccumXciFusion
-  : Fusion<"xqci-movimm-longlogical", "HasMOVIMMLongAccumXqciFusion",
-           "Enable MOVIMM + long accumulate macrofusion",
-           [
-             SecondFusionPredicateWithMCInstPredicate<
-               CheckOpcode<LongAccumXqciOp>
-             >,
-             WildcardTrue,
-             FirstFusionPredicateWithMCInstPredicate<
-               CheckAny<[
-                 CheckAll<[
-                   CheckOpcode<[ADDI]>,
-                   CheckRegOperand<1, X0>
+  : SimpleFusion<"xqci-movimm-longlogical", "HasMOVIMMLongAccumXqciFusion",
+                 "Enable MOVIMM + long accumulate macrofusion",
+                 CheckAny<[
+                   CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>
+                   ]>,
+                   CheckOpcode<LoadImmOp>,
                  ]>,
-                 CheckOpcode<LoadImmOp>,
-               ]>
-             >,
-             TieReg<0, 0>,
-             TieReg<0, 1>,
-           ]>;
+                 CheckOpcode<LongAccumXqciOp>,
+                 [],
+                 [TieReg<0, 0>]>;
 
 // Fuse move followed by long accumulate operation.
 def TuneMovALUXqciFusion
-  : Fusion<"xqci-mov-longlogical", "HasMovALUXqciFusion",
-           "Enable MOV + long accumulate macrofusion",
-           [
-             SecondFusionPredicateWithMCInstPredicate<
-               CheckOpcode<LongAccumXqciOp>
-             >,
-             WildcardTrue,
-             FirstFusionPredicateWithMCInstPredicate<
-               CheckAll<[
-                 CheckOpcode<[ADDI]>,
-                 CheckIsImmOperand<2>,
-                 CheckImmOperand<2, 0>
-               ]>
-             >,
-             TieReg<0, 0>,
-             TieReg<0, 1>
-           ]>;
+  : SimpleFusion<"xqci-mov-longlogical", "HasMovALUXqciFusion",
+                 "Enable MOV + long accumulate macrofusion",
+                 CheckAll<[
+                   CheckOpcode<[ADDI]>,
+                   CheckIsImmOperand<2>,
+                   CheckImmOperand<2, 0>
+                 ]>,
+                 CheckOpcode<LongAccumXqciOp>,
+                 [],
+                 [TieReg<0, 0>]>;
