@@ -3290,6 +3290,6 @@ let SubtargetPredicate = isGFX11Plus in {
 // Fallback for f32 -> i16 saturated conversion on pre-GFX11. Required because
 // f32 -> i16 has to be legal so that the packed pattern above can match.
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
-  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0x8000>;
+  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0xffff8000>;
   defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0xffff>;
 }
