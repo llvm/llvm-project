@@ -4,17 +4,18 @@
 
 RWByteAddressBuffer GBuf : register(u0);
 
-void Level2(RWByteAddressBuffer Buf) {
-    Buf.Store(0, 42);
+void Level2(RWByteAddressBuffer Buf, uint Idx) {
+    Buf.Store(Idx, 42);
 }
-void Level1(RWByteAddressBuffer Buf) {
-    Level2(Buf);
+void Level1(RWByteAddressBuffer Buf, uint Idx) {
+    Level2(Buf, Idx);
 }
 
 [numthreads(1,1,1)]
 void main() {
     RWByteAddressBuffer Local = GBuf;
-    Level1(Local);
+    Level1(Local, 0);
+    Level1(Local, 4);
 }
 
 // CHECK-LABEL: define {{.*}}@main(
