@@ -11777,23 +11777,82 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
 void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
                                                 DebugLoc DL) const {
   MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
-  auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
-                     .setMIFlag(MachineInstr::FrameDestroy);
-
   MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(
       MF.getSubtarget().getFrameLowering());
+
+  SmallVector<Register, 3> ImplicitDefs;
   if (AFL.getArgumentStackToRestore(MF, MBB)) {
-    Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
-    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
+    ImplicitDefs.push_back(AArch64::X17);
+    ImplicitDefs.push_back(AArch64::X16);
     if (AFI->branchProtectionPAuthLR())
-      Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
-    return;
+      ImplicitDefs.push_back(AArch64::X15);
+  } else if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR()) {
+    ImplicitDefs.push_back(AArch64::X16);
   }
 
-  if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
-    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
+  // If the scratch registers we plan using are alive at this point,
+  // try spilling them to other registers.
+
+  assert(MF.getProperties().hasTracksLiveness());
+  LivePhysRegs LiveRegs(TRI);
+  LiveRegs.addLiveOuts(MBB);
+  for (auto &MI : llvm::reverse(llvm::make_range(InsertPt, MBB.end())))
+    LiveRegs.stepBackward(MI);
+
+  auto FindAvailableRegister = [&LiveRegs, &MRI]() {
+    for (Register Reg : AArch64::GPR64RegClass) {
+      if (LiveRegs.available(MRI, Reg))
+        return Reg;
+    }
+    reportFatalUsageError("Cannot insert PAUTH_EPILOGUE: ran out of registers");
+  };
+
+  // Find out which scratch registers have to be spilled to other GPRs,
+  // mark the rest as unavailable to be spilled-to.
+  SmallVector<std::pair<Register, Register>, 3> Spills;
+  for (Register ScratchReg : ImplicitDefs) {
+    // With Speculative Load Hardening, X16 is reported as reserved by MRI,
+    // but a fallback to DSB+ISB is actually supported as long as implicit-defs
+    // are set appropriately.
+    if (ScratchReg == AArch64::X16 &&
+        MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
+      continue;
+
+    assert(!MRI.isReserved(ScratchReg));
+
+    if (LiveRegs.available(MRI, ScratchReg))
+      LiveRegs.addReg(ScratchReg);
+    else
+      Spills.emplace_back(ScratchReg, AArch64::NoRegister);
+  }
+
+  for (auto &[ScratchReg, SpillReg] : Spills) {
+    (void)ScratchReg;
+    SpillReg = FindAvailableRegister();
+    LiveRegs.addReg(SpillReg);
+  }
+
+  auto EmitMOV = [&](Register DstReg, Register SrcReg) {
+    BuildMI(MBB, InsertPt, DL, get(AArch64::ORRXrs), DstReg)
+        .addReg(AArch64::XZR)
+        .addReg(SrcReg)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  };
+
+  for (auto [ScratchReg, SpillReg] : Spills)
+    EmitMOV(SpillReg, ScratchReg);
+
+  auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
+                     .setMIFlag(MachineInstr::FrameDestroy);
+  for (auto ScratchReg : ImplicitDefs)
+    Builder.addReg(ScratchReg, RegState::ImplicitDefine);
+
+  for (auto [ScratchReg, SpillReg] : llvm::reverse(Spills))
+    EmitMOV(ScratchReg, SpillReg);
 }
 
 MachineBasicBlock::iterator
