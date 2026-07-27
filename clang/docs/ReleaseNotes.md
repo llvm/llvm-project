@@ -323,6 +323,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a crash when a structured binding was declared with an explicit
+  (non-``auto``) array type. (#GH200834)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

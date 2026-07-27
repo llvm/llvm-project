@@ -229,27 +229,14 @@ namespace by_value_array_copy {
     auto [d] = T{};
   }
 
-  // Don't crash when a decomposition is declared with an explicit
-  // (non-'auto') array type whose size doesn't match the initializer's
-  // array type: the declared type is ill-formed and was never deduced,
-  // so it need not match.
+  // A structured binding declared with an explicit (non-'auto') array type is
+  // ill-formed; it must be diagnosed and marked invalid rather than reaching
+  // the by-value array-copy path (which used to crash). Only the "must be
+  // 'auto'" error is expected.
   typedef int array_type[3];
   void explicit_array_type() {
     int arr[4]{1, 2, 3, 4};
-    array_type [a, b, c]{arr}; // expected-error {{structured binding declaration cannot be declared with type 'array_type' (aka 'int[3]'); declared type must be 'auto' or reference to 'auto'}} expected-error {{cannot initialize an array element of type 'int' with an lvalue of type 'int[4]'}}
-  }
-
-  // Same as above, but the explicit (non-'auto') array type has the *same*
-  // number of elements as the initializer. The same-type condition then
-  // holds, so the by-value array-copy fast path is *entered* (rather than
-  // fallen through as in the mismatched-size case above) even though the
-  // type was never deduced from 'auto'. This must still only diagnose that
-  // the declared type must be 'auto', never crash -- it also guards the
-  // second assert in that fast path (IK_DirectList).
-  typedef int array_type_4[4];
-  void explicit_array_type_same_size() {
-    int arr[4]{1, 2, 3, 4};
-    array_type_4 [a, b, c, d]{arr}; // expected-error {{structured binding declaration cannot be declared with type 'array_type_4' (aka 'int[4]'); declared type must be 'auto' or reference to 'auto'}}
+    array_type [a, b, c]{arr}; // expected-error {{structured binding declaration cannot be declared with type 'array_type' (aka 'int[3]'); declared type must be 'auto' or reference to 'auto'}}
   }
 
 } // namespace by_value_array_copy
