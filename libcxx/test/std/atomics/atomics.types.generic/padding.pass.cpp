@@ -69,12 +69,12 @@ void assert_padding(const T& obj, unsigned char pad_byte) {
   assert(std::memcmp(&obj, &reference, sizeof(T)) == 0);
 }
 
-template <class T>
+template <class T, template <class> class MaybeVolatile>
 void test() {
   {
     // compare_exchange_strong
     // CAS should succeed when only padding differs in expected; expected is unchanged.
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
 
     T init;
     initialize(init, 10, 'a', 0xBB);
@@ -104,7 +104,7 @@ void test() {
   {
     // compare_exchange_strong
     // atomic and expected values are different; failure
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     T stored;
     initialize(stored, 10, 'a', 0xBB);
     assert_padding(stored, 0xBB);
@@ -133,7 +133,7 @@ void test() {
   {
     // compare_exchange_strong
     // atomic and expected are the same, including padding
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     T init;
     initialize(init, 10, 'a', 0x00);
     assert_padding(init, 0x00);
@@ -162,7 +162,7 @@ void test() {
   {
     // compare_exchange_weak
     // atomic and expected only differs in padding bits. It should either succeed or spuriously fail
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     T stored;
     initialize(stored, 10, 'a', 0xBB);
     assert_padding(stored, 0xBB);
@@ -207,7 +207,7 @@ void test() {
   {
     // compare_exchange_strong
     // atomic and expected values are different; failure
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     T stored;
     initialize(stored, 10, 'a', 0xBB);
     assert_padding(stored, 0xBB);
@@ -236,7 +236,7 @@ void test() {
 
   {
     // Types with unique object representations skip the padding-clearing path.
-    std::atomic<int> a(1);
+    MaybeVolatile<std::atomic<int>> a(1);
     int expected = 1;
     assert(a.compare_exchange_strong(expected, 2));
     assert(expected == 1);
@@ -247,6 +247,18 @@ void test() {
     assert(expected == 2);
     assert(a.load() == 2);
   }
+}
+
+template <class T>
+using TypeIdentity = T;
+
+template <class T>
+using AddVolatile = typename std::add_volatile<T>::type;
+
+template <class T>
+void test() {
+  test<T, TypeIdentity>();
+  test<T, AddVolatile>();
 }
 
 int main(int, char**) {

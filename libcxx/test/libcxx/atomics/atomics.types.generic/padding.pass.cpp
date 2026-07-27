@@ -88,13 +88,23 @@ void assert_padding(const std::atomic<T>& obj, unsigned char pad_byte) {
 }
 
 template <class T>
+void assert_padding(volatile const std::atomic<T>& obj, unsigned char pad_byte) {
+  alignas(T) unsigned char buf[sizeof(T)];
+  std::memset(buf, pad_byte, sizeof(T));
+  T& reference = *reinterpret_cast<T*>(buf);
+  T loaded     = obj.load();
+  set(reference, loaded.i, loaded.c);
+  assert(std::memcmp(const_cast<const void*>(static_cast<const volatile void*>(&obj)), &reference, sizeof(T)) == 0);
+}
+
+template <class T, template <class> class MaybeVolatile>
 void test() {
   {
     // atomic();
     // Prio to C++20, the default constructor leaves std::atomic unitialized,
     // so padding bytes are not guaranteed zero
 #if TEST_STD_VER >= 20
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     assert_padding(a, 0);
     T loaded = a.load();
     assert(loaded.i == 0);
@@ -107,7 +117,7 @@ void test() {
     T init;
     initialize(init, 10, 'a', 0xBB);
     assert_padding(init, 0xBB);
-    std::atomic<T> a(init);
+    MaybeVolatile<std::atomic<T>> a(init);
     T loaded = a.load();
     assert(loaded.i == 10);
     assert(loaded.c == 'a');
@@ -115,7 +125,7 @@ void test() {
   }
   {
     // atomic::store
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     T value;
     initialize(value, 5, 'x', 0xAB);
     assert_padding(value, 0xAB);
@@ -130,7 +140,7 @@ void test() {
     T initial;
     initialize(initial, 1, 'a', 0x00);
     assert_padding(initial, 0x00);
-    std::atomic<T> a(initial);
+    MaybeVolatile<std::atomic<T>> a(initial);
     T new_val;
     initialize(new_val, 2, 'b', 0xCD);
     assert_padding(new_val, 0xCD);
@@ -144,7 +154,7 @@ void test() {
   }
   {
     // atomic_init
-    std::atomic<T> a;
+    MaybeVolatile<std::atomic<T>> a;
     T init;
     initialize(init, 7, 'z', 0xEF);
     assert_padding(init, 0xEF);
@@ -154,6 +164,18 @@ void test() {
     assert(loaded.c == 'z');
     assert_padding(a, 0);
   }
+}
+
+template <class T>
+using TypeIdentity = T;
+
+template <class T>
+using AddVolatile = typename std::add_volatile<T>::type;
+
+template <class T>
+void test() {
+  test<T, TypeIdentity>();
+  test<T, AddVolatile>();
 }
 
 int main(int, char**) {
