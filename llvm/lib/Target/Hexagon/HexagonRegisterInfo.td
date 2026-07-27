@@ -204,6 +204,19 @@ let Namespace = "Hexagon" in {
                  DwarfRegNum<[97]>;
   }
 
+  // CS/M register pairs.
+  class HexagonCircPairRegs<bits<1> num, string n,
+                          list<Register> subregs, list<string> alt = []>
+      : RegisterWithSubRegs<n, subregs> {
+    let AltNames = alt;
+    let HWEncoding{0-0} = num;
+  }
+
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
+    def CS_M0 : HexagonCircPairRegs<0, "cs_m0", [CS0, M0]>;
+    def CS_M1 : HexagonCircPairRegs<1, "cs_m1", [CS1, M1]>;
+  }
+
   foreach i = 0 -31 in {
     def V#i : Ri<i, "v"#i>, DwarfRegNum<[!add(i, 99)]>;
     def VF#i : R_fake<"__"#!add(i, 999999)>, DwarfRegNum<[!add(i, 999999)]>;
@@ -563,6 +576,12 @@ let Size = 32 in def PredRegs
 
 let Size =
     32 in def ModRegs : RegisterClass<"Hexagon", [i32], 32, (add M0, M1)>;
+
+let Size = 32, CopyCost = -1 in
+def CSRegs : RegisterClass<"Hexagon", [i32], 32, (add CS0, CS1)>;
+
+let Size = 64, CopyCost = -1 in
+def CircRegs : RegisterClass<"Hexagon", [i64], 64, (add CS_M0, CS_M1)>;
 
 let Size = 32, isAllocatable = 0 in def CtrRegs
     : RegisterClass<"Hexagon", [i32], 32,
