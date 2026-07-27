@@ -23,9 +23,10 @@ class LibcallPredicate<code cond> {
 // a module level property that should only be computed based on the
 // triple.
 //
-// The condition is expressed as a `dag` of LibcallPredicate leaves combined
-// with the all_of/any_of/not operators, which the emitter lowers to the
-// equivalent C++ boolean over `Triple TT`.
+// The condition is expressed as a `dag` of LibcallPredicates combined
+// with the all_of/any_of/not operators, which the emitter lowers to
+// the a boolean function of a Triple named TT (and other constructor
+// arguments of RuntimeLibcallsInfo).
 class RuntimeLibcallAvailability<dag cond = (?)> {
   // Composable form: (all_of/any_of/not <LibcallPredicate>...). The `(?)`
   // placeholder default means the libcall is always available.
