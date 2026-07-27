@@ -326,57 +326,88 @@ static void lowerPreloadedKernArg(MachineIRBuilder &B, Register DstReg,
   assert(!PreloadRegs.empty());
 
   // Kernarg preloads are assigned in 32-bit SGPR units.
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
   auto BuildCopyFromPreload = [&B](LLT Ty, Register PhysReg) {
     B.getMBB().addLiveIn(PhysReg.asMCReg());
     return B.buildCopy(Ty, PhysReg).getReg(0);
   };
-  auto getRawBitsTy = [](LLT Ty) { return LLT::scalar(Ty.getSizeInBits()); };
-  auto getPreloadStorageTy = [](LLT Ty) {
-    unsigned RoundedBits = alignTo(Ty.getSizeInBits(), 32);
-    if (!Ty.isPointer() && !Ty.isVector() && RoundedBits == Ty.getSizeInBits())
-      return Ty;
-    return LLT::scalar(RoundedBits);
-  };
-
-  Register Value;
-  LLT ValueTy;
-  const bool IsPackedSubDword = DstTy.getSizeInBits() < 32 && Alignment < 4;
-
+  unsigned StorageBits = PreloadRegs.size() == 1
+                             ? alignTo(DstTy.getSizeInBits(), 32)
+                             : PreloadRegs.size() * 32;
+  // Normalize tuple registers and individual SGPRs into 32-bit words.
+  SmallVector<Register, 8> Words;
   if (PreloadRegs.size() == 1) {
-    if (IsPackedSubDword) {
-      // Extract sub-dword preloads from their containing 32-bit SGPR word.
-      Register Raw = BuildCopyFromPreload(S32, Register(PreloadRegs[0]));
-      uint64_t OffsetDiff = Offset - alignDown(Offset, 4);
-      Register ShiftAmt = B.buildConstant(S32, OffsetDiff * 8).getReg(0);
-      Value = B.buildLShr(S32, Raw, ShiftAmt).getReg(0);
-      ValueTy = S32;
+    LLT StorageTy = LLT::integer(StorageBits);
+    Register Copy =
+        BuildCopyFromPreload(StorageTy, Register(PreloadRegs.front()));
+    if (StorageTy == I32) {
+      Words.push_back(Copy);
     } else {
-      // The physical register may cover more bits than the IR value uses.
-      ValueTy = getPreloadStorageTy(DstTy);
-      Value = BuildCopyFromPreload(ValueTy, Register(PreloadRegs[0]));
+      auto Unmerge = B.buildUnmerge(I32, Copy);
+      for (unsigned I = 0, E = StorageBits / 32; I != E; ++I)
+        Words.push_back(Unmerge.getReg(I));
     }
   } else {
-    assert(!IsPackedSubDword && "packed sub-dword preload should use one SGPR");
-    // Reconstruct wider preloads from separate 32-bit SGPR entries.
-    SmallVector<Register, 4> Regs;
-    Regs.reserve(PreloadRegs.size());
-    for (MCRegister Reg : PreloadRegs) {
-      Regs.push_back(BuildCopyFromPreload(S32, Register(Reg)));
-    }
+    for (MCRegister Reg : PreloadRegs)
+      Words.push_back(BuildCopyFromPreload(I32, Register(Reg)));
+  }
+  assert(Words.size() == StorageBits / 32);
 
-    ValueTy = LLT::scalar(PreloadRegs.size() * 32);
-    Value = B.buildMergeLikeInstr(ValueTy, Regs).getReg(0);
+  // Packed sub-dword arguments can start within a shared SGPR.
+  unsigned BaseBitOffset = 0;
+  if (DstTy.getSizeInBits() < 32 && Alignment < 4)
+    BaseBitOffset = (Offset - alignDown(Offset, 4)) * 8;
+
+  if (DstTy.isVector()) {
+    // Rebuild vector elements from the words while ignoring ABI tail padding.
+    LLT EltTy = DstTy.getElementType();
+    unsigned EltBits = EltTy.getSizeInBits().getFixedValue();
+    LLT IntEltTy = LLT::integer(EltBits);
+    SmallVector<Register, 8> Elts;
+    Elts.reserve(DstTy.getNumElements());
+    for (unsigned I = 0, E = DstTy.getNumElements(); I != E; ++I) {
+      unsigned BitOffset = BaseBitOffset + I * EltBits;
+      unsigned FirstWord = BitOffset / 32;
+      unsigned OffsetInWord = BitOffset % 32;
+      unsigned NumWords = divideCeil(OffsetInWord + EltBits, 32u);
+      LLT EltStorageTy = LLT::integer(NumWords * 32);
+      Register Elt = Words[FirstWord];
+      if (NumWords > 1)
+        Elt = B.buildMergeLikeInstr(
+                   EltStorageTy,
+                   ArrayRef<Register>(Words).slice(FirstWord, NumWords))
+                  .getReg(0);
+      if (OffsetInWord)
+        Elt = B.buildLShr(EltStorageTy, Elt, B.buildConstant(I32, OffsetInWord))
+                  .getReg(0);
+      if (EltStorageTy != IntEltTy)
+        Elt = B.buildTrunc(IntEltTy, Elt).getReg(0);
+      if (EltTy.isPointer())
+        Elt = B.buildIntToPtr(EltTy, Elt).getReg(0);
+      else if (EltTy != IntEltTy)
+        Elt = B.buildBitcast(EltTy, Elt).getReg(0);
+      Elts.push_back(Elt);
+    }
+    B.buildBuildVector(DstReg, Elts);
+    return;
   }
 
+  LLT ValueTy = LLT::integer(Words.size() * 32);
+  Register Value = Words.size() == 1
+                       ? Words.front()
+                       : B.buildMergeLikeInstr(ValueTy, Words).getReg(0);
+  if (BaseBitOffset)
+    Value = B.buildLShr(ValueTy, Value, B.buildConstant(I32, BaseBitOffset))
+                .getReg(0);
+
   LLT AdjustedTy =
-      (DstTy.isPointer() || DstTy.isVector()) ? getRawBitsTy(DstTy) : DstTy;
+      DstTy.isInteger() ? DstTy : LLT::integer(DstTy.getSizeInBits());
   if (ValueTy != AdjustedTy)
     Value = B.buildAnyExtOrTrunc(AdjustedTy, Value).getReg(0);
 
   if (DstTy.isPointer())
     Value = B.buildIntToPtr(DstTy, Value).getReg(0);
-  else if (DstTy.isVector())
+  else if (DstTy != AdjustedTy)
     Value = B.buildBitcast(DstTy, Value).getReg(0);
 
   B.buildCopy(DstReg, Value);
@@ -437,14 +468,14 @@ static void allocatePreloadKernArgSGPRs(CCState &CCInfo,
 
     const TargetRegisterClass *RC =
         TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
-    SmallVectorImpl<MCRegister> *PreloadRegs = Info.addPreloadedKernArg(
+    ArrayRef<MCRegister> PreloadRegs = Info.addPreloadedKernArg(
         TRI, RC, NumAllocSGPRs, KernArgIdx, PaddingSGPRs);
 
     // Record each assigned physical SGPR as a live-in and reserve it from the
     // calling convention allocator.
-    if (PreloadRegs->size() > 1)
+    if (PreloadRegs.size() > 1)
       RC = &AMDGPU::SGPR_32RegClass;
-    for (MCRegister Reg : *PreloadRegs) {
+    for (MCRegister Reg : PreloadRegs) {
       assert(Reg);
       MF.addLiveIn(Reg, RC);
       CCInfo.AllocateReg(Reg);

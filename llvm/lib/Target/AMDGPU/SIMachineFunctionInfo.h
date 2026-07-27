@@ -883,10 +883,10 @@ public:
   Register addPrivateSegmentSize(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
-  SmallVectorImpl<MCRegister> *
-  addPreloadedKernArg(const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
-                      unsigned AllocSizeDWord, int KernArgIdx,
-                      int PaddingSGPRs);
+  ArrayRef<MCRegister> addPreloadedKernArg(const SIRegisterInfo &TRI,
+                                           const TargetRegisterClass *RC,
+                                           unsigned AllocSizeDWord,
+                                           int KernArgIdx, int PaddingSGPRs);
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {
