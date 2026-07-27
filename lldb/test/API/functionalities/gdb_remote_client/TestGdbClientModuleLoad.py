@@ -72,7 +72,6 @@ class MyResponder(MockGDBServerResponder):
         return "m400000"
 
     def qProcessInfo(self):
-        return "pid:47;ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(
         return "pid:400000;ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(
             self._triple
         )
