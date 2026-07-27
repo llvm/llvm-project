@@ -5378,8 +5378,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
     // Use the loop's own index type (matching `Span`) so the buffer allocation
     // works for both i32 and i64 (e.g. `integer(kind=8)`) induction variables.
     Type *IndexTy = ScanRedInfo->Span->getType();
-    Value *AllocSpan = Builder.CreateAdd(ScanRedInfo->Span,
-                                         ConstantInt::get(IndexTy, 1));
+    Value *AllocSpan =
+        Builder.CreateAdd(ScanRedInfo->Span, ConstantInt::get(IndexTy, 1));
     for (size_t i = 0; i < ScanVars.size(); i++) {
       Type *IntPtrTy = IndexTy;
       Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
@@ -5523,8 +5523,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     PHINode *Pow2K = Builder.CreatePHI(IndexTy, 2);
     Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
                          InputBB);
-    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1),
-                       InputBB);
+    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1), InputBB);
     // for (size i = n - 1; i >= 2 ^ k; --i)
     //   tmp[i] op= tmp[i-pow2k];
     llvm::BasicBlock *InnerLoopBB =
@@ -5557,8 +5556,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
         return AfterIP.takeError();
       Builder.CreateStore(Result, LHSPtr);
     }
-    llvm::Value *NextIVal = Builder.CreateNUWSub(
-        IVal, llvm::ConstantInt::get(IndexTy, 1));
+    llvm::Value *NextIVal =
+        Builder.CreateNUWSub(IVal, llvm::ConstantInt::get(IndexTy, 1));
     IVal->addIncoming(NextIVal, Builder.GetInsertBlock());
     CmpI = Builder.CreateICmpUGE(NextIVal, Pow2K);
     Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);

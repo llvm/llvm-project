@@ -540,8 +540,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         // Scan reductions are only implemented for a single loop; a collapsed
         // (multi-dimensional) loop nest is not yet supported.
         if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation()))
-          if (auto loopNest = dyn_cast_or_null<omp::LoopNestOp>(
-                  wsloopOp.getWrappedLoop()))
+          if (auto loopNest =
+                  dyn_cast_or_null<omp::LoopNestOp>(wsloopOp.getWrappedLoop()))
             if (loopNest.getNumLoops() > 1)
               result = todo("inscan reduction on a collapsed "
                             "(multi-dimensional) loop nest");
@@ -4876,8 +4876,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     // masked prefix-sum reads it. A source-level `nowait` only elides the final
     // barrier after the scan (second) loop, so force the barrier for the input
     // loop regardless of `nowait` to avoid a data race.
-    bool needsBarrier =
-        loopNeedsBarrier || (isInScanRegion && inputScanLoop);
+    bool needsBarrier = loopNeedsBarrier || (isInScanRegion && inputScanLoop);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
         ompBuilder->applyWorkshareLoop(
             ompLoc.DL, loopInfo, allocaIP, needsBarrier,
