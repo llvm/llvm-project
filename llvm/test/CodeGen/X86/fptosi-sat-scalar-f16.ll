@@ -209,7 +209,6 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 }
 
 ; FIXME: Can be optimizated with maxss + minss
-; FIXME: X64-AVX512FP16 miscompiles NaN to the signed minimum instead of 0.
 define i13 @test_signed_i13_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i13_f16:
 ; X86-X87:       # %bb.0:
@@ -297,9 +296,10 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; X64-AVX512FP16-LABEL: test_signed_i13_f16:
 ; X64-AVX512FP16:       # %bb.0:
 ; X64-AVX512FP16-NEXT:    vcvttsh2si %xmm0, %eax
-; X64-AVX512FP16-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX512FP16-NEXT:    vmovsh {{.*#+}} xmm1 = [-4.096E+3,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX512FP16-NEXT:    vucomish %xmm0, %xmm1
 ; X64-AVX512FP16-NEXT:    movl $61440, %ecx # imm = 0xF000
-; X64-AVX512FP16-NEXT:    cmovael %eax, %ecx
+; X64-AVX512FP16-NEXT:    cmovbel %eax, %ecx
 ; X64-AVX512FP16-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-AVX512FP16-NEXT:    movl $4095, %eax # imm = 0xFFF
 ; X64-AVX512FP16-NEXT:    cmovbel %ecx, %eax
@@ -310,7 +310,6 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 }
 
 ; FIXME: Can be optimizated with maxss + minss
-; FIXME: X64-AVX512FP16 miscompiles NaN to the signed minimum instead of 0.
 define i16 @test_signed_i16_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i16_f16:
 ; X86-X87:       # %bb.0:
@@ -398,9 +397,10 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; X64-AVX512FP16-LABEL: test_signed_i16_f16:
 ; X64-AVX512FP16:       # %bb.0:
 ; X64-AVX512FP16-NEXT:    vcvttsh2si %xmm0, %eax
-; X64-AVX512FP16-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX512FP16-NEXT:    vmovsh {{.*#+}} xmm1 = [-3.2768E+4,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX512FP16-NEXT:    vucomish %xmm0, %xmm1
 ; X64-AVX512FP16-NEXT:    movl $32768, %ecx # imm = 0x8000
-; X64-AVX512FP16-NEXT:    cmovael %eax, %ecx
+; X64-AVX512FP16-NEXT:    cmovbel %eax, %ecx
 ; X64-AVX512FP16-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-AVX512FP16-NEXT:    movl $32767, %eax # imm = 0x7FFF
 ; X64-AVX512FP16-NEXT:    cmovbel %ecx, %eax
