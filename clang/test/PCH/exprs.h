@@ -106,6 +106,11 @@ typedef typeof(__builtin_shufflevector(vec2, vec2b, 2, 1)) shuffle_expr;
 typedef __attribute__(( ext_vector_type(2) )) float float2;
 typedef typeof(__builtin_convertvector(vec2, float2)) convert_expr;
 
+// ConvertFromArbitraryFPExpr
+typedef typeof(__builtin_convert_from_arbitrary_fp((unsigned char)0,
+                                                   "Float8E5M2", double))
+  convert_from_arbitrary_fp_expr;
+
 // GenericSelectionExpr
 typedef typeof(_Generic(i, char*: 0, int: 0., default: hello))
   generic_selection_expr;

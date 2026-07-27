@@ -1481,6 +1481,12 @@ def ConvertVector : Builtin {
   let Prototype = "void(...)";
 }
 
+def ConvertFromArbitraryFP : Builtin {
+  let Spellings = ["__builtin_convert_from_arbitrary_fp"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def MaskedLoad : Builtin {
   let Spellings = ["__builtin_masked_load"];
   let Attributes = [NoThrow, CustomTypeChecking];

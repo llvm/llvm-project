@@ -2678,6 +2678,16 @@ public:
                                SourceLocation BuiltinLoc,
                                SourceLocation RParenLoc);
 
+  /// ConvertFromArbitraryFPExpr - Handle __builtin_convert_from_arbitrary_fp
+  ExprResult ConvertFromArbitraryFPExpr(Expr *E, Expr *Format,
+                                        TypeSourceInfo *TInfo,
+                                        SourceLocation BuiltinLoc,
+                                        SourceLocation RParenLoc);
+
+  /// Check that \p E is an ordinary string literal naming an arbitrary
+  /// floating-point format. Returns the literal, or null after diagnosing.
+  const StringLiteral *CheckArbitraryFPFormatArg(Expr *E);
+
   static StringRef GetFormatStringTypeName(FormatStringType FST);
   static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -7721,6 +7731,16 @@ public:
   ExprResult ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
                                     SourceLocation BuiltinLoc,
                                     SourceLocation RParenLoc);
+
+  /// ActOnConvertFromArbitraryFPExpr - create a new convert-from-arbitrary-fp
+  /// expression from the provided arguments.
+  ///
+  /// __builtin_convert_from_arbitrary_fp( value, format, dst type )
+  ///
+  ExprResult ActOnConvertFromArbitraryFPExpr(Expr *E, Expr *Format,
+                                             ParsedType ParsedDestTy,
+                                             SourceLocation BuiltinLoc,
+                                             SourceLocation RParenLoc);
 
   //===---------------------------- OpenCL Features -----------------------===//
 

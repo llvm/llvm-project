@@ -4066,6 +4066,15 @@ public:
     return SemaRef.ConvertVectorExpr(SrcExpr, DstTInfo, BuiltinLoc, RParenLoc);
   }
 
+  /// Build a new convert from arbitrary floating-point expression.
+  ExprResult RebuildConvertFromArbitraryFPExpr(SourceLocation BuiltinLoc,
+                                               Expr *SrcExpr, Expr *Format,
+                                               TypeSourceInfo *DstTInfo,
+                                               SourceLocation RParenLoc) {
+    return SemaRef.ConvertFromArbitraryFPExpr(SrcExpr, Format, DstTInfo,
+                                              BuiltinLoc, RParenLoc);
+  }
+
   /// Build a new template argument pack expansion.
   ///
   /// By default, performs semantic analysis to build a new pack expansion
@@ -17671,6 +17680,29 @@ TreeTransform<Derived>::TransformConvertVectorExpr(ConvertVectorExpr *E) {
   return getDerived().RebuildConvertVectorExpr(E->getBuiltinLoc(),
                                                SrcExpr.get(), Type,
                                                E->getRParenLoc());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformConvertFromArbitraryFPExpr(
+    ConvertFromArbitraryFPExpr *E) {
+  ExprResult SrcExpr = getDerived().TransformExpr(E->getSrcExpr());
+  if (SrcExpr.isInvalid())
+    return ExprError();
+
+  ExprResult Format = getDerived().TransformExpr(E->getFormatExpr());
+  if (Format.isInvalid())
+    return ExprError();
+
+  TypeSourceInfo *Type = getDerived().TransformType(E->getTypeSourceInfo());
+  if (!Type)
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Type == E->getTypeSourceInfo() &&
+      SrcExpr.get() == E->getSrcExpr() && Format.get() == E->getFormatExpr())
+    return E;
+
+  return getDerived().RebuildConvertFromArbitraryFPExpr(
+      E->getBuiltinLoc(), SrcExpr.get(), Format.get(), Type, E->getRParenLoc());
 }
 
 template<typename Derived>

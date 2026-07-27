@@ -4842,6 +4842,72 @@ public:
   }
 };
 
+/// ConvertFromArbitraryFPExpr - Clang builtin function
+/// __builtin_convert_from_arbitrary_fp. This AST node provides support for
+/// interpreting an integer as the bits of the specified floating-point format
+/// and converting it to the destination floating-point type.
+class ConvertFromArbitraryFPExpr : public Expr {
+  enum { SRC, FORMAT, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+  TypeSourceInfo *TInfo;
+  SourceLocation BuiltinLoc, RParenLoc;
+
+  friend class ASTStmtReader;
+
+public:
+  ConvertFromArbitraryFPExpr(Expr *SrcExpr, Expr *Format, TypeSourceInfo *TI,
+                             QualType DstType, ExprValueKind VK,
+                             ExprObjectKind OK, SourceLocation BuiltinLoc,
+                             SourceLocation RParenLoc)
+      : Expr(ConvertFromArbitraryFPExprClass, DstType, VK, OK), TInfo(TI),
+        BuiltinLoc(BuiltinLoc), RParenLoc(RParenLoc) {
+    SubExprs[SRC] = SrcExpr;
+    SubExprs[FORMAT] = Format;
+    setDependence(computeDependence(this));
+  }
+
+  explicit ConvertFromArbitraryFPExpr(EmptyShell Empty)
+      : Expr(ConvertFromArbitraryFPExprClass, Empty) {}
+
+  /// getSrcExpr - Return the integer expression holding the format bits.
+  Expr *getSrcExpr() const { return cast<Expr>(SubExprs[SRC]); }
+
+  /// getFormatExpr - Return the expression naming the source format.
+  Expr *getFormatExpr() const { return cast<Expr>(SubExprs[FORMAT]); }
+
+  /// getFormat - Return the name of the source arbitrary floating-point format.
+  StringRef getFormat() const {
+    return cast<StringLiteral>(getFormatExpr()->IgnoreParenImpCasts())
+        ->getString();
+  }
+
+  /// getTypeSourceInfo - Return the destination type.
+  TypeSourceInfo *getTypeSourceInfo() const { return TInfo; }
+  void setTypeSourceInfo(TypeSourceInfo *TI) { TInfo = TI; }
+
+  /// getBuiltinLoc - Return the location of the
+  /// __builtin_convert_from_arbitrary_fp token.
+  SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
+
+  /// getRParenLoc - Return the location of final right parenthesis.
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ConvertFromArbitraryFPExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+};
+
 /// ChooseExpr - GNU builtin-in function __builtin_choose_expr.
 /// This AST node is similar to the conditional operator (?:) in C, with
 /// the following exceptions:

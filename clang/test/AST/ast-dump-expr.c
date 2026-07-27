@@ -346,3 +346,11 @@ void PrimaryExpressions(int a) {
 
   // Generic selection expressions are covered elsewhere.
 }
+
+void ArbitraryFPConversions(unsigned char b) {
+  __builtin_convert_from_arbitrary_fp(b, "Float8E5M2", float);
+  // CHECK: ConvertFromArbitraryFPExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:61> 'float'
+  // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:39> 'unsigned char' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:39> 'unsigned char' lvalue ParmVar 0x{{[^ ]*}} 'b' 'unsigned char'
+  // CHECK-NEXT: StringLiteral 0x{{[^ ]*}} <col:42> 'char[11]' lvalue "Float8E5M2"
+}

@@ -649,6 +649,7 @@ public:
   Value *VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E);
   Value *VisitShuffleVectorExpr(ShuffleVectorExpr *E);
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
+  Value *VisitConvertFromArbitraryFPExpr(ConvertFromArbitraryFPExpr *E);
   Value *VisitMemberExpr(MemberExpr *E);
   Value *VisitExtVectorElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
   Value *VisitMatrixElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
@@ -2136,6 +2137,19 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   }
 
   return Res;
+}
+
+Value *ScalarExprEmitter::VisitConvertFromArbitraryFPExpr(
+    ConvertFromArbitraryFPExpr *E) {
+  Value *Src = CGF.EmitScalarExpr(E->getSrcExpr());
+  llvm::Type *DstTy = ConvertType(E->getType());
+
+  llvm::Function *F = CGF.CGM.getIntrinsic(
+      llvm::Intrinsic::convert_from_arbitrary_fp, {DstTy, Src->getType()});
+  llvm::Value *Format = llvm::MetadataAsValue::get(
+      CGF.getLLVMContext(),
+      llvm::MDString::get(CGF.getLLVMContext(), E->getFormat()));
+  return Builder.CreateCall(F, {Src, Format});
 }
 
 Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
