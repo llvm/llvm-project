@@ -21,6 +21,7 @@
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace clang {
@@ -847,7 +848,7 @@ public:
   /// table.
   template <typename TableT>
   bool collectExactFunctionParameterSelectors(
-      TableT *Table, bool IsCXXMethod,
+      TableT *Table,
       llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors);
 
   /// Retrieve the selector ID for the given selector, or an empty
@@ -918,8 +919,8 @@ APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
   if (ID == IdentifierID(0))
     return llvm::StringRef();
 
-  if (!IdentifierStringsInitialized) {
-    IdentifierStringsInitialized = true;
+  if (!IdentifierStrings) {
+    IdentifierStrings.emplace();
     // keys() and data() iterate over the same serialized entries in lockstep.
     // The serialized hash-table order is not guaranteed to be identifier-ID
     // order, so keep an explicit ID-to-string map rather than indexing a vector
@@ -932,20 +933,24 @@ APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
     auto KnownIDEnd = IDs.end();
     for (; Identifier != IdentifierEnd && KnownID != KnownIDEnd;
          ++Identifier, ++KnownID)
-      IdentifierStrings.try_emplace(static_cast<uint32_t>(*KnownID),
-                                    *Identifier);
+      IdentifierStrings->try_emplace(static_cast<uint32_t>(*KnownID),
+                                     *Identifier);
   }
 
-  auto Known = IdentifierStrings.find(static_cast<uint32_t>(ID));
-  if (Known == IdentifierStrings.end())
+  auto Known = IdentifierStrings->find(static_cast<uint32_t>(ID));
+  if (Known == IdentifierStrings->end())
     return std::nullopt;
   return Known->second;
 }
 
 template <typename TableT>
 bool APINotesReader::Implementation::collectExactFunctionParameterSelectors(
-    TableT *Table, bool IsCXXMethod,
-    llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors) {
+    TableT *Table, llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors) {
+  static_assert(std::is_same_v<TableT, SerializedGlobalFunctionTable> ||
+                std::is_same_v<TableT, SerializedCXXMethodTable>);
+  constexpr bool IsCXXMethod =
+      std::is_same_v<TableT, SerializedCXXMethodTable>;
+
   if (!Table)
     return true;
 
@@ -2537,11 +2542,9 @@ APINotesReader::getGlobalFunctionSelectorKey(
 bool APINotesReader::collectExactFunctionParameterSelectors(
     llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors) {
   return Implementation->collectExactFunctionParameterSelectors(
-             Implementation->GlobalFunctionTable.get(), /*IsCXXMethod=*/false,
-             Selectors) &&
+             Implementation->GlobalFunctionTable.get(), Selectors) &&
          Implementation->collectExactFunctionParameterSelectors(
-             Implementation->CXXMethodTable.get(), /*IsCXXMethod=*/true,
-             Selectors);
+             Implementation->CXXMethodTable.get(), Selectors);
 }
 
 auto APINotesReader::lookupGlobalFunctionImpl(llvm::StringRef Name,
