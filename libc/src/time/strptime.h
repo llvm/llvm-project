@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 char *strptime(const char *__restrict buf, const char *__restrict format,
-               const tm *__restrict tm);
+               const struct tm *__restrict tm);
 
 } // namespace LIBC_NAMESPACE_DECL
 
