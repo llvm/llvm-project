@@ -5167,12 +5167,6 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicIsInRampOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicIsInRampOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  return mlir::failure();
-}
-
 mlir::LogicalResult CIRToLLVMCoroIntrinsicFreeOpLowering::matchAndRewrite(
     cir::CoroIntrinsicFreeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
