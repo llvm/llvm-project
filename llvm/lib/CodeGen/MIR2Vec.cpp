@@ -383,8 +383,8 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   // RegisterBank instead of a TargetRegisterClass, for which
   // getRegClassOrNull() returns nullptr.
   if (!RegClass) {
-    LLVM_DEBUG(errs() << "MIR2Vec: No register class for register "
-                      << Reg.id() << "; using zero vector.\n");
+    LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
+                      << "; using zero vector.\n");
     ++MIRClasslessRegCounter;
     return std::nullopt;
   }
