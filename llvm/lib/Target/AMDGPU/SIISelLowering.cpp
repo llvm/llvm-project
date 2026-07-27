@@ -3184,12 +3184,12 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       // Preload this argument.
       const TargetRegisterClass *RC =
           TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
-      SmallVectorImpl<MCRegister> *PreloadRegs =
+      ArrayRef<MCRegister> PreloadRegs =
           Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, InIdx, PaddingSGPRs);
 
-      if (PreloadRegs->size() > 1)
+      if (PreloadRegs.size() > 1)
         RC = &AMDGPU::SGPR_32RegClass;
-      for (auto &Reg : *PreloadRegs) {
+      for (MCRegister Reg : PreloadRegs) {
         assert(Reg);
         MF.addLiveIn(Reg, RC);
         CCInfo.AllocateReg(Reg);

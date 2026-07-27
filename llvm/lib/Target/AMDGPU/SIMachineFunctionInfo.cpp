@@ -271,7 +271,7 @@ Register SIMachineFunctionInfo::addLDSKernelId() {
   return ArgInfo.LDSKernelId.getRegister();
 }
 
-SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
+ArrayRef<MCRegister> SIMachineFunctionInfo::addPreloadedKernArg(
     const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
     unsigned AllocSizeDWord, int KernArgIdx, int PaddingSGPRs) {
   auto [It, Inserted] = ArgInfo.PreloadKernArgs.try_emplace(KernArgIdx);
@@ -299,7 +299,7 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
 
   // Track the actual number of SGPRs that HW will preload to.
   UserSGPRInfo.allocKernargPreloadSGPRs(AllocSizeDWord + PaddingSGPRs);
-  return &Regs;
+  return Regs;
 }
 
 void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
