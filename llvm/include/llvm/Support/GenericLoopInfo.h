@@ -427,12 +427,6 @@ public:
       LI->reallocBlocks(*static_cast<LoopT *>(this), Size);
   }
 
-  /// interface to do reserve() for SubLoops
-  void reserveSubLoops(unsigned Size) {
-    assert(!isInvalid() && "Loop not in a valid state!");
-    SubLoops.reserve(Size);
-  }
-
   /// This method is used to move BB (which must be part of this loop) to be the
   /// loop header of the loop (the block that dominates all others).
   void moveToHeader(BlockT *BB) {
@@ -668,10 +662,6 @@ private:
   /// builds the block list.
   static BlockT *pendingHeader(const LoopT *L) { return L->PendingHeader; }
 
-  void discoverAndMapSubloop(LoopT *L, BlockT *Header,
-                             ArrayRef<BlockT *> Backedges,
-                             const DominatorTreeBase<BlockT, false> &DomTree);
-
   /// True if \p L borrows its block list from BlockLayout.
   static bool hasBorrowedBlocks(const LoopT &L) {
     return L.BlockCapacity == LoopT::BorrowedCapacity;
@@ -850,8 +840,19 @@ public:
     return isNotAlreadyContainedIn(SubLoop->getParentLoop(), ParentLoop);
   }
 
-  /// Create the loop forest using a stable algorithm.
+  /// Create the loop forest for a function. A dominator tree is needed only for
+  /// an irreducible CFG, where dominance reduces a loop that an edge re-enters
+  /// to the natural loop of its header's backedges.
+  ///@{
+  /// Build a dominator tree if one is needed.
+  void analyze(ParentT F);
+  /// Call \p GetDomTree if a dominator tree is needed.
+  void
+  analyze(ParentT F,
+          function_ref<const DominatorTreeBase<BlockT, false> &()> GetDomTree);
+  /// Analyze the function \p DomTree describes.
   void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
+  ///@}
 
   // Debugging
   void print(raw_ostream &OS) const;

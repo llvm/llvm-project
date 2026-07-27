@@ -55,22 +55,24 @@
 # CHECK-EMPTY:
 
 ## .glink has 3 IPLT entries for ifunc1, ifunc2 and ifunc3.
-## ifunc2 and ifunc3 have the same code sequence as their PLT call stubs.
+## ifunc1@toc - ifunc1@iplt = 0x100302a0 - 0x10010268 = (2<<16) + 56
+## ifunc2@toc - ifunc2@iplt = 0x100302a8 - 0x10010278 = (2<<16) + 48
+## ifunc3@toc - ifunc3@iplt = 0x100302b0 - 0x10010288 = (2<<16) + 40
 # CHECK:      Disassembly of section .glink:
 # CHECK-EMPTY:
 # CHECK-NEXT: 0000000010010268 <ifunc1>:
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32760(12)
+# CHECK-NEXT:     addis 12, 12, 2
+# CHECK-NEXT:     ld 12, 56(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32752(12)
+# CHECK-NEXT:     addis 12, 12, 2
+# CHECK-NEXT:     ld 12, 48(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 # CHECK-EMPTY:
 # CHECK-NEXT: 0000000010010288 <ifunc3>:
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32744(12)
+# CHECK-NEXT:     addis 12, 12, 2
+# CHECK-NEXT:     ld 12, 40(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 
