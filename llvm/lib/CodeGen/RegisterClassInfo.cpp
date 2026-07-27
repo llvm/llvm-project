@@ -128,10 +128,11 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
          "RegisterClassInfo must be initialized before updating reserved regs");
   assert(ReservedInput.size() == Reserved.size() &&
          "Reserved register bit vectors must have the same size");
-  assert(Reserved.subsetOf(ReservedInput) &&
-         "updateReservedRegs cannot remove reserved registers");
   if (ReservedInput == Reserved)
     return;
+
+  // Cached orders cannot regain unreserved registers; recompute them lazily.
+  bool OnlyNewReservations = Reserved.subsetOf(ReservedInput);
 
   // subtracts reserved set from input set to get newly reserved regs
   BitVector NewReservations = ReservedInput;
@@ -144,18 +145,20 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
 
   // NumRegs may hide entries beyond the stress limit, so those orders cannot
   // safely be compacted using only their visible prefix.
-  if (StressRA) {
+  if (!OnlyNewReservations || StressRA) {
     ++Tag;
     return;
   }
 
   for (const TargetRegisterClass &RC : TRI->regclasses()) {
     RCInfo &Info = RegClass[RC.getID()];
-    Info.ProperSubClass = false;
 
-    // Stale entries will be computed lazily with the new Reserved vector.
+    // skip if class info is out of date
     if (Info.Tag != Tag)
       continue;
+
+    // Recomputed below, once every order has been narrowed.
+    Info.ProperSubClass = false;
 
     unsigned NewNumRegs = 0;
     uint8_t MinCost = uint8_t(~0u);
@@ -253,7 +256,6 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     RCI.NumRegs = StressRA;
 
   // Check if RC is a proper sub-class.
-  RCI.ProperSubClass = false;
   if (const TargetRegisterClass *Super =
           TRI->getLargestLegalSuperClass(RC, *MF))
     if (Super != RC && getNumAllocatableRegs(Super) > RCI.NumRegs)

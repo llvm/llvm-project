@@ -99,10 +99,10 @@ public:
                                      bool Rev = false);
 
   /// allows modification of current reserved register vector
-  /// without invalidating RCI and triggering recomputation.
+  /// without invalidating RCI and triggering recomputation when possible
   /// prereqs for use:
   ///     RCI already initialized,
-  ///     the caller updated MRI's reserved vector (only adding reservations)
+  ///     the caller updated MRI's reserved vector
   ///     note: target information, callee-saved regs, cost, and alloc order
   ///     must not change.
   ///     input: MRI's current frozen vector
