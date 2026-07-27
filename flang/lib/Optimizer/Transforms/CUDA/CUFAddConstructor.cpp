@@ -383,7 +383,9 @@ struct CUFAddConstructor
               // Under -gpu=mem:unified, also register the global as
               // device-resident so a matching host symbol from another
               // translation unit is not treated as host memory.
-              if (cudaUnified) {
+              if (cudaUnified &&
+                  attr.getValue() != cuf::DataAttribute::Constant &&
+                  attr.getValue() != cuf::DataAttribute::Device) {
                 uint64_t szBytes = getGlobalSizeInBytes(
                     loc, *dl, kindMap, typeConverter, globalOp);
                 cuf::RegisterVariableStaticOp::create(

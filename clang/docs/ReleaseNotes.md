@@ -362,6 +362,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
+
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
@@ -425,6 +427,12 @@ features cannot lower the translation-unit ABI level;
 #### Android Support
 
 #### Windows Support
+
+- Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
+  over-aligned base class is followed by another base class. MSVC on Arm64 (but
+  not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
+  subsequent base; Clang now does the same.
+  ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
 
