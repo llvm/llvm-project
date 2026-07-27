@@ -3759,9 +3759,12 @@ static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
   if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE)
     return false;
   EVT VT = cast<MemSDNode>(User)->getMemoryVT();
-  if (!(VT.isScalarInteger() &&
-        (Subtarget.hasStdExtZilx() || Subtarget.hasVendorXTHeadMemIdx() ||
-         Subtarget.hasVendorXqcisls())) &&
+  // Zilx only provides indexed loads, so it must not enable reg+reg-scale
+  // address folding for stores. XTheadMemIdx and Xqcisls have scaled stores.
+  bool HasScalarIntegerMemIdx =
+      Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls() ||
+      (Subtarget.hasStdExtZilx() && User->getOpcode() == ISD::LOAD);
+  if (!(VT.isScalarInteger() && HasScalarIntegerMemIdx) &&
       !((VT == MVT::f32 || VT == MVT::f64) &&
         Subtarget.hasVendorXTHeadFMemIdx()))
     return false;
