@@ -18,12 +18,13 @@
 // Zilx indexed loads reuse the AMO major opcode. The addressing mode is
 // selected by funct5 (inst[31:27]) and the access width/signedness reuses the
 // base integer load funct3. rs1 is the index operand, rs2 is the base operand,
-// and the aq and rl bits are always 0.
+// and the aq and rl bits are always 0. The base register is written in
+// parentheses to distinguish it from the index register.
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class ZilxLoad<bits<5> funct5, bits<3> funct3, string opcodestr>
     : RVInstRAtomic<funct5, /*aq=*/0, /*rl=*/0, funct3, OPC_AMO,
-                    (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                    opcodestr, "$rd, $rs1, $rs2">;
+                    (outs GPR:$rd), (ins GPRMemZeroOffset:$rs2, GPR:$rs1),
+                    opcodestr, "$rd, $rs2, $rs1">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -88,8 +89,8 @@ def LXSUWWU : ZilxLoad<0b11110, 0b110, "lxsuwwu">,
 // They are parse-only aliases (EmitPriority 0) so the disassembler still prints
 // the underlying `lxsb`/`lxsbu`.
 let Predicates = [HasStdExtZilx] in {
-def : InstAlias<"lxb $rd, $rs1, $rs2",  (LXSB  GPR:$rd, GPR:$rs1, GPR:$rs2), 0>;
-def : InstAlias<"lxbu $rd, $rs1, $rs2", (LXSBU GPR:$rd, GPR:$rs1, GPR:$rs2), 0>;
+def : InstAlias<"lxb $rd, $rs2, $rs1",  (LXSB  GPR:$rd, GPRMemZeroOffset:$rs2, GPR:$rs1), 0>;
+def : InstAlias<"lxbu $rd, $rs2, $rs1", (LXSBU GPR:$rd, GPRMemZeroOffset:$rs2, GPR:$rs1), 0>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -127,21 +128,21 @@ def AddrRegZextReg2 : AddrRegZextReg<2>;
 def AddrRegZextReg3 : AddrRegZextReg<3>;
 
 // The addressing-mode ComplexPatterns bind the base first and the (shifted)
-// index second. Zilx encodes rs1 as the index and rs2 as the base, so the
-// operands are emitted in that order.
+// index second. Zilx encodes rs2 as the base (written in parentheses) and rs1
+// as the index, so the operands are emitted in that order.
 class UnscaledIndexLoadPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (LoadOp (AddrRegReg0 (XLenVT GPR:$base), (XLenVT GPR:$index)))),
-          (Inst GPR:$index, GPR:$base)>;
+          (Inst GPRMemZeroOffset:$base, GPR:$index)>;
 
 class ScaledIndexLoadPat<PatFrag LoadOp, RVInst Inst, int Scale, ValueType vt = XLenVT>
     : Pat<(vt (LoadOp (!cast<AddrRegReg>("AddrRegReg" # Scale)
                       (XLenVT GPR:$base), (XLenVT GPR:$index)))),
-          (Inst GPR:$index, GPR:$base)>;
+          (Inst GPRMemZeroOffset:$base, GPR:$index)>;
 
 class ScaledZextIndexLoadPat<PatFrag LoadOp, RVInst Inst, int Scale, ValueType vt = XLenVT>
     : Pat<(vt (LoadOp (!cast<AddrRegZextReg>("AddrRegZextReg" # Scale)
                       (XLenVT GPR:$base), (XLenVT GPR:$index)))),
-          (Inst GPR:$index, GPR:$base)>;
+          (Inst GPRMemZeroOffset:$base, GPR:$index)>;
 
 // Patterns
 let Predicates = [HasStdExtZilx] in {

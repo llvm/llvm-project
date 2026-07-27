@@ -17,6 +17,7 @@
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -42,6 +43,149 @@
 namespace Fortran::semantics {
 
 using namespace Fortran::semantics::omp;
+
+namespace {
+
+bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec) {
+  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  const parser::OmpClause *clause{
+      parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_default)};
+  if (!clause) {
+    return false;
+  }
+  const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
+  const auto *dsa{std::get_if<DataSharingAttribute>(&defaultClause.v.u)};
+  return dsa && *dsa == DataSharingAttribute::None;
+}
+
+bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {
+  if (symbol.owner() == scope || !scope.Contains(symbol.owner())) {
+    return false;
+  }
+  if (symbol.test(Symbol::Flag::OmpPreDetermined)) {
+    return true;
+  }
+  // Only PRIVATE on an enclosed construct avoids an implicit reference in the
+  // enclosing construct. Other explicit DSAs still require an outer DSA.
+  return symbol.test(Symbol::Flag::OmpExplicit) &&
+      symbol.test(Symbol::Flag::OmpPrivate);
+}
+
+class MetadirectiveDefaultNoneChecker {
+public:
+  MetadirectiveDefaultNoneChecker(SemanticsContext &context, const Scope &scope,
+      const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed)
+      : context_{context}, scope_{scope}, explicitDSA_{explicitDSA},
+        diagnosed_{diagnosed} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::DoConstruct &loop) {
+    for (const omp::LoopControl &control : omp::GetLoopControls(loop)) {
+      if (const Symbol *symbol{control.iv.symbol}) {
+        loopIndices_.insert(symbol->GetUltimate());
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::SpecificationPart &) {
+    ++declarativeNesting_;
+    return true;
+  }
+  void Post(const parser::SpecificationPart &) { --declarativeNesting_; }
+
+  bool Pre(const parser::DataStmt &) {
+    ++declarativeNesting_;
+    return true;
+  }
+  void Post(const parser::DataStmt &) { --declarativeNesting_; }
+
+  bool Pre(const parser::Expr &) {
+    ++expressionNesting_;
+    return true;
+  }
+  void Post(const parser::Expr &) { --expressionNesting_; }
+
+  bool Pre(const parser::Name &name) {
+    // A declarative name is not a reference, but a name in a specification
+    // expression can require an explicit DSA.
+    if ((declarativeNesting_ > 0 && expressionNesting_ == 0) || !name.symbol) {
+      return true;
+    }
+
+    const Symbol &symbol{*name.symbol};
+    const Symbol &ultimate{symbol.GetUltimate()};
+    // Variables declared inside the associated loop without static storage are
+    // predetermined private.
+    bool isNonStaticLocal{ultimate.owner() != scope_ &&
+        scope_.Contains(ultimate.owner()) && !semantics::IsSaved(ultimate) &&
+        !ultimate.test(Symbol::Flag::InCommonBlock)};
+    if (!omp::IsPrivatizable(ultimate) ||
+        ultimate.test(Symbol::Flag::OmpThreadprivate) ||
+        loopIndices_.count(ultimate) != 0 ||
+        HasNestedPrivateDSA(symbol, scope_) || isNonStaticLocal) {
+      return true;
+    }
+
+    const Symbol *requiredSymbol{&ultimate};
+    if (ultimate.test(Symbol::Flag::CrayPointee)) {
+      requiredSymbol = &semantics::GetCrayPointer(ultimate).GetUltimate();
+    }
+    if (explicitDSA_.count(&ultimate) != 0 ||
+        explicitDSA_.count(requiredSymbol) != 0 ||
+        !diagnosed_.insert(*requiredSymbol).second) {
+      return true;
+    }
+
+    if (ultimate.test(Symbol::Flag::CrayPointee)) {
+      context_.Say(name.source,
+          "The DEFAULT(NONE) clause requires that the Cray Pointer '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+          requiredSymbol->name());
+    } else {
+      context_.Say(name.source,
+          "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
+          ultimate.name());
+    }
+    return true;
+  }
+
+private:
+  SemanticsContext &context_;
+  const Scope &scope_;
+  const SymbolSourceMap &explicitDSA_;
+  UnorderedSymbolSet &diagnosed_;
+  UnorderedSymbolSet loopIndices_;
+  int declarativeNesting_{0};
+  int expressionNesting_{0};
+};
+
+} // namespace
+
+void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
+    const parser::OmpDirectiveSpecification &spec,
+    const parser::DoConstruct &rootLoop, UnorderedSymbolSet &diagnosed) {
+  if (!HasDefaultNone(spec)) {
+    return;
+  }
+
+  SymbolSourceMap explicitDSA;
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
+    if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
+      if (const parser::OmpObjectList *objects{
+              parser::omp::GetOmpObjectList(clause)}) {
+        GetSymbolsInObjectList(*objects, explicitDSA);
+      }
+    }
+  }
+
+  const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
+  MetadirectiveDefaultNoneChecker checker{
+      context_, scope, explicitDSA, diagnosed};
+  parser::Walk(rootLoop, checker);
+}
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
   OmpVerifyModifiers(
@@ -571,8 +715,11 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   }
 
   llvm::omp::Directive dirId{x.DirId()};
+  bool checkDefaultNoneInAssociatedLoop{
+      GetDirectiveNest(MetadirectiveNest) != 0};
   if (const parser::OpenMPConstruct *meta{GetCurrentConstruct()}) {
     if (parser::Unwrap<parser::OmpDelimitedMetadirectiveDirective>(meta->u)) {
+      checkDefaultNoneInAssociatedLoop = false;
       unsigned version{context_.langOptions().OpenMPVersion};
       switch (llvm::omp::getDirectiveAssociation(dirId)) {
       case llvm::omp::Association::Block:
@@ -596,7 +743,8 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // Record each variant directive. A loop-associated one is later validated
   // against the loop nest that follows the metadirective.
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
-    metadirectiveLoopVariants_.push_back({currentWhenSelector_, &x});
+    metadirectiveLoopVariants_.push_back(
+        {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
   }
 }
 
@@ -674,6 +822,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 
   // Build the matching context once for the static-applicability gate below.
   OmpVariantMatchContext matchContext{context_};
+  UnorderedSymbolSet defaultNoneDiagnosed;
 
   for (const MetadirectiveLoopVariant &variant : variants) {
     const parser::OmpDirectiveSpecification *spec{variant.spec};
@@ -686,6 +835,12 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
     if (assoc == llvm::omp::Association::LoopNest) {
       if (!checkRootLoopCanonical(*spec, /*isSequence=*/false)) {
         continue;
+      }
+
+      // A standalone metadirective does not contain its associated loop in
+      // the parse tree, so name resolution cannot apply DEFAULT(NONE) to it.
+      if (variant.checkDefaultNoneInAssociatedLoop) {
+        CheckDefaultNoneInAssociatedLoop(*spec, rootLoop, defaultNoneDiagnosed);
       }
 
       auto [needDepth, needPerfect]{
