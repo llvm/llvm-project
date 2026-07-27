@@ -10,22 +10,25 @@
 # RUN:   FileCheck %s --check-prefixes=HEX,CHECK
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x300360 R_SPARC_GLOB_DAT b 0x0
+# RELOC-NEXT:   0x300368 R_SPARC_GLOB_DAT b 0x0
 # RELOC-NEXT: }
 
+# NM: 00000000003002a0 d _DYNAMIC
 # NM: 0000000000300360 d _GLOBAL_OFFSET_TABLE_
-# NM: 0000000000400370 d a
+# NM: 0000000000400378 d a
 
+## .got[0] holds the address of _DYNAMIC.
 # HEX:      Contents of section .got:
-# HEX-NEXT: 300360 00000000 00000000 00000000 00400370
+# HEX-NEXT: 300360 00000000 003002a0 00000000 00000000
+# HEX-NEXT: 300370 00000000 00400378
 
-## a: &.got[1] - _GLOBAL_OFFSET_TABLE_ = 0x300368 - 0x300360 = 8
-## b: &.got[0] - _GLOBAL_OFFSET_TABLE_ = 0x300360 - 0x300360 = 0
+## a: &.got[2] - _GLOBAL_OFFSET_TABLE_ = 0x300370 - 0x300360 = 16
+## b: &.got[1] - _GLOBAL_OFFSET_TABLE_ = 0x300368 - 0x300360 = 8
 # CHECK:      sethi 0, %o0
-# CHECK-NEXT: or %o0, 8, %o0
+# CHECK-NEXT: or %o0, 16, %o0
 # CHECK-NEXT: sethi 0, %o1
-# CHECK-NEXT: or %o1, 0, %o1
-# CHECK-NEXT: ldx [%l7+8], %o2
+# CHECK-NEXT: or %o1, 8, %o1
+# CHECK-NEXT: ldx [%l7+16], %o2
 
 # RUN: ld.lld --apply-dynamic-relocs %t.o %t1.so -o %t2
 # RUN: llvm-objdump -s -j .got %t2 | FileCheck --check-prefix=HEX %s

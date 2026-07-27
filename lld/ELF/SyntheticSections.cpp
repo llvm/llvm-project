@@ -1521,9 +1521,14 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (ctx.in.relaPlt.get() == this && ctx.in.gotPlt->getParent()) {
-    getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
+  if (ctx.in.relaPlt.get() == this) {
+    InputSection *sec = ctx.target->usesGotPlt
+                            ? static_cast<InputSection *>(ctx.in.gotPlt.get())
+                            : static_cast<InputSection *>(ctx.in.plt.get());
+    if (sec->getParent()) {
+      getParent()->flags |= ELF::SHF_INFO_LINK;
+      getParent()->info = sec->getParent()->sectionIndex;
+    }
   }
 }
 
