@@ -166,8 +166,8 @@ exit:
 }
 
 ; Post-increment with negative step.
-define i1 @postinc_negative_step_not_folded(i1 %c) {
-; CHECK-LABEL: define i1 @postinc_negative_step_not_folded(
+define i1 @postinc_negative_step(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_negative_step(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]

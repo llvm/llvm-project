@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt-c/Session.h"
 
 namespace orc_rt {
 
@@ -368,6 +369,19 @@ void Session::sendWrapperResult(uint64_t CallId,
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes) {
   unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));
+}
+
+// --- C API Implementation ---
+
+extern "C" void orc_rt_Session_callController(
+    orc_rt_SessionRef S, orc_rt_ControllerHandlerTag T,
+    orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_Session_CallControllerReturn Return, void *ReturnCtx) {
+  unwrap(S)->callController(
+      [S, Return, ReturnCtx](WrapperFunctionBuffer ResultBytes) {
+        Return(S, ResultBytes.release(), ReturnCtx);
+      },
+      T, WrapperFunctionBuffer(ArgBytes));
 }
 
 } // namespace orc_rt

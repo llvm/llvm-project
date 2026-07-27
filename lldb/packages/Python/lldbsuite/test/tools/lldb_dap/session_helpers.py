@@ -27,6 +27,7 @@ from .types import (
     CompletionsArgs,
     ConfigurationDoneArgs,
     ContinueArgs,
+    ContinuedEvent,
     DataBreakpoint,
     DataBreakpointInfoArgs,
     DisassembleArgs,
@@ -1103,8 +1104,17 @@ class DAPTestSession(Session):
         return self.wait_for_event(MemoryEvent, after=after)
 
     def do_continue(self):
+        """Send a 'continueRequest' and wait for a 'ContinuedEvent',
+
+        Receiving the continue response does not mean the process continued,
+        It means we successfully sent the continue packet.
+        LLDB can continue asynchronously, so wait for the 'Continued' event.
+        """
         self.ensure_initialized()
-        return self.send_request(ContinueArgs()).result()
+        prior_event = self.last_event()
+        response = self.send_request(ContinueArgs()).result()
+        self.wait_for_event(ContinuedEvent, after=prior_event)
+        return response
 
     def continue_to_exit(self, exitCode: int = 0) -> ExitedEvent:
         continue_response = self.do_continue()
