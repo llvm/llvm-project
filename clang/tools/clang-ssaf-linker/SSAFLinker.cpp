@@ -6,17 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements the SSAF entity linker tool that performs entity
-//  linking across multiple TU summaries using the EntityLinker framework.
+//  This file implements the SSAF entity linker tool. Its default behavior
+//  is to link N TU summaries into one LU summary via the EntityLinker
+//  framework. It also provides the `static-library` subcommand for
+//  bundling TU summaries into a StaticLibrary.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
-#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
-#include "clang/ScalableStaticAnalysisFramework/Tool/Utils.h"
+#include "StaticLibraryCreateCLI.h"
+
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
+#include "clang/ScalableStaticAnalysis/Core/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/ScalableStaticAnalysis/Tool/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -42,6 +46,11 @@ namespace {
 
 cl::OptionCategory SsafLinkerCategory("clang-ssaf-linker options");
 
+// The `static-library` subcommand groups all StaticLibrary operations.
+cl::SubCommand StaticLibraryCmd("static-library",
+                                "Operations on StaticLibraries");
+
+// Top-level (default) `link` action positionals.
 cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
                                  cl::OneOrMore, cl::cat(SsafLinkerCategory));
 
@@ -49,11 +58,59 @@ cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"), cl::Required,
                                 cl::cat(SsafLinkerCategory));
 
+// --verbose and --time apply to every subcommand.
 cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
-                      cl::init(false), cl::cat(SsafLinkerCategory));
+                      cl::init(false), cl::cat(SsafLinkerCategory),
+                      cl::sub(cl::SubCommand::getTopLevel()),
+                      cl::sub(StaticLibraryCmd));
 
 cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
-                   cl::cat(SsafLinkerCategory));
+                   cl::cat(SsafLinkerCategory),
+                   cl::sub(cl::SubCommand::getTopLevel()),
+                   cl::sub(StaticLibraryCmd));
+
+// The `static-library` subcommand's verb positional. Declared BEFORE
+// StaticLibraryInputs so cl-lib binds argv[0] under the subcommand to the
+// verb rather than to the greedy input list.
+cl::opt<std::string> StaticLibraryVerb(cl::Positional, cl::Required,
+                                       cl::sub(StaticLibraryCmd),
+                                       cl::desc("<verb>"),
+                                       cl::value_desc("create"),
+                                       cl::cat(SsafLinkerCategory));
+
+// The `static-library` subcommand's action-specific positional input
+// list. Currently consumed by `static-library create`; if future verbs
+// need different input shapes they'll declare their own positionals.
+cl::list<std::string> StaticLibraryInputs(cl::Positional,
+                                          cl::sub(StaticLibraryCmd),
+                                          cl::desc("<TU summary files>"),
+                                          cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> StaticLibraryOutput("o", cl::Required,
+                                         cl::sub(StaticLibraryCmd),
+                                         cl::desc("Output file path"),
+                                         cl::value_desc("path"),
+                                         cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> StaticLibraryNamespace(
+    "namespace", cl::sub(StaticLibraryCmd),
+    cl::desc("Namespace name for the StaticLibrary (defaults to output "
+             "file stem)"),
+    cl::value_desc("name"), cl::cat(SsafLinkerCategory));
+
+cl::opt<std::string> StaticLibraryTriple(
+    "target-triple", cl::sub(StaticLibraryCmd),
+    cl::desc("Target triple (defaults to inputs' triple; must match all "
+             "inputs when set)"),
+    cl::value_desc("triple"), cl::cat(SsafLinkerCategory));
+
+//===----------------------------------------------------------------------===//
+// StaticLibrary Verbs
+//===----------------------------------------------------------------------===//
+
+// Verb strings for the `static-library` subcommand. Kept in sync with
+// UnknownStaticLibraryVerb below.
+constexpr const char *StaticLibraryCreateVerb = "create";
 
 //===----------------------------------------------------------------------===//
 // Error Messages
@@ -62,6 +119,9 @@ cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
 namespace LocalErrorMessages {
 
 constexpr const char *LinkingSummary = "Linking summary '{0}'";
+
+constexpr const char *UnknownStaticLibraryVerb =
+    "unknown static-library verb '{0}': expected 'create'";
 
 } // namespace LocalErrorMessages
 
@@ -81,7 +141,7 @@ void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
 }
 
 //===----------------------------------------------------------------------===//
-// Data Structures
+// link action
 //===----------------------------------------------------------------------===//
 
 struct LinkerInput {
@@ -90,11 +150,7 @@ struct LinkerInput {
   std::string LinkUnitName;
 };
 
-//===----------------------------------------------------------------------===//
-// Pipeline
-//===----------------------------------------------------------------------===//
-
-LinkerInput validate(llvm::TimerGroup &TG) {
+LinkerInput validateLinkInput(llvm::TimerGroup &TG) {
   llvm::Timer TValidate("validate", "Validate Input", TG);
   LinkerInput LI;
 
@@ -119,7 +175,16 @@ LinkerInput validate(llvm::TimerGroup &TG) {
   return LI;
 }
 
-void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
+void runLink(llvm::TimerGroup &TG) {
+  info(0, "Linking started.");
+
+  LinkerInput LI;
+  {
+    info(1, "Validating input.");
+    LI = validateLinkInput(TG);
+  }
+
+  info(1, "Linking input.");
   info(2, "Constructing linker.");
 
   // TODO: The linker currently uses a hardcoded target triple. Architecture
@@ -178,6 +243,30 @@ void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
       fail(std::move(Err));
     }
   }
+
+  info(0, "Linking finished.");
+}
+
+//===----------------------------------------------------------------------===//
+// static-library subcommand dispatch
+//===----------------------------------------------------------------------===//
+
+void runStaticLibrary(llvm::TimerGroup &TG) {
+  if (StaticLibraryVerb == StaticLibraryCreateVerb) {
+    StaticLibraryCreateCLI::Config Cfg;
+    Cfg.InputPaths = StaticLibraryInputs;
+    Cfg.OutputPath = StaticLibraryOutput;
+    Cfg.Namespace = StaticLibraryNamespace;
+    Cfg.TargetTriple = StaticLibraryTriple;
+    Cfg.Verbose = Verbose;
+    Cfg.Time = Time;
+
+    StaticLibraryCreateCLI SLC;
+    SLC.run(TG, Cfg);
+    return;
+  }
+  fail(LocalErrorMessages::UnknownStaticLibraryVerb,
+       StaticLibraryVerb.getValue());
 }
 
 } // namespace
@@ -192,23 +281,13 @@ int main(int argc, const char **argv) {
   InitLLVM X(argc, argv);
   initTool(argc, argv, "0.1", SsafLinkerCategory, ToolHeading);
 
-  llvm::TimerGroup LinkerTimers(getToolName(), ToolHeading);
-  LinkerInput LI;
+  llvm::TimerGroup Timers(getToolName(), ToolHeading);
 
-  {
-    info(0, "Linking started.");
-
-    {
-      info(1, "Validating input.");
-      LI = validate(LinkerTimers);
-    }
-
-    {
-      info(1, "Linking input.");
-      link(LI, LinkerTimers);
-    }
-
-    info(0, "Linking finished.");
+  if (StaticLibraryCmd) {
+    runStaticLibrary(Timers);
+  } else {
+    // Default (no subcommand): run the linker pipeline.
+    runLink(Timers);
   }
 
   return 0;

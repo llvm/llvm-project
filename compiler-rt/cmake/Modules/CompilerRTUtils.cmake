@@ -170,7 +170,7 @@ macro(detect_target_arch)
   check_symbol_exists(__wasm64__ "" __WEBASSEMBLY64)
   check_symbol_exists(__ve__ "" __VE)
   if(__AMDGPU)
-    add_default_target_arch(amdgcn)
+    add_default_target_arch(amdgpu)
   elseif(__ARM)
     add_default_target_arch(arm)
   elseif(__AVR)
@@ -313,6 +313,15 @@ macro(load_llvm_config)
       "You are not using the monorepo layout. This configuration is DEPRECATED.")
   endif()
 
+  # Exports from LLVM and Clang may contain shared libraries. When targeting
+  # platforms that lack shared library support, importing such
+  # exports unrestrictedly will trigger an error. Set
+  # LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
+  # when the target platform does not support shared libraries.
+  get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+  if (NOT HAS_SHARED_SUPPORT)
+    set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
+  endif()
   find_package(LLVM HINTS "${LLVM_CMAKE_DIR}")
   if (NOT LLVM_FOUND)
      message(WARNING "UNSUPPORTED COMPILER-RT CONFIGURATION DETECTED: "
@@ -417,6 +426,11 @@ macro(construct_compiler_rt_default_triple)
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^i.86$")
     # Android uses i686, but that's remapped at a later stage.
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
+  endif()
+
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^thumb")
+    string(REPLACE "thumb" "arm" COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+    set(COMPILER_RT_ARM_THUMB ON)
   endif()
 
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")

@@ -10,6 +10,8 @@
 
 // digits10
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <limits>
 #include <cfloat>
 
@@ -58,7 +60,7 @@ int main(int, char**)
     test<long double, LDBL_DIG>();
 
     // _BitInt(N): digits10 = floor((N - is_signed) * log10(2)).
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
     test<unsigned _BitInt(8), 2>();   // digits=8,   log10=2.4
     test<signed _BitInt(8), 2>();     // digits=7,   log10=2.1
     test<unsigned _BitInt(13), 3>();  // digits=13,  log10=3.9
@@ -85,10 +87,8 @@ int main(int, char**)
     test<signed _BitInt(4096), 1232>();   // digits=4095, log10=1232.7
 #  endif
 
-    // Very wide _BitInt: pin the log10(2) approximation used by digits10.
-    // Each width is the first point at which a coarser rational convergent
-    // of log10(2) would give the wrong floor, so these tests bite if the
-    // formula ever regresses.
+    // Each width is the first point where a coarser rational convergent of
+    // log10(2) would give the wrong floor.
 #  if __BITINT_MAXWIDTH__ >= 15437
     // A coarser convergent (643/2136) would give 4646 here; correct is 4647.
     test<unsigned _BitInt(15437), 4647>();
@@ -104,11 +104,10 @@ int main(int, char**)
     // Pin the exact upper bound of the approximation.
     test<unsigned _BitInt(8388608), 2525222>();
 #  endif
-    // The 1936274/6432163 convergent stays exact up to d=51132156. 8388608 is
-    // the largest width tested above, so if Clang raises __BITINT_MAXWIDTH__,
-    // extend the coverage before trusting the formula at the new range.
-    LIBCPP_STATIC_ASSERT(__BITINT_MAXWIDTH__ <= 8388608);
-#endif // TEST_HAS_EXTENSION(bit_int)
+    // The 1936274/6432163 convergent stays exact to d=51132156, above the
+    // current max width; the static_assert flags any future increase.
+    LIBCPP_STATIC_ASSERT(__BITINT_MAXWIDTH__ <= 8388608, "extend digits10 _BitInt coverage for the new maximum width");
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

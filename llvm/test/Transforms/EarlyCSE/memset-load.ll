@@ -87,6 +87,18 @@ entry:
   ret ptr addrspace(1) %v
 }
 
+define <4 x i32> @masked_load_from_zero_memset(ptr %p) {
+; CHECK-LABEL: define <4 x i32> @masked_load_from_zero_memset(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[P]], <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i32> splat (i32 7))
+; CHECK-NEXT:    ret <4 x i32> [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 16, i1 false)
+  %v = call <4 x i32> @llvm.masked.load(ptr %p, i32 16, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i32> <i32 7, i32 7, i32 7, i32 7>)
+  ret <4 x i32> %v
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg)
 declare void @clobber(ptr)

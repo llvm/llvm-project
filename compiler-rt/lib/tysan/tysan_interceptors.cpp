@@ -22,7 +22,7 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
 extern "C" int mallopt(int param, int value);
 #endif
 
@@ -49,18 +49,6 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
     return internal_memmove(dst, src, size);
 
   void *res = REAL(memmove)(dst, src, size);
-  tysan_copy_types(dst, src, size);
-  return res;
-}
-
-INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
-  if (!tysan_inited && REAL(memcpy) == nullptr) {
-    // memmove is used here because on some platforms this will also
-    // intercept the memmove implementation.
-    return internal_memmove(dst, src, size);
-  }
-
-  void *res = REAL(memcpy)(dst, src, size);
   tysan_copy_types(dst, src, size);
   return res;
 }
@@ -211,7 +199,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
   // Instruct libc malloc to consume less memory.
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
   mallopt(1, 0);          // M_MXFAST
   mallopt(-3, 32 * 1024); // M_MMAP_THRESHOLD
 #endif
@@ -238,7 +226,6 @@ void InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(memset);
   INTERCEPT_FUNCTION(memmove);
-  INTERCEPT_FUNCTION(memcpy);
 
   inited = 1;
 }

@@ -20,6 +20,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -34,10 +35,11 @@ using namespace AMDGPU;
 
 RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
-    const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
+    GISelValueTracking *VT, const RegisterBankInfo &RBI,
+    const RegBankLegalizeRules &RBLRules)
     : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
       ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()), B(B),
-      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
+      MRI(*B.getMRI()), MUI(MUI), VT(VT), RBI(RBI), MORE(MF, nullptr),
       RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
@@ -226,7 +228,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
       // Build the comparison(s), CurrentLaneReg == OpReg.
       unsigned OpSize = OpTy.getSizeInBits();
       unsigned PartSize = (OpSize % 64 == 0) ? 64 : 32;
-      LLT PartTy = LLT::scalar(PartSize);
+      LLT PartTy = LLT::integer(PartSize);
       unsigned NumParts = OpSize / PartSize;
       SmallVector<Register, 8> OpParts;
       SmallVector<Register, 8> CurrentLaneParts;
@@ -262,7 +264,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 
   // Copy vcc to sgpr32/64, ballot becomes a no-op during instruction selection.
   Register CondRegLM =
-      MRI.createVirtualRegister({WaveRC, LLT::scalar(IsWave32 ? 32 : 64)});
+      MRI.createVirtualRegister({WaveRC, LLT::integer(IsWave32 ? 32 : 64)});
   B.buildIntrinsic(Intrinsic::amdgcn_ballot, CondRegLM).addReg(CondReg);
 
   // Update EXEC, save the original EXEC value to SavedExec.
@@ -309,8 +311,8 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
           getIConstantVRegSExtVal(CombinedOffset, MRI)) {
     uint32_t SOffset, ImmOffset;
     if (TII.splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
-      VOffsetReg = B.buildConstant({VgprRB, S32}, 0).getReg(0);
-      SOffsetReg = B.buildConstant({SgprRB, S32}, SOffset).getReg(0);
+      VOffsetReg = B.buildConstant(VgprRB_I32, 0).getReg(0);
+      SOffsetReg = B.buildConstant(SgprRB_I32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
       return SOffset + ImmOffset;
     }
@@ -324,13 +326,13 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
       TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
     if (Base.isValid() && MRI.getRegBank(Base) == VgprRB) {
       VOffsetReg = Base;
-      SOffsetReg = B.buildConstant({SgprRB, S32}, SOffset).getReg(0);
+      SOffsetReg = B.buildConstant(SgprRB_I32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
       return 0;
     }
     // If we have SGPR base, we can use it for soffset.
     if (SOffset == 0) {
-      VOffsetReg = B.buildConstant({VgprRB, S32}, 0).getReg(0);
+      VOffsetReg = B.buildConstant(VgprRB_I32, 0).getReg(0);
       SOffsetReg = Base;
       InstOffsetVal = ImmOffset;
       return 0;
@@ -360,9 +362,9 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
   if (MRI.getRegBank(CombinedOffset) == VgprRB) {
     VOffsetReg = CombinedOffset;
   } else {
-    VOffsetReg = B.buildCopy({VgprRB, S32}, CombinedOffset).getReg(0);
+    VOffsetReg = B.buildCopy(VgprRB_I32, CombinedOffset).getReg(0);
   }
-  SOffsetReg = B.buildConstant({SgprRB, S32}, 0).getReg(0);
+  SOffsetReg = B.buildConstant(SgprRB_I32, 0).getReg(0);
   return 0;
 }
 
@@ -376,7 +378,7 @@ bool RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
   Register Base = MI.getOperand(1).getReg();
   LLT PtrTy = MRI.getType(Base);
   const RegisterBank *PtrRB = MRI.getRegBankOrNull(Base);
-  LLT OffsetTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT OffsetTy = LLT::integer(PtrTy.getSizeInBits());
   SmallVector<Register, 4> LoadPartRegs;
 
   unsigned ByteOffset = 0;
@@ -457,11 +459,11 @@ bool RegBankLegalizeHelper::widenMMOToS32(GAnyLoad &MI) const {
   if (MI.getOpcode() == G_LOAD) {
     B.buildLoad(Dst, Ptr, *WideMMO);
   } else {
-    auto Load = B.buildLoad(SgprRB_S32, Ptr, *WideMMO);
+    auto Load = B.buildLoad(SgprRB_I32, Ptr, *WideMMO);
 
     if (MI.getOpcode() == G_ZEXTLOAD) {
       APInt Mask = APInt::getLowBitsSet(S32.getSizeInBits(), MemSize);
-      auto MaskCst = B.buildConstant(SgprRB_S32, Mask);
+      auto MaskCst = B.buildConstant(SgprRB_I32, Mask);
       B.buildAnd(Dst, Load, MaskCst);
     } else {
       assert(MI.getOpcode() == G_SEXTLOAD);
@@ -484,9 +486,9 @@ bool RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
     auto False = B.buildConstant({VgprRB, Ty}, 0);
     B.buildSelect(Dst, Src, True, False);
   } else if (Ty == S64) {
-    auto True = B.buildConstant({VgprRB_S32}, TrueExtCst);
-    auto False = B.buildConstant({VgprRB_S32}, 0);
-    auto Lo = B.buildSelect({VgprRB_S32}, Src, True, False);
+    auto True = B.buildConstant({VgprRB_I32}, TrueExtCst);
+    auto False = B.buildConstant({VgprRB_I32}, 0);
+    auto Lo = B.buildSelect({VgprRB_I32}, Src, True, False);
     MachineInstrBuilder Hi;
     switch (Opc) {
     case G_SEXT:
@@ -496,7 +498,7 @@ bool RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
       Hi = False;
       break;
     case G_ANYEXT:
-      Hi = B.buildUndef({VgprRB_S32});
+      Hi = B.buildUndef({VgprRB_I32});
       break;
     default:
       reportGISelFailure(
@@ -518,32 +520,33 @@ bool RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
 }
 
 std::pair<Register, Register> RegBankLegalizeHelper::unpackZExt(Register Reg) {
-  auto PackedS32 = B.buildBitcast(SgprRB_S32, Reg);
-  auto Mask = B.buildConstant(SgprRB_S32, 0x0000ffff);
-  auto Lo = B.buildAnd(SgprRB_S32, PackedS32, Mask);
-  auto Hi = B.buildLShr(SgprRB_S32, PackedS32, B.buildConstant(SgprRB_S32, 16));
+  auto PackedI32 = B.buildBitcast(SgprRB_I32, Reg);
+  auto Mask = B.buildConstant(SgprRB_I32, 0x0000ffff);
+  auto Lo = B.buildAnd(SgprRB_I32, PackedI32, Mask);
+  auto Hi = B.buildLShr(SgprRB_I32, PackedI32, B.buildConstant(SgprRB_I32, 16));
   return {Lo.getReg(0), Hi.getReg(0)};
 }
 
 std::pair<Register, Register> RegBankLegalizeHelper::unpackSExt(Register Reg) {
-  auto PackedS32 = B.buildBitcast(SgprRB_S32, Reg);
-  auto Lo = B.buildSExtInReg(SgprRB_S32, PackedS32, 16);
-  auto Hi = B.buildAShr(SgprRB_S32, PackedS32, B.buildConstant(SgprRB_S32, 16));
+  auto PackedI32 = B.buildBitcast(SgprRB_I32, Reg);
+  auto Lo = B.buildSExtInReg(SgprRB_I32, PackedI32, 16);
+  auto Hi = B.buildAShr(SgprRB_I32, PackedI32, B.buildConstant(SgprRB_I32, 16));
   return {Lo.getReg(0), Hi.getReg(0)};
 }
 
 std::pair<Register, Register> RegBankLegalizeHelper::unpackAExt(Register Reg) {
-  auto PackedS32 = B.buildBitcast(SgprRB_S32, Reg);
-  auto Lo = PackedS32;
-  auto Hi = B.buildLShr(SgprRB_S32, PackedS32, B.buildConstant(SgprRB_S32, 16));
+  auto PackedI32 = B.buildBitcast(SgprRB_I32, Reg);
+  auto Lo = PackedI32;
+  auto Hi = B.buildLShr(SgprRB_I32, PackedI32, B.buildConstant(SgprRB_I32, 16));
   return {Lo.getReg(0), Hi.getReg(0)};
 }
 
 std::pair<Register, Register>
 RegBankLegalizeHelper::unpackAExtTruncS16(Register Reg) {
   auto [Lo32, Hi32] = unpackAExt(Reg);
-  return {B.buildTrunc(SgprRB_S16, Lo32).getReg(0),
-          B.buildTrunc(SgprRB_S16, Hi32).getReg(0)};
+  LLT EltTy = MRI.getType(Reg).getElementType();
+  return {B.buildTrunc({SgprRB, EltTy}, Lo32).getReg(0),
+          B.buildTrunc({SgprRB, EltTy}, Hi32).getReg(0)};
 }
 
 bool RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
@@ -552,22 +555,22 @@ bool RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
   case AMDGPU::G_SHL: {
     auto [Val0, Val1] = unpackAExt(MI.getOperand(1).getReg());
     auto [Amt0, Amt1] = unpackAExt(MI.getOperand(2).getReg());
-    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0, Amt0}).getReg(0);
-    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val1, Amt1}).getReg(0);
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val0, Amt0}).getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val1, Amt1}).getReg(0);
     break;
   }
   case AMDGPU::G_LSHR: {
     auto [Val0, Val1] = unpackZExt(MI.getOperand(1).getReg());
     auto [Amt0, Amt1] = unpackZExt(MI.getOperand(2).getReg());
-    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0, Amt0}).getReg(0);
-    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val1, Amt1}).getReg(0);
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val0, Amt0}).getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val1, Amt1}).getReg(0);
     break;
   }
   case AMDGPU::G_ASHR: {
     auto [Val0, Val1] = unpackSExt(MI.getOperand(1).getReg());
     auto [Amt0, Amt1] = unpackSExt(MI.getOperand(2).getReg());
-    Lo = B.buildAShr(SgprRB_S32, Val0, Amt0).getReg(0);
-    Hi = B.buildAShr(SgprRB_S32, Val1, Amt1).getReg(0);
+    Lo = B.buildAShr(SgprRB_I32, Val0, Amt0).getReg(0);
+    Hi = B.buildAShr(SgprRB_I32, Val1, Amt1).getReg(0);
     break;
   }
   default:
@@ -590,9 +593,9 @@ bool RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
     // For signed operations, use sign extension
     auto [Val0_Lo, Val0_Hi] = unpackSExt(MI.getOperand(1).getReg());
     auto [Val1_Lo, Val1_Hi] = unpackSExt(MI.getOperand(2).getReg());
-    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val0_Lo, Val1_Lo})
              .getReg(0);
-    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val0_Hi, Val1_Hi})
              .getReg(0);
     break;
   }
@@ -601,9 +604,9 @@ bool RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
     // For unsigned operations, use zero extension
     auto [Val0_Lo, Val0_Hi] = unpackZExt(MI.getOperand(1).getReg());
     auto [Val1_Lo, Val1_Hi] = unpackZExt(MI.getOperand(2).getReg());
-    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val0_Lo, Val1_Lo})
              .getReg(0);
-    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Val0_Hi, Val1_Hi})
              .getReg(0);
     break;
   }
@@ -621,8 +624,8 @@ bool RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
 bool RegBankLegalizeHelper::lowerUnpackAExt(MachineInstr &MI) {
   auto [Op1Lo, Op1Hi] = unpackAExt(MI.getOperand(1).getReg());
   auto [Op2Lo, Op2Hi] = unpackAExt(MI.getOperand(2).getReg());
-  auto ResLo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Lo, Op2Lo});
-  auto ResHi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Hi, Op2Hi});
+  auto ResLo = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Op1Lo, Op2Lo});
+  auto ResHi = B.buildInstr(MI.getOpcode(), {SgprRB_I32}, {Op1Hi, Op2Hi});
   B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
                           {ResLo.getReg(0), ResHi.getReg(0)});
   MI.eraseFromParent();
@@ -661,7 +664,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   // If only the offset is divergent, emit a MUBUF buffer load
   // instead. We can assume that the buffer is unswizzled.
   Register RSrc = MI.getOperand(1).getReg();
-  Register VIndex = B.buildConstant(VgprRB_S32, 0).getReg(0);
+  Register VIndex = B.buildConstant(VgprRB_I32, 0).getReg(0);
   unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
   switch (MI.getOpcode()) {
   case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
@@ -727,7 +730,7 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
 
   // Src >> LSBit Hi|Lo: x?????syyyyyyl??? -> xxxx?????syyyyyyl
   unsigned SHROpc = Signed ? AMDGPU::G_ASHR : AMDGPU::G_LSHR;
-  auto SHRSrc = B.buildInstr(SHROpc, {{VgprRB, S64}}, {Src, LSBit});
+  auto SHRSrc = B.buildInstr(SHROpc, {VgprRB_I64}, {Src, LSBit});
 
   auto ConstWidth = getIConstantVRegValWithLookThrough(Width, MRI);
 
@@ -735,36 +738,36 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
   // << (64 - Width): Hi|Lo: xxxx?????syyyyyyl -> syyyyyyl000000000
   // >> (64 - Width): Hi|Lo: syyyyyyl000000000 -> ssssssssssyyyyyyl
   if (!ConstWidth) {
-    auto Amt = B.buildSub(VgprRB_S32, B.buildConstant(SgprRB_S32, 64), Width);
-    auto SignBit = B.buildShl({VgprRB, S64}, SHRSrc, Amt);
+    auto Amt = B.buildSub(VgprRB_I32, B.buildConstant(SgprRB_I32, 64), Width);
+    auto SignBit = B.buildShl(VgprRB_I64, SHRSrc, Amt);
     B.buildInstr(SHROpc, {Dst}, {SignBit, Amt});
     MI.eraseFromParent();
     return true;
   }
 
   uint64_t WidthImm = ConstWidth->Value.getZExtValue();
-  auto UnmergeSHRSrc = B.buildUnmerge(VgprRB_S32, SHRSrc);
+  auto UnmergeSHRSrc = B.buildUnmerge(VgprRB_I32, SHRSrc);
   Register SHRSrcLo = UnmergeSHRSrc.getReg(0);
   Register SHRSrcHi = UnmergeSHRSrc.getReg(1);
-  auto Zero = B.buildConstant({VgprRB, S32}, 0);
+  auto Zero = B.buildConstant(VgprRB_I32, 0);
   unsigned BFXOpc = Signed ? AMDGPU::G_SBFX : AMDGPU::G_UBFX;
 
   if (WidthImm <= 32) {
     // SHRSrc Hi|Lo: ????????|???syyyl -> ????????|ssssyyyl
-    auto Lo = B.buildInstr(BFXOpc, {VgprRB_S32}, {SHRSrcLo, Zero, Width});
+    auto Lo = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcLo, Zero, Width});
     MachineInstrBuilder Hi;
     if (Signed) {
       // SHRSrc Hi|Lo: ????????|ssssyyyl -> ssssssss|ssssyyyl
-      Hi = B.buildAShr(VgprRB_S32, Lo, B.buildConstant(VgprRB_S32, 31));
+      Hi = B.buildAShr(VgprRB_I32, Lo, B.buildConstant(VgprRB_I32, 31));
     } else {
       // SHRSrc Hi|Lo: ????????|000syyyl -> 00000000|000syyyl
       Hi = Zero;
     }
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
   } else {
-    auto Amt = B.buildConstant(VgprRB_S32, WidthImm - 32);
+    auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
     // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
-    auto Hi = B.buildInstr(BFXOpc, {VgprRB_S32}, {SHRSrcHi, Zero, Amt});
+    auto Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt});
     B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
   }
 
@@ -785,10 +788,10 @@ bool RegBankLegalizeHelper::lowerS_BFE(MachineInstr &MI) {
   // field offset in low and size in high 16 bits.
 
   // Src1 Hi16|Lo16 = Size|FieldOffset
-  auto Mask = B.buildConstant(SgprRB_S32, maskTrailingOnes<unsigned>(6));
-  auto FieldOffset = B.buildAnd(SgprRB_S32, LSBit, Mask);
-  auto Size = B.buildShl(SgprRB_S32, Width, B.buildConstant(SgprRB_S32, 16));
-  auto Src1 = B.buildOr(SgprRB_S32, FieldOffset, Size);
+  auto Mask = B.buildConstant(SgprRB_I32, maskTrailingOnes<unsigned>(6));
+  auto FieldOffset = B.buildAnd(SgprRB_I32, LSBit, Mask);
+  auto Size = B.buildShl(SgprRB_I32, Width, B.buildConstant(SgprRB_I32, 16));
+  auto Src1 = B.buildOr(SgprRB_I32, FieldOffset, Size);
   unsigned Opc32 = Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
   unsigned Opc64 = Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64;
   unsigned Opc = Ty == S32 ? Opc32 : Opc64;
@@ -796,7 +799,7 @@ bool RegBankLegalizeHelper::lowerS_BFE(MachineInstr &MI) {
   // Select machine instruction, because of reg class constraining, insert
   // copies from reg class to reg bank.
   auto S_BFE = B.buildInstr(Opc, {{SgprRB, Ty}},
-                            {B.buildCopy(Ty, Src), B.buildCopy(S32, Src1)});
+                            {B.buildCopy(Ty, Src), B.buildCopy(I32, Src1)});
   constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
                                    *ST.getRegisterInfo(), RBI);
 
@@ -809,7 +812,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
   assert(DstTy == V4S16 || DstTy == V2S32 || DstTy == S64);
-  LLT Ty = DstTy == V4S16 ? V2S16 : S32;
+  LLT Ty = DstTy.divide(2);
   auto Op1 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(1).getReg());
   auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
   unsigned Opc = MI.getOpcode();
@@ -826,17 +829,17 @@ bool RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
 bool RegBankLegalizeHelper::lowerSplitTo32Mul(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   assert(MRI.getType(Dst) == S64);
-  auto Op1 = B.buildUnmerge({VgprRB_S32}, MI.getOperand(1).getReg());
-  auto Op2 = B.buildUnmerge({VgprRB_S32}, MI.getOperand(2).getReg());
+  auto Op1 = B.buildUnmerge({VgprRB_I32}, MI.getOperand(1).getReg());
+  auto Op2 = B.buildUnmerge({VgprRB_I32}, MI.getOperand(2).getReg());
 
   // TODO: G_AMDGPU_MAD_* optimizations for G_MUL divergent S64 operation to
   // match GlobalISel with old regbankselect.
-  auto Lo = B.buildMul(VgprRB_S32, Op1.getReg(0), Op2.getReg(0));
-  auto Carry = B.buildUMulH(VgprRB_S32, Op1.getReg(0), Op2.getReg(0));
-  auto MulLo0Hi1 = B.buildMul(VgprRB_S32, Op1.getReg(0), Op2.getReg(1));
-  auto MulHi0Lo1 = B.buildMul(VgprRB_S32, Op1.getReg(1), Op2.getReg(0));
-  auto Sum = B.buildAdd(VgprRB_S32, MulLo0Hi1, MulHi0Lo1);
-  auto Hi = B.buildAdd(VgprRB_S32, Sum, Carry);
+  auto Lo = B.buildMul(VgprRB_I32, Op1.getReg(0), Op2.getReg(0));
+  auto Carry = B.buildUMulH(VgprRB_I32, Op1.getReg(0), Op2.getReg(0));
+  auto MulLo0Hi1 = B.buildMul(VgprRB_I32, Op1.getReg(0), Op2.getReg(1));
+  auto MulHi0Lo1 = B.buildMul(VgprRB_I32, Op1.getReg(1), Op2.getReg(0));
+  auto Sum = B.buildAdd(VgprRB_I32, MulLo0Hi1, MulHi0Lo1);
+  auto Hi = B.buildAdd(VgprRB_I32, Sum, Carry);
 
   B.buildMergeLikeInstr(Dst, {Lo, Hi});
   MI.eraseFromParent();
@@ -851,10 +854,11 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   auto Flags = MI.getFlags();
 
   auto [Op1Lo, Op1Hi] = unpackAExtTruncS16(MI.getOperand(1).getReg());
+  LLT EltTy = MRI.getType(Dst).getElementType();
 
   if (NumOps == 2) {
-    auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo}, Flags);
-    auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi}, Flags);
+    auto Lo = B.buildInstr(Opc, {{SgprRB, EltTy}}, {Op1Lo}, Flags);
+    auto Hi = B.buildInstr(Opc, {{SgprRB, EltTy}}, {Op1Hi}, Flags);
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
     MI.eraseFromParent();
     return true;
@@ -863,8 +867,8 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   auto [Op2Lo, Op2Hi] = unpackAExtTruncS16(MI.getOperand(2).getReg());
 
   if (NumOps == 3) {
-    auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo}, Flags);
-    auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi}, Flags);
+    auto Lo = B.buildInstr(Opc, {{SgprRB, EltTy}}, {Op1Lo, Op2Lo}, Flags);
+    auto Hi = B.buildInstr(Opc, {{SgprRB, EltTy}}, {Op1Hi, Op2Hi}, Flags);
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
     MI.eraseFromParent();
     return true;
@@ -872,8 +876,8 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
 
   assert(NumOps == 4);
   auto [Op3Lo, Op3Hi] = unpackAExtTruncS16(MI.getOperand(3).getReg());
-  auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op1Lo, Op2Lo, Op3Lo}, Flags);
-  auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op1Hi, Op2Hi, Op3Hi}, Flags);
+  auto Lo = B.buildInstr(Opc, {{SgprRB, EltTy}}, {Op1Lo, Op2Lo, Op3Lo}, Flags);
+  auto Hi = B.buildInstr(Opc, {{SgprRB, EltTy}}, {Op1Hi, Op2Hi, Op3Hi}, Flags);
   B.buildMergeLikeInstr(Dst, {Lo, Hi});
   MI.eraseFromParent();
   return true;
@@ -889,14 +893,14 @@ bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
   const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
 
   // Keep the multiplication on the SALU.
-  Register DstLo = B.buildMul(SgprRB_S32, Src0, Src1).getReg(0);
-  Register DstHi = MRI.createVirtualRegister(SgprRB_S32);
+  Register DstLo = B.buildMul(SgprRB_I32, Src0, Src1).getReg(0);
+  Register DstHi = MRI.createVirtualRegister(SgprRB_I32);
   if (ST.hasScalarMulHiInsts()) {
     B.buildInstr(AMDGPU::G_UMULH, {{DstHi}}, {Src0, Src1});
   } else {
-    auto VSrc0 = B.buildCopy(VgprRB_S32, Src0);
-    auto VSrc1 = B.buildCopy(VgprRB_S32, Src1);
-    auto MulHi = B.buildInstr(AMDGPU::G_UMULH, {VgprRB_S32}, {VSrc0, VSrc1});
+    auto VSrc0 = B.buildCopy(VgprRB_I32, Src0);
+    auto VSrc1 = B.buildCopy(VgprRB_I32, Src1);
+    auto MulHi = B.buildInstr(AMDGPU::G_UMULH, {VgprRB_I32}, {VSrc0, VSrc1});
     buildReadAnyLane(B, DstHi, MulHi.getReg(0), RBI);
   }
 
@@ -911,13 +915,13 @@ bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
     B.buildConstant(Dst1, 0);
   } else {
     // Accumulate: add Src2 to the multiplication result with carry chain.
-    Register Src2Lo = MRI.createVirtualRegister(SgprRB_S32);
-    Register Src2Hi = MRI.createVirtualRegister(SgprRB_S32);
+    Register Src2Lo = MRI.createVirtualRegister(SgprRB_I32);
+    Register Src2Hi = MRI.createVirtualRegister(SgprRB_I32);
     B.buildUnmerge({Src2Lo, Src2Hi}, Src2);
 
-    auto AddLo = B.buildUAddo(SgprRB_S32, SgprRB_S32, DstLo, Src2Lo);
+    auto AddLo = B.buildUAddo(SgprRB_I32, SgprRB_I32, DstLo, Src2Lo);
     auto AddHi =
-        B.buildUAdde(SgprRB_S32, SgprRB_S32, DstHi, Src2Hi, AddLo.getReg(1));
+        B.buildUAdde(SgprRB_I32, SgprRB_I32, DstHi, Src2Hi, AddLo.getReg(1));
     B.buildMergeLikeInstr(Dst0, {AddLo.getReg(0), AddHi.getReg(0)});
     B.buildCopy(Dst1, AddHi.getReg(1));
   }
@@ -931,7 +935,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Dst);
   assert(DstTy == V4S16 || DstTy == V2S32 || DstTy == S64 ||
          (DstTy.isPointer() && DstTy.getSizeInBits() == 64));
-  LLT Ty = DstTy == V4S16 ? V2S16 : S32;
+  LLT Ty = DstTy.isFloat() ? LLT::float32() : DstTy.divide(2);
   auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
   auto Op3 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(3).getReg());
   Register Cond = MI.getOperand(1).getReg();
@@ -947,26 +951,26 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
 }
 
 bool RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
-  auto Op1 = B.buildUnmerge(VgprRB_S32, MI.getOperand(1).getReg());
+  auto Op1 = B.buildUnmerge(VgprRB_I32, MI.getOperand(1).getReg());
   int Amt = MI.getOperand(2).getImm();
   Register Lo, Hi;
   // Hi|Lo: s sign bit, ?/x bits changed/not changed by sign-extend
   if (Amt <= 32) {
-    auto Freeze = B.buildFreeze(VgprRB_S32, Op1.getReg(0));
+    auto Freeze = B.buildFreeze(VgprRB_I32, Op1.getReg(0));
     if (Amt == 32) {
       // Hi|Lo: ????????|sxxxxxxx -> ssssssss|sxxxxxxx
       Lo = Freeze.getReg(0);
     } else {
       // Hi|Lo: ????????|???sxxxx -> ssssssss|ssssxxxx
-      Lo = B.buildSExtInReg(VgprRB_S32, Freeze, Amt).getReg(0);
+      Lo = B.buildSExtInReg(VgprRB_I32, Freeze, Amt).getReg(0);
     }
 
-    auto SignExtCst = B.buildConstant(SgprRB_S32, 31);
-    Hi = B.buildAShr(VgprRB_S32, Lo, SignExtCst).getReg(0);
+    auto SignExtCst = B.buildConstant(SgprRB_I32, 31);
+    Hi = B.buildAShr(VgprRB_I32, Lo, SignExtCst).getReg(0);
   } else {
     // Hi|Lo: ?????sxx|xxxxxxxx -> ssssssxx|xxxxxxxx
     Lo = Op1.getReg(0);
-    Hi = B.buildSExtInReg(VgprRB_S32, Op1.getReg(1), Amt - 32).getReg(0);
+    Hi = B.buildSExtInReg(VgprRB_I32, Op1.getReg(1), Amt - 32).getReg(0);
   }
 
   B.buildMergeLikeInstr(MI.getOperand(0).getReg(), {Lo, Hi});
@@ -1013,19 +1017,19 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
     llvm_unreachable("unexpected opcode in lowerSplitBitCount64To32");
   }
 
-  auto Unmerge = B.buildUnmerge(VgprRB_S32, MI.getOperand(1).getReg());
+  auto Unmerge = B.buildUnmerge(VgprRB_I32, MI.getOperand(1).getReg());
   Register Lo = Unmerge.getReg(0);
   Register Hi = Unmerge.getReg(1);
 
   // MSB-first (FFBH/CTLZ) searches hi first; LSB-first (FFBL/CTTZ) searches
   // lo first. The secondary half adds 32 to account for the primary half's
   // width.
-  auto Primary = B.buildInstr(FFBOpc, {VgprRB_S32}, {SearchFromMSB ? Hi : Lo});
+  auto Primary = B.buildInstr(FFBOpc, {VgprRB_I32}, {SearchFromMSB ? Hi : Lo});
   auto Secondary =
-      B.buildInstr(FFBOpc, {VgprRB_S32}, {SearchFromMSB ? Lo : Hi});
+      B.buildInstr(FFBOpc, {VgprRB_I32}, {SearchFromMSB ? Lo : Hi});
 
-  auto Adjusted = B.buildInstr(AddOpc, {VgprRB_S32},
-                               {Secondary, B.buildConstant(VgprRB_S32, 32)});
+  auto Adjusted = B.buildInstr(AddOpc, {VgprRB_I32},
+                               {Secondary, B.buildConstant(VgprRB_I32, 32)});
   B.buildUMin(MI.getOperand(0).getReg(), Primary, Adjusted);
 
   MI.eraseFromParent();
@@ -1062,16 +1066,16 @@ bool RegBankLegalizeHelper::lowerExtrVecEltToSel(MachineInstr &MI) {
     }
     B.buildCopy(Dst, PrevSelect);
   } else if (ScalarTy.getSizeInBits() == 64) {
-    auto InitUnmerge = B.buildUnmerge(VgprRB_S32, Unmerge.getReg(0));
+    auto InitUnmerge = B.buildUnmerge(VgprRB_I32, Unmerge.getReg(0));
     Register PrevLo = InitUnmerge.getReg(0);
     Register PrevHi = InitUnmerge.getReg(1);
     for (unsigned I = 1; I < NumElts; ++I) {
       auto IdxConst = B.buildConstant({SgprRB, MRI.getType(Idx)}, I);
       auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, VccRB_S1, Idx, IdxConst);
-      auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Unmerge.getReg(I));
-      PrevLo = B.buildSelect(VgprRB_S32, Cmp, EltUnmerge.getReg(0), PrevLo)
+      auto EltUnmerge = B.buildUnmerge(VgprRB_I32, Unmerge.getReg(I));
+      PrevLo = B.buildSelect(VgprRB_I32, Cmp, EltUnmerge.getReg(0), PrevLo)
                    .getReg(0);
-      PrevHi = B.buildSelect(VgprRB_S32, Cmp, EltUnmerge.getReg(1), PrevHi)
+      PrevHi = B.buildSelect(VgprRB_I32, Cmp, EltUnmerge.getReg(1), PrevHi)
                    .getReg(0);
     }
     B.buildMergeLikeInstr(Dst, {PrevLo, PrevHi});
@@ -1108,12 +1112,12 @@ bool RegBankLegalizeHelper::lowerExtrVecEltTo32(MachineInstr &MI) {
   auto CastSrc = B.buildBitcast({VgprRB, Vec32Ty}, Src);
 
   // Calculate new Lo and Hi indices
-  auto One = B.buildConstant(SgprRB_S32, 1);
-  auto IdxLo = B.buildShl(SgprRB_S32, Idx, One);
-  auto IdxHi = B.buildAdd(SgprRB_S32, IdxLo, One);
+  auto One = B.buildConstant(SgprRB_I32, 1);
+  auto IdxLo = B.buildShl(SgprRB_I32, Idx, One);
+  auto IdxHi = B.buildAdd(SgprRB_I32, IdxLo, One);
 
-  auto ExtLo = B.buildExtractVectorElement(VgprRB_S32, CastSrc, IdxLo);
-  auto ExtHi = B.buildExtractVectorElement(VgprRB_S32, CastSrc, IdxHi);
+  auto ExtLo = B.buildExtractVectorElement(VgprRB_I32, CastSrc, IdxLo);
+  auto ExtHi = B.buildExtractVectorElement(VgprRB_I32, CastSrc, IdxHi);
 
   B.buildMergeLikeInstr(Dst, {ExtLo.getReg(0), ExtHi.getReg(0)});
 
@@ -1143,18 +1147,18 @@ bool RegBankLegalizeHelper::lowerInsVecEltToSel(MachineInstr &MI) {
 
   if (!IsSGPR && ScalarTy.getSizeInBits() == 64) {
     // VGPR B64: split to 32-bit lo/hi since there is no v_cndmask_b64.
-    auto Unmerge = B.buildUnmerge(VgprRB_S32, Src);
-    auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Elt);
+    auto Unmerge = B.buildUnmerge(VgprRB_I32, Src);
+    auto EltUnmerge = B.buildUnmerge(VgprRB_I32, Elt);
     Register EltLo = EltUnmerge.getReg(0);
     Register EltHi = EltUnmerge.getReg(1);
     for (unsigned I = 0; I < NumElts; ++I) {
-      auto IdxConst = B.buildConstant(VgprRB_S32, I);
+      auto IdxConst = B.buildConstant(VgprRB_I32, I);
       auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, VccRB_S1, Idx, IdxConst);
       Selects.push_back(
-          B.buildSelect(VgprRB_S32, Cmp, EltLo, Unmerge.getReg(2 * I))
+          B.buildSelect(VgprRB_I32, Cmp, EltLo, Unmerge.getReg(2 * I))
               .getReg(0));
       Selects.push_back(
-          B.buildSelect(VgprRB_S32, Cmp, EltHi, Unmerge.getReg(2 * I + 1))
+          B.buildSelect(VgprRB_I32, Cmp, EltHi, Unmerge.getReg(2 * I + 1))
               .getReg(0));
     }
     LLT Vec32Ty = LLT::fixed_vector(2 * NumElts, 32);
@@ -1163,10 +1167,10 @@ bool RegBankLegalizeHelper::lowerInsVecEltToSel(MachineInstr &MI) {
   } else if (ScalarTy.getSizeInBits() == 32 || ScalarTy.getSizeInBits() == 64) {
     // B32 (any bank) and SGPR B64: element-wise select at native width.
     MachineRegisterInfo::VRegAttrs SrcRB_EltTy = {SrcRB, ScalarTy};
-    MachineRegisterInfo::VRegAttrs CmpTy = IsSGPR ? SgprRB_S32 : VccRB_S1;
+    MachineRegisterInfo::VRegAttrs CmpTy = IsSGPR ? SgprRB_I32 : VccRB_S1;
     auto Unmerge = B.buildUnmerge(SrcRB_EltTy, Src);
     for (unsigned I = 0; I < NumElts; ++I) {
-      auto IdxConst = B.buildConstant(SgprRB_S32, I);
+      auto IdxConst = B.buildConstant(SgprRB_I32, I);
       auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CmpTy, Idx, IdxConst);
       Selects.push_back(
           B.buildSelect(SrcRB_EltTy, Cmp, Elt, Unmerge.getReg(I)).getReg(0));
@@ -1207,12 +1211,12 @@ bool RegBankLegalizeHelper::lowerInsVecEltTo32(MachineInstr &MI) {
   MachineRegisterInfo::VRegAttrs VgprRB_Vec32Ty = {VgprRB, Vec32Ty};
 
   auto CastSrc = B.buildBitcast(VgprRB_Vec32Ty, Src);
-  auto EltUnmerge = B.buildUnmerge(VgprRB_S32, Elt);
+  auto EltUnmerge = B.buildUnmerge(VgprRB_I32, Elt);
 
   // Calculate new Lo and Hi indices
-  auto One = B.buildConstant(SgprRB_S32, 1);
-  auto IdxLo = B.buildShl(SgprRB_S32, Idx, One);
-  auto IdxHi = B.buildAdd(SgprRB_S32, IdxLo, One);
+  auto One = B.buildConstant(SgprRB_I32, 1);
+  auto IdxLo = B.buildShl(SgprRB_I32, Idx, One);
+  auto IdxHi = B.buildAdd(SgprRB_I32, IdxLo, One);
 
   auto InsLo = B.buildInsertVectorElement(VgprRB_Vec32Ty, CastSrc,
                                           EltUnmerge.getReg(0), IdxLo);
@@ -1240,7 +1244,7 @@ bool RegBankLegalizeHelper::lowerAbsToNegMax(MachineInstr &MI) {
   Register Zero;
   if (Ty == V2S16) {
     // buildConstant cannot produce a V2S16 directly; pack two S16 zeros.
-    Register Zero16 = B.buildConstant({VgprRB, S16}, 0).getReg(0);
+    Register Zero16 = B.buildConstant({VgprRB, I16}, 0).getReg(0);
     Zero = B.buildBuildVector({VgprRB, Ty}, {Zero16, Zero16}).getReg(0);
   } else {
     assert((Ty == S32 || Ty == S16) && "unexpected type for AbsToNegMax");
@@ -1263,15 +1267,146 @@ bool RegBankLegalizeHelper::lowerAbsToS32(MachineInstr &MI) {
   //
   // SALU only has s_abs_i32, with no direct uniform V2S16 abs. The
   // re-emitted G_ABS(SgprRB, S32) selects to s_abs_i32 on each value.
-  auto Bitcast = B.buildBitcast({SgprRB_S32}, MI.getOperand(1).getReg());
-  auto SextInReg = B.buildSExtInReg({SgprRB_S32}, Bitcast, 16);
+  auto Bitcast = B.buildBitcast({SgprRB_I32}, MI.getOperand(1).getReg());
+  auto SextInReg = B.buildSExtInReg({SgprRB_I32}, Bitcast, 16);
   auto ShiftHi =
-      B.buildAShr({SgprRB_S32}, Bitcast, B.buildConstant({SgprRB_S32}, 16));
+      B.buildAShr({SgprRB_I32}, Bitcast, B.buildConstant({SgprRB_I32}, 16));
 
-  auto AbsLo = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {SextInReg});
-  auto AbsHi = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_S32}}, {ShiftHi});
+  auto AbsLo = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_I32}}, {SextInReg});
+  auto AbsHi = B.buildInstr(AMDGPU::G_ABS, {{SgprRB_I32}}, {ShiftHi});
   B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
                           {AbsLo.getReg(0), AbsHi.getReg(0)});
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Ported from SITargetLowering::lowerSET_ROUNDING in SIISelLowering.cpp.
+// Keep the mapping logic and conversion tables aligned with the SDAG lowering.
+bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
+  Register NewMode = MI.getOperand(0).getReg();
+
+  // Index a table of 4-bit entries mapping from the C FLT_ROUNDS values to the
+  // hardware MODE.fp_round values.
+  if (auto ConstMode = getIConstantVRegValWithLookThrough(NewMode, MRI)) {
+    uint32_t ClampedVal = std::min(
+        static_cast<uint32_t>(ConstMode->Value.getZExtValue()),
+        static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
+    uint32_t DecodedVal = AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal);
+    NewMode = B.buildConstant(SgprRB_I32, DecodedVal).getReg(0);
+  } else {
+    // If we know the input can only be one of the supported standard modes in
+    // the range 0-3, we can use a simplified mapping to hardware values.
+    KnownBits Known = VT->getKnownBits(NewMode);
+    const bool UseReducedTable = Known.countMinLeadingZeros() >= 30;
+    // The supported standard values are 0-3. The extended values start at 8. We
+    // need to offset by 4 if the value is in the extended range.
+
+    if (UseReducedTable) {
+      // Truncate to the low 32-bits.
+      auto BitTable = B.buildConstant(
+          SgprRB_I32, AMDGPU::FltRoundToHWConversionTable & 0xffff);
+
+      auto Two = B.buildConstant(SgprRB_I32, 2);
+      auto RoundModeTimesNumBits = B.buildShl(SgprRB_I32, NewMode, Two);
+
+      NewMode =
+          B.buildLShr(SgprRB_I32, BitTable, RoundModeTimesNumBits).getReg(0);
+
+      // TODO: A demanded-bits simplification on the setreg source here could
+      // likely reduce the table extracted bits into inline immediates.
+    } else {
+      // table_index = umin(value, value - 4)
+      // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
+      auto NegFour = B.buildConstant(SgprRB_I32, -4);
+      auto OffsetEnum = B.buildAdd(SgprRB_I32, NewMode, NegFour);
+      auto IndexVal = B.buildUMin(SgprRB_I32, NewMode, OffsetEnum);
+
+      auto Two = B.buildConstant(SgprRB_I32, 2);
+      auto RoundModeTimesNumBits = B.buildShl(SgprRB_I32, IndexVal, Two);
+
+      auto BitTable =
+          B.buildConstant(SgprRB_I64, AMDGPU::FltRoundToHWConversionTable);
+      auto TableValue =
+          B.buildLShr(SgprRB_I64, BitTable, RoundModeTimesNumBits);
+      // No need to mask out the high bits since the setreg will ignore them
+      // anyway.
+      NewMode = B.buildTrunc(SgprRB_I32, TableValue).getReg(0);
+    }
+  }
+
+  // N.B. The setreg will be later folded into s_round_mode on supported
+  // targets.
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  B.buildIntrinsic(Intrinsic::amdgcn_s_setreg, ArrayRef<DstOp>(),
+                   /*HasSideEffects=*/true, /*isConvergent=*/false)
+      .addImm(static_cast<int16_t>(BothRoundHwReg))
+      .addReg(NewMode);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Ported from SITargetLowering::lowerGET_ROUNDING in SIISelLowering.cpp.
+// Keep the mapping logic and conversion tables aligned with the SDAG lowering.
+bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  auto GetReg =
+      B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {SgprRB_I32},
+                       /*HasSideEffects=*/true, /*isConvergent=*/false)
+          .addImm(BothRoundHwReg);
+
+  // There are two rounding modes, one for f32 and one for f64/f16. We only
+  // report in the standard value range if both are the same.
+  //
+  // The raw values also differ from the expected FLT_ROUNDS values. Nearest
+  // ties away from zero is not supported, and the other values are rotated by
+  // 1.
+  //
+  // If the two rounding modes are not the same, report a target defined value.
+
+  // Mode register rounding mode fields:
+  //
+  // [1:0] Single-precision round mode.
+  // [3:2] Double/Half-precision round mode.
+  //
+  // 0=nearest even; 1= +infinity; 2= -infinity, 3= toward zero.
+  //
+  //             Hardware   Spec
+  // Toward-0        3        0
+  // Nearest Even    0        1
+  // +Inf            1        2
+  // -Inf            2        3
+  //  NearestAway0  N/A       4
+  //
+  // We have to handle 16 permutations of a 4-bit value, so we create a 64-bit
+  // table we can index by the raw hardware mode.
+  //
+  // (trunc (FltRoundConversionTable >> MODE.fp_round)) & 0xf
+  auto BitTable = B.buildConstant(SgprRB_I64, AMDGPU::FltRoundConversionTable);
+
+  auto Two = B.buildConstant(SgprRB_I32, 2);
+  auto RoundModeTimesNumBits = B.buildShl(SgprRB_I32, GetReg, Two);
+
+  // TODO: We could possibly avoid a 64-bit shift and use a simpler table if we
+  // knew only one mode was demanded.
+  auto TableValue = B.buildLShr(SgprRB_I64, BitTable, RoundModeTimesNumBits);
+  auto TruncTable = B.buildTrunc(SgprRB_I32, TableValue);
+
+  auto EntryMask = B.buildConstant(SgprRB_I32, 0xf);
+  auto TableEntry = B.buildAnd(SgprRB_I32, TruncTable, EntryMask);
+
+  // There's a gap in the 4-bit encoded table and actual enum values, so offset
+  // if it's an extended value.
+  auto Four = B.buildConstant(SgprRB_I32, 4);
+  auto EnumOffset = B.buildAdd(SgprRB_I32, TableEntry, Four);
+  auto IsStandardMode =
+      B.buildICmp(CmpInst::ICMP_ULT, SgprRB_I32, TableEntry, Four);
+  B.buildSelect(Dst, IsStandardMode, TableEntry, EnumOffset);
 
   MI.eraseFromParent();
   return true;
@@ -1310,17 +1445,18 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     MachineInstrBuilder Hi;
     switch (MI.getOpcode()) {
     case AMDGPU::G_ZEXT: {
-      Hi = B.buildConstant({RB, S32}, 0);
+      Hi = B.buildConstant({RB, I32}, 0);
       break;
     }
     case AMDGPU::G_SEXT: {
       // Replicate sign bit from 32-bit extended part.
-      auto ShiftAmt = B.buildConstant({RB, S32}, 31);
-      Hi = B.buildAShr({RB, S32}, MI.getOperand(1).getReg(), ShiftAmt);
+      auto ShiftAmt = B.buildConstant({RB, I32}, 31);
+      Hi = B.buildAShr({RB, MRI.getType(MI.getOperand(1).getReg())},
+                       MI.getOperand(1).getReg(), ShiftAmt);
       break;
     }
     case AMDGPU::G_ANYEXT: {
-      Hi = B.buildUndef({RB, S32});
+      Hi = B.buildUndef({RB, I32});
       break;
     }
     default:
@@ -1350,11 +1486,11 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     // compares all bits in register.
     Register BoolSrc = MRI.createVirtualRegister({VgprRB, Ty});
     if (Ty == S64) {
-      auto Src64 = B.buildUnmerge(VgprRB_S32, Src);
-      auto One = B.buildConstant(VgprRB_S32, 1);
-      auto AndLo = B.buildAnd(VgprRB_S32, Src64.getReg(0), One);
-      auto Zero = B.buildConstant(VgprRB_S32, 0);
-      auto AndHi = B.buildAnd(VgprRB_S32, Src64.getReg(1), Zero);
+      auto Src64 = B.buildUnmerge(VgprRB_I32, Src);
+      auto One = B.buildConstant(VgprRB_I32, 1);
+      auto AndLo = B.buildAnd(VgprRB_I32, Src64.getReg(0), One);
+      auto Zero = B.buildConstant(VgprRB_I32, 0);
+      auto AndHi = B.buildAnd(VgprRB_I32, Src64.getReg(1), Zero);
       B.buildMergeLikeInstr(BoolSrc, {AndLo, AndHi});
     } else {
       assert(Ty == S32 || Ty == S16);
@@ -1378,15 +1514,15 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return true;
   }
   case DivSMulToMAD: {
-    auto Op1 = B.buildTrunc(VgprRB_S32, MI.getOperand(1));
-    auto Op2 = B.buildTrunc(VgprRB_S32, MI.getOperand(2));
-    auto Zero = B.buildConstant({VgprRB, S64}, 0);
+    auto Op1 = B.buildTrunc(VgprRB_I32, MI.getOperand(1));
+    auto Op2 = B.buildTrunc(VgprRB_I32, MI.getOperand(2));
+    auto Zero = B.buildConstant(VgprRB_I64, 0);
 
     unsigned NewOpc = MI.getOpcode() == AMDGPU::G_AMDGPU_S_MUL_U64_U32
                           ? AMDGPU::G_AMDGPU_MAD_U64_U32
                           : AMDGPU::G_AMDGPU_MAD_I64_I32;
 
-    B.buildInstr(NewOpc, {MI.getOperand(0).getReg(), {SgprRB, S32}},
+    B.buildInstr(NewOpc, {MI.getOperand(0).getReg(), SgprRB_I32},
                  {Op1, Op2, Zero});
     MI.eraseFromParent();
     return true;
@@ -1400,9 +1536,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   case SplitTo32SExtInReg:
     return lowerSplitTo32SExtInReg(MI);
   case CtPop64To32: {
-    auto Unmerge = B.buildUnmerge({VgprRB, S32}, MI.getOperand(1).getReg());
-    auto LoPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(0));
-    auto HiPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(1));
+    auto Unmerge = B.buildUnmerge(VgprRB_I32, MI.getOperand(1).getReg());
+    auto LoPopCnt = B.buildCTPOP(VgprRB_I32, Unmerge.getReg(0));
+    auto HiPopCnt = B.buildCTPOP(VgprRB_I32, Unmerge.getReg(1));
     // Max popcount of two 32-bit values is 64, so this add cannot overflow.
     B.buildAdd(MI.getOperand(0).getReg(), LoPopCnt, HiPopCnt,
                MachineInstr::NoSWrap | MachineInstr::NoUWrap);
@@ -1422,7 +1558,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
         LLT EltTy = DstTy.getElementType();
         B128 = LLT::fixed_vector(128 / EltTy.getSizeInBits(), EltTy);
       } else {
-        B128 = LLT::scalar(128);
+        B128 = LLT::integer(128);
       }
       if (Size / 128 == 2)
         splitLoad(MI, {B128, B128});
@@ -1468,7 +1604,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     if (MRI.getRegBank(AllocSize) != SgprRB) {
       auto WaveReduction =
-          B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {SgprRB_S32})
+          B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {SgprRB_I32})
               .addUse(AllocSize)
               .addImm(0);
       AllocSize = WaveReduction.getReg(0);
@@ -1486,8 +1622,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     Register AdjustedSize = AllocSize;
     if (!HasFlatScratch) {
-      auto WaveSize = B.buildConstant(SgprRB_S32, WavefrontSizeLog2);
-      AdjustedSize = B.buildShl(SgprRB_S32, AllocSize, WaveSize).getReg(0);
+      auto WaveSize = B.buildConstant(SgprRB_I32, WavefrontSizeLog2);
+      AdjustedSize = B.buildShl(SgprRB_I32, AllocSize, WaveSize).getReg(0);
     }
     if (Alignment > TFI.getStackAlign()) {
       const uint64_t EffectiveAlignment =
@@ -1495,9 +1631,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       auto OldSP = B.buildCopy({SgprRB, PtrTy}, SPReg);
       auto Tmp1 =
           B.buildPtrAdd({SgprRB, PtrTy}, OldSP,
-                        B.buildConstant(SgprRB_S32, EffectiveAlignment - 1));
+                        B.buildConstant(SgprRB_I32, EffectiveAlignment - 1));
       uint64_t Mask = maskTrailingZeros<uint64_t>(Log2_64(EffectiveAlignment));
-      B.buildPtrMask(Dst, Tmp1, B.buildConstant(SgprRB_S32, Mask));
+      B.buildPtrMask(Dst, Tmp1, B.buildConstant(SgprRB_I32, Mask));
     } else {
       B.buildCopy(Dst, SPReg);
     }
@@ -1563,15 +1699,15 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       auto UnmergeV2S16 =
           B.buildUnmerge({SgprRB, V2S16}, Unmerge->getSourceReg());
       for (unsigned i = 0; i < UnmergeV2S16->getNumDefs(); ++i) {
-        auto [Dst0S32, Dst1S32] =
+        auto [Dst0I32, Dst1I32] =
             unpackAExt(UnmergeV2S16->getOperand(i).getReg());
-        B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0S32);
-        B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1S32);
+        B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0I32);
+        B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1I32);
       }
     } else {
-      auto [Dst0S32, Dst1S32] = unpackAExt(MI.getOperand(2).getReg());
-      B.buildTrunc(MI.getOperand(0).getReg(), Dst0S32);
-      B.buildTrunc(MI.getOperand(1).getReg(), Dst1S32);
+      auto [Dst0I32, Dst1I32] = unpackAExt(MI.getOperand(2).getReg());
+      B.buildTrunc(MI.getOperand(0).getReg(), Dst0I32);
+      B.buildTrunc(MI.getOperand(1).getReg(), Dst1I32);
     }
 
     MI.eraseFromParent();
@@ -1579,7 +1715,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case AextToS32InIncomingBlockGPHI: {
     Register Dst = MI.getOperand(0).getReg();
-    Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
+    Register NewDst = MRI.createVirtualRegister(SgprRB_I32);
     B.setInsertPt(*MI.getParent(), MI.getParent()->getFirstNonPHI());
     MI.getOperand(0).setReg(NewDst);
     B.buildTrunc(Dst, NewDst);
@@ -1592,7 +1728,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
       B.setInsertPt(*DefMBB, DefMBB->SkipPHIsAndLabels(std::next(DefMI)));
 
-      auto NewUse = B.buildAnyExt(SgprRB_S32, UseReg);
+      auto NewUse = B.buildAnyExt(SgprRB_I32, UseReg);
       MI.getOperand(i).setReg(NewUse.getReg(0));
     }
     break;
@@ -1653,6 +1789,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   case DeletePrefetch:
     MI.eraseFromParent();
     return true;
+  case LowerSetRounding:
+    return lowerSetRounding(MI);
+  case LowerGetRounding:
+    return lowerGetRounding(MI);
   }
 
   return true;
@@ -2068,7 +2208,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
       Op.setReg(NewDst);
       if (!MRI.use_empty(Reg)) {
         auto CopyS32_Vcc =
-            B.buildInstr(AMDGPU::G_AMDGPU_COPY_SCC_VCC, {SgprRB_S32}, {NewDst});
+            B.buildInstr(AMDGPU::G_AMDGPU_COPY_SCC_VCC, {SgprRB_I32}, {NewDst});
         B.buildTrunc(Reg, CopyS32_Vcc);
       }
       break;
@@ -2076,13 +2216,13 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprS16: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);
-      Register NewVgprDstS16 = MRI.createVirtualRegister({VgprRB, S16});
-      Register NewVgprDstS32 = MRI.createVirtualRegister({VgprRB, S32});
-      Register NewSgprDstS32 = MRI.createVirtualRegister({SgprRB, S32});
-      Op.setReg(NewVgprDstS16);
-      B.buildAnyExt(NewVgprDstS32, NewVgprDstS16);
-      buildReadAnyLane(B, NewSgprDstS32, NewVgprDstS32, RBI);
-      B.buildTrunc(Reg, NewSgprDstS32);
+      Register NewVgprDst16 = MRI.createVirtualRegister({VgprRB, Ty});
+      Register NewVgprDstI32 = MRI.createVirtualRegister(VgprRB_I32);
+      Register NewSgprDstI32 = MRI.createVirtualRegister(SgprRB_I32);
+      Op.setReg(NewVgprDst16);
+      B.buildAnyExt(NewVgprDstI32, NewVgprDst16);
+      buildReadAnyLane(B, NewSgprDstI32, NewVgprDstI32, RBI);
+      B.buildTrunc(Reg, NewSgprDstI32);
       break;
     }
     case UniInVgprS32:
@@ -2124,7 +2264,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case Sgpr32Trunc: {
       assert(Ty.getSizeInBits() < 32);
       assert(RB == SgprRB);
-      Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
+      Register NewDst = MRI.createVirtualRegister(SgprRB_I32);
       Op.setReg(NewDst);
       if (!MRI.use_empty(Reg))
         B.buildTrunc(Reg, NewDst);
@@ -2173,7 +2313,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(Ty == S1);
       assert(RB == VccRB || RB == SgprRB);
       if (RB == SgprRB) {
-        auto Aext = B.buildAnyExt(SgprRB_S32, Reg);
+        auto Aext = B.buildAnyExt(SgprRB_I32, Reg);
         auto CopyVcc_Scc =
             B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {VccRB_S1}, {Aext});
         Op.setReg(CopyVcc_Scc.getReg(0));
@@ -2349,7 +2489,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       // Note: this ext allows S1, and it is meant to be combined away.
       assert(Ty.getSizeInBits() < 32);
       assert(RB == SgprRB);
-      auto Aext = B.buildAnyExt(SgprRB_S32, Reg);
+      auto Aext = B.buildAnyExt(SgprRB_I32, Reg);
       Op.setReg(Aext.getReg(0));
       break;
     }
@@ -2357,32 +2497,32 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       // Note: this ext allows S1, and it is meant to be combined away.
       assert(Ty.getSizeInBits() == 1);
       assert(RB == SgprRB);
-      auto Aext = B.buildAnyExt(SgprRB_S32, Reg);
+      auto Aext = B.buildAnyExt(SgprRB_I32, Reg);
       // Zext SgprS1 is not legal, make AND with 1 instead. This instruction is
       // most of times meant to be combined away in AMDGPURegBankCombiner.
-      auto Cst1 = B.buildConstant(SgprRB_S32, 1);
-      auto BoolInReg = B.buildAnd(SgprRB_S32, Aext, Cst1);
+      auto Cst1 = B.buildConstant(SgprRB_I32, 1);
+      auto BoolInReg = B.buildAnd(SgprRB_I32, Aext, Cst1);
       Op.setReg(BoolInReg.getReg(0));
       break;
     }
     case Sgpr32SExt: {
       assert(1 < Ty.getSizeInBits() && Ty.getSizeInBits() < 32);
       assert(RB == SgprRB);
-      auto Sext = B.buildSExt(SgprRB_S32, Reg);
+      auto Sext = B.buildSExt(SgprRB_I32, Reg);
       Op.setReg(Sext.getReg(0));
       break;
     }
     case Sgpr32ZExt: {
       assert(1 < Ty.getSizeInBits() && Ty.getSizeInBits() < 32);
       assert(RB == SgprRB);
-      auto Zext = B.buildZExt({SgprRB, S32}, Reg);
+      auto Zext = B.buildZExt(SgprRB_I32, Reg);
       Op.setReg(Zext.getReg(0));
       break;
     }
     case Vgpr32AExt: {
       assert(Ty.getSizeInBits() < 32);
       assert(RB == VgprRB);
-      auto Aext = B.buildAnyExt({VgprRB, S32}, Reg);
+      auto Aext = B.buildAnyExt(VgprRB_I32, Reg);
       Op.setReg(Aext.getReg(0));
       break;
     }
@@ -2390,7 +2530,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       // Note this ext allows S1, and it is meant to be combined away.
       assert(Ty.getSizeInBits() < 32);
       assert(RB == VgprRB);
-      auto Sext = B.buildSExt({VgprRB, S32}, Reg);
+      auto Sext = B.buildSExt(VgprRB_I32, Reg);
       Op.setReg(Sext.getReg(0));
       break;
     }
@@ -2398,7 +2538,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       // Note this ext allows S1, and it is meant to be combined away.
       assert(Ty.getSizeInBits() < 32);
       assert(RB == VgprRB);
-      auto Zext = B.buildZExt({VgprRB, S32}, Reg);
+      auto Zext = B.buildZExt(VgprRB_I32, Reg);
       Op.setReg(Zext.getReg(0));
       break;
     }

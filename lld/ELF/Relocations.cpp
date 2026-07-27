@@ -41,7 +41,9 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/Parallel.h"
 #include <algorithm>
+#include <atomic>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -697,10 +699,10 @@ bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {
   return true;
 }
 
-template <bool shard = false>
+template <bool concurrent = false>
 static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                              uint64_t offsetInSec, Symbol &sym, int64_t addend,
-                             RelExpr expr, RelType type) {
+                             RelExpr expr, RelType type, unsigned shard = 0) {
   bool isAArch64Auth =
       ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64;
 
@@ -722,15 +724,15 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    relrDyn->addRelativeReloc<shard>(isec, offsetInSec, sym, addend, type,
-                                     expr);
+    relrDyn->addRelativeReloc(isec, offsetInSec, sym, addend, type, expr,
+                              shard);
     return;
   }
   RelType relativeType = ctx.target->relativeRel;
   if (isAArch64Auth)
     relativeType = R_AARCH64_AUTH_RELATIVE;
-  ctx.in.relaDyn->addRelativeReloc<shard>(relativeType, isec, offsetInSec, sym,
-                                          addend, type, expr);
+  ctx.in.relaDyn->addRelativeReloc<concurrent>(relativeType, isec, offsetInSec,
+                                               sym, addend, type, expr, shard);
   // With MTE globals, we always want to derive the address tag by `ldg`-ing
   // the symbol. When we have a RELATIVE relocation though, we no longer have
   // a reference to the symbol. Because of this, when we have an addend that
@@ -748,21 +750,17 @@ template <class PltSection, class GotPltSection>
 static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
+  RelExpr expr = sym.isPreemptible ? R_ADDEND : R_ABS;
+  if (!ctx.target->usesGotPlt) {
+    rel.addReloc(
+        {type, &plt, sym.getPltOffset(ctx), sym.isPreemptible, sym, 0, expr});
+    return;
+  }
   gotPlt.addEntry(sym);
-  // The x86-64 psABI requires the r_addend of R_X86_64_JUMP_SLOT to hold the
-  // link-time VA of the PLT entry so that the dynamic linker can locate the
-  // indirect branch (l->l_addr + r_addend) and rewrite it to a direct branch
-  // when -z mark-plt is active.
-  RelExpr addendExpr = R_ADDEND;
-  if (ctx.arg.emachine == EM_X86_64 && ctx.arg.zMarkPlt &&
-      type == ctx.target->pltRel)
-    addendExpr = R_PLT;
-  if (sym.isPreemptible)
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, addendExpr});
-  else
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
+  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx), sym.isPreemptible, sym,
+                0, expr});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -933,9 +931,9 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
-      // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
-      // needing the GOT if we can't relax everything.
-      if (expr == R_RELAX_GOT_PC)
+      // If the target adjusted the expression to an optimizable form, we may
+      // end up needing the GOT if we can't optimize everything.
+      if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
         ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
     }
   }
@@ -989,8 +987,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   // Use a simple -z notext rule that treats all sections except .eh_frame as
-  // writable. GNU ld does not produce dynamic relocations in .eh_frame (and our
-  // SectionBase::getOffset would incorrectly adjust the offset).
+  // writable. GNU ld does not produce dynamic relocations in .eh_frame.
   //
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
@@ -1003,7 +1000,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
         ((rel == ctx.target->symbolicRel ||
           (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) &&
          !sym.isPreemptible)) {
-      addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
+      addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type, shard);
       return;
     }
     if (rel != 0) {
@@ -1129,8 +1126,9 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
 }
 
 template <class ELFT, class RelTy>
-void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                                 unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
@@ -1140,18 +1138,19 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-template <class ELFT> void TargetInfo::scanSection1(InputSectionBase &sec) {
+template <class ELFT>
+void TargetInfo::scanSection1(InputSectionBase &sec, unsigned shard) {
   const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
   if (rels.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, rels.crels);
+    scanSectionImpl<ELFT>(sec, rels.crels, shard);
   else if (rels.areRelocsRel())
-    scanSectionImpl<ELFT>(sec, rels.rels);
+    scanSectionImpl<ELFT>(sec, rels.rels, shard);
   else
-    scanSectionImpl<ELFT>(sec, rels.relas);
+    scanSectionImpl<ELFT>(sec, rels.relas, shard);
 }
 
-void TargetInfo::scanSection(InputSectionBase &sec) {
-  invokeELFT(scanSection1, sec);
+void TargetInfo::scanSection(InputSectionBase &sec, unsigned shard) {
+  invokeELFT(scanSection1, sec, shard);
 }
 
 void RelocScan::scanEhSection(EhInputSection &s) {
@@ -1181,46 +1180,36 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
 
+  size_t numFiles = ctx.objectFiles.size();
+  std::atomic<size_t> next{0};
   // MIPS modifies MipsGotSection during relocation scanning, which is not
   // suitable for parallelism.
-  bool serial = ctx.arg.emachine == EM_MIPS;
-  parallel::TaskGroup tg;
-  auto outerFn = [&]() {
-    for (ELFFileBase *f : ctx.objectFiles) {
-      auto fn = [f, &ctx]() {
-        for (InputSectionBase *s : f->getSections()) {
+  size_t numWorkers = ctx.arg.emachine == EM_MIPS
+                          ? 1
+                          : std::min<size_t>(ctx.arg.threadCount, numFiles + 1);
+  parallelFor(0, numWorkers, [&](unsigned shard) {
+    // Tasks claim work items off a shared counter: item i < numFiles scans
+    // ctx.objectFiles[i] while the last item scans special sections.
+    for (size_t i;
+         (i = next.fetch_add(1, std::memory_order_relaxed)) <= numFiles;) {
+      if (i != numFiles) {
+        for (InputSectionBase *s : ctx.objectFiles[i]->getSections())
           if (s && s->kind() == SectionBase::Regular && s->isLive() &&
               (s->flags & SHF_ALLOC) &&
               !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
-            ctx.target->scanSection(*s);
-        }
-      };
-      if (serial)
-        fn();
-      else
-        tg.spawn(fn);
-    }
-    auto scanEH = [&] {
-      RelocScan scanner(ctx);
+            ctx.target->scanSection(*s, shard);
+        continue;
+      }
+      RelocScan scanner(ctx, nullptr, shard);
       for (EhInputSection *sec : ctx.in.ehFrame->sections)
         scanner.scanEhSection(*sec);
       ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
       if (armExidx && armExidx->isLive())
         for (InputSection *sec : armExidx->exidxSections)
           if (sec->isLive())
-            ctx.target->scanSection(*sec);
-    };
-    if (serial)
-      scanEH();
-    else
-      tg.spawn(scanEH);
-  };
-  // If `serial` is true, call `spawn` to ensure that `scanner` runs in a thread
-  // with valid getThreadIndex().
-  if (serial)
-    tg.spawn(outerFn);
-  else
-    outerFn();
+            ctx.target->scanSection(*sec, shard);
+    }
+  });
 }
 
 RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
@@ -1348,7 +1337,6 @@ void elf::postScanRelocations(Ctx &ctx) {
 
     if (!sym.isTls())
       return;
-    bool isLocalInExecutable = !sym.isPreemptible && !ctx.arg.shared;
     GotSection *got = ctx.in.got.get();
 
     if (flags & NEEDS_TLSDESC) {
@@ -1371,21 +1359,22 @@ void elf::postScanRelocations(Ctx &ctx) {
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);
       uint64_t off = got->getGlobalDynOffset(sym);
-      if (isLocalInExecutable)
-        // Write one to the GOT slot.
-        got->addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, &sym});
-      else
+      uint64_t offsetOff = off + ctx.arg.wordsize;
+      if (sym.isPreemptible) {
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *got, off,
                                        sym);
-
-      // If the symbol is preemptible we need the dynamic linker to write
-      // the offset too.
-      uint64_t offsetOff = off + ctx.arg.wordsize;
-      if (sym.isPreemptible)
+        // If the symbol is preemptible we need the dynamic linker to write
+        // the offset too.
         ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *got,
                                        offsetOff, sym);
-      else
+      } else {
+        if (ctx.arg.shared)
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, got, off});
+        else
+          // Write one to the GOT slot.
+          got->addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, &sym});
         got->addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, &sym});
+      }
     }
     if (flags & NEEDS_GOT_DTPREL) {
       got->addEntry(sym);

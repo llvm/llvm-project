@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -3562,7 +3561,8 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
                isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
-      assert(!getTargetMachine().isPositionIndependent());
+      if (getTargetMachine().isPositionIndependent())
+        return false;
       LoadGPRs -= 1; // Base is a global (immediate since this is non-PIC), no
                      // reg needed.
     }

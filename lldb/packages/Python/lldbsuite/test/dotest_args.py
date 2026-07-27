@@ -298,6 +298,12 @@ def create_parser():
         action="store_true",
         help="Print the lldb version banner during test setup.",
     )
+    group.add_argument(
+        "--lldb-python-dir",
+        dest="lldb_python_dir",
+        metavar="path",
+        help="Path to the directory that contains the 'lldb' Python module. ",
+    )
 
     # Configuration options
     group = parser.add_argument_group("Remote platform options")
@@ -339,6 +345,13 @@ def create_parser():
     X(
         "-d",
         "Suspend the process after launch to wait indefinitely for a debugger to attach",
+    )
+    group.add_argument(
+        "--debug-with",
+        dest="debug_with",
+        choices=["xcode"],
+        type=str.lower,
+        help="Suspend the process after launch, and instruct the specified debugger to attach to it",
     )
     X("-t", "Turn on tracing of lldb command and other detailed test executions")
     group.add_argument(
