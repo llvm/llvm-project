@@ -101,7 +101,9 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
           Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
   if (const auto *VPI = dyn_cast<VPInstruction>(R)) {
     if (VPI->getOpcode() == Instruction::Call)
-      return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
+      // The callee is the last operand, excluding the mask if masked.
+      return GetCalleeIntrinsic(
+          VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
       return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
           ->getZExtValue();
