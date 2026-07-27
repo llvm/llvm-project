@@ -1035,6 +1035,7 @@ static bool isStdStreamVar(const VarDecl *D) {
 
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const StackFrame *SF) {
+  assert(SF);
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();

@@ -106,6 +106,20 @@ enum class SamplerFeedbackType : uint32_t {
   MipRegionUsed = 1,
 };
 
+/// Opcodes for the DXIL `AtomicBinOp` op (78). Values must match the DXIL
+/// specification.
+enum class AtomicBinOpCode : uint32_t {
+  Add = 0,
+  And = 1,
+  Or = 2,
+  Xor = 3,
+  IMin = 4,
+  IMax = 5,
+  UMin = 6,
+  UMax = 7,
+  Exchange = 8,
+};
+
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 

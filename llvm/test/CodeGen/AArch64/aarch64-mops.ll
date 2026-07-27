@@ -2034,42 +2034,34 @@ entry:
 define void @memmove_7(ptr %dst, ptr %src, i32 %value) {
 ; GISel-WITHOUT-MOPS-O0-LABEL: memmove_7:
 ; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w10, [x1]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str w10, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    strh w9, [x0, #4]
-; GISel-WITHOUT-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    stur w8, [x0, #3]
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
 ;
 ; GISel-WITHOUT-MOPS-O3-LABEL: memmove_7:
 ; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
 ; GISel-WITHOUT-MOPS-O3-NEXT:    ldr w8, [x1]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldur w9, [x1, #3]
 ; GISel-WITHOUT-MOPS-O3-NEXT:    str w8, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strh w9, [x0, #4]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    stur w9, [x0, #3]
 ; GISel-WITHOUT-MOPS-O3-NEXT:    ret
 ;
 ; GISel-MOPS-O0-LABEL: memmove_7:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    ldr w10, [x1]
-; GISel-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
-; GISel-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
-; GISel-MOPS-O0-NEXT:    str w10, [x0]
-; GISel-MOPS-O0-NEXT:    strh w9, [x0, #4]
-; GISel-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-MOPS-O0-NEXT:    stur w8, [x0, #3]
 ; GISel-MOPS-O0-NEXT:    ret
 ;
 ; GISel-MOPS-O3-LABEL: memmove_7:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
 ; GISel-MOPS-O3-NEXT:    ldr w8, [x1]
-; GISel-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
-; GISel-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-MOPS-O3-NEXT:    ldur w9, [x1, #3]
 ; GISel-MOPS-O3-NEXT:    str w8, [x0]
-; GISel-MOPS-O3-NEXT:    strh w9, [x0, #4]
-; GISel-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-MOPS-O3-NEXT:    stur w9, [x0, #3]
 ; GISel-MOPS-O3-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_7:
@@ -2504,42 +2496,34 @@ entry:
 define void @memmove_inline_7(ptr %dst, ptr %src, i32 %value) {
 ; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_7:
 ; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w10, [x1]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str w10, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    strh w9, [x0, #4]
-; GISel-WITHOUT-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    stur w8, [x0, #3]
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
 ;
 ; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_7:
 ; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
 ; GISel-WITHOUT-MOPS-O3-NEXT:    ldr w8, [x1]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldur w9, [x1, #3]
 ; GISel-WITHOUT-MOPS-O3-NEXT:    str w8, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strh w9, [x0, #4]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    stur w9, [x0, #3]
 ; GISel-WITHOUT-MOPS-O3-NEXT:    ret
 ;
 ; GISel-MOPS-O0-LABEL: memmove_inline_7:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    ldr w10, [x1]
-; GISel-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
-; GISel-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
-; GISel-MOPS-O0-NEXT:    str w10, [x0]
-; GISel-MOPS-O0-NEXT:    strh w9, [x0, #4]
-; GISel-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-MOPS-O0-NEXT:    stur w8, [x0, #3]
 ; GISel-MOPS-O0-NEXT:    ret
 ;
 ; GISel-MOPS-O3-LABEL: memmove_inline_7:
 ; GISel-MOPS-O3:       // %bb.0: // %entry
 ; GISel-MOPS-O3-NEXT:    ldr w8, [x1]
-; GISel-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
-; GISel-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-MOPS-O3-NEXT:    ldur w9, [x1, #3]
 ; GISel-MOPS-O3-NEXT:    str w8, [x0]
-; GISel-MOPS-O3-NEXT:    strh w9, [x0, #4]
-; GISel-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-MOPS-O3-NEXT:    stur w9, [x0, #3]
 ; GISel-MOPS-O3-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_7:

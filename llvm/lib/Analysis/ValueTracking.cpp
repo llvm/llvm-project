@@ -8989,7 +8989,6 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               Value *TrueVal, Value *FalseVal,
                                               Value *&LHS, Value *&RHS,
                                               unsigned Depth) {
-  bool HasMismatchedZeros = false;
   if (CmpInst::isFPPredicate(Pred)) {
     // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
     // 0.0 operand, set the compare's 0.0 operands to that same value for the
@@ -9004,14 +9003,10 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       OutputZeroVal = FalseVal;
 
     if (OutputZeroVal) {
-      if (match(CmpLHS, m_AnyZeroFP()) && CmpLHS != OutputZeroVal) {
-        HasMismatchedZeros = true;
+      if (match(CmpLHS, m_AnyZeroFP()) && CmpLHS != OutputZeroVal)
         CmpLHS = OutputZeroVal;
-      }
-      if (match(CmpRHS, m_AnyZeroFP()) && CmpRHS != OutputZeroVal) {
-        HasMismatchedZeros = true;
+      if (match(CmpRHS, m_AnyZeroFP()) && CmpRHS != OutputZeroVal)
         CmpRHS = OutputZeroVal;
-      }
     }
   }
 
@@ -9023,15 +9018,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   //  minNum(0.0, -0.0)          // May return -0.0 or 0.0 (IEEE 754-2008 5.3.1)
   // Therefore, we behave conservatively and only proceed if at least one of the
   // operands is known to not be zero or if we don't care about signed zero.
-  switch (Pred) {
-  default: break;
-  case CmpInst::FCMP_OGT: case CmpInst::FCMP_OLT:
-  case CmpInst::FCMP_UGT: case CmpInst::FCMP_ULT:
-    if (!HasMismatchedZeros)
-      break;
-    [[fallthrough]];
-  case CmpInst::FCMP_OGE: case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_UGE: case CmpInst::FCMP_ULE:
+  if (CmpInst::isFPPredicate(Pred)) {
     if (!FMF.noSignedZeros() && !isKnownNonZero(CmpLHS) &&
         !isKnownNonZero(CmpRHS))
       return {SPF_UNKNOWN, SPNB_NA, false};
@@ -10735,6 +10722,14 @@ void llvm::findValuesAffectedByCondition(
             InsertAffected(X);
         }
       }
+
+      auto AddNuwSquareOperand = [&AddAffected](Value *Op) {
+        Value *SquareOp = nullptr;
+        if (match(Op, m_NUWMul(m_Value(SquareOp), m_Deferred(SquareOp))))
+          AddAffected(SquareOp);
+      };
+      AddNuwSquareOperand(A);
+      AddNuwSquareOperand(B);
 
       if (HasRHSC && match(A, m_Ctpop(m_Value(X))))
         AddAffected(X);
