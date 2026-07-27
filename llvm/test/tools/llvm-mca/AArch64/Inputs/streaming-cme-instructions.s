@@ -39,8 +39,10 @@ mla z0.d, p0/m, z1.d, z2.d
 index z0.s, w0, #1
 index z0.s, #0, w0
 index z0.s, w0, w1
+index z23.d, x13, #8
 insr z0.s, w0
 lasta d0, p7, z31.d
+lasta x0, p0, z1.d
 faddv d0, p0, z1.d
 fmaxnmv d0, p0, z1.d
 sqcvtn z0.h, { z0.s, z1.s }

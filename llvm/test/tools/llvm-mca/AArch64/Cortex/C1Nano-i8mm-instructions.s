@@ -22,53 +22,57 @@
 # CHECK-NEXT:  1      4     0.50                        usmmla	v0.4s, v0.16b, v0.16b
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - C1NanoUnitALU0
-# CHECK-NEXT: [1]   - C1NanoUnitALU1
-# CHECK-NEXT: [2]   - C1NanoUnitB
-# CHECK-NEXT: [3]   - C1NanoUnitCMELD
-# CHECK-NEXT: [4]   - C1NanoUnitCMEMC
-# CHECK-NEXT: [5.0] - C1NanoUnitCMEMML0
-# CHECK-NEXT: [5.1] - C1NanoUnitCMEMML0
-# CHECK-NEXT: [6]   - C1NanoUnitCMEMML1
-# CHECK-NEXT: [7.0] - C1NanoUnitCMEPERMF
-# CHECK-NEXT: [7.1] - C1NanoUnitCMEPERMF
-# CHECK-NEXT: [7.2] - C1NanoUnitCMEPERMF
-# CHECK-NEXT: [8.0] - C1NanoUnitCMEPERMS
-# CHECK-NEXT: [8.1] - C1NanoUnitCMEPERMS
-# CHECK-NEXT: [9]   - C1NanoUnitCMEPF
-# CHECK-NEXT: [10.0] - C1NanoUnitCMERNMRET
-# CHECK-NEXT: [10.1] - C1NanoUnitCMERNMRET
-# CHECK-NEXT: [10.2] - C1NanoUnitCMERNMRET
-# CHECK-NEXT: [11]  - C1NanoUnitCMEST
-# CHECK-NEXT: [12]  - C1NanoUnitCMEVX0ALU
-# CHECK-NEXT: [13]  - C1NanoUnitCMEVX0FPDOT
-# CHECK-NEXT: [14]  - C1NanoUnitCMEVX0MUL
-# CHECK-NEXT: [15]  - C1NanoUnitCMEVX1ALU
-# CHECK-NEXT: [16]  - C1NanoUnitCMEVX1FPDOT
-# CHECK-NEXT: [17]  - C1NanoUnitCMEVX1MUL
-# CHECK-NEXT: [18]  - C1NanoUnitDiv
-# CHECK-NEXT: [19]  - C1NanoUnitLd1
-# CHECK-NEXT: [20]  - C1NanoUnitLdSt
-# CHECK-NEXT: [21]  - C1NanoUnitMAC
-# CHECK-NEXT: [22]  - C1NanoUnitPAC
-# CHECK-NEXT: [23]  - C1NanoUnitVALU0
-# CHECK-NEXT: [24]  - C1NanoUnitVALU1
-# CHECK-NEXT: [25]  - C1NanoUnitVMAC0
-# CHECK-NEXT: [26]  - C1NanoUnitVMAC1
-# CHECK-NEXT: [27]  - C1NanoUnitVMC
+# CHECK-NEXT: [0.0] - C1NanoUnit3CMEPERMF
+# CHECK-NEXT: [0.1] - C1NanoUnit3CMEPERMF
+# CHECK-NEXT: [0.2] - C1NanoUnit3CMEPERMF
+# CHECK-NEXT: [1.0] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.1] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.2] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.3] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [1.4] - C1NanoUnit5CMEVXALU
+# CHECK-NEXT: [2]   - C1NanoUnitALU0
+# CHECK-NEXT: [3]   - C1NanoUnitALU1
+# CHECK-NEXT: [4]   - C1NanoUnitB
+# CHECK-NEXT: [5]   - C1NanoUnitCMELD
+# CHECK-NEXT: [6]   - C1NanoUnitCMEMC
+# CHECK-NEXT: [7]   - C1NanoUnitCMEMML0
+# CHECK-NEXT: [8]   - C1NanoUnitCMEMML1
+# CHECK-NEXT: [9]   - C1NanoUnitCMEPERMF
+# CHECK-NEXT: [10]  - C1NanoUnitCMEPERMS
+# CHECK-NEXT: [11]  - C1NanoUnitCMEPF
+# CHECK-NEXT: [12.0] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [12.1] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [12.2] - C1NanoUnitCMERNMRET
+# CHECK-NEXT: [13]  - C1NanoUnitCMEST
+# CHECK-NEXT: [14]  - C1NanoUnitCMEVX0ALU
+# CHECK-NEXT: [15]  - C1NanoUnitCMEVX0FPDOT
+# CHECK-NEXT: [16]  - C1NanoUnitCMEVX0MUL
+# CHECK-NEXT: [17]  - C1NanoUnitCMEVX1ALU
+# CHECK-NEXT: [18]  - C1NanoUnitCMEVX1FPDOT
+# CHECK-NEXT: [19]  - C1NanoUnitCMEVX1MUL
+# CHECK-NEXT: [20]  - C1NanoUnitDiv
+# CHECK-NEXT: [21]  - C1NanoUnitLd1
+# CHECK-NEXT: [22]  - C1NanoUnitLdSt
+# CHECK-NEXT: [23]  - C1NanoUnitMAC
+# CHECK-NEXT: [24]  - C1NanoUnitPAC
+# CHECK-NEXT: [25]  - C1NanoUnitVALU0
+# CHECK-NEXT: [26]  - C1NanoUnitVALU1
+# CHECK-NEXT: [27]  - C1NanoUnitVMAC0
+# CHECK-NEXT: [28]  - C1NanoUnitVMAC1
+# CHECK-NEXT: [29]  - C1NanoUnitVMC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7.0]  [7.1]  [7.2]  [8.0]  [8.1]  [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50   3.00   3.00    -
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50   3.00   3.00    -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7.0]  [7.1]  [7.2]  [8.0]  [8.1]  [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     smmla	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     sudot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     sudot	v0.4s, v0.16b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ummla	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.2s, v0.8b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.2s, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.4s, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.4s, v0.16b, v0.4b[2]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usmmla	v0.4s, v0.16b, v0.16b
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     smmla	v0.4s, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     sudot	v0.2s, v0.8b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     sudot	v0.4s, v0.16b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ummla	v0.4s, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.2s, v0.8b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.2s, v0.8b, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.4s, v0.16b, v0.16b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     usdot	v0.4s, v0.16b, v0.4b[2]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usmmla	v0.4s, v0.16b, v0.16b

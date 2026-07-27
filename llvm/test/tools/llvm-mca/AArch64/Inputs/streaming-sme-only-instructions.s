@@ -127,7 +127,9 @@ sumops za0.s, p0/m, p0/m, z0.b, z0.b
 usmopa za0.s, p0/m, p0/m, z0.b, z0.b
 usmops za0.s, p0/m, p0/m, z0.b, z0.b
 sunpk {z0.h - z1.h}, z0.b
+sunpk {z0.h - z3.h}, {z0.b, z1.b}
 uunpk {z0.h - z1.h}, z0.b
+uunpk {z0.h - z3.h}, {z0.b, z1.b}
 st1b {z0.b, z1.b}, pn8, [x0]
 st1b {z0.b - z3.b}, pn8, [x0]
 stnt1b {z0.b, z1.b}, pn8, [x0]
@@ -143,13 +145,18 @@ zero za.d[w8, 0, vgx2]
 zero {zt0}
 zip1 z0.s, z0.s, z0.s
 zip2 z0.s, z0.s, z0.s
+zip {z0.q - z1.q}, z0.q, z0.q
+zip {z0.q - z3.q}, {z0.q - z3.q}
+rprfm #0, x0, [x0]
 
 // SME load instructions.
+ld1q {za0h.q[w12, 0]}, p0/z, [x0, x0, lsl #4]
 ld1w {za0v.s[w12, 0]}, p0/z, [x0]
 ldr zt0, [x0]
 ldr za[w12, #0], [x0]
 
 // SME store instructions.
+st1q {za0h.q[w12, 0]}, p0, [x0, x0, lsl #4]
 st1w {za0h.s[w12, 0]}, p0, [x0]
 str zt0, [x0]
 str za[w12, #0], [x0]
