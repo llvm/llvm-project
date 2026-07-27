@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
+// UNSUPPORTED: intelgpu
+
 #include <cstdio>
 #include <cstdlib>
 
