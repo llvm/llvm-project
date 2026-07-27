@@ -503,8 +503,8 @@ features cannot lower the translation-unit ABI level;
 - The SYCL runtime shared library has been renamed from `libsycl.so` to
   `libLLVMSYCL.so` to align with LLVM naming conventions.
 
-- SYCL header include paths are now added automatically for both host and
-  device compilations.
+- In SYCL mode, the compiler driver automatically provides the necessary SYCL
+  header include paths to both the host and device compilers.
 
 - SYCL runtime library linking is now supported on Windows. When `-fsycl` is
   specified, Clang automatically adds `/MD` if no explicit CRT flag is present,
@@ -515,9 +515,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime library
   was unconditionally added to the link line even when the flag was passed.
 
-- SYCL device compilations targeting SPIR-V now automatically link
-  `libclang_rt.builtins.bc` at compile time via `-mlink-builtin-bitcode`.
-  Pass `--no-offloadlib` to opt out.
+- SYCL device compilations targeting SPIR-V now automatically link compiler
+  builtin functions at compile time. Pass `--no-offloadlib` to opt out.
 
 ## Additional Information
 
