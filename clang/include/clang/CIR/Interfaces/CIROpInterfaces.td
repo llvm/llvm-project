@@ -258,6 +258,26 @@ let cppNamespace = "::cir" in {
     ];
   }
 
+  def CIR_StdOpInterface : OpInterface<"StdOpInterface"> {
+    let description = [{
+      Interface for raised standard library ops, exposing the original callee
+      so LoweringPrepare can rebuild the call generically.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the original callee symbol reference.",
+        "mlir::FlatSymbolRefAttr", "getOriginalFnAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttr();
+        }]>,
+      InterfaceMethod<"Return the name of the original_fn attribute.",
+        "mlir::StringAttr", "getOriginalFnAttrName", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttrName();
+        }]>,
+    ];
+  }
+
 } // namespace cir
 
 #endif // CLANG_CIR_INTERFACES_CIROPINTERFACES_TD

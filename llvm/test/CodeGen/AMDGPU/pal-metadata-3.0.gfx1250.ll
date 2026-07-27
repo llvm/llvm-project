@@ -118,7 +118,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
@@ -130,7 +130,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
@@ -142,7 +142,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK:    .registers:      {}

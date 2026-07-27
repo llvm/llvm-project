@@ -65,7 +65,7 @@ static Error createCustomError() {
 
 TEST(VirtualOutputBackendTest, construct) {
   MockOutputBackendData Data;
-  auto B = createMockBackend(Data);
+  [[maybe_unused]] auto B = createMockBackend(Data);
   EXPECT_EQ(0, Data.Cloned);
   EXPECT_EQ(0, Data.FilesCreated);
 }
