@@ -724,8 +724,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    relrDyn->addRelativeReloc(isec, offsetInSec, sym, addend, type, expr,
-                              shard);
+    relrDyn->addRelativeReloc<concurrent>(isec, offsetInSec, sym, addend, type,
+                                          expr, shard);
     return;
   }
   RelType relativeType = ctx.target->relativeRel;
