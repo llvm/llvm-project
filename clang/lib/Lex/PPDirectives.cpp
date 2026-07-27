@@ -396,16 +396,15 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   // Macro names with reserved identifiers are accepted if built-in or passed
   // through the command line (the later may be present if -dD was used to
   // generate the preprocessed file).
-  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
-  // of the condition.
-  if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
+  // NB: isInPredefinedFile() (via getPresumedLoc) is relatively expensive, so
+  // only run it for names that can actually warn.
+  MacroDiag D = MD_NoWarn;
+  if (isDefineUndef == MU_Define) {
+    D = shouldWarnOnMacroDef(*this, II);
+  } else if (isDefineUndef == MU_Undef)
+    D = shouldWarnOnMacroUndef(*this, II);
+  if (D != MD_NoWarn && !SourceMgr.isInSystemHeader(MacroNameLoc) &&
       !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
-    MacroDiag D = MD_NoWarn;
-    if (isDefineUndef == MU_Define) {
-      D = shouldWarnOnMacroDef(*this, II);
-    }
-    else if (isDefineUndef == MU_Undef)
-      D = shouldWarnOnMacroUndef(*this, II);
     if (D == MD_KeywordDef) {
       // We do not want to warn on some patterns widely used in configuration
       // scripts.  This requires analyzing next tokens, so do not issue warnings
@@ -1195,9 +1194,8 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
-    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
-        Filename, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
-    return llvm::expectedToOptional(std::move(ShouldBeEntry));
+    return FM.getOptionalFileRef(Filename, OpenFile, /*CacheFailure=*/true,
+                                 /*IsText=*/false);
   }
 
   auto SeparateComponents = [](SmallVectorImpl<char> &LookupPath,
@@ -1224,27 +1222,25 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
       TmpDir = LookupFromFile->getDir().getName();
       llvm::sys::path::append(TmpDir, Filename);
       if (!TmpDir.empty()) {
-        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
             TmpDir, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
-          return llvm::expectedToOptional(std::move(ShouldBeEntry));
-        llvm::consumeError(ShouldBeEntry.takeError());
+          return ShouldBeEntry;
       }
     }
 
     // Otherwise, do working directory lookup.
     LookupPath.clear();
-    auto MaybeWorkingDirEntry = FM.getDirectoryRef(".");
+    auto MaybeWorkingDirEntry = FM.getOptionalDirectoryRef(".");
     if (MaybeWorkingDirEntry) {
       DirectoryEntryRef WorkingDirEntry = *MaybeWorkingDirEntry;
       StringRef WorkingDir = WorkingDirEntry.getName();
       if (!WorkingDir.empty()) {
         SeparateComponents(LookupPath, WorkingDir, Filename, false);
-        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
             LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
-          return llvm::expectedToOptional(std::move(ShouldBeEntry));
-        llvm::consumeError(ShouldBeEntry.takeError());
+          return ShouldBeEntry;
       }
     }
   }
@@ -1252,11 +1248,10 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
   for (const auto &Entry : PPOpts.EmbedEntries) {
     LookupPath.clear();
     SeparateComponents(LookupPath, Entry, Filename, false);
-    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+    OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
         LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
     if (ShouldBeEntry)
-      return llvm::expectedToOptional(std::move(ShouldBeEntry));
-    llvm::consumeError(ShouldBeEntry.takeError());
+      return ShouldBeEntry;
   }
   return std::nullopt;
 }
@@ -1459,10 +1454,11 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandlePragmaDirective({PIK_HashPragma, Introducer.getLocation()});
     case tok::pp_module:
     case tok::pp___preprocessed_module:
-      return HandleCXXModuleDirective(Result);
+      if (Introducer.isModuleContextualKeyword())
+        return HandleCXXModuleDirective(Result);
+      break;
     case tok::pp___preprocessed_import:
       return HandleCXXImportDirective(Result);
-    // GNU Extensions.
     case tok::pp_import:
       switch (Introducer.getKind()) {
       case tok::hash:
@@ -1474,6 +1470,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       default:
         llvm_unreachable("not a valid import directive");
       }
+
+    // GNU Extensions.
     case tok::pp_include_next:
       return HandleIncludeNextDirective(Introducer.getLocation(), Result);
 
@@ -1650,7 +1648,8 @@ void Preprocessor::HandleLineDirective() {
     return;
   } else {
     // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
+    StringLiteralParser Literal(StrTok, *this,
+                                StringLiteralEvalMethod::Unevaluated);
     assert(Literal.isOrdinary() && "Didn't allow wide strings in");
     if (Literal.hadError) {
       DiscardUntilEndOfDirective();
@@ -1801,7 +1800,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     return;
   } else {
     // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
+    StringLiteralParser Literal(StrTok, *this,
+                                StringLiteralEvalMethod::Unevaluated);
     assert(Literal.isOrdinary() && "Didn't allow wide strings in");
     if (Literal.hadError) {
       DiscardUntilEndOfDirective();

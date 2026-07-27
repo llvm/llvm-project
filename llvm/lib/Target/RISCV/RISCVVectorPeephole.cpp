@@ -448,9 +448,11 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
 }
 
 /// Given A and B are in the same MBB, returns true if A comes before B.
-static bool dominates(MachineBasicBlock::const_iterator A,
-                      MachineBasicBlock::const_iterator B) {
+static bool strictlyDominates(MachineBasicBlock::const_iterator A,
+                              MachineBasicBlock::const_iterator B) {
   assert(A->getParent() == B->getParent());
+  if (A == B)
+    return false;
   const MachineBasicBlock *MBB = A->getParent();
   auto MBBEnd = MBB->end();
   if (B == MBBEnd)
@@ -463,9 +465,9 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   return &*I == A;
 }
 
-/// If a register in \p Uses doesn't dominate \p Src, try to move \p Src so it
-/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
-/// the same basic block as \Src.
+/// If a register in \p Defs doesn't dominate \p Use, try to move Use so it
+/// does. Returns false if any def doesn't dominate and we can't move Use. Each
+/// def must be in the same block as Use.
 bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
                                           MachineInstr &Use) const {
   MachineInstr *Dest = &Use;
@@ -476,7 +478,8 @@ bool RISCVVectorPeephole::ensureDominates(ArrayRef<const MachineOperand *> Defs,
       continue;
 
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
-    if (Def->getParent() == Dest->getParent() && !dominates(Def, *Dest)) {
+    if (Def->getParent() == Dest->getParent() &&
+        !strictlyDominates(Def, *Dest)) {
       if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
         return false;
       Dest = Def->getNextNode();

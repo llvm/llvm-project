@@ -99,8 +99,10 @@ TEST(LockedTest, ExclusiveReleasesOnDestruction) {
     LockedPtr<Widget, std::mutex> handle(mutex, &widget);
     EXPECT_FALSE(mutex.try_lock());
   }
-  EXPECT_TRUE(mutex.try_lock());
-  mutex.unlock();
+  if (mutex.try_lock())
+    mutex.unlock();
+  else
+    ADD_FAILURE() << "Mutex was not released";
 }
 
 TEST(LockedTest, MoveTransfersLock) {

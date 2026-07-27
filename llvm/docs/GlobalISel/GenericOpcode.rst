@@ -4,8 +4,6 @@
 Generic Opcodes
 ===============
 
-.. contents::
-   :local:
 
 .. note::
 
@@ -340,6 +338,15 @@ These each perform their respective integer arithmetic on a scalar.
   %dst:_(s32) = G_ADD %src0:_(s32), %src1:_(s32)
 
 The above example adds %src1 to %src0 and stores the result in %dst.
+
+G_CLMUL
+^^^^^^^
+
+Perform integer carry-less multiplication.
+
+.. code-block:: none
+
+  %dst:_(s32) = G_CLMUL %src_0:_(s32), %src1:_(32)
 
 G_SDIVREM, G_UDIVREM
 ^^^^^^^^^^^^^^^^^^^^

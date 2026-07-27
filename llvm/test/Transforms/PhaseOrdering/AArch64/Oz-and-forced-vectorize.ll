@@ -10,7 +10,7 @@ target triple = "arm64-apple-ios5.0.0"
 
 define void @foo(ptr noalias nocapture %ptrA, ptr noalias nocapture readonly %ptrB, i64 %size) minsize {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr noalias captures(none) [[PTRA:%.*]], ptr noalias readonly captures(none) [[PTRB:%.*]], i64 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree captures(none) [[PTRA:%.*]], ptr noalias readonly captures(none) [[PTRB:%.*]], i64 [[SIZE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i64 [[SIZE]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[FOR_COND_CLEANUP:.*]], label %[[VECTOR_PH:.*]]

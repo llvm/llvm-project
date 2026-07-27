@@ -638,12 +638,13 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP5]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP17]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
@@ -823,6 +824,54 @@ for.exit:
   ret void
 }
 
+define void @simple_histogram_metadata(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @simple_histogram_metadata(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META30:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP4]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP5]], i32 1, <vscale x 4 x i1> splat (i1 true)), !alias.scope [[META32:![0-9]+]], !noalias [[META27]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4, !alias.scope !6, !noalias !9
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4, !alias.scope !11, !noalias !6
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4, !alias.scope !11, !noalias !6
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
+
+for.exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1}
@@ -831,3 +880,11 @@ attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 !3 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.interleave.count", i32 1}
+!6 = !{!7}
+!7 = distinct !{!7, !8, !"scope-index"}
+!8 = distinct !{!8, !"scopes-indices"}
+!9 = !{!10}
+!10 = distinct !{!10, !8, !"scope-bucket"}
+!11 = !{!10, !12}
+!12 = distinct !{!12, !13, !"scope-bucket-2"}
+!13 = distinct !{!13, !"scopes-buckets"}

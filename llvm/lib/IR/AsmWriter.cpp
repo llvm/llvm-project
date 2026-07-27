@@ -1202,7 +1202,8 @@ int SlotTracker::processIndex() {
   // Start numbering the GUIDs after the module ids.
   GUIDNext = ModulePathNext;
 
-  for (auto &GlobalList : *TheIndex)
+  // Sort by GUID for deterministic slot assignment.
+  for (const auto &GlobalList : TheIndex->sortedGlobalValueSummariesRange())
     CreateGUIDSlot(GlobalList.first);
 
   // Start numbering the TypeIdCompatibleVtables after the GUIDs.
@@ -2444,6 +2445,8 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printBool("rangesBaseAddress", N->getRangesBaseAddress(), false);
   Printer.printString("sysroot", N->getSysRoot());
   Printer.printString("sdk", N->getSDK());
+  Printer.printDwarfEnum("dialect", Lang.getDialect(),
+                         dwarf::LanguageDialectString);
   Out << ")";
 }
 
@@ -2624,7 +2627,7 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
-  Printer.printInt("line", N->getLine());
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
   Printer.printInt("column", N->getColumn());
   Printer.printBool("isArtificial", N->isArtificial(), false);
   if (N->getCoroSuspendIdx())
@@ -3123,21 +3126,38 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getTargetTriple().empty())
     Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
 
-  if (!M->getModuleInlineAsm().empty()) {
+  if (M->hasModuleInlineAsm()) {
     Out << '\n';
 
-    // Split the string into lines, to make it easier to read the .ll file.
-    StringRef Asm = M->getModuleInlineAsm();
-    do {
-      StringRef Front;
-      std::tie(Front, Asm) = Asm.split('\n');
+    for (const Module::GlobalAsmFragment &Frag : M->getModuleInlineAsm()) {
+      Out << "module asm";
+      SmallVector<std::pair<StringRef, StringRef>> Props =
+          Frag.Props.getAsStrings();
+      if (!Props.empty()) {
+        ListSeparator LS;
+        Out << "(";
+        for (auto [Key, Value] : Props) {
+          Out << LS;
+          Out << Key << ": \"";
+          printEscapedString(Value, Out);
+          Out << "\"";
+        }
+        Out << ")";
+      }
+      Out << "\n";
+      // Split the string into lines, to make it easier to read the .ll file.
+      StringRef Asm = Frag.Asm;
+      do {
+        StringRef Front;
+        std::tie(Front, Asm) = Asm.split('\n');
 
-      // We found a newline, print the portion of the asm string from the
-      // last newline up to this newline.
-      Out << "module asm \"";
-      printEscapedString(Front, Out);
-      Out << "\"\n";
-    } while (!Asm.empty());
+        // We found a newline, print the portion of the asm string from the
+        // last newline up to this newline.
+        Out << "    \"";
+        printEscapedString(Front, Out);
+        Out << "\"\n";
+      } while (!Asm.empty());
+    }
   }
 
   printTypeIdentities();
@@ -3227,14 +3247,17 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // FIXME: Change AliasSummary to hold a ValueInfo instead of summary pointer
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
-  for (auto &GlobalList : *TheIndex) {
+  // Sort by GUID for deterministic output matching slot assignment order.
+  auto SortedGVS = TheIndex->sortedGlobalValueSummariesRange();
+
+  for (const auto &GlobalList : SortedGVS) {
     auto GUID = GlobalList.first;
     for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
   // Print the global value summary entries.
-  for (auto &GlobalList : *TheIndex) {
+  for (const auto &GlobalList : SortedGVS) {
     auto GUID = GlobalList.first;
     auto VI = TheIndex->getValueInfo(GlobalList);
     printSummaryInfo(Machine.getGUIDSlot(GUID), VI);
@@ -4349,9 +4372,15 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 /// intrinsic indicating base and derived pointer names.
 void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
   Out << " ; (";
-  writeOperand(Relocate.getBasePtr(), false);
+  if (Value *BasePtr = Relocate.getBasePtr())
+    writeOperand(BasePtr, false);
+  else
+    Out << "invalid";
   Out << ", ";
-  writeOperand(Relocate.getDerivedPtr(), false);
+  if (Value *DerivedPtr = Relocate.getDerivedPtr())
+    writeOperand(DerivedPtr, false);
+  else
+    Out << "invalid";
   Out << ")";
 }
 
@@ -4450,6 +4479,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       (isa<AtomicCmpXchgInst>(I) && cast<AtomicCmpXchgInst>(I).isVolatile()) ||
       (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
     Out << " volatile";
+
+  if (isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise())
+    Out << " elementwise";
 
   // Print out optimization information.
   writeOptimizationInfo(Out, &I);
@@ -4621,7 +4653,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Function *CalledFunc = CI->getCalledFunction();
     auto PrintArgComment = [&](unsigned ArgNo) {
       const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
-      if (!ConstArg)
+      if (!ConstArg || !CalledFunc)
         return;
       std::string ArgComment;
       raw_string_ostream ArgCommentStream(ArgComment);
@@ -4978,6 +5010,9 @@ void AssemblyWriter::printMetadataAttachments(
 }
 
 void AssemblyWriter::writeMDNode(unsigned Slot, const MDNode *Node) {
+  if (AnnotationWriter)
+    AnnotationWriter->emitMDNodeAnnot(Node, Out);
+
   Out << '!' << Slot << " = ";
   printMDNodeBody(Node);
   Out << "\n";
@@ -5036,20 +5071,11 @@ void AssemblyWriter::writeAllAttributeGroups() {
 
 void AssemblyWriter::printUseListOrder(const Value *V,
                                        ArrayRef<unsigned> Shuffle) {
-  bool IsInFunction = Machine.getFunction();
-  if (IsInFunction)
+  if (Machine.getFunction())
     Out << "  ";
 
-  Out << "uselistorder";
-  if (const BasicBlock *BB = IsInFunction ? nullptr : dyn_cast<BasicBlock>(V)) {
-    Out << "_bb ";
-    writeOperand(BB->getParent(), false);
-    Out << ", ";
-    writeOperand(BB, false);
-  } else {
-    Out << " ";
-    writeOperand(V, true);
-  }
+  Out << "uselistorder ";
+  writeOperand(V, true);
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
   Out << ", { " << llvm::interleaved(Shuffle) << " }\n";

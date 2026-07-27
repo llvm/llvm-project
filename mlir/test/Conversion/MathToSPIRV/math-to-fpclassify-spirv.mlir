@@ -29,4 +29,13 @@ module attributes {
     return
   }
 
+  // CHECK-LABEL: @ctpop
+  func.func @ctpop(%i: i32, %iv: vector<4xi32>) {
+    // CHECK: spirv.BitCount %{{.*}} : i32
+    %0 = math.ctpop %i : i32
+    // CHECK: spirv.BitCount %{{.*}} : vector<4xi32>
+    %1 = math.ctpop %iv : vector<4xi32>
+    return
+  }
+
 }

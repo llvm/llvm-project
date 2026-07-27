@@ -7,9 +7,7 @@ define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[BB8:.*]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[OP_RDX:%.*]], %[[BB8]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX]] = add i32 0, [[TMP0]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB8]] ], [ 0, %[[BB]] ]
 ; CHECK-NEXT:    br label %[[BB8]]
 ;
 bb:

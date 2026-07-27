@@ -1120,6 +1120,21 @@ bool HasConstant(const Expr<SomeType> &);
 // Predicate: Does an expression contain a component
 bool HasStructureComponent(const Expr<SomeType> &expr);
 
+// Predicate: does an expression contain a procedure reference?
+bool HasProcedureRef(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a VOLATILE or ASYNCHRONOUS symbol?
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
+
+// Can a scalar real RHS expression in an assignment be rewritten as a split
+// sum expression tree?
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+
+// Try to rewrite a scalar real sum as a split sum expression tree.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
@@ -1393,13 +1408,27 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
     return true; // Managed arrays initialization is performed on the device.
   }
 
-  // Cases where no explicit data transfer is needed:
-  // - Both sides involve only managed/unified symbols (host-accessible).
-  // - LHS is host-only and RHS has only managed/unified symbols.
-  // - LHS is managed/unified and RHS is host-only.
-  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+  // Managed/unified data is host-addressable, so several assignments are
+  // performed on the host and need no explicit data transfer:
+  // - A whole-allocatable left-hand side involving managed/unified data: the
+  //   assignment has reallocation semantics and is performed on the host.
+  // - Element-wise (scalar) access to managed/unified data.
+  // - A right-hand side expression involving managed/unified data assigned into
+  //   a host-addressable (managed/unified or host) left-hand side: evaluating
+  //   it on the host avoids materializing a temporary.
+  // - A managed/unified left-hand side assigned from host-only data.
+  // A whole-array assignment whose right-hand side is a managed/unified
+  // variable is a synchronous data transfer that waits for previously launched
+  // kernels.
+  if ((IsAllocatableDesignator(lhs) &&
+          (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+          lhs.Rank() == 0) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
-          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+          lhs.Rank() == 0) ||
+      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) &&
+          (lhsNbManagedSymbols >= 1 || !HasCUDADeviceAttrs(lhs))) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
@@ -1409,6 +1438,9 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1570,6 +1602,11 @@ std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 // How many ancestors does have a derived type have?
 std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
 
 } // namespace Fortran::evaluate
 

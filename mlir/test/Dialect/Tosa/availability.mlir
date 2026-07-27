@@ -43,7 +43,7 @@ func.func @test_avg_pool2d_adaptive(%arg0: tensor<1x7x7x9xf32>) -> tensor<1x7x7x
 // CHECK-LABEL: conv2d
 func.func @test_conv2d(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>) -> tensor<1x4x4x8xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [int4, int16, fp8e4m3, fp8e5m2, bf16] ]
+  // CHECK: extensions: [ [int4, int16, fp8e4m3, fp8e5m2, bf16, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
@@ -521,7 +521,7 @@ func.func @test_reduce_sum(%arg0: tensor<13x21x3xf32>) -> tensor<1x21x3xf32> {
 // CHECK-LABEL: concat
 func.func @test_concat(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<26x21x3xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int16, int64] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int16, int64, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
   %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
   return %0 : tensor<26x21x3xf32>
 }
@@ -542,7 +542,7 @@ func.func @test_pad(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
 func.func @test_reshape(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
   %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int64] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int64, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xf32>, !tosa.shape<2>) -> tensor<1x819xf32>
   return %0 : tensor<1x819xf32>
 }
@@ -596,6 +596,16 @@ func.func @test_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> 
 }
 
 // -----
+// CHECK-LABEL: test_row_gather
+func.func @test_row_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int16, int64, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
+  return %0 : tensor<13x52x3xf32>
+}
+
+// -----
 // CHECK-LABEL: row_gather_block_scaled
 func.func @test_row_gather_block_scaled(%arg0: tensor<13x21x32xf4E2M1FN>, %arg1: tensor<13x21x1xf8E8M0FNU>, %arg2: tensor<13x26xi32>) -> (tensor<13x52x32xf4E2M1FN>, tensor<13x52x1xf8E8M0FNU>) {
   %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
@@ -627,10 +637,10 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
 }
 
 // -----
-// CHECK-LABEL: cast
-func.func @test_cast1(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
+// CHECK-LABEL: test_cast
+func.func @test_cast(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int64] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int64, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
@@ -650,7 +660,7 @@ func.func @test_rescale(%arg0: tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439
 // CHECK-LABEL: test_const
 func.func @test_const(%arg0 : index) -> tensor<4xi32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [int4, int16, fp8e4m3, fp8e5m2, bf16, mxfp, int64] ]
+  // CHECK: extensions: [ [int4, int16, fp8e4m3, fp8e5m2, bf16, mxfp, int64, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
     %0 = "tosa.const"() {values = dense<[3, 0, 1, 2]> : tensor<4xi32>} : () -> tensor<4xi32>
     return %0 : tensor<4xi32>
 }

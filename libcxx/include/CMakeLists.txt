@@ -324,6 +324,7 @@ set(files
   __concepts/movable.h
   __concepts/predicate.h
   __concepts/primary_template.h
+  __concepts/referenceable.h
   __concepts/regular.h
   __concepts/relation.h
   __concepts/same_as.h
@@ -342,6 +343,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
   __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -436,6 +438,9 @@ set(files
   __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
+  __functional/function_ref.h
+  __functional/function_ref_common.h
+  __functional/function_ref_impl.h
   __functional/hash.h
   __functional/identity.h
   __functional/invoke.h
@@ -616,6 +621,7 @@ set(files
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
+  __memory/uninitialized_multidimensional_algorithms.h
   __memory/unique_ptr.h
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
@@ -674,6 +680,7 @@ set(files
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
@@ -723,6 +730,7 @@ set(files
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
+  __ranges/concat_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
   __ranges/counted.h
@@ -824,7 +832,6 @@ set(files
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
   __type_traits/decay.h
-  __type_traits/dependent_type.h
   __type_traits/desugars_to.h
   __type_traits/detected_or.h
   __type_traits/disjunction.h
@@ -877,7 +884,6 @@ set(files
   __type_traits/is_polymorphic.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
-  __type_traits/is_referenceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -897,7 +903,6 @@ set(files
   __type_traits/is_void.h
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h
-  __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
@@ -910,6 +915,7 @@ set(files
   __type_traits/rank.h
   __type_traits/reference_constructs_from_temporary.h
   __type_traits/reference_converts_from_temporary.h
+  __type_traits/register_passable.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_const_ref.h
@@ -962,6 +968,7 @@ set(files
   __vector/comparison.h
   __vector/container_traits.h
   __vector/erase.h
+  __vector/layout.h
   __vector/pmr.h
   __vector/swap.h
   __vector/vector.h
@@ -1091,6 +1098,7 @@ set(files
   strstream
   syncstream
   system_error
+  text_encoding
   tgmath.h
   thread
   tuple

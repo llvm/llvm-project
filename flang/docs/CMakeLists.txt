@@ -1,5 +1,3 @@
-
-find_package(Doxygen)
 if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
   set(abs_top_srcdir ${CMAKE_CURRENT_SOURCE_DIR})
@@ -48,8 +46,7 @@ if (LLVM_ENABLE_DOXYGEN)
     set(flang_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+  llvm_configure_doxygen()
 
   set(abs_top_srcdir)
   set(abs_top_builddir)
@@ -116,14 +113,14 @@ if (LLVM_ENABLE_SPHINX)
       message(STATUS "Using index.md for html build")
 
       # Copy the entire flang/docs directory to the build Source dir,
-      # then remove the index.rst file, to avoid clash with index.md
+      # then remove the CommandGuide index.md file, to avoid clash with index.md
       # which is used for the HTML build.
       add_custom_target(copy-flang-src-docs-html
         COMMAND "${CMAKE_COMMAND}" -E copy_directory
               "${CMAKE_CURRENT_SOURCE_DIR}"
               "${FLANG_DOCS_HTML_DIR}"
         COMMAND "${CMAKE_COMMAND}" -E remove
-          "${FLANG_DOCS_HTML_DIR}/CommandGuide/index.rst"
+          "${FLANG_DOCS_HTML_DIR}/CommandGuide/index.md"
         COMMAND "${CMAKE_COMMAND}" -E copy
           "${CMAKE_CURRENT_BINARY_DIR}/Source/FlangCommandLineReference.rst"
           "${FLANG_DOCS_HTML_DIR}/FlangCommandLineReference.rst"
@@ -148,11 +145,11 @@ if (LLVM_ENABLE_SPHINX)
     # MAN BUILD SETUP
     # ----------------------------
     if (${SPHINX_OUTPUT_MAN})
-      message(STATUS "Using CommandGuide/index.rst for man build")
+      message(STATUS "Using CommandGuide/index.md for man build")
 
       # Create minimal Source dir with ONLY the files needed for man build:
       # - conf.py (Sphinx config)
-      # - index.rst (top-level man page)
+      # - index.md (top-level man page)
       # - FlangCommandLineOptions.rst (generated reference)
       add_custom_target(copy-flang-src-docs-man
         COMMAND "${CMAKE_COMMAND}" -E make_directory
@@ -164,8 +161,8 @@ if (LLVM_ENABLE_SPHINX)
           "${CMAKE_CURRENT_BINARY_DIR}/Source/FlangCommandLineOptions.rst"
           "${FLANG_DOCS_MAN_DIR}/FlangCommandLineOptions.rst"
         COMMAND "${CMAKE_COMMAND}" -E copy
-                "${CMAKE_CURRENT_SOURCE_DIR}/CommandGuide/index.rst"
-                "${FLANG_DOCS_MAN_DIR}/index.rst"
+                "${CMAKE_CURRENT_SOURCE_DIR}/CommandGuide/index.md"
+                "${FLANG_DOCS_MAN_DIR}/index.md"
         DEPENDS flang-doc gen-FlangCommandLineOptions.rst)
 
       add_sphinx_target(man flang SOURCE_DIR "${FLANG_DOCS_MAN_DIR}")
@@ -173,4 +170,3 @@ if (LLVM_ENABLE_SPHINX)
     endif()
   endif()
 endif()
-

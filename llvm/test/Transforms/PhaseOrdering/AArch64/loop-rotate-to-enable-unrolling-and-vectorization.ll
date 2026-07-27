@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; runtime-unrolled at -O3.
 define ptr @search_loop_unrolled(ptr %begin, ptr %end, i8 %val) {
 ; CHECK-LABEL: define ptr @search_loop_unrolled(
-; CHECK-SAME: ptr readnone captures(address) [[BEGIN:%.*]], ptr readonly captures(address, ret: address, provenance) [[END:%.*]], i8 [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readnone captures(address) [[BEGIN:%.*]], ptr nofree readonly captures(address, ret: address, provenance) [[END:%.*]], i8 [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_ENTRY:%.*]] = icmp eq ptr [[BEGIN]], [[END]]
 ; CHECK-NEXT:    [[PTR_DEC1:%.*]] = getelementptr inbounds i8, ptr [[END]], i64 -1
@@ -15,8 +15,8 @@ define ptr @search_loop_unrolled(ptr %begin, ptr %end, i8 %val) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_ENTRY]], i1 true, i1 [[CMP_END2]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[COMMON_RET:.*]], label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[END5:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[BEGIN6:%.*]] = ptrtoint ptr [[BEGIN]] to i64
+; CHECK-NEXT:    [[END5:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[BEGIN6:%.*]] = ptrtoaddr ptr [[BEGIN]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i64 [[BEGIN6]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[END5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[TMP1]]
@@ -103,7 +103,7 @@ exit:
 
 define i64 @rotate_needed_to_vectorize(ptr noalias %scan, ptr noalias %match) {
 ; CHECK-LABEL: define i64 @rotate_needed_to_vectorize(
-; CHECK-SAME: ptr noalias readonly captures(none) [[SCAN:%.*]], ptr noalias readonly captures(none) [[MATCH:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree readonly captures(none) [[SCAN:%.*]], ptr noalias nofree readonly captures(none) [[MATCH:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:

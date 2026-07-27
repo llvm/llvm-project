@@ -35,6 +35,12 @@
   <th>Flag</th>
   <th>Available in Clang?</th>
  </tr>
+  <tr>
+  <td><a href="#cxx29">C++2d</a></td>
+  <td><tt>-std=c++2d</tt></td>
+  <td class="partial" align="center">Partial</td>
+ </tr>
+<tr>
  <tr>
   <td><a href="#cxx26">C++2c</a></td>
   <td><tt>-std=c++2c</tt></td>
@@ -84,6 +90,112 @@ language.</p>
 <p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
 the "c++" label, as well as mode-specific labels such as "c++11", "c++14",
 and so on, to track known bugs with Clang's language conformance.</p>
+
+
+<h2 id="cxx29">C++2d implementation status</h2>
+
+<!-- TODO add link to the ISO Standard after it's published. -->
+<p>Clang has support for some of the features of the C++ standard following
+C++2c, informally referred to as C++2d.</p>
+
+<p>You can use Clang in C++2d mode with the <code>-std=c++2d</code> option.</p>
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
+<table width="689" border="1" cellspacing="0">
+<tr>
+  <th>Language Feature</th>
+  <th>C++29 Proposal</th>
+  <th>Available in Clang?</th>
+</tr>
+ <!-- Summer 2026 papers (Brno) -->
+<tr>
+  <td>Clarify the behavior of floating-point overflow</td>
+  <td><a href="https://wg21.link/P3899R3">P3899R3</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Defaulting postfix increment and decrement operations</td>
+  <td><a href="https://wg21.link/P3668R4">P3668R4</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Adding restrictions to defaulted assignment operator functions</td>
+  <td><a href="https://wg21.link/P2953R5">P2953R5</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Nondeterministic pointer provenance</td>
+  <td><a href="https://wg21.link/P2434R5">P2434R5</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Invalid pointer operations</td>
+  <td><a href="https://wg21.link/P3347R6">P3347R6</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Adjust identifier following new Unicode recommendations</td>
+  <td><a href="https://wg21.link/P3658R1">P3658R1</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td><code>return_value</code> &amp; <code>return_void</code> are not mutually exclusive</td>
+  <td><a href="https://wg21.link/P3950R1">P3950R1</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>More named universal character escapes</td>
+  <td><a href="https://wg21.link/P3733R1">P3733R1</a> <a href="#dr">(DR)</a></td>
+  <td class="full" align="center">Clang 23</td>
+</tr>
+<tr>
+  <td>Lexical order for lambdas</td>
+  <td><a href="https://wg21.link/P3847R1">P3847R1</a> <a href="#dr">(DR)</a></td>
+  <td class="full" align="center">Clang 3.1</td>
+</tr>
+<tr>
+  <td>Language linkage for templates</td>
+  <td><a href="https://wg21.link/P2243R0">P2243R0</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Deallocation functions with throwing exception specification are ill-formed</td>
+  <td><a href="https://wg21.link/P3424R2">P3424R2</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Conditional noexcept specifiers in compound requirements</td>
+  <td><a href="https://wg21.link/P3822R2">P3822R2</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Contracts for C++: virtual functions</td>
+  <td><a href="https://wg21.link/P3097R3">P3097R3</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Consteval-only values for C++26</td>
+  <td><a href="https://wg21.link/P4101R1">P4101R1</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Pointer lifetime-end zap proposed solutions</td>
+  <td><a href="https://wg21.link/P2414R12">P2414R12</a> <a href="#dr">(DR)</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td>Pack indexing for template names</td>
+  <td><a href="https://wg21.link/P3670R4">P3670R4</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+<tr>
+  <td><code>#embed</code> offset parameter</td>
+  <td><a href="https://wg21.link/P3540R3">P3540R3</a></td>
+  <td class="none" align="center">No</td>
+</tr>
+</table>
+</details>
 
 <h2 id="cxx26">C++2c implementation status</h2>
 
@@ -320,12 +432,18 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Expansion Statements</td>
   <td><a href="https://wg21.link/P1306">P1306R5</a></td>
-  <td class="none" align="center">No</td>
+  <td class="partial" align="center">
+    <details>
+      <summary>Clang 23 (Partial)</summary>
+      Iterating expansion statements currently cannot be expanded and will
+      result in a diagnostic, but other types of expansion statements work.
+    </details>
+  </td>
  </tr>
  <tr>
    <td>constexpr virtual inheritance</td>
    <td><a href="https://wg21.link/P3533">P3533R2</a></td>
-   <td class="none" align="center">No</td>
+   <td class="full" align="center">Clang 24</td>
  </tr>
  <tr>
    <td>Preprocessing is never undefined</td>

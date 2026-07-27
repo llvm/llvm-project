@@ -276,7 +276,7 @@ private:
 #define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) .Case(#Name, UETT_##Name)
 #define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                    \
   .Case(#Name, UETT_##Name)
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
         .Default(std::nullopt);
   }
 
@@ -422,13 +422,13 @@ private:
 /// Helper methods to extract and merge all possible typed matchers
 /// out of the polymorphic object.
 template <class PolyMatcher>
-static void mergePolyMatchers(const PolyMatcher &Poly,
-                              std::vector<DynTypedMatcher> &Out,
-                              ast_matchers::internal::EmptyTypeList) {}
+void mergePolyMatchers(const PolyMatcher &Poly,
+                       std::vector<DynTypedMatcher> &Out,
+                       ast_matchers::internal::EmptyTypeList) {}
 
 template <class PolyMatcher, class TypeList>
-static void mergePolyMatchers(const PolyMatcher &Poly,
-                              std::vector<DynTypedMatcher> &Out, TypeList) {
+void mergePolyMatchers(const PolyMatcher &Poly,
+                       std::vector<DynTypedMatcher> &Out, TypeList) {
   Out.push_back(ast_matchers::internal::Matcher<typename TypeList::head>(Poly));
   mergePolyMatchers(Poly, Out, typename TypeList::tail());
 }
@@ -444,9 +444,8 @@ inline VariantMatcher outvalueToVariantMatcher(const DynTypedMatcher &Matcher) {
 }
 
 template <typename T>
-static VariantMatcher outvalueToVariantMatcher(const T &PolyMatcher,
-                                               typename T::ReturnTypes * =
-                                                   nullptr) {
+VariantMatcher outvalueToVariantMatcher(const T &PolyMatcher,
+                                        typename T::ReturnTypes * = nullptr) {
   std::vector<DynTypedMatcher> Matchers;
   mergePolyMatchers(PolyMatcher, Matchers, typename T::ReturnTypes());
   VariantMatcher Out = VariantMatcher::PolymorphicMatcher(std::move(Matchers));
@@ -649,10 +648,9 @@ private:
 
 /// 0-arg marshaller function.
 template <typename ReturnType>
-static VariantMatcher matcherMarshall0(void (*Func)(), StringRef MatcherName,
-                                       SourceRange NameRange,
-                                       ArrayRef<ParserValue> Args,
-                                       Diagnostics *Error) {
+VariantMatcher
+matcherMarshall0(void (*Func)(), StringRef MatcherName, SourceRange NameRange,
+                 ArrayRef<ParserValue> Args, Diagnostics *Error) {
   using FuncType = ReturnType (*)();
   CHECK_ARG_COUNT(0);
   return outvalueToVariantMatcher(reinterpret_cast<FuncType>(Func)());
@@ -660,10 +658,9 @@ static VariantMatcher matcherMarshall0(void (*Func)(), StringRef MatcherName,
 
 /// 1-arg marshaller function.
 template <typename ReturnType, typename ArgType1>
-static VariantMatcher matcherMarshall1(void (*Func)(), StringRef MatcherName,
-                                       SourceRange NameRange,
-                                       ArrayRef<ParserValue> Args,
-                                       Diagnostics *Error) {
+VariantMatcher
+matcherMarshall1(void (*Func)(), StringRef MatcherName, SourceRange NameRange,
+                 ArrayRef<ParserValue> Args, Diagnostics *Error) {
   using FuncType = ReturnType (*)(ArgType1);
   CHECK_ARG_COUNT(1);
   CHECK_ARG_TYPE(0, ArgType1);
@@ -673,10 +670,9 @@ static VariantMatcher matcherMarshall1(void (*Func)(), StringRef MatcherName,
 
 /// 2-arg marshaller function.
 template <typename ReturnType, typename ArgType1, typename ArgType2>
-static VariantMatcher matcherMarshall2(void (*Func)(), StringRef MatcherName,
-                                       SourceRange NameRange,
-                                       ArrayRef<ParserValue> Args,
-                                       Diagnostics *Error) {
+VariantMatcher
+matcherMarshall2(void (*Func)(), StringRef MatcherName, SourceRange NameRange,
+                 ArrayRef<ParserValue> Args, Diagnostics *Error) {
   using FuncType = ReturnType (*)(ArgType1, ArgType2);
   CHECK_ARG_COUNT(2);
   CHECK_ARG_TYPE(0, ArgType1);

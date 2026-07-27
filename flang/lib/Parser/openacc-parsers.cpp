@@ -50,8 +50,8 @@ TYPE_PARSER(construct<AccObjectListWithReduction>(
 
 // 2.16 (3249) wait-argument is:
 //   [devnum : int-expr :] [queues :] int-expr-list
-TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
-    "QUEUES:" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
+TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM :" >> scalarIntExpr / ":"),
+    "QUEUES :" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
 
 // 2.9 (1984-1986) size-expr is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
@@ -85,11 +85,11 @@ TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 //   dim:int-expr
 //   static:size-expr
 TYPE_PARSER(sourced(construct<AccGangArg>(construct<AccGangArg::Static>(
-                        "STATIC: " >> Parser<AccSizeExpr>{})) ||
+                        "STATIC :" >> Parser<AccSizeExpr>{})) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Dim>("DIM: " >> scalarIntExpr)) ||
+        construct<AccGangArg::Dim>("DIM :" >> scalarIntExpr)) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr))))
+        construct<AccGangArg::Num>(maybe("NUM :"_tok) >> scalarIntExpr))))
 
 // 2.9 gang-arg-list
 TYPE_PARSER(
@@ -97,12 +97,13 @@ TYPE_PARSER(
 
 // 2.9.1 collapse
 TYPE_PARSER(construct<AccCollapseArg>(
-    "FORCE:"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
+    "FORCE :"_tok >> pure(true) || pure(false), scalarIntConstantExpr))
 
 // 2.5.15 Reduction, F'2023 R1131, and CUF reduction-op
 // Operator for reduction
 TYPE_PARSER(construct<ReductionOperator>(
     first("+" >> pure(ReductionOperator::Operator::Plus),
+        "-" >> pure(ReductionOperator::Operator::Minus),
         "*" >> pure(ReductionOperator::Operator::Multiply),
         "MAX" >> pure(ReductionOperator::Operator::Max),
         "MIN" >> pure(ReductionOperator::Operator::Min),
@@ -136,8 +137,8 @@ TYPE_PARSER(sourced(
 
 // Modifier for copyin, copyout, cache and create
 TYPE_PARSER(sourced(construct<AccDataModifier>(
-    first("ZERO:" >> pure(AccDataModifier::Modifier::Zero),
-        "READONLY:" >> pure(AccDataModifier::Modifier::ReadOnly)))))
+    first("ZERO :" >> pure(AccDataModifier::Modifier::Zero),
+        "READONLY :" >> pure(AccDataModifier::Modifier::ReadOnly)))))
 
 // Combined directives
 TYPE_PARSER(sourced(construct<AccCombinedDirective>(
@@ -176,8 +177,14 @@ TYPE_PARSER(construct<OpenACCLoopConstruct>(
     maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
+// The name list is optional: empty list = unnamed/implicit form; 1+ names =
+// named form.
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),
-    maybe(parenthesized(name)), Parser<AccClauseList>{})))
+    defaulted(localRecovery(
+        "empty parentheses in ROUTINE directive; omit parentheses for the unnamed form"_err_en_US,
+        !parenthesized(ok) >> parenthesized(nonemptyList(name)),
+        parenthesized(ok))),
+    Parser<AccClauseList>{})))
 
 // 2.10 Cache directive
 TYPE_PARSER(sourced(

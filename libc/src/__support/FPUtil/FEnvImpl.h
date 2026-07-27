@@ -20,6 +20,12 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 
+#ifdef LIBC_COMPILER_HAS_STDC_FENV_ACCESS
+#define LIBC_FENV_ACCESS_ON _Pragma("STDC FENV_ACCESS ON")
+#else
+#define LIBC_FENV_ACCESS_ON
+#endif
+
 // In full build mode we are the system fenv in libc.
 #if defined(LIBC_FULL_BUILD)
 #undef LIBC_MATH_USE_SYSTEM_FENV
@@ -37,27 +43,56 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE int clear_except(int excepts) { return feclearexcept(excepts); }
+LIBC_INLINE int clear_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
+  return feclearexcept(excepts);
+}
 
-LIBC_INLINE int test_except(int excepts) { return fetestexcept(excepts); }
+LIBC_INLINE int test_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
+  return fetestexcept(excepts);
+}
 
 LIBC_INLINE int get_except() {
+  LIBC_FENV_ACCESS_ON
   fexcept_t excepts = 0;
   fegetexceptflag(&excepts, FE_ALL_EXCEPT);
   return static_cast<int>(excepts);
 }
 
 LIBC_INLINE int set_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
   fexcept_t exc = static_cast<fexcept_t>(excepts);
   return fesetexceptflag(&exc, FE_ALL_EXCEPT);
 }
 
-LIBC_INLINE int raise_except(int excepts) { return feraiseexcept(excepts); }
+LIBC_INLINE int raise_except(int excepts) {
+  LIBC_FENV_ACCESS_ON
+  return feraiseexcept(excepts);
+}
 
-LIBC_INLINE int get_round() { return fegetround(); }
+LIBC_INLINE int enable_except(int) { return 0; }
+
+LIBC_INLINE int disable_except(int) { return 0; }
+
+LIBC_INLINE int get_round() {
+  LIBC_FENV_ACCESS_ON
+  return fegetround();
+}
 
 LIBC_INLINE int set_round(int rounding_mode) {
+  LIBC_FENV_ACCESS_ON
   return fesetround(rounding_mode);
+}
+
+LIBC_INLINE int get_env(fenv_t *env) {
+  LIBC_FENV_ACCESS_ON
+  return fegetenv(env);
+}
+
+LIBC_INLINE int set_env(const fenv_t *env) {
+  LIBC_FENV_ACCESS_ON
+  return fesetenv(env);
 }
 
 } // namespace fputil
@@ -129,6 +164,7 @@ clear_except_if_required([[maybe_unused]] int excepts) {
     return 0;
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
+    LIBC_FENV_ACCESS_ON
     if (math_errhandling & MATH_ERREXCEPT)
       return clear_except(excepts);
 #endif // LIBC_MATH_HAS_NO_EXCEPT
@@ -142,6 +178,7 @@ set_except_if_required([[maybe_unused]] int excepts) {
     return 0;
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
+    LIBC_FENV_ACCESS_ON
     if (math_errhandling & MATH_ERREXCEPT)
       return set_except(excepts);
 #endif // LIBC_MATH_HAS_NO_EXCEPT
@@ -155,6 +192,7 @@ raise_except_if_required([[maybe_unused]] int excepts) {
     return 0;
   } else {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
+    LIBC_FENV_ACCESS_ON
     if (math_errhandling & MATH_ERREXCEPT)
       return raise_except(excepts);
 #endif // LIBC_MATH_HAS_NO_EXCEPT

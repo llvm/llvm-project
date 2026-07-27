@@ -15,7 +15,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Progress.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/Process.h"
@@ -282,24 +281,21 @@ std::vector<ArchSpec> PlatformAppleSimulator::GetSupportedArchitectures(
   return result;
 }
 
-static llvm::StringRef GetXcodeSDKDir(std::string preferred,
-                                      std::string secondary) {
-  llvm::StringRef sdk;
-  auto get_sdk = [&](std::string sdk) -> llvm::StringRef {
-    Progress progress("Looking for Xcode SDK", sdk);
+static std::string GetXcodeSDKDir(std::string preferred,
+                                  std::string secondary) {
+  auto get_sdk = [&](std::string sdk) -> std::string {
     auto sdk_path_or_err =
-        HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK(std::move(sdk))});
+        PlatformDarwin::ResolveXcodeSDK(XcodeSDK(std::move(sdk)));
     if (!sdk_path_or_err) {
-      Debugger::ReportError("Error while searching for Xcode SDK: " +
-                            toString(sdk_path_or_err.takeError()));
+      Debugger::ReportError(toString(sdk_path_or_err.takeError()));
       return {};
     }
-    return *sdk_path_or_err;
+    return sdk_path_or_err->GetPath();
   };
 
-  sdk = get_sdk(preferred);
+  std::string sdk = get_sdk(std::move(preferred));
   if (sdk.empty())
-    sdk = get_sdk(secondary);
+    sdk = get_sdk(std::move(secondary));
   return sdk;
 }
 

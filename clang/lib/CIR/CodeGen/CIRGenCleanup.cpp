@@ -198,9 +198,10 @@ void CIRGenFunction::FullExprCleanupScope::exit(
     cgf.builder.createStore(val.getLoc(), val, temp);
   }
 
-  // Pop any EH and lifetime-extended cleanups that were pushed during
-  // the expression (e.g. temporary destructors).
-  cleanups.forceCleanup();
+  // Pop any EH cleanups that were pushed during the expression but leave
+  // any lifetime-extended cleanups so that they can be promoted to the EH
+  // stack after we've finished emitting any deferred cleanups.
+  cleanups.forceCleanupExceptLifetimeExtended();
 
   // Make sure the cleanup scope body region has a terminator.
   {
@@ -264,6 +265,12 @@ void CIRGenFunction::FullExprCleanupScope::exit(
 
   cgf.deferredConditionalCleanupStack.truncate(oldSize);
   cgf.builder.setInsertionPointAfter(scope);
+
+  // Promote any lifetime-extended cleanups onto the EH scope stack. The new
+  // cir.cleanup.scope ops created here will wrap any code in the enclosing
+  // scope, including reloads of any spilled values below, so the
+  // lifetime-extended destructors run at the correct point.
+  cleanups.forceLifetimeExtendedCleanups();
 
   // Reload spilled values now that the builder is after the closed scope.
   for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
@@ -348,6 +355,12 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
       skipCleanupScope = true;
   }
 
+  // While emitting a loop's condition variable, suppress cir.cleanup.scope
+  // creation. The variable's destructor is captured on the EH stack and later
+  // emitted into the loop op's per-iteration cleanup region.
+  if (capturingLoopConditionCleanups)
+    skipCleanupScope = true;
+
   cir::CleanupScopeOp cleanupScope = nullptr;
   if (!skipCleanupScope) {
     CIRGenBuilderTy &builder = cgf->getBuilder();
@@ -413,7 +426,12 @@ void EHScopeStack::popCleanup() {
       cir::YieldOp::create(cgf->getBuilder(),
                            cgf->getBuilder().getUnknownLoc());
     }
-    cgf->getBuilder().setInsertionPointAfter(cleanupScope);
+    // If the insertion point was inside the cleanup scope we just closed, move
+    // it to immediate after the scope.
+    mlir::Block *insertBlock = cgf->getBuilder().getInsertionBlock();
+    if (insertBlock &&
+        cleanupScope.getBodyRegion().findAncestorBlockInRegion(*insertBlock))
+      cgf->getBuilder().setInsertionPointAfter(cleanupScope);
   }
 
   // Destroy the cleanup.
@@ -500,21 +518,15 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   scope.setActive(false);
 }
 
-static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
-                        EHScopeStack::Cleanup *cleanup,
-                        EHScopeStack::Cleanup::Flags flags,
-                        Address activeFlag) {
+static void emitCleanupBody(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,
+                            EHScopeStack::Cleanup::Flags flags,
+                            Address activeFlag, mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Block &block = cleanupScope.getCleanupRegion().back();
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(&block);
 
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
 
   if (activeFlag.isValid()) {
-    mlir::Location loc = cleanupScope.getLoc();
     mlir::Value isActive = builder.createFlagLoad(loc, activeFlag.getPointer());
     cir::IfOp::create(builder, loc, isActive,
                       /*withElseRegion=*/false,
@@ -529,6 +541,19 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
     cleanup->emit(cgf, flags);
     assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
   }
+}
+
+static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
+                        EHScopeStack::Cleanup *cleanup,
+                        EHScopeStack::Cleanup::Flags flags,
+                        Address activeFlag) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Block &block = cleanupScope.getCleanupRegion().back();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&block);
+
+  emitCleanupBody(cgf, cleanup, flags, activeFlag, cleanupScope.getLoc());
 
   mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
   if (cleanupRegionLastBlock.empty() ||
@@ -690,6 +715,53 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   ehStack.popCleanup();
   scope.markEmitted();
   emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
+}
+
+void CIRGenFunction::emitLoopConditionCleanups(
+    EHScopeStack::stable_iterator depth, mlir::Location loc) {
+  // The captured cleanups were pushed while emitting the loop's condition
+  // variable with EHScopeStack capturing condition cleanups, so they own no
+  // cir.cleanup.scope. Emit them directly into the loop's cleanup region (the
+  // current insertion point), popping each off the EH stack.
+  while (ehStack.stable_begin() != depth) {
+    assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
+    EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
+    assert(!scope.getCleanupScopeOp() &&
+           "captured loop-condition cleanup should not own a cleanup scope");
+
+    EHScopeStack::Cleanup::Flags cleanupFlags;
+    if (scope.isNormalCleanup())
+      cleanupFlags.setIsNormalCleanupKind();
+    if (scope.isEHCleanup())
+      cleanupFlags.setIsEHCleanupKind();
+
+    // The condition variable's cleanup is guarded by an active flag that is
+    // false while its initializer runs, so a throwing initializer does not
+    // destroy the not-yet-constructed variable. The single guarded emission
+    // serves both the normal per-iteration exit and the EH unwind path.
+    Address activeFlag = scope.getActiveFlag();
+
+    // Copy the cleanup emission data out before popping, since popCleanup
+    // deallocates the entry. This mirrors popCleanupBlock.
+    auto *cleanupSource = reinterpret_cast<char *>(scope.getCleanupBuffer());
+    alignas(EHScopeStack::ScopeStackAlignment) char
+        cleanupBufferStack[8 * sizeof(void *)];
+    std::unique_ptr<char[]> cleanupBufferHeap;
+    size_t cleanupSize = scope.getCleanupSize();
+    EHScopeStack::Cleanup *cleanup;
+    if (cleanupSize <= sizeof(cleanupBufferStack)) {
+      memcpy(cleanupBufferStack, cleanupSource, cleanupSize);
+      cleanup = reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferStack);
+    } else {
+      cleanupBufferHeap.reset(new char[cleanupSize]);
+      memcpy(cleanupBufferHeap.get(), cleanupSource, cleanupSize);
+      cleanup =
+          reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferHeap.get());
+    }
+
+    ehStack.popCleanup();
+    emitCleanupBody(*this, cleanup, cleanupFlags, activeFlag, loc);
+  }
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.

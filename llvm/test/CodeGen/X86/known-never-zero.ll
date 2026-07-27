@@ -927,9 +927,9 @@ define i32 @smax_known_zero(i32 %x, i32 %y) {
 ; X86-LABEL: smax_known_zero:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    cmovnsl %eax, %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    bsfl %ecx, %ecx
 ; X86-NEXT:    movl $32, %eax
 ; X86-NEXT:    cmovnel %ecx, %eax
@@ -937,9 +937,9 @@ define i32 @smax_known_zero(i32 %x, i32 %y) {
 ;
 ; X64-LABEL: smax_known_zero:
 ; X64:       # %bb.0:
-; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    movl $-1, %ecx
-; X64-NEXT:    cmovnsl %edi, %ecx
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    sarl $31, %ecx
+; X64-NEXT:    orl %edi, %ecx
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    rep bsfl %ecx, %eax
 ; X64-NEXT:    retq
@@ -1613,9 +1613,7 @@ define i32 @udiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X86-NEXT:    movdqa %xmm2, (%esi)
-; X86-NEXT:    bsfl %ecx, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1645,9 +1643,8 @@ define i32 @udiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = udiv exact <4 x i32> %x, %y
@@ -1743,9 +1740,7 @@ define i32 @sdiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X86-NEXT:    movdqa %xmm2, (%esi)
-; X86-NEXT:    bsfl %ecx, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1775,9 +1770,8 @@ define i32 @sdiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X64-NEXT:    idivl %ecx
 ; X64-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = sdiv exact <4 x i32> %x, %y

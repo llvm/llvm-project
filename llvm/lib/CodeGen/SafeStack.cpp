@@ -556,7 +556,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
     IRB.SetInsertPoint(BasePointer->getNextNode());
-    BasePointer = IRB.CreateIntrinsic(
+    BasePointer = IRB.CreateIntrinsicWithoutFolding(
         StackPtrTy, Intrinsic::ptrmask,
         {BasePointer, ConstantInt::get(AddrTy, ~(FrameAlignment.value() - 1))});
   }
@@ -970,7 +970,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {

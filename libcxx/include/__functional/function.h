@@ -17,6 +17,7 @@
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
 #include <__memory/addressof.h>
+#include <__new/placement_new_delete.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>
@@ -130,6 +131,7 @@ namespace __function {
 template <class _Fp>
 class __base;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
 public:
@@ -148,6 +150,7 @@ public:
   virtual const std::type_info& target_type() const _NOEXCEPT  = 0;
 #  endif // _LIBCPP_HAS_RTTI
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // __func implements __base for a given functor type.
 
@@ -337,7 +340,7 @@ template <typename _Fun>
 struct __use_small_storage
     : public integral_constant<
           bool,
-          sizeof(_Fun) <= sizeof(__policy_storage)&& _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
+          sizeof(_Fun) <= sizeof(__policy_storage) && _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
               is_trivially_copy_constructible<_Fun>::value && is_trivially_destructible<_Fun>::value> {};
 
 // Policy contains information about how to copy, destroy, and move the
@@ -529,8 +532,12 @@ public:
 
 #  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 extern "C" void* _Block_copy(const void*);
 extern "C" void _Block_release(const void*);
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Rp1, class... _ArgTypes1, class _Rp, class... _ArgTypes>
 class __func<_Rp1 (^)(_ArgTypes1...), _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
@@ -621,10 +628,10 @@ public:
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI function() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI function(nullptr_t) _NOEXCEPT {}
-  _LIBCPP_HIDE_FROM_ABI function(const function&);
-  _LIBCPP_HIDE_FROM_ABI function(function&&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI function(const function&)      = default;
+  _LIBCPP_HIDE_FROM_ABI function(function&&) _NOEXCEPT = default;
   template <class _Fp, class = _EnableIfLValueCallable<_Fp>>
-  _LIBCPP_HIDE_FROM_ABI function(_Fp);
+  _LIBCPP_HIDE_FROM_ABI function(_Fp __f) : __f_(std::move(__f)) {}
 
 #  if _LIBCPP_STD_VER <= 14
   template <class _Alloc>
@@ -632,23 +639,35 @@ public:
   template <class _Alloc>
   _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, nullptr_t) _NOEXCEPT {}
   template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, const function&);
+  _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, const function& __f) : __f_(__f.__f_) {}
   template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, function&&);
+  _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, function&& __f) : __f_(std::move(__f.__f_)) {}
   template <class _Fp, class _Alloc, class = _EnableIfLValueCallable<_Fp>>
-  _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc& __a, _Fp __f);
+  _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, _Fp __f) : __f_(std::move(__f)) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI function& operator=(const function&);
-  _LIBCPP_HIDE_FROM_ABI function& operator=(function&&) _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI function& operator=(nullptr_t) _NOEXCEPT;
-  template <class _Fp, class = _EnableIfLValueCallable<__decay_t<_Fp>>>
-  _LIBCPP_HIDE_FROM_ABI function& operator=(_Fp&&);
+  _LIBCPP_HIDE_FROM_ABI function& operator=(const function& __f) {
+    function(__f).swap(*this);
+    return *this;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI ~function();
+  _LIBCPP_HIDE_FROM_ABI function& operator=(function&& __f) _NOEXCEPT = default;
+
+  _LIBCPP_HIDE_FROM_ABI function& operator=(nullptr_t) _NOEXCEPT {
+    __f_ = nullptr;
+    return *this;
+  }
+
+  template <class _Fp, class = _EnableIfLValueCallable<__decay_t<_Fp>>>
+  _LIBCPP_HIDE_FROM_ABI function& operator=(_Fp&& __f) {
+    function(std::forward<_Fp>(__f)).swap(*this);
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI ~function() = default;
 
   // function modifiers:
-  _LIBCPP_HIDE_FROM_ABI void swap(function&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI void swap(function& __f) _NOEXCEPT { __f_.swap(__f.__f_); }
 
 #  if _LIBCPP_STD_VER <= 14
   template <class _Fp, class _Alloc>
@@ -670,15 +689,23 @@ public:
 
 public:
   // function invocation:
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
+  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes... __args) const { return __f_(std::forward<_ArgTypes>(__args)...); }
 
 #  if _LIBCPP_HAS_RTTI
   // function target access:
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT {
+    return __f_.target_type();
+  }
+
   template <typename _Tp>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT {
+    return (_Tp*)(__f_.template target<_Tp>());
+  }
+
   template <typename _Tp>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT {
+    return __f_.template target<_Tp>();
+  }
 #  endif // _LIBCPP_HAS_RTTI
 };
 
@@ -689,93 +716,6 @@ function(_Rp (*)(_Ap...)) -> function<_Rp(_Ap...)>;
 template <class _Fp, class _Stripped = __strip_signature_t<decltype(&_Fp::operator())>>
 function(_Fp) -> function<_Stripped>;
 #  endif // _LIBCPP_STD_VER >= 17
-
-template <class _Rp, class... _ArgTypes>
-function<_Rp(_ArgTypes...)>::function(const function& __f) : __f_(__f.__f_) {}
-
-#  if _LIBCPP_STD_VER <= 14
-template <class _Rp, class... _ArgTypes>
-template <class _Alloc>
-function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&, const function& __f) : __f_(__f.__f_) {}
-#  endif
-
-template <class _Rp, class... _ArgTypes>
-function<_Rp(_ArgTypes...)>::function(function&& __f) _NOEXCEPT : __f_(std::move(__f.__f_)) {}
-
-#  if _LIBCPP_STD_VER <= 14
-template <class _Rp, class... _ArgTypes>
-template <class _Alloc>
-function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&, function&& __f) : __f_(std::move(__f.__f_)) {}
-#  endif
-
-template <class _Rp, class... _ArgTypes>
-template <class _Fp, class>
-function<_Rp(_ArgTypes...)>::function(_Fp __f) : __f_(std::move(__f)) {}
-
-#  if _LIBCPP_STD_VER <= 14
-template <class _Rp, class... _ArgTypes>
-template <class _Fp, class _Alloc, class>
-function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&, _Fp __f) : __f_(std::move(__f)) {}
-#  endif
-
-template <class _Rp, class... _ArgTypes>
-function<_Rp(_ArgTypes...)>& function<_Rp(_ArgTypes...)>::operator=(const function& __f) {
-  function(__f).swap(*this);
-  return *this;
-}
-
-template <class _Rp, class... _ArgTypes>
-function<_Rp(_ArgTypes...)>& function<_Rp(_ArgTypes...)>::operator=(function&& __f) _NOEXCEPT {
-  __f_ = std::move(__f.__f_);
-  return *this;
-}
-
-template <class _Rp, class... _ArgTypes>
-function<_Rp(_ArgTypes...)>& function<_Rp(_ArgTypes...)>::operator=(nullptr_t) _NOEXCEPT {
-  __f_ = nullptr;
-  return *this;
-}
-
-template <class _Rp, class... _ArgTypes>
-template <class _Fp, class>
-function<_Rp(_ArgTypes...)>& function<_Rp(_ArgTypes...)>::operator=(_Fp&& __f) {
-  function(std::forward<_Fp>(__f)).swap(*this);
-  return *this;
-}
-
-template <class _Rp, class... _ArgTypes>
-function<_Rp(_ArgTypes...)>::~function() {}
-
-template <class _Rp, class... _ArgTypes>
-void function<_Rp(_ArgTypes...)>::swap(function& __f) _NOEXCEPT {
-  __f_.swap(__f.__f_);
-}
-
-template <class _Rp, class... _ArgTypes>
-_Rp function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __arg) const {
-  return __f_(std::forward<_ArgTypes>(__arg)...);
-}
-
-#  if _LIBCPP_HAS_RTTI
-
-template <class _Rp, class... _ArgTypes>
-const std::type_info& function<_Rp(_ArgTypes...)>::target_type() const _NOEXCEPT {
-  return __f_.target_type();
-}
-
-template <class _Rp, class... _ArgTypes>
-template <typename _Tp>
-_Tp* function<_Rp(_ArgTypes...)>::target() _NOEXCEPT {
-  return (_Tp*)(__f_.template target<_Tp>());
-}
-
-template <class _Rp, class... _ArgTypes>
-template <typename _Tp>
-const _Tp* function<_Rp(_ArgTypes...)>::target() const _NOEXCEPT {
-  return __f_.template target<_Tp>();
-}
-
-#  endif // _LIBCPP_HAS_RTTI
 
 template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const function<_Rp(_ArgTypes...)>& __f, nullptr_t) _NOEXCEPT {

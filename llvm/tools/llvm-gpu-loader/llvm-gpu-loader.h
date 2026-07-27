@@ -133,9 +133,10 @@ ol_result_t (*olGetSymbol)(ol_program_handle_t Program, const char *Name,
 
 ol_result_t (*olLaunchKernel)(
     ol_queue_handle_t Queue, ol_device_handle_t Device,
-    ol_symbol_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    ol_symbol_handle_t Kernel,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-    const ol_kernel_launch_prop_t *Properties);
+    const ol_kernel_launch_prop_t *Properties, size_t NumArgs, void **ArgPtrs,
+    const size_t *ArgSizes);
 
 ol_result_t (*olCreateQueue)(ol_device_handle_t Device,
                              ol_queue_handle_t *Queue);
@@ -146,6 +147,9 @@ ol_result_t (*olSyncQueue)(ol_queue_handle_t Queue);
 
 ol_result_t (*olMemAlloc)(ol_device_handle_t Device, ol_alloc_type_t Type,
                           size_t Size, void **AllocationOut);
+
+ol_result_t (*olMemAllocHost)(ol_device_handle_t Device, size_t Size,
+                              void **AllocationOut);
 
 ol_result_t (*olMemFree)(void *Address);
 
@@ -195,6 +199,7 @@ llvm::Error loadLLVMOffload() {
   DYNAMIC_INIT(olDestroyQueue);
   DYNAMIC_INIT(olSyncQueue);
   DYNAMIC_INIT(olMemAlloc);
+  DYNAMIC_INIT(olMemAllocHost);
   DYNAMIC_INIT(olMemFree);
   DYNAMIC_INIT(olMemcpy);
   DYNAMIC_INIT(olGetDeviceInfo);

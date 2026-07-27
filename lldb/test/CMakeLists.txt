@@ -42,12 +42,16 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 # Configure the build directory.
-# The .noindex suffix is a marker for Spotlight to never index the
-# build directory.  LLDB queries Spotlight to locate .dSYM bundles
-# based on the UUID embedded in a binary, and because the UUID is a
-# hash of filename and .text section, there *will* be conflicts inside
-# the build directory.
-set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+if(APPLE)
+  # The .noindex suffix is a marker for Spotlight to never index the
+  # build directory.  LLDB queries Spotlight to locate .dSYM bundles
+  # based on the UUID embedded in a binary, and because the UUID is a
+  # hash of filename and .text section, there *will* be conflicts inside
+  # the build directory.
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+else()
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build" CACHE PATH "The build root for building tests.")
+endif()
 
 # Configure and create module cache directories.
 set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running tests.")
@@ -128,6 +132,17 @@ if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
 
+# When script interpreter plugins are built as separate shared libraries, they
+# are loaded by liblldb at runtime and aren't pulled in by the liblldb target.
+if(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  if(TARGET lldbPluginScriptInterpreterPython)
+    add_lldb_test_dependency(lldbPluginScriptInterpreterPython)
+  endif()
+  if(TARGET lldbPluginScriptInterpreterLua)
+    add_lldb_test_dependency(lldbPluginScriptInterpreterLua)
+  endif()
+endif()
+
 if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
@@ -205,13 +220,15 @@ if(TARGET clang)
             "LLDB_TEST_LIBCXX_ROOT_DIR to it.")
       endif()
     else()
-      # We require libcxx for the test suite, so if we aren't building it,
-      # provide a helpful error about how to resolve the situation.
-      if(NOT LLDB_HAS_LIBCXX)
-        message(SEND_ERROR
-          "LLDB test suite requires libc++, but it is currently disabled. "
-          "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
-          "`LLDB_INCLUDE_TESTS=OFF`.")
+      # The LLDB test suite uses libc++ for many tests. If it isn't being
+      # built in-tree, tests in the "libc++" category will be skipped
+      # (same behavior as Linux).
+      if(NOT LLDB_HAS_LIBCXX AND LLDB_ENABLE_LIBCXX_TESTS)
+        message(WARNING
+          "LLDB's libc++ specific tests will be skipped. Add `libcxx` to "
+          "`LLVM_ENABLE_RUNTIMES` to get full coverage, set "
+          "`LLDB_ENABLE_LIBCXX_TESTS=OFF` to silence this warning, or disable "
+          "all tests with `LLDB_INCLUDE_TESTS=OFF`.")
       endif()
     endif()
   endif()
@@ -255,11 +272,21 @@ if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
 endif()
 
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
-set(LLDB_TEST_USE_LLDB_SERVER OFF CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
+
+# On Windows, drive the tests through the lldb-server backend by default when
+# libxml2 is available (it is required to parse the gdb-remote target XML).
+# Without libxml2, fall back to the in-process Windows process plugin. This
+# mirrors the runtime default selected in ProcessWindows.cpp.
+set(LLDB_TEST_USE_LLDB_SERVER_DEFAULT OFF)
+if(WIN32 AND LLDB_ENABLE_LIBXML2)
+  set(LLDB_TEST_USE_LLDB_SERVER_DEFAULT ON)
+endif()
+set(LLDB_TEST_USE_LLDB_SERVER ${LLDB_TEST_USE_LLDB_SERVER_DEFAULT} CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN
   LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA

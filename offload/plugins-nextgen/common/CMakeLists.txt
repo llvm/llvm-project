@@ -3,8 +3,8 @@
 include(TableGen)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API/OffloadAPI.td)
-tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
-tablegen(OFFLOAD include/OffloadInfo.inc -gen-info -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+tablegen(OFFLOAD include/OffloadInfo.inc -gen-info EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
 add_public_tablegen_target(PluginErrcodes)
 
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
@@ -35,11 +35,6 @@ endif()
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
-
-if (TARGET flang_rt.runtime.static)
-  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static)
-  target_compile_definitions(PluginCommon PRIVATE OFFLOAD_HAS_FLANG_RT)
-endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE

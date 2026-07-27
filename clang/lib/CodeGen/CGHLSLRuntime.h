@@ -79,6 +79,7 @@ namespace CodeGen {
 class CodeGenModule;
 class CodeGenFunction;
 class LValue;
+class AggValueSlot;
 
 class CGHLSLOffsetInfo {
   SmallVector<uint32_t> Offsets;
@@ -160,6 +161,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossDiagonal,
+                                   quad_read_across_diagonal)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
@@ -299,17 +302,22 @@ public:
   std::optional<LValue>
   emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  CodeGenFunction &CGF);
-  bool emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr, CodeGenFunction &CGF);
+
+  bool emitGlobalResourceArray(CodeGenFunction &CGF, const Expr *E,
+                               AggValueSlot &DestSlot);
+  std::optional<LValue>
+  emitGlobalResourceArrayAsLValue(CodeGenFunction &CGF,
+                                  const VarDecl *ArrayDecl);
 
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
 
-  RawAddress createBufferMatrixTempAddress(const LValue &LV, SourceLocation Loc,
+  RawAddress createBufferMatrixTempAddress(const LValue &LV,
                                            CodeGenFunction &CGF);
 
-  bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
-                      QualType CType);
+  bool emitBufferCopy(CodeGenFunction &CGF, const Expr *E, const LValue &SrcLV,
+                      AggValueSlot &DestSlot);
 
   LValue emitBufferMemberExpr(CodeGenFunction &CGF, const MemberExpr *E);
   std::optional<LValue> emitResourceMemberExpr(CodeGenFunction &CGF,
@@ -325,14 +333,17 @@ private:
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);
 
-  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B,
+                                         const FunctionDecl *FD,
+                                         llvm::Type *Type,
                                          const clang::DeclaratorDecl *Decl,
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                         HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
-  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
+                                    const FunctionDecl *FD, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
                                     HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
@@ -348,6 +359,10 @@ private:
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,
                              std::optional<unsigned> Index);
+
+  bool initializeGlobalResourceArray(CodeGenFunction &CGF,
+                                     const VarDecl *ArrayDecl,
+                                     AggValueSlot &DestSlot);
 
   llvm::Triple::ArchType getArch();
 

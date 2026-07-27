@@ -1,5 +1,5 @@
 // RUN: llvm-tblgen -print-records %p/../../lib/Target/AArch64/AArch64.td -I %p/../../lib/Target/AArch64 -I %p/../../include \
-// RUN:    | sed -e "s/, /, \n/g" -e "s/\[/\[\n/g" \
+// RUN:    | awk '{gsub(/\[/,"[\n"); gsub(/, /,",\n"); print}' \
 // RUN:    | FileCheck %s --implicit-check-not="def TuneApple"
 
 // Verify the resolved tuning feature lists for Apple CPUs.
@@ -25,6 +25,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA11 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a11";
@@ -45,6 +46,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA12 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a12";
@@ -65,6 +67,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA13 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a13";
@@ -85,6 +88,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA14 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a14";
@@ -113,6 +117,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA15 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a15";
@@ -141,6 +146,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA16 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a16";
@@ -170,6 +176,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA17 {      // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a17";
@@ -199,6 +206,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleA7 {       // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-a7";
@@ -220,6 +228,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleM4 {       // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-m4";
@@ -236,6 +245,7 @@
 // CHECK-NEXT:    FeatureFuseAddress,
 // CHECK-NEXT:    FeatureFuseAdrpAdd,
 // CHECK-NEXT:    FeatureFuseAES,
+// CHECK-NEXT:    FeatureFuseAppleSMECompute,
 // CHECK-NEXT:    FeatureFuseArithmeticLogic,
 // CHECK-NEXT:    FeatureFuseCryptoEOR,
 // CHECK-NEXT:    FeatureFuseCmpCSel,
@@ -248,6 +258,7 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }
 // CHECK-LABEL: def TuneAppleM5 {       // SubtargetFeature
 // CHECK-NEXT:    string Name = "apple-m5";
@@ -264,10 +275,12 @@
 // CHECK-NEXT:    FeatureFuseAddress,
 // CHECK-NEXT:    FeatureFuseAdrpAdd,
 // CHECK-NEXT:    FeatureFuseAES,
+// CHECK-NEXT:    FeatureFuseAppleSMECompute,
 // CHECK-NEXT:    FeatureFuseArithmeticLogic,
 // CHECK-NEXT:    FeatureFuseCryptoEOR,
 // CHECK-NEXT:    FeatureFuseCmpCSel,
 // CHECK-NEXT:    FeatureFuseFCmpFCSel,
+// CHECK-NEXT:    FeatureFuseFMinFMax,
 // CHECK-NEXT:    FeatureFuseLiterals,
 // CHECK-NEXT:    FeatureMaxInterleaveFactor4,
 // CHECK-NEXT:    FeatureNoZCZeroingFPR64,
@@ -276,4 +289,5 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
 // CHECK-NEXT: }

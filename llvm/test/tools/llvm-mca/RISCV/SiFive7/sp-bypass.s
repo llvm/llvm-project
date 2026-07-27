@@ -78,4 +78,4 @@ addi t0, sp, 20
 # CHECK-NEXT: 2.     1     0.0    0.0    0.0       addi	sp, t0, 16
 # CHECK-NEXT: 3.     1     0.0    0.0    0.0       addi	sp, sp, -80
 # CHECK-NEXT: 4.     1     0.0    0.0    0.0       addi	t0, sp, 20
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        5     0.0    0.0    0.0       <total>

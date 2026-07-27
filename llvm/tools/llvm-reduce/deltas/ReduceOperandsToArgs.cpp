@@ -34,7 +34,8 @@ static bool canReduceUse(Use &Op) {
     return false;
 
   // Don't pass labels/metadata as arguments.
-  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isTokenTy())
+  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isTokenTy() ||
+      Ty->isX86_AMXTy())
     return false;
 
   // No need to replace values that are already arguments.
