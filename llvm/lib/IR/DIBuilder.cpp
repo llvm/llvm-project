@@ -1155,7 +1155,7 @@ DILexicalBlock *DIBuilder::createLexicalBlock(DIScope *Scope, DIFile *File,
 DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     BasicBlock *InsertAtEnd) {
-  // If this block already has a terminator then insert this intrinsic before
+  // If this block already has a terminator then insert this record before
   // the terminator. Otherwise, put it at the end of the block.
   Instruction *InsertBefore = InsertAtEnd->getTerminatorOrNull();
   return insertDeclare(Storage, VarInfo, Expr, DL,
@@ -1194,11 +1194,9 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
 }
 
-DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
-                                              DILocalVariable *VarInfo,
-                                              DIExpression *Expr,
-                                              const DILocation *DL,
-                                              InsertPosition InsertPt) {
+DbgInstPtr DIBuilder::insertDbgValue(Value *Val, DILocalVariable *VarInfo,
+                                     DIExpression *Expr, const DILocation *DL,
+                                     InsertPosition InsertPt) {
   DbgVariableRecord *DVR =
       DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
   insertDbgVariableRecord(DVR, InsertPt);
