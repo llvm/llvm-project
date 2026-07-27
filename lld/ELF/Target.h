@@ -50,8 +50,13 @@ public:
   // they are called. This function writes that code.
   virtual void writePltHeader(uint8_t *buf) const {}
 
+  virtual uint64_t getPltEntryOffset(uint32_t pltIdx,
+                                     uint64_t headerSize) const {
+    return headerSize + uint64_t{pltIdx} * pltEntrySize;
+  }
   virtual void writePlt(uint8_t *buf, const Symbol &sym,
                         uint64_t pltEntryAddr) const {}
+  virtual void finalizePlt(uint8_t *buf) const {}
   virtual void writeIplt(uint8_t *buf, const Symbol &sym,
                          uint64_t pltEntryAddr) const {
     // All but PPC32 and PPC64 use the same format for .plt and .iplt entries.

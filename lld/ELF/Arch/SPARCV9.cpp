@@ -11,6 +11,8 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "llvm/Support/Endian.h"
+#include <algorithm>
+#include <cassert>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -20,6 +22,13 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+constexpr uint32_t firstLargePltIndex = 32768 - 4;
+constexpr uint32_t pltLargeEntriesPerBlock = 160;
+constexpr uint32_t pltLargeCodeSize = 24;
+constexpr uint32_t pltLargePointerSize = 8;
+constexpr uint32_t pltLargeBlockSize =
+    pltLargeEntriesPerBlock * (pltLargeCodeSize + pltLargePointerSize);
+
 class SPARCV9 final : public TargetInfo {
 public:
   SPARCV9(Ctx &);
@@ -29,8 +38,11 @@ public:
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void finalizeDynamicReloc(DynamicReloc &rel) const override;
   void writeGotHeader(uint8_t *buf) const override;
+  uint64_t getPltEntryOffset(uint32_t pltIdx,
+                             uint64_t headerSize) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  void finalizePlt(uint8_t *buf) const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
@@ -39,6 +51,9 @@ public:
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+
+private:
+  uint64_t getLargePltPointerOffset(uint32_t pltIdx) const;
 };
 } // namespace
 
@@ -137,6 +152,15 @@ static bool getSparcAbsRelocPair(RelType type, RelType &aligned,
 }
 
 void SPARCV9::finalizeDynamicReloc(DynamicReloc &rel) const {
+  if (rel.type == R_SPARC_JMP_SLOT && rel.inputSec == ctx.in.plt.get()) {
+    uint32_t pltIdx = rel.sym->getPltIdx(ctx);
+    if (pltIdx >= firstLargePltIndex) {
+      uint64_t off = getPltEntryOffset(pltIdx, ctx.in.plt->headerSize);
+      rel.r_offset = ctx.in.plt->getVA() + getLargePltPointerOffset(pltIdx);
+      rel.addend = -static_cast<int64_t>(ctx.in.plt->getVA() + off + 4);
+    }
+  }
+
   RelType aligned = R_SPARC_NONE, unaligned = R_SPARC_NONE;
   uint64_t alignment = 1;
   if (!getSparcAbsRelocPair(rel.type, aligned, unaligned, alignment))
@@ -462,8 +486,47 @@ void SPARCV9::writeGotHeader(uint8_t *buf) const {
   write64be(buf, ctx.in.dynamic->getVA());
 }
 
-void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
+uint64_t SPARCV9::getPltEntryOffset(uint32_t pltIdx,
+                                    uint64_t headerSize) const {
+  if (pltIdx < firstLargePltIndex)
+    return headerSize + uint64_t{pltIdx} * pltEntrySize;
+
+  uint32_t largeIdx = pltIdx - firstLargePltIndex;
+  return headerSize + uint64_t{firstLargePltIndex} * pltEntrySize +
+         largeIdx / pltLargeEntriesPerBlock * pltLargeBlockSize +
+         largeIdx % pltLargeEntriesPerBlock * pltLargeCodeSize;
+}
+
+uint64_t SPARCV9::getLargePltPointerOffset(uint32_t pltIdx) const {
+  assert(pltIdx >= firstLargePltIndex);
+  uint32_t largeIdx = pltIdx - firstLargePltIndex;
+  uint32_t entriesBeforeBlock =
+      largeIdx / pltLargeEntriesPerBlock * pltLargeEntriesPerBlock;
+  uint32_t indexInBlock = largeIdx % pltLargeEntriesPerBlock;
+  uint64_t largeEntries = ctx.in.plt->getNumEntries() - firstLargePltIndex;
+  uint64_t entriesInBlock = std::min<uint64_t>(
+      pltLargeEntriesPerBlock, largeEntries - entriesBeforeBlock);
+  uint64_t blockOffset = getPltEntryOffset(
+      firstLargePltIndex + entriesBeforeBlock, ctx.in.plt->headerSize);
+
+  return blockOffset + entriesInBlock * pltLargeCodeSize +
+         indexInBlock * pltLargePointerSize;
+}
+
+void SPARCV9::writePlt(uint8_t *buf, const Symbol &sym,
                        uint64_t pltEntryAddr) const {
+  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
+  if (sym.getPltIdx(ctx) >= firstLargePltIndex) {
+    uint64_t ptrOff = getLargePltPointerOffset(sym.getPltIdx(ctx));
+    write32be(buf, 0x8a10000f);
+    write32be(buf + 4, 0x40000002);
+    write32be(buf + 8, 0x01000000);
+    write32be(buf + 12, 0xc25be000 | ((ptrOff - (off + 4)) & 0x1fff));
+    write32be(buf + 16, 0x83c3c001);
+    write32be(buf + 20, 0x9e100005);
+    return;
+  }
+
   const uint8_t pltData[] = {
       0x03, 0x00, 0x00, 0x00, // sethi   (. - .PLT0), %g1
       0x30, 0x68, 0x00, 0x00, // ba,a    %xcc, .PLT1
@@ -476,9 +539,15 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   };
   memcpy(buf, pltData, sizeof(pltData));
 
-  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
   relocateNoSym(buf, R_SPARC_22, off);
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
+}
+
+void SPARCV9::finalizePlt(uint8_t *buf) const {
+  for (uint32_t i = firstLargePltIndex; i < ctx.in.plt->getNumEntries(); ++i) {
+    uint64_t off = getPltEntryOffset(i, ctx.in.plt->headerSize);
+    write64be(buf + getLargePltPointerOffset(i), -(off + 4));
+  }
 }
 
 void elf::setSPARCV9TargetInfo(Ctx &ctx) { ctx.target.reset(new SPARCV9(ctx)); }

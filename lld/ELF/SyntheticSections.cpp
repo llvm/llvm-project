@@ -2429,20 +2429,21 @@ PltSection::PltSection(Ctx &ctx)
 
   // The PLT needs to be writable on SPARC as the dynamic linker will
   // modify the instructions in the PLT entries.
-  if (ctx.arg.emachine == EM_SPARCV9)
+  if (ctx.arg.emachine == EM_SPARCV9) {
     this->flags |= SHF_WRITE;
+    addralign = 256;
+  }
 }
 
 void PltSection::writeTo(uint8_t *buf) {
   // At beginning of PLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
   ctx.target->writePltHeader(buf);
-  size_t off = headerSize;
-
   for (const Symbol *sym : entries) {
+    size_t off = sym->getPltOffset(ctx);
     ctx.target->writePlt(buf + off, *sym, getVA() + off);
-    off += ctx.target->pltEntrySize;
   }
+  ctx.target->finalizePlt(buf);
 }
 
 void PltSection::addEntry(Symbol &sym) {
@@ -2465,11 +2466,8 @@ bool PltSection::isNeeded() const {
 void PltSection::addSymbols() {
   ctx.target->addPltHeaderSymbols(*this);
 
-  size_t off = headerSize;
-  for (size_t i = 0; i < entries.size(); ++i) {
-    ctx.target->addPltSymbols(*this, off);
-    off += ctx.target->pltEntrySize;
-  }
+  for (const Symbol *sym : entries)
+    ctx.target->addPltSymbols(*this, sym->getPltOffset(ctx));
 }
 
 IpltSection::IpltSection(Ctx &ctx)

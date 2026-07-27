@@ -185,7 +185,7 @@ uint64_t Symbol::getGotPltOffset(Ctx &ctx) const {
 uint64_t Symbol::getPltOffset(Ctx &ctx) const {
   if (isInIplt)
     return getPltIdx(ctx) * ctx.target->ipltEntrySize;
-  return ctx.in.plt->headerSize + getPltIdx(ctx) * ctx.target->pltEntrySize;
+  return ctx.target->getPltEntryOffset(getPltIdx(ctx), ctx.in.plt->headerSize);
 }
 
 uint64_t Symbol::getPltVA(Ctx &ctx) const {
