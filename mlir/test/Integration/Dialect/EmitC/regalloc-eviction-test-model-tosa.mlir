@@ -36,7 +36,7 @@
 // CHECK:         cmp gt
 // CHECK:         conditional
 // CHECK:         assign
-module attributes {tf_saved_model.semantics, tfl.description = "MLIR Converted.", tfl.metadata = {CONVERSION_METADATA = "\0C\00\00\00\08\00\0E\00\08\00\04\00\08\00\00\00\10\00\00\00$\00\00\00\00\00\06\00\08\00\04\00\06\00\00\00\04\00\00\00\00\00\00\00\00\00\0A\00\10\00\0C\00\08\00\04\00\0A\00\00\00\01\00\00\00\02\00\00\00\04\00\00\00\06\00\00\002.15.1\00\00", min_runtime_version = "1.9.0\00\00\00\00\00\00\00\00\00\00\00"}, tfl.schema_version = 3 : i32} {
+module attributes {tf_saved_model.semantics, tfl.description = "MLIR Converted.", tfl.schema_version = 3 : i32} {
   func.func @mock_model(%arg0: tensor<33xi64> {tf_saved_model.index_path = ["mask"]}) -> (tensor<i64> {tf_saved_model.index_path = ["index_to_evict"]}) attributes {tf.entry_function = {inputs = "action_mask:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["action"]} {
     %0 = tosa.cast %arg0 : (tensor<33xi64>) -> tensor<33xi32>
     %1 = tosa.argmax %0 {axis = 0 : i32} : (tensor<33xi32>) -> tensor<i64>
