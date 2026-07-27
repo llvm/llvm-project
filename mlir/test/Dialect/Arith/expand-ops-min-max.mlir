@@ -1,94 +1,100 @@
-// Default (both min/max groups expanded): the ops become cmpf/cmpi + select.
-// RUN: mlir-opt %s -arith-expand -split-input-file | FileCheck %s --check-prefix=EXPAND
+// Default (min/max expansion disabled): the ops are kept as-is so a later
+// arith-to-llvm lowering can map them to the min/max intrinsics.
+// RUN: mlir-opt %s -arith-expand -split-input-file | FileCheck %s --check-prefix=DEFAULT
 
-// include-min-max-f=false: only the float ops are kept; integer ops still expand.
-// RUN: mlir-opt %s -arith-expand="include-min-max-f=false" -split-input-file | FileCheck %s --check-prefix=KEEPF
+// include-min-max-f=true: only the float ops expand into cmpf + select; the
+// integer ops are kept (integer expansion still off by default).
+// RUN: mlir-opt %s -arith-expand="include-min-max-f=true" -split-input-file | FileCheck %s --check-prefix=EXPANDF
 
-// include-min-max-i=false: only the integer ops are kept; float ops still expand.
-// RUN: mlir-opt %s -arith-expand="include-min-max-i=false" -split-input-file | FileCheck %s --check-prefix=KEEPI
+// include-min-max-i=true: only the integer ops expand into cmpi + select; the
+// float ops are kept (float expansion still off by default).
+// RUN: mlir-opt %s -arith-expand="include-min-max-i=true" -split-input-file | FileCheck %s --check-prefix=EXPANDI
 
-// Both disabled: all min/max ops are kept.
-// RUN: mlir-opt %s -arith-expand="include-min-max-f=false include-min-max-i=false" -split-input-file | FileCheck %s --check-prefix=KEEPALL
+// Both enabled: all min/max ops are expanded.
+// RUN: mlir-opt %s -arith-expand="include-min-max-f=true include-min-max-i=true" -split-input-file | FileCheck %s --check-prefix=EXPANDALL
 
-// EXPAND-LABEL:  func @maximumf
-// KEEPF-LABEL:   func @maximumf
-// KEEPI-LABEL:   func @maximumf
-// KEEPALL-LABEL: func @maximumf
+// DEFAULT-LABEL:   func @maximumf
+// EXPANDF-LABEL:   func @maximumf
+// EXPANDI-LABEL:   func @maximumf
+// EXPANDALL-LABEL: func @maximumf
 func.func @maximumf(%a: f32, %b: f32) -> f32 {
-  // EXPAND: arith.cmpf ugt
-  // EXPAND: arith.select
-  // EXPAND-NOT: arith.maximumf
-  // KEEPF: arith.maximumf
-  // KEEPF-NOT: arith.select
-  // KEEPI: arith.cmpf ugt
-  // KEEPI-NOT: arith.maximumf
-  // KEEPALL: arith.maximumf
-  // KEEPALL-NOT: arith.select
+  // DEFAULT: arith.maximumf
+  // DEFAULT-NOT: arith.select
+  // EXPANDF: arith.cmpf ugt
+  // EXPANDF: arith.select
+  // EXPANDF-NOT: arith.maximumf
+  // EXPANDI: arith.maximumf
+  // EXPANDI-NOT: arith.select
+  // EXPANDALL: arith.cmpf ugt
+  // EXPANDALL: arith.select
+  // EXPANDALL-NOT: arith.maximumf
   %result = arith.maximumf %a, %b : f32
   return %result : f32
 }
 
 // -----
 
-// EXPAND-LABEL:  func @minnumf
-// KEEPF-LABEL:   func @minnumf
-// KEEPI-LABEL:   func @minnumf
-// KEEPALL-LABEL: func @minnumf
+// DEFAULT-LABEL:   func @minnumf
+// EXPANDF-LABEL:   func @minnumf
+// EXPANDI-LABEL:   func @minnumf
+// EXPANDALL-LABEL: func @minnumf
 func.func @minnumf(%a: f32, %b: f32) -> f32 {
-  // EXPAND: arith.cmpf ult
-  // EXPAND-NOT: arith.minnumf
-  // KEEPF: arith.minnumf
-  // KEEPI: arith.cmpf ult
-  // KEEPALL: arith.minnumf
+  // DEFAULT: arith.minnumf
+  // EXPANDF: arith.cmpf ult
+  // EXPANDF-NOT: arith.minnumf
+  // EXPANDI: arith.minnumf
+  // EXPANDALL: arith.cmpf ult
+  // EXPANDALL-NOT: arith.minnumf
   %result = arith.minnumf %a, %b : f32
   return %result : f32
 }
 
 // -----
 
-// EXPAND-LABEL:  func @maxsi
-// KEEPF-LABEL:   func @maxsi
-// KEEPI-LABEL:   func @maxsi
-// KEEPALL-LABEL: func @maxsi
+// DEFAULT-LABEL:   func @maxsi
+// EXPANDF-LABEL:   func @maxsi
+// EXPANDI-LABEL:   func @maxsi
+// EXPANDALL-LABEL: func @maxsi
 func.func @maxsi(%a: i32, %b: i32) -> i32 {
-  // EXPAND: arith.cmpi sgt
-  // EXPAND-NOT: arith.maxsi
-  // KEEPF: arith.cmpi sgt
-  // KEEPF-NOT: arith.maxsi
-  // KEEPI: arith.maxsi
-  // KEEPI-NOT: arith.select
-  // KEEPALL: arith.maxsi
-  // KEEPALL-NOT: arith.select
+  // DEFAULT: arith.maxsi
+  // DEFAULT-NOT: arith.select
+  // EXPANDF: arith.maxsi
+  // EXPANDF-NOT: arith.select
+  // EXPANDI: arith.cmpi sgt
+  // EXPANDI-NOT: arith.maxsi
+  // EXPANDALL: arith.cmpi sgt
+  // EXPANDALL-NOT: arith.maxsi
   %result = arith.maxsi %a, %b : i32
   return %result : i32
 }
 
 // -----
 
-// EXPAND-LABEL:  func @minui
-// KEEPF-LABEL:   func @minui
-// KEEPI-LABEL:   func @minui
-// KEEPALL-LABEL: func @minui
+// DEFAULT-LABEL:   func @minui
+// EXPANDF-LABEL:   func @minui
+// EXPANDI-LABEL:   func @minui
+// EXPANDALL-LABEL: func @minui
 func.func @minui(%a: i32, %b: i32) -> i32 {
-  // EXPAND: arith.cmpi ult
-  // EXPAND-NOT: arith.minui
-  // KEEPF: arith.cmpi ult
-  // KEEPI: arith.minui
-  // KEEPALL: arith.minui
+  // DEFAULT: arith.minui
+  // EXPANDF: arith.minui
+  // EXPANDI: arith.cmpi ult
+  // EXPANDI-NOT: arith.minui
+  // EXPANDALL: arith.cmpi ult
+  // EXPANDALL-NOT: arith.minui
   %result = arith.minui %a, %b : i32
   return %result : i32
 }
 
 // -----
 
-// Even with min/max expansion disabled, the other expansions (here
-// ceildivsi) still run.
+// Regardless of the min/max gating, the other expansions (here ceildivsi)
+// always run.
 
-// EXPAND-LABEL:  func @ceildivi_still_expands
-// KEEPALL-LABEL: func @ceildivi_still_expands
+// DEFAULT-LABEL:   func @ceildivi_still_expands
+// EXPANDALL-LABEL: func @ceildivi_still_expands
 func.func @ceildivi_still_expands(%a: i32, %b: i32) -> i32 {
-  // EXPAND-NOT: arith.ceildivsi
-  // KEEPALL-NOT: arith.ceildivsi
+  // DEFAULT-NOT: arith.ceildivsi
+  // EXPANDALL-NOT: arith.ceildivsi
   %result = arith.ceildivsi %a, %b : i32
   return %result : i32
 }
