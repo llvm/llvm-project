@@ -948,8 +948,7 @@ bool APINotesReader::Implementation::collectExactFunctionParameterSelectors(
     TableT *Table, llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors) {
   static_assert(std::is_same_v<TableT, SerializedGlobalFunctionTable> ||
                 std::is_same_v<TableT, SerializedCXXMethodTable>);
-  constexpr bool IsCXXMethod =
-      std::is_same_v<TableT, SerializedCXXMethodTable>;
+  constexpr bool IsCXXMethod = std::is_same_v<TableT, SerializedCXXMethodTable>;
 
   if (!Table)
     return true;
