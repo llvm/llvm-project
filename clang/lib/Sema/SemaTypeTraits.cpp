@@ -1292,8 +1292,6 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
         Kind == clang::BTT_ReferenceBindsToTemporary ||
         Kind == clang::BTT_ReferenceConstructsFromTemporary ||
         Kind == clang::BTT_ReferenceConvertsFromTemporary;
-    if (UseRawObjectType && !Args[0]->getType()->isReferenceType())
-      return false;
 
     // Precondition: T and all types in the parameter pack Args shall be
     // complete types, (possibly cv-qualified) void, or arrays of
@@ -1310,7 +1308,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
 
     // Make sure the first argument is not incomplete nor a function type.
     QualType T = Args[0]->getType();
-    if (T->isIncompleteType() || T->isFunctionType())
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        (UseRawObjectType && !T->isReferenceType()))
       return false;
 
     // Make sure the first argument is not an abstract type.
@@ -1955,16 +1954,8 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
 
 static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
-      .Case("is_trivially_relocatable",
-            TypeTrait::UTT_IsCppTriviallyRelocatable)
-      .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
-      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
-      .Case("is_empty", TypeTrait::UTT_IsEmpty)
-      .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
-      .Case("is_aggregate", TypeTrait::UTT_IsAggregate)
-      .Case("is_constructible", TypeTrait::TT_IsConstructible)
-      .Case("is_final", TypeTrait::UTT_IsFinal)
-      .Case("is_abstract", TypeTrait::UTT_IsAbstract)
+#define EMIT_STD_NAME_CASES
+#include "clang/Basic/Traits.inc"
       .Default(std::nullopt);
 }
 

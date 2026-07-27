@@ -811,6 +811,10 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
+  if (GetIsConstant()) {
+    error = Status::FromErrorString("Cannot change the value of a constant");
+    return false;
+  }
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
@@ -979,7 +983,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       if ((bytes_read = data.GetByteSize()) > 0) {
         total_bytes_read = bytes_read;
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
         if (capped_data)
           was_capped = true;
       }
@@ -1011,7 +1015,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           len = cstr_len;
 
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
 
         if (len < k_max_buf_size)
           break;
@@ -1702,6 +1706,10 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
+  if (GetIsConstant()) {
+    error = Status::FromErrorString("Cannot change the value of a constant");
+    return false;
+  }
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
@@ -2046,18 +2054,20 @@ void ValueObject::CalculateSyntheticValue() {
     return;
   }
 
-  lldb::SyntheticChildrenSP current_synth_sp(m_synthetic_children_sp);
+  lldb::SyntheticChildrenSP prev_synth_sp(GetSyntheticChildren());
 
   if (!UpdateFormatsIfNeeded() && m_synthetic_value)
     return;
 
-  if (m_synthetic_children_sp.get() == nullptr)
+  lldb::SyntheticChildrenSP curr_synth_sp(GetSyntheticChildren());
+
+  if (curr_synth_sp.get() == nullptr)
     return;
 
-  if (current_synth_sp == m_synthetic_children_sp && m_synthetic_value)
+  if (curr_synth_sp == prev_synth_sp && m_synthetic_value)
     return;
 
-  m_synthetic_value = new ValueObjectSynthetic(*this, m_synthetic_children_sp);
+  m_synthetic_value = new ValueObjectSynthetic(*this, curr_synth_sp);
 }
 
 void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {

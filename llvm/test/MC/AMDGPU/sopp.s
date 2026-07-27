@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck --check-prefixes=GCN,SI %s
 // RUN: not llvm-mc -triple=amdgcn %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefixes=GCN,VI %s
+// RUN: llvm-mc -triple=amdgpu8.03 -show-encoding %s | FileCheck --check-prefixes=GCN,VI %s
 
 //===----------------------------------------------------------------------===//
 // Edge Cases

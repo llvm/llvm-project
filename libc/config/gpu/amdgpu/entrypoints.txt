@@ -281,6 +281,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -599,6 +603,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16

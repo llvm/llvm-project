@@ -3,6 +3,11 @@
 ! Test CUDA Fortran data transfer using assignment statements.
 
 module mod1
+
+  real, parameter :: pi = 0.9189385332046727417803297
+  real, constant :: rconst
+  real, constant :: csconst
+
   type :: t1
     integer :: i
   end type
@@ -560,9 +565,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub28
 ! CHECK: fir.call @_QP__sum
-! CHECK-NOT: cuf.data_transfer
-! CHECK: hlfir.assign
-! CHECK-NOT: cuf.data_transfer
+! CHECK: cuf.data_transfer
 
 ! Data transfer with conversion with more complex elemental
 ! Check that the data transfer is placed before the elemental op.
@@ -576,7 +579,7 @@ subroutine sub29()
 end subroutine
 
 ! CHECK-LABEL:  func.func @_QPsub29()
-! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %24#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %{{.*}}#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[TMP_BUFFER:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf16>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf16>>, !fir.heap<!fir.array<?xf16>>)
 ! CHECK: cuf.data_transfer %{{.*}} to %[[TMP_BUFFER]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.heap<!fir.array<?xf16>>>, !fir.box<!fir.array<?xf16>>
 ! CHECK: hlfir.elemental 
@@ -655,8 +658,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub35()
 ! CHECK-NOT: cuf.data_transfer
 
-! Test that host_var = managed_module_var does NOT generate cuf.data_transfer
-! (managed memory is host-accessible, so direct assignment suffices).
+! Test that host_var = managed_module_var generates a cuf.data_transfer:
+! reading a whole managed array variable is a synchronous data transfer.
 subroutine sub36()
   use managed_mod
   integer :: host_arr(10)
@@ -664,7 +667,7 @@ subroutine sub36()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub36()
-! CHECK-NOT: cuf.data_transfer
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_host>}
 
 ! Test that device_var = managed_module_var DOES generate cuf.data_transfer
 ! (device memory requires explicit cudaMemcpy).
@@ -776,3 +779,16 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub45
 ! CHECK-LABEL: @_QFsub45Pcompute
 ! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.box<!fir.array<?x?xcomplex<f64>>>, !fir.box<!fir.array<?x?xcomplex<f64>>>
+
+subroutine sub46()
+  use mod1
+  csconst = rconst * pi/6
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub46()
+! CHECK: cuf.data_transfer
+! CHECK: arith.mulf
+! CHECK: arith.constant
+! CHECK: arith.divf
+! CHECK: hlfir.assign
+! CHECK: cuf.data_transfer

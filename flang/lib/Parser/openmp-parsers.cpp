@@ -43,9 +43,6 @@
 namespace Fortran::parser {
 using namespace Fortran::parser::omp;
 
-using DirectiveSet =
-    llvm::Bitset<llvm::NextPowerOf2(llvm::omp::Directive_enumSize)>;
-
 // Helper function to print the buffer contents starting at the current point.
 [[maybe_unused]] static std::string ahead(const ParseState &state) {
   return std::string(
@@ -1133,6 +1130,20 @@ TYPE_PARSER(construct<OmpAdjustArgsClause::OmpAdjustOp>(
     "NEED_DEVICE_PTR" >>
         pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Need_Device_Ptr)))
 
+TYPE_PARSER(construct<OmpApplyClause::Modifier>(Parser<OmpLoopModifier>{}))
+
+TYPE_PARSER(sourced(construct<OmpLoopModifier>(
+    "FUSED" >> pure(llvm::omp::LoopModifier::OMPLM_fused) ||
+        "GRID" >> pure(llvm::omp::LoopModifier::OMPLM_grid) ||
+        "IDENTITY" >> pure(llvm::omp::LoopModifier::OMPLM_identity) ||
+        "INTERCHANGED" >> pure(llvm::omp::LoopModifier::OMPLM_interchanged) ||
+        "INTRATILE" >> pure(llvm::omp::LoopModifier::OMPLM_intratile) ||
+        "OFFSETS" >> pure(llvm::omp::LoopModifier::OMPLM_offsets) ||
+        "REVERSED" >> pure(llvm::omp::LoopModifier::OMPLM_reversed) ||
+        "SPLIT" >> pure(llvm::omp::LoopModifier::OMPLM_split) ||
+        "UNROLLED" >> pure(llvm::omp::LoopModifier::OMPLM_unrolled),
+    maybe(parenthesized(nonemptyList(scalarIntConstantExpr))))))
+
 // --- Parsers for clauses --------------------------------------------
 
 // Declaration of the ODS parser. This type must be complete for some of
@@ -1174,6 +1185,10 @@ TYPE_PARSER(construct<OmpAdjustArgsClause>(
 TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
+
+TYPE_PARSER(construct<OmpApplyClause>(
+    maybe(nonemptyList(Parser<OmpApplyClause::Modifier>{} / ":")),
+    nonemptyList(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
 
 // 2.4 Requires construct [OpenMP 5.0]
 //        atomic-default-mem-order-clause ->
@@ -1483,6 +1498,8 @@ TYPE_PARSER( //
                       parenthesized(Parser<OmpAllocateClause>{}))) ||
     "APPEND_ARGS" >> construct<OmpClause>(construct<OmpClause::AppendArgs>(
                          parenthesized(Parser<OmpAppendArgsClause>{}))) ||
+    "APPLY" >> construct<OmpClause>(construct<OmpClause::Apply>(
+                   parenthesized(Parser<OmpApplyClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
                        parenthesized(scalarIntExpr))) ||
     "AT" >> construct<OmpClause>(construct<OmpClause::At>(
@@ -1730,9 +1747,9 @@ static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
   return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
 }
 
-static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+static inline constexpr auto IsMemberOf(const llvm::omp::DirectiveSet &dirs) {
   return [&dirs](const OmpDirectiveName &name) -> bool {
-    return dirs.test(llvm::to_underlying(name.v));
+    return dirs.test(name.v);
   };
 }
 
@@ -1954,9 +1971,8 @@ TYPE_PARSER(construct<OmpMetadirectiveDirective>(
 struct OmpDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpDirectiveParser(DirectiveSet dirs) : dirs_(dirs) {}
-  constexpr OmpDirectiveParser(llvm::omp::Directive dir)
-      : dirs_({static_cast<unsigned>(llvm::to_underlying(dir))}) {}
+  constexpr OmpDirectiveParser(llvm::omp::DirectiveSet dirs) : dirs_(dirs) {}
+  constexpr OmpDirectiveParser(llvm::omp::Directive dir) : dirs_({dir}) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
     auto p{predicated(Parser<OmpDirectiveName>{}, IsMemberOf(dirs_)) >=
@@ -1965,7 +1981,7 @@ struct OmpDirectiveParser {
   }
 
 private:
-  DirectiveSet dirs_;
+  llvm::omp::DirectiveSet dirs_;
 };
 
 // Parse the directive that begins a construct. In some cases the directive
@@ -1977,7 +1993,8 @@ private:
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpBeginDirectiveParser(DirectiveSet dirs, bool implicit = true)
+  constexpr OmpBeginDirectiveParser(
+      llvm::omp::DirectiveSet dirs, bool implicit = true)
       : dparser_(dirs), implicit_(implicit) {}
   constexpr OmpBeginDirectiveParser(
       llvm::omp::Directive dir, bool implicit = true)
@@ -2016,7 +2033,8 @@ private:
 struct OmpEndDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpEndDirectiveParser(DirectiveSet dirs) : dparser_(dirs) {}
+  constexpr OmpEndDirectiveParser(llvm::omp::DirectiveSet dirs)
+      : dparser_(dirs) {}
   constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) : dparser_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
@@ -2110,7 +2128,8 @@ private:
 struct OmpLoopConstructParser {
   using resultType = OpenMPLoopConstruct;
 
-  constexpr OmpLoopConstructParser(DirectiveSet dirs, bool implicit = true)
+  constexpr OmpLoopConstructParser(
+      llvm::omp::DirectiveSet dirs, bool implicit = true)
       : dirs_(dirs), implicit_(implicit) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
@@ -2153,7 +2172,7 @@ struct OmpLoopConstructParser {
   }
 
 private:
-  DirectiveSet dirs_;
+  llvm::omp::DirectiveSet dirs_;
   bool implicit_;
 };
 
@@ -2539,11 +2558,10 @@ TYPE_PARSER(sourced(
         llvm::omp::Directive::OMPD_metadirective, /*implicit=*/false})))
 
 // OMP SECTIONS Directive
-static constexpr DirectiveSet GetSectionsDirectives() {
-  using Directive = llvm::omp::Directive;
-  constexpr DirectiveSet sectionsDirectives{
-      unsigned(Directive::OMPD_sections),
-      unsigned(Directive::OMPD_parallel_sections),
+static constexpr llvm::omp::DirectiveSet GetSectionsDirectives() {
+  constexpr llvm::omp::DirectiveSet sectionsDirectives{
+      llvm::omp::Directive::OMPD_sections,
+      llvm::omp::Directive::OMPD_parallel_sections,
   };
   return sectionsDirectives;
 }
@@ -2601,58 +2619,28 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(
                     Parser<OmpDelimitedMetadirectiveDirective>{}))))
 
-static constexpr DirectiveSet GetLoopDirectives() {
-  using Directive = llvm::omp::Directive;
-  constexpr DirectiveSet loopDirectives{
-      unsigned(Directive::OMPD_distribute),
-      unsigned(Directive::OMPD_distribute_parallel_do),
-      unsigned(Directive::OMPD_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_distribute_simd),
-      unsigned(Directive::OMPD_do),
-      unsigned(Directive::OMPD_do_simd),
-      unsigned(Directive::OMPD_loop),
-      unsigned(Directive::OMPD_masked_taskloop),
-      unsigned(Directive::OMPD_masked_taskloop_simd),
-      unsigned(Directive::OMPD_master_taskloop),
-      unsigned(Directive::OMPD_master_taskloop_simd),
-      unsigned(Directive::OMPD_parallel_do),
-      unsigned(Directive::OMPD_parallel_do_simd),
-      unsigned(Directive::OMPD_parallel_loop),
-      unsigned(Directive::OMPD_parallel_masked_taskloop),
-      unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
-      unsigned(Directive::OMPD_parallel_master_taskloop),
-      unsigned(Directive::OMPD_parallel_master_taskloop_simd),
-      unsigned(Directive::OMPD_simd),
-      unsigned(Directive::OMPD_target_loop),
-      unsigned(Directive::OMPD_target_parallel_do),
-      unsigned(Directive::OMPD_target_parallel_do_simd),
-      unsigned(Directive::OMPD_target_parallel_loop),
-      unsigned(Directive::OMPD_target_simd),
-      unsigned(Directive::OMPD_target_teams_distribute),
-      unsigned(Directive::OMPD_target_teams_distribute_parallel_do),
-      unsigned(Directive::OMPD_target_teams_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_target_teams_distribute_simd),
-      unsigned(Directive::OMPD_target_teams_loop),
-      unsigned(Directive::OMPD_taskloop),
-      unsigned(Directive::OMPD_taskloop_simd),
-      unsigned(Directive::OMPD_teams_distribute),
-      unsigned(Directive::OMPD_teams_distribute_parallel_do),
-      unsigned(Directive::OMPD_teams_distribute_parallel_do_simd),
-      unsigned(Directive::OMPD_teams_distribute_simd),
-      unsigned(Directive::OMPD_teams_loop),
-      unsigned(Directive::OMPD_fuse),
-      unsigned(Directive::OMPD_tile),
-      unsigned(Directive::OMPD_unroll),
-      unsigned(Directive::OMPD_interchange),
-  };
+static constexpr llvm::omp::DirectiveSet GetLoopDirectives() {
+  using SourceLanguage = llvm::omp::SourceLanguage;
+  llvm::omp::DirectiveSet loopDirectives;
+
+  for (auto dirId : llvm::omp::directives()) {
+    auto assoc{getDirectiveAssociation(dirId)};
+    if (assoc == llvm::omp::Association::LoopNest ||
+        assoc == llvm::omp::Association::LoopSeq) {
+      auto langs{getDirectiveLanguages(dirId)};
+      if (llvm::to_underlying(langs & SourceLanguage::Fortran) != 0) {
+        loopDirectives.set(dirId);
+      }
+    }
+  }
   return loopDirectives;
 }
 
 TYPE_PARSER(sourced(construct<OpenMPLoopConstruct>(
     OmpLoopConstructParser(GetLoopDirectives()))))
 
-static constexpr DirectiveSet GetAllDirectives() { //
-  return ~DirectiveSet{};
+static constexpr llvm::omp::DirectiveSet GetAllDirectives() {
+  return ~llvm::omp::DirectiveSet();
 }
 
 TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(

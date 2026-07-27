@@ -255,6 +255,22 @@ enum ScriptLanguage {
   eScriptLanguageDefault = eScriptLanguagePython
 };
 
+/// Scripting extension types.
+enum ScriptedExtension {
+  eScriptedExtensionInvalid = 0,
+  eScriptedExtensionOperatingSystem,
+  eScriptedExtensionScriptedPlatform,
+  eScriptedExtensionScriptedProcess,
+  eScriptedExtensionScriptedBreakpointResolver,
+  eScriptedExtensionScriptedThreadPlan,
+  eScriptedExtensionScriptedFrameProvider,
+  eScriptedExtensionScriptedHook,
+  eScriptedExtensionScriptedThread,
+  eScriptedExtensionScriptedFrame,
+  eScriptedExtensionScriptedStackFrameRecognizer,
+  kLastScriptedExtension = eScriptedExtensionScriptedStackFrameRecognizer
+};
+
 /// Register numbering types.
 // See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
 // these to the lldb internal register numbering scheme (eRegisterKindLLDB).
@@ -781,6 +797,8 @@ enum CommandArgumentType {
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
   eArgTypePluginDomain,
+  eArgTypeBreakpointResolverMask,
+  eArgTypeScriptedExtension,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -1461,10 +1479,11 @@ enum CompletionType {
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
   eManagedPluginCompletion = (1ul << 27),
+  eScriptedExtensionCompletion = (1ul << 28),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 28)
+  eTerminatorCompletion = (1ul << 29)
 };
 
 /// Specifies if children need to be re-computed after a call to \ref
@@ -1581,6 +1600,19 @@ enum BinaryInformationLevel {
   eBinaryInformationLevelAddrNameUUID,
   eBinaryInformationLevelFull
 };
+
+/// This reflects the BreakpointResolver::ResolverTy, but this is a convenient
+/// enum for making a mask to pass to RegisterOverrideResolver.  It has to be
+/// kept in sync with the ResolverTy.
+FLAGS_ENUM(BreakpointResolverType){
+    eResolverUnknown = 0,          eResolverFileAndLine = (1 << 0),
+    eResolverAddress = (1 << 1),   eResolverName = (1 << 2),
+    eResolverFileRegex = (1 << 3), eResolverPython = (1 << 4),
+    eResolverException = (1 << 5), eResolverLastKnown = eResolverException,
+};
+constexpr unsigned BreakpointResolverAllResolversMask =
+    eResolverFileAndLine | eResolverAddress | eResolverName |
+    eResolverFileRegex | eResolverPython | eResolverException;
 
 } // namespace lldb
 

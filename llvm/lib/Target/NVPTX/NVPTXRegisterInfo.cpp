@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXRegisterInfo.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
@@ -18,13 +19,13 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reg-info"
 
-namespace llvm {
-StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
+StringRef llvm::getNVPTXRegClassName(TargetRegisterClass const *RC) {
   if (RC == &NVPTX::B128RegClass)
     return ".b128";
   if (RC == &NVPTX::B64RegClass)
@@ -58,7 +59,7 @@ StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
   return "INTERNAL";
 }
 
-StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
+StringRef llvm::getNVPTXRegClassStr(TargetRegisterClass const *RC) {
   if (RC == &NVPTX::B128RegClass)
     return "%rq";
   if (RC == &NVPTX::B64RegClass)
@@ -73,7 +74,6 @@ StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
     return "!Special!";
   return "INTERNAL";
 }
-} // namespace llvm
 
 NVPTXRegisterInfo::NVPTXRegisterInfo()
     : NVPTXGenRegisterInfo(0), StrPool(StrAlloc) {}
@@ -115,11 +115,17 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   const MachineFunction &MF = *MI.getParent()->getParent();
-  const int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const int Offset = MFI.getObjectOffset(FrameIndex) +
                      MI.getOperand(FIOperandNum + 1).getImm();
 
-  // Using I0 as the frame pointer
-  MI.getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), false);
+  // Local (addrspace 5) allocas are addressed through the local frame pointer
+  // (%SPL); everything else uses the generic frame pointer (%SP).
+  const AllocaInst *AI = MFI.getObjectAllocation(FrameIndex);
+  const Register FrameReg = AI && AI->getAddressSpace() == ADDRESS_SPACE_LOCAL
+                                ? getFrameLocalRegister(MF)
+                                : getFrameRegister(MF);
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   return false;
 }
@@ -132,9 +138,9 @@ Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 Register
 NVPTXRegisterInfo::getFrameLocalRegister(const MachineFunction &MF) const {
-  const NVPTXTargetMachine &TM =
-      static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrameLocal64 : NVPTX::VRFrameLocal32;
+  return MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_LOCAL) == 64
+             ? NVPTX::VRFrameLocal64
+             : NVPTX::VRFrameLocal32;
 }
 
 void NVPTXRegisterInfo::clearDebugRegisterMap() const {
