@@ -133,8 +133,7 @@ def ACCDevicePtrToCUFKernel
     This must run before the pass that lowers cuf.kernel_launch to
     gpu.launch_func.
   }];
-  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect",
-                           "cuf::CUFDialect"];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
 #endif // FORTRAN_OPTIMIZER_OPENACC_PASSES
