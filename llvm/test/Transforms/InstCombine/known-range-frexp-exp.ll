@@ -187,6 +187,20 @@ define i1 @frexp_slt_double(double nofpclass(nan inf) %x) {
   ret i1 %v2
 }
 
+;128 bit exponent signed less-than comparison
+define i1 @frexp_slt_fp128(fp128 nofpclass(nan inf) %x) {
+; CHECK-LABEL: define i1 @frexp_slt_fp128(
+; CHECK-SAME: fp128 nofpclass(nan inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X]])
+; CHECK-NEXT:    [[V2:%.*]] = fcmp olt fp128 [[TMP1]], f0x7FFE0000000000000000000000000000
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = call { fp128, i128 } @llvm.frexp.fp128.i128(fp128 %x)
+  %v1 = extractvalue { fp128, i128 } %v0, 1
+  %v2 = icmp slt i128 %v1, 16384
+  ret i1 %v2
+}
+
 ; Float exponent signed greater-than comparison.
 define i1 @frexp_sgt_float(float nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define i1 @frexp_sgt_float(

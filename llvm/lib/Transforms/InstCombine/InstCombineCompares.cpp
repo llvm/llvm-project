@@ -3613,8 +3613,7 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
       Value *X;
       if (match(Cmp.getOperand(0),
                 m_OneUse(m_ExtractValue<1>(
-                    m_OneUse(m_Intrinsic<Intrinsic::frexp>(m_Value(X)))))) &&
-          isKnownNeverInfOrNaN(X, SQ.getWithInstruction(&Cmp))) {
+                    m_OneUse(m_Intrinsic<Intrinsic::frexp>(m_Value(X))))))) {
         ICmpInst::Predicate Pred = Cmp.getPredicate();
         APInt Exp;
         FCmpInst::Predicate NewPred;
@@ -3639,7 +3638,8 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
               X->getType()->getScalarType()->getFltSemantics();
           int MaxExp = APFloat::semanticsMaxExponent(Sem);
 
-          if (!Exp.isNegative() && Exp.sle(MaxExp + 1)) {
+          if (!Exp.isNegative() && Exp.sle(MaxExp + 1) &&
+              isKnownNeverInfOrNaN(X, SQ.getWithInstruction(&Cmp))) {
             int ExpVal = static_cast<int>(Exp.getSExtValue());
             APFloat CmpConst = scalbn(APFloat::getOne(Sem), ExpVal,
                                       APFloat::rmNearestTiesToEven);
