@@ -123,6 +123,78 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
   }
 }
 
+void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
+  assert(MF && TRI && RegClass &&
+         "RegisterClassInfo must be initialized before updating reserved regs");
+  assert(ReservedInput.size() == Reserved.size() &&
+         "Reserved register bit vectors must have the same size");
+  assert(Reserved.subsetOf(ReservedInput) &&
+         "updateReservedRegs cannot remove reserved registers");
+  if (ReservedInput == Reserved)
+    return;
+
+  // subtracts reserved set from input set to get newly reserved regs
+  BitVector NewReservations = ReservedInput;
+  NewReservations.reset(Reserved);
+
+  Reserved = ReservedInput;
+
+  // Pressure limits depend on the number of allocatable registers.
+  std::fill_n(PSetLimits.get(), TRI->getNumRegPressureSets(), 0);
+
+  // NumRegs may hide entries beyond the stress limit, so those orders cannot
+  // safely be compacted using only their visible prefix.
+  if (StressRA) {
+    ++Tag;
+    return;
+  }
+
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    RCInfo &Info = RegClass[RC.getID()];
+    Info.ProperSubClass = false;
+
+    // Stale entries will be computed lazily with the new Reserved vector.
+    if (Info.Tag != Tag)
+      continue;
+
+    unsigned NewNumRegs = 0;
+    uint8_t MinCost = uint8_t(~0u);
+    uint8_t LastCost = uint8_t(~0u);
+    unsigned LastCostChange = 0;
+
+    for (unsigned I = 0; I != Info.NumRegs; ++I) {
+      MCPhysReg PhysReg = Info.Order[I];
+      if (NewReservations.test(PhysReg))
+        continue;
+
+      uint8_t Cost = RegCosts[PhysReg];
+      MinCost = std::min(MinCost, Cost);
+      if (Cost != LastCost)
+        LastCostChange = NewNumRegs;
+
+      Info.Order[NewNumRegs++] = PhysReg;
+      LastCost = Cost;
+    }
+
+    Info.NumRegs = NewNumRegs;
+    Info.MinCost = MinCost;
+    Info.LastCostChange = LastCostChange;
+  }
+
+  // ProperSubClass depends on both this class and its superclass counts, so
+  // calculate it only after all valid orders have been compacted.
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    RCInfo &Info = RegClass[RC.getID()];
+    if (Info.Tag != Tag)
+      continue;
+
+    if (const TargetRegisterClass *Super =
+            TRI->getLargestLegalSuperClass(&RC, *MF))
+      if (Super != &RC && getNumAllocatableRegs(Super) > Info.NumRegs)
+        Info.ProperSubClass = true;
+  }
+}
+
 /// compute - Compute the preferred allocation order for RC with reserved
 /// registers filtered out. Volatile registers come first followed by CSR
 /// aliases ordered according to the CSR order specified by the target.
@@ -181,6 +253,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     RCI.NumRegs = StressRA;
 
   // Check if RC is a proper sub-class.
+  RCI.ProperSubClass = false;
   if (const TargetRegisterClass *Super =
           TRI->getLargestLegalSuperClass(RC, *MF))
     if (Super != RC && getNumAllocatableRegs(Super) > RCI.NumRegs)
@@ -206,7 +279,6 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
 unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   const TargetRegisterClass *RC = TRI->getLargestRegClassForRegPressureSet(Idx);
   assert(RC && "Failed to find register class");
-  compute(RC);
   unsigned NAllocatableRegs = getNumAllocatableRegs(RC);
   unsigned RegPressureSetLimit = TRI->getRegPressureSetLimit(*MF, Idx);
   // If all the regs are reserved, return raw RegPressureSetLimit.

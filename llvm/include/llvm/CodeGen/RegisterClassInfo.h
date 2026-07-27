@@ -98,6 +98,16 @@ public:
   LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
                                      bool Rev = false);
 
+  /// allows modification of current reserved register vector
+  /// without invalidating RCI and triggering recomputation.
+  /// prereqs for use:
+  ///     RCI already initialized,
+  ///     the caller updated MRI's reserved vector (only adding reservations)
+  ///     note: target information, callee-saved regs, cost, and alloc order
+  ///     must not change.
+  ///     input: MRI's current frozen vector
+  LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
+
   LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &) {
     auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
