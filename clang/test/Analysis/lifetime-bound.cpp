@@ -315,7 +315,7 @@ int *field_subobject_dangling() {
   // expected-note@-2    {{Returning value bound to 'pair' that will go out of scope}}
   // expected-warning@-3 {{Address of stack memory associated with local variable 'pair' returned to caller}}
   // expected-note@-4    {{Address of stack memory associated with local variable 'pair' returned to caller}}
-  // expected-warning@-5    {{address of stack memory associated with local variable 'pair' returned}}
+  // expected-warning@-5 {{address of stack memory associated with local variable 'pair' returned}}
 }
 
 int *getBasePtr(Derived &d [[clang::lifetimebound]]) {
@@ -329,7 +329,7 @@ int *base_subobject_dangling() {
   // expected-note@-2    {{Returning value bound to 'derived' that will go out of scope}}
   // expected-warning@-3 {{Address of stack memory associated with local variable 'derived' returned to caller}}
   // expected-note@-4    {{Address of stack memory associated with local variable 'derived' returned to caller}}
-  // expected-warning@-5    {{address of stack memory associated with local variable 'derived' returned}}
+  // expected-warning@-5 {{address of stack memory associated with local variable 'derived' returned}}
 }
 
 int *getNestedFieldPtr(Outer &o [[clang::lifetimebound]]) {
