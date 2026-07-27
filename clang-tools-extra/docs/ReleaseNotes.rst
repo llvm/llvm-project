@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-nested-switch-label
+  <clang-tidy/checks/bugprone/nested-switch-label>` check.
+
+  Finds switch labels nested in compound statements other than the switch body.
+
 - New :doc:`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
