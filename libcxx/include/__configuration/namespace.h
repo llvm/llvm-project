@@ -46,7 +46,7 @@
 #  define _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS
 #endif
 
-#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#if defined(_LIBCPP_COMPILER_CLANG_BASED) && (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101)
 #  define _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS                                                                         \
     _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                                \
     _Pragma(_LIBCPP_TOSTRING(clang attribute _LibcxxExplicitABIAnnotations.push(                                       \
