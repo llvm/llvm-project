@@ -2210,6 +2210,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8bf16, Legal);
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
+
+    // SVE TBL takes its index vector from a register, so it implements a
+    // dynamic shuffle directly. Unpacked integer types are promoted to their
+    // container before reaching the lowering; the unpacked floating-point types
+    // are not, so they are listed here too.
+    for (auto VT :
+         {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64, MVT::nxv8f16,
+          MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16, MVT::nxv2f32, MVT::nxv4f16,
+          MVT::nxv2f16, MVT::nxv4bf16, MVT::nxv2bf16})
+      setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   }
 
   if (Subtarget->isSVEAvailable() ||
@@ -2389,6 +2399,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -8779,6 +8790,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return LowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -16278,6 +16291,80 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  // SVE TBL indexes lanes of its operands' element width directly, so a
+  // scalable shuffle is one instruction with no index conversion.
+  // Out-of-range indices produce 0, which poison permits. An unpacked type
+  // keeps its elements in wider lanes, so the lookup is done in the container
+  // type in order to index the lanes the elements actually occupy.
+  if (VT.isScalableVector()) {
+    EVT EltIntVT = VT.changeVectorElementTypeToInteger();
+    EVT ContainerVT = getSVEContainerType(EltIntVT);
+    SDValue Data = DAG.getBitcast(EltIntVT, V);
+    if (ContainerVT != EltIntVT)
+      Data = DAG.getNode(ISD::ANY_EXTEND, DL, ContainerVT, Data);
+    SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, ContainerVT);
+    SDValue Tbl = DAG.getNode(AArch64ISD::TBL, DL, ContainerVT, Data, Idx);
+    if (ContainerVT != EltIntVT)
+      Tbl = DAG.getNode(ISD::TRUNCATE, DL, EltIntVT, Tbl);
+    return DAG.getBitcast(VT, Tbl);
+  }
+
+  // Only handle NEON-sized fixed-length shuffles. Anything else falls back to
+  // the generic expansion, which for these types is a stack round trip.
+  // On big-endian the vNiW -> v16i8 bitcast below reverses the bytes within
+  // each lane, which the byte-offset construction does not account for.
+  if (!Subtarget->isNeonAvailable() || !Subtarget->isLittleEndian() ||
+      VT.getScalarSizeInBits() % 8 != 0 ||
+      (VT.getSizeInBits() != 64 && VT.getSizeInBits() != 128))
+    return SDValue();
+
+  // Turn the mask of element indices into a mask of byte indices for TBL:
+  //   ByteIdx = Mask * <EltBytes repeated in every byte of the lane>
+  //             + <0, 1, ..., EltBytes - 1 across the bytes of the lane>
+  // computed in lanes of the element width. The byte-replicating multiply
+  // only overflows across bytes for out-of-range indices, whose lanes are
+  // poison anyway, and TBL yields 0 for out-of-range byte indices, which
+  // poison also permits, so no clamping is needed.
+  unsigned EltBytes = VT.getScalarSizeInBits() / 8;
+  EVT IdxVT = VT.changeVectorElementTypeToInteger();
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+  if (EltBytes > 1) {
+    uint64_t RepEltBytes = 0, ByteOffsets = 0;
+    for (unsigned I = 0; I < EltBytes; ++I) {
+      RepEltBytes |= (uint64_t)EltBytes << (8 * I);
+      ByteOffsets |= (uint64_t)I << (8 * I);
+    }
+    Idx = DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
+                      DAG.getConstant(RepEltBytes, DL, IdxVT));
+    Idx = DAG.getNode(ISD::ADD, DL, IdxVT, Idx,
+                      DAG.getConstant(ByteOffsets, DL, IdxVT));
+  }
+
+  // TBL always reads a 128-bit table register. For a 64-bit shuffle the upper
+  // half of that register holds nothing addressable: byte indices >= 8 come
+  // only from element indices >= NumElts, which are poison.
+  MVT IndexVT = VT.getSizeInBits() == 128 ? MVT::v16i8 : MVT::v8i8;
+  SDValue ByteIdx = DAG.getBitcast(IndexVT, Idx);
+  SDValue Table = DAG.getBitcast(IndexVT, V);
+  if (IndexVT == MVT::v8i8)
+    Table = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Table,
+                        DAG.getUNDEF(MVT::v8i8));
+
+  SDValue Shuffle = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl1, DL, MVT::i32), Table,
+      ByteIdx);
+  return DAG.getBitcast(VT, Shuffle);
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
