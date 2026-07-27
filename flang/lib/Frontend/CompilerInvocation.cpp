@@ -1411,6 +1411,54 @@ static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Set the IEEE Floating point rounding modes, underflow mode and halting mode.
+///
+/// Initial halting mode:
+/// -ffpe-trap= sets the initial floating-point exception halting mode for the
+/// main program. Only the last -ffpe-trap= on the command line is effective.
+/// The value is a comma-separated set of exception mnemonics: "invalid",
+/// "zero", "overflow", "underflow", and "inexact" correspond to the Fortran
+/// 2023 IEEE_FLAG_TYPE values (F2023 17.2), and "denormal" is a non-standard,
+/// gfortran-compatible extension. "none", as well as an empty list, requests no
+/// halting and resets any earlier request.
+///
+/// TODO:
+/// Rounding modes
+/// Underflow mode
+///
+/// The value and the target-support warnings are validated in the driver (see
+/// addIEEEFPModesOptions() in clang/lib/Driver/ToolChains/Flang.cpp);
+/// here we only translate the already-validated list, so an unrecognized
+/// mnemonic maps to 0 and is ignored rather than re-diagnosed.
+static void setIEEEFPModesArgs(Fortran::common::LangOptions &opts,
+                               llvm::opt::ArgList &args) {
+  const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_ffpe_trap_EQ);
+  if (!a)
+    return;
+
+  using LangOptions = Fortran::common::LangOptions;
+  unsigned traps = 0;
+  llvm::SmallVector<llvm::StringRef> trapList;
+  llvm::StringRef(a->getValue())
+      .split(trapList, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (llvm::StringRef trap : trapList) {
+    if (trap == "none") {
+      // Reset to no halting; a later mnemonic can re-enable.
+      traps = 0;
+      continue;
+    }
+    traps |= llvm::StringSwitch<unsigned>(trap)
+                 .Case("invalid", LangOptions::FPE_Invalid)
+                 .Case("denormal", LangOptions::FPE_Denormal)
+                 .Case("zero", LangOptions::FPE_DivByZero)
+                 .Case("overflow", LangOptions::FPE_Overflow)
+                 .Case("underflow", LangOptions::FPE_Underflow)
+                 .Case("inexact", LangOptions::FPE_Inexact)
+                 .Default(0);
+  }
+  opts.FPExceptionTraps = traps;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1485,73 +1533,8 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       opts.FastRealMod = false;
   }
 
-  // -ffpe-trap= sets the initial floating-point exception halting mode for the
-  // main program. Only the last -ffpe-trap= on the command line is effective.
-  //
-  // The value is a comma-separated set of exception mnemonics. "invalid",
-  // "zero", "overflow", "underflow", and "inexact" correspond to the Fortran
-  // 2023 IEEE_FLAG_TYPE values IEEE_INVALID, IEEE_DIVIDE_BY_ZERO,
-  // IEEE_OVERFLOW, IEEE_UNDERFLOW, and IEEE_INEXACT (F2023 17.2). "denormal" is
-  // a non-standard, gfortran-compatible extension (subnormal is an
-  // IEEE_FEATURES feature, not an exception flag). "none", as well as an empty
-  // list, requests no halting, allowing a later -ffpe-trap= to override an
-  // earlier one.
-  //
-  // The option is validated here in the frontend (rather than the driver) so
-  // that a direct `flang -fc1` invocation is self-checking; the driver only
-  // forwards the flag. An unknown mnemonic is an error. In addition, run-time
-  // halting is implemented in flang-rt only where the target's floating-point
-  // environment can trap: it relies on glibc's feenableexcept (exposed as
-  // IEEE_SUPPORT_HALTING), so it takes effect only with a glibc-based C library
-  // on all targets (in practice Linux), and the "denormal" exception
-  // additionally requires an x86 target. When the target cannot honor the
-  // request we warn and the runtime ignores it. The check is triple-based and
-  // intentionally conservative: it only ever under-warns (for example, it does
-  // not warn for non-glibc x86 such as macOS/Windows/musl), with the runtime
-  // remaining the definitive authority.
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::options::OPT_ffpe_trap_EQ)) {
-    using LangOptions = Fortran::common::LangOptions;
-    llvm::StringRef val = a->getValue();
-    unsigned traps = 0;
-    llvm::SmallVector<llvm::StringRef> trapList;
-    val.split(trapList, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-    for (llvm::StringRef trap : trapList) {
-      if (trap == "none") {
-        // Reset to no halting; a later mnemonic can re-enable.
-        traps = 0;
-        continue;
-      }
-      unsigned flag = llvm::StringSwitch<unsigned>(trap)
-                          .Case("invalid", LangOptions::FPE_Invalid)
-                          .Case("denormal", LangOptions::FPE_Denormal)
-                          .Case("zero", LangOptions::FPE_DivByZero)
-                          .Case("overflow", LangOptions::FPE_Overflow)
-                          .Case("underflow", LangOptions::FPE_Underflow)
-                          .Case("inexact", LangOptions::FPE_Inexact)
-                          .Default(0);
-      if (flag == 0) {
-        diags.Report(clang::diag::err_drv_unsupported_option_argument)
-            << a->getSpelling() << trap;
-        return false;
-      }
-      traps |= flag;
-    }
-
-    // Warn if the target cannot honor the request; the runtime ignores it.
-    llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
-    if (traps != 0 && !triple.isX86() && !triple.isOSLinux()) {
-      diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-          << a->getAsString(args) << triple.str();
-    } else if ((traps & LangOptions::FPE_Denormal) && !triple.isX86()) {
-      // The "denormal" exception is an x86-only extension; on other (otherwise
-      // supported) targets it cannot be trapped.
-      diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-          << "-ffpe-trap=denormal" << triple.str();
-    }
-
-    opts.FPExceptionTraps = traps;
-  }
+  // Set the initial IEEE floating point modes
+  setIEEEFPModesArgs(opts, args);
 
   return true;
 }

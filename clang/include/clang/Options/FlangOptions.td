@@ -332,15 +332,19 @@ def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
 exception halting mode for the main program unit. This is the halting mode in
 effect when the main program begins execution; the program may subsequently
 change it (for example, with ``IEEE_SET_HALTING_MODE``). ``[list]`` is a
-comma-separated list of the exceptions to halt on: ``invalid``, ``zero``,
-``overflow``, ``underflow``, and ``inexact``, corresponding to the Fortran 2023
-(17.6) ``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
-``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``. As a non-standard
-GFortran-compatible extension, ``denormal`` halts on the hardware denormal
-(subnormal) operand exception. An empty list, or the value ``none``, disables
-halting. In the absence of this option, the program runs with traps disabled
-(equivalent to passing ``none``). Multiple occurrences are allowed; only the
-last ``-ffpe-trap=`` takes effect.
+(possibly empty) comma-separated list of ``none`` or the following exceptions:
+``invalid``, ``zero``, ``overflow``, ``underflow``, ``inexact``, and
+``denormal``. The first five exceptions correspond to the Fortran 2023 (17.6)
+``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
+``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``, whereas
+``denormal`` is a non-standard GFortran-compatible extension that halts on the
+hardware denormal (subnormal) operand exception. The value ``none`` may appear
+anywhere in the list; it disables halting and clears any preceding exceptions in
+the list, while exceptions following it are still effective (e.g.,
+``invalid,none,zero`` enables halting on ``zero`` only). In the absence of this
+option, or when an empty list is passed to it, the program runs with traps
+disabled (equivalent to passing ``none``). Multiple occurrences of this option
+are allowed, in which case only the last one takes effect.
 
 Run-time halting relies on glibc's ``feenableexcept`` (exposed as
 ``IEEE_SUPPORT_HALTING``). The compile-time warning is a conservative
@@ -348,31 +352,38 @@ approximation from the target triple; the runtime is the definitive authority on
 which exceptions can be trapped.
 
 The table below summarizes the halting behavior for different system
-configurations. In it, ``halts`` = the exception is trapped, ``ignored`` = no
-run-time effect, "Standard" = ``invalid``, ``zero``, ``overflow``,
-``underflow``, ``inexact`` exceptions, and "Others" = any non-x86 architecture
-(AArch64, PowerPC, RISC-V, ...):
+configurations. The C standard library is ``glibc`` (in practice Linux) or
+``non-glibc``; "Standard Exception" covers ``invalid``, ``zero``, ``overflow``,
+``underflow``, and ``inexact``. In the Standard Exception and Denormal columns,
+each cell names the compiler action followed by the run-time action:
+``compiler accepts`` = the compiler forwards the request without a warning,
+``compiler warns`` = the compiler emits a warning, ``runtime halts`` = the
+exception is trapped at run time, and ``runtime ignores`` = the request is
+silently ignored at run time.
 
-+--------+-----------+----------+----------+-------------------+
-| Arch   | C library | Standard | denormal | Warning           |
-+========+===========+==========+==========+===================+
-| x86    | glibc     | halts    | halts    | none              |
-+--------+-----------+----------+----------+-------------------+
-| Others | glibc     | halts    | ignored  | ``denormal`` only |
-+--------+-----------+----------+----------+-------------------+
-| x86    | non-glibc | ignored  | ignored  | none (silent)     |
-+--------+-----------+----------+----------+-------------------+
-| Others | non-glibc | ignored  | ignored  | always            |
-+--------+-----------+----------+----------+-------------------+
++--------------+--------------------+--------------------+-------------------+
+| Architecture | C Standard Library | Standard Exception | Denormal          |
++==============+====================+====================+===================+
+| x86          | glibc              | compiler accepts,  | compiler accepts, |
+|              |                    | runtime halts      | runtime halts     |
++--------------+--------------------+--------------------+-------------------+
+| non-x86      | glibc              | compiler accepts,  | compiler warns,   |
+|              |                    | runtime halts      | runtime ignores   |
++--------------+--------------------+--------------------+-------------------+
+| x86          | non-glibc          | compiler accepts,  | compiler accepts, |
+|              |                    | runtime ignores    | runtime ignores   |
++--------------+--------------------+--------------------+-------------------+
+| non-x86      | non-glibc          | compiler warns,    | compiler warns,   |
+|              |                    | runtime ignores    | runtime ignores   |
++--------------+--------------------+--------------------+-------------------+
 
 Notes:
 
-* On non-x86 targets, an exception halts only if the target's glibc
-  ``feenableexcept`` supports it; the runtime probes each requested exception at
-  start-up (via ``IEEE_SUPPORT_HALTING``) and enables only those it can.
-* ``denormal`` is honored only on x86_64; on 32-bit x86 it is silently ignored.
-* The "always" case excludes non-glibc *Linux* (for example musl), where -- as
-  on the x86 rows -- the option is silently ignored without a warning.}]>;
+* On non-x86 targets the standard exceptions halt only where the target's glibc
+  ``feenableexcept`` supports them; the runtime probes each at start-up (via
+  ``IEEE_SUPPORT_HALTING``) and enables only those it can.
+* ``denormal`` is honored only on x86_64; on 32-bit x86 it is silently ignored
+  (no warning).}]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
