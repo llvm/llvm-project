@@ -14,6 +14,8 @@
 #include "orc-rt/QueueingRunner.h"
 #include "orc-rt/SPSWrapperFunction.h"
 
+#include "orc-rt-c/Session.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -672,6 +674,55 @@ static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
         Return(X + Y);
       });
+}
+
+// Wrapper handler that echoes its argument bytes straight back as the result.
+// Used to exercise the C callController entry point without pulling in SPS
+// (de)serialization -- the payload is opaque to the code under test.
+static void echo_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+                         orc_rt_WrapperFunctionReturn Return,
+                         orc_rt_WrapperFunctionBuffer ArgBytes) {
+  Return(S, CallId, ArgBytes);
+}
+
+// Captures what orc_rt_Session_callController threads back to its C return
+// function, so the test can inspect it after the call completes.
+struct CAPICallControllerResult {
+  bool Ran = false;
+  orc_rt_SessionRef S = nullptr;
+  std::string Result;
+};
+
+static void capiCallControllerReturn(orc_rt_SessionRef S,
+                                     orc_rt_WrapperFunctionBuffer ResultBytes,
+                                     void *Ctx) {
+  auto &R = *static_cast<CAPICallControllerResult *>(Ctx);
+  R.Ran = true;
+  R.S = S;
+  WrapperFunctionBuffer Result(ResultBytes);
+  R.Result.assign(Result.data(), Result.size());
+}
+
+TEST(ControllerAccessTest, CAPICallControllerRoundTrip) {
+  // Drive a controller call through the C API entry point
+  // (orc_rt_Session_callController) and confirm that the result bytes, the
+  // session handle, and the caller-supplied context are all threaded back to
+  // the C return function.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  S.attach<MockControllerAccess>(BootstrapInfo(S), postOnto(Tasks));
+
+  CAPICallControllerResult R;
+  orc_rt_Session_callController(
+      wrap(&S), reinterpret_cast<orc_rt_ControllerHandlerTag>(&echo_wrapper),
+      WrapperFunctionBuffer::copyFrom("hello", 5).release(),
+      &capiCallControllerReturn, &R);
+
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
+
+  EXPECT_TRUE(R.Ran) << "C return function never fired";
+  EXPECT_EQ(R.S, wrap(&S)) << "Session handle not threaded through";
+  EXPECT_EQ(R.Result, "hello") << "Result bytes not round-tripped";
 }
 
 TEST(ControllerAccessTest, ValidCallToController) {
