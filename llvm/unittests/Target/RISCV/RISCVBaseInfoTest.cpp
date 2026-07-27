@@ -18,7 +18,7 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<MCSubtargetInfo> createSTI(StringRef TripleName,
-                                            StringRef FeatureStr) {
+                                           StringRef FeatureStr) {
   LLVMInitializeRISCVTargetInfo();
   LLVMInitializeRISCVTarget();
   LLVMInitializeRISCVTargetMC();
@@ -30,7 +30,7 @@ std::unique_ptr<MCSubtargetInfo> createSTI(StringRef TripleName,
 }
 
 RISCVABI::ABI computeTargetABI(StringRef TripleName, StringRef FeatureStr,
-                                StringRef ABIName = "") {
+                               StringRef ABIName = "") {
   auto STI = createSTI(TripleName, FeatureStr);
   return RISCVABI::computeTargetABI(*STI, ABIName);
 }
