@@ -2589,6 +2589,8 @@ int testInterfaces(MlirContext ctx) {
   // CHECK: arith.constant speculatability: 1
 
   MlirOperationState storeState = mlirOperationStateGet(storeName, loc);
+  MlirValue constantResult = mlirOperationGetResult(constantOp, 0);
+  mlirOperationStateAddOperands(&storeState, 1, &constantResult);
   MlirOperation storeOp = mlirOperationCreate(&storeState);
   if (mlirOperationImplementsInterface(storeOp, condSpecTypeID)) {
     fprintf(stderr, "ERROR: Expected memref.store instance to not implement "
@@ -2618,6 +2620,47 @@ int testInterfaces(MlirContext ctx) {
   // CHECK: memref.store instance after attach: 1
   // CHECK: memref.store speculatability: 2
   // CHECK: callback count: 1
+
+  MlirMemoryEffect allocate = mlirMemoryEffectsAllocateGet();
+  MlirMemoryEffect free = mlirMemoryEffectsFreeGet();
+  MlirMemoryEffect read = mlirMemoryEffectsReadGet();
+  MlirMemoryEffect write = mlirMemoryEffectsWriteGet();
+  MlirSideEffectResource defaultResource = mlirSideEffectsDefaultResourceGet();
+  if (!allocate.ptr || !free.ptr || !read.ptr || !write.ptr ||
+      !defaultResource.ptr) {
+    fprintf(stderr, "ERROR: Expected memory effect components\n");
+    return 6;
+  }
+
+  MlirAttribute nullParameters = {NULL};
+  MlirOpOperand opOperand = mlirOperationGetOpOperand(storeOp, 0);
+  MlirBlock block = mlirBlockCreate(1, &i32, &loc);
+  MlirValue blockArgument = mlirBlockGetArgument(block, 0);
+  MlirAttribute symbol = mlirFlatSymbolRefAttrGet(
+      ctx, mlirStringRefCreateFromCString("effect_target"));
+
+  MlirMemoryEffectInstance instances[] = {
+      mlirMemoryEffectInstanceCreate(allocate, nullParameters, 0, false,
+                                     defaultResource),
+      mlirMemoryEffectInstanceCreateForOpOperand(read, opOperand, zero, 1,
+                                                 false, defaultResource),
+      mlirMemoryEffectInstanceCreateForOpResult(
+          write, constantResult, nullParameters, 2, false, defaultResource),
+      mlirMemoryEffectInstanceCreateForBlockArgument(free, blockArgument, zero,
+                                                     3, false, defaultResource),
+      mlirMemoryEffectInstanceCreateForSymbol(read, symbol, zero, 4, true,
+                                              defaultResource),
+  };
+  for (intptr_t i = 0; i < 5; ++i) {
+    if (!instances[i].ptr) {
+      fprintf(stderr, "ERROR: Expected memory effect instance\n");
+      return 7;
+    }
+    mlirMemoryEffectInstanceDestroy(instances[i]);
+  }
+  mlirBlockDestroy(block);
+  fprintf(stderr, "memory effect instances constructed\n");
+  // CHECK: memory effect instances constructed
 
   mlirOperationDestroy(storeOp);
   mlirOperationDestroy(constantOp);

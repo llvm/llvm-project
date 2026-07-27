@@ -181,10 +181,14 @@ INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
 static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                 BasicBlock *OldHeader) {
   // Any candidate (sibling of NewLoop, or top-level loop if there is no
-  // parent) is a child iff its header is owned by the new loop.
+  // parent) is a child iff its header is owned by the new loop. The new loop's
+  // block list is already populated but its subloops are not yet attached, so
+  // query the block list directly rather than contains(), which would derive
+  // from the not-yet-updated block-to-loop map.
   SmallVector<Loop *, 4> ChildLoops =
       LI.takeChildrenIf(ParentLoop, [&](Loop *L) {
-        return NewLoop != L && NewLoop->contains(L->getHeader());
+        return NewLoop != L &&
+               llvm::is_contained(NewLoop->getBlocks(), L->getHeader());
       });
 
   for (Loop *Child : ChildLoops) {

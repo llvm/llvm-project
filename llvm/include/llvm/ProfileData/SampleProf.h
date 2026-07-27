@@ -31,6 +31,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <list>
 #include <map>
@@ -207,8 +208,13 @@ enum class SecNameTableFlags : uint32_t {
   SecFlagFixedLengthMD5 = (1 << 1),
   // Profile contains ".__uniq." suffix name. Compiler shouldn't strip
   // the suffix when doing profile matching when seeing the flag.
-  SecFlagUniqSuffix = (1 << 2)
+  SecFlagUniqSuffix = (1 << 2),
+  // Name table is stored in 3-span Eytzinger layout (CS, Flat, Inlinees).
+  SecFlagEytzinger = (1 << 3)
 };
+
+enum class EytzingerSpan : size_t { CS, Flat, Inlinee, NumSpans };
+
 enum class SecProfileSymbolListFlags : uint32_t {
   SecFlagInValid = 0,
   SecFlagMD5 = (1 << 0)
@@ -1341,24 +1347,26 @@ public:
                       const HashKeyMap<DenseMap, FunctionId, FunctionId>
                           *FuncNameToProfNameMap = nullptr) const;
 
-  LLVM_ABI static bool ProfileIsProbeBased;
-
-  LLVM_ABI static bool ProfileIsCS;
-
-  LLVM_ABI static bool ProfileIsPreInlined;
-
   SampleContext &getContext() const { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
 
+  // These boolean variables are atomic so that parallel in-process ThinLTO
+  // backends writing the same value do not race.
+  LLVM_ABI static std::atomic<bool> ProfileIsProbeBased;
+
+  LLVM_ABI static std::atomic<bool> ProfileIsCS;
+
+  LLVM_ABI static std::atomic<bool> ProfileIsPreInlined;
+
   /// Whether the profile uses MD5 to represent string.
-  LLVM_ABI static bool UseMD5;
+  LLVM_ABI static std::atomic<bool> UseMD5;
 
   /// Whether the profile contains any ".__uniq." suffix in a name.
-  LLVM_ABI static bool HasUniqSuffix;
+  LLVM_ABI static std::atomic<bool> HasUniqSuffix;
 
   /// If this profile uses flow sensitive discriminators.
-  LLVM_ABI static bool ProfileIsFS;
+  LLVM_ABI static std::atomic<bool> ProfileIsFS;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.

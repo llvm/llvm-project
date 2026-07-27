@@ -5,33 +5,33 @@
 // crash because the expansion produced an IntegerLiteral typed _Bool/bool.
 
 // C (C11 and C23): IntegerLiteral 'int' implicit-cast to _Bool.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -std=c11 \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -std=c11 \
 // RUN:   -ast-print %s | FileCheck --check-prefix=INT-TRUE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx900 -std=c11 \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -std=c11 \
 // RUN:   -ast-print %s | FileCheck --check-prefix=INT-FALSE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -std=c11 \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -std=c11 \
 // RUN:   -ast-dump %s | FileCheck --check-prefix=INT-DUMP %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -std=c23 \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -std=c23 \
 // RUN:   -ast-print %s | FileCheck --check-prefix=INT-TRUE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx900 -std=c23 \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -std=c23 \
 // RUN:   -ast-print %s | FileCheck --check-prefix=INT-FALSE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -std=c23 \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -std=c23 \
 // RUN:   -ast-dump %s | FileCheck --check-prefix=INT-DUMP %s
 
 // C++ / HIP device: CXXBoolLiteralExpr 'bool'.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x c++ \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x c++ \
 // RUN:   -std=c++17 -ast-print %s | FileCheck --check-prefix=BOOL-TRUE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx900 -x c++ \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x c++ \
 // RUN:   -std=c++17 -ast-print %s | FileCheck --check-prefix=BOOL-FALSE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x c++ \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x c++ \
 // RUN:   -std=c++17 -ast-dump %s | FileCheck --check-prefix=BOOL-DUMP %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x hip \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x hip \
 // RUN:   -fcuda-is-device -ast-print %s \
 // RUN:   | FileCheck --check-prefix=BOOL-TRUE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx900 -x hip \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip \
 // RUN:   -fcuda-is-device -ast-print %s \
 // RUN:   | FileCheck --check-prefix=BOOL-FALSE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x hip \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x hip \
 // RUN:   -fcuda-is-device -ast-dump %s \
 // RUN:   | FileCheck --check-prefix=BOOL-DUMP %s
 
