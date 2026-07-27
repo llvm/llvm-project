@@ -138,57 +138,29 @@ TEST_F(ObjectContainerMachOFilesetTest, ZeroCmdSize) {
   // 0x7FFFFFFF so that without the fix ParseFileset spins ~2 billion times and
   // never returns in practice; with the fix it breaks on the first iteration.
   // Reaching the assertion below is the regression check.
-  const uint8_t kData[] = {
-      // mach_header_64 (little-endian)
-      0xCF,
-      0xFA,
-      0xED,
-      0xFE, // magic:      MH_MAGIC_64
-      0x07,
-      0x00,
-      0x00,
-      0x01, // cputype:    CPU_TYPE_X86_64
-      0x03,
-      0x00,
-      0x00,
-      0x80, // cpusubtype: CPU_SUBTYPE_X86_64_ALL
-      0x0C,
-      0x00,
-      0x00,
-      0x00, // filetype:   MH_FILESET
-      0xFF,
-      0xFF,
-      0xFF,
-      0x7F, // ncmds:      0x7FFFFFFF
-      0x08,
-      0x00,
-      0x00,
-      0x00, // sizeofcmds: 8
-      0x00,
-      0x00,
-      0x00,
-      0x00, // flags:      0
-      0x00,
-      0x00,
-      0x00,
-      0x00, // reserved:   0
-      // load_command
-      0x19,
-      0x00,
-      0x00,
-      0x00, // cmd:     LC_SEGMENT_64 (arbitrary)
-      0x00,
-      0x00,
-      0x00,
-      0x00, // cmdsize: 0  ← causes the spin
-  };
-  auto Buf = std::make_shared<DataBufferHeap>(kData, sizeof(kData));
-  lldb::DataExtractorSP DataSP =
-      std::make_shared<lldb_private::DataExtractor>(Buf, lldb::eByteOrderLittle,
-                                                    /*addr_size=*/8);
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x0000000C
+  ncmds:           0x7FFFFFFF
+  sizeofcmds:      8
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_THREAD
+    cmdsize:         0
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  ModuleSpec Spec = ExpectedFile->moduleSpec();
+  lldb::DataExtractorSP DataSP = Spec.GetExtractor();
   // Before the fix ParseFileset loops ~0x7FFFFFFF times and never returns.
-  (void)ObjectContainerMachOFileset::GetModuleSpecifications(FileSpec(), DataSP,
-                                                             0, sizeof(kData));
+  (void)ObjectContainerMachOFileset::GetModuleSpecifications(
+      FileSpec(), DataSP, 0, DataSP->GetByteSize());
 }
 
 // Regression fixture: a universal (fat) Mach-O whose header claims a huge
