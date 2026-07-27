@@ -124,7 +124,6 @@ class X86AsmBackend : public MCAsmBackend {
   Align AlignBoundary;
   unsigned TargetPrefixMax = 0;
 
-  bool ReuseBA = false;
   MCInst PrevInst;
   unsigned PrevInstOpcode = 0;
   MCBoundaryAlignFragment *PendingBA = nullptr;
@@ -482,9 +481,10 @@ void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
 
   if (OS.getCurrentSectionOnly()->isBundleLocked())
     return;
-  // when there is a prefix MCInst not locked, we need an implicit lock between
-  // the prefix and the next MCInst.
-  if (ReuseBA && PendingBA &&
+  // A pending BoundaryAlign here means the previous MCInst was just a prefix,
+  // which needs an implicit lock with this one, so reuse the fragment and let
+  // this instruction extend its range.
+  if (PendingBA &&
       PendingBA->getLastFragment()->getParent() == OS.getCurrentSectionOnly()) {
     PendingBA->setLastFragment(OS.getCurrentFragment());
     return;
@@ -516,11 +516,8 @@ void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
 
   CF->getParent()->ensureMinAlignment(Asm->getBundleAlign());
 
-  // Update ReuseBA for the next BeginBundle.
-  ReuseBA = isPrefix(PrevInstOpcode, *MCII);
-  if (ReuseBA)
-    return;
-  PendingBA = nullptr;
+  if (!isPrefix(PrevInstOpcode, *MCII))
+    PendingBA = nullptr;
 }
 
 /// Insert BoundaryAlignFragment before instructions to align branches.
