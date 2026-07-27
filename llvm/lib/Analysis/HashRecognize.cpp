@@ -292,6 +292,8 @@ bool RecurrenceInfo::matchConditionalRecurrence(
 
   // Step comes from the loop latch, start comes from the other incoming value.
   int LatchIdx = Phi->getBasicBlockIndex(L.getLoopLatch());
+  if (LatchIdx < 0)
+    return false;
   Value *FoundStep = Phi->getIncomingValue(LatchIdx);
   Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
