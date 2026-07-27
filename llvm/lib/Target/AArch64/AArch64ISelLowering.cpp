@@ -18344,6 +18344,14 @@ setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
                                 EC * NumVecs);
   Info.ptrVal = CI.getArgOperand(CI.arg_size() - 1);
   Info.offset = 0;
+  // Unless all predicate lanes are known to be active, the full scalable
+  // vector size is only an upper bound on the memory accessed, which
+  // MachineMemOperand cannot represent so set it unknown.
+  // `NumVecs` used in operand below because predicate is after
+  // all vector i.e. stN(vec0, ..., vecN-1, predicate, pointer)
+  const auto *Pred = dyn_cast<Constant>(CI.getArgOperand(NumVecs));
+  if (!Pred || !Pred->isAllOnesValue())
+    Info.size = MemoryLocation::UnknownSize;
   Info.align.reset();
   Info.flags = MachineMemOperand::MOStore;
 }
