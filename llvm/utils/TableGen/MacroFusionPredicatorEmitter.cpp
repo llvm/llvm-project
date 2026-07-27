@@ -36,7 +36,9 @@
 // bool isNAME(const TargetInstrInfo &TII,
 //             const TargetSubtargetInfo &STI,
 //             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
+//             const MachineInstr &SecondMI, const SDep *Dep) {
+//   if (isNonDataDep(Dep))
+//     return false;
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
 //   /* Predicates */
 //   if (SecondMI.getMF()->getProperties().hasNoVRegs())
@@ -118,7 +120,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
   for (const Record *Fusion : Fusions)
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
        << "const TargetSubtargetInfo &, const MachineInstr *, "
-       << "const MachineInstr &);\n";
+       << "const MachineInstr &, const SDep *);\n";
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
@@ -156,7 +158,9 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
-    OS.indent(4) << "const MachineInstr &SecondMI) {\n";
+    OS.indent(4) << "const MachineInstr &SecondMI, const SDep *Dep) {\n";
+    OS.indent(2) << "if (isNonDataDep(Dep))\n";
+    OS.indent(4) << "return false;\n";
     OS.indent(2)
         << "[[maybe_unused]] auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
