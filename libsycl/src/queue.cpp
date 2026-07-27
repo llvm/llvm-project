@@ -51,12 +51,12 @@ event queue::getLastEvent() {
   return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
 }
 
-void queue::setKernelParameters(const std::vector<event> &Events) {
-  return impl->setKernelParameters(detail::getSyclObjImpls(Events));
+void queue::setKernelDependencies(const std::vector<event> &Events) {
+  return impl->setKernelDependencies(detail::getSyclObjImpls(Events));
 }
 
-void queue::setKernelParameters(const detail::UnifiedRangeView &Range) {
-  return impl->setKernelParameters(Range);
+void queue::setKernelRange(const detail::UnifiedRangeView &Range) {
+  return impl->setKernelRange(Range);
 }
 
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,

@@ -27,15 +27,14 @@ void handler::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
   std::memcpy(MArgData.data(), ArgData, ArgSize);
   MCGF = [this, &KernelInfo]() {
     auto EventsImpl = detail::getSyclObjImpls(MDepEvents);
-    MQueue.setKernelParameters(std::move(EventsImpl));
-    // Range is set directly from parallel_for via range_view.
+    MQueue.setKernelDependencies(std::move(EventsImpl));
     MQueue.submitKernelImpl(KernelInfo, MArgData.data(), MArgData.size());
     return MQueue.getLastEvent();
   };
 }
 
-void handler::setKernelParameters(const detail::UnifiedRangeView &Range) {
-  MQueue.setKernelParameters(Range);
+void handler::setKernelRange(const detail::UnifiedRangeView &Range) {
+  MQueue.setKernelRange(Range);
 }
 
 void handler::memcpy(void *dest, const void *src, std::size_t numBytes) {

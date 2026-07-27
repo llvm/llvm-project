@@ -128,19 +128,12 @@ static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
   }
 }
 
-void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events) {
+void QueueImpl::setKernelDependencies(std::vector<EventImplPtr> &&Events) {
   checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
-
-  // It is done at the beginning of a new submission to ensure that we can still
-  // submit a kernel properly if the previous submission throws.
-  MCurrentSubmitInfo.DepEvents.clear();
-  MCurrentSubmitInfo.Range = {};
-
   MCurrentSubmitInfo.DepEvents = std::move(Events);
 }
 
-void QueueImpl::setKernelParameters(const detail::UnifiedRangeView &Range) {
-  MCurrentSubmitInfo.Range = {};
+void QueueImpl::setKernelRange(const detail::UnifiedRangeView &Range) {
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
@@ -161,11 +154,15 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
-  if (isFailed(Result))
+
+  MCurrentSubmitInfo.Range = {};
+  if (isFailed(Result)) {
+    MCurrentSubmitInfo.DepEvents = {};
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
+  }
 
   MCurrentSubmitInfo.LastEvent =
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));

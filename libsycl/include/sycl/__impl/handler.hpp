@@ -92,7 +92,7 @@ private:
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>
   void parallelForImpl(Range<Dims> numWorkItems, Rest &&...rest) {
-    setKernelParameters(numWorkItems);
+    setKernelRange(numWorkItems);
 
     detail::KernelSubmissionBase<handler>::template parallelForImpl<KernelName>(
         numWorkItems, std::forward<Rest>(rest)...);
@@ -103,7 +103,7 @@ private:
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
                         size_t ArgSize);
 
-  void setKernelParameters(const detail::UnifiedRangeView &Range);
+  void setKernelRange(const detail::UnifiedRangeView &Range);
 
   // Queue, this handler is attached to.
   sycl::detail::QueueImpl &MQueue;

@@ -80,8 +80,8 @@ public:
   void throwAsynchronous();
 
   /// Enqueues a kernel to liboffload.
-  /// Kernel parameters like dependencies and range must be passed in advance by
-  /// calling setKernelParameters.
+  /// Kernel dependencies and range must be passed in advance by calling
+  /// setKernelDependencies and setKernelRange.
   /// \param KernelInfo a kernel info that is uniform between different
   /// submissions of the same kernel.
   /// \param ArgData a pointer to kernel argument.
@@ -97,15 +97,15 @@ public:
     return MCurrentSubmitInfo.LastEvent;
   }
 
-  /// Sets event dependencies for the next submitKernelImpl call.
+  /// Sets event dependencies to be used in the next submitKernelImpl call.
   /// Must be called prior to a submitKernelImpl call.
   /// \param Events a collection of events that the kernel depends on.
-  void setKernelParameters(std::vector<EventImplPtr> &&Events);
+  void setKernelDependencies(std::vector<EventImplPtr> &&Events);
 
-  /// Sets the execution range for the next submitKernelImpl call.
+  /// Sets execution range to be used in the next submitKernelImpl call.
   /// Must be called prior to a submitKernelImpl call.
   /// \param Range a unified range view of the execution range.
-  void setKernelParameters(const detail::UnifiedRangeView &Range);
+  void setKernelRange(const detail::UnifiedRangeView &Range);
 
   /// \return the async_handler associated with this queue.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }

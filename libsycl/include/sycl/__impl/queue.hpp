@@ -249,7 +249,8 @@ public:
                                           void()>::value,
         "Invalid kernel function signature.");
 
-    setKernelParameters(depEvents);
+    setKernelDependencies(depEvents);
+    setKernelRange({});
     using NameT =
         typename detail::get_kernel_name_t<KernelName, KernelType>::name;
     submitSingleTask<NameT, KernelType>(kernelFunc);
@@ -475,8 +476,8 @@ private:
             typename... Rest>
   event parallelForImpl(Range<Dims> numWorkItems,
                         const std::vector<event> &depEvents, Rest &&...rest) {
-    setKernelParameters(depEvents);
-    setKernelParameters(numWorkItems);
+    setKernelDependencies(depEvents);
+    setKernelRange(numWorkItems);
 
     detail::KernelSubmissionBase<queue>::template parallelForImpl<KernelName>(
         numWorkItems, std::forward<Rest>(rest)...);
@@ -492,11 +493,11 @@ private:
   /// Passes kernel dependency events to the runtime.
   /// \param Events a collection of events representing dependencies of the
   /// kernel to submit.
-  void setKernelParameters(const std::vector<event> &Events);
+  void setKernelDependencies(const std::vector<event> &Events);
 
   /// Passes kernel execution range to the runtime.
   /// \param Range a unified view of the kernel execution range.
-  void setKernelParameters(const detail::UnifiedRangeView &Range);
+  void setKernelRange(const detail::UnifiedRangeView &Range);
 
   /// Passes kernel arguments to runtime.
   /// \param KernelInfo the information for the kernel being invoked.

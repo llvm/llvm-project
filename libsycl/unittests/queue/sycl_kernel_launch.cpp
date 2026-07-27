@@ -21,7 +21,8 @@ using namespace ::testing;
 
 class sycl::detail::MockQueue : public sycl::queue {
 public:
-  using sycl::queue::setKernelParameters;
+  using sycl::queue::setKernelDependencies;
+  using sycl::queue::setKernelRange;
   using sycl::queue::sycl_kernel_launch;
 };
 
@@ -97,7 +98,7 @@ static ol_kernel_launch_size_args_t captureKernelLaunchArgs(
 struct DimSwapParam {
   // Name used by the test runner to identify the case.
   const char *Description;
-  // Calls setKernelParameters on Q with the appropriate range.
+  // Calls kernel dependency/range setup on Q with the appropriate range.
   std::function<void(sycl::detail::MockQueue &)> SetParams;
   // Expected fields of ol_kernel_launch_size_args_t after the swap.
   uint32_t ExpDims;
@@ -132,8 +133,8 @@ INSTANTIATE_TEST_SUITE_P(
                      [](sycl::detail::MockQueue &Q) {
                        sycl::nd_range<1> NDR(sycl::range<1>{8},
                                              sycl::range<1>{2});
-                       Q.setKernelParameters(std::vector<sycl::event>{});
-                       Q.setKernelParameters(NDR);
+                       Q.setKernelDependencies(std::vector<sycl::event>{});
+                       Q.setKernelRange(NDR);
                      },
                      /*Dims=*/1, /*NG=*/4, 1, 1, /*GS=*/2, 1, 1},
         // 2D nd_range: swap [0]<->[1].
@@ -142,8 +143,8 @@ INSTANTIATE_TEST_SUITE_P(
                      [](sycl::detail::MockQueue &Q) {
                        sycl::nd_range<2> NDR(sycl::range<2>{4, 6},
                                              sycl::range<2>{2, 3});
-                       Q.setKernelParameters(std::vector<sycl::event>{});
-                       Q.setKernelParameters(NDR);
+                       Q.setKernelDependencies(std::vector<sycl::event>{});
+                       Q.setKernelRange(NDR);
                      },
                      /*Dims=*/2, /*NG=*/2, 2, 1, /*GS=*/3, 2, 1},
         // 3D nd_range: swap [0]<->[2].
@@ -153,8 +154,8 @@ INSTANTIATE_TEST_SUITE_P(
                      [](sycl::detail::MockQueue &Q) {
                        sycl::nd_range<3> NDR(sycl::range<3>{2, 4, 6},
                                              sycl::range<3>{1, 2, 3});
-                       Q.setKernelParameters(std::vector<sycl::event>{});
-                       Q.setKernelParameters(NDR);
+                       Q.setKernelDependencies(std::vector<sycl::event>{});
+                       Q.setKernelRange(NDR);
                      },
                      /*Dims=*/3, /*NG=*/2, 2, 2, /*GS=*/3, 2, 1},
         // 2D range (no local): swap [0]<->[1], GroupSize stays {1,1,1}.
@@ -162,8 +163,8 @@ INSTANTIATE_TEST_SUITE_P(
         DimSwapParam{"2D_Range",
                      [](sycl::detail::MockQueue &Q) {
                        sycl::range<2> R(4, 6);
-                       Q.setKernelParameters(std::vector<sycl::event>{});
-                       Q.setKernelParameters(R);
+                       Q.setKernelDependencies(std::vector<sycl::event>{});
+                       Q.setKernelRange(R);
                      },
                      /*Dims=*/2, /*NG=*/6, 4, 1, /*GS=*/1, 1, 1}),
     [](const ::testing::TestParamInfo<DimSwapParam> &Info) {
