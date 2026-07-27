@@ -111,6 +111,82 @@ define float @test_convert_float4e2m1fn_to_f32(i4 %bits) {
   ret float %fp
 }
 
+define double @test_convert_float4e2m1fn_to_f64(i4 %bits) {
+; CHECK-LABEL: define nofpclass(nan inf sub) double @test_convert_float4e2m1fn_to_f64(
+; CHECK-SAME: i4 [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call nofpclass(nan inf sub) double @llvm.convert.from.arbitrary.fp.f64.i4(i4 [[BITS]], metadata !"Float4E2M1FN") #[[ATTR2]]
+; CHECK-NEXT:    ret double [[FP]]
+;
+  %fp = call double @llvm.convert.from.arbitrary.fp.f64.i4(i4 %bits, metadata !"Float4E2M1FN")
+  ret double %fp
+}
+
+define half @test_convert_float8e4m3fn_to_f16(i8 %bits) {
+; CHECK-LABEL: define nofpclass(inf sub) half @test_convert_float8e4m3fn_to_f16(
+; CHECK-SAME: i8 [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call nofpclass(inf sub) half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[BITS]], metadata !"Float8E4M3FN") #[[ATTR2]]
+; CHECK-NEXT:    ret half [[FP]]
+;
+  %fp = call half @llvm.convert.from.arbitrary.fp.f16.i8(i8 %bits, metadata !"Float8E4M3FN")
+  ret half %fp
+}
+
+define half @test_convert_float6e2m3fn_to_f16(i6 %bits) {
+; CHECK-LABEL: define nofpclass(nan inf sub) half @test_convert_float6e2m3fn_to_f16(
+; CHECK-SAME: i6 [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call nofpclass(nan inf sub) half @llvm.convert.from.arbitrary.fp.f16.i6(i6 [[BITS]], metadata !"Float6E2M3FN") #[[ATTR2]]
+; CHECK-NEXT:    ret half [[FP]]
+;
+  %fp = call half @llvm.convert.from.arbitrary.fp.f16.i6(i6 %bits, metadata !"Float6E2M3FN")
+  ret half %fp
+}
+
+define <4 x half> @test_convert_float8e5m2_to_v4f16(<4 x i8> %bits) {
+; CHECK-LABEL: define <4 x half> @test_convert_float8e5m2_to_v4f16(
+; CHECK-SAME: <4 x i8> [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call <4 x half> @llvm.convert.from.arbitrary.fp.v4f16.v4i8(<4 x i8> [[BITS]], metadata !"Float8E5M2") #[[ATTR2]]
+; CHECK-NEXT:    ret <4 x half> [[FP]]
+;
+  %fp = call <4 x half> @llvm.convert.from.arbitrary.fp.v4f16.v4i8(<4 x i8> %bits, metadata !"Float8E5M2")
+  ret <4 x half> %fp
+}
+
+define <4 x double> @test_convert_float4e2m1fn_to_v4f64(<4 x i4> %bits) {
+; CHECK-LABEL: define nofpclass(nan inf sub) <4 x double> @test_convert_float4e2m1fn_to_v4f64(
+; CHECK-SAME: <4 x i4> [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call nofpclass(nan inf sub) <4 x double> @llvm.convert.from.arbitrary.fp.v4f64.v4i4(<4 x i4> [[BITS]], metadata !"Float4E2M1FN") #[[ATTR2]]
+; CHECK-NEXT:    ret <4 x double> [[FP]]
+;
+  %fp = call <4 x double> @llvm.convert.from.arbitrary.fp.v4f64.v4i4(<4 x i4> %bits, metadata !"Float4E2M1FN")
+  ret <4 x double> %fp
+}
+
+define <4 x double> @test_convert_float6e3m2fn_to_v4f64(<4 x i6> %bits) {
+; CHECK-LABEL: define nofpclass(nan inf sub) <4 x double> @test_convert_float6e3m2fn_to_v4f64(
+; CHECK-SAME: <4 x i6> [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call nofpclass(nan inf sub) <4 x double> @llvm.convert.from.arbitrary.fp.v4f64.v4i6(<4 x i6> [[BITS]], metadata !"Float6E3M2FN") #[[ATTR2]]
+; CHECK-NEXT:    ret <4 x double> [[FP]]
+;
+  %fp = call <4 x double> @llvm.convert.from.arbitrary.fp.v4f64.v4i6(<4 x i6> %bits, metadata !"Float6E3M2FN")
+  ret <4 x double> %fp
+}
+
+define half @test_convert_float8e8m0fnu_to_f16(i8 %bits) {
+; CHECK-LABEL: define half @test_convert_float8e8m0fnu_to_f16(
+; CHECK-SAME: i8 [[BITS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FP:%.*]] = call half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[BITS]], metadata !"Float8E8M0FNU") #[[ATTR2]]
+; CHECK-NEXT:    ret half [[FP]]
+;
+  %fp = call half @llvm.convert.from.arbitrary.fp.f16.i8(i8 %bits, metadata !"Float8E8M0FNU")
+  ret half %fp
+}
+
 declare float @llvm.convert.from.arbitrary.fp.f32.i4(i4, metadata)
 declare float @llvm.convert.from.arbitrary.fp.f32.i6(i6, metadata)
 declare float @llvm.convert.from.arbitrary.fp.f32.i8(i8, metadata)
+declare double @llvm.convert.from.arbitrary.fp.f64.i4(i4, metadata)
+declare half @llvm.convert.from.arbitrary.fp.f16.i8(i8, metadata)
+declare half @llvm.convert.from.arbitrary.fp.f16.i6(i6, metadata)
+declare <4 x double> @llvm.convert.from.arbitrary.fp.v4f64.v4i4(<4 x i4>, metadata)
+declare <4 x half> @llvm.convert.from.arbitrary.fp.v4f16.v4i8(<4 x i8>, metadata)
+declare <4 x double> @llvm.convert.from.arbitrary.fp.v4f64.v4i6(<4 x i6>, metadata)
