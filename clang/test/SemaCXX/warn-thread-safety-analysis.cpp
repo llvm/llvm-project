@@ -1977,6 +1977,7 @@ namespace TryLockTest {
 
 struct TestTryLock {
   Mutex mu;
+  Mutex mu2;
   int a GUARDED_BY(mu);
   bool cond;
 
@@ -2028,6 +2029,59 @@ struct TestTryLock {
       a = 3;
       mu.Unlock();
     }
+  }
+
+  void foo3_double_branch() {
+    bool failed = !mu.TryLock();
+    if (failed)
+      cond = true;  // does not return; rejoins the success path
+    if (failed)     // paths re-diverge consistently here, so no warning at
+      return;       // the preceding join
+    a = 3;
+    mu.Unlock();
+  }
+
+  // Mimic the logic of the previous test, but in a statement expression.
+  // This pattern is typically found in macros.
+  void foo3_double_branch_statement_expression() {
+    if (({ bool failed = !mu.TryLock(); if (failed) cond = true; failed; }))
+      return;
+    a = 3;
+    mu.Unlock();
+  }
+
+  void foo3_no_rebranch_at_join() {
+    bool failed = !mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (failed)
+      cond = true;
+    // Lock state genuinely differs at this join: nothing re-branches on
+    // 'failed' here, so the warning must be retained.
+    a = 3;          // expected-warning {{mutex 'mu' is not held on every path through here}} \
+                    // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock();    // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  void foo3_rebranch_after_reassign() {
+    bool failed = !mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (failed)
+      cond = true;
+    failed = true;  // expected-warning {{mutex 'mu' is not held on every path through here}}
+    if (failed)     // no longer the try-lock result: the join above must warn
+      return;
+    a = 3;          // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock();    // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  void foo3_rebranch_other_mutex_still_warns() {
+    bool failed = !mu.TryLock();
+    if (failed)
+      mu2.Lock();   // expected-note {{mutex acquired here}}
+    // The re-branch on 'failed' only suppresses the warning for 'mu', the
+    // capability the try-lock acquires; 'mu2' must still warn at the join.
+    if (failed)     // expected-warning {{mutex 'mu2' is not held on every path through here}}
+      return;
+    a = 3;
+    mu.Unlock();
   }
 
   void foo4() {
