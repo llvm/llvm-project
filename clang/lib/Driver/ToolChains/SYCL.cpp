@@ -219,10 +219,6 @@ SYCLToolChain::getDeviceLibs(
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return {};
-  // -nolibsycl suppresses all SYCL library injection including device libs.
-  if (DriverArgs.hasArg(options::OPT_nolibsycl))
-    return {};
-
   // compiler-rt always installs the spirv64 .bc file under lib/<triple>/
   // regardless of LLVM_ENABLE_PER_TARGET_RUNTIME_DIR, so only check that path.
   SmallString<128> BCPath(getDriver().ResourceDir);
