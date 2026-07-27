@@ -649,6 +649,10 @@ struct VPlanTransforms {
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
+
+  /// Wrap recipes in \p Plan into expression recipes that can help
+  /// cost/register pressure estimation.
+  static void prepareForCostModel(VPlan &Plan);
 };
 
 } // namespace llvm
