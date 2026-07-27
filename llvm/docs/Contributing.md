@@ -55,9 +55,15 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
 
 ```{note}
-It's ok for a patch to contain multiple commits; we use the 'Squash and Merge'
-button on GitHub when merging PRs, i.e. all commits will be combined into a
-single one by GitHub at merge time.
+When a PR is accepted and submitted into mainline, all changes from the PR are combined into a single commit using GitHub's "Squash and Merge" button. (We don't use merge commits on LLVM's mainline.) Because of that policy, the series of commits inside a PR branch does not make it into the "permanent record", and is thus not of critical importance.
+
+However, in order to make it easy for reviewers to understand the changes being made during the course of a PR review, it is recommended to follow these guidelines:
+
+- When opening a new PR, prefer to have a single (or small number) of commits on your branch, up-to-date with the upstream `origin/main` branch, and without merges. (This might involve rebasing your local branch prior to creating a PR.)
+
+- Once a PR has been sent for review, prefer to not rebase or modify existing commits already seen by reviewers. Any changes in response to review commits should be added as a new commit on top of the existing ones. If the PR is blocked by merge-conflicts, you should generally resolve the issue by merging main into your PR branch as a separate commit, rather than by rebasing.
+
+Also, be aware that the PR's description/first-comment will be used as the commit message of the final squashed commit. Make sure the PR description contains the message you wish to use, does not contain anything extraneous, and that you update it if the PR evolves during the review. Note: while GitHub copies commit messages into the PR description when initially creating a PR, subsequent messages are ignored; updates must be made directly to the PR description.
 ```
 
 (format patches)=
