@@ -18,6 +18,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -29,14 +31,11 @@ static void emitGPUKindEnum(raw_ostream &OS, StringRef Name) {
     OS << ((C == '-') ? '_' : toUpper(C));
 }
 
-/// Derive the Triple::SubArchType for a canonical GPU record.
-static void emitSubArch(raw_ostream &OS, const Record *Rec) {
-  if (Rec->getValueAsBit("IsPseudoTarget")) {
-    OS << "Triple::NoSubArch";
-    return;
-  }
-
-  StringRef Suffix = Rec->getValueAsString("Name");
+// Derive the Triple::SubArchType from a "gfx..." GPU name, e.g. "gfx90a" ->
+// Triple::AMDGPUSubArch90A, "gfx9-generic" -> Triple::AMDGPUSubArch9 (the
+// family major). The name must be a real hardware GPU (not a pseudo target).
+static void emitSubArchForName(raw_ostream &OS, StringRef Name) {
+  StringRef Suffix = Name;
   Suffix.consume_front("gfx");
   Suffix.consume_back("-generic");
 
@@ -45,15 +44,33 @@ static void emitSubArch(raw_ostream &OS, const Record *Rec) {
     OS << ((C == '-') ? '_' : toUpper(C));
 }
 
-/// The gfx family for a canonical GPU record: the "-generic" family prefix
-/// (e.g.  "gfx9-4-generic" -> "gfx9"), or the name with its last two chars
-/// dropped for a concrete GPU (e.g. "gfx90a" -> "gfx9", "gfx1030" ->
-/// "gfx10"). Empty for a pseudo target.
+// Derive the Triple::SubArchType for a canonical GPU record. A pseudo target
+// represents no hardware and maps to Triple::NoSubArch; otherwise the subarch
+// is derived from the name.
+static void emitSubArch(raw_ostream &OS, const Record *Rec) {
+  if (Rec->getValueAsBit("IsPseudoTarget")) {
+    OS << "Triple::NoSubArch";
+    return;
+  }
+  emitSubArchForName(OS, Rec->getValueAsString("Name"));
+}
+
+// A canonical GPU record is a "gfxN-generic" family target if it covers a set
+// of concrete GPUs (via CoveredGPUs) rather than being a single piece of
+// hardware.
+static bool isGenericTarget(const Record *Rec) {
+  return !Rec->getValueAsListOfDefs("CoveredGPUs").empty();
+}
+
+// The gfx family for a canonical GPU record: the "-generic" family prefix (e.g.
+// "gfx9-4-generic" -> "gfx9"), or the name with its last two chars dropped for
+// a concrete GPU (e.g. "gfx90a" -> "gfx9", "gfx1030" -> "gfx10"). Empty for a
+// pseudo target.
 static StringRef getArchFamily(const Record *Rec) {
   if (Rec->getValueAsBit("IsPseudoTarget"))
     return "";
   StringRef Name = Rec->getValueAsString("Name");
-  if (Name.ends_with("-generic"))
+  if (isGenericTarget(Rec))
     return Name.take_front(Name.find('-'));
   return Name.drop_back(2);
 }
@@ -72,13 +89,6 @@ static void emitIsaVersion(raw_ostream &OS, const Record *Rec, char Open,
   }
 
   OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
-}
-
-// A canonical GPU record is a "gfxN-generic" family target if it covers a set
-// of concrete GPUs (via CoveredGPUs) rather than being a single piece of
-// hardware.
-static bool isGenericTarget(const Record *Rec) {
-  return !Rec->getValueAsListOfDefs("CoveredGPUs").empty();
 }
 
 // A canonical GPU or a ProcessorAlias.
@@ -301,6 +311,61 @@ static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK) {
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
 }
 
+// Emit the subarch -> major-family-subarch overrides; a subarch not listed here
+// is its own major subarch. Each entry maps a member GPU's own subarch to its
+// family's major subarch, from one of two sources: a "gfxN-generic" target,
+// whose subarch is the major for every GPU it lists in CoveredGPUs, or an
+// AMDGPUFamily's MajorSubArch for the gfx6/gfx7/gfx8 families that have no
+// generic target.
+static void emitAMDGPUMajorSubArch(raw_ostream &OS, const RecordKeeper &RK) {
+  ArrayRef<const Record *> GPUs =
+      RK.getAllDerivedDefinitionsIfDefined("AMDGPUGPUInfo");
+  ArrayRef<const Record *> Families =
+      RK.getAllDerivedDefinitionsIfDefined("AMDGPUFamily");
+
+  // The overrides come from generic targets' CoveredGPUs and AMDGPUFamily
+  // members. std::array makes the R600 case (zero entries) well-formed.
+  size_t NumEntries = 0;
+  for (const Record *G : GPUs)
+    NumEntries += G->getValueAsListOfDefs("CoveredGPUs").size();
+  for (const Record *F : Families)
+    NumEntries += F->getValueAsListOfDefs("Members").size();
+
+  OS << "#ifdef GET_AMDGPU_MAJOR_SUBARCH\n"
+        "#undef GET_AMDGPU_MAJOR_SUBARCH\n"
+        "struct AMDGPUMajorSubArchEntry {\n"
+        "  Triple::SubArchType SubArch;\n"
+        "  Triple::SubArchType Major;\n"
+        "};\n"
+        "static constexpr std::array<AMDGPUMajorSubArchEntry, "
+     << NumEntries << "> AMDGPUMajorSubArch = {{\n";
+
+  // A "gfxN-generic" target's subarch is the major for every GPU it covers.
+  for (const Record *G : GPUs) {
+    for (const Record *Member : G->getValueAsListOfDefs("CoveredGPUs")) {
+      OS << "  {";
+      emitSubArchForName(OS, Member->getValueAsString("Name"));
+      OS << ", ";
+      emitSubArch(OS, G);
+      OS << "},\n";
+    }
+  }
+
+  // The gfx6/gfx7/gfx8 families have no generic target, so their major comes
+  // from AMDGPUFamily::MajorSubArch.
+  for (const Record *F : Families) {
+    StringRef Major = F->getValueAsString("MajorSubArch");
+    for (const Record *Member : F->getValueAsListOfDefs("Members")) {
+      OS << "  {";
+      emitSubArchForName(OS, Member->getValueAsString("Name"));
+      OS << ", Triple::AMDGPUSubArch" << Major << "},\n";
+    }
+  }
+
+  OS << "}};\n"
+        "#endif // GET_AMDGPU_MAJOR_SUBARCH\n\n";
+}
+
 static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "// Autogenerated by AMDGPUTargetDefEmitter.cpp\n\n";
   // R600 processors are Processor records; AMDGPU processors are
@@ -310,6 +375,7 @@ static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   emitR600(OS, RK);
   emitAMDGPU(OS, RK);
   emitAMDGPUTable(OS, RK);
+  emitAMDGPUMajorSubArch(OS, RK);
 }
 
 static TableGen::Emitter::Opt X("gen-amdgpu-target-def", emitAMDGPUTargetDef,

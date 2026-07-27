@@ -24,6 +24,9 @@ using namespace llvm;
 using namespace AMDGPU;
 
 namespace {
+constexpr unsigned NumAMDGPUSubArches =
+    Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch + 1;
+
 // Per-GPU data for the AMDGCN GPUKinds, from the generated table below.
 struct GPUInfo {
   StringRef Name;
@@ -34,6 +37,7 @@ struct GPUInfo {
 };
 
 #define GET_AMDGPU_GPU_TABLE
+#define GET_AMDGPU_MAJOR_SUBARCH
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 
 // Look up the GPUInfo row for an AMDGCN GPUKind, or nullptr for GK_NONE / a
@@ -49,8 +53,6 @@ const GPUInfo *getAMDGPUInfo(GPUKind AK) {
 
 // Reverse map: SubArch -> GPUKind, indexed by (SubArch - FirstAMDGPUSubArch).
 // Subarches with no GPU (incl. the NoSubArch pseudo targets) map to GK_NONE.
-constexpr unsigned NumAMDGPUSubArches =
-    Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch + 1;
 constexpr std::array<GPUKind, NumAMDGPUSubArches> AMDGPUSubArchToGPUKind = [] {
   std::array<GPUKind, NumAMDGPUSubArches> Map{};
 
@@ -63,6 +65,21 @@ constexpr std::array<GPUKind, NumAMDGPUSubArches> AMDGPUSubArchToGPUKind = [] {
   }
   return Map;
 }();
+
+/// SubArch -> major-family, indexed by (SubArch - FirstAMDGPUSubArch).
+constexpr std::array<Triple::SubArchType, NumAMDGPUSubArches>
+    AMDGPUMajorFamilies = [] {
+      std::array<Triple::SubArchType, NumAMDGPUSubArches> Map{};
+
+      for (unsigned I = 0; I < NumAMDGPUSubArches; ++I) {
+        Map[I] =
+            static_cast<Triple::SubArchType>(Triple::FirstAMDGPUSubArch + I);
+      }
+
+      for (const AMDGPUMajorSubArchEntry &Entry : AMDGPUMajorSubArch)
+        Map[Entry.SubArch - Triple::FirstAMDGPUSubArch] = Entry.Major;
+      return Map;
+    }();
 } // namespace
 
 StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
@@ -82,59 +99,6 @@ llvm::AMDGPU::getGPUKindFromSubArch(Triple::SubArchType SubArch) {
     return GK_NONE;
   return AMDGPUSubArchToGPUKind[SubArch - Triple::FirstAMDGPUSubArch];
 }
-
-static const Triple::SubArchType
-    AMDGPUMajorFamilies[Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch +
-                        1] = {
-        Triple::AMDGPUSubArch6,    Triple::AMDGPUSubArch6,
-        Triple::AMDGPUSubArch6,    Triple::AMDGPUSubArch6,
-
-        Triple::AMDGPUSubArch7,    Triple::AMDGPUSubArch7,
-        Triple::AMDGPUSubArch7,    Triple::AMDGPUSubArch7,
-        Triple::AMDGPUSubArch7,    Triple::AMDGPUSubArch7,
-        Triple::AMDGPUSubArch7,
-
-        Triple::AMDGPUSubArch8,    Triple::AMDGPUSubArch8,
-        Triple::AMDGPUSubArch8,    Triple::AMDGPUSubArch8,
-        Triple::AMDGPUSubArch8,
-
-        Triple::AMDGPUSubArch810,
-
-        Triple::AMDGPUSubArch9,    Triple::AMDGPUSubArch9,
-        Triple::AMDGPUSubArch9,    Triple::AMDGPUSubArch9,
-        Triple::AMDGPUSubArch9,    Triple::AMDGPUSubArch9,
-        Triple::AMDGPUSubArch9,
-
-        Triple::AMDGPUSubArch908,  Triple::AMDGPUSubArch90A,
-
-        Triple::AMDGPUSubArch9_4,  Triple::AMDGPUSubArch9_4,
-        Triple::AMDGPUSubArch9_4,
-
-        Triple::AMDGPUSubArch10_1, Triple::AMDGPUSubArch10_1,
-        Triple::AMDGPUSubArch10_1, Triple::AMDGPUSubArch10_1,
-        Triple::AMDGPUSubArch10_1,
-
-        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
-        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
-        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
-        Triple::AMDGPUSubArch10_3, Triple::AMDGPUSubArch10_3,
-
-        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
-        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
-        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
-        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
-        Triple::AMDGPUSubArch11,   Triple::AMDGPUSubArch11,
-
-        Triple::AMDGPUSubArch11_7, Triple::AMDGPUSubArch11_7,
-        Triple::AMDGPUSubArch11_7, Triple::AMDGPUSubArch11_7,
-
-        Triple::AMDGPUSubArch12,   Triple::AMDGPUSubArch12,
-        Triple::AMDGPUSubArch12,
-
-        Triple::AMDGPUSubArch12_5, Triple::AMDGPUSubArch12_5,
-        Triple::AMDGPUSubArch12_5,
-
-        Triple::AMDGPUSubArch13,   Triple::AMDGPUSubArch13};
 
 Triple::SubArchType AMDGPU::getMajorSubArch(Triple::SubArchType X) {
   if (X < Triple::FirstAMDGPUSubArch || X > Triple::LastAMDGPUSubArch)
