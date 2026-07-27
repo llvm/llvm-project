@@ -471,6 +471,22 @@ static LogicalResult checkImplementationStatus(Operation &op) {
               break;
             }
         }
+        // Scan reductions allocate a shared temporary buffer in the alloca
+        // frame of the enclosing parallel region. An orphaned worksharing loop
+        // (e.g. an `omp do` in a subroutine that is called from within a
+        // parallel region) has no such frame in its own function, so the buffer
+        // would be allocated per-thread and produce wrong results.
+        if (!op->template getParentOfType<omp::ParallelOp>())
+          result = todo("inscan reduction on an orphaned worksharing loop "
+                        "(no enclosing parallel region)");
+        // Scan reductions are only implemented for a single loop; a collapsed
+        // (multi-dimensional) loop nest is not yet supported.
+        if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation()))
+          if (auto loopNest = dyn_cast_or_null<omp::LoopNestOp>(
+                  wsloopOp.getWrappedLoop()))
+            if (loopNest.getNumLoops() > 1)
+              result = todo("inscan reduction on a collapsed "
+                            "(multi-dimensional) loop nest");
       }
     }
   };
@@ -4699,9 +4715,16 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
                                            loopInfo->getLatch(), index);
 
+    // Scan reductions need a barrier at the end of the input (first) loop so
+    // that every thread has finished writing the temporary buffer before the
+    // masked prefix-sum reads it. A source-level `nowait` only elides the final
+    // barrier after the scan (second) loop, so force the barrier for the input
+    // loop regardless of `nowait` to avoid a data race.
+    bool needsBarrier =
+        loopNeedsBarrier || (isInScanRegion && inputScanLoop);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
         ompBuilder->applyWorkshareLoop(
-            ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
+            ompLoc.DL, loopInfo, allocaIP, needsBarrier,
             convertToScheduleKind(schedule), chunk, isSimd,
             scheduleMod == omp::ScheduleModifier::monotonic,
             scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,

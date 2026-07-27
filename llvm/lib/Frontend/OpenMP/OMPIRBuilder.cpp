@@ -5350,10 +5350,13 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                        ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Builder.restoreIP(CodeGenIP);
-    Value *AllocSpan =
-        Builder.CreateAdd(ScanRedInfo->Span, Builder.getInt32(1));
+    // Use the loop's own index type (matching `Span`) so the buffer allocation
+    // works for both i32 and i64 (e.g. `integer(kind=8)`) induction variables.
+    Type *IndexTy = ScanRedInfo->Span->getType();
+    Value *AllocSpan = Builder.CreateAdd(ScanRedInfo->Span,
+                                         ConstantInt::get(IndexTy, 1));
     for (size_t i = 0; i < ScanVars.size(); i++) {
-      Type *IntPtrTy = Builder.getInt32Ty();
+      Type *IntPtrTy = IndexTy;
       Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
       Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
       Value *Buff = Builder.CreateMalloc(IntPtrTy, ScanVarsType[i], Allocsize,
@@ -5453,6 +5456,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
                        ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Builder.restoreIP(CodeGenIP);
     Function *CurFn = Builder.GetInsertBlock()->getParent();
+    // Index/counter values that participate in buffer-offset arithmetic must
+    // use the loop's own index type (`Span`'s type) so scan works for both i32
+    // and i64 (e.g. `integer(kind=8)`) induction variables.
+    Type *IndexTy = ScanRedInfo->Span->getType();
     // for (int k = 0; k <= ceil(log2(n)); ++k)
     llvm::BasicBlock *LoopBB =
         BasicBlock::Create(CurFn->getContext(), "omp.outer.log.scan.body");
@@ -5488,10 +5495,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
 
     PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
     // size pow2k = 1;
-    PHINode *Pow2K = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    PHINode *Pow2K = Builder.CreatePHI(IndexTy, 2);
     Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
                          InputBB);
-    Pow2K->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 1),
+    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1),
                        InputBB);
     // for (size i = n - 1; i >= 2 ^ k; --i)
     //   tmp[i] op= tmp[i-pow2k];
@@ -5503,14 +5510,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
     emitBlock(InnerLoopBB, CurFn);
     Builder.SetInsertPoint(InnerLoopBB);
-    PHINode *IVal = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+    PHINode *IVal = Builder.CreatePHI(IndexTy, 2);
     IVal->addIncoming(NMin1, LoopBB);
     for (ReductionInfo RedInfo : ReductionInfos) {
       Value *ReductionVal = RedInfo.PrivateVariable;
       Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ReductionVal];
       Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
       Type *DestTy = RedInfo.ElementType;
-      Value *IV = Builder.CreateAdd(IVal, Builder.getInt32(1));
+      Value *IV = Builder.CreateAdd(IVal, ConstantInt::get(IndexTy, 1));
       Value *LHSPtr =
           Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
       Value *OffsetIval = Builder.CreateNUWSub(IV, Pow2K);
@@ -5526,7 +5533,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
       Builder.CreateStore(Result, LHSPtr);
     }
     llvm::Value *NextIVal = Builder.CreateNUWSub(
-        IVal, llvm::ConstantInt::get(Builder.getInt32Ty(), 1));
+        IVal, llvm::ConstantInt::get(IndexTy, 1));
     IVal->addIncoming(NextIVal, Builder.GetInsertBlock());
     CmpI = Builder.CreateICmpUGE(NextIVal, Pow2K);
     Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
