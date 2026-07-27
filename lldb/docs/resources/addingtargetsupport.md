@@ -431,7 +431,7 @@ directly to userspace.
 :::{note}
 Hardware often has many more features than LLDB makes use of. What we make use
 of is decided by how useful it will be to how many users and how understandable
-it will be presented in the LLDB interface.
+it will be when presented in the LLDB interface.
 :::
 
 ### Accurate Breakpoints and Watchpoints
