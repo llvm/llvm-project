@@ -87,7 +87,7 @@ static Value getMappedVar(Value value) {
 /// Checks if mappedVar is present due to an enclosing acc.data region.
 static bool isMappedInEnclosingAccData(Value mappedVar,
                                        cuf::KernelLaunchOp launch) {
-  if(!mappedVar)
+  if (!mappedVar)
     return false;
   for (auto dataOp = launch->getParentOfType<acc::DataOp>(); dataOp;
        dataOp = dataOp->getParentOfType<acc::DataOp>()) {
