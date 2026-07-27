@@ -11817,13 +11817,14 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(CmpPredicate Pred,
   // LHS u<= RHS if Diff = RHS - LHS does not underflow.
   // Range check: max(LHS) + max(Diff) <= UINT_MAX (i.e. DMax u<= ~LMax).
   // ULT additionally requires Diff != 0.
-  if (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) {
+  if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT)
+    return false;
+  ConstantRange LR = getUnsignedRange(LHS);
+  if (!LR.isFullSet()) {
     SCEVUse Diff = getMinusSCEV(RHS, LHS);
     if (!isa<SCEVCouldNotCompute>(Diff)) {
       ConstantRange DR = getUnsignedRange(Diff);
-      ConstantRange LR = getUnsignedRange(LHS);
-      if (!DR.isFullSet() && !LR.isFullSet() &&
-          DR.getUnsignedMax().ule(~LR.getUnsignedMax())) {
+      if (!DR.isFullSet() && DR.getUnsignedMax().ule(~LR.getUnsignedMax())) {
         if (Pred == CmpInst::ICMP_ULE ||
             DR.getUnsignedMin().ugt(0) /*ULE Diff>0*/)
           return true;
