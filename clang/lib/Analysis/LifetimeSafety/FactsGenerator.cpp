@@ -930,6 +930,8 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
   for (unsigned I = IsInstance;
        I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
     const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
+    if (PVD->isExplicitObjectParameter())
+      continue;
     if (!PVD->getType()->isRValueReferenceType())
       continue;
     // Skip lifetime annotated r-value reference parameters. Lifetime annotation
