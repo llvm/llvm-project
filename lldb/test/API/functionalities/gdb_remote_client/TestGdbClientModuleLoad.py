@@ -63,14 +63,16 @@ class MyResponder(MockGDBServerResponder):
         return "l"
 
     # In the two following functions, we return a PID == PID_MAX_LIMIT so that we do not
-    # use a host program file.
+    # use a host program file. Note that the number is in hex.
+    PID_MAX_LIMIT = "400000"
 
     def qfThreadInfo(self):
-        return "m400000"
+        return f"m{self.PID_MAX_LIMIT}"
 
     def qProcessInfo(self):
-        return "pid:400000;ptrsize:8;endian:little;triple:%s;" % hex_encode_bytes(
-            self._triple
+        return "pid:%s;ptrsize:8;endian:little;triple:%s;" % (
+            self.PID_MAX_LIMIT,
+            hex_encode_bytes(self._triple),
         )
 
     def setBreakpoint(self, packet):
