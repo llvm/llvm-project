@@ -139,29 +139,29 @@ define void @red(ptr %base.0, ptr %base.1, ptr %base.2, ptr %base.3, i64 %end) {
 ; CHECK:  LV(REG): Calculating max register usage:
 ; CHECK:  LV(REG): VF = vscale x 1
 ; CHECK:  LV(REG): Found max usage: 2 item
-; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 7 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK:  LV(REG): VF = vscale x 2
 ; CHECK:  LV(REG): Found max usage: 2 item
-; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 13 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK:  LV(REG): VF = vscale x 4
 ; CHECK:  LV(REG): Found max usage: 2 item
-; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 32 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 26 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK:  LV(REG): VF = vscale x 8
 ; CHECK:  LV(REG): Found max usage: 2 item
-; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
-; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 64 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK:  LV(REG): RegisterClass: RISCV::VRRC, 52 registers
 ; CHECK:  LV(REG): Found invariant usage: 1 item
 ; CHECK:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK:  LV(REG): Cost of 64 from 32 spills of RISCV::VRRC
+; CHECK:  LV(REG): Cost of 40 from 20 spills of RISCV::VRRC
 ;
 entry:
   br label %loop.body
