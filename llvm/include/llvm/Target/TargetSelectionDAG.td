@@ -408,6 +408,9 @@ def fpimm      : SDNode<"ISD::ConstantFP", SDTFPLeaf  , [], "ConstantFPSDNode">;
 def vt         : SDNode<"ISD::VALUETYPE" , SDTOther   , [], "VTSDNode">;
 def bb         : SDNode<"ISD::BasicBlock", SDTOther   , [], "BasicBlockSDNode">;
 def cond       : SDNode<"ISD::CONDCODE"  , SDTOther   , [], "CondCodeSDNode">;
+def poison     : SDNode<"ISD::POISON"    , SDTUNDEF   , []>;
+// `undef` is the ISD::UNDEF node, but in isel patterns it matches
+// either ISD::UNDEF or ISD::POISON
 def undef      : SDNode<"ISD::UNDEF"     , SDTUNDEF   , []>;
 def vscale     : SDNode<"ISD::VSCALE"    , SDTIntUnaryOp, []>;
 def globaladdr : SDNode<"ISD::GlobalAddress",         SDTPtrLeaf, [],
@@ -1023,6 +1026,10 @@ class SDNodeXForm<SDNode opc, code xformFunction> {
 
 // The default transform does not change the matched node.
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
+
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Fragments.
@@ -1911,6 +1918,12 @@ def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminimum node:$lhs, node:$rhs),
                                (fminimum node:$lhs, node:$rhs)]>;
+def any_pseudo_fmax : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmax node:$lhs, node:$rhs),
+                               (pseudo_fmax node:$lhs, node:$rhs)]>;
+def any_pseudo_fmin : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmin node:$lhs, node:$rhs),
+                               (pseudo_fmin node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;

@@ -6499,6 +6499,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     return ExprError();
 
   if (From->containsErrors()) {
+    if (S.Context.hasSameType(From->getType(), T))
+      return From;
+
     // The expression already has errors, so the correct cast kind can't be
     // determined. Use RecoveryExpr to keep the expected type T and mark the
     // result as invalid, preventing further cascading errors.
@@ -7385,7 +7388,16 @@ void Sema::AddOverloadCandidate(
         Function->isFromGlobalModule() &&
         (IsImplicitlyInstantiated || Function->isInlined());
 
-    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF) {
+    // Don't exclude internal-linkage entities from the current TU's global
+    // module fragment.
+    const Module *CurrentModule = getCurrentModule();
+    const bool IsCurrentUnitGMFDecl =
+        Function->isFromGlobalModule() && CurrentModule &&
+        Function->getOwningModule()->getTopLevelModule() ==
+            CurrentModule->getTopLevelModule();
+
+    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF &&
+        !IsCurrentUnitGMFDecl) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;
@@ -12394,9 +12406,8 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
 /// Diagnose a failed template-argument deduction.
 static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  DeductionFailureInfo &DeductionFailure,
-                                 unsigned NumArgs, bool TakingCandidateAddress,
-                                 TemplateSpecCandidateSetKind CandidateSetKind =
-                                     TemplateSpecCandidateSetKind::Normal) {
+                                 unsigned NumArgs,
+                                 bool TakingCandidateAddress) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
   NamedDecl *ParamD;
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
@@ -12643,10 +12654,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           //    name for types, not decls.
           // Ideally, this should folded into the diagnostic printer.
           S.Diag(Templated->getLocation(),
-                 CandidateSetKind ==
-                         TemplateSpecCandidateSetKind::FriendTemplate
-                     ? diag::note_friend_template_non_deduced_mismatch_qualified
-                     : diag::note_ovl_candidate_non_deduced_mismatch_qualified)
+                 diag::note_ovl_candidate_non_deduced_mismatch_qualified)
               << FirstTN.getAsTemplateDecl() << SecondTN.getAsTemplateDecl();
           return;
         }
@@ -12662,9 +12670,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // diagnostic that mentions 'auto' and lambda in addition to
     // (or instead of?) the canonical template type parameters.
     S.Diag(Templated->getLocation(),
-           CandidateSetKind == TemplateSpecCandidateSetKind::FriendTemplate
-               ? diag::note_friend_template_non_deduced_mismatch
-               : diag::note_ovl_candidate_non_deduced_mismatch)
+           diag::note_ovl_candidate_non_deduced_mismatch)
         << FirstTA << SecondTA;
     return;
   }
@@ -13615,12 +13621,10 @@ struct CompareTemplateSpecCandidatesForDisplay {
 /// Diagnose a template argument deduction failure.
 /// We are treating these failures as overload failures due to bad
 /// deductions.
-void TemplateSpecCandidate::NoteDeductionFailure(
-    Sema &S, bool ForTakingAddress,
-    TemplateSpecCandidateSetKind CandidateSetKind) {
+void TemplateSpecCandidate::NoteDeductionFailure(Sema &S,
+                                                 bool ForTakingAddress) {
   DiagnoseBadDeduction(S, FoundDecl, Specialization, // pattern
-                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress,
-                       CandidateSetKind);
+                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress);
 }
 
 void TemplateSpecCandidateSet::destroyCandidates() {
@@ -13672,7 +13676,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
 
     assert(Cand->Specialization &&
            "Non-matching built-in candidates are not added to Cands.");
-    Cand->NoteDeductionFailure(S, ForTakingAddress, CandidateSetKind);
+    Cand->NoteDeductionFailure(S, ForTakingAddress);
   }
 
   if (I != E)
@@ -15226,6 +15230,24 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
   return CheckForImmediateInvocation(CE, CE->getDirectCallee());
 }
 
+void Sema::LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                                   OverloadedOperatorKind Op,
+                                   const UnresolvedSetImpl &Fns,
+                                   ArrayRef<Expr *> Args, bool PerformADL) {
+  assert(Op != OO_None && "Invalid opcode for overloaded unary operator");
+
+  SourceLocation OpLoc = CandidateSet.getLocation();
+  DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
+
+  AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
+  AddMemberOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+  if (PerformADL)
+    AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
+                                         /*ExplicitTemplateArgs*/ nullptr,
+                                         CandidateSet);
+  AddBuiltinOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+}
+
 ExprResult
 Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
                               const UnresolvedSetImpl &Fns,
@@ -15279,22 +15301,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
 
   // Build an empty overload set.
   OverloadCandidateSet CandidateSet(OpLoc, OverloadCandidateSet::CSK_Operator);
-
-  // Add the candidates from the given function set.
-  AddNonMemberOperatorCandidates(Fns, ArgsArray, CandidateSet);
-
-  // Add operator candidates that are member functions.
-  AddMemberOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
-
-  // Add candidates from ADL.
-  if (PerformADL) {
-    AddArgumentDependentLookupCandidates(OpName, OpLoc, ArgsArray,
-                                         /*ExplicitTemplateArgs*/nullptr,
-                                         CandidateSet);
-  }
-
-  // Add builtin operator candidates.
-  AddBuiltinOperatorCandidates(Op, OpLoc, ArgsArray, CandidateSet);
+  LookupOverloadedUnaryOp(CandidateSet, Op, Fns, ArgsArray, PerformADL);
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 

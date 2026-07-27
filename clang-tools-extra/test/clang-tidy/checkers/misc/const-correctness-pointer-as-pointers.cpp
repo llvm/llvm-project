@@ -206,3 +206,16 @@ void ignore_unique_ptr_emplace_sink() {
   std::vector<std::unique_ptr<UniquePtrData>> data;
   data.emplace_back(newdata);
 }
+
+void auto_pointee_to_const() {
+  int a[] = {1, 2};
+  int *p_normal = &a[0];
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'p_normal' of type 'int *' can be declared 'const'
+  // CHECK-FIXES: int  const*p_normal = &a[0];
+  p_normal = &a[1];
+
+  // A bare 'auto' deduces to 'int *'; the pointee 'const' cannot be spelled through 'auto',
+  // so unlike the pointer above it is not diagnosed.
+  auto p_auto = &a[0];
+  p_auto = &a[1];
+}

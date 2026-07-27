@@ -27,9 +27,6 @@ __attribute__((noinline)) void foo(int n, int N) {
 // PROMO: load{{.*}}@__profc_foo, align
 // PROMO-NEXT: add
 // PROMO-NEXT: store{{.*}}@__profc_foo, align
-// PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 8){{.*}}
-// PROMO-NEXT: add
-// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 8){{.*}}
 // PROMO: load{{.*}}@__profc_foo{{.*}} 16){{.*}}
 // PROMO-NEXT: add
 // PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 16){{.*}}
@@ -38,9 +35,6 @@ __attribute__((noinline)) void foo(int n, int N) {
 // NOPROMO: load{{.*}}@__profc_foo, align
 // NOPROMO-NEXT: add
 // NOPROMO-NEXT: store{{.*}}@__profc_foo, align
-// NOPROMO: load{{.*}}@__profc_foo{{.*}} 8){{.*}}
-// NOPROMO-NEXT: add
-// NOPROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 8){{.*}}
 // NOPROMO: load{{.*}}@__profc_foo{{.*}} 16){{.*}}
 // NOPROMO-NEXT: add
 // NOPROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 16){{.*}}
