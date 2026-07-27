@@ -30,7 +30,7 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -175,7 +175,7 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<1>, ir<8>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -688,9 +688,9 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP6]]>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -788,9 +788,9 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<8>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP8]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<8>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP9]]>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -889,7 +889,7 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<%stride1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
@@ -994,7 +994,7 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -1286,9 +1286,9 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%gep.ld0>, ir<1>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld0>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP6]]>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -1386,7 +1386,7 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld.base> = getelementptr ir<%p>, ir<%offset>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%gep.ld.base>, ir<%mul>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -1479,7 +1479,7 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%mul>, ir<%offset>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -1752,7 +1752,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -2011,7 +2011,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -2101,7 +2101,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -2224,7 +2224,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep.ld2> = getelementptr ir<%p2>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.ld2>, ir<1>
@@ -2410,7 +2410,7 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<42>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -2662,7 +2662,7 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -2752,7 +2752,7 @@ define void @trunc_stride(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<4>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -2847,9 +2847,9 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:      EMIT ir<%idx.ext> = mul ir<%iv.ext>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.trunc> = getelementptr ir<%p0>, ir<%idx.trunc>
 ; CHECK-NEXT:      EMIT ir<%gep.ext> = getelementptr ir<%p0>, ir<%idx.ext>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.trunc>, ir<4>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.trunc>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.trunc> = load vp<[[VP6]]>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ext>, ir<4>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.ext>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.ext> = load vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld.trunc>, ir<%ld.ext>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -3126,7 +3126,7 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<8>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
@@ -3211,7 +3211,7 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer ir<%gep.st>, ir<1>
@@ -3307,7 +3307,7 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%val> = mul ir<%ld>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -3399,7 +3399,7 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:      EMIT ir<%iv.times.stride> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%iv.times.stride>, ir<42>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<8>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep.ld>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%val> = mul ir<%ld>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
@@ -3519,7 +3519,7 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:      ir<%iv.0> = WIDEN-INDUCTION ir<1>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      ir<%iv.1> = WIDEN-INDUCTION ir<0>, vp<[[VP3]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv.1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.dst>, ir<4>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<0.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%iv.1.next> = add ir<%iv.1>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT ir<%iv.0.next> = add ir<%iv.0>, ir<1>
