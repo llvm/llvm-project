@@ -1151,7 +1151,7 @@ else ()
       # For spirv64, produce a combined bitcode file alongside the static archive.
       # -mlink-builtin-bitcode expects raw LLVM IR and cannot unpack a static archive,
       # so we use llvm-link to merge the archive members into a single .bc file.
-      if("${arch}" STREQUAL "spirv64")
+      if("${arch}" MATCHES "^spirv64")
         find_program(LLVM_LINK llvm-link
           PATHS ${LLVM_TOOLS_BINARY_DIR}
           NO_DEFAULT_PATH)
@@ -1162,7 +1162,7 @@ else ()
             COMMAND "${LLVM_LINK}"
                     "$<TARGET_FILE:clang_rt.builtins-spirv64>"
                     -o "${SPIRV64_BC_OUTPUT}"
-            DEPENDS clang_rt.builtins-spirv64
+            DEPENDS clang_rt.builtins-${arch}
             COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc"
             VERBATIM)
           add_custom_target(clang_rt.builtins-spirv64-bc ALL

@@ -223,6 +223,8 @@ SYCLToolChain::getDeviceLibs(
   if (DriverArgs.hasArg(options::OPT_nolibsycl))
     return {};
 
+  // compiler-rt always installs the spirv64 .bc file under lib/<triple>/
+  // regardless of LLVM_ENABLE_PER_TARGET_RUNTIME_DIR, so only check that path.
   SmallString<128> BCPath(getDriver().ResourceDir);
   llvm::sys::path::append(BCPath, "lib", getTriple().str(),
                           "libclang_rt.builtins.bc");
