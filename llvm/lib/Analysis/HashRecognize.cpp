@@ -84,7 +84,9 @@ static bool containsUnreachable(const Loop &L,
   SmallVector<const Instruction *, 16> Worklist(Roots);
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
-    Visited.insert(I);
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     if (isa<PHINode>(I))
       continue;
@@ -234,9 +236,13 @@ BinaryOperator *
 RecurrenceInfo::digRecurrence(Instruction *V,
                               Instruction::BinaryOps BOWithConstOpToMatch) {
   SmallVector<Instruction *> Worklist;
+  SmallPtrSet<Instruction *, 16> Visited;
   Worklist.push_back(V);
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))
@@ -458,6 +464,7 @@ HashRecognize::genBarrettConstants(const PolynomialInfo &Info) {
 static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
                                      const PHINode *P2, const Loop &L) {
   SmallVector<const Instruction *> Worklist;
+  SmallPtrSet<const Instruction *, 16> Visited;
 
   // matchConditionalRecurrence has already ensured that the SelectInst's
   // condition is an Instruction.
@@ -465,6 +472,9 @@ static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
 
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))

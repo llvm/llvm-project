@@ -7,7 +7,7 @@
 # That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
 # their results to be compared.
 
-name: Benchmark libc++ PR
+name: "[libc++] Benchmark PR"
 
 permissions:
   contents: read
@@ -92,13 +92,12 @@ jobs:
           - platform: macOS 26.5 arm64
             runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
             cxx: clang++
-            install-python: false
-            install-macos-dependencies: true
+            running-on: macos
+            xcode-version: '26.5'
           - platform: Linux x86_64
             runner: llvm-premerge-libcxx-runners
             cxx: clang++-22
-            install-python: true
-            install-macos-dependencies: false
+            running-on: linux
       fail-fast: false
     permissions:
       pull-requests: write
@@ -120,15 +119,28 @@ jobs:
           fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
 
       - name: Install Python
-        if: ${{ matrix.install-python }}
+        if: ${{ matrix.running-on == 'linux' }} # installed via Homebrew on macOS
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14'
 
-      - name: Install Ninja and CMake
-        if: ${{ matrix.install-macos-dependencies }}
+      - name: Select Xcode
+        if: ${{ matrix.running-on == 'macos' }}
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
+
+      - name: Install dependencies via Homebrew
+        if: ${{ matrix.running-on == 'macos' }}
         run: |
-          brew install ninja cmake
+          brew update
+          brew install ninja cmake python@3.14
+          echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          "${COMPILER}" --version
+          python3 --version
 
       - name: Setup virtual environment
         run: |

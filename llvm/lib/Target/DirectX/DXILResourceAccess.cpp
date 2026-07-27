@@ -290,8 +290,9 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
   Value *Offset =
       traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
 
-  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
-  // entirely into the index.
+  // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
+  // into the index and mark the coord1 arg as poison — only StructuredBuffer
+  // atomics use both a struct index and a byte offset.
   if (!RTI.isStruct()) {
     auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
     if (!ConstantOffset || !ConstantOffset->isZero())
