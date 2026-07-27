@@ -1,0 +1,126 @@
+# REQUIRES: system-linux, x86-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/perfdata-redirect.exe
+# RUN: touch %t/perf.data
+# RUN: chmod +x %t/mock-perf %t/mock-perf-fail
+# RUN: llvm-profgen --binary=%t/perfdata-redirect.exe \
+# RUN:   --perfdata=%t/perf.data --perf-binary=%t/mock-perf \
+# RUN:   --skip-symbolization --use-offset=0 --format=text --output=%t/profile
+# RUN: FileCheck %s --check-prefix=PROFILE --input-file=%t/profile
+# RUN: not llvm-profgen --binary=%t/perfdata-redirect.exe \
+# RUN:   --perfdata=%t/perf.data --perf-binary=%t/mock-perf-fail \
+# RUN:   --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SECOND-ERROR
+
+## The first mock invocation deliberately writes the complete second output plus a
+## duplicate sample. Without truncating the shared redirect file, that stale
+## sample survives the second invocation and doubles every profile count.
+# PROFILE:      1
+# PROFILE-NEXT: 1008-100c:1
+# PROFILE-NEXT: 2
+# PROFILE-NEXT: 1000->1008:1
+# PROFILE-NEXT: 100c->1000:1
+
+## The first invocation also leaves a longer stderr message. Verify that an
+## error from the second invocation contains only its own stderr.
+# SECOND-ERROR: error: Perf script failed with exit code 7
+# SECOND-ERROR-NEXT: second invocation failed
+# SECOND-ERROR-NOT: STALE-FIRST-STDERR
+
+#--- mock-perf
+#!/bin/sh
+
+if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \
+   [ "$3" != "-F" ] || [ "$5" != "-i" ] || [ ! -f "$6" ]; then
+  echo "unexpected perf arguments: $*" >&2
+  exit 2
+fi
+
+emit_sample() {
+  printf '%s\n' 'PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/perfdata-redirect.exe'
+  printf '%s\n' '70000000100c 0x70000000100c/0x700000001000/P/-/-/0 0x700000001000/0x700000001008/P/-/-/0'
+}
+
+case "$4" in
+  comm,pid)
+    if [ "$#" -ne 6 ]; then
+      echo "unexpected mmap arguments: $*" >&2
+      exit 2
+    fi
+    emit_sample
+    printf '%s\n' '70000000100c 0x70000000100c/0x700000001000/P/-/-/0 0x700000001000/0x700000001008/P/-/-/0'
+    ;;
+  ip,brstack)
+    if [ "$#" -ne 8 ] || [ "$7" != "--pid" ] || [ "$8" != "1" ]; then
+      echo "unexpected sample arguments: $*" >&2
+      exit 2
+    fi
+    emit_sample
+    ;;
+  *)
+    echo "unexpected perf fields: $4" >&2
+    exit 2
+    ;;
+esac
+
+#--- mock-perf-fail
+#!/bin/sh
+
+if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \
+   [ "$3" != "-F" ] || [ "$5" != "-i" ] || [ ! -f "$6" ]; then
+  echo "unexpected perf arguments: $*" >&2
+  exit 2
+fi
+
+case "$4" in
+  comm,pid)
+    printf '%s\n' 'PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/perfdata-redirect.exe'
+    printf '%s\n' 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx STALE-FIRST-STDERR' >&2
+    ;;
+  ip,brstack)
+    printf '%s\n' 'second invocation failed' >&2
+    exit 7
+    ;;
+  *)
+    echo "unexpected perf fields: $4" >&2
+    exit 2
+    ;;
+esac
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+  Entry:   0x1000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x1
+    ## 1000: jmp 0x1008
+    ## 1002: nop*6
+    ## 1008: nop*4
+    ## 100c: jmp 0x1000
+    ## 100e: ret
+    Content:      EB0690909090909090909090EBF2C3
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x100F
+    MemSize:  0x100F
+    Align:    0x1000
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0xF
