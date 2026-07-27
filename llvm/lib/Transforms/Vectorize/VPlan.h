@@ -3615,6 +3615,9 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// extended vector operands, negating the multiplication, performing a
     /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
+    /// Represent an inloop operations with tail-floded select for the outer
+    /// loop reduction.
+    TailFoldedInLoopOp,
   };
 
   /// Type of the expression.
@@ -3672,6 +3675,9 @@ public:
     } else
       assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
+  VPExpressionRecipe(VPSingleDefRecipe *InLoopOp, VPSingleDefRecipe *VPMerge)
+      : VPExpressionRecipe(ExpressionTypes::TailFoldedInLoopOp,
+                           {InLoopOp, VPMerge}) {}
 
   ~VPExpressionRecipe() override {
     SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;

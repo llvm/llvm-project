@@ -5980,3 +5980,45 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
     }
   }
 }
+
+static void tryToCreateAbstractInLoopOp(VPWidenIntrinsicRecipe *VPMerge) {
+  // Only convert the in-loop operations with tail-folding predication to
+  // expression recipe.
+  if (any_of(VPMerge->users(), [](VPUser *U) {
+        if (auto *R = dyn_cast<VPSingleDefRecipe>(U))
+          return !isa<VPReductionPHIRecipe>(R) &&
+                 !match(R, m_ComputeReductionResult(m_VPValue()));
+        return true;
+      }))
+    return;
+
+  VPSingleDefRecipe *InLoopOp =
+      dyn_cast<VPSingleDefRecipe>(VPMerge->getOperand(1));
+  // TODO: Support cmp-select reductions.
+  if (!InLoopOp || !isa<VPWidenRecipe, VPWidenIntrinsicRecipe>(InLoopOp) ||
+      match(InLoopOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+    return;
+
+  VPBasicBlock *VPBB = VPMerge->getParent();
+  auto IP = std::next(VPMerge->getIterator());
+  auto *Expr = new VPExpressionRecipe(InLoopOp, VPMerge);
+  Expr->insertBefore(*VPBB, IP);
+  VPMerge->replaceAllUsesWith(Expr);
+}
+
+void VPlanTransforms::prepareForCostModel(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      // Warp in-loop operations and the vp.merge (cleanup tail poison) to
+      // expression recipes since the vp.merge will be optmized out in the
+      // backend.
+      if (match(&R, m_Intrinsic<Intrinsic::vp_merge>(m_VPValue(), m_VPValue(),
+                                                     m_VPValue(), m_VPValue())))
+        tryToCreateAbstractInLoopOp(cast<VPWidenIntrinsicRecipe>(&R));
+    }
+  }
+}

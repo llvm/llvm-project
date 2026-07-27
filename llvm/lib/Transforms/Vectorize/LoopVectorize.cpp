@@ -6488,6 +6488,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
                    useActiveLaneMask(Style),
                    useActiveLaneMaskForControlFlow(Style));
 
+    RUN_VPLAN_PASS(VPlanTransforms::prepareForCostModel, *Plan);
     RUN_VPLAN_PASS_NO_VERIFY(printOptimizedVPlan, *Plan);
     assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
     VPlans.push_back(std::move(Plan));

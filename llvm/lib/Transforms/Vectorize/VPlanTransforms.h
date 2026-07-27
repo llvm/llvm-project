@@ -622,6 +622,10 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Warp recipes in \p Plan into expression recipes that can help
+  /// cost/register pressure estimation.
+  static void prepareForCostModel(VPlan &Plan);
 };
 
 } // namespace llvm

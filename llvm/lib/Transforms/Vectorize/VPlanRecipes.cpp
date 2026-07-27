@@ -3596,9 +3596,11 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
-                        cast<VPReductionRecipe>(ExpressionRecipes.back())
-                            ->getChainOp()
-                            ->getScalarType()),
+                        ExpressionType == ExpressionTypes::TailFoldedInLoopOp
+                            ? ExpressionRecipes.back()->getScalarType()
+                            : cast<VPReductionRecipe>(ExpressionRecipes.back())
+                                  ->getChainOp()
+                                  ->getScalarType()),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -3671,6 +3673,14 @@ SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
 
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
+  // Handle expression recipe without in-loop reduction.
+  if (ExpressionType == ExpressionTypes::TailFoldedInLoopOp) {
+    InstructionCost Cost = 0;
+    for (auto *R : ExpressionRecipes)
+      Cost += R->cost(VF, Ctx);
+    return Cost;
+  }
+
   Type *RedTy = this->getScalarType();
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(getOperand(0)->getScalarType(), VF));
@@ -3742,6 +3752,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
+  case ExpressionTypes::TailFoldedInLoopOp:
+    llvm_unreachable("TailFoldedInLoopOp should be handled early");
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
@@ -3772,6 +3784,42 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EXPRESSION ";
   printAsOperand(O, SlotTracker);
   O << " = ";
+  // Handle the tail-folded in-loop operation
+  if (ExpressionType == ExpressionTypes::TailFoldedInLoopOp) {
+    VPSingleDefRecipe *InLoopOp = ExpressionRecipes[0];
+    unsigned NumInLoopOps = InLoopOp->getNumOperands();
+    O << "vp.merge ";
+    getOperand(NumInLoopOps)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    auto PrintInLoopOperands = [&]() {
+      O << "(";
+      for (unsigned Idx = 0; Idx != NumInLoopOps; ++Idx) {
+        if (Idx != 0)
+          O << ", ";
+        getOperand(Idx)->printAsOperand(O, SlotTracker);
+      }
+      O << ")";
+    };
+
+    if (auto *WidenIntrinsic = dyn_cast<VPWidenIntrinsicRecipe>(InLoopOp)) {
+      O << WidenIntrinsic->getIntrinsicName();
+      WidenIntrinsic->printFlags(O);
+      PrintInLoopOperands();
+    } else if (auto *Widen = dyn_cast<VPWidenRecipe>(InLoopOp)) {
+      O << Instruction::getOpcodeName(Widen->getOpcode());
+      Widen->printFlags(O);
+      PrintInLoopOperands();
+    } else {
+      llvm_unreachable("Unsupported in-loop recipe for tail-folded expression");
+    }
+    O << ", ";
+    getOperand(NumInLoopOps + 1)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    getOperand(NumInLoopOps + 2)->printAsOperand(O, SlotTracker);
+
+    return;
+  }
+
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
   VPValue *Mask = getOperand(getNumOperands() - 1);
@@ -3866,6 +3914,8 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << ")";
     break;
   }
+  default:
+    llvm_unreachable("Unhandled VPExpressionRecipe::ExpressionTypes enum");
   }
 }
 
