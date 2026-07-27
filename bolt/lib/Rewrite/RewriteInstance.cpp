@@ -2155,14 +2155,13 @@ measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
   // Ignore trailing filler (nop/trap) after the terminator. The filler is
   // treated as slack, just like the zero padding checked below, so real
   // binaries with post-ret padding are still recognized.
+  uint64_t TailLen = CodeLen;
   size_t CallableInsts = Insts.size();
   while (CallableInsts > 0 &&
-         isAArch64TailPaddingInst(BC, Insts[CallableInsts - 1]))
+         isAArch64TailPaddingInst(BC, Insts[CallableInsts - 1])) {
     --CallableInsts;
-
-  uint64_t TailLen = 0;
-  for (size_t I = 0; I < CallableInsts; ++I)
-    TailLen += InstSizes[I];
+    TailLen -= InstSizes[CallableInsts];
+  }
 
   if (!TailLen || !isValidAArch64UnmarkedTail(
                       BC, ArrayRef(Insts).take_front(CallableInsts)))
