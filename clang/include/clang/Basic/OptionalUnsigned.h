@@ -30,7 +30,10 @@ template <class T> struct OptionalUnsigned {
   OptionalUnsigned(T Val) : Rep(static_cast<underlying_type>(Val) + 1) {
     assert(has_value());
   }
-  OptionalUnsigned(int) = delete;
+
+  template <typename SignedInt,
+            std::enable_if_t<std::is_signed_v<SignedInt>, bool> = false>
+  OptionalUnsigned(SignedInt) = delete;
 
   constexpr static OptionalUnsigned
   fromInternalRepresentation(underlying_type Rep) {
