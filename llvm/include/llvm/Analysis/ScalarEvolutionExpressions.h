@@ -53,7 +53,6 @@ enum SCEVTypes : unsigned short {
   scSMinExpr,
   scSequentialUMinExpr,
   scPtrToAddr,
-  scPtrToInt,
   scUnknown,
   scCouldNotCompute
 };
@@ -114,23 +113,9 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) {
-    return S->getSCEVType() == scPtrToAddr || S->getSCEVType() == scPtrToInt ||
-           S->getSCEVType() == scTruncate || S->getSCEVType() == scZeroExtend ||
-           S->getSCEVType() == scSignExtend;
+    return S->getSCEVType() == scPtrToAddr || S->getSCEVType() == scTruncate ||
+           S->getSCEVType() == scZeroExtend || S->getSCEVType() == scSignExtend;
   }
-};
-
-/// This class represents a cast from a pointer to a pointer-sized integer
-/// value.
-class SCEVPtrToIntExpr : public SCEVCastExpr {
-  friend class ScalarEvolution;
-
-  SCEVPtrToIntExpr(const FoldingSetNodeIDRef ID, SCEVUse Op, Type *ITy);
-
-public:
-  /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const SCEV *S) { return S->getSCEVType() == scPtrToInt; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a cast from a pointer to a pointer-sized integer
@@ -612,8 +597,6 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
       return ((SC *)this)->visitVScale((const SCEVVScale *)S);
     case scPtrToAddr:
       return ((SC *)this)->visitPtrToAddrExpr((const SCEVPtrToAddrExpr *)S);
-    case scPtrToInt:
-      return ((SC *)this)->visitPtrToIntExpr((const SCEVPtrToIntExpr *)S);
     case scTruncate:
       return ((SC *)this)->visitTruncateExpr((const SCEVTruncateExpr *)S);
     case scZeroExtend:
@@ -664,9 +647,6 @@ template <typename SC, typename RetVal = void> struct SCEVUseVisitor {
     case scPtrToAddr:
       return ((SC *)this)
           ->visitPtrToAddrExpr(cast<SCEVUseT<const SCEVPtrToAddrExpr *>>(S));
-    case scPtrToInt:
-      return ((SC *)this)
-          ->visitPtrToIntExpr(cast<SCEVUseT<const SCEVPtrToIntExpr *>>(S));
     case scTruncate:
       return ((SC *)this)
           ->visitTruncateExpr(cast<SCEVUseT<const SCEVTruncateExpr *>>(S));
@@ -748,7 +728,6 @@ public:
       case scUnknown:
         continue;
       case scPtrToAddr:
-      case scPtrToInt:
       case scTruncate:
       case scZeroExtend:
       case scSignExtend:
@@ -840,13 +819,6 @@ public:
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
     const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand() ? Expr : SE.getPtrToAddrExpr(Operand);
-  }
-
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
-    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
-    return Operand == Expr->getOperand()
-               ? Expr
-               : SE.getPtrToIntExpr(Operand, Expr->getType());
   }
 
   const SCEV *visitTruncateExpr(const SCEVTruncateExpr *Expr) {
