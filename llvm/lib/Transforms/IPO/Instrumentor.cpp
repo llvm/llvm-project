@@ -261,8 +261,13 @@ void InstrumentorImpl::linkRuntime() {
   }
 
   auto InternalizeCallback = [&](Module &M, const StringSet<> &GVS) {
-    internalizeModule(M, [&GVS](const GlobalValue &GV) {
-      return !GV.hasName() || !GVS.count(GV.getName());
+    StringSet<> RuntimeExports;
+    for (StringRef Name : IConf.RuntimeExportSymbols->getStringList())
+      RuntimeExports.insert(Name);
+
+    internalizeModule(M, [&GVS, &RuntimeExports](const GlobalValue &GV) {
+      return !GV.hasName() || !GVS.count(GV.getName()) ||
+             RuntimeExports.count(GV.getName());
     });
   };
 
@@ -624,6 +629,17 @@ BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
   auto BCO =
       std::make_unique<BaseConfigurationOption>(Name, Description, STRING);
   BCO->setString(DefaultValue);
+  IConf.addBaseChoice(BCO.get());
+  return BCO;
+}
+
+std::unique_ptr<BaseConfigurationOption>
+BaseConfigurationOption::createStringListOption(
+    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
+    ArrayRef<StringRef> DefaultValue) {
+  auto BCO = std::make_unique<BaseConfigurationOption>(Name, Description,
+                                                        STRING_LIST);
+  BCO->setStringList(DefaultValue);
   IConf.addBaseChoice(BCO.get());
   return BCO;
 }
