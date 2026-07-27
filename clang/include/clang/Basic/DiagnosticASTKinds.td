@@ -355,7 +355,7 @@ def note_constexpr_new_negative : Note<
 def note_constexpr_new_too_large : Note<
   "cannot allocate array; evaluated array bound %0 is too large">;
 def note_constexpr_new_exceeds_limits : Note<
-  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1); "
+  "cannot allocate array; evaluated array bound %0 exceeds the limit of %1; "
   "use '-fconstexpr-steps' to increase this limit">;
 def note_constexpr_new_too_small : Note<
   "cannot allocate array; evaluated array bound %0 is too small to hold "

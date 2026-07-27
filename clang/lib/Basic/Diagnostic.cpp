@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -895,6 +896,22 @@ static void HandleIntegerHumanModifier(int64_t ValNo,
   Out << ValNo;
 }
 
+static void HandleIntegerDefaultModifier(int64_t Val,
+                                         SmallVectorImpl<char> &OutStr) {
+  std::string Str = formatDiagnosticInteger(
+      llvm::APInt(64, static_cast<uint64_t>(Val), /*isSigned=*/true),
+      /*Signed=*/true);
+  OutStr.append(Str.begin(), Str.end());
+}
+
+static void
+HandleUnsignedIntegerDefaultModifier(uint64_t Val,
+                                     SmallVectorImpl<char> &OutStr) {
+  std::string Str =
+      formatDiagnosticInteger(llvm::APInt(64, Val), /*Signed=*/false);
+  OutStr.append(Str.begin(), Str.end());
+}
+
 /// PluralNumber - Parse an unsigned integer and advance Start.
 static unsigned PluralNumber(const char *&Start, const char *End) {
   // Programming 101: Parse a decimal number :-)
@@ -1279,7 +1296,7 @@ void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
-        llvm::raw_svector_ostream(OutStr) << Val;
+        HandleIntegerDefaultModifier(Val, OutStr);
       }
       break;
     }
@@ -1299,7 +1316,7 @@ void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
-        llvm::raw_svector_ostream(OutStr) << Val;
+        HandleUnsignedIntegerDefaultModifier(Val, OutStr);
       }
       break;
     }

@@ -1402,19 +1402,33 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   return DB;
 }
 
+inline constexpr uint64_t DiagnosticIntegerSeparatorThreshold = 100'000;
+
+inline std::string formatDiagnosticInteger(const llvm::APInt &Val,
+                                           bool Signed) {
+  bool Small = false;
+  if (Signed) {
+    if (Val.getSignificantBits() <= 64) {
+      int64_t S = Val.getSExtValue();
+      uint64_t Magnitude = S < 0 ? -static_cast<uint64_t>(S) : uint64_t(S);
+      Small = Magnitude < DiagnosticIntegerSeparatorThreshold;
+    }
+  } else if (Val.getActiveBits() <= 64) {
+    Small = Val.getZExtValue() < DiagnosticIntegerSeparatorThreshold;
+  }
+  return toString(Val, /*Radix=*/10, Signed, /*formatAsCLiteral=*/false,
+                  /*UpperCase=*/true, /*InsertSeparators=*/!Small);
+}
+
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const llvm::APSInt &Int) {
-  DB.AddString(toString(Int, /*Radix=*/10, Int.isSigned(),
-                        /*formatAsCLiteral=*/false,
-                        /*UpperCase=*/true, /*InsertSeparators=*/true));
+  DB.AddString(formatDiagnosticInteger(Int, Int.isSigned()));
   return DB;
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const llvm::APInt &Int) {
-  DB.AddString(toString(Int, /*Radix=*/10, /*Signed=*/false,
-                        /*formatAsCLiteral=*/false,
-                        /*UpperCase=*/true, /*InsertSeparators=*/true));
+  DB.AddString(formatDiagnosticInteger(Int, /*Signed=*/false));
   return DB;
 }
 

@@ -6860,9 +6860,8 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(
-        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
-        /*UpperCase=*/false, /*InsertSeparators=*/true);
+    Diag(Loc, diag::err_array_too_large)
+        << formatDiagnosticInteger(Oversized, Oversized.isSigned());
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;

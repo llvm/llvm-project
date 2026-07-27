@@ -356,12 +356,10 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   if (S.checkingForUndefinedBehavior()) {
     const Expr *E = S.Current->getExpr(OpPC);
     QualType Type = E->getType();
-    SmallString<32> Trunc;
-    Value.trunc(Result.bitWidth())
-        .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
-        << Trunc << Type << E->getSourceRange();
+        << formatDiagnosticInteger(Value.trunc(Result.bitWidth()),
+                                   Result.isSigned())
+        << Type << E->getSourceRange();
   }
 
   if (!handleOverflow(S, OpPC, Value)) {
@@ -867,12 +865,10 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     if (S.checkingForUndefinedBehavior()) {
       const Expr *E = S.Current->getExpr(OpPC);
       QualType Type = E->getType();
-      SmallString<32> Trunc;
-      NegatedValue.trunc(Result.bitWidth())
-          .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                    /*UpperCase=*/true, /*InsertSeparators=*/true);
       S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
-          << Trunc << Type << E->getSourceRange();
+          << formatDiagnosticInteger(NegatedValue.trunc(Result.bitWidth()),
+                                     Result.isSigned())
+          << Type << E->getSourceRange();
       return true;
     }
 
@@ -956,12 +952,10 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (S.checkingForUndefinedBehavior()) {
     const Expr *E = S.Current->getExpr(OpPC);
     QualType Type = E->getType();
-    SmallString<32> Trunc;
-    APResult.trunc(Result.bitWidth())
-        .toString(Trunc, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
-                  /*UpperCase=*/true, /*InsertSeparators=*/true);
     S.report(E->getExprLoc(), diag::warn_integer_constant_overflow)
-        << Trunc << Type << E->getSourceRange();
+        << formatDiagnosticInteger(APResult.trunc(Result.bitWidth()),
+                                   Result.isSigned())
+        << Type << E->getSourceRange();
     return true;
   }
   return handleOverflow(S, OpPC, APResult);

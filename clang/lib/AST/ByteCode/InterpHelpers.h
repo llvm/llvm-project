@@ -145,10 +145,10 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
 
       if (NumElements->isSigned() && NumElements->isNegative()) {
         S.FFDiag(Loc, diag::note_constexpr_new_negative)
-            << NumElements->toDiagnosticString(S.getASTContext());
+            << NumElements->toAPSInt();
       } else {
         S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-            << NumElements->toDiagnosticString(S.getASTContext());
+            << NumElements->toAPSInt();
       }
     }
     return false;

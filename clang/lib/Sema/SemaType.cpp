@@ -2307,9 +2307,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
               : ConstVal.getActiveBits();
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
         Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10, ConstVal.isSigned(),
-                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
-                        /*InsertSeparators=*/true)
+            << formatDiagnosticInteger(ConstVal, ConstVal.isSigned())
             << ArraySize->getSourceRange();
         return QualType();
       }

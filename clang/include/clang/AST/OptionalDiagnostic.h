@@ -39,9 +39,8 @@ public:
 
   OptionalDiagnostic &operator<<(const llvm::APSInt &I) {
     if (Diag) {
-      SmallVector<char, 32> Buffer;
-      I.toString(Buffer);
-      *Diag << StringRef(Buffer.data(), Buffer.size());
+      std::string Str = formatDiagnosticInteger(I, I.isSigned());
+      *Diag << StringRef(Str);
     }
     return *this;
   }
