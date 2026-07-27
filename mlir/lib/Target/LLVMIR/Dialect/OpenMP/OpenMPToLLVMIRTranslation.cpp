@@ -31,6 +31,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
@@ -7922,14 +7923,28 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             if (failed(checkImplementationStatus(*op)))
               return failure();
 
-            // No support in Openmp runtime function (__kmpc_flush) to accept
-            // the argument list.
-            // OpenMP standard states the following:
-            //  "An implementation may implement a flush with a list by ignoring
-            //   the list, and treating it the same as a flush without a list."
-            //
-            // The argument list is discarded so that, flush with a list is
-            // treated same as a flush without a list.
+            // __kmpc_flush ignores the list, so emit a compiler memory barrier
+            // over the listed pointers to keep their accesses ordered across the
+            // flush even when they carry the Fortran-implied `noalias`.
+            llvm::SmallVector<llvm::Value *> flushPtrs;
+            llvm::SmallVector<llvm::Type *> flushPtrTypes;
+            for (mlir::Value flushVar : op.getVarList()) {
+              llvm::Value *ptr = moduleTranslation.lookupValue(flushVar);
+              flushPtrs.push_back(ptr);
+              flushPtrTypes.push_back(ptr->getType());
+            }
+            if (!flushPtrs.empty()) {
+              std::string constraints;
+              for (size_t i = 0, e = flushPtrs.size(); i != e; ++i)
+                constraints += "r,";
+              constraints += "~{memory}";
+              llvm::FunctionType *asmFTy = llvm::FunctionType::get(
+                  builder.getVoidTy(), flushPtrTypes, /*isVarArg=*/false);
+              llvm::InlineAsm *barrier = llvm::InlineAsm::get(
+                  asmFTy, /*AsmString=*/"", constraints,
+                  /*hasSideEffects=*/true);
+              builder.CreateCall(barrier, flushPtrs);
+            }
             ompBuilder->createFlush(builder.saveIP());
             return success();
           })

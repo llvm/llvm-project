@@ -23,9 +23,11 @@ llvm.func @test_flush_construct(%arg0: !llvm.ptr) {
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush
 
+  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush (%arg0 : !llvm.ptr)
 
+  // CHECK: call void asm sideeffect "", "r,r,~{memory}"(ptr %{{[0-9]+}}, ptr %{{[0-9]+}})
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush (%arg0, %arg0 : !llvm.ptr, !llvm.ptr)
 
