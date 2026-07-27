@@ -1004,6 +1004,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AMDGPU builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  }
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf:
     return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEsingle());

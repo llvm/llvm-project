@@ -313,6 +313,13 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
     if (!SCEVPatternMatch::match(Expr, m_scev_Add(m_scev_Mul(Mul), m_SCEV(A))))
       return false;
 
+    // URem is represented as `A - ((A udiv B) * B)`. Only construct the complex
+    // SCEV expression, if the multiply of the expression to check has a UDiv
+    // operand.
+    if (none_of(Mul->operands(),
+                [](const SCEV *Op) { return isa<SCEVUDivExpr>(Op); }))
+      return false;
+
     const auto MatchURemWithDivisor = [&](const SCEV *B) {
       // (SomeExpr + (-(SomeExpr / B) * B)).
       if (Expr == SE.getURemExpr(A, B))
