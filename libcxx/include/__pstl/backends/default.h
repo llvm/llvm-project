@@ -66,6 +66,7 @@ namespace __pstl {
 //
 // mismatch family
 // ---------------
+// - lexicographical_compare
 // - mismatch_3leg
 //
 // for_each family
@@ -220,6 +221,33 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
 //////////////////////////////////////////////////////////////
 // mismatch family
 //////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __lexicographical_compare<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Comp __comp) const noexcept {
+    using _Mismatch = __dispatch<__mismatch, __current_configuration, _ExecutionPolicy>;
+    using _Ref1     = __iterator_reference<_ForwardIterator1>;
+    using _Ref2     = __iterator_reference<_ForwardIterator2>;
+    // find the first pair of elements that are not equal, or the end of one or both of the ranges
+    auto __res = _Mismatch()(__policy, __first1, __last1, __first2, __last2, [&](_Ref1 __lhs, _Ref2 __rhs) {
+      return !__comp(__lhs, __rhs) && !__comp(__rhs, __lhs); // derive equality from the less-than predicate
+    });
+    if (!__res) // if the underlying mismatch operation failed, return nullopt
+      return nullopt;
+    if (__res->first == __last1)       // the first range is exhausted,
+      return __res->second != __last2; // it is lexicographically less if the second range is not exhausted.
+    if (__res->second == __last2)      // the second range is exhausted,
+      return false;                    // the first range is not exhausted, so it is not lexicographically less.
+    return __comp(*__res->first, *__res->second); // otherwise, compare the first pair of non-equal elements
+  }
+};
 
 template <class _ExecutionPolicy>
 struct __mismatch_3leg<__default_backend_tag, _ExecutionPolicy> {
@@ -629,7 +657,8 @@ struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
     ++__result;
     _ForwardIterator1 __first2 = std::next(__first1);
     if (__first2 == __last1)
-      return __result; // edge case: not enough elements to perform adjacent difference, just return the output iterator
+      return __result; // edge case: not enough elements to perform adjacent difference, just return the output
+                       // iterator
     // Process as a binary transform of two iterator ranges: [__first1 + 1, __last1) and [__first1, __last1 - 1)
     return _TransformBinary()(
         __policy,
