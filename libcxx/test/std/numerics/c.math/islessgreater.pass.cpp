@@ -18,66 +18,72 @@
 
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                  = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max = lim::max();
+    TEST_CONSTEXPR_CXX23 T inf = lim::infinity();
+    TEST_CONSTEXPR_CXX23 T nan = lim::quiet_NaN();
+
     assert(std::islessgreater(T(1), T(2)));
     assert(std::islessgreater(T(2), T(1)));
     assert(!std::islessgreater(T(1), T(1)));
 
-    assert(!std::islessgreater(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity()));
-    assert(std::islessgreater(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::max()));
+    assert(!std::islessgreater(inf, inf));
+    assert(std::islessgreater(inf, max));
 
-    assert(!std::islessgreater(std::numeric_limits<T>::quiet_NaN(), T(0)));
-    assert(!std::islessgreater(T(0), std::numeric_limits<T>::quiet_NaN()));
-    assert(!std::islessgreater(std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::quiet_NaN()));
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
+    assert(!std::islessgreater(nan, T(0)));
+    assert(!std::islessgreater(T(0), nan));
+    assert(!std::islessgreater(nan, nan));
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim                  = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T max = lim::max();
+    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
+
     if (!std::is_same<T, bool>::value) {
       assert(std::islessgreater(T(1), T(2)));
       assert(std::islessgreater(T(2), T(1)));
     }
 
     assert(!std::islessgreater(T(1), T(1)));
+    assert(std::islessgreater(max, T(0)));
+    assert(!std::islessgreater(max, max));
 
-    assert(!std::islessgreater(T(1), T(1)));
-    assert(std::islessgreater(std::numeric_limits<T>::max(), T(0)));
-    assert(!std::islessgreater(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
-
-    if (std::is_signed<T>::value) {
+    if (lim::is_signed) {
       assert(std::islessgreater(T(-1), T(1)));
-      assert(std::islessgreater(std::numeric_limits<T>::lowest(), T(0)));
-      assert(std::islessgreater(T(0), std::numeric_limits<T>::lowest()));
-      assert(!std::islessgreater(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::lowest()));
+      assert(std::islessgreater(low, T(0)));
+      assert(std::islessgreater(T(0), low));
+      assert(!std::islessgreater(low, low));
     }
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
+  using lim                     = std::numeric_limits<double>;
+  TEST_CONSTEXPR_CXX23 auto nan = lim::quiet_NaN();
+
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
+  // Make sure we can call `std::islessgreater` with mixed-type promotions with __promote_t<_A1, _A2>.
+  {
+    assert(std::islessgreater(2.0, 1));     // double vs int
+    assert(std::islessgreater(1, 2.0f));    // int vs float
+    assert(std::islessgreater(2.0L, 1.0f)); // long double vs float
+    assert(!std::islessgreater(nan, 1.0));  // NaN vs int
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
   return 0;
 }
