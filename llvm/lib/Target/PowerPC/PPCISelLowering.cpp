@@ -21145,7 +21145,8 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
       Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
 }
 
-bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT,
+                                                      bool IsDivergent) const {
   return Subtarget.useCRBits();
 }
 

@@ -73,6 +73,7 @@
 ; LAXX-NEXT:       Post-Dominator Tree Construction
 ; LAXX-NEXT:       Branch Probability Analysis
 ; LAXX-NEXT:       Block Frequency Analysis
+; LAXX-NEXT:       Uniformity Analysis
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation

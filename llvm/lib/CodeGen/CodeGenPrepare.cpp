@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -317,6 +318,7 @@ class CodeGenPrepare {
   const TargetLibraryInfo *TLInfo = nullptr;
   DomTreeUpdater *DTU = nullptr;
   LoopInfo *LI = nullptr;
+  const UniformityInfo *UA = nullptr;
   BlockFrequencyInfo *BFI;
   BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI = nullptr;
@@ -495,6 +497,7 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   }
 };
@@ -518,6 +521,7 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   CGP.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
   CGP.BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
   CGP.PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  CGP.UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   auto BBSPRWP =
       getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   CGP.BBSectionsProfileReader = BBSPRWP ? &BBSPRWP->getBBSPR() : nullptr;
@@ -538,6 +542,7 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(CodeGenPrepareLegacyPass, DEBUG_TYPE,
                     "Optimize for code generation", false, false)
 
@@ -569,6 +574,7 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   LI = &AM.getResult<LoopAnalysis>(F);
   BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  UA = &AM.getResult<UniformityInfoAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   if (!PSI)
@@ -1879,8 +1885,9 @@ bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
 ///
 /// Return true if any changes are made.
 static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
-                              const DataLayout &DL) {
-  if (TLI.hasMultipleConditionRegisters(EVT::getEVT(Cmp->getType())))
+                              const DataLayout &DL, bool IsDivergent) {
+  if (TLI.hasMultipleConditionRegisters(EVT::getEVT(Cmp->getType()),
+                                        IsDivergent))
     return false;
 
   // Avoid sinking soft-FP comparisons, since this can move them into a loop.
@@ -2266,7 +2273,7 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
 }
 
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
-  if (sinkCmpExpression(Cmp, *TLI, *DL))
+  if (sinkCmpExpression(Cmp, *TLI, *DL, UA->isDivergentAtDef(Cmp)))
     return true;
 
   if (combineToUAddWithOverflow(Cmp, ModifiedDT))
