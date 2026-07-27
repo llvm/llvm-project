@@ -2350,12 +2350,10 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                             /*IsCanonicalizing=*/true);
 }
 
-static Value *
-simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
-                                  FastMathFlags FMF, FPClassTest DemandedMask,
-                                  KnownFPClass &Known,
-                                  const APInt &DemandedElts,
-                                  const SimplifyQuery &SQ, unsigned Depth) {
+static Value *simplifyDemandedUseFPClassFPTrunc(
+    InstCombinerImpl &IC, Instruction &I, FastMathFlags FMF,
+    FPClassTest DemandedMask, KnownFPClass &Known, const APInt &DemandedElts,
+    const SimplifyQuery &SQ, unsigned Depth) {
 
   FPClassTest SrcDemandedMask = DemandedMask;
   if (DemandedMask & fcNan)
@@ -3454,8 +3452,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
       [[fallthrough]];
     }
     default:
-      Known =
-          computeKnownFPClass(I, DemandedElts, DemandedMask, SQ, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedElts, DemandedMask, SQ, Depth + 1);
       Known.knownNot(~DemandedMask);
       break;
     }
@@ -3676,8 +3673,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
 
     Value *FNegSrc = I->getOperand(0);
     if (!match(FNegSrc, m_FAbs(m_Value(Src)))) {
-      Known =
-          computeKnownFPClass(I, DemandedElts, DemandedMask, SQ, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedElts, DemandedMask, SQ, Depth + 1);
       break;
     }
 

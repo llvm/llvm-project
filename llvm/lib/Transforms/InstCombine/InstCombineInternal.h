@@ -619,12 +619,9 @@ public:
                                     KnownFPClass &Known,
                                     const APInt &DemandedElts,
                                     const SimplifyQuery &Q, unsigned Depth = 0);
-  Value *SimplifyMultipleUseDemandedFPClass(Instruction *I,
-                                            FPClassTest DemandedMask,
-                                            KnownFPClass &Known,
-                                            const APInt &DemandedElts,
-                                            const SimplifyQuery &Q,
-                                            unsigned Depth);
+  Value *SimplifyMultipleUseDemandedFPClass(
+      Instruction *I, FPClassTest DemandedMask, KnownFPClass &Known,
+      const APInt &DemandedElts, const SimplifyQuery &Q, unsigned Depth);
 
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
