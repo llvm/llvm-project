@@ -15,7 +15,6 @@
 #include "L0Kernel.h"
 #include "L0Plugin.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
@@ -65,18 +64,18 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
                             size_t Size) {
-  assert(PatternSize < Size && "PatternSize < Size is unsupported");
+  assert(PatternSize <= Size && "PatternSize > Size is unsupported");
 
   if (Size == 0 || PatternSize == 0)
     return Plugin::success();
 
-  if (llvm::isPowerOf2_64(PatternSize) &&
+  if (llvm::isPowerOf2_64(PatternSize) && (Size % PatternSize == 0) &&
       PatternSize <= Device.getMaxMemFillPatternSize()) {
     // Native L0 memory fill is possible directly.
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
-  auto PatternBytes = static_cast<const unsigned char *>(Pattern);
+  auto *PatternBytes = static_cast<const unsigned char *>(Pattern);
   // Check if all bytes are equal.
   if (std::memcmp(PatternBytes, PatternBytes + 1, PatternSize - 1) == 0) {
     // Substitution of 1 as PatternSize is equivalent,
@@ -181,15 +180,15 @@ void L0AsyncQueueTy::resetImpl() {
 }
 
 void L0AsyncQueueTy::processCopyQueues() {
-  auto processQueue = [](auto &Queue) {
+  auto ProcessQueue = [](auto &Queue) {
     for (auto &[Src, Dst, Size] : Queue)
       std::copy_n(static_cast<const char *>(Src), Size,
                   static_cast<char *>(Dst));
     Queue.clear();
   };
 
-  processQueue(USM2MList);
-  processQueue(H2MList);
+  ProcessQueue(USM2MList);
+  ProcessQueue(H2MList);
 }
 
 Error L0AsyncQueueTy::synchronizeImpl() {

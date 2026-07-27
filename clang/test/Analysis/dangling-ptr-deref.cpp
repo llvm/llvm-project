@@ -84,3 +84,190 @@ void test_case_seven() {
   // expected-warning@-1 {{Use of 'i' after its lifetime ended}}
   // expected-note@-2    {{Use of 'i' after its lifetime ended}}
 }
+
+void passing_dangling_ptr_to_opaque_func() {
+  int *ptr = nullptr;
+  {
+    int num = 5;
+    ptr = &num;
+  }
+  // expected-note@-1 {{'num' is destroyed here}}
+  escape(ptr);
+  // expected-warning@-1 {{Use of 'num' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'num' after its lifetime ended}}
+}
+
+int deref_param(int *p) { return *p; }
+// expected-warning@-1 {{Use of 'num' after its lifetime ended}}
+// expected-note@-2    {{Use of 'num' after its lifetime ended}}
+
+void inlined_callee_single_report() {
+  int *ptr = nullptr;
+  {
+    int num = 5;
+    ptr = &num;
+  }
+  // expected-note@-1 {{'num' is destroyed here}}
+  int r = deref_param(ptr);
+  // expected-note@-1 {{Calling 'deref_param'}}
+  (void)r;
+}
+
+struct MyBuffer {
+  char buffer[8];
+};
+struct MyStruct { int x; };
+
+struct Inner { int x; };
+
+struct Outer { struct Inner inner; };
+
+struct A {
+  struct B { int x; };
+  B b;
+};
+
+
+char member_subregion_dangling_deref() {
+  const char *p = nullptr;
+  {
+    MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
+  return *p; 
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+}
+
+void opaque(const char *);
+void opaque_pp(const char **);
+
+void passing_dangling_to_call() {
+  const char *p = nullptr;
+  {
+    MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
+  opaque(p);
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+}
+
+char member_subregion_alive_deref() {
+  {
+    MyBuffer tmp_buffer = {};
+    const char *p = tmp_buffer.buffer;
+    opaque(p); // no-warning
+    return *p; // no-warning
+  }
+}
+
+char member_subregion_alive_deref_pp() {
+  const char *ptr = nullptr;
+  const char **pp = &ptr;
+  {
+    MyBuffer tmp_buffer = {};
+    ptr = tmp_buffer.buffer;
+  }
+  opaque_pp(pp);
+  return **pp; // no-warning  
+}
+
+void arr_elem_subreg_dangling_deref() {
+  int *ptr = nullptr;
+  {
+    int local_arr[4];
+    ptr = &local_arr[1];
+  }
+  // expected-note@-1 {{'local_arr[1]' is destroyed here}}
+  *ptr = 7;
+  // expected-warning@-1 {{Use of 'local_arr[1]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'local_arr[1]' after its lifetime ended}}
+}
+
+char member_array_elem_dangling_deref() {
+  const char *p = nullptr;
+  {
+    MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer + 3;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[3]' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[3]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[3]' after its lifetime ended}}
+}
+
+char member_array_out_of_bounds_dangling_deref() {
+  const char *p = nullptr;
+  {
+    MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer + 10;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[10]' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[10]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[10]' after its lifetime ended}}
+}
+
+int struct_field_dangling_deref() {
+  int *p = nullptr;
+  {
+    MyStruct s = {};
+    p = &s.x;
+  }
+  // expected-note@-1 {{'s.x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 's.x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 's.x' after its lifetime ended}}
+}
+
+int struct_array_element_dangling_deref() {
+  int *p = nullptr;
+  {
+    MyStruct arr[4] = {};
+    p = &arr[2].x;
+  }
+  // expected-note@-1 {{'arr[2].x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'arr[2].x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'arr[2].x' after its lifetime ended}}
+}
+
+int nested_field_dangling_deref() {
+  int *p = nullptr;
+  {
+    Outer o = {};
+    p = &o.inner.x;
+  }
+  // expected-note@-1 {{'o.inner.x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'o.inner.x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'o.inner.x' after its lifetime ended}}
+}
+
+int nested_type_field_dangling_deref() {
+  int *p = nullptr;
+  {
+    A a = {};
+    p = &a.b.x;
+  }
+  // expected-note@-1 {{'a.b.x' is destroyed here}}
+  return *p;
+  // expected-warning@-1 {{Use of 'a.b.x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'a.b.x' after its lifetime ended}}
+}
+
+char member_subregion_dangling_deref_increment() {
+  const char *p = nullptr;
+  {
+    MyBuffer tmp_buffer = {};
+    p = tmp_buffer.buffer;
+  }
+  // expected-note@-1 {{'tmp_buffer.buffer[1]' is destroyed here}}
+  p++;
+  return *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
+}

@@ -1383,6 +1383,7 @@ void RewriteInstance::discoverFileObjects() {
 
   // Now that all the functions were created - adjust their boundaries.
   adjustFunctionBoundaries(MarkerSymbols);
+  splitUnmarkedTailFunctions(MarkerSymbols);
 
   // Annotate functions with code/data markers in AArch64
   for (auto &[Address, Type] : MarkerSymbols) {
@@ -2083,6 +2084,163 @@ void RewriteInstance::disassemblePLT() {
   }
 }
 
+namespace {
+
+/// True when the predecessor body ends at its FDE boundary, so trailing bytes
+/// are outside both symtab size and unwind info:
+///   (1) __BOLT_FDE_FUNC* (FDE with no symtab entry), or
+///   (2) a normal symbol whose size equals its FDE address range.
+bool isCFIBoundedTailPredecessor(const BinaryFunction &BF,
+                                 const CFIReaderWriter &CFI) {
+  if (BF.getOneName().starts_with("__BOLT_FDE_FUNC"))
+    return true;
+  auto FDEI = CFI.getFDEs().find(BF.getAddress());
+  if (FDEI == CFI.getFDEs().end())
+    return false;
+  return FDEI->second->getAddressRange() == BF.getSize();
+}
+
+/// AArch64 padding / filler instructions that may appear in slack but are not
+/// standalone callable functions.
+bool isAArch64TailPaddingInst(const BinaryContext &BC, const MCInst &Inst) {
+  if (BC.MIB->isNoop(Inst) || BC.MIB->isTrap(Inst))
+    return true;
+  return false;
+}
+
+/// True if the decoded tail looks like real callable code, not padding.
+/// Expects trailing filler to have already been trimmed, so the last
+/// instruction must be the tail's terminator.
+bool isValidAArch64UnmarkedTail(const BinaryContext &BC,
+                                ArrayRef<MCInst> Insts) {
+  if (Insts.empty())
+    return false;
+
+  // Expect a callable snippet; inlined tails end with ret.
+  return BC.MIB->isReturn(Insts.back());
+}
+
+/// Disassemble a prefix of [TailStart, TailStart + TrailingExtent) and return
+/// the length of the callable tail. Trailing filler instructions (nop/trap)
+/// after the terminator are trimmed and treated as slack, and any remaining
+/// bytes in the range must be zero padding.
+/// Returns 0 if the region is not valid unmarked code.
+uint64_t
+measureAArch64UnmarkedTail(BinaryContext &BC, const BinaryFunction &Pred,
+                           DenseMap<uint64_t, MarkerSymType> &MarkerSyms,
+                           uint64_t TailStart, uint64_t TrailingExtent) {
+  auto hasDataMarkerAt = [&MarkerSyms](uint64_t Address) {
+    auto It = MarkerSyms.find(Address);
+    return It != MarkerSyms.end() && It->second == MarkerSymType::DATA;
+  };
+
+  // Pred was registered from an executable section during symbol/FDE discovery.
+  BinarySection &Section = *Pred.getOriginSection();
+
+  // adjustFunctionBoundaries() set Pred->MaxSize so [Pred, Pred+MaxSize) fits
+  // in the section and stops at the next symbol/function.
+  if (!Section.containsRange(TailStart, TrailingExtent))
+    return 0;
+
+  StringRef Contents = Section.getContents();
+  const uint64_t SectionOffset = TailStart - Section.getAddress();
+  const uint8_t *Bytes =
+      reinterpret_cast<const uint8_t *>(Contents.data()) + SectionOffset;
+
+  SmallVector<MCInst, 4> Insts;
+  SmallVector<uint64_t, 4> InstSizes;
+  uint64_t CodeLen = 0;
+  while (CodeLen < TrailingExtent) {
+    if (hasDataMarkerAt(TailStart + CodeLen))
+      return 0;
+    if (Pred.isInConstantIsland(TailStart + CodeLen))
+      return 0;
+
+    MCInst Inst;
+    uint64_t Size = 0;
+    ArrayRef<uint8_t> Slice(Bytes + CodeLen, TrailingExtent - CodeLen);
+    if (!BC.SymbolicDisAsm->getInstruction(Inst, Size, Slice,
+                                           TailStart + CodeLen, nulls()) ||
+        !Size)
+      break;
+    Insts.push_back(Inst);
+    InstSizes.push_back(Size);
+    CodeLen += Size;
+  }
+
+  // Ignore trailing filler (nop/trap) after the terminator. The filler is
+  // treated as slack, just like the zero padding checked below, so real
+  // binaries with post-ret padding are still recognized.
+  uint64_t TailLen = CodeLen;
+  size_t CallableInsts = Insts.size();
+  while (CallableInsts > 0 &&
+         isAArch64TailPaddingInst(BC, Insts[CallableInsts - 1])) {
+    --CallableInsts;
+    TailLen -= InstSizes[CallableInsts];
+  }
+
+  if (!TailLen || !isValidAArch64UnmarkedTail(
+                      BC, ArrayRef(Insts).take_front(CallableInsts)))
+    return 0;
+
+  // Everything past the decoded region must be zero padding. The decoded
+  // filler in [TailLen, CodeLen) is already validated as nop/trap above.
+  for (uint64_t I = CodeLen; I < TrailingExtent; ++I) {
+    if (Bytes[I] != 0)
+      return 0;
+  }
+
+  return TailLen;
+}
+
+} // namespace
+
+void RewriteInstance::splitUnmarkedTailFunctions(
+    DenseMap<uint64_t, MarkerSymType> &MarkerSyms) {
+  if (!BC->isAArch64())
+    return;
+
+  std::vector<BinaryFunction *> Worklist;
+  for (BinaryFunction &BF : llvm::make_second_range(BC->getBinaryFunctions())) {
+    if (BF.isPseudo() || BF.isFragment())
+      continue;
+    if (BF.getMaxSize() == BF.getSize())
+      continue;
+    if (!isCFIBoundedTailPredecessor(BF, *CFIRdWrt))
+      continue;
+    Worklist.push_back(&BF);
+  }
+
+  for (BinaryFunction *Pred : Worklist) {
+    const uint64_t TailStart = Pred->getAddress() + Pred->getSize();
+    const uint64_t TrailingExtent = Pred->getMaxSize() - Pred->getSize();
+
+    if (BC->getBinaryFunctionAtAddress(TailStart))
+      continue;
+
+    const uint64_t CodeLen = measureAArch64UnmarkedTail(
+        *BC, *Pred, MarkerSyms, TailStart, TrailingExtent);
+    if (!CodeLen)
+      continue;
+
+    BinarySection &Section = *Pred->getOriginSection();
+
+    Pred->setMaxSize(Pred->getSize());
+
+    std::string TailName =
+        "__BOLT_UNMARKED_TAILat" + Twine::utohexstr(TailStart).str();
+    BC->errs() << "BOLT-WARNING: detected executable code after CFI-bounded "
+               << "function " << *Pred << "; creating synthetic function "
+               << TailName
+               << ". Consider adding a symbol or FDE for this code.\n";
+
+    // Inherit [TailStart, TailStart + TrailingExtent) from Pred's old extent.
+    BinaryFunction *TailBF = BC->createBinaryFunction(
+        TailName, Section, TailStart, CodeLen, CodeLen);
+    TailBF->setMaxSize(TrailingExtent);
+  }
+}
+
 void RewriteInstance::adjustFunctionBoundaries(
     DenseMap<uint64_t, MarkerSymType> &MarkerSyms) {
   for (auto BFI = BC->getBinaryFunctions().begin(),
@@ -2126,6 +2284,13 @@ void RewriteInstance::adjustFunctionBoundaries(
       if (It == MarkerSyms.end() || It->second != MarkerSymType::DATA) {
         // This is potentially another entry point into the function.
         uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
+        // At the FDE/symbol end, unmarked tail code may follow; split will
+        // promote it to __BOLT_UNMARKED_TAIL instead of a secondary entry.
+        if (BC->isAArch64() && EntryOffset == Function.getSize() &&
+            isCFIBoundedTailPredecessor(Function, *CFIRdWrt)) {
+          ++NextSymRefI;
+          continue;
+        }
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
                           << Function << " at offset 0x"
                           << Twine::utohexstr(EntryOffset) << '\n');
@@ -5235,7 +5400,7 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   NewEhdr.e_shoff = SHTOffset;
   NewEhdr.e_shnum = OutputSections.size();
   NewEhdr.e_shstrndx = NewSectionIndex[NewEhdr.e_shstrndx];
-  OS.pwrite(reinterpret_cast<const char *>(&NewEhdr), sizeof(NewEhdr), 0);
+  safePWrite(OS, reinterpret_cast<const char *>(&NewEhdr), sizeof(NewEhdr), 0);
 }
 
 template <typename ELFT, typename WriteFuncTy, typename StrTabFuncTy>
@@ -5715,13 +5880,10 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   if (DynSymSection) {
     updateELFSymbolTable(
         File,
-        /*IsDynSym=*/true,
-        *DynSymSection,
-        NewSectionIndex,
+        /*IsDynSym=*/true, *DynSymSection, NewSectionIndex,
         [&](size_t Offset, const ELFSymTy &Sym) {
-          Out->os().pwrite(reinterpret_cast<const char *>(&Sym),
-                           sizeof(ELFSymTy),
-                           DynSymSection->sh_offset + Offset);
+          safePWrite(Out->os(), reinterpret_cast<const char *>(&Sym),
+                     sizeof(ELFSymTy), DynSymSection->sh_offset + Offset);
         },
         [](StringRef) -> size_t { return 0; });
   }
@@ -5807,7 +5969,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
     if (!Addend)
       return;
 
-    OS.pwrite(reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
+    safePWrite(OS, reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
   };
 
   // Fill new relative relocation offsets set
@@ -5845,8 +6007,8 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       exit(1);
     }
 
-    OS.pwrite(reinterpret_cast<const char *>(&Value), DynamicRelrEntrySize,
-              RelrDynOffset);
+    safePWrite(OS, reinterpret_cast<const char *>(&Value), DynamicRelrEntrySize,
+               RelrDynOffset);
     RelrDynOffset += DynamicRelrEntrySize;
   };
 
@@ -5908,7 +6070,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   DynamicRelativeRelocationsCount = 0;
 
   auto writeRela = [&OS](const Elf_Rela *RelA, uint64_t &Offset) {
-    OS.pwrite(reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
+    safePWrite(OS, reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
     Offset += sizeof(*RelA);
   };
 
@@ -6019,9 +6181,9 @@ void RewriteInstance::patchELFGOT(ELFObjectFile<ELFT> *File) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: patching GOT entry 0x"
                         << Twine::utohexstr(*GOTEntry) << " with 0x"
                         << Twine::utohexstr(NewAddress) << '\n');
-      OS.pwrite(reinterpret_cast<const char *>(&NewAddress), sizeof(NewAddress),
-                reinterpret_cast<const char *>(GOTEntry) -
-                    File->getData().data());
+      safePWrite(
+          OS, reinterpret_cast<const char *>(&NewAddress), sizeof(NewAddress),
+          reinterpret_cast<const char *>(GOTEntry) - File->getData().data());
     }
   }
 }
@@ -6113,8 +6275,8 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
       break;
     }
     if (ShouldPatch)
-      OS.pwrite(reinterpret_cast<const char *>(&NewDE), sizeof(NewDE),
-                DynamicOffset + (&Dyn - DTB) * sizeof(Dyn));
+      safePWrite(OS, reinterpret_cast<const char *>(&NewDE), sizeof(NewDE),
+                 DynamicOffset + (&Dyn - DTB) * sizeof(Dyn));
   }
 
   if (BC->RequiresZNow && !ZNowSet) {
@@ -6327,8 +6489,8 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
     if (opts::Verbosity >= 2)
       BC->outs() << "BOLT: rewriting function \"" << *Function << "\"\n";
 
-    OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
-              Function->getImageSize(), Function->getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function->getImageAddress()),
+               Function->getImageSize(), Function->getFileOffset());
 
     // Write nops at the end of the function.
     if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
@@ -6351,8 +6513,8 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
 
     for (const FunctionFragment &FF :
          Function->getLayout().getSplitFragments()) {
-      OS.pwrite(reinterpret_cast<char *>(FF.getImageAddress()),
-                FF.getImageSize(), FF.getFileOffset());
+      safePWrite(OS, reinterpret_cast<char *>(FF.getImageAddress()),
+                 FF.getImageSize(), FF.getFileOffset());
     }
   }
 

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple amdgcn--amdpal %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn--amdpal %s | FileCheck %s
 
 	.amdgpu_pal_metadata
 ---
