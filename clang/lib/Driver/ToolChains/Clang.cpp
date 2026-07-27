@@ -1445,7 +1445,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       if (llvm::any_of(CmdArgs, isPAuthLR))
         EnablePAuthLR = true;
     }
-    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
+    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg, Triple,
                                           EnablePAuthLR))
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << DiagMsg;
@@ -1538,6 +1538,15 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   AddUnalignedAccessWarning(CmdArgs);
 }
 
+void Clang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  // Pass through -mxnack/-mno-xnack and -msramecc/-mno-sramecc flags to cc1.
+  if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack))
+    A->render(Args, CmdArgs);
+  if (Arg *A = Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc))
+    A->render(Args, CmdArgs);
+}
+
 void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
                                 const ArgList &Args, bool KernelOrKext,
                                 ArgStringList &CmdArgs) const {
@@ -1563,6 +1572,10 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:
     AddAArch64TargetArgs(Args, CmdArgs);
+    break;
+
+  case llvm::Triple::amdgpu:
+    AddAMDGPUTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::loongarch32:
@@ -3299,6 +3312,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       restoreFPContractState();
       break;
 
+    case options::OPT_cl_fast_relaxed_math:
+      applyFastMath(true, A->getSpelling());
+      break;
+
     case options::OPT_Ofast:
       // If -Ofast is the optimization level, then -ffast-math should be enabled
       if (!OFastEnabled)
@@ -3985,6 +4002,14 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   if (Args.hasArg(options::OPT_dxc_source_in_debug_module)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-source-in-debug-module");
+  }
+  if (Args.hasArg(options::OPT_dxc_Qstrip_debug)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-strip-debug");
+  }
+  if (Args.hasArg(options::OPT_dxc_Qpdb_in_private)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-pdb-in-private");
   }
 }
 
@@ -5381,6 +5406,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (UnifiedLTO)
       CmdArgs.push_back("-funified-lto");
   }
+
+  if (Args.hasArg(options::OPT_fdefined_pointer_subtraction))
+    CmdArgs.push_back("-fdefined-pointer-subtraction");
 
   // If CollectArgsForIntegratedAssembler() isn't called below, claim the args
   // it claims when not running an assembler. Otherwise, clang would emit
@@ -7036,9 +7064,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // FIXME: There's no reason for this to be restricted to some backend.
     // The backend code needs to be changed to include the appropriate function
     // calls automatically.
-    StringRef Value = A->getValue();
-    if (!Triple.isX86() && !Triple.isAArch64() &&
-        !(Triple.isRISCV() && (Value == "skip" || Value.contains("gpr"))))
+    if (!Triple.isX86() && !Triple.isAArch64() && !Triple.isRISCV())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
   }
@@ -8083,6 +8109,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_compilation_unit_id);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_include_local_entities);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_no_extract_from_system_headers);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_source_transformation);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_global_scope_analysis_result);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_src_edit_file);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_transformation_report_file);
 
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
@@ -8495,7 +8525,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Triple.isAArch64() &&
       (Args.hasArg(options::OPT_mno_fmv) ||
-       (Triple.isAndroid() && Triple.isAndroidVersionLT(23)) ||
        getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_CompilerRT)) {
     // Disable Function Multiversioning on AArch64 target.
     CmdArgs.push_back("-target-feature");

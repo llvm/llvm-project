@@ -159,9 +159,28 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
   ; CHECK: %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
   %atomic.elem.fadd = atomicrmw elementwise fadd ptr %x, <2 x half> %val monotonic
 
-  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
-  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val seq_cst
+  ; CHECK: %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val acq_rel
+  %atomic.elem.fadd.vol = atomicrmw volatile elementwise fadd ptr %x, <2 x half> %val acq_rel
 
+  ret void
+}
+
+define void @vector_atomicrmw_xchg(ptr %x, <2 x i16> %ival, <2 x half> %fval, <2 x ptr> %pval) {
+  ; CHECK: %atomic.xchg.int = atomicrmw xchg ptr %x, <2 x i16> %ival seq_cst
+  %atomic.xchg.int = atomicrmw xchg ptr %x, <2 x i16> %ival seq_cst
+
+  ; CHECK: %atomic.xchg.fp = atomicrmw xchg ptr %x, <2 x half> %fval seq_cst
+  %atomic.xchg.fp = atomicrmw xchg ptr %x, <2 x half> %fval seq_cst
+
+  ; CHECK: %atomic.xchg.ptr = atomicrmw xchg ptr %x, <2 x ptr> %pval seq_cst
+  %atomic.xchg.ptr = atomicrmw xchg ptr %x, <2 x ptr> %pval seq_cst
+
+  ret void
+}
+
+define void @vector_atomicrmw_xchg_i1(ptr %x, <8 x i1> %val) {
+  ; CHECK: %atomic.xchg = atomicrmw xchg ptr %x, <8 x i1> %val seq_cst
+  %atomic.xchg = atomicrmw xchg ptr %x, <8 x i1> %val seq_cst
   ret void
 }
 

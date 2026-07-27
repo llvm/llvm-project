@@ -111,9 +111,12 @@ static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
 /// Extract constant from a value that must be the result of one of the
 /// ConstantOp operations.
 static int64_t getConstantIntValue(mlir::Value val) {
-  if (auto constVal = fir::getIntIfConstant(val))
-    return *constVal;
-  fir::emitFatalError(val.getLoc(), "must be a constant");
+  std::optional<llvm::APInt> constVal = fir::getIntIfConstant(val);
+  if (!constVal)
+    fir::emitFatalError(val.getLoc(), "must be a constant");
+  if (std::optional<std::int64_t> constVal64 = constVal->trySExtValue())
+    return *constVal64;
+  fir::emitFatalError(val.getLoc(), "constant must fit in a 64-bit integer");
 }
 
 static unsigned getTypeDescFieldId(mlir::Type ty) {
@@ -1062,8 +1065,8 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
 
       // Do folding for constant inputs.
       if (auto constVal = fir::getIntIfConstant(op0)) {
-        mlir::Value normVal =
-            fir::genConstantIndex(loc, toTy, rewriter, *constVal ? 1 : 0);
+        mlir::Value normVal = fir::genConstantIndex(loc, toTy, rewriter,
+                                                    constVal->isZero() ? 0 : 1);
         rewriter.replaceOp(convert, normVal);
         return mlir::success();
       }
@@ -1980,7 +1983,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
     bool useInputType = fir::isPolymorphicType(boxTy) &&
                         !fir::isUnlimitedPolymorphicType(inputType);
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
-    if constexpr (!std::is_same_v<BOX, fir::EmboxOp>) {
+    if constexpr (std::is_same_v<BOX, fir::cg::XEmboxOp>) {
       if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
         typeparams.push_back(substrParams[1]);
     }
@@ -2322,6 +2325,49 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
       return true;
   return false;
 }
+
+/// Create a box from a base pointer and explicit per-dimension lower bound,
+/// extent, and byte stride. Unlike fir.embox, the strides are written into the
+/// descriptor verbatim (no scaling by the element size), while elem_len/type
+/// are taken from the result box element type.
+struct CreateBoxOpConversion : public EmboxCommonConversion<fir::CreateBoxOp> {
+  using EmboxCommonConversion::EmboxCommonConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::CreateBoxOp createBox, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = createBox.getLoc();
+    const unsigned rank = createBox.getRank();
+    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
+        createBox, fir::unwrapRefType(createBox.getMemref().getType()),
+        rewriter, rank, /*substrParams=*/mlir::ValueRange{},
+        /*lenParams=*/mlir::ValueRange{});
+
+    auto i64Ty = mlir::IntegerType::get(createBox.getContext(), 64);
+    mlir::ValueRange lbounds = adaptor.getLbounds();
+    mlir::ValueRange extents = adaptor.getExtents();
+    mlir::ValueRange strides = adaptor.getStrides();
+    for (unsigned d = 0; d < rank; ++d) {
+      mlir::Value lb = integerCast(loc, rewriter, i64Ty, lbounds[d]);
+      mlir::Value extent = integerCast(loc, rewriter, i64Ty, extents[d]);
+      // The stride is a byte stride and is stored as-is; this is the whole
+      // point of the op (fir.embox would scale it by the element size).
+      mlir::Value stride = integerCast(loc, rewriter, i64Ty, strides[d]);
+      dest = insertLowerBound(rewriter, loc, dest, d, lb);
+      dest = insertExtent(rewriter, loc, dest, d, extent);
+      dest = insertStride(rewriter, loc, dest, d, stride);
+    }
+    dest = insertBaseAddress(rewriter, loc, dest, adaptor.getMemref());
+
+    bool needsDeviceAlloc =
+        isDeviceAllocation(createBox.getMemref(), adaptor.getMemref()) ||
+        isUsedByGPULaunchFunc(createBox);
+    mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
+                                                      dest, needsDeviceAlloc);
+    rewriter.replaceOp(createBox, result);
+    return mlir::success();
+  }
+};
 
 /// Create a generic box on a memory reference.
 struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
@@ -3795,11 +3841,10 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
       if (auto callOp = mlir::dyn_cast_or_null<mlir::LLVM::CallOp>(
               inputBoxStorage.getDefiningOp())) {
         if (callOp.getCallee() &&
-            ((*callOp.getCallee())
-                 .starts_with(RTNAME_STRING(CUFAllocDescriptor)) ||
-             (*callOp.getCallee()).starts_with("__tgt_acc_get_deviceptr"))) {
-          // CUDA Fortran local descriptor are allocated in managed memory. So
-          // new storage must be allocated the same way.
+            (*callOp.getCallee()).starts_with("__tgt_acc_get_deviceptr")) {
+          // The device pointer descriptor is allocated in managed memory, so
+          // new storage must be allocated the same way. A CUFAllocDescriptor
+          // source is handled below if the load is used by a GPU launch.
           auto mod = load->getParentOfType<mlir::ModuleOp>();
           newBoxStorage =
               genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
@@ -5122,11 +5167,11 @@ void fir::populateFIRToLLVMConversionPatterns(
       DeclareValueOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
-      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-      EmboxProcOpConversion, EqvOpConversion, ExtractValueOpConversion,
-      FakeUseOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-      InsertOnRangeOpConversion, IsPresentOpConversion,
+      CreateBoxOpConversion, DivcOpConversion, EmboxOpConversion,
+      EmboxCharOpConversion, EmboxProcOpConversion, EqvOpConversion,
+      ExtractValueOpConversion, FakeUseOpConversion, FieldIndexOpConversion,
+      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
+      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
       LenParamIndexOpConversion, LoadOpConversion, LogicalAndOpConversion,
       LogicalOrOpConversion, MulcOpConversion, NegcOpConversion,
       NeqvOpConversion, NoReassocOpConversion, PrefetchOpConversion,

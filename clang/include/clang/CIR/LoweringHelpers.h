@@ -13,6 +13,7 @@
 #define LLVM_CLANG_CIR_LOWERINGHELPERS_H
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -42,6 +43,18 @@ std::optional<mlir::Attribute>
 lowerConstRecordAttr(cir::ConstRecordAttr constRecord,
                      const mlir::TypeConverter *converter,
                      mlir::ModuleOp moduleOp = {});
+
+/// Adjust \p llvmType (the converted type of \p init) to the concrete LLVM type
+/// a global constant initialized with \p init actually lowers to. This differs
+/// from a plain type conversion for flexible-array-member and union
+/// initializers, and the adjustment recurses through nested aggregates. Returns
+/// \p llvmType unchanged when no adjustment is needed. This is the single
+/// source of truth for the shape of a lowered record constant; the
+/// value-producing paths (the insertvalue visitor and lowerConstRecordAttr)
+/// conform to it.
+mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
+                                   const mlir::TypeConverter &converter,
+                                   const mlir::DataLayout &dataLayout);
 
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val);
