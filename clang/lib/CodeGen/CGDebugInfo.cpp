@@ -6411,8 +6411,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
                                   Type, false, llvm::DINode::FlagArtificial);
 
   if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
-    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     *InsertPoint);
+    DBuilder.insertDbgValue(Value, D, DBuilder.createExpression(), DIL,
+                            *InsertPoint);
   }
 }
 
