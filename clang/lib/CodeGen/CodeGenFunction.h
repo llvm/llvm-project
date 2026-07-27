@@ -1772,6 +1772,8 @@ private:
   /// expressions.
   llvm::DenseMap<const OpaqueValueExpr *, LValue> OpaqueLValues;
   llvm::DenseMap<const OpaqueValueExpr *, RValue> OpaqueRValues;
+  llvm::DenseMap<const MaterializeTemporaryExpr *, LValue>
+      PreEvaluatedMaterializedTemporaries;
 
   // VLASizeMap - This keeps track of the associated size for each VLA type.
   // We track this by the size expression rather than the type itself because
@@ -3097,6 +3099,16 @@ public:
   /// isOpaqueValueEmitted - Return true if the opaque value expression has
   /// already been emitted.
   bool isOpaqueValueEmitted(const OpaqueValueExpr *E);
+
+  bool hasPreEvaluatedTemporary(const MaterializeTemporaryExpr *M) const {
+    return PreEvaluatedMaterializedTemporaries.count(M);
+  }
+  LValue getPreEvaluatedTemporary(const MaterializeTemporaryExpr *M) {
+    auto It = PreEvaluatedMaterializedTemporaries.find(M);
+    assert(It != PreEvaluatedMaterializedTemporaries.end() &&
+           "MTE is not pre-evaluated");
+    return It->second;
+  }
 
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }

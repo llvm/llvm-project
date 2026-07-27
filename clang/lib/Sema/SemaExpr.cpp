@@ -6209,6 +6209,55 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   return false;
 }
 
+namespace {
+struct CoroSuspendFinder : DynamicRecursiveASTVisitor {
+  bool FoundSuspend = false;
+
+  CoroSuspendFinder() { ShouldVisitImplicitCode = true; }
+
+  bool VisitCoawaitExpr(CoawaitExpr *E) override {
+    FoundSuspend = true;
+    return false; // Stop traversal
+  }
+  bool VisitCoyieldExpr(CoyieldExpr *E) override {
+    FoundSuspend = true;
+    return false; // Stop traversal
+  }
+};
+} // namespace
+
+static bool containsCoroSuspend(const Expr *E) {
+  if (!E)
+    return false;
+  CoroSuspendFinder Finder;
+  Finder.TraverseStmt(const_cast<Expr *>(E));
+  return Finder.FoundSuspend;
+}
+
+static bool isWin32InAllocaRecord(ASTContext &Context, QualType Ty) {
+  const RecordType *RT = Ty->getAs<RecordType>();
+  if (!RT)
+    return false;
+  const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  if (!RD)
+    return false;
+
+  const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+  if (Triple.getArch() != llvm::Triple::x86 || !Triple.isOSWindows())
+    return false;
+  if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
+    return false;
+
+  if (RD->canPassInRegisters())
+    return false;
+
+  TypeInfo Info = Context.getTypeInfo(Context.getCanonicalTagType(RD));
+  if (Info.isAlignRequired() && Info.Align > 4)
+    return false; // passed indirectly
+
+  return true;
+}
+
 bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   const FunctionProtoType *Proto,
                                   unsigned FirstParam, ArrayRef<Expr *> Args,
@@ -6216,6 +6265,15 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   VariadicCallType CallType, bool AllowExplicit,
                                   bool IsListInitialization) {
   unsigned NumParams = Proto->getNumParams();
+  bool CallHasSuspend = false;
+  if (getCurFunction() && getCurFunction()->isCoroutine()) {
+    for (const Expr *A : Args) {
+      if (containsCoroSuspend(A)) {
+        CallHasSuspend = true;
+        break;
+      }
+    }
+  }
   bool Invalid = false;
   size_t ArgIx = 0;
   // Continue to check argument types (even if we have too few/many args).
@@ -6274,6 +6332,13 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
              isPedantic ? diag::warn_obt_discarded_at_function_boundary_pedantic
                         : diag::warn_obt_discarded_at_function_boundary)
             << Arg->getType() << ProtoArgType;
+      }
+      if (CallHasSuspend && Arg->isPRValue() &&
+          isWin32InAllocaRecord(Context, ProtoArgType)) {
+        ExprResult Materialized =
+            CreateMaterializeTemporaryExpr(Arg->getType(), Arg, false);
+        if (!Materialized.isInvalid())
+          Arg = Materialized.get();
       }
 
       ExprResult ArgE = PerformCopyInitialization(

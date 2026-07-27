@@ -357,9 +357,6 @@ public:
     std::reverse(Writebacks.begin(), Writebacks.end());
   }
 
-  bool shouldForceWriteback() const { return ForceWriteback; }
-  void setForceWriteback(bool V) { ForceWriteback = V; }
-
 private:
   SmallVector<Writeback, 1> Writebacks;
 
@@ -370,8 +367,6 @@ private:
 
   /// The stacksave call.  It dominates all of the argument evaluation.
   llvm::CallInst *StackBase = nullptr;
-
-  bool ForceWriteback = false;
 };
 
 /// FunctionArgList - Type for representing both the decl and type

@@ -4811,6 +4811,46 @@ static bool containsCoroSuspend(const Expr *E) {
   return Finder.FoundSuspend;
 }
 
+static const MaterializeTemporaryExpr *getMTEToPreEvaluate(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParens();
+    if (auto *Cleanups = dyn_cast<ExprWithCleanups>(E)) {
+      E = Cleanups->getSubExpr();
+      continue;
+    }
+    if (auto *Bind = dyn_cast<CXXBindTemporaryExpr>(E)) {
+      E = Bind->getSubExpr();
+      continue;
+    }
+    break;
+  }
+
+  if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+    if (CE->getNumArgs() > 0) {
+      const Expr *Arg = CE->getArg(0);
+      while (true) {
+        Arg = Arg->IgnoreParens();
+        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Arg))
+          return MTE;
+        if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Arg)) {
+          Arg = Cleanups->getSubExpr();
+          continue;
+        }
+        if (auto *Bind = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
+          Arg = Bind->getSubExpr();
+          continue;
+        }
+        if (auto *ICE = dyn_cast<ImplicitCastExpr>(Arg)) {
+          Arg = ICE->getSubExpr();
+          continue;
+        }
+        break;
+      }
+    }
+  }
+  return nullptr;
+}
+
 /// EmitCallArgs - Emit call arguments for a function.
 void CodeGenFunction::EmitCallArgs(
     CallArgList &Args, PrototypeWrapper Prototype,
@@ -4909,25 +4949,44 @@ void CodeGenFunction::EmitCallArgs(
       std::swap(Args.back(), *(&Args.back() - 1));
   };
 
+  bool CallHasSuspend = false;
+  if (isCoroutine()) {
+    for (const Expr *A : ArgRange) {
+      if (containsCoroSuspend(A)) {
+        CallHasSuspend = true;
+        break;
+      }
+    }
+  }
+
+  SmallVector<const MaterializeTemporaryExpr *, 4> MTEsToPreEvaluate;
+  if (CallHasSuspend && hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
+    for (const Expr *A : ArgRange) {
+      if (auto *MTE = getMTEToPreEvaluate(A)) {
+        MTEsToPreEvaluate.push_back(MTE);
+      }
+    }
+  }
+
+  if (!MTEsToPreEvaluate.empty()) {
+    if (LeftToRight) {
+      for (const MaterializeTemporaryExpr *MTE : MTEsToPreEvaluate) {
+        LValue LV = EmitMaterializeTemporaryExpr(MTE);
+        PreEvaluatedMaterializedTemporaries[MTE] = LV;
+      }
+    } else {
+      for (int i = MTEsToPreEvaluate.size() - 1; i >= 0; --i) {
+        const MaterializeTemporaryExpr *MTE = MTEsToPreEvaluate[i];
+        LValue LV = EmitMaterializeTemporaryExpr(MTE);
+        PreEvaluatedMaterializedTemporaries[MTE] = LV;
+      }
+    }
+  }
+
   if (hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
     assert(getTarget().getTriple().getArch() == llvm::Triple::x86 &&
            "inalloca only supported on x86");
-    if (isCoroutine()) {
-      bool CallHasSuspend = false;
-      for (const Expr *A : ArgRange) {
-        bool hasSuspend = containsCoroSuspend(A);
-        if (hasSuspend) {
-          CallHasSuspend = true;
-          break;
-        }
-      }
-      if (CallHasSuspend) {
-        Args.setForceWriteback(true);
-      }
-    }
-    if (!Args.shouldForceWriteback()) {
-      Args.allocateArgumentMemory(*this);
-    }
+    Args.allocateArgumentMemory(*this);
   }
 
   // Evaluate each argument in the appropriate order.
@@ -4963,10 +5022,6 @@ void CodeGenFunction::EmitCallArgs(
     }
   }
 
-  if (Args.shouldForceWriteback()) {
-    Args.allocateArgumentMemory(*this);
-  }
-
   if (!LeftToRight) {
     // Un-reverse the arguments we just evaluated so they match up with the LLVM
     // IR function.
@@ -4974,6 +5029,10 @@ void CodeGenFunction::EmitCallArgs(
 
     // Reverse the writebacks to match the MSVC ABI.
     Args.reverseWritebacks();
+  }
+
+  for (const auto *MTE : MTEsToPreEvaluate) {
+    PreEvaluatedMaterializedTemporaries.erase(MTE);
   }
 }
 
@@ -5064,42 +5123,39 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (type->isRecordType()) {
-    bool paramDestroyed = type->castAsRecordDecl()->isParamDestroyedInCallee();
-    if (paramDestroyed) {
-      // If we're using inalloca, use the argument memory.  Otherwise, use a
-      // temporary.
-      bool usePlaceholder =
-          args.isUsingInAlloca() && !args.shouldForceWriteback();
-      AggValueSlot Slot = usePlaceholder ? createPlaceholderSlot(*this, type)
-                                         : CreateAggTemp(type, "agg.tmp");
+  if (type->isRecordType() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee()) {
+    // If we're using inalloca, use the argument memory.  Otherwise, use a
+    // temporary.
+    AggValueSlot Slot = args.isUsingInAlloca()
+                            ? createPlaceholderSlot(*this, type)
+                            : CreateAggTemp(type, "agg.tmp");
 
-      bool DestroyedInCallee = true, NeedsCleanup = true;
-      if (const auto *RD = type->getAsCXXRecordDecl())
-        DestroyedInCallee = RD->hasNonTrivialDestructor();
-      else
-        NeedsCleanup = type.isDestructedType();
+    bool DestroyedInCallee = true, NeedsCleanup = true;
+    if (const auto *RD = type->getAsCXXRecordDecl())
+      DestroyedInCallee = RD->hasNonTrivialDestructor();
+    else
+      NeedsCleanup = type.isDestructedType();
 
-      if (DestroyedInCallee && !args.shouldForceWriteback())
-        Slot.setExternallyDestructed();
+    if (DestroyedInCallee)
+      Slot.setExternallyDestructed();
 
-      EmitAggExpr(E, Slot);
-      RValue RV = Slot.asRValue();
-      args.add(RV, type);
+    EmitAggExpr(E, Slot);
+    RValue RV = Slot.asRValue();
+    args.add(RV, type);
 
-      if (DestroyedInCallee && NeedsCleanup && !args.shouldForceWriteback()) {
-        // Create a no-op GEP between the placeholder and the cleanup so we can
-        // RAUW it successfully.  It also serves as a marker of the first
-        // instruction where the cleanup is active.
-        pushFullExprCleanup<DestroyUnpassedArg>(NormalAndEHCleanup,
-                                                Slot.getAddress(), type);
-        // This unreachable is a temporary marker which will be removed later.
-        llvm::Instruction *IsActive =
-            Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
-        args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
-      }
-      return;
+    if (DestroyedInCallee && NeedsCleanup) {
+      // Create a no-op GEP between the placeholder and the cleanup so we can
+      // RAUW it successfully.  It also serves as a marker of the first
+      // instruction where the cleanup is active.
+      pushFullExprCleanup<DestroyUnpassedArg>(NormalAndEHCleanup,
+                                              Slot.getAddress(), type);
+      // This unreachable is a temporary marker which will be removed later.
+      llvm::Instruction *IsActive =
+          Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+      args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
+    return;
   }
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
@@ -5549,83 +5605,26 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         RawAddress Addr = I->hasLValue()
                               ? I->getKnownLValue().getAddress()
                               : I->getKnownRValue().getAggregateAddress();
-        if (CallArgs.shouldForceWriteback()) {
-          RawAddress Dest = RawAddress::invalid();
-          if (!ArgInfo.getInAllocaIndirect()) {
-            Dest = Builder.CreateStructGEP(ArgMemory,
-                                           ArgInfo.getInAllocaFieldIndex());
-          } else {
-            Dest = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
-            Address ArgSlot = Builder.CreateStructGEP(
-                ArgMemory, ArgInfo.getInAllocaFieldIndex());
-            Builder.CreateStore(Dest.getPointer(), ArgSlot);
-          }
-          const CXXRecordDecl *RD = info_it->type->getAsCXXRecordDecl();
-          if (RD && !RD->isTriviallyCopyable()) {
-            const CXXConstructorDecl *CopyCtor = nullptr;
-            const CXXConstructorDecl *MoveCtor = nullptr;
-            for (const CXXConstructorDecl *C : RD->ctors()) {
-              if (C->isDeleted())
-                continue;
-              if (C->isMoveConstructor()) {
-                MoveCtor = C;
-              } else if (C->isCopyConstructor()) {
-                if (!CopyCtor || C->getParamDecl(0)
-                                     ->getType()
-                                     ->getPointeeType()
-                                     .isConstQualified())
-                  CopyCtor = C;
-              }
-            }
-            const CXXConstructorDecl *Ctor = MoveCtor ? MoveCtor : CopyCtor;
-            if (!Ctor || Ctor->isDeleted()) {
-              CGM.Error(Loc, "coroutine argument must be copyable or movable "
-                             "on this target");
-              EmitAggregateCopy(MakeAddrLValue(Dest, info_it->type),
-                                MakeAddrLValue(Addr, info_it->type),
-                                info_it->type, AggValueSlot::DoesNotOverlap);
-            } else {
-              CallArgList CtorArgs;
-              llvm::Value *ThisPtr = getAsNaturalPointerTo(
-                  Dest, Ctor->getThisType()->getPointeeType());
-              CtorArgs.add(RValue::get(ThisPtr), Ctor->getThisType());
-              QualType ParamTy = Ctor->getParamDecl(0)->getType();
-              llvm::Value *SrcPtr =
-                  getAsNaturalPointerTo(Addr, ParamTy->getPointeeType());
-              CtorArgs.add(RValue::get(SrcPtr), ParamTy);
-              EmitCXXConstructorCall(Ctor, Ctor_Complete,
-                                     /*ForVirtualBase*/ false,
-                                     /*Delegating*/ false, Dest, CtorArgs,
-                                     AggValueSlot::DoesNotOverlap, Loc,
-                                     /*NewPointerIsChecked*/ false);
-            }
-          } else {
-            EmitAggregateCopy(MakeAddrLValue(Dest, info_it->type),
-                              MakeAddrLValue(Addr, info_it->type),
-                              info_it->type, AggValueSlot::DoesNotOverlap);
-          }
-        } else {
-          llvm::Instruction *Placeholder =
-              cast<llvm::Instruction>(Addr.getPointer());
+        llvm::Instruction *Placeholder =
+            cast<llvm::Instruction>(Addr.getPointer());
 
-          if (!ArgInfo.getInAllocaIndirect()) {
-            // Replace the placeholder with the appropriate argument slot GEP.
-            CGBuilderTy::InsertPoint IP = Builder.saveIP();
-            Builder.SetInsertPoint(Placeholder);
-            Addr = Builder.CreateStructGEP(ArgMemory,
-                                           ArgInfo.getInAllocaFieldIndex());
-            Builder.restoreIP(IP);
-          } else {
-            // For indirect things such as overaligned structs, replace the
-            // placeholder with a regular aggregate temporary alloca. Store the
-            // address of this alloca into the struct.
-            Addr = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
-            Address ArgSlot = Builder.CreateStructGEP(
-                ArgMemory, ArgInfo.getInAllocaFieldIndex());
-            Builder.CreateStore(Addr.getPointer(), ArgSlot);
-          }
-          deferPlaceholderReplacement(Placeholder, Addr.getPointer());
+        if (!ArgInfo.getInAllocaIndirect()) {
+          // Replace the placeholder with the appropriate argument slot GEP.
+          CGBuilderTy::InsertPoint IP = Builder.saveIP();
+          Builder.SetInsertPoint(Placeholder);
+          Addr = Builder.CreateStructGEP(ArgMemory,
+                                         ArgInfo.getInAllocaFieldIndex());
+          Builder.restoreIP(IP);
+        } else {
+          // For indirect things such as overaligned structs, replace the
+          // placeholder with a regular aggregate temporary alloca. Store the
+          // address of this alloca into the struct.
+          Addr = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
+          Address ArgSlot = Builder.CreateStructGEP(
+              ArgMemory, ArgInfo.getInAllocaFieldIndex());
+          Builder.CreateStore(Addr.getPointer(), ArgSlot);
         }
+        deferPlaceholderReplacement(Placeholder, Addr.getPointer());
       } else if (ArgInfo.getInAllocaIndirect()) {
         // Make a temporary alloca and store the address of it into the argument
         // struct.

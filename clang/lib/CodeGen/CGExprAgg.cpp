@@ -754,8 +754,58 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 //                            Visitor Methods
 //===----------------------------------------------------------------------===//
 
+static void emitNonTrivialCopyOrMove(CodeGenFunction &CGF, AggValueSlot Dest,
+                                     LValue SrcLV, QualType Type) {
+  const CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
+  assert(RD && "Type must be a CXXRecordDecl");
+
+  const CXXConstructorDecl *CopyCtor = nullptr;
+  const CXXConstructorDecl *MoveCtor = nullptr;
+  for (const CXXConstructorDecl *C : RD->ctors()) {
+    if (C->isDeleted())
+      continue;
+    if (C->isMoveConstructor()) {
+      MoveCtor = C;
+    } else if (C->isCopyConstructor()) {
+      if (!CopyCtor ||
+          C->getParamDecl(0)->getType()->getPointeeType().isConstQualified())
+        CopyCtor = C;
+    }
+  }
+
+  const CXXConstructorDecl *Ctor = MoveCtor ? MoveCtor : CopyCtor;
+  assert(Ctor && "No copy or move constructor found");
+
+  CallArgList CtorArgs;
+  llvm::Value *ThisPtr = CGF.getAsNaturalPointerTo(
+      Dest.getAddress(), Ctor->getThisType()->getPointeeType());
+  CtorArgs.add(RValue::get(ThisPtr), Ctor->getThisType());
+
+  QualType ParamTy = Ctor->getParamDecl(0)->getType();
+  llvm::Value *SrcPtr =
+      CGF.getAsNaturalPointerTo(SrcLV.getAddress(), ParamTy->getPointeeType());
+  CtorArgs.add(RValue::get(SrcPtr), ParamTy);
+
+  CGF.EmitCXXConstructorCall(Ctor, Ctor_Complete,
+                             /*ForVirtualBase*/ false,
+                             /*Delegating*/ false, Dest.getAddress(), CtorArgs,
+                             AggValueSlot::DoesNotOverlap, SourceLocation(),
+                             /*NewPointerIsChecked*/ false);
+}
+
 void AggExprEmitter::VisitMaterializeTemporaryExpr(
     MaterializeTemporaryExpr *E) {
+  if (CGF.hasPreEvaluatedTemporary(E)) {
+    LValue SrcLV = CGF.getPreEvaluatedTemporary(E);
+    QualType Type = E->getType();
+    const CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
+    if (RD && !RD->isTriviallyCopyable()) {
+      emitNonTrivialCopyOrMove(CGF, Dest, SrcLV, Type);
+    } else {
+      EmitFinalDestCopy(Type, SrcLV);
+    }
+    return;
+  }
   Visit(E->getSubExpr());
 }
 

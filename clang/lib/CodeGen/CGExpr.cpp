@@ -513,6 +513,11 @@ static bool isAAPCS(const TargetInfo &TargetInfo) {
 
 LValue CodeGenFunction::
 EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
+  auto It = PreEvaluatedMaterializedTemporaries.find(M);
+  if (It != PreEvaluatedMaterializedTemporaries.end()) {
+    return It->second;
+  }
+
   const Expr *E = M->getSubExpr();
 
   assert((!M->getExtendingDecl() || !isa<VarDecl>(M->getExtendingDecl()) ||
