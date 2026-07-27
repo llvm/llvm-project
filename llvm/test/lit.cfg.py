@@ -584,6 +584,9 @@ if config.link_llvm_dylib:
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
+if getattr(config, "have_emitc_compile", False):
+    config.available_features.add("have_emitc_compile")
+
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
 
