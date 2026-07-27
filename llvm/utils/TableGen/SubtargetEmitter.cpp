@@ -286,24 +286,44 @@ static void checkDuplicateCPUFeatures(StringRef CPUName,
 std::pair<unsigned, unsigned>
 SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
                                const FeatureMapTy &FeatureMap) {
-  // Gather and sort processor information
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
-  llvm::sort(ProcessorList, LessRecordFieldName());
 
-  // In the string table, include the aliases as well.
+  StringMap<const Record *> ProcessorMap;
+  for (const Record *Processor : ProcessorList)
+    ProcessorMap[Processor->getValueAsString("Name")] = Processor;
+
+  // Maps each emitted CPU name (processor or alias) to the processor record it
+  // resolves to. Keying by name detects duplicates on insertion.
+  StringMap<const Record *> SubTypeEntries;
+  for (const Record *Processor : ProcessorList)
+    SubTypeEntries[Processor->getValueAsString("Name")] = Processor;
+
   std::vector<const Record *> ProcessorAliasList =
       Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
-  SmallVector<StringRef> Names;
-  Names.reserve(ProcessorList.size() + ProcessorAliasList.size());
-  for (const Record *Processor : ProcessorList)
-    Names.push_back(Processor->getValueAsString("Name"));
-  for (const Record *Rec : ProcessorAliasList)
-    Names.push_back(Rec->getValueAsString("Name"));
-  llvm::sort(Names);
+  for (const Record *Rec : ProcessorAliasList) {
+    StringRef Name = Rec->getValueAsString("Name");
+    StringRef Alias = Rec->getValueAsString("Alias");
+    auto It = ProcessorMap.find(Alias);
+    if (It == ProcessorMap.end())
+      PrintFatalError(Rec, "Alias '" + Name +
+                               "' references a non-existent Processor '" +
+                               Alias + "'");
+    if (!SubTypeEntries.try_emplace(Name, It->second).second)
+      PrintFatalError(
+          Rec, "Alias '" + Name + "' duplicates an existing " +
+                   (ProcessorMap.contains(Name) ? "Processor" : "alias"));
+  }
+
+  // The table must stay sorted by key for the binary search in the lookups.
+  std::vector<std::pair<StringRef, const Record *>> SortedEntries;
+  SortedEntries.reserve(SubTypeEntries.size());
+  for (const auto &Entry : SubTypeEntries)
+    SortedEntries.emplace_back(Entry.getKey(), Entry.getValue());
+  llvm::sort(SortedEntries, llvm::less_first());
 
   StringToOffsetTable StrTab;
-  for (StringRef Name : Names)
+  for (const auto &[Name, Proc] : SortedEntries)
     StrTab.GetOrAddStringOffset(Name);
 
   // Note that unlike `FeatureKeyValues`, here we do not need to check for
@@ -311,24 +331,25 @@ SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
   // constructor calls `getSchedModels` to build a `CodeGenSchedModels` object,
   // which does the duplicate processor check.
 
+  unsigned Total = SortedEntries.size();
+
   // Begin processor table.
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
-     << "extern const llvm::SubtargetSubTypeKVStorage< " << ProcessorList.size()
-     << ", " << (StrTab.size() + 1) << "> " << Target
-     << "SubTypeKVStorage = {\n  {\n";
+     << "extern const llvm::SubtargetSubTypeKVStorage< " << Total << ", "
+     << (StrTab.size() + 1) << "> " << Target << "SubTypeKVStorage = {\n  {\n";
 
-  for (const auto &[Idx, Processor] : enumerate(ProcessorList)) {
-    StringRef Name = Processor->getValueAsString("Name");
+  for (const auto &[Idx, Entry] : enumerate(SortedEntries)) {
+    const auto &[Name, Processor] = Entry;
     ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
     ConstRecVec TuneFeatureList =
         Processor->getValueAsListOfDefs("TuneFeatures");
 
-    // Warn the user if there are duplicate processor features or tune
-    // features.
-    checkDuplicateCPUFeatures(Name, FeatureList, TuneFeatureList);
+    // Aliases share the canonical processor's already-checked feature lists.
+    if (Name == Processor->getValueAsString("Name"))
+      checkDuplicateCPUFeatures(Name, FeatureList, TuneFeatureList);
 
-    OS << "   { sizeof(SubtargetSubTypeKV) * " << (ProcessorList.size() - Idx)
-       << " + " << StrTab.GetOrAddStringOffset(Name) << ", ";
+    OS << "   { sizeof(SubtargetSubTypeKV) * " << (Total - Idx) << " + "
+       << StrTab.GetOrAddStringOffset(Name) << ", ";
 
     printFeatureMask(OS, FeatureList, FeatureMap);
     OS << ", ";
@@ -344,7 +365,7 @@ SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
   // End processor table.
   OS << "};\n";
 
-  return {ProcessorList.size(), StrTab.size() + 1};
+  return {Total, StrTab.size() + 1};
 }
 
 //
@@ -1990,10 +2011,6 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
     return;
   }
 
-  if (Target == "AArch64")
-    OS << "  CPU = AArch64::resolveCPUAlias(CPU);\n"
-       << "  TuneCPU = AArch64::resolveCPUAlias(TuneCPU);\n";
-
   OS << "  InitMCProcessorInfo(CPU, TuneCPU, FS);\n"
      << "  const FeatureBitset &Bits = getFeatureBits();\n";
 
@@ -2068,11 +2085,6 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
           "final;\n";
   }
-  if (Target == "AArch64")
-    OS << "  bool isCPUStringValid(StringRef CPU) const final {\n"
-       << "    CPU = AArch64::resolveCPUAlias(CPU);\n"
-       << "    return MCSubtargetInfo::isCPUStringValid(CPU);\n"
-       << "  }\n";
   OS << "};\n";
   emitHwModeCheck(Target + "GenMCSubtargetInfo", OS, /*IsMC=*/true);
 }
@@ -2105,8 +2117,6 @@ FeatureMapTy SubtargetEmitter::emitEnums(raw_ostream &OS) {
 SubtargetEmitter::MCDescInfo
 SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_MC_DESC");
-  if (Target == "AArch64")
-    OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
 
   MCDescInfo Res;
@@ -2127,9 +2137,6 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   OS << "\nstatic inline MCSubtargetInfo *create" << Target
      << "MCSubtargetInfoImpl("
      << "const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS) {\n";
-  if (Target == "AArch64")
-    OS << "  CPU = AArch64::resolveCPUAlias(CPU);\n"
-       << "  TuneCPU = AArch64::resolveCPUAlias(TuneCPU);\n";
   OS << "  return new " << Target
      << "GenMCSubtargetInfo(TT, CPU, TuneCPU, FS, ";
   OS << "StringTable(" << Target << "SubTypeKVStorage.Strings), ";
@@ -2163,8 +2170,6 @@ void SubtargetEmitter::emitTargetDesc(raw_ostream &OS) {
   OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
-  if (Target == "AArch64")
-    OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   parseFeaturesFunction(OS);
 }
 
@@ -2264,11 +2269,7 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
   OS << ClassName << "::" << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS)\n";
 
-  if (Target == "AArch64")
-    OS << "  : TargetSubtargetInfo(TT, AArch64::resolveCPUAlias(CPU),\n"
-       << "                        AArch64::resolveCPUAlias(TuneCPU), FS, ";
-  else
-    OS << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
+  OS << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
   OS << "StringTable(" << Target << "SubTypeKVStorage.Strings), ";
   if (DescInfo.NumFeatures)
     OS << "ArrayRef(" << Target << "FeatureKVStorage.Features), ";
