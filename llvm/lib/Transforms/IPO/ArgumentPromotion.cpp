@@ -294,7 +294,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     NewCS->setAttributes(AttributeList::get(F->getContext(),
                                             CallPAL.getFnAttrs(),
                                             CallPAL.getRetAttrs(), ArgAttrVec));
-    NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCS->copyProfileAndDebugMetadata(CB);
     Args.clear();
     ArgAttrVec.clear();
 

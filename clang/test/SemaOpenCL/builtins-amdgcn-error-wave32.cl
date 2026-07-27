@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple amdgcn-- -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx900 -verify=expected,gfx9 -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx900 -target-feature +wavefrontsize64 -verify=expected,wavefront64 -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 -target-feature +wavefrontsize64 -verify=expected,wavefront64 -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 -target-feature -wavefrontsize32 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.00-- -verify=expected,gfx9 -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.00-- -target-feature +wavefrontsize64 -verify=expected,wavefront64 -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.10-- -target-feature +wavefrontsize64 -verify=expected,wavefront64 -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.10-- -target-feature -wavefrontsize32 -verify -S -o - %s
 
 // REQUIRES: amdgpu-registered-target
 

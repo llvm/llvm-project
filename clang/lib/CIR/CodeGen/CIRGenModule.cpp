@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
+#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -37,6 +37,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
@@ -151,6 +152,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         getTriple().isGPU(), langOpts.OpenMPForceUSM, langOpts.OpenMP,
         langOpts.OMPHostIRFile, langOpts.OMPTargetTriples, langOpts.NoGPULib);
     mlir::omp::setOffloadModuleInterfaceAttributes(theModule, ompOpts);
+    mlir::omp::setOpenMPVersionAttribute(theModule, langOpts.OpenMP);
   }
 
   if (langOpts.CUDA)
@@ -2306,11 +2308,19 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
-  if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
-    assert(!cir::MissingFeatures::noUniqueAddressLayout());
-    errorNYI(e->getExprLoc(),
-             "emitMemberPointerConstant: no_unique_address field");
-    return {};
+  // Empty [[no_unique_address]] fields have no CIR field index; represent the
+  // pointer-to-data-member by its concrete byte offset within the class.
+  if (isEmptyFieldForMemberPointer(fieldDecl)) {
+    // This function should ONLY be accessed in reference to itself, I don't see
+    // any cases/couldn't find any cases where anything else could get here, and
+    // classic-codegen does the same.
+    assert(fieldDecl->getParent() == destClass &&
+           "scalar member pointer should be relative to the declaring class");
+    uint64_t offset =
+        astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl))
+            .getQuantity();
+    return cir::ConstantOp::create(builder, loc,
+                                   cir::DataMemberOffsetAttr::get(ty, offset));
   }
 
   std::optional<llvm::SmallVector<int32_t>> path =
@@ -2324,8 +2334,6 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
                               const FieldDecl *field) {
-  assert(!field->hasAttr<NoUniqueAddressAttr>());
-
   llvm::SmallVector<int32_t> path;
   if (!findFieldMemberPath(destClass, field, path))
     return std::nullopt;
@@ -2393,6 +2401,11 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
     path.pop_back();
   }
   return false;
+}
+
+bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
+  return isEmptyFieldForLayout(astContext, field) &&
+         field->isPotentiallyOverlapping();
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -3458,8 +3471,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
 
-    // Mark C++ special member functions (Constructor, Destructor etc.)
-    setCXXSpecialMemberAttr(func, funcDecl);
+    // Record the func_info tag, a C++ special member form or a known standard
+    // library entity.
+    setFuncInfoAttr(func, funcDecl);
 
     if (!cgf)
       theModule.push_back(func);
@@ -3503,8 +3517,8 @@ static cir::AssignKind getAssignKindFromDecl(const CXXMethodDecl *method) {
   llvm_unreachable("not a copy or move assignment operator");
 }
 
-void CIRGenModule::setCXXSpecialMemberAttr(
-    cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl) {
+void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
+                                   const clang::FunctionDecl *funcDecl) {
   if (!funcDecl)
     return;
 
@@ -3535,6 +3549,33 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
+
+  // Otherwise tag a function that matches a known standard library entity. A
+  // known entity is named by a plain identifier in std. For a member the
+  // record decides std membership. Inline namespaces, like the versioning
+  // namespace of libc++, count as part of std.
+  if (!funcDecl->getIdentifier())
+    return;
+  bool inStdNamespace = method ? method->getParent()->isInStdNamespace()
+                               : funcDecl->isInStdNamespace();
+  if (!inStdNamespace)
+    return;
+
+  // The names and the tags come from CIRStdOps.td, and the recognizer checks
+  // the shape of each call. Only free functions name a known entity today, so
+  // a member like char_traits::find never shares the tag of the free std::find.
+  std::optional<cir::KnownFuncKind> kind;
+  if (!method) {
+    kind = llvm::StringSwitch<std::optional<cir::KnownFuncKind>>(
+               funcDecl->getName())
+               .Case(cir::StdFindOp::getFunctionName(),
+                     cir::StdFindOp::getFuncKind())
+               .Default(std::nullopt);
+  }
+  if (!kind)
+    return;
+
+  funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(&getMLIRContext(), *kind));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,

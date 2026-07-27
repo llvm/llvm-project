@@ -196,11 +196,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
 
-  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
-                    << TargetID.getXnackSetting() << '\n');
-  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
-                    << TargetID.getSramEccSetting() << '\n');
-
   return *this;
 }
 
@@ -217,11 +212,13 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM, bool BufferOOBRelaxed,
-                           bool TBufferOOBRelaxed)
+                           bool TBufferOOBRelaxed,
+                           AMDGPU::TargetIDSetting XnackSetting,
+                           AMDGPU::TargetIDSetting SramEccSetting)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(AMDGPU::createAMDGPUTargetID(*this, FS)),
+    TargetID(AMDGPU::createAMDGPUTargetID(*this, "")),
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
@@ -232,6 +229,22 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                   /*TransAl=*/Align(4)) {
 
   // clang-format on
+
+  // Apply the module flag's xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support have xnack always on and ignore module
+  // flags.
+  if (hasXNACKOnOffModes())
+    TargetID.setXnackSetting(XnackSetting);
+
+  // Apply the module flag's sramecc setting if the target supports it.
+  if (supportsSRAMECC())
+    TargetID.setSramEccSetting(SramEccSetting);
+
+  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
+                    << TargetID.getXnackSetting() << '\n');
+  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
+                    << TargetID.getSramEccSetting() << '\n');
+
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
 

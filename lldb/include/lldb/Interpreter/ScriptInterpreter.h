@@ -39,6 +39,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 #include <optional>
 
@@ -170,6 +171,25 @@ public:
 
   virtual StructuredData::DictionarySP GetInterpreterInfo();
 
+  /// Describes one extension to emit into the generated template file.
+  ///
+  /// `full_name` is the dotted extension name as the user typed it (e.g.
+  /// `"ScriptedProcess"` or a nested `"...ChildKind"`), used to name the
+  /// generated class. `path` is the same name split on `.`; its last element
+  /// selects the ScriptedExtension kind and everything before it is treated
+  /// as a subclass discriminator. Both StringRefs must outlive the call to
+  /// GenerateExtensionTemplate; the implementation stores them, not copies.
+  struct ExtensionTemplateRequest {
+    llvm::StringRef full_name;
+    llvm::SmallVector<llvm::StringRef> path;
+  };
+
+  virtual llvm::Expected<FileSpec>
+  GenerateExtensionTemplate(const std::string &name,
+                            std::vector<ExtensionTemplateRequest> &extensions,
+                            bool generate_non_abstract_methods,
+                            std::string output_file);
+
   ~ScriptInterpreter() override = default;
 
   virtual bool Interrupt() { return false; }
@@ -246,22 +266,6 @@ public:
   virtual StructuredData::GenericSP
   CreateScriptCommandObject(const char *class_name) {
     return StructuredData::GenericSP();
-  }
-
-  virtual StructuredData::GenericSP
-  CreateFrameRecognizer(const char *class_name) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual lldb::ValueObjectListSP GetRecognizedArguments(
-      const StructuredData::ObjectSP &implementor,
-      lldb::StackFrameSP frame_sp) {
-    return lldb::ValueObjectListSP();
-  }
-
-  virtual bool ShouldHide(const StructuredData::ObjectSP &implementor,
-                          lldb::StackFrameSP frame_sp) {
-    return false;
   }
 
   virtual StructuredData::ObjectSP
@@ -526,6 +530,16 @@ public:
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
 
+  virtual llvm::Expected<std::string>
+  ExtensionToImportPath(lldb::ScriptedExtension extension) {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  static llvm::StringLiteral
+  ExtensionToString(lldb::ScriptedExtension extension);
+
+  static lldb::ScriptedExtension StringToExtension(llvm::StringRef string);
+
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
@@ -564,6 +578,11 @@ public:
 
   virtual lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedStackFrameRecognizerInterfaceSP
+  CreateScriptedStackFrameRecognizerInterface() {
     return {};
   }
 
