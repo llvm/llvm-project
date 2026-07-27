@@ -1,7 +1,7 @@
 // Test SystemZ ABI rewrite of struct passed by value (BIND(C), VALUE derived types).
 // RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s
 
-// CHECK-LABEL: func.func private @test_i32(%arg0: i64)
+// CHECK-LABEL: func.func private @test_i32(%arg0: i32)
 func.func private @test_i32(%arg0: !fir.type<t1{i:i32}>) { return }
 
 // CHECK-LABEL: func.func @test_call_i32(
@@ -10,11 +10,11 @@ func.func @test_call_i32(%arg0: !fir.ref<!fir.type<t1{i:i32}>>) {
   // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t1{i:i32}>>
   %in = fir.load %arg0 : !fir.ref<!fir.type<t1{i:i32}>>
   // CHECK: %[[STCK:.*]] = llvm.intr.stacksave : !llvm.ptr
-  // CHECK: %[[TMP:.*]] = fir.alloca i64
-  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<i64>) -> !fir.ref<!fir.type<t1{i:i32}>>
+  // CHECK: %[[TMP:.*]] = fir.alloca i32
+  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<i32>) -> !fir.ref<!fir.type<t1{i:i32}>>
   // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<t1{i:i32}>>
-  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<i64>
-  // CHECK: fir.call @test_i32(%[[VAL]]) : (i64) -> ()
+  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<i32>
+  // CHECK: fir.call @test_i32(%[[VAL]]) : (i32) -> ()
   // CHECK: llvm.intr.stackrestore %[[STCK]] : !llvm.ptr
   fir.call @test_i32(%in) : (!fir.type<t1{i:i32}>) -> ()
   // CHECK: return

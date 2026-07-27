@@ -1959,7 +1959,7 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
     // SystemZ ABI requires all integers < 64 bits to be sign/zero extended.
     // Handle widths 32 to 63 explicitly; GenericTarget handles widths < 32
     // including the i1 zero-extension special case.
-    if (argTy.getWidth() >= 32 && argTy.getWidth() < defaultWidth) {
+    if (argTy.getWidth() >= 32 && argTy.getWidth() < 64) {
       AT::IntegerExtension intExt = argTy.isUnsigned()
                                         ? AT::IntegerExtension::Zero
                                         : AT::IntegerExtension::Sign;
@@ -2000,7 +2000,8 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
         fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
     uint64_t byteSize = sizeAndAlign.first;
     if (byteSize == 1 || byteSize == 2 || byteSize == 4 || byteSize == 8) {
-      marshal.emplace_back(mlir::IntegerType::get(ty.getContext(), 64), AT{});
+      marshal.emplace_back(
+          mlir::IntegerType::get(ty.getContext(), byteSize * 8), AT{});
       return marshal;
     }
     // Larger structs passed via implicit by-value reference.
