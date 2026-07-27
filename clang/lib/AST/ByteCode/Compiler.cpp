@@ -287,7 +287,7 @@ private:
 /// Scope used to handle temporaries in toplevel variable declarations.
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
-  DeclScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
+  DeclScope(Compiler<Emitter> *Ctx, const VarDecl *VD)
       : LocalScope<Emitter>(Ctx), Scope(Ctx->P),
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->InitializingDecl = VD;
@@ -301,7 +301,7 @@ public:
 
 private:
   Program::DeclScope Scope;
-  const ValueDecl *OldInitializingDecl;
+  const VarDecl *OldInitializingDecl;
 };
 
 /// Scope used to handle initialization methods.
@@ -2442,7 +2442,9 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         Ctx.getASTContext().getAsConstantArrayType(QT);
     uint64_t NumElems = CAT->getZExtSize();
 
-    if (Initializing && !this->emitCheckArrayDestSize(NumElems, E))
+    if (Initializing &&
+        (!InitializingDecl || InitializingDecl->hasLocalStorage()) &&
+        !this->emitCheckArrayDestSize(NumElems, E))
       return false;
 
     if (Inits.size() == 1 && QT == Inits[0]->getType())
@@ -8276,12 +8278,16 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
                      bool IsConstexprUnknown = true) -> bool {
     llvm::SaveAndRestore CURS(this->VariablesAreConstexprUnknown,
                               IsConstexprUnknown);
-    if (!this->emitPushCC(VD->hasConstantInitialization(), E))
-      return false;
+    if constexpr (std::is_same_v<Emitter, EvalEmitter>) {
+      if (!this->emitPushCC(VD->hasConstantInitialization(), E))
+        return false;
+    }
     auto VarState = this->visitDecl(VD);
 
-    if (!this->emitPopCC(E))
-      return false;
+    if constexpr (std::is_same_v<Emitter, EvalEmitter>) {
+      if (!this->emitPopCC(E))
+        return false;
+    }
 
     if (VarState.notCreated())
       return true;

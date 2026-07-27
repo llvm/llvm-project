@@ -3661,7 +3661,12 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     Ops[Idx] = generateNewInstTree(
         generateInstLaneVectorFromOperand(Item, Idx), &I->getOperandUse(Idx),
         IdentityLeafs, SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
-    WorkList.pushValue(Ops[Idx]);
+    // Don't re-queue the operand of a bitcast we just regenerated. Doing so
+    // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
+    // which foldShuffleToIdentity then re-matches as the same superfluous
+    // identity - an infinite loop between the two folds.
+    if (!isa<BitCastInst>(I))
+      WorkList.pushValue(Ops[Idx]);
   }
 
   SmallVector<Value *, 8> ValueList;
