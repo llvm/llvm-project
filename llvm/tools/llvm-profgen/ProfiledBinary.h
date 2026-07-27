@@ -201,6 +201,12 @@ struct MMapEvent {
   StringRef BinaryPath;
 };
 
+// Runtime address range covered by an MMAP event for the profiled binary.
+struct MMapRange {
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+};
+
 class ProfiledBinary {
   // The executable binary file.
   object::OwningBinary<object::Binary> OBinary;
@@ -313,6 +319,9 @@ class ProfiledBinary {
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
   std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
+
+  // Address ranges mapped for the profiled binary.
+  SmallVector<MMapRange, 8> MMapRanges;
 
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
@@ -726,6 +735,19 @@ public:
     }
     NonTextMMapEvents[Event.Address] = Event;
     return Error::success();
+  }
+
+  void addMMapRange(uint64_t Address, uint64_t Size) {
+    MMapRanges.push_back({Address, Size});
+  }
+
+  // Check if a given virtual address is covered by any of the mmap ranges for
+  // the profiled binary.
+  bool isVaddrMMapped(uint64_t VAddr) const {
+    for (const MMapRange &Range : MMapRanges)
+      if (Range.Address <= VAddr && VAddr - Range.Address < Range.Size)
+        return true;
+    return false;
   }
 
   // Given a non-text runtime address, canonicalize it to the virtual address in

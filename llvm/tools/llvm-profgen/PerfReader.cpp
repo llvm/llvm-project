@@ -552,6 +552,8 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
+  Binary->addMMapRange(Event.Address, Event.Size);
+
   // Drop the event if its image is loaded at the same address
   if (Event.Address == Binary->getBaseAddress()) {
     Binary->setIsLoadedByMMap(true);

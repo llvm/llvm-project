@@ -1,0 +1,118 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/warn-not-symbolized-mmap.exe
+
+## The LBR pair creates a valid code range inside without_debug, which
+## intentionally has no DWARF. The warning is emitted only when its runtime
+## address is covered by a recorded MMAP range.
+
+## BaseAddress is initially zero. Ensure that a first MMAP at address zero is
+## recorded before the same-address early return.
+# RUN: llvm-profgen --binary=%t/warn-not-symbolized-mmap.exe \
+# RUN:   --perfscript=%t/zero.perfscript --warn-not-symbolized \
+# RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=ZERO
+
+## The second MMAP has the same non-zero address but extends the mapped range.
+## Ensure that it is recorded before the same-address early return.
+# RUN: llvm-profgen --binary=%t/warn-not-symbolized-mmap.exe \
+# RUN:   --perfscript=%t/repeated.perfscript --warn-not-symbolized \
+# RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=REPEATED
+
+## The MMAP range is half-open. An address at Address + Size is not mapped and
+## must not produce a symbolization warning.
+# RUN: llvm-profgen --binary=%t/warn-not-symbolized-mmap.exe \
+# RUN:   --perfscript=%t/outside.perfscript --warn-not-symbolized \
+# RUN:   --output=/dev/null 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=OUTSIDE
+
+# ZERO: warning: Failed to symbolize address
+# ZERO-SAME: (vaddr=     284)
+# REPEATED: warning: Failed to symbolize address
+# REPEATED-SAME: (vaddr=700000000284)
+# OUTSIDE-NOT: warning: Failed to symbolize address
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0
+    Offset:   0
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x27C
+    Offset:       0x27C
+    AddressAlign: 0x4
+    ## with_debug: add w0, w0, #1; ret
+    ## without_debug: add w0, w0, #2; ret
+    Content:      00040011C0035FD600080011C0035FD6
+  - Name:         .debug_abbrev
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      011101252513050325721710171B25111B120673170000022E00111B1206401803253A0B3B0B49133F19000003240003253E0B0B0B000000
+  - Name:         .debug_info
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      33000000050001080000000001001D0001080000000000000002000800000008000000020008000000016F030001320000000304050400
+  - Name:         .debug_str_offsets
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      18000000050000000200000007000000000000001D00000003000000
+  - Name:         .debug_line
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      460000000500080025000000010101FB0E0D00010101010000000100000101011F010000000002011F020F0102000000000400050C0A0009027C020000000000001305034B0204000101
+  - Name:         .debug_line_str
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign: 0x1
+    EntSize:      0x1
+    Content:      2F007761726E2D6E6F742D73796D626F6C697A65642E6300
+Symbols:
+  - Name:    with_debug
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x27C
+    Size:    0x8
+  - Name:    without_debug
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x284
+    Size:    0x8
+DWARF:
+  debug_str:
+    - '/'
+    - ''
+    - int
+    - warn-not-symbolized.c
+    - with_debug
+  debug_addr:
+    - Length:      0xC
+      Version:     0x5
+      AddressSize: 0x8
+      Entries:
+        - Address: 0x27C
+
+#--- zero.perfscript
+PERF_RECORD_MMAP2 1/1: [0x0(0x1000) @ 0 00:00 0 0]: r-xp /tmp/warn-not-symbolized-mmap.exe
+284 0x288/0x27c/P/-/-/0 0x280/0x284/P/-/-/0
+
+#--- repeated.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x200) @ 0 00:00 0 0]: r-xp /tmp/warn-not-symbolized-mmap.exe
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x1000) @ 0 00:00 0 0]: r-xp /tmp/warn-not-symbolized-mmap.exe
+700000000284 0x700000000288/0x70000000027c/P/-/-/0 0x700000000280/0x700000000284/P/-/-/0
+
+#--- outside.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x284) @ 0 00:00 0 0]: r-xp /tmp/warn-not-symbolized-mmap.exe
+700000000284 0x700000000288/0x70000000027c/P/-/-/0 0x700000000280/0x700000000284/P/-/-/0

@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -80,6 +81,20 @@ static cl::opt<bool>
     KernelBinary("kernel",
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
+
+static cl::opt<uint32_t>
+    ProfPageSize("page-size", cl::desc("Page size of a profiling system"),
+                 cl::init(0x1000), cl::cat(ProfGenCategory));
+
+static cl::opt<bool> UseSystemPageSize(
+    "use-system-page-size",
+    cl::desc("Use the page size of the system running llvm-profgen"),
+    cl::cat(ProfGenCategory));
+
+static cl::opt<bool> WarnNotSymbolized(
+    "warn-not-symbolized", cl::init(false),
+    cl::desc("Generate warnings for not symbolized addresses"),
+    cl::cat(ProfGenCategory));
 
 namespace sampleprof {
 
@@ -362,11 +377,19 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // FIXME: This should be the page size of the system running profiling.
-  // However such info isn't available at post-processing time, assuming
-  // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
-  // because we may build the tools on non-linux.
-  uint64_t PageSize = 0x1000;
+  // FIXME: Read the page size from the perf.data header when available.
+  // Keep the default independent of the post-processing host so profiles can
+  // be processed on a system with a different page size.
+  // Note that we don't use EXEC_PAGESIZE from <linux/param.h> because we may
+  // build the tools on non-linux.
+  if (UseSystemPageSize && ProfPageSize.getNumOccurrences())
+    exitWithError(
+        "--page-size and --use-system-page-size cannot be used together");
+  uint64_t PageSize = UseSystemPageSize
+                          ? llvm::sys::Process::getPageSizeEstimate()
+                          : ProfPageSize;
+  if (!isPowerOf2_64(PageSize))
+    exitWithError("--page-size must be a power of two");
   bool SeenFirstLoadableSegment = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
@@ -1180,6 +1203,14 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
     LineLocation Line(LineOffset, Discriminator);
     auto It = NameStrings.insert(FunctionName);
     CallStack.emplace_back(FunctionId(It.first->getKey()), Line);
+  }
+
+  if (WarnNotSymbolized && CallStack.empty()) {
+    uint64_t VAddr = IP.Address + BaseAddress - getPreferredBaseAddress();
+    if (isVaddrMMapped(VAddr))
+      WithColor::warning() << "Failed to symbolize address "
+                           << format("%8" PRIx64, IP.Address)
+                           << " (vaddr=" << format("%8" PRIx64, VAddr) << ")\n";
   }
 
   return CallStack;

@@ -1,0 +1,67 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/page-size.exe
+
+## A 64 KiB profiling system maps the executable segment from file offset zero.
+# RUN: llvm-profgen --binary=%t/page-size.exe --perfscript=%t/64k.perfscript \
+# RUN:   --skip-symbolization --use-offset=0 --format=text --page-size=65536 \
+# RUN:   --output=%t/explicit-64k.prof
+# RUN: FileCheck %s --check-prefix=PROFILE --input-file=%t/explicit-64k.prof
+
+# RUN: not llvm-profgen --binary=%t/page-size.exe --show-disassembly-only \
+# RUN:   --page-size=3 --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALID
+# RUN: not llvm-profgen --binary=%t/page-size.exe --show-disassembly-only \
+# RUN:   --page-size=4096 --use-system-page-size --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CONFLICT
+
+# PROFILE:      0
+# PROFILE-NEXT: 1
+# PROFILE-NEXT: 11008->11000:1
+
+# INVALID: error: --page-size must be a power of two
+# CONFLICT: error: --page-size and --use-system-page-size cannot be used together
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x0000000000011000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x0000000000011000
+    Offset:       0x0000000000001000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## ret
+    Content:      1F2003D51F2003D5C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x0
+    VAddr:    0x0000000000010000
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x10000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x0000000000011000
+    Align:    0x10000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000011000
+    Size:    0xC
+
+#--- 64k.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x10000) @ 0 00:00 0 0]: r-xp /tmp/page-size.exe
+700000001000 0x700000001008/0x700000001000/P/-/-/0
