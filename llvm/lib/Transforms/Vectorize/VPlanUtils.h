@@ -183,6 +183,11 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
 
+/// Returns the (early exiting block, exit block) pairs of \p Plan, i.e. all
+/// edges to an exit block that do not come from \p MiddleVPBB.
+SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
+getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
+
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
 /// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
