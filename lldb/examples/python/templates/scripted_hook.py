@@ -65,3 +65,27 @@ class ScriptedHook(metaclass=ABCMeta):
             returned to the user, `False` if the process should keep running.
         """
         pass
+
+
+    def handle_resolve_addr(
+        self, load_addr: int, stream: lldb.SBStream) -> lldb.SBAddress:
+        """Called whenever the target is not able to resolve a load address to
+        a section offset address.
+
+        Clients can implement a JIT loader plugin using this method. Anytime the
+        target fails to resolve an address, this method will be called. The
+        function can find the file for the module that contains the address,
+        load it into the target, and return the resolved address. If the
+        address cannot be resolved, return a default construct lldb.SBAddress.
+
+        Args:
+            load_addr (int): The load address to attempt to resolve.
+            stream (lldb.SBStream): The stream to which the hook can write
+                output that will be reported to the user.
+
+        Returns:
+            lldb.SBAddress: If the address was resolved, return a SBAddress
+            that has been resolved to a section offset address, or return a
+            default constructed SBAddress if the address could not be resolved.
+        """
+        pass

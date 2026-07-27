@@ -5557,7 +5557,8 @@ Python class hooks:
             pass
         def handle_stop(self, exe_ctx, stream):
             return True  # True = should_stop, False = continue
-
+        def handle_resolve_addr(self, load_addr, stream):
+            return lldb.SBAddress()  # Invalid defailt constructed address.
 Filter options:
 ---------------
   Filters (-s, -f, -l, -e, -c, -n, -x, -t, -T, -q) restrict when the hook
@@ -5913,6 +5914,8 @@ protected:
       return Target::Hook::kModulesUnloaded;
     if (name == "stop")
       return Target::Hook::kProcessStop;
+    if (name == "resolve-addr")
+      return Target::Hook::kResolveAddress;
     return 0;
   }
 

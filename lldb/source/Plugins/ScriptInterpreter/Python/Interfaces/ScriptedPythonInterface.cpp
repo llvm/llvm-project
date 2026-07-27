@@ -14,6 +14,8 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
@@ -114,6 +116,18 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_symbol_context);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
+
+  return {};
+}
+
+template <>
+Address ScriptedPythonInterface::ExtractValueFromPythonObject<Address>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBAddress *sb_addr = reinterpret_cast<lldb::SBAddress *>(
+          python::LLDBSWIGPython_CastPyObjectToSBAddress(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBAddress(*sb_addr);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBAddress to lldb_private::Address.");
 
   return {};
 }

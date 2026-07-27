@@ -3481,8 +3481,14 @@ Status Target::Install(ProcessLaunchInfo *launch_info) {
 
 bool Target::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
                                 uint32_t stop_id, bool allow_section_end) {
-  return m_section_load_history.ResolveLoadAddress(stop_id, load_addr, so_addr,
-                                                   allow_section_end);
+  if (m_section_load_history.ResolveLoadAddress(stop_id, load_addr, so_addr,
+                                                allow_section_end))
+    return true;
+  if (std::optional<Address> opt_addr = RunResolveAddressHooks(load_addr)) {
+    so_addr = *opt_addr;
+    return true;
+  }
+  return false;
 }
 
 bool Target::ResolveFileAddress(lldb::addr_t file_addr,
@@ -4668,6 +4674,8 @@ Status Target::HookScripted::SetScriptCallback(
     m_trigger_mask |= kModulesUnloaded;
   if (methods.handle_stop)
     m_trigger_mask |= kProcessStop;
+  if (methods.handle_resolve_addr)
+    m_trigger_mask |= kResolveAddress;
 
   return {};
 }
@@ -4707,6 +4715,14 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
 
   return *should_stop_or_err ? StopHook::StopHookResult::KeepStopped
                              : StopHook::StopHookResult::RequestContinue;
+}
+
+std::optional<Address> 
+Target::HookScripted::HandleResolveAddress(lldb::addr_t load_addr, 
+                                           lldb::StreamSP &output_sp) {
+  if (!m_interface_sp)
+    return std::nullopt;
+  return m_interface_sp->HandleResolveAddress(load_addr, output_sp);
 }
 
 llvm::StringRef Target::HookScripted::GetScriptClassName() const {
@@ -4810,6 +4826,34 @@ bool Target::SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled) {
 void Target::SetAllHooksEnabledState(bool enabled) {
   for (auto &[_, hook] : m_hooks)
     hook->SetIsEnabled(enabled);
+}
+
+std::optional<Address> Target::RunResolveAddressHooks(lldb::addr_t load_addr) {
+  if (m_hooks.empty())
+    return std::nullopt;
+
+  // Copy active hooks into a local vector before iterating, in case a
+  // callback modifies m_hooks (same pattern as RunStopHooks).
+  std::vector<HookSP> active_hooks;
+  for (auto &[_, hook_sp] : m_hooks) {
+    if (hook_sp->IsEnabled() && hook_sp->FiresOn(Hook::kResolveAddress))
+      active_hooks.push_back(hook_sp);
+  }
+
+  if (active_hooks.empty())
+    return std::nullopt;
+
+  StreamSP output_sp = m_debugger.GetAsyncOutputStream();
+
+  for (auto &hook_sp : active_hooks) {
+    if (std::optional<Address> opt_addr = hook_sp->HandleResolveAddress(load_addr, output_sp)) {
+      assert(opt_addr->IsSectionOffset());
+      return *opt_addr;
+    }
+  }
+
+  output_sp->Flush();
+  return std::nullopt;
 }
 
 void Target::RunModuleHooks(bool is_load) {

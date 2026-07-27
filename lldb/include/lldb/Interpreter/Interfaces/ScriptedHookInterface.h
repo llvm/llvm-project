@@ -10,7 +10,7 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDHOOKINTERFACE_H
 
 #include "lldb/lldb-private.h"
-
+#include "lldb/Core/Address.h"
 #include "ScriptedInterface.h"
 
 namespace lldb_private {
@@ -21,9 +21,10 @@ public:
     bool handle_module_loaded = false;
     bool handle_module_unloaded = false;
     bool handle_stop = false;
+    bool handle_resolve_addr = false;
 
     bool any() const {
-      return handle_module_loaded || handle_module_unloaded || handle_stop;
+      return handle_module_loaded || handle_module_unloaded || handle_stop || handle_resolve_addr;
     }
   };
 
@@ -46,6 +47,28 @@ public:
   virtual llvm::Expected<bool> HandleStop(ExecutionContext &exe_ctx,
                                           lldb::StreamSP &output_sp) {
     return true;
+  }
+
+  /// Called when the target tried to resolve an address but wasn't able to 
+  /// resolve it to an object file section. This allows plug-ins to resolve
+  /// an address on demand. JIT plug-ins can be completely implemented using
+  /// ScriptedHookInterface plug-ins and can lazily load the JIT'ed information
+  /// as needed instead of setting breakpoints
+  ///
+  /// \param[in] load_addr
+  ///   The load address to resolve.
+  ///
+  /// \param[out] addr
+  ///   The section offset address that was resolved if \a true is returned.
+  ///
+  /// \param[in] output_sp
+  ///   An output stream to use for logging.
+  ///
+  /// \return
+  ///   True if the address was resolved, false otherwise.
+  virtual std::optional<Address>
+  HandleResolveAddress(lldb::addr_t load_addr, lldb::StreamSP &output_sp) {
+    return std::nullopt;
   }
 };
 } // namespace lldb_private

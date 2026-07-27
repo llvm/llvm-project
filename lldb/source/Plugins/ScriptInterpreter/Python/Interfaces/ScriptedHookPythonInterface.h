@@ -33,14 +33,15 @@ public:
     return llvm::SmallVector<AbstractMethodRequirement>({{"handle_stop", 2}});
   }
 
-  /// Check which of the three hook methods the Python class implements.
+  /// Check which of the hook methods the Python class implements.
   SupportedHookMethods GetSupportedMethods() override;
 
   void HandleModuleLoaded(lldb::StreamSP &output_sp) override;
   void HandleModuleUnloaded(lldb::StreamSP &output_sp) override;
   llvm::Expected<bool> HandleStop(ExecutionContext &exe_ctx,
                                   lldb::StreamSP &output_sp) override;
-
+  std::optional<Address> HandleResolveAddress(lldb::addr_t load_addr, 
+                                              lldb::StreamSP &output_sp) override;
   static void Initialize();
   static void Terminate();
 

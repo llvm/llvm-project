@@ -1769,6 +1769,7 @@ public:
       kModulesLoaded = (1u << 0),
       kModulesUnloaded = (1u << 1),
       kProcessStop = (1u << 2),
+      kResolveAddress = (1u << 3)
     };
 
     lldb::TargetSP &GetTarget() { return m_target_sp; }
@@ -1824,6 +1825,11 @@ public:
     virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
                                                 lldb::StreamSP output) {
       return StopHook::StopHookResult::NoPreference;
+    }
+
+    virtual std::optional<Address> HandleResolveAddress(lldb::addr_t load_addr, 
+                                                        lldb::StreamSP &output_sp) {
+      return std::nullopt;
     }
 
     virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
@@ -1896,7 +1902,9 @@ public:
     void HandleModuleUnloaded(lldb::StreamSP output) override;
     StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
                                         lldb::StreamSP output) override;
-
+    std::optional<Address> 
+    HandleResolveAddress(lldb::addr_t load_addr, 
+                         lldb::StreamSP &output_sp) override;
     Status SetScriptCallback(const ScriptedMetadata &scripted_metadata);
 
   private:
@@ -1947,6 +1955,10 @@ public:
   // Pass at_initial_stop if this is the stop where lldb gains
   // control over the process for the first time.
   bool RunStopHooks(bool at_initial_stop = false);
+
+  /// Runs the resolve address hooks that have been registered with this
+  /// target. Returns true if the address was resolved.
+  std::optional<Address> RunResolveAddressHooks(lldb::addr_t load_addr);
 
   bool SetSuppresStopHooks(bool suppress) {
     bool old_value = m_suppress_stop_hooks;

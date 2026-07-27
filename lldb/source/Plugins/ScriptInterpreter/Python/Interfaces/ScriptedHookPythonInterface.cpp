@@ -49,6 +49,8 @@ ScriptedHookPythonInterface::GetSupportedMethods() {
   methods.handle_module_unloaded =
       implementor.HasAttribute("handle_module_unloaded");
   methods.handle_stop = implementor.HasAttribute("handle_stop");
+  methods.handle_resolve_addr =
+      implementor.HasAttribute("handle_resolve_addr");
   return methods;
 }
 
@@ -64,12 +66,20 @@ void ScriptedHookPythonInterface::HandleModuleLoaded(
     lldb::StreamSP &output_sp) {
   Status error;
   Dispatch("handle_module_loaded", error, output_sp);
+  if (error.Fail()) {
+    LLDB_LOG(GetLog(LLDBLog::Script), "handle_module_loaded failed: {0}",
+             error.AsCString());
+  }
 }
 
 void ScriptedHookPythonInterface::HandleModuleUnloaded(
     lldb::StreamSP &output_sp) {
   Status error;
   Dispatch("handle_module_unloaded", error, output_sp);
+  if (error.Fail()) {
+    LLDB_LOG(GetLog(LLDBLog::Script), "handle_module_unloaded failed: {0}",
+             error.AsCString());
+  }
 }
 
 llvm::Expected<bool>
@@ -83,12 +93,29 @@ ScriptedHookPythonInterface::HandleStop(ExecutionContext &exe_ctx,
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
+    LLDB_LOG(GetLog(LLDBLog::Script), "handle_stop failed: {0}",
+             error.AsCString());
     if (!obj)
       return true;
     return error.ToError();
   }
 
   return obj->GetBooleanValue();
+}
+
+std::optional<Address>
+ScriptedHookPythonInterface::HandleResolveAddress(lldb::addr_t load_addr,
+                                                  lldb::StreamSP &output_sp) {
+  Status error;
+  Address addr =
+      Dispatch<Address>("handle_resolve_addr", error, load_addr, output_sp);
+  if (error.Fail()) {
+    LLDB_LOG(GetLog(LLDBLog::Script), "handle_resolve_addr failed: {0}",
+             error.AsCString());
+  }
+  if (addr.IsSectionOffset())
+    return addr;
+  return std::nullopt;
 }
 
 void ScriptedHookPythonInterface::Initialize() {

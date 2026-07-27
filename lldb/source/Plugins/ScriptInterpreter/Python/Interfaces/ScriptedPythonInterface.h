@@ -648,6 +648,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(Address &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::StreamSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg.get());
   }
@@ -766,6 +770,10 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
 template <>
 SymbolContext
 ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
+    python::PythonObject &p, Status &error);
+
+template <>
+Address ScriptedPythonInterface::ExtractValueFromPythonObject<Address>(
     python::PythonObject &p, Status &error);
 
 template <>
