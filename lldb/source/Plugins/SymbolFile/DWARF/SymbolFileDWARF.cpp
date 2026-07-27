@@ -96,6 +96,10 @@
 #include <cctype>
 #include <cstring>
 
+#ifndef LLDB_DWO_DIAGNOSTIC_SUFFIX
+#define LLDB_DWO_DIAGNOSTIC_SUFFIX ""
+#endif
+
 //#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
 
 #ifdef ENABLE_DEBUG_PRINTF
@@ -1918,13 +1922,13 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     }
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
-        "{1:x16}",
+        "{1:x16}" LLDB_DWO_DIAGNOSTIC_SUFFIX,
         error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
           "unable to locate separate debug file (dwo, dwp). Debugging will be "
-          "degraded");
+          "degraded" LLDB_DWO_DIAGNOSTIC_SUFFIX);
     }
     return nullptr;
   }
