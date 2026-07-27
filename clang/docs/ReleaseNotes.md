@@ -155,6 +155,8 @@ features cannot lower the translation-unit ABI level;
 
 ### Modified Compiler Flags
 
+- All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
