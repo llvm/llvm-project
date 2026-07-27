@@ -27,10 +27,6 @@ namespace clang {
 /// is ptrauth_string_discriminator("block_descriptor")
 constexpr uint16_t BlockDescriptorConstantDiscriminator = 0xC0BB;
 
-/// Constant discriminator to be used with function pointers in .init_array and
-/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
-constexpr uint16_t InitFiniPointerConstantDiscriminator = 0xD9D4;
-
 /// Constant discriminator to be used with method list pointers. The value is
 /// ptrauth_string_discriminator("method_list_t")
 constexpr uint16_t MethodListPointerConstantDiscriminator = 0xC310;
@@ -223,9 +219,6 @@ struct PointerAuthOptions {
 
   /// The ABI for C++ member function pointers.
   PointerAuthSchema CXXMemberFunctionPointers;
-
-  /// The ABI for function addresses in .init_array and .fini_array
-  PointerAuthSchema InitFiniPointers;
 
   /// The ABI for block invocation function pointers.
   PointerAuthSchema BlockInvocationFunctionPointers;

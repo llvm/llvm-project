@@ -5290,14 +5290,30 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return replaceOperand(SI, 2, ConstantInt::get(FalseVal->getType(), 0));
   }
 
+  if (match(CondVal, m_Trunc(m_Value(Trunc))) && Trunc->getType() == SelType) {
+    if (match(FalseVal, m_Zero()) && impliesPoison(TrueVal, CondVal) &&
+        llvm::computeKnownBits(TrueVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1)
+      return BinaryOperator::CreateAnd(Trunc, TrueVal);
+
+    if (cast<TruncInst>(CondVal)->hasNoUnsignedWrap() &&
+        match(TrueVal, m_One()) && impliesPoison(FalseVal, CondVal) &&
+        llvm::computeKnownBits(FalseVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1) {
+      return BinaryOperator::CreateOr(Trunc, FalseVal);
+    }
+  }
+
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
-                                           m_Specific(CondVal), m_Value()))))
-    return replaceInstUsesWith(
-        SI, Builder.CreateMaskedLoad(
-                TrueVal->getType(), MaskedLoadPtr,
-                cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
-                CondVal, FalseVal));
+                                           m_Specific(CondVal), m_Value())))) {
+    auto *LoadInst = cast<IntrinsicInst>(TrueVal);
+    Instruction *In = Builder.CreateMaskedLoad(
+        TrueVal->getType(), MaskedLoadPtr,
+        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+    In->setAAMetadata(LoadInst->getAAMetadata());
+    return replaceInstUsesWith(SI, In);
+  }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
   // bitwidth-1, 1 -> scmp(X, 0)

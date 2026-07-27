@@ -1672,14 +1672,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // addresses will differ from what the ObjectFile had originally,
     // and what the dSYM has.
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
-      Log *log = GetLog(LLDBLog::Symbols);
-      if (log) {
-        log->Printf(
-            "Installing dSYM's %s segment file address over ObjectFile's "
-            "so symbol table/debug info resolves correctly for %s",
-            const_segname.AsCString(""),
-            module_sp->GetFileSpec().GetFilename().AsCString(""));
-      }
+      LLDB_LOG(GetLog(LLDBLog::Symbols),
+               "Installing dSYM's {0} segment file address over ObjectFile's "
+               "so symbol table/debug info resolves correctly for {1}",
+               const_segname.AsCString(""),
+               module_sp->GetFileSpec().GetFilename());
 
       // Make sure we've parsed the symbol table from the ObjectFile before
       // we go around changing its Sections.
@@ -1836,11 +1833,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       lldb::SectionType sect_type = GetSectionType(sect64.flags, section_name);
 
-      SectionSP section_sp(new Section(
+      SectionSP section_sp = std::make_shared<Section>(
           segment_sp, module_sp, this, ++context.NextSectionIdx, section_name,
           sect_type, sect64.addr - segment_sp->GetFileAddress(), sect64.size,
           section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
-          sect64.align, sect64.flags));
+          sect64.align, sect64.flags);
       // Set the section to be encrypted to match the segment
 
       bool section_is_encrypted = false;
@@ -2028,7 +2025,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
                                 const SectionSP &symbol_section) {
   SymbolType type = eSymbolTypeInvalid;
 
-  const char *symbol_sect_name = symbol_section->GetName().AsCString(nullptr);
+  llvm::StringRef symbol_sect_name = symbol_section->GetName();
   if (symbol_section->IsDescendant(text_section_sp.get())) {
     if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                 S_ATTR_SELF_MODIFYING_CODE |
@@ -2039,8 +2036,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
   } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
              symbol_section->IsDescendant(data_dirty_section_sp.get()) ||
              symbol_section->IsDescendant(data_const_section_sp.get())) {
-    if (symbol_sect_name &&
-        ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+    if (symbol_sect_name.starts_with("__objc")) {
       type = eSymbolTypeRuntime;
 
       if (symbol_name) {
@@ -2065,15 +2061,12 @@ static SymbolType GetSymbolType(const char *&symbol_name,
           }
         }
       }
-    } else if (symbol_sect_name &&
-               ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                   symbol_sect_name) {
+    } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
       type = eSymbolTypeException;
     } else {
       type = eSymbolTypeData;
     }
-  } else if (symbol_sect_name &&
-             ::strstr(symbol_sect_name, "__IMPORT") == symbol_sect_name) {
+  } else if (symbol_sect_name.starts_with("__IMPORT")) {
     type = eSymbolTypeTrampoline;
   }
   return type;
@@ -2103,10 +2096,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   Log *log = GetLog(LLDBLog::Symbols);
 
   const FileSpec &file = m_file ? m_file : module_sp->GetFileSpec();
-  const char *file_name = file.GetFilename().AsCString("<Unknown>");
-  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
+  llvm::StringRef file_name = file.GetFilename().nonEmptyOr("<Unknown>");
+  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
+                     file_name.str().c_str());
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
-  Progress progress("Parsing symbol table", file_name);
+  Progress progress("Parsing symbol table", file_name.str());
 
   LinkeditDataCommandLargeOffsets function_starts_load_command;
   LinkeditDataCommandLargeOffsets exports_trie_load_command;
@@ -2369,7 +2363,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   } else {
-    if (is_local_shared_cache_image) {
+    if (is_local_shared_cache_image && linkedit_section_sp) {
       // The load commands in shared cache images are relative to the
       // beginning of the shared cache, not the library image. The
       // data we get handed when creating the ObjectFileMachO starts
@@ -3227,8 +3221,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                           }
 
                           if (type == eSymbolTypeInvalid) {
-                            const char *symbol_sect_name =
-                                symbol_section->GetName().AsCString(nullptr);
+                            llvm::StringRef symbol_sect_name =
+                                symbol_section->GetName();
                             if (symbol_section->IsDescendant(
                                     text_section_sp.get())) {
                               if (symbol_section->IsClear(
@@ -3244,26 +3238,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                            data_dirty_section_sp.get()) ||
                                        symbol_section->IsDescendant(
                                            data_const_section_sp.get())) {
-                              if (symbol_sect_name &&
-                                  ::strstr(symbol_sect_name, "__objc") ==
-                                      symbol_sect_name) {
+                              if (symbol_sect_name.starts_with("__objc")) {
                                 type = eSymbolTypeRuntime;
 
                                 if (TryParseV2ObjCMetadataSymbol(
                                         symbol_name,
                                         symbol_name_non_abi_mangled, type))
                                   demangled_is_synthesized = true;
-                              } else if (symbol_sect_name &&
-                                         ::strstr(symbol_sect_name,
-                                                  "__gcc_except_tab") ==
-                                             symbol_sect_name) {
+                              } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
                                 type = eSymbolTypeException;
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name &&
-                                       ::strstr(symbol_sect_name, "__IMPORT") ==
-                                           symbol_sect_name) {
+                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {
@@ -3987,8 +3974,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             }
 
             if (type == eSymbolTypeInvalid) {
-              const char *symbol_sect_name =
-                  symbol_section->GetName().AsCString(nullptr);
+              llvm::StringRef symbol_sect_name = symbol_section->GetName();
               if (symbol_section->IsDescendant(text_section_sp.get())) {
                 if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                             S_ATTR_SELF_MODIFYING_CODE |
@@ -4001,23 +3987,18 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                              data_dirty_section_sp.get()) ||
                          symbol_section->IsDescendant(
                              data_const_section_sp.get())) {
-                if (symbol_sect_name &&
-                    ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+                if (symbol_sect_name.starts_with("__objc")) {
                   type = eSymbolTypeRuntime;
 
                   if (TryParseV2ObjCMetadataSymbol(
                           symbol_name, symbol_name_non_abi_mangled, type))
                     demangled_is_synthesized = true;
-                } else if (symbol_sect_name &&
-                           ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                               symbol_sect_name) {
+                } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
                   type = eSymbolTypeException;
                 } else {
                   type = eSymbolTypeData;
                 }
-              } else if (symbol_sect_name &&
-                         ::strstr(symbol_sect_name, "__IMPORT") ==
-                             symbol_sect_name) {
+              } else if (symbol_sect_name.starts_with("__IMPORT")) {
                 type = eSymbolTypeTrampoline;
               } else if (symbol_section->IsDescendant(objc_section_sp.get())) {
                 type = eSymbolTypeRuntime;
@@ -4851,8 +4832,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
 
   if (!rpath_paths.empty()) {
     // Fixup all LC_RPATH values to be absolute paths.
-    const std::string this_directory =
-        this_file_spec.GetDirectory().GetString();
+    const std::string this_directory = this_file_spec.GetDirectory().str();
     for (auto &rpath : rpath_paths) {
       if (llvm::StringRef(rpath).starts_with(g_loader_path))
         rpath = this_directory + rpath.substr(g_loader_path.size());
@@ -5538,8 +5518,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
     } else {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString g_kld_section_name("__KLD");
-        if (section_list->FindSectionByName(g_kld_section_name))
+        if (section_list->FindSectionByName("__KLD"))
           return eStrataKernel;
       }
     }
@@ -6107,7 +6086,7 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         addr_t vmaddr = section->GetLoadBaseAddress(&target);
         if (vmaddr == LLDB_INVALID_ADDRESS)
           continue;
-        ConstString name = section->GetName();
+        llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
         // the right one, doesn't need to be nul terminated.
@@ -6115,8 +6094,8 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         // is not guaranteed to be nul-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
-        strncpy(seg_vmaddr.segname, name.AsCString(nullptr),
-                sizeof(seg_vmaddr.segname));
+        strncpy(seg_vmaddr.segname, name.data(),
+                std::min(name.size(), sizeof(seg_vmaddr.segname)));
         seg_vmaddr.vmaddr = vmaddr;
         seg_vmaddr.unused = 0;
         segment_vmaddrs.push_back(seg_vmaddr);

@@ -2,9 +2,6 @@
 
 LLVM and API reference documentation.
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -53,7 +50,6 @@ MLGO
 ContentAddressableStorage
 CIBestPractices
 AIToolPolicy
-CalleeTypeMetadata
 CallGraphSection
 InterfaceExportAnnotations
 PCSectionsMetadata

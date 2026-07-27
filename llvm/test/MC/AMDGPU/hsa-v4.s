@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -47,10 +47,10 @@
 // OBJDUMP-NEXT: 00f0 0000ac00 80000000 00000000 00000000
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx904:xnack+"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx904:xnack+"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx904:xnack+"
 
 .p2align 8
 .type minimal,@function

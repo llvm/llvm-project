@@ -2,9 +2,6 @@
 
 # LLVM GitHub User Guide
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -349,7 +346,7 @@ may cause problems for some configurations after it lands. You will be notified
 if this happens and the community is ready to help you fix the problems.
 
 This process is described in detail
-{ref}`here <MyFirstTypoFix Issues After Landing Your PR>`.
+{ref}`here <myfirsttypofix-issues-after-landing-your-pr>`.
 
 
 ### Checking out another PR locally

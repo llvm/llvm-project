@@ -117,10 +117,9 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
         module_sp->ReportWarning(
             "address {0:x16} maps to more than one section: {1}.{2} and "
             "{3}.{4}",
-            load_addr, module_sp->GetFileSpec().GetFilename().GetCString(),
-            section->GetName().GetCString(),
-            curr_module_sp->GetFileSpec().GetFilename().GetCString(),
-            ats_pos->second->GetName().GetCString());
+            load_addr, module_sp->GetFileSpec().GetFilename(),
+            section->GetName(), curr_module_sp->GetFileSpec().GetFilename(),
+            ats_pos->second->GetName());
       }
     }
     ats_pos->second = section;
@@ -183,12 +182,11 @@ bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
       const FileSpec &module_file_spec(section_sp->GetModule()->GetFileSpec());
       module_name = module_file_spec.GetPath();
     }
-    LLDB_LOGF(
-        log,
-        "SectionLoadList::%s (section = %p (%s.%s), load_addr = 0x%16.16" PRIx64
-        ")",
-        __FUNCTION__, static_cast<void *>(section_sp.get()),
-        module_name.c_str(), section_sp->GetName().AsCString(""), load_addr);
+    LLDB_LOG(log,
+             "SectionLoadList::{0} (section = {1:x} ({2}.{3}), load_addr = "
+             "0x{4,16:x})",
+             __FUNCTION__, static_cast<void *>(section_sp.get()),
+             module_name.c_str(), section_sp->GetName(), load_addr);
   }
   bool erased = false;
   std::lock_guard<std::recursive_mutex> guard(m_mutex);

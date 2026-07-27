@@ -19,6 +19,7 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
@@ -34,7 +35,8 @@ class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
 class SIMachineFunctionInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
@@ -69,20 +71,19 @@ struct SIInstrWorklist {
 
   void insert(MachineInstr *MI);
 
-  MachineInstr *top() const {
-    const auto *iter = InstrList.begin();
-    return *iter;
-  }
+  MachineInstr *top() const { return InstrList[Front]; }
 
   void erase_top() {
-    const auto *iter = InstrList.begin();
-    InstrList.erase(iter);
+    InSet.erase(InstrList[Front]);
+    ++Front;
   }
 
-  bool empty() const { return InstrList.empty(); }
+  bool empty() const { return Front == InstrList.size(); }
 
   void clear() {
     InstrList.clear();
+    Front = 0;
+    InSet.clear();
     DeferredList.clear();
   }
 
@@ -92,7 +93,9 @@ struct SIInstrWorklist {
 
 private:
   /// InstrList contains the MachineInstrs.
-  SetVector<MachineInstr *> InstrList;
+  SmallVector<MachineInstr *> InstrList;
+  SmallPtrSet<MachineInstr *, 8> InSet;
+  unsigned Front = 0;
   /// Deferred instructions are specific MachineInstr
   /// that will be added by insert method.
   SetVector<MachineInstr *> DeferredList;
@@ -734,7 +737,7 @@ public:
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
 
   /// \returns true for FLAT instructions that can access LDS.
-  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI, bool TgSplit) const;
 
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {

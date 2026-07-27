@@ -17,12 +17,14 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/DWP/ELFWriter.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -39,19 +41,30 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
   return 8;    // unit length: 4 bytes, version: 2 bytes, padding: 2 bytes.
 }
 
-static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
+static Expected<uint64_t> getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode,
+                                      bool IsLittleEndian) {
   uint64_t Offset = 0;
-  DataExtractor AbbrevData(Abbrev, true);
-  while (AbbrevData.getULEB128(&Offset) != AbbrCode) {
+  DataExtractor AbbrevData(Abbrev, IsLittleEndian);
+  while (AbbrevData.isValidOffset(Offset)) {
+    uint64_t Code = AbbrevData.getULEB128(&Offset);
+    if (Code == AbbrCode)
+      return Offset;
+    // A zero abbreviation code marks the end of the abbreviation table.
+    if (Code == 0)
+      break;
     // Tag
     AbbrevData.getULEB128(&Offset);
     // DW_CHILDREN
     AbbrevData.getU8(&Offset);
-    // Attributes
-    while (AbbrevData.getULEB128(&Offset) | AbbrevData.getULEB128(&Offset))
+    // Attribute specifications, terminated by a (0, 0) pair.
+    dwarf::Attribute Name;
+    dwarf::Form Form;
+    std::optional<int64_t> ImplicitConst;
+    while (readAbbrevAttribute(AbbrevData, &Offset, Name, Form, ImplicitConst))
       ;
   }
-  return Offset;
+  return make_error<DWPError>("abbrev code " + utostr(AbbrCode) +
+                              " not found in abbrev section");
 }
 
 static Expected<const char *>
@@ -83,19 +96,20 @@ getIndexedString(dwarf::Form Form, DataExtractor InfoData, uint64_t &InfoOffset,
         "DW_FORM_string, DW_FORM_strx, DW_FORM_strx1, DW_FORM_strx2, "
         "DW_FORM_strx3, DW_FORM_strx4, or DW_FORM_GNU_str_index.");
   }
-  DataExtractor StrOffsetsData(StrOffsets, true);
+  DataExtractor StrOffsetsData(StrOffsets, InfoData.isLittleEndian());
   uint64_t StrOffsetsOffset = 4 * StrIndex;
   StrOffsetsOffset += debugStrOffsetsHeaderSize(StrOffsetsData, Version);
 
   uint64_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
-  DataExtractor StrData(Str, true);
+  DataExtractor StrData(Str, InfoData.isLittleEndian());
   return StrData.getCStr(&StrOffset);
 }
 
 static Expected<CompileUnitIdentifiers>
 getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
-                 StringRef Info, StringRef StrOffsets, StringRef Str) {
-  DataExtractor InfoData(Info, true);
+                 StringRef Info, StringRef StrOffsets, StringRef Str,
+                 bool IsLittleEndian) {
+  DataExtractor InfoData(Info, IsLittleEndian);
   uint64_t Offset = Header.HeaderSize;
   if (Header.Version >= 5 && Header.UnitType != dwarf::DW_UT_split_compile)
     return make_error<DWPError>(
@@ -106,19 +120,22 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
   CompileUnitIdentifiers ID;
 
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
-  DataExtractor AbbrevData(Abbrev, true);
-  uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
+  DataExtractor AbbrevData(Abbrev, IsLittleEndian);
+  Expected<uint64_t> AbbrevOffsetOrErr =
+      getCUAbbrev(Abbrev, AbbrCode, IsLittleEndian);
+  if (!AbbrevOffsetOrErr)
+    return AbbrevOffsetOrErr.takeError();
+  uint64_t AbbrevOffset = *AbbrevOffsetOrErr;
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
     return make_error<DWPError>("top level DIE is not a compile unit");
   // DW_CHILDREN
   AbbrevData.getU8(&AbbrevOffset);
-  uint32_t Name;
+  dwarf::Attribute Name;
   dwarf::Form Form;
-  while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
-             (Form = static_cast<dwarf::Form>(
-                  AbbrevData.getULEB128(&AbbrevOffset))) &&
-         (Name != 0 || Form != 0)) {
+  std::optional<int64_t> ImplicitConst;
+  while (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form,
+                             ImplicitConst)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
       Expected<const char *> EName = getIndexedString(
@@ -138,7 +155,8 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      Header.Signature = InfoData.getU64(&Offset);
+      Header.Signature = ImplicitConst ? static_cast<uint64_t>(*ImplicitConst)
+                                       : InfoData.getU64(&Offset);
       break;
     default:
       DWARFFormValue::skipValue(
@@ -254,11 +272,12 @@ static Error addAllTypesFromTypesSection(
     DWPWriter &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     DWPSectionId OutputSection, const std::vector<StringRef> &TypesSections,
     const UnitIndexEntry &CUEntry, uint32_t &TypesOffset,
-    OnCuIndexOverflow OverflowOptValue, bool &AnySectionOverflow) {
+    OnCuIndexOverflow OverflowOptValue, bool &AnySectionOverflow,
+    bool IsLittleEndian) {
   for (StringRef Types : TypesSections) {
     Out.switchSection(OutputSection);
     uint64_t Offset = 0;
-    DataExtractor Data(Types, true);
+    DataExtractor Data(Types, IsLittleEndian);
     while (Data.isValidOffset(Offset)) {
       UnitIndexEntry Entry = CUEntry;
       // Zero out the debug_info contribution
@@ -381,11 +400,12 @@ static void writeNewOffsetsTo(DWPWriter &Out, DataExtractor &Data,
 
 namespace llvm {
 // Parse and return the header of an info section compile/type unit.
-Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info) {
+Expected<InfoSectionUnitHeader>
+parseInfoSectionUnitHeader(StringRef Info, bool IsLittleEndian) {
   InfoSectionUnitHeader Header;
   Error Err = Error::success();
   uint64_t Offset = 0;
-  DWARFDataExtractor InfoData(Info, true, 0);
+  DWARFDataExtractor InfoData(Info, IsLittleEndian, 0);
   std::tie(Header.Length, Header.Format) =
       InfoData.getInitialLength(&Offset, &Err);
   if (Err)
@@ -445,7 +465,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
                        StringRef CurStrSection, StringRef CurStrOffsetSection,
                        uint16_t Version, SectionLengths &SectionLength,
                        const Dwarf64StrOffsetsPromotion StrOffsetsOptValue,
-                       bool SingleInput) {
+                       bool SingleInput, bool IsLittleEndian) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
@@ -465,7 +485,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
   // Pre-reserve based on estimated string count to avoid rehashing.
   OffsetRemapping.reserve(CurStrSection.size() / 20);
 
-  DataExtractor Data(CurStrSection, true);
+  DataExtractor Data(CurStrSection, IsLittleEndian);
   uint64_t LocalOffset = 0;
   uint64_t PrevOffset = 0;
 
@@ -488,7 +508,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
     PrevOffset = LocalOffset;
   }
 
-  Data = DataExtractor(CurStrOffsetSection, true);
+  Data = DataExtractor(CurStrOffsetSection, IsLittleEndian);
 
   Out.switchSection(DS_StrOffsets);
 
@@ -599,7 +619,13 @@ static void writeIndex(DWPWriter &Out, DWPSectionId Section,
   }
 
   Out.switchSection(Section);
-  Out.emitIntValue(IndexVersion, 4);        // Version
+  // Header layout differs between v2 and v5; see DWARFUnitIndex::Header::parse.
+  if (IndexVersion >= 5) {
+    Out.emitIntValue(IndexVersion, 2); // Version
+    Out.emitIntValue(0, 2);            // Padding
+  } else {
+    Out.emitIntValue(IndexVersion, 4); // Version
+  }
   Out.emitIntValue(Columns, 4);             // Columns
   Out.emitIntValue(IndexEntries.size(), 4); // Num Units
   Out.emitIntValue(Buckets.size(), 4);      // Num Buckets
@@ -762,6 +788,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
       } else if (Obj.isWasm()) {
         Out.setIsWASM(true);
       }
+      Out.setIsLittleEndian(Obj.isLittleEndian());
       MachineSet = true;
     }
 
@@ -791,8 +818,8 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
     if (CurInfoSection.empty())
       continue;
 
-    Expected<InfoSectionUnitHeader> HeaderOrErr =
-        parseInfoSectionUnitHeader(CurInfoSection.front());
+    Expected<InfoSectionUnitHeader> HeaderOrErr = parseInfoSectionUnitHeader(
+        CurInfoSection.front(), Obj.isLittleEndian());
     if (!HeaderOrErr)
       return HeaderOrErr.takeError();
     InfoSectionUnitHeader &Header = *HeaderOrErr;
@@ -810,7 +837,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
 
     writeStringsAndOffsets(Out, Strings, CurStrSection, CurStrOffsetSection,
                            Header.Version, SectionLength, StrOffsetsOptValue,
-                           Inputs.size() == 1);
+                           Inputs.size() == 1, Obj.isLittleEndian());
 
     for (auto Pair : SectionLength) {
       auto Index = getContributionIndex(Pair.first, IndexVersion);
@@ -843,7 +870,8 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
         uint64_t UnitOffset = 0;
         while (Info.size() > UnitOffset) {
           Expected<InfoSectionUnitHeader> HeaderOrError =
-              parseInfoSectionUnitHeader(Info.substr(UnitOffset, Info.size()));
+              parseInfoSectionUnitHeader(Info.substr(UnitOffset, Info.size()),
+                                         Obj.isLittleEndian());
           if (!HeaderOrError)
             return HeaderOrError.takeError();
           InfoSectionUnitHeader &Header = *HeaderOrError;
@@ -872,7 +900,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
             Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
                 Header, AbbrevSection,
                 Info.substr(UnitOffset - C.getLength32(), C.getLength32()),
-                CurStrOffsetSection, CurStrSection);
+                CurStrOffsetSection, CurStrSection, Obj.isLittleEndian());
 
             if (!EID)
               return createFileError(Input, EID.takeError());
@@ -906,7 +934,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
         if (Error Err = addAllTypesFromTypesSection(
                 Out, TypeIndexEntries, DS_Types, CurTypesSection, CurEntry,
                 ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES, 2)],
-                OverflowOptValue, AnySectionOverflow))
+                OverflowOptValue, AnySectionOverflow, Obj.isLittleEndian()))
           return Err;
       }
       if (AnySectionOverflow)
@@ -937,7 +965,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
       StringRef CUInfoSection =
           getSubsection(DwpSingleInfoSection, E, DW_SECT_INFO);
       Expected<InfoSectionUnitHeader> HeaderOrError =
-          parseInfoSectionUnitHeader(CUInfoSection);
+          parseInfoSectionUnitHeader(CUInfoSection, Obj.isLittleEndian());
       if (!HeaderOrError)
         return HeaderOrError.takeError();
       InfoSectionUnitHeader &Header = *HeaderOrError;
@@ -946,7 +974,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
           Header, getSubsection(AbbrevSection, E, DW_SECT_ABBREV),
           CUInfoSection,
           getSubsection(CurStrOffsetSection, E, DW_SECT_STR_OFFSETS),
-          CurStrSection);
+          CurStrSection, Obj.isLittleEndian());
       if (!EID)
         return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
@@ -1045,7 +1073,8 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
 //===----------------------------------------------------------------------===//
 
 Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
-  support::endian::Writer Wr(OS, llvm::endianness::little);
+  support::endian::Writer Wr(OS, IsLittleEndian ? llvm::endianness::little
+                                                : llvm::endianness::big);
 
   // Section metadata table.
   struct SectionMeta {

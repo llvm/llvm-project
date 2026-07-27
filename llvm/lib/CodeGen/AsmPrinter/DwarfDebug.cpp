@@ -585,7 +585,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<Register, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of register units known to be clobbered on the path
 /// to a call site.
 using ClobberedRegUnitSet = SmallSet<MCRegUnit, 16>;
@@ -1295,19 +1295,7 @@ void DwarfDebug::beginModule(Module *M) {
         CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
       continue;
 
-    DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
-
-    for (auto *Ty : CUNode->getEnumTypes()) {
-      assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
-             "Unexpected function-local entity in 'enums' CU field.");
-      CU.getOrCreateTypeDIE(cast<DIType>(Ty));
-    }
-
-    for (auto *Ty : CUNode->getRetainedTypes()) {
-      if (DIType *RT = dyn_cast<DIType>(Ty))
-        // There is no point in force-emitting a forward declaration.
-        CU.getOrCreateTypeDIE(RT);
-    }
+    getOrCreateDwarfCompileUnit(CUNode);
   }
 }
 
@@ -1522,8 +1510,24 @@ void DwarfDebug::endModule() {
     DenseSet<DIGlobalVariable *> Processed;
     for (auto *GVE : CUNode->getGlobalVariables()) {
       DIGlobalVariable *GV = GVE->getVariable();
+      assert(!isa_and_nonnull<DILocalScope>(GV->getScope()) &&
+             "Unexpected function-local entity in 'globals' CU field.");
       if (Processed.insert(GV).second)
         CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+    }
+
+    // Emit types.
+    for (auto *Ty : CUNode->getEnumTypes()) {
+      assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
+             "Unexpected function-local entity in 'enums' CU field.");
+      CU->getOrCreateTypeDIE(cast<DIType>(Ty));
+    }
+
+    for (auto *Ty : CUNode->getRetainedTypes()) {
+      if (DIType *RT = dyn_cast<DIType>(Ty)) {
+        // There is no point in force-emitting a forward declaration.
+        CU->getOrCreateTypeDIE(RT);
+      }
     }
 
     // Emit imported entities.
@@ -1534,14 +1538,20 @@ void DwarfDebug::endModule() {
     }
 
     // Emit function-local entities.
-    for (const auto *D : CU->getDeferredLocalDecls()) {
-      if (auto *IE = dyn_cast<DIImportedEntity>(D))
-        CU->getOrCreateImportedEntityDIE(IE);
-      else if (auto *Ty = dyn_cast<DIType>(D))
-        CU->getOrCreateTypeDIE(Ty);
-      else
-        llvm_unreachable("Unexpected local retained node!");
-    }
+    const auto Unexpected = [](const Metadata *N) {
+      llvm_unreachable("Unexpected local retained node!");
+    };
+    for (const auto *D : CU->getDeferredLocalDecls())
+      DISubprogram::visitRetainedNode<void>(
+          D, Unexpected, Unexpected,
+          [CU](const auto *IE) { CU->getOrCreateImportedEntityDIE(IE); },
+          [CU](const auto *Ty) { CU->getOrCreateTypeDIE(Ty); },
+          [&](const auto *GVE) {
+            DIGlobalVariable *GV = GVE->getVariable();
+            if (Processed.insert(GV).second)
+              CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+          },
+          Unexpected);
 
     // Emit base types.
     CU->createBaseTypeDIEs();
@@ -2088,16 +2098,17 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
   }
 
   // Collect info for retained nodes.
-  for (const DINode *DN : SP->getRetainedNodes()) {
-    const auto *LS = getRetainedNodeScope(DN);
-    if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+  for (const MDNode *N : SP->getRetainedNodes()) {
+    const auto *LS = getRetainedNodeScope(N);
+    if (isa<DILocalVariable>(N) || isa<DILabel>(N)) {
+      auto *DN = cast<DINode>(N);
       if (!Processed.insert(InlinedEntity(DN, nullptr)).second)
         continue;
       LexicalScope *LexS = LScopes.findLexicalScope(LS);
       if (LexS)
         createConcreteEntity(TheCU, *LexS, DN, nullptr);
     } else {
-      LocalDeclsPerLS[LS].insert(DN);
+      LocalDeclsPerLS[LS].insert(N);
     }
   }
 }
@@ -2897,12 +2908,13 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 #endif
   for (LexicalScope *AScope : LScopes.getAbstractScopesList()) {
     const auto *SP = cast<DISubprogram>(AScope->getScopeNode());
-    for (const DINode *DN : SP->getRetainedNodes()) {
-      const auto *LS = getRetainedNodeScope(DN);
+    for (const MDNode *N : SP->getRetainedNodes()) {
+      const auto *LS = getRetainedNodeScope(N);
       // Ensure LexicalScope is created for the scope of this node.
       auto *LexS = LScopes.getOrCreateAbstractScope(LS);
       assert(LexS && "Expected the LexicalScope to be created.");
-      if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {
+      if (isa<DILocalVariable>(N) || isa<DILabel>(N)) {
+        auto *DN = cast<DINode>(N);
         // Collect info for variables/labels that were optimized out.
         if (!Processed.insert(InlinedEntity(DN, nullptr)).second ||
             TheCU.getExistingAbstractEntity(DN))
@@ -2910,7 +2922,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
         TheCU.createAbstractEntity(DN, LexS);
       } else {
         // Remember the node if this is a local declarations.
-        LocalDeclsPerLS[LS].insert(DN);
+        LocalDeclsPerLS[LS].insert(N);
       }
       assert(
           LScopes.getAbstractScopesList().size() == NumAbstractSubprograms &&
@@ -3278,7 +3290,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
         if (TypeBitSize > GenericBitSize && IsByteSized && IsOutOfRange) {
           DwarfExpr.addImplicitValue(
               APInt(static_cast<unsigned>(TypeBitSize),
-                    static_cast<uint64_t>(Entry.getInt()), IsSigned),
+                    static_cast<uint64_t>(Entry.getInt()), IsSigned,
+                    /*implicitTrunc=*/true),
               AP);
           return true;
         }

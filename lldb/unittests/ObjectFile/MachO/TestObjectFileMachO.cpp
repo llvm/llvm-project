@@ -16,10 +16,13 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #ifdef __APPLE__
@@ -171,4 +174,50 @@ TEST_F(ObjectFileMachOTest, ZeroCmdSize) {
   // Before the fix GetAllArchSpecs loops ~0x7FFFFFFF times and never returns.
   (void)ObjectFile::GetModuleSpecifications(FileSpec(), DataSP, 0,
                                             sizeof(kData));
+}
+
+// A Mach-O whose MH_DYLIB_IN_CACHE flag is set but which has no __LINKEDIT
+// segment.
+TEST_F(ObjectFileMachOTest, ParseSymtabSharedCacheMissingLinkedit) {
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000006
+  ncmds:           2
+  sizeofcmds:      96
+  flags:           0x80000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          0
+    strsize:         0
+...
+)";
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  lldb::ModuleSP module = std::make_shared<Module>(file->moduleSpec());
+  ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
+
+  // Simply no crashing is the regression check.
+  Symtab symtab(OF);
+  OF->ParseSymtab(symtab);
 }

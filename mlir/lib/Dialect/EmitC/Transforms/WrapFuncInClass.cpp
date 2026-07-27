@@ -17,6 +17,7 @@
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace emitc;
@@ -47,7 +48,8 @@ struct WrapFuncInClassPass
     });
 
     RewritePatternSet patterns(&getContext());
-    populateWrapFuncInClass(patterns, funcName, globalsUsedByFuncs);
+    populateWrapFuncInClass(patterns, funcName, classNameFormat,
+                            globalsUsedByFuncs);
 
     walkAndApplyPatterns(moduleOp, std::move(patterns));
 
@@ -67,15 +69,16 @@ struct WrapFuncInClassPass
 class WrapFuncInClass : public OpRewritePattern<FuncOp> {
 public:
   WrapFuncInClass(
-      MLIRContext *context, StringRef funcName,
+      MLIRContext *context, StringRef funcName, StringRef classNameFormat,
       const DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove)
       : OpRewritePattern<FuncOp>(context), funcName(funcName),
-        globalsToMove(globalsToMove) {}
+        classNameFormat(classNameFormat), globalsToMove(globalsToMove) {}
 
   LogicalResult matchAndRewrite(FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto className = funcOp.getSymNameAttr().str() + "Class";
+    std::string className =
+        llvm::formatv(classNameFormat.c_str(), funcOp.getName());
     ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
@@ -149,13 +152,18 @@ private:
   /// function.
   std::string funcName;
 
+  /// Format string used to create the wrapper class name where '{}' is
+  /// replaced with the original function name.
+  std::string classNameFormat;
+
   /// Map of FuncOp and the GlobalOps it uses which need to be moved into the
   /// ClassOp wrapper.
   DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> globalsToMove;
 };
 
 void mlir::emitc::populateWrapFuncInClass(
-    RewritePatternSet &patterns, StringRef funcName,
+    RewritePatternSet &patterns, StringRef funcName, StringRef classNameFormat,
     DenseMap<FuncOp, DenseSet<GlobalOp>> &globalsToMove) {
-  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName, globalsToMove);
+  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName,
+                                classNameFormat, globalsToMove);
 }

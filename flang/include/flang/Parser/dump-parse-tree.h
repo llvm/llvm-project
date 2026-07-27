@@ -172,6 +172,7 @@ public:
   NODE(parser, AssumedImpliedSpec)
   NODE(parser, AssumedRankSpec)
   NODE(parser, AssumedShapeSpec)
+  NODE(parser, AssumedShapeBoundsSpec)
   NODE(parser, AssumedSizeSpec)
   NODE(parser, Asynchronous)
   NODE(parser, AsynchronousStmt)
@@ -556,6 +557,15 @@ public:
   NODE_ENUM(OmpAlwaysModifier, Value)
   NODE(parser, OmpAppendArgsClause)
   NODE(OmpAppendArgsClause, OmpAppendOp)
+  NODE(parser, OmpLoopModifier)
+
+  static std::string GetNodeName(const llvm::omp::LoopModifier &x) {
+    return llvm::Twine(
+        "llvm::omp::LoopModifier = ", llvm::omp::getLoopModifierName(x))
+        .str();
+  }
+  NODE(parser, OmpApplyClause)
+  NODE(OmpApplyClause, Modifier)
   NODE(parser, OmpArgument)
   NODE(parser, OmpArgumentList)
   NODE(parser, OmpAssumeDirective)
@@ -592,6 +602,7 @@ public:
   NODE(parser, OmpDefaultClause)
   NODE_ENUM(OmpDefaultClause, DataSharingAttribute)
   NODE(parser, OmpDefaultmapClause)
+  NODE(parser, OmpDefaultVariantClause)
   NODE(OmpDefaultmapClause, Modifier)
   NODE_ENUM(OmpDefaultmapClause, ImplicitBehavior)
   NODE(parser, OmpDeleteModifier)

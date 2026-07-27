@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -188,6 +189,10 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
+  void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
+                         raw_ostream &O) const;
+  void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI,
+                     raw_ostream &O) const;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
@@ -227,6 +232,10 @@ private:
 
   void emitPTXGlobalVariable(const GlobalVariable *GVar, raw_ostream &O,
                              const NVPTXSubtarget &STI);
+  void emitPTXGlobalVariableDefinition(const GlobalVariable *GVar,
+                                       raw_ostream &O,
+                                       const NVPTXSubtarget &STI,
+                                       bool EmitInitializer);
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
   std::string getPTXFundamentalTypeStr(Type *Ty, bool = true) const;
   void printScalarConstant(const Constant *CPV, raw_ostream &O);

@@ -2,9 +2,6 @@
 
 LLVM welcomes contributions of all kinds. To get started, please review the following topics:
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -366,7 +363,7 @@ The {doc}`CodeOfConduct` applies to all office hours.
   * - Maksim Panchenko
     - BOLT internals, IR, new passes, proposals, etc.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
-    - [Zoom](https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09)
+    - [Zoom](https://fb.zoom.us/j/97358910859?pwd=FamcLANMN7umLlFTTTkqXUCAG81SH0.1)
     - English, Russian
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
