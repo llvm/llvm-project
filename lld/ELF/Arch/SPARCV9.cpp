@@ -166,6 +166,20 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       expr = R_GOT_OFF;
       break;
 
+    // Optimize the GOT load to an add of the symbol's GOT-relative address if
+    // applicable. Exclude absolute symbol, which can be arbitrarily far. %l7
+    // points at .got, which must be retained.
+    case R_SPARC_GOTDATA_OP_HIX22:
+    case R_SPARC_GOTDATA_OP_LOX10:
+    case R_SPARC_GOTDATA_OP:
+      if (sym.isPreemptible || isAbsolute(sym)) {
+        expr = R_GOT_OFF;
+      } else {
+        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        expr = R_GOTREL;
+      }
+      break;
+
     // TLS LE relocations:
     case R_SPARC_TLS_LE_HIX22:
     case R_SPARC_TLS_LE_LOX10:
@@ -321,6 +335,24 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
   case R_SPARC_TLS_LE_LOX10:
     // T-simm13
     write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x000003ff) | 0x1C00);
+    break;
+  case R_SPARC_GOTDATA_OP_HIX22: {
+    // V-imm22. sethi encodes the complement of a negative value, which the
+    // paired xor undoes, so the encodable range is 33 bits.
+    checkInt(ctx, loc, val, 33, rel);
+    uint64_t v = int64_t(val) < 0 ? ~val : val;
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((v >> 10) & 0x003fffff));
+    break;
+  }
+  case R_SPARC_GOTDATA_OP_LOX10:
+    // T-simm13. Only a negative value needs the sign extension bits.
+    write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x000003ff) |
+                       (int64_t(val) < 0 ? 0x1c00 : 0));
+    break;
+  case R_SPARC_GOTDATA_OP:
+    // ldx [%rs1 + %rs2], %rd -> add %rs1, %rs2, %rd
+    if (rel.expr == R_GOTREL)
+      write32be(loc, (read32be(loc) & 0x3e07c01f) | 0x80000000);
     break;
   default:
     llvm_unreachable("unknown relocation");
