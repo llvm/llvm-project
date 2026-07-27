@@ -20,8 +20,7 @@
 
 namespace Fortran::utils::openmp {
 std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
-  auto appendKinds = [](std::string &name,
-                        llvm::ArrayRef<std::int64_t> kinds) {
+  auto appendKinds = [](std::string &name, llvm::ArrayRef<std::int64_t> kinds) {
     for (std::int64_t kind : kinds) {
       name.append("K");
       if (kind < 0) {
