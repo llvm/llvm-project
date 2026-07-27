@@ -22,6 +22,7 @@
 namespace lld {
 namespace elf {
 class Defined;
+class DynamicReloc;
 class InputFile;
 class Symbol;
 template <class RelTy> struct Relocs;
@@ -37,6 +38,7 @@ public:
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
   virtual RelType getDynRel(RelType type) const { return 0; }
+  virtual void finalizeDynamicReloc(DynamicReloc &rel) const {}
   virtual void writeGotPltHeader(uint8_t *buf) const {}
   virtual void writeGotHeader(uint8_t *buf) const {}
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}

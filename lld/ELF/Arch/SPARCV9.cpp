@@ -27,6 +27,7 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  void finalizeDynamicReloc(DynamicReloc &rel) const override;
   void writeGotHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -83,8 +84,17 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
 }
 
 RelType SPARCV9::getDynRel(RelType type) const {
-  if (type == R_SPARC_64)
+  switch (type) {
+  case R_SPARC_16:
+  case R_SPARC_32:
+  case R_SPARC_64:
+  case R_SPARC_UA16:
+  case R_SPARC_UA32:
+  case R_SPARC_UA64:
     return type;
+  default:
+    break;
+  }
   return R_SPARC_NONE;
 }
 
@@ -92,11 +102,58 @@ int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_SPARC_64:
   case R_SPARC_GLOB_DAT:
+  case R_SPARC_RELATIVE:
     return read64be(buf);
   default:
     InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
+}
+
+static bool getSparcAbsRelocPair(RelType type, RelType &aligned,
+                                 RelType &unaligned, uint64_t &alignment) {
+  switch (type) {
+  case R_SPARC_16:
+  case R_SPARC_UA16:
+    aligned = R_SPARC_16;
+    unaligned = R_SPARC_UA16;
+    alignment = 2;
+    return true;
+  case R_SPARC_32:
+  case R_SPARC_UA32:
+    aligned = R_SPARC_32;
+    unaligned = R_SPARC_UA32;
+    alignment = 4;
+    return true;
+  case R_SPARC_64:
+  case R_SPARC_UA64:
+    aligned = R_SPARC_64;
+    unaligned = R_SPARC_UA64;
+    alignment = 8;
+    return true;
+  default:
+    return false;
+  }
+}
+
+void SPARCV9::finalizeDynamicReloc(DynamicReloc &rel) const {
+  RelType aligned = R_SPARC_NONE, unaligned = R_SPARC_NONE;
+  uint64_t alignment = 1;
+  if (!getSparcAbsRelocPair(rel.type, aligned, unaligned, alignment))
+    return;
+
+  rel.type = rel.r_offset % alignment == 0 ? aligned : unaligned;
+  if (!rel.needsDynSymIndex() || rel.sym->isPreemptible)
+    return;
+
+  if (rel.type == R_SPARC_64) {
+    rel.convertToRelative(relativeRel);
+    return;
+  }
+
+  Err(ctx) << "relocation " << rel.type << " at offset " << rel.r_offset
+           << " against non-preemptible symbol " << rel.sym
+           << " cannot be converted to " << relativeRel;
 }
 
 template <class ELFT, class RelTy>
@@ -311,6 +368,7 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     write32be(loc, (read32be(loc) & ~0x000003ff) | (val & 0x000003ff));
     break;
   case R_SPARC_64:
+  case R_SPARC_RELATIVE:
   case R_SPARC_DISP64:
   case R_SPARC_UA64:
     // V-xword64

@@ -1534,6 +1534,7 @@ void RelocationBaseSection::finalizeContents() {
 
 void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
+  ctx.target->finalizeDynamicReloc(*this);
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
   isFinal = true; // Catch errors

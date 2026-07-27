@@ -995,10 +995,17 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
                     (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
-    if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) ||
-        ((rel == ctx.target->symbolicRel ||
-          (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) &&
-         !sym.isPreemptible)) {
+    bool useRelative =
+        (rel == ctx.target->symbolicRel ||
+         (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) &&
+        !sym.isPreemptible;
+    bool isSparcAbsReloc =
+        ctx.arg.emachine == EM_SPARCV9 &&
+        (type == R_SPARC_16 || type == R_SPARC_32 || type == R_SPARC_64 ||
+         type == R_SPARC_UA16 || type == R_SPARC_UA32 || type == R_SPARC_UA64);
+    if (isSparcAbsReloc)
+      useRelative = false;
+    if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) || useRelative) {
       addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type, shard);
       return;
     }
@@ -1024,6 +1031,8 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
         }
       }
       ctx.in.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
+      if (isSparcAbsReloc && !sym.isPreemptible && ctx.arg.writeAddends)
+        sec->addReloc({expr, type, offset, addend, &sym});
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
