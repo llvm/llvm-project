@@ -5,7 +5,7 @@
 # The scheduler only prints the limit diagnostic for excess pressure. Use 34
 # so the diagnostic is printed with both the old limit of 33 and the new 31.
 # CHECK: Max Pressure: GPR32=34
-# CHECK: GPR32 Limit 33 Actual 34
+# CHECK: GPR32 Limit 31 Actual 34
 
 ---
 name:            gpr_pressure
