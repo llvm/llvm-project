@@ -1877,12 +1877,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
   // Run the SSA form of the memory clause pass before PHI elimination.
-  // LiveVariables is the anchor: it runs in SSA form and sets kill flags that
-  // our pass relies on for intra-block liveness tracking.
-  // TODO: Once PR #161054 (SSAMachineScheduler) is merged, anchor this pass
-  // after SSAMachineSchedulerID instead of LiveVariablesID.
+  // MachineLoopInfo is the last pass before PHIElimination in the base
+  // pipeline, so this places the pass as late as possible while the function
+  // is still in SSA form.
   if (EnableSSASIFormMemoryClauses)
-    insertPass(&LiveVariablesID, &SSASIFormMemoryClausesID);
+    insertPass(&MachineLoopInfoID, &SSASIFormMemoryClausesID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }

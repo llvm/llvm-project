@@ -9,7 +9,7 @@
 # XNACK-NEXT: %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
 # XNACK-NEXT: %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
 # XNACK-NEXT: %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 48, 0, implicit $exec
-# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: KILL %0
 # XNACK-NEXT: %5:vreg_64 = IMPLICIT_DEF
 
 # NOXNACK-LABEL: name: vector_clause
@@ -64,7 +64,7 @@ body:             |
 # XNACK:      %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0
 # XNACK-NEXT: %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 4, 0
 # XNACK-NEXT: %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 8, 0
-# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: KILL %0
 # XNACK-NEXT: S_ENDPGM
 
 ---
@@ -97,14 +97,13 @@ body:             |
 ...
 
 # Subreg pointer: both sub-lane pairs die inside the clause (no post-clause use
-# of %0). LiveVars however only sets isKill() on the last whole-register use
-# (sub2_sub3 on the second load). We emit a whole-register KILL killed %0,
-# covering all lanes.
+# of %0). LiveIntervals detects no live lanes past the clause end, so we emit
+# a whole-register KILL %0, covering all lanes.
 #
 # XNACK-LABEL: name: subreg_ptr_killed_in_clause
 # XNACK:      %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub0_sub1, 0, 0, implicit $exec
 # XNACK-NEXT: %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub2_sub3, 16, 0, implicit $exec
-# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: KILL %0
 # XNACK-NEXT: %3:vreg_64 = IMPLICIT_DEF
 #
 # NOXNACK-LABEL: name: subreg_ptr_killed_in_clause
@@ -125,13 +124,14 @@ body:             |
 
 # Subreg pointer: sub0_sub1 is used after the clause (as store address), so
 # those lanes are live-out of the clause. Only sub2_sub3 dies inside the clause.
-# No KILL is needed because %0.sub2_sub3 does not have the killed flag given that
-# %0.sub0_sub1 (and thus %0) is still live after the last load.
+# LiveIntervals detects the sub2_sub3 subrange dies at the clause end, so a
+# KILL for that subrange is emitted to extend its liveness through the
+# early-clobber defs.
 #
 # XNACK-LABEL: name: subreg_ptr_partial_live_after
 # XNACK:      %1:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub0_sub1, 0, 0, implicit $exec
 # XNACK-NEXT: %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0.sub2_sub3, 16, 0, implicit $exec
-# XNACK-NOT:  KILL
+# XNACK-NEXT: KILL %0.sub2_sub3
 #
 # NOXNACK-LABEL: name: subreg_ptr_partial_live_after
 # NOXNACK-NOT: KILL
@@ -189,7 +189,7 @@ body:             |
 # XNACK-NEXT:  %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
 # XNACK-NEXT:  %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
 # XNACK-NEXT:  %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
-# XNACK-NEXT:  KILL killed %0
+# XNACK-NEXT:  KILL %0
 
 ---
 name: pointer_from_predecessor
@@ -248,10 +248,10 @@ body:             |
 # XNACK-NEXT: dead %14:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec
 # XNACK-NEXT: dead %15:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec
 # XNACK-NEXT: dead %16:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec
-# XNACK-NEXT: KILL killed %0
+# XNACK-NEXT: KILL %0
 # XNACK-NEXT: dead %17:vgpr_32 = GLOBAL_LOAD_DWORD %1, 60, 0, implicit $exec
 # XNACK-NEXT: dead %18:vgpr_32 = GLOBAL_LOAD_DWORD %1, 64, 0, implicit $exec
-# XNACK-NEXT: KILL killed %1
+# XNACK-NEXT: KILL %1
 
 ---
 name: overflow_counter

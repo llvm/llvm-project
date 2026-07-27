@@ -12,17 +12,13 @@
 /// is enabled, preventing a load from overwriting a pointer and requiring a
 /// soft clause break.
 ///
-/// TODO: Once PR #161054 (SSAMachineScheduler) is merged this pass should be
-/// placed immediately after SSAMachineScheduler in the pipeline.
-///
 //===----------------------------------------------------------------------===//
 
 #include "SSASIFormMemoryClauses.h"
 #include "AMDGPU.h"
 #include "GCNRegPressure.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -43,23 +39,25 @@ class SSASIFormMemoryClausesImpl {
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
-  bool checkPressure(const MachineInstr &MI, GCNRegPressure &CurPressure);
-  void collectRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
+  bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT);
+  void collectRegUses(const MachineInstr &MI, RegUse &Defs,
+                      RegUse &Uses) const;
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
-                      GCNRegPressure &CurPressure);
+                      GCNDownwardRPTracker &RPT);
 
   const GCNSubtarget *ST;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   SIMachineFunctionInfo *MFI;
-  LiveVariables *LV;
+  LiveIntervals *LIS;
 
   unsigned LastRecordedOccupancy;
   unsigned MaxVGPRs;
   unsigned MaxSGPRs;
 
 public:
-  bool run(MachineFunction &MF, LiveVariables &LV);
+  SSASIFormMemoryClausesImpl(LiveIntervals *LS) : LIS(LS) {}
+  bool run(MachineFunction &MF);
 };
 
 class SSASIFormMemoryClausesLegacy : public MachineFunctionPass {
@@ -75,7 +73,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariablesWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -88,7 +86,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SSASIFormMemoryClausesLegacy, DEBUG_TYPE,
                       "SSA SI Form memory clauses", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SSASIFormMemoryClausesLegacy, DEBUG_TYPE,
                     "SSA SI Form memory clauses", false, false)
 
@@ -192,28 +190,15 @@ bool SSASIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
 // Since all defs in the clause are early clobber we can run out of registers.
 // Function returns false if pressure would hit the limit if instruction is
 // bundled into a memory clause.
-//
-// We accumulate pressure monotonically across the clause: because all defs are
-// marked early-clobber they remain live until the clause end, so we never
-// subtract pressure for uses that die mid-clause. This is conservative and
-// avoids the need for LiveIntervals.
 bool SSASIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
-                                               GCNRegPressure &CurPressure) {
-  // Speculatively add this instruction's virtual defs to the running pressure.
-  // Physical register defs are skipped: they are not allocatable slots and
-  // GCNRegPressure::inc() requires a virtual register.
-  GCNRegPressure NewPressure = CurPressure;
-  for (const MachineOperand &MO : MI.defs()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      continue;
-    Register Reg = MO.getReg();
-    LaneBitmask Mask = MO.getSubReg()
-                           ? TRI->getSubRegIndexLaneMask(MO.getSubReg())
-                           : MRI->getMaxLaneMaskForVReg(Reg);
-    NewPressure.inc(Reg, LaneBitmask::getNone(), Mask, *MRI);
-  }
-
-  unsigned Occupancy = NewPressure.getOccupancy(
+                                               GCNDownwardRPTracker &RPT) {
+  // NB: skip advanceBeforeNext() call. Since all defs will be marked
+  // early-clobber they will all stay alive at least to the end of the
+  // clause. Therefore we should not decrease pressure even if a load
+  // pointer becomes dead and could otherwise be reused for destination.
+  RPT.advanceToNext();
+  GCNRegPressure MaxPressure = RPT.moveMaxPressure();
+  unsigned Occupancy = MaxPressure.getOccupancy(
       *ST,
       MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
@@ -227,10 +212,9 @@ bool SSASIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // tracking does not account for the alignment requirements for SGPRs, or the
   // fragmentation of registers the allocator will need to satisfy.
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      NewPressure.getVGPRNum(ST->hasGFX90AInsts()) <= MaxVGPRs / 2 &&
-      NewPressure.getSGPRNum() <= MaxSGPRs / 2) {
+      MaxPressure.getVGPRNum(ST->hasGFX90AInsts()) <= MaxVGPRs / 2 &&
+      MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
-    CurPressure = NewPressure;
     return true;
   }
   return false;
@@ -266,18 +250,18 @@ void SSASIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
 // def/use maps are not updated.
 bool SSASIFormMemoryClausesImpl::processRegUses(const MachineInstr &MI,
                                                 RegUse &Defs, RegUse &Uses,
-                                                GCNRegPressure &CurPressure) {
+                                                GCNDownwardRPTracker &RPT) {
   if (!canBundle(MI, Defs, Uses))
     return false;
 
-  if (!checkPressure(MI, CurPressure))
+  if (!checkPressure(MI, RPT))
     return false;
 
   collectRegUses(MI, Defs, Uses);
   return true;
 }
 
-bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF, LiveVariables &LVIn) {
+bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->isXNACKEnabled())
     return false;
@@ -286,7 +270,7 @@ bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF, LiveVariables &LVIn) {
   TRI = ST->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
-  LV = &LVIn;
+  SlotIndexes *Ind = LIS->getSlotIndexes();
   bool Changed = false;
 
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
@@ -295,45 +279,7 @@ bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF, LiveVariables &LVIn) {
       "amdgpu-max-memory-clause", SSAMaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
-    // BlockPressure tracks the register pressure at the current scan position
-    // within MBB. It is seeded with virtual registers live-in to this block
-    // (as computed by LiveVariables), then updated instruction-by-instruction:
-    // virtual register defs increase pressure; uses with kill flags decrease
-    // it. In SSA form, kill flags are reliable (each vreg has exactly one
-    // def), so this gives accurate intra-block liveness.
-    GCNRegPressure BlockPressure;
-    for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
-      Register Reg = Register::index2VirtReg(I);
-      if (LV->isLiveIn(Reg, MBB)) {
-        LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(Reg);
-        BlockPressure.inc(Reg, LaneBitmask::getNone(), Mask, *MRI);
-      }
-    }
-
-    // PressurePos is the next instruction to be consumed into BlockPressure.
-    // It may lag behind the outer loop iterator when the inner clause-extension
-    // loop advances Next past instructions not admitted to a clause.
-    // advanceBlockPressure() catches it up before each clause attempt.
-    auto PressurePos = MBB.instr_begin();
-
-    auto advanceBlockPressure = [&](MachineBasicBlock::instr_iterator Target) {
-      while (PressurePos != Target) {
-        const MachineInstr &CurMI = *PressurePos++;
-        if (CurMI.isMetaInstruction())
-          continue;
-        for (const MachineOperand &MO : CurMI.operands()) {
-          if (!MO.isReg() || !MO.getReg().isVirtual())
-            continue;
-          Register Reg = MO.getReg();
-          LaneBitmask Mask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
-          if (MO.isDef())
-            BlockPressure.inc(Reg, LaneBitmask::getNone(), Mask, *MRI);
-          else if (MO.isKill())
-            BlockPressure.inc(Reg, Mask, LaneBitmask::getNone(), *MRI);
-        }
-      }
-    };
-
+    GCNDownwardRPTracker RPT(*LIS);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;
@@ -344,40 +290,24 @@ bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF, LiveVariables &LVIn) {
 
       bool IsVMEM = isVMEMClauseInst(MI);
 
-      if (!isValidClauseInst(MI, IsVMEM)) {
-        advanceBlockPressure(Next);
+      if (!isValidClauseInst(MI, IsVMEM))
         continue;
+
+      if (!RPT.getNext().isValid())
+        RPT.reset(MI, MBB.end());
+      else { // Advance the state to the current MI.
+        RPT.advance(MachineBasicBlock::const_iterator(MI));
+        RPT.advanceBeforeNext();
       }
 
-      // Bring BlockPressure up to (but not including) MI, then snapshot it as
-      // the baseline pressure entering this potential clause.
-      advanceBlockPressure(I);
-      GCNRegPressure CurPressure = BlockPressure;
-
+      const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
       RegUse Defs, Uses;
-      // Kills: virtual registers with isKill() on any use inside the clause.
-      // These registers die within the clause and need a whole-register KILL
-      // pseudo after the last load to extend their live range past the
-      // early-clobber defs. The specific subreg that LV flagged does not
-      // matter; we always emit a whole-register KILL.
-      DenseSet<Register> Kills;
-
-      auto collectKills = [&](const MachineInstr &Instr) {
-        for (const MachineOperand &MO : Instr.operands()) {
-          if (!MO.isReg() || MO.isDef() || !MO.isKill() ||
-              !MO.getReg().isVirtual())
-            continue;
-          Kills.insert(MO.getReg());
-        }
-      };
-
-      if (!processRegUses(MI, Defs, Uses, CurPressure)) {
-        advanceBlockPressure(Next);
+      if (!processRegUses(MI, Defs, Uses, RPT)) {
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
-      collectKills(MI);
 
-      MachineBasicBlock::instr_iterator LastClauseInst = Next;
+      MachineBasicBlock::iterator LastClauseInst = Next;
       unsigned Length = 1;
       for (; Next != E && Length < FuncMaxClause; ++Next) {
         // Debug instructions should not change the kill insertion.
@@ -390,18 +320,14 @@ bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF, LiveVariables &LVIn) {
         // A load from pointer which was loaded inside the same bundle is an
         // impossible clause because we will need to write and read the same
         // register inside. In this case processRegUses will return false.
-        if (!processRegUses(*Next, Defs, Uses, CurPressure))
+        if (!processRegUses(*Next, Defs, Uses, RPT))
           break;
 
-        collectKills(*Next);
         LastClauseInst = Next;
         ++Length;
       }
       if (Length < 2) {
-        // Clause did not form; process MI normally. Instructions examined by
-        // the inner loop but not admitted will be caught up by
-        // advanceBlockPressure() at the start of the next outer iteration.
-        advanceBlockPressure(std::next(I));
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -410,40 +336,81 @@ bool SSASIFormMemoryClausesImpl::run(MachineFunction &MF, LiveVariables &LVIn) {
 
       assert(!LastClauseInst->isMetaInstruction());
 
-      // For each register killed within the clause, insert a whole-register
-      // KILL pseudo after the clause to extend its liveness through the
-      // early-clobber defs. Registers not in Kills are live past the clause
-      // and need nothing.
-      for (Register Reg : Kills) {
-        auto UseIt = Uses.find(Reg);
-        assert(UseIt != Uses.end());
-        RegState UseState = UseIt->second.first & ~RegState::Kill;
+      SlotIndex ClauseLiveInIdx = LIS->getInstructionIndex(MI);
+      SlotIndex ClauseLiveOutIdx =
+          LIS->getInstructionIndex(*LastClauseInst).getNextIndex();
 
-        MachineInstrBuilder Kill =
-            BuildMI(*MI.getParent(), std::next(LastClauseInst), DebugLoc(),
-                    TII->get(AMDGPU::KILL));
-        Kill.addUse(Reg, UseState | RegState::Kill, AMDGPU::NoSubRegister);
+      // Track the last inserted kill.
+      MachineInstrBuilder Kill;
 
-        // Move the kill record from within the clause to the KILL instruction,
-        // keeping LiveVariables consistent with the modified MIR.
-        // findKill is guaranteed non-null: a kill flag within the clause
-        // implies LV recorded a kill for this register in this block.
-        MachineInstr *OldKill = LV->getVarInfo(Reg).findKill(&MBB);
-        assert(OldKill &&
-               "Kill flag in clause but no LV kill record in block?");
-        // replaceKillInstruction only updates the VarInfo::Kills list; clear
-        // the kill flag on the old instruction manually.
-        OldKill->clearRegisterKills(Reg, TRI);
-        LV->replaceKillInstruction(Reg, *OldKill, *Kill);
+      // Insert one kill per register, with operands covering all necessary
+      // subregisters.
+      for (auto &&R : Uses) {
+        Register Reg = R.first;
+        if (Reg.isPhysical())
+          continue;
+
+        // Collect the register operands we should extend the live ranges of.
+        SmallVector<std::tuple<RegState, unsigned>> KillOps;
+        const LiveInterval &LI = LIS->getInterval(R.first);
+
+        if (!LI.hasSubRanges()) {
+          if (!LI.liveAt(ClauseLiveOutIdx)) {
+            KillOps.emplace_back(R.second.first | RegState::Kill,
+                                 AMDGPU::NoSubRegister);
+          }
+        } else {
+          LaneBitmask KilledMask;
+          for (const LiveInterval::SubRange &SR : LI.subranges()) {
+            if (SR.liveAt(ClauseLiveInIdx) && !SR.liveAt(ClauseLiveOutIdx))
+              KilledMask |= SR.LaneMask;
+          }
+
+          if (KilledMask.none())
+            continue;
+
+          SmallVector<unsigned> KilledIndexes;
+          bool Success = TRI->getCoveringSubRegIndexes(
+              MRI->getRegClass(Reg), KilledMask, KilledIndexes);
+          (void)Success;
+          assert(Success && "Failed to find subregister mask to cover lanes");
+          for (unsigned SubReg : KilledIndexes) {
+            KillOps.emplace_back(R.second.first | RegState::Kill, SubReg);
+          }
+        }
+
+        if (KillOps.empty())
+          continue;
+
+        Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst), DebugLoc(),
+                       TII->get(AMDGPU::KILL));
+        for (auto &Op : KillOps)
+          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        Ind->insertMachineInstrInMaps(*Kill);
       }
 
-      // Update BlockPressure: CurPressure already has all clause defs
-      // accumulated; subtract the registers that died within the clause.
-      BlockPressure = CurPressure;
-      for (Register Reg : Kills)
-        BlockPressure.inc(Reg, MRI->getMaxLaneMaskForVReg(Reg),
-                          LaneBitmask::getNone(), *MRI);
-      PressurePos = Next;
+      // Restore the state after processing the end of the bundle.
+      RPT.reset(MI, MBB.end(), &LiveRegsCopy);
+
+      if (!Kill)
+        continue;
+
+      for (auto &&R : Defs) {
+        Register Reg = R.first;
+        Uses.erase(Reg);
+        if (Reg.isPhysical())
+          continue;
+        LIS->removeInterval(Reg);
+        LIS->createAndComputeVirtRegInterval(Reg);
+      }
+
+      for (auto &&R : Uses) {
+        Register Reg = R.first;
+        if (Reg.isPhysical())
+          continue;
+        LIS->removeInterval(Reg);
+        LIS->createAndComputeVirtRegInterval(Reg);
+      }
     }
   }
 
@@ -454,14 +421,14 @@ bool SSASIFormMemoryClausesLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  LiveVariables &LV = getAnalysis<LiveVariablesWrapperPass>().getLV();
-  return SSASIFormMemoryClausesImpl().run(MF, LV);
+  LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  return SSASIFormMemoryClausesImpl(LIS).run(MF);
 }
 
 PreservedAnalyses
 SSASIFormMemoryClausesPass::run(MachineFunction &MF,
                                 MachineFunctionAnalysisManager &MFAM) {
-  LiveVariables &LV = MFAM.getResult<LiveVariablesAnalysis>(MF);
-  SSASIFormMemoryClausesImpl().run(MF, LV);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  SSASIFormMemoryClausesImpl(&LIS).run(MF);
   return PreservedAnalyses::all();
 }
