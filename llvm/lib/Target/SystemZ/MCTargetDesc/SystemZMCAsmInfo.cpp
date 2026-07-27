@@ -59,10 +59,6 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   initializeAtSpecifiers(atSpecifiers);
 }
 
-bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {
-  return MCAsmInfo::isAcceptableChar(C) || C == '#';
-}
-
 void SystemZMCAsmInfoGOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   switch (Expr.getSpecifier()) {

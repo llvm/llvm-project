@@ -104,11 +104,9 @@ declare void @use_v32i8(<32 x i8>)
 define <32 x i8> @max_expense_multi_use_triggered(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: define <32 x i8> @max_expense_multi_use_triggered(
 ; CHECK-SAME: <32 x i8> [[A:%.*]], <32 x i8> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <32 x i8> [[A]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[B1:%.*]] = shufflevector <32 x i8> [[B]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[OP:%.*]] = add <32 x i8> [[A1]], [[B1]]
-; CHECK-NEXT:    call void @use_v32i8(<32 x i8> [[OP]])
 ; CHECK-NEXT:    [[POST:%.*]] = add <32 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[OP:%.*]] = shufflevector <32 x i8> [[POST]], <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    call void @use_v32i8(<32 x i8> [[OP]])
 ; CHECK-NEXT:    ret <32 x i8> [[POST]]
 ;
   %a1 = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> <i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

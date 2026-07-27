@@ -587,12 +587,12 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
     Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder) {
+    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   VPSingleDefRecipe *BaseIV =
-      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step, Flags);
 
   // Truncate base induction if needed.
   Type *ResultTy = BaseIV->getScalarType();
@@ -934,6 +934,22 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     default:
       llvm_unreachable("Unhandled cast SCEV");
     }
+
+    // When expanding ptrtoaddr, first check if there's an existing ptrtoint we
+    // can reuse.
+    if (Opcode == Instruction::PtrToAddr) {
+      VPlan &Plan = Builder.getPlan();
+      BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+      if (auto *IRV = dyn_cast<VPIRValue>(Op)) {
+        if (CastInst *CI = SCEVExpander::findReusableCastForPtrToAddr(
+                IRV->getValue(), S->getType(), PH->getDataLayout(),
+                [&](const CastInst *CI) {
+                  return SE.DT.dominates(CI->getParent(), PH);
+                }))
+          return Plan.getOrAddLiveIn(CI);
+      }
+    }
+
     return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
   }
   case scUMaxExpr:
