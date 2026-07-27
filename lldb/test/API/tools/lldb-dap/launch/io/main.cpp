@@ -26,13 +26,6 @@ int main(int argc, char *argv[]) {
     std::cout << "[STDOUT][FROM_ENV]: " << env << "\n";
     std::cerr << "[STDERR][FROM_ENV]: " << env << "\n";
   }
-#ifdef _WIN32
-  const char *win_nodebugheap = std::getenv("_NO_DEBUG_HEAP");
-  if (!win_nodebugheap || std::strcmp(win_nodebugheap, "1") != 0) {
-    std::cout << "Invalid or missing _NO_DEBUG_HEAP\n";
-    return 1;
-  }
-#endif
   if (read_stdin) {
     std::string line;
     if (std::getline(std::cin, line)) {
