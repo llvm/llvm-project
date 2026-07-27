@@ -151,6 +151,8 @@ def darwinHasExp10 : RuntimeLibcallAvailability<
           (all_of IsIOS, OSVersionAtLeast<7, 0>),
           IsDriverKit, IsTvOS, IsWatchOS, IsXROS, IsBridgeOS)>;
 
+// memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X
+// 10.5 and later. All versions of watchOS support it.
 def darwinHasMemsetPattern : RuntimeLibcallAvailability<
   (any_of (all_of IsMacOSX, MacOSXVersionAtLeast<10, 5>),
           (all_of IsIsiOS, OSVersionAtLeast<3, 0>),
