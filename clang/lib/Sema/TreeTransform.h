@@ -9487,9 +9487,9 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
     if (ExpansionVar.isInvalid())
       return StmtError();
 
-    NewPattern = CXXExpansionStmtPattern::CreateEnumerating(
-        SemaRef.Context, NewESD, Init, ExpansionVar.getAs<DeclStmt>(),
-        S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
+    NewPattern = SemaRef.BuildCXXEnumeratingExpansionStmtPattern(
+        NewESD, Init, ExpansionVar.getAs<DeclStmt>(), S->getLParenLoc(),
+        S->getColonLoc(), S->getRParenLoc());
   } else if (S->isIterating()) {
     StmtResult Begin = TransformStmtInParentContext(S->getBeginVarStmt());
     StmtResult Iter = TransformStmtInParentContext(S->getIterVarStmt());
@@ -9504,11 +9504,17 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
     if (ExpansionVar.isInvalid())
       return StmtError();
 
+    // Compute the expansion size if possible.
+    DeclStmt *RangeVarDS = Range.getAs<DeclStmt>();
+    VarDecl *RangeVar = cast<VarDecl>(RangeVarDS->getSingleDecl());
+    CXXExpansionStmtPattern::ExpansionSize Size =
+        SemaRef.ComputeIteratingExpansionSize(RangeVar, S->getColonLoc());
+
     NewPattern = CXXExpansionStmtPattern::CreateIterating(
         SemaRef.Context, NewESD, Init, ExpansionVar.getAs<DeclStmt>(),
-        Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(),
+        RangeVarDS, Begin.getAs<DeclStmt>(),
         Iter.getAs<DeclStmt>(), S->getLParenLoc(), S->getColonLoc(),
-        S->getRParenLoc());
+        S->getRParenLoc(), Size);
 
     SemaRef.ApplyForRangeOrExpansionStatementLifetimeExtension(
         NewPattern->getRangeVar(), LifetimeExtendTemps);
@@ -9535,6 +9541,13 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
     // here.
     llvm_unreachable("destructuring pattern should never be instantiated");
   }
+
+  // If the expansion size is 0, treat the body as a discarded statement.
+  EnterExpressionEvaluationContext PotentiallyDiscarded(
+      SemaRef, Sema::ExpressionEvaluationContext::DiscardedStatement,
+      /*LambdaContextDecl=*/nullptr,
+      Sema::ExpressionEvaluationContextRecord::EK_Other,
+      NewPattern->getExpansionSize() == 0u);
 
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())

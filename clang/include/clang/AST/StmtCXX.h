@@ -672,9 +672,23 @@ public:
 /// \see CXXExpansionStmtDecl for more documentation on expansion statements.
 class CXXExpansionStmtPattern final
     : public Stmt,
-      llvm::TrailingObjects<CXXExpansionStmtPattern, Stmt *> {
+      llvm::TrailingObjects<CXXExpansionStmtPattern, Stmt *,
+                            OptionalUnsigned<std::uint64_t>> {
   friend class ASTStmtReader;
   friend TrailingObjects;
+
+public:
+  using ExpansionSize = OptionalUnsigned<std::uint64_t>;
+
+private:
+  size_t numTrailingObjects(OverloadToken<Stmt *>) const {
+    return getNumSubStmts();
+  }
+
+  size_t
+  numTrailingObjects(OverloadToken<ExpansionSize>) const {
+    return CXXExpansionStmtPatternBits.HasExpansionSize;
+  }
 
 public:
   enum class ExpansionStmtKind : uint8_t {
@@ -726,15 +740,19 @@ private:
     COUNT_Iterating,
   };
 
-  CXXExpansionStmtPattern(ExpansionStmtKind PatternKind, EmptyShell Empty);
+  CXXExpansionStmtPattern(ExpansionStmtKind PatternKind, bool HasExpansionSize,
+                          EmptyShell Empty);
   CXXExpansionStmtPattern(ExpansionStmtKind PatternKind,
                           CXXExpansionStmtDecl *ESD, Stmt *Init,
                           DeclStmt *ExpansionVar, SourceLocation LParenLoc,
-                          SourceLocation ColonLoc, SourceLocation RParenLoc);
+                          SourceLocation ColonLoc, SourceLocation RParenLoc,
+                          ExpansionSize Size);
 
 public:
-  static CXXExpansionStmtPattern *
-  CreateEmpty(ASTContext &Context, EmptyShell Empty, ExpansionStmtKind Kind);
+  static CXXExpansionStmtPattern *CreateEmpty(ASTContext &Context,
+                                              EmptyShell Empty,
+                                              ExpansionStmtKind Kind,
+                                              bool HasExpansionSize);
 
   /// Create a dependent expansion statement pattern.
   static CXXExpansionStmtPattern *
@@ -748,20 +766,23 @@ public:
   CreateDestructuring(ASTContext &Context, CXXExpansionStmtDecl *ESD,
                       Stmt *Init, DeclStmt *ExpansionVar,
                       Stmt *DecompositionDeclStmt, SourceLocation LParenLoc,
-                      SourceLocation ColonLoc, SourceLocation RParenLoc);
+                      SourceLocation ColonLoc, SourceLocation RParenLoc,
+                      ExpansionSize Size);
 
   /// Create an enumerating expansion statement pattern.
   static CXXExpansionStmtPattern *
   CreateEnumerating(ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
                     DeclStmt *ExpansionVar, SourceLocation LParenLoc,
-                    SourceLocation ColonLoc, SourceLocation RParenLoc);
+                    SourceLocation ColonLoc, SourceLocation RParenLoc,
+                    ExpansionSize Size);
 
   /// Create an iterating expansion statement pattern.
   static CXXExpansionStmtPattern *
   CreateIterating(ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
                   DeclStmt *ExpansionVar, DeclStmt *Range, DeclStmt *Begin,
                   DeclStmt *Iter, SourceLocation LParenLoc,
-                  SourceLocation ColonLoc, SourceLocation RParenLoc);
+                  SourceLocation ColonLoc, SourceLocation RParenLoc,
+                  ExpansionSize Size);
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getColonLoc() const { return ColonLoc; }
@@ -924,14 +945,26 @@ public:
     getSubStmt(EXPANSION_INITIALIZER) = S;
   }
 
+  // Get the expansion size, if known.
+  ExpansionSize getExpansionSize() const {
+    if (!CXXExpansionStmtPatternBits.HasExpansionSize)
+      return std::nullopt;
+    return *getTrailingObjects<ExpansionSize>();
+  }
+
+  void setExpansionSize(ExpansionSize Size) {
+    assert(CXXExpansionStmtPatternBits.HasExpansionSize);
+    *getTrailingObjects<ExpansionSize>() = Size;
+  }
+
   child_range children() {
-    return child_range(getTrailingObjects(),
-                       getTrailingObjects() + getNumSubStmts());
+    return child_range(getTrailingObjects<Stmt*>(),
+                       getTrailingObjects<Stmt*>() + getNumSubStmts());
   }
 
   const_child_range children() const {
-    return const_child_range(getTrailingObjects(),
-                             getTrailingObjects() + getNumSubStmts());
+    return const_child_range(getTrailingObjects<Stmt*>(),
+                             getTrailingObjects<Stmt*>() + getNumSubStmts());
   }
 
   static bool classof(const Stmt *T) {
@@ -940,19 +973,19 @@ public:
 
 private:
   template <typename... Args>
-  static CXXExpansionStmtPattern *AllocateAndConstruct(ASTContext &Context,
-                                                       ExpansionStmtKind Kind,
-                                                       Args &&...Arguments);
+  static CXXExpansionStmtPattern *
+  AllocateAndConstruct(ASTContext &Context, ExpansionStmtKind Kind,
+                       bool HasExpansionSize, Args &&...Arguments);
 
   static unsigned getNumSubStmts(ExpansionStmtKind Kind);
   Stmt *getSubStmt(unsigned Idx) const {
     assert(Idx < getNumSubStmts());
-    return getTrailingObjects()[Idx];
+    return getTrailingObjects<Stmt*>()[Idx];
   }
 
   Stmt *&getSubStmt(unsigned Idx) {
     assert(Idx < getNumSubStmts());
-    return getTrailingObjects()[Idx];
+    return getTrailingObjects<Stmt*>()[Idx];
   }
 };
 

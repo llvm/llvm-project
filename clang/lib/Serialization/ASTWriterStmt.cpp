@@ -1760,12 +1760,15 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   VisitStmt(S);
   Record.push_back(static_cast<unsigned>(S->getKind()));
+  Record.push_back(S->getExpansionSize().has_value());
   Record.AddSourceLocation(S->getLParenLoc());
   Record.AddSourceLocation(S->getColonLoc());
   Record.AddSourceLocation(S->getRParenLoc());
   Record.AddDeclRef(S->getDecl());
   for (Stmt *SubStmt : S->children())
     Record.AddStmt(SubStmt);
+  if (CXXExpansionStmtPattern::ExpansionSize Size = S->getExpansionSize())
+    Record.push_back(*Size);
   Code = serialization::STMT_CXX_EXPANSION_PATTERN;
 }
 

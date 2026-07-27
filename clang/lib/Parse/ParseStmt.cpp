@@ -2371,6 +2371,20 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
 
   MisleadingIndentationChecker MIChecker(*this, MSK_for, ForLoc);
 
+  // If this is an expansion statement with a known expansion size of 0, parse
+  // the body as a discarded statement.
+  bool ShouldEnterDiscardedContext = false;
+  if (ESD && ForRangeStmt.isUsable()) {
+    auto *Pattern = ForRangeStmt.getAs<CXXExpansionStmtPattern>();
+    ShouldEnterDiscardedContext = Pattern->getExpansionSize() == 0u;
+  }
+
+  EnterExpressionEvaluationContext PotentiallyDiscarded(
+      Actions, Sema::ExpressionEvaluationContext::DiscardedStatement,
+      /*LambdaContextDecl=*/nullptr,
+      Sema::ExpressionEvaluationContextRecord::EK_Other,
+      ShouldEnterDiscardedContext);
+
   // Read the body statement.
   StmtResult Body(ParseStatement(TrailingElseLoc));
 
