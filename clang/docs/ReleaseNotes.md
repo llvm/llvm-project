@@ -503,8 +503,9 @@ features cannot lower the translation-unit ABI level;
 - The SYCL runtime shared library has been renamed from `libsycl.so` to
   `libLLVMSYCL.so` to align with LLVM naming conventions.
 
-- In SYCL mode, the compiler driver automatically provides the necessary SYCL
-  header include paths to both the host and device compilers.
+- When SYCL based compilation is enabled, the compiler driver automatically
+  provides the necessary SYCL header include paths to both the host and
+  device compilations.
 
 - SYCL runtime library linking is now supported on Windows. When `-fsycl` is
   specified, Clang automatically adds `/MD` if no explicit CRT flag is present,
