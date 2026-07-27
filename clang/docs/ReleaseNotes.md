@@ -456,6 +456,8 @@ features cannot lower the translation-unit ABI level;
 
 ### libclang
 
+- visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
+
 ### Code Completion
 
 ### Static Analyzer
