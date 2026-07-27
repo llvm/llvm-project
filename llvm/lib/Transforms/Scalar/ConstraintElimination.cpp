@@ -493,8 +493,8 @@ static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
 // Variable } where Coefficient * Variable. The sum of the constant offset and
 // pairs equals \p V.
 //
-// Looking through some expressions is only valid if a pre-condition holds
-// pre-conditions are checked against \p Info as needed.
+// Looking through certain expressions is only valid if a pre-condition holds.
+// Pre-conditions are checked against \p Info as needed.
 static Decomposition decompose(Value *V, const ConstraintInfo &Info,
                                bool IsSigned, const DataLayout &DL) {
   auto MergeResults = [&Info, IsSigned,
