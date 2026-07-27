@@ -70,9 +70,6 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AArch64 Backend
 
-* On AArch64 Windows targets, return address signing now uses the B-key by
-  default because Windows unwind information only supports B-key signing.
-
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
