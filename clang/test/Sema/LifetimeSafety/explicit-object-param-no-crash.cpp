@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -std=c++23 -verify -fsyntax-only -Wlifetime-safety -Wlifetime-safety-lifetimebound-violation
 
-// expected-no-diagnostics
+#include "Inputs/lifetime-analysis.h"
 
 // Explicit object member functions must not be treated as having an implicit
 // object argument.
@@ -72,4 +72,16 @@ struct Holder {
 const int *object_arg_is_not_moved(Holder &&h [[clang::lifetimebound]]) {
   static_cast<Holder &&>(h).consume();
   return h.borrow();
+}
+
+const int *t1(Holder h) {
+  const int *ptr = h.borrow(); // expected-warning {{stack memory associated with parameter 'h' is returned}}
+  static_cast<Holder &&>(h).consume();
+  return ptr; // expected-note {{returned here}}
+}
+
+const int *t2(Holder h) {
+  const int *ptr = h.borrow(); // expected-warning {{stack memory associated with parameter 'h' is returned}}
+  std::move(h).consume();
+  return ptr; // expected-note {{returned here}}
 }
