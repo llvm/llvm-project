@@ -20,6 +20,18 @@
 
 namespace Fortran::utils::openmp {
 std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
+  auto appendKinds = [](std::string &name,
+                        llvm::ArrayRef<std::int64_t> kinds) {
+    for (std::int64_t kind : kinds) {
+      name.append("K");
+      if (kind < 0) {
+        name.append("N");
+        kind = -kind;
+      }
+      name.append(std::to_string(kind));
+    }
+  };
+
   auto [kind, deconstructed] =
       fir::NameUniquer::deconstruct(recordType.getName());
   if (kind != fir::NameUniquer::NameKind::DERIVED_TYPE)
@@ -35,7 +47,9 @@ std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
     procs.emplace_back(proc);
   }
 
-  std::string mapperName = deconstructed.name + llvm::omp::OmpDefaultMapperName;
+  std::string mapperName = deconstructed.name;
+  appendKinds(mapperName, deconstructed.kinds);
+  mapperName.append(llvm::omp::OmpDefaultMapperName);
   return fir::NameUniquer::doGenerated(
       modules, procs, deconstructed.blockId, mapperName);
 }
