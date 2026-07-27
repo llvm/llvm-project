@@ -10,13 +10,13 @@
 // TODO: Fix the BitSize...
 #include "DynamicArray.h"
 
+#include "Plugins/TypeSystem/Fortran/FortranTypes.h"
+#include "Plugins/TypeSystem/Fortran/TypeSystemFortran.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/ValueObject/ValueObject.h"
-#include "Plugins/TypeSystem/Fortran/FortranTypes.h"
-#include "Plugins/TypeSystem/Fortran/TypeSystemFortran.h"
 
 #include "llvm/Support/Error.h"
 
@@ -329,15 +329,18 @@ DynamicArraySyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
     return m_backend.GetSyntheticChildAtOffset(child_byte_offset, child_type,
                                                true, ConstString(child_name));
   }
-
-  lldb::ValueObjectSP child_sp = CreateChildValueObjectFromAddress(child_name, array_address,
-                                           m_backend.GetExecutionContextRef(),
-                                           child_type, false);
+  // We set do_deref to false since this expects the array elements to be
+  // pointers.
+  lldb::ValueObjectSP child_sp = CreateChildValueObjectFromAddress(
+      child_name, array_address, m_backend.GetExecutionContextRef(), child_type,
+      false);
+  // We explicitly set the value to be a load so it can dereference the array
+  // address correctly.
   if (child_sp) {
     child_sp->GetValue().SetValueType(Value::ValueType::LoadAddress);
     child_sp->GetValue().GetScalar() = array_address;
   }
-  
+
   return child_sp;
 }
 
