@@ -323,11 +323,8 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                         getSubtargetInfo().getFeatureBits());
 
   bool InstructionEmitted = !MAI->getSkipEmission(MI);
-  if (InstructionEmitted) {
+  if (InstructionEmitted)
     outputInstruction(MI);
-    if (NSDebugHandler && !isHidden() && MAI)
-      NSDebugHandler->notifyMachineInstructionEmitted(MI, *MF, *MAI);
-  }
 
   // Output OpLabel after OpFunction and OpFunctionParameter in the first MBB.
   const MachineInstr *NextMI = MI->getNextNode();
@@ -341,7 +338,7 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(MI->getParent()->getNumber() == MF->front().getNumber() &&
            "OpFunction is not in the front MBB of MF");
     emitOpLabel(*MI->getParent());
-    if (NSDebugHandler && !isHidden() && MAI)
+    if (NSDebugHandler && !isHidden())
       NSDebugHandler->notifyEntryLabelEmitted(*MF, *MAI);
   }
 }

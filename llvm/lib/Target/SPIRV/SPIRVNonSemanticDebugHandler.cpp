@@ -1163,35 +1163,43 @@ void SPIRVNonSemanticDebugHandler::endFunctionImpl(const MachineFunction *MF) {
   resetPerFunctionDebugState();
 }
 
-void SPIRVNonSemanticDebugHandler::notifyMachineInstructionEmitted(
-    const MachineInstr *MI, const MachineFunction &MF,
-    SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!GlobalNSDIEnabled || DebugFunctionDefinitionEmitted)
+void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
+  assert(CurMI == nullptr && "CurMI must be null");
+  CurMI = MI;
+}
+
+void SPIRVNonSemanticDebugHandler::endInstruction() {
+  const MachineInstr *MI = CurMI;
+  CurMI = nullptr;
+
+  if (!MI || !GlobalNSDIEnabled || DebugFunctionDefinitionEmitted || !CurrentMF)
     return;
-  assert(CurrentMF == &MF &&
-         "notification does not match the current MachineFunction");
-  if (MI->getParent() != &MF.front())
+
+  if (MI != LastFunctionOpVariable)
     return;
 
   // If this is the last function-level OpVariable, emit the
   // DebugFunctionDefinition. Otherwise, we had already done it before right
-  // after the OpLabel.
-  if (MI == LastFunctionOpVariable)
-    tryEmitDebugFunctionDefinition(MAI);
+  // after the OpLabel (see notifyEntryLabelEmitted).
+  assert(CurrentMAI && "CurrentMAI must be set");
+  tryEmitDebugFunctionDefinition(*CurrentMAI);
 }
 
 void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
     const MachineFunction &MF, SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!GlobalNSDIEnabled || DebugFunctionDefinitionEmitted)
+  if (!GlobalNSDIEnabled || DebugFunctionDefinitionEmitted || !CurrentMF)
     return;
+
   assert(CurrentMF == &MF &&
          "notification does not match the current MachineFunction");
 
+  if (LastFunctionOpVariable)
+    return;
+
   // If there are no function-level OpVariables, emit the
   // DebugFunctionDefinition. Otherwise, DebugFunctionDefinition is emitted
-  // after the last OpVariable.
-  if (!LastFunctionOpVariable)
-    tryEmitDebugFunctionDefinition(MAI);
+  // after the last OpVariable (see endInstruction).
+  tryEmitDebugFunctionDefinition(*CurrentMAI);
 }
 
 bool SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(

@@ -46,8 +46,9 @@ class SPIRVSubtarget;
 /// - emitNonSemanticGlobalDebugInfo() emits module-scope NSDI and sets
 ///   GlobalNSDIEnabled.
 /// - beginFunctionImpl() prepares per-function DebugFunctionDefinition state.
-/// - SPIRVAsmPrinter notifies the handler when it emits MachineInstrs and the
-///   synthesized entry OpLabel.
+/// - endInstruction() emits DebugFunctionDefinition after the last function-
+///   level OpVariable; SPIRVAsmPrinter calls notifyEntryLabelEmitted() after
+///   the synthesized entry OpLabel when there are no OpVariables.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   struct CompileUnitInfo {
@@ -197,11 +198,6 @@ public:
   /// \returns true when module-scope NSDI emission ran; false when skipped.
   bool emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Called after an MI has been emitted.
-  void notifyMachineInstructionEmitted(const MachineInstr *MI,
-                                       const MachineFunction &MF,
-                                       SPIRV::ModuleAnalysisInfo &MAI);
-
   /// Called after the synthesized entry \c OpLabel has been emitted.
   void notifyEntryLabelEmitted(const MachineFunction &MF,
                                SPIRV::ModuleAnalysisInfo &MAI);
@@ -215,13 +211,13 @@ protected:
   // DebugHandlerBase stores MMI as a pointer copy from Asm->MMI at construction
   // time (DebugHandlerBase.cpp: `MMI(Asm->MMI)`). The handler is constructed
   // before AsmPrinter::doInitialization() runs, so Asm->MMI is null at that
-  // point and MMI remains null for this handler's entire lifetime. The
-  // base-class beginInstruction/endInstruction dereference MMI to create temp
-  // symbols for label tracking and would crash. Override them as no-ops.
+  // point and MMI remains null for this handler's entire lifetime. Do not call
+  // the base-class beginInstruction/endInstruction — they dereference MMI to
+  // create temp symbols for label tracking and would crash.
   // Future local NSDI that needs MCContext must use
   // Asm->OutStreamer->getContext() rather than MMI->getContext().
-  void beginInstruction(const MachineInstr *MI) override {}
-  void endInstruction() override {}
+  void beginInstruction(const MachineInstr *MI) override;
+  void endInstruction() override;
 
   // Override beginFunctionImpl(), not beginFunction():
   // DebugHandlerBase::beginFunction() populates LScopes and DbgValues needed
