@@ -354,6 +354,25 @@ void test_trylock_conditional(void) {
   mutex_unlock(&mu1);
 }
 
+// How glibc before 2.32 spells assert(): a void conditional operator whose
+// false arm does not return. There is no result to branch on later, so the
+// try-lock is acquired on the branch itself.
+void assert_fail(void) __attribute__((noreturn));
+#define assert_trylock(e) ((e) ? (void)0 : assert_fail())
+
+void test_trylock_void_conditional(void) {
+  assert_trylock(mutex_exclusive_trylock(&mu1));
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
+void test_trylock_void_conditional_via_var(void) {
+  int got = mutex_exclusive_trylock(&mu1);
+  assert_trylock(got);
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
