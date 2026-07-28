@@ -626,8 +626,7 @@ void Preprocessor::EnterMainSourceFile() {
       if (!isPreprocessedModuleFile() && Input)
         MainFileIsPreprocessedModuleFile =
             clang::isPreprocessedModuleFile(*Input);
-      if (Input && !MainFileIsPreprocessedModuleFile &&
-          hasDeferredGMFInputs())
+      if (Input && !MainFileIsPreprocessedModuleFile && hasDeferredGMFInputs())
         MainFileModuleUnitKind = scanInputForCXX20ModuleUnit(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
@@ -659,8 +658,7 @@ void Preprocessor::EnterMainSourceFile() {
     }
     if (MainFileModuleUnitKind ==
         ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment) {
-      Predefines +=
-          "# 1 \"<implicit-global-module-fragment>\" 1\nmodule;\n";
+      Predefines += "# 1 \"<implicit-global-module-fragment>\" 1\nmodule;\n";
       HasSynthesizedGMF = true;
     } else if (MainFileModuleUnitKind == ModuleUnitKind::NotModuleUnit) {
       DeferredGMFInputs.clear();
@@ -708,9 +706,8 @@ void Preprocessor::EnterDeferredGMFInputs(SourceLocation IncludeLoc) {
   // Synthesize the implicit input directives and enter them inside the global
   // module fragment. Attribute the buffer to IncludeLoc so it is ordered within
   // the translation unit.
-  std::unique_ptr<llvm::MemoryBuffer> MB =
-      llvm::MemoryBuffer::getMemBufferCopy(DeferredGMFInputs,
-                                           "<gmf-command-line-inputs>");
+  std::unique_ptr<llvm::MemoryBuffer> MB = llvm::MemoryBuffer::getMemBufferCopy(
+      DeferredGMFInputs, "<gmf-command-line-inputs>");
   DeferredGMFInputs.clear();
   DeferredGMFInputsFileID =
       SourceMgr.createFileID(std::move(MB), SrcMgr::C_User, 0, 0, IncludeLoc);

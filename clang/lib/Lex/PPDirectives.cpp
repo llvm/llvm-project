@@ -4451,12 +4451,10 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
           : DirToks.pop_back_val().getLocation();
 
-  bool IsGMFIntroducer = DirToks.size() == 2 &&
-                         DirToks[0].is(tok::kw_module) &&
+  bool IsGMFIntroducer = DirToks.size() == 2 && DirToks[0].is(tok::kw_module) &&
                          DirToks[1].is(tok::semi);
-  bool IsSynthesizedGMF =
-      IsGMFIntroducer && HasSynthesizedGMF &&
-      CurPPLexer->getFileID() == getPredefinesFileID();
+  bool IsSynthesizedGMF = IsGMFIntroducer && HasSynthesizedGMF &&
+                          CurPPLexer->getFileID() == getPredefinesFileID();
 
   if (!IncludeMacroStack.empty() && !IsSynthesizedGMF) {
     Diag(StartLoc, diag::err_pp_module_decl_in_header)
