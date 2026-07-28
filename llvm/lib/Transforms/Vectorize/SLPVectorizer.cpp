@@ -635,7 +635,10 @@ public:
     const auto *II = dyn_cast<IntrinsicInst>(I);
     const auto *IOp = dyn_cast<IntrinsicInst>(Op);
     if (II || IOp)
-      return II && IOp && II->getIntrinsicID() == IOp->getIntrinsicID();
+      return II && IOp &&
+             isEquivalentIntrinsicID(II->getIntrinsicID(),
+                                     IOp->getIntrinsicID()) !=
+                 Intrinsic::not_intrinsic;
     return true;
   }
 
@@ -1049,7 +1052,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
         auto *CallBase = cast<CallInst>(MainOp);
-        if (Call->getCalledFunction() != CallBase->getCalledFunction())
+        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
+        Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, BaseID);
+        if (Call->getCalledFunction() != CallBase->getCalledFunction() &&
+            isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
+                Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (Call->hasOperandBundles() &&
             (!CallBase->hasOperandBundles() ||
@@ -1058,8 +1065,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                          CallBase->op_begin() +
                              CallBase->getBundleOperandsStartIndex())))
           return InstructionsState::invalid();
-        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
-        if (ID != BaseID)
+        if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
@@ -1086,6 +1092,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     assert(MainOp && "Cannot find MainOp with Opcode from BinOpHelper.");
     AltOp = findInstructionWithOpcode(VL, BinOpHelper.getAltOpcode());
     assert(AltOp && "Cannot find AltOp with Opcode from BinOpHelper.");
+  } else if (auto *CB = dyn_cast<CallInst>(MainOp);
+             CB &&
+             getVectorIntrinsicIDForCall(CB, &TLI) == Intrinsic::fmuladd) {
+    // fma and fmuladd share a single vector fma node; use the fma as the
+    // representative so the fused form is not weakened to fmuladd.
+    auto *It = find_if(VL, [&](Value *V) {
+      auto *CI = dyn_cast<CallInst>(V);
+      return CI && getVectorIntrinsicIDForCall(CI, &TLI) == Intrinsic::fma;
+    });
+    if (It != VL.end())
+      MainOp = AltOp = cast<Instruction>(*It);
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");
@@ -5502,25 +5519,28 @@ private:
           if (!AreAllBundlesScheduled(SD, SDBundles))
             continue;
           SD->setScheduled(/*Scheduled=*/true);
+          Instruction *In = SD->getInst();
+          // The instruction may also belong to tree entries that do not need
+          // scheduling (e.g. all their values are used outside the block), so
+          // no schedule bundle is registered for them. Such an entry can still
+          // model one of this instruction's operands as a copyable element, or
+          // model the instruction itself as an expanded binop, registered on
+          // that non-scheduled parent edge. That dependency would never be
+          // decremented when the instruction is scheduled through a different
+          // bundle, leaving the operand's bundle permanently unscheduled and
+          // tripping the unscheduled-deps assertion. Add pseudo-bundles for
+          // these missing tree entries, so their operand dependencies are
+          // decremented here as well. Real operand dependencies are protected
+          // against double counting by the per-operand use counter.
           if (isa<ScheduleCopyableData>(SD) ||
-              ScheduleCopyableDataMap.empty()) {
+              (ScheduleCopyableDataMap.empty() &&
+               none_of(R.getTreeEntries(In), [&](const TreeEntry *TE) {
+                 return TE->isExpandedBinOp(In);
+               }))) {
             ProcessBundleMember(SD, isa<ScheduleCopyableData>(SD) ? &Bundle
                                                                   : SDBundles);
             continue;
           }
-          // The instruction may also belong to tree entries that do not need
-          // scheduling (e.g. all their values are used outside the block), so
-          // no schedule bundle is registered for them. Such an entry can still
-          // model one of this instruction's operands as a copyable element,
-          // registered on that non-scheduled parent edge. That copyable would
-          // never be decremented when the instruction is scheduled through a
-          // different bundle, leaving the copyable's bundle permanently
-          // unscheduled and tripping the unscheduled-deps assertion. Add
-          // pseudo-bundles for these missing tree entries, so their copyable
-          // operand dependencies are decremented here as well. Real operand
-          // dependencies are protected against double counting by the
-          // per-operand use counter in ProcessBundleMember.
-          Instruction *In = SD->getInst();
           SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
           SmallVector<ScheduleBundle *> AllBundles(SDBundles.begin(),
                                                    SDBundles.end());
@@ -9953,6 +9973,8 @@ static std::pair<size_t, size_t> generateKeySubkey(
     } else if (auto *Call = dyn_cast<CallInst>(I)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, TLI);
       if (isTriviallyVectorizable(ID)) {
+        if (ID == Intrinsic::fmuladd)
+          ID = Intrinsic::fma;
         SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(ID));
       } else if (!VFDatabase(*Call).getMappings(*Call).empty()) {
         SubKey = hash_combine(hash_value(I->getOpcode()),
@@ -10703,8 +10725,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (S.isCopyableElement(V))
         continue;
       CallInst *CI2 = dyn_cast<CallInst>(V);
-      if (!CI2 || CI2->getCalledFunction() != F ||
-          getVectorIntrinsicIDForCall(CI2, TLI) != ID ||
+      Intrinsic::ID ID2 = CI2 ? getVectorIntrinsicIDForCall(CI2, TLI)
+                              : Intrinsic::not_intrinsic;
+      Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, ID2);
+      if (!CI2 ||
+          (CI2->getCalledFunction() != F &&
+           isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
+               Intrinsic::not_intrinsic) ||
+          (ID != ID2 && Equivalent == Intrinsic::not_intrinsic) ||
           (VecFunc &&
            VecFunc != VFDatabase(*CI2).getVectorizedFunction(Shape)) ||
           !CI->hasIdenticalOperandBundleSchema(*CI2)) {
@@ -23115,6 +23143,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           // Follow all insert element instructions from the current buildvector
           // sequence.
           Instruction *Ins = VL0;
+          Instruction *Op;
           do {
             std::optional<unsigned> InsertIdx = getElementIndex(Ins);
             if (!InsertIdx)
@@ -23123,9 +23152,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
+            Op = Ins;
             Ins =
                 dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
-          } while (Ins);
+          } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
           SmallBitVector IsFirstPoison =
@@ -24510,7 +24540,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
         {DominatorTree::Insert, BB, ScalarBB},
         {DominatorTree::Insert, VecBB, Tail},
         {DominatorTree::Insert, ScalarBB, Tail}};
+    // Term (e.g. a switch) may have multiple edges to the same successor;
+    // dedupe so each distinct successor gets exactly one Insert/Delete pair.
+    SmallPtrSet<BasicBlock *, 4> UniqueSuccs;
     for (BasicBlock *Succ : successors(Term)) {
+      if (!UniqueSuccs.insert(Succ).second)
+        continue;
       Updates.push_back({DominatorTree::Insert, Tail, Succ});
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
@@ -30752,8 +30787,8 @@ public:
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for ordered reduction\n");
-      if (Cost > -SLPCostThreshold/* ||
-          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)*/) {
+      if (Cost > -SLPCostThreshold ||
+          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)) {
         if (Cost.isValid())
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",

@@ -21,7 +21,6 @@
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm::omp::target::plugin {
@@ -29,8 +28,8 @@ namespace llvm::omp::target::plugin {
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
 static struct {
-  DeviceArchTy arch;
-  PCIIdTy ids[10];
+  DeviceArchTy Arch;
+  PCIIdTy Ids[10];
 } DeviceArchMap[] = {{DeviceArchTy::DeviceArch_Gen,
                       {PCIIdTy::SKL,
                        PCIIdTy::KBL,
@@ -73,13 +72,13 @@ DeviceArchTy L0DeviceTy::computeArch() const {
   }
 
   for (int ArchIndex = 0; ArchIndex < DeviceArchMapSize; ArchIndex++) {
-    for (int i = 0;; i++) {
-      const auto Id = DeviceArchMap[ArchIndex].ids[i];
+    for (int IdIndex = 0;; IdIndex++) {
+      const auto Id = DeviceArchMap[ArchIndex].Ids[IdIndex];
       if (Id == PCIIdTy::None)
         break;
-      auto maskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
-      if (maskedId == Id)
-        return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match.
+      auto MaskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
+      if (MaskedId == Id)
+        return DeviceArchMap[ArchIndex].Arch; // Exact match or prefix match.
     }
   }
 
@@ -188,10 +187,10 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   IndirectAccessFlags = Flags;
 
   // Get the UUID.
-  std::string uid;
-  for (int n = 0; n < ZE_MAX_DEVICE_UUID_SIZE; n++)
-    uid += std::to_string(DeviceProperties.uuid.id[n]);
-  DeviceUuid = std::move(uid);
+  std::string Uid;
+  for (int UidByte = 0; UidByte < ZE_MAX_DEVICE_UUID_SIZE; UidByte++)
+    Uid += std::to_string(DeviceProperties.uuid.id[UidByte]);
+  DeviceUuid = std::move(Uid);
 
   auto QueueGroupInfoOrErr = scanQueueGroups();
   if (!QueueGroupInfoOrErr)
@@ -201,7 +200,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
 
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
-  l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
+  L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();
   return Plugin::success();
 }
@@ -449,7 +448,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Number of total EUs", getNumEUs(), "",
            DeviceInfo::NUM_COMPUTE_UNITS);
   Info.add("Number of threads per EU", getNumThreadsPerEU());
-  Info.add("EU SIMD width", getSIMDWidth());
+  Info.add("EU SIMD width", getSIMDWidth(), "", DeviceInfo::NUM_LANES);
   Info.add("Number of EUs per subslice", getNumEUsPerSubslice());
   Info.add("Number of subslices per slice", getNumSubslicesPerSlice());
   Info.add("Number of slices", getNumSlices());
@@ -568,7 +567,7 @@ Expected<GenericKernelTy &> L0DeviceTy::constructKernel(const char *Name) {
 }
 
 uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
-  ze_memory_allocation_properties_t properties = {
+  ze_memory_allocation_properties_t Properties = {
       ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES,
       nullptr,                // Extension.
       ZE_MEMORY_TYPE_UNKNOWN, // Type.
@@ -576,14 +575,14 @@ uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
       0,                      // Page size.
   };
 
-  ze_result_t rc;
-  CALL_ZE(rc, zeMemGetAllocProperties, getZeContext(), Ptr, &properties,
+  ze_result_t Res;
+  CALL_ZE(Res, zeMemGetAllocProperties, getZeContext(), Ptr, &Properties,
           nullptr);
 
-  if (rc == ZE_RESULT_ERROR_INVALID_ARGUMENT)
+  if (Res == ZE_RESULT_ERROR_INVALID_ARGUMENT)
     return ZE_MEMORY_TYPE_UNKNOWN;
-  else
-    return properties.type;
+
+  return Properties.type;
 }
 
 interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
@@ -599,7 +598,7 @@ interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
 
 Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
                                                  interop_spec_t &InteropSpec) {
-  auto Ret = new omp_interop_val_t(
+  auto *Ret = new omp_interop_val_t(
       DeviceId, static_cast<kmp_interop_type_t>(InteropContext));
   Ret->fr_id = tgt_fr_level_zero;
   Ret->vendor_id = omp_vendor_intel;
@@ -624,7 +623,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
       delete Ret;
     });
 
-    auto L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
+    auto *L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
@@ -648,7 +647,7 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
                          "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
                          DPxPTR(Interop));
   }
-  auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
+  auto *L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
   if (Interop->async_info && Interop->async_info->Queue) {
     auto ImmCmdList = L0->ImmCmdList;
     CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);

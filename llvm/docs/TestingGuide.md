@@ -1,8 +1,5 @@
 # LLVM Testing Infrastructure Guide
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:

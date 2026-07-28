@@ -2197,6 +2197,30 @@ struct TestTryLock {
     if (mu.TryLock() ? 0 : 1) // expected-note{{mutex acquired here}}
       mu.Unlock();            // expected-warning{{releasing mutex 'mu' that was not held}}
   }                           // expected-warning{{mutex 'mu' is not held on every path through here}}
+
+  // A void conditional operator has no result to branch on later, so unlike
+  // foo13-foo15 the branch itself is honored. This is how glibc before 2.32
+  // spells assert().
+  void foo16() {
+    mu.TryLock() ? static_cast<void>(0) : fail();
+    a = 3;
+    mu.Unlock();
+  }
+
+  void foo17() {
+    !mu.TryLock() ? fail() : static_cast<void>(0);
+    a = 3;
+    mu.Unlock();
+  }
+
+  // Both arms return here, so the join disagrees -- as it would for an if.
+  void foo18() {
+    mu.TryLock() ? static_cast<void>(0) : static_cast<void>(0); // expected-note{{mutex acquired here}} \
+                                                                   expected-warning{{mutex 'mu' is not held on every path through here}}
+    mu.Unlock(); // expected-warning{{releasing mutex 'mu' that was not held}}
+  }
+
+  static void fail() __attribute__((noreturn));
 };  // end TestTrylock
 
 } // end namespace TrylockTest
@@ -7601,6 +7625,112 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   f->data = 42;
   ptr->mu.Unlock();
 }
+
+struct LOCKABLE Entry;
+void getLockedEntry(Entry **entry) EXCLUSIVE_LOCK_FUNCTION(*entry);
+void useLockedEntry(Entry *entry) EXCLUSIVE_LOCKS_REQUIRED(entry);
+void unlockEntry(Entry *entry) UNLOCK_FUNCTION(entry);
+void assertLockedEntry(Entry **entry)   ASSERT_EXCLUSIVE_LOCK(*entry);
+
+void testOutParamAcquireCap(Entry *in) {
+  Entry *entry = in;
+
+  // 'getLockedEntry' guarantees that '*entry' is locked after return:
+  getLockedEntry(&entry);
+  useLockedEntry(entry);
+  if (1) {
+    useLockedEntry(entry);
+  }
+  unlockEntry(entry);
+}
+
+void testOutParamAcquireCap_invalidation(Entry *in) {
+  Entry *entry = in;
+
+  // 'getLockedEntry' invalidates 'entry' at the pre-state and ensures
+  // 'entry' is locked at the post-state. So 'in' is not locked.
+  getLockedEntry(&entry); // expected-note{{mutex acquired here}}
+  useLockedEntry(in); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in' exclusively}}
+  unlockEntry(in); // expected-warning{{releasing mutex 'in' that was not held}}
+} // expected-warning{{mutex 'entry' is still held at the end of function}}
+
+void getLockedEntryRef(Entry *&entry) EXCLUSIVE_LOCK_FUNCTION(entry);
+
+void testAcquireCapability_outParamRef(Entry *in) {
+  Entry *entry = in;
+  getLockedEntryRef(entry);
+  // 'entry' has been invalidated. So it holds the lock after the call,
+  // but 'in' does not:
+  useLockedEntry(entry);
+  unlockEntry(entry);
+  useLockedEntry(in); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in' exclusively}}
+  unlockEntry(in); // expected-warning{{releasing mutex 'in' that was not held}}
+}
+
+void testAssertCapability_outParam(Entry *in) {
+  Entry *entry = in;
+  assertLockedEntry(&entry);
+  // 'entry' has been invalidated. So it is assumed to hold the lock
+  // after the call, but 'in' does not:
+  useLockedEntry(entry);
+  unlockEntry(entry);
+  useLockedEntry(in); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in' exclusively}}
+  unlockEntry(in); // expected-warning{{releasing mutex 'in' that was not held}}
+}
+
+  void getMultiLockedEntries(Entry **e1, Entry **e2, Entry *e3) EXCLUSIVE_LOCK_FUNCTION(*e1, *e2, e3);
+
+void testAcquireCapability_outParmMultiAttrArg(Entry *in1, Entry *in2, Entry *in3) {
+  Entry *entry1 = in1;
+  Entry *entry2 = in2;
+  Entry *entry3 = in3;
+  getMultiLockedEntries(&entry1, &entry2, entry3);
+  useLockedEntry(entry1);
+  useLockedEntry(entry2);
+  unlockEntry(entry1);
+  unlockEntry(entry2);
+
+  useLockedEntry(in1); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in1' exclusively}}
+  useLockedEntry(in2); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in2' exclusively}}
+  useLockedEntry(in3);
+  unlockEntry(in1); // expected-warning{{releasing mutex 'in1' that was not held}}
+  unlockEntry(in2); // expected-warning{{releasing mutex 'in2' that was not held}}
+  unlockEntry(in3);
+}  
+
+void allActions(Entry **e1, Entry **e2, Entry **e3, Entry **e4, Entry **e5)
+  EXCLUSIVE_LOCK_FUNCTION(*e1) EXCLUSIVE_LOCKS_REQUIRED(*e2)
+  UNLOCK_FUNCTION(*e3) ASSERT_EXCLUSIVE_LOCK(*e4) LOCKS_EXCLUDED(*e5);
+
+// Test pre- and post-state handling involving various kinds of
+// attributes at a single call-site.
+void testAllActions_outParms() {
+  Entry *e1 = nullptr, *e2 = nullptr, *e3 = nullptr,
+    *e4 = nullptr;
+
+  getLockedEntry(&e2);
+  // locks e1, requires then unlocks e2, assumes e3 is locked, requires !e4:
+  allActions(&e1, &e2, &e2, &e3, &e4);
+  useLockedEntry(e1);
+  useLockedEntry(e3);
+  unlockEntry(e1);
+  unlockEntry(e3);
+}
+
+void testAllActions_outParms_negative() {
+  Entry *e1 = nullptr, *e2 = nullptr, *e3 = nullptr,
+    *e4 = nullptr;
+
+  getLockedEntry(&e2);
+  getLockedEntry(&e4); // expected-note{{mutex acquired here}}
+  allActions(&e1, &e2, &e2, &e3, &e4); // expected-warning{{cannot call function 'allActions' while mutex 'e4' is held}} \
+                                       // expected-note{{mutex released here}}
+  useLockedEntry(e1);
+  useLockedEntry(e3);
+  unlockEntry(e1);
+  unlockEntry(e2); // expected-warning{{releasing mutex 'e2' that was not held}}
+} // expected-warning{{mutex 'e4' is still held at the end of function}}
+
 
 // A function that may do anything to the objects referred to by the inputs.
 void escapeAliasMultiple(void *, void *, void *);

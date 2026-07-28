@@ -412,17 +412,6 @@ static bool sinkScalarOperands(VPlan &Plan) {
   return Changed;
 }
 
-/// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
-/// the mask.
-static VPValue *getPredicatedMask(VPRegionBlock *R) {
-  auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
-  if (!EntryBB || EntryBB->size() != 1 ||
-      !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
-    return nullptr;
-
-  return cast<VPBranchOnMaskRecipe>(&*EntryBB->begin())->getOperand(0);
-}
-
 /// If \p R is a triangle region, return the 'then' block of the triangle.
 static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
   auto *EntryBB = cast<VPBasicBlock>(R->getEntry());
@@ -467,8 +456,8 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     if (!Region2 || !Region2->isReplicator())
       continue;
 
-    VPValue *Mask1 = getPredicatedMask(Region1);
-    VPValue *Mask2 = getPredicatedMask(Region2);
+    VPValue *Mask1 = Region1->getEntryBranchOnMask()->getOperand(0);
+    VPValue *Mask2 = Region2->getEntryBranchOnMask()->getOperand(0);
     if (!Mask1 || Mask1 != Mask2)
       continue;
 
@@ -795,11 +784,17 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
+    VPIRFlags::WrapFlagsTy WrapFlags;
+    // We can preserve nuw when the step is non-negative.
+    const APInt *Step;
+    if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
+      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
+                   false};
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder);
+        WideIV->getDebugLoc(), Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -1010,8 +1005,44 @@ static VPValue *optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
   return nullptr;
 }
 
+static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
+                                               PredicatedScalarEvolution &PSE,
+                                               VPValue *ResumeTC,
+                                               const Loop *L) {
+  VPValue *Incoming;
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+    return nullptr;
+
+  const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
+  const SCEV *Start, *Step;
+  if (!match(IncomingSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                               m_SpecificLoop(L))))
+    return nullptr;
+
+  auto *ExtractR = cast<VPInstruction>(Op);
+  DebugLoc DL = ExtractR->getDebugLoc();
+  VPBuilder Builder(ExtractR);
+  VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
+  VPValue *StartVPV = Expander.tryToExpand(Start);
+  VPValue *StepVPV = Expander.tryToExpand(Step);
+  if (!StartVPV || !StepVPV)
+    return nullptr;
+
+  Type *StartTy = StartVPV->getScalarType();
+  assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
+  InductionDescriptor::InductionKind Kind =
+      StartTy->isPointerTy() ? InductionDescriptor::IK_PtrInduction
+                             : InductionDescriptor::IK_IntInduction;
+  Type *TCTy = ResumeTC->getScalarType();
+  VPValue *ExitCount = Builder.createOverflowingOp(
+      Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
+      {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
+  return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartVPV, ExitCount,
+                                 StepVPV);
+}
+
 void VPlanTransforms::optimizeInductionLiveOutUsers(
-    VPlan &Plan, PredicatedScalarEvolution &PSE) {
+    VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
   auto GetEndValue =
@@ -1066,12 +1097,16 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
-        if (PredVPBB == MiddleVPBB)
+        if (PredVPBB == MiddleVPBB) {
           Escape = optimizeLatchExitInductionUser(
               Plan, ExitIRI->getOperand(Idx), bind_back(GetEndValue, TC), PSE);
-        else
+          if (!Escape)
+            Escape = optimizeLatchExitIVUserViaSCEV(
+                Plan, ExitIRI->getOperand(Idx), PSE, TC, L);
+        } else {
           Escape = optimizeEarlyExitInductionUser(
               Plan, ExitIRI->getOperand(Idx), PSE);
+        }
         if (Escape)
           ExitIRI->setOperand(Idx, Escape);
       }
@@ -1224,6 +1259,20 @@ static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
       Y->getScalarType()->isIntegerTy(1)) {
     Def->replaceAllUsesWith(
         Builder.createOr(Y, Builder.createLogicalAnd(X, Z)));
+    return true;
+  }
+
+  // select %M0, (select %M1, %X, %Y), %Y -> select (%M0 && %M1), %X, %Y
+  VPValue *Mask0, *Mask1;
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_SelectLike(m_VPValue(Mask0),
+                         m_OneUse(m_SelectLike(m_VPValue(Mask1), m_VPValue(X),
+                                               m_VPValue(Y))),
+                         m_Deferred(Y)))) {
+    auto *Select = Builder.createSelect(Builder.createLogicalAnd(Mask0, Mask1),
+                                        X, Y, Def->getDebugLoc());
+    Def->replaceAllUsesWith(Select);
     return true;
   }
 
@@ -3218,39 +3267,35 @@ bool VPlanTransforms::handleUncountableEarlyExits(
 #endif
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
-  for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-      // Collect condition for this early exit.
-      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
-      VPValue *CondOfEarlyExitingVPBB;
-      [[maybe_unused]] bool Matched =
-          match(EarlyExitingVPBB->getTerminator(),
-                m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
-      assert(Matched && "Terminator must be BranchOnCond");
+  for (auto [EarlyExitingVPBB, ExitBlock] :
+       vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // Collect condition for this early exit.
+    VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
+    VPValue *CondOfEarlyExitingVPBB;
+    [[maybe_unused]] bool Matched =
+        match(EarlyExitingVPBB->getTerminator(),
+              m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
+    assert(Matched && "Terminator must be BranchOnCond");
 
-      // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
-      // the correct block mask.
-      VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
-      auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
-          VPInstruction::MaskedCond,
-          TrueSucc == ExitBlock
-              ? CondOfEarlyExitingVPBB
-              : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
-      assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
-              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
-              VPDT.properlyDominates(
-                  CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
-                  LatchVPBB)) &&
-             "exit condition must dominate the latch");
-      Exits.push_back({
-          EarlyExitingVPBB,
-          ExitBlock,
-          CondToEarlyExit,
-      });
-    }
+    // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
+    // the correct block mask.
+    VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
+    auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
+        VPInstruction::MaskedCond,
+        TrueSucc == ExitBlock
+            ? CondOfEarlyExitingVPBB
+            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
+    assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+            !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
+            VPDT.properlyDominates(
+                CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
+                LatchVPBB)) &&
+           "exit condition must dominate the latch");
+    Exits.push_back({
+        EarlyExitingVPBB,
+        ExitBlock,
+        CondToEarlyExit,
+    });
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
@@ -5428,38 +5473,61 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
-  // Widen unmasked unit-stride consecutive accesses, matching the legacy CM.
+  // Widen unit-stride consecutive accesses, matching the legacy CM. Both
+  // forward (stride +1) and reverse (stride -1) accesses are handled.
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
-        if (RecipeBuilder.isPredicatedInst(I))
-          return false;
-
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
-        if (getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L) != 1)
+        std::optional<int64_t> Stride =
+            getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
+        if (Stride != 1 && Stride != -1)
+          return false;
+        bool Reverse = Stride == -1;
+
+        // A predicated access can only be widened (rather than scalarized) if
+        // the target supports a masked load/store for it.
+        // TODO: Determine if a load/store needs predication directly in VPlan.
+        bool IsPredicated = RecipeBuilder.isPredicatedInst(I);
+        if (IsPredicated && !CostCtx.Config.isLegalMaskedLoadOrStore(
+                                IsLoad, ScalarTy, getLoadStoreAlignment(I),
+                                getLoadStoreAddressSpace(I)))
           return false;
 
-        Type *StrideTy =
-            Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-        VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
         VPBuilder Builder(VPI);
-        auto *VectorPtr = Builder.createVectorPointer(
-            Ptr, ScalarTy, StrideOne, vputils::getGEPFlagsForPtr(Ptr),
-            VPI->getDebugLoc());
-        VPRecipeBase *WidenedR;
-        if (IsLoad)
-          WidenedR = Builder.createWidenLoad(*cast<LoadInst>(I), VectorPtr,
-                                             /*Mask=*/nullptr,
-                                             /*Consecutive=*/true, *VPI,
-                                             VPI->getDebugLoc());
-        else
-          WidenedR = Builder.createWidenStore(
-              *cast<StoreInst>(I), VectorPtr, VPI->getOperand(0),
-              /*Mask=*/nullptr, /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-        return ReplaceWith(VPI, WidenedR);
+        VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
+            Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
+
+        VPValue *Mask = IsPredicated ? VPI->getMask() : nullptr;
+        // Reverse the mask so it matches the reversed access order.
+        if (Reverse && Mask)
+          Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask,
+                                      VPI->getDebugLoc());
+
+        if (IsLoad) {
+          VPSingleDefRecipe *Load = Builder.createWidenLoad(
+              *cast<LoadInst>(I), VectorPtr, Mask,
+              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+          // Reverse the loaded values back into program order.
+          if (Reverse)
+            Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
+                                        VPI->getDebugLoc());
+          return ReplaceWith(VPI, Load);
+        }
+
+        VPValue *StoredVal = VPI->getOperand(0);
+        if (Reverse)
+          // Reverse the stored values so they are written in descending order.
+          StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
+                                           VPI->getDebugLoc());
+
+        auto *StoreR = Builder.createWidenStore(
+            *cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
+            /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+        return ReplaceWith(VPI, StoreR);
       });
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
@@ -5762,7 +5830,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarSExtOrTrunc(
+      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
           VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(

@@ -488,10 +488,11 @@ public:
   /// Return the next context after processing S.  This function is used by
   /// clients of the class to get the appropriate context when traversing the
   /// CFG.  It must be called for every assignment or DeclStmt.
-  Context getNextContext(unsigned &CtxIndex, const Stmt *S, Context C) {
-    if (SavedContexts[CtxIndex+1].first == S) {
+  const Context &getNextContext(unsigned &CtxIndex, const Stmt *S,
+                                const Context &C) {
+    if (SavedContexts[CtxIndex + 1].first == S) {
       CtxIndex++;
-      Context Result = SavedContexts[CtxIndex].second;
+      const Context &Result = SavedContexts[CtxIndex].second;
       return Result;
     }
     return C;
@@ -1690,9 +1691,14 @@ ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
   assert(!Negate && "Must be called with Negate initialized to false");
 
   const Stmt *Cond = Block->getTerminatorCondition();
-  // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(Block->getTerminatorStmt()))
+  if (!Cond)
     return {};
+
+  // We don't acquire try-locks on ?: branches, except when its result is used.
+  if (const auto *COp =
+          dyn_cast_if_present<ConditionalOperator>(Block->getTerminatorStmt()))
+    if (!COp->getType()->isVoidType())
+      return {};
 
   const LocalVarContext &LVarCtx = BlockInfo[Block->getBlockID()].ExitContext;
 
@@ -1778,22 +1784,101 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   FactSet FSet;
   // The fact set for the function on exit.
   const FactSet &FunctionExitFSet;
-  LocalVariableMap::Context LVarCtx;
-  unsigned CtxIndex;
+
+  /// A `LocalVariableMap::Context` wrapper that groups a context 'Q' with its
+  /// immediate predecessor 'P' for a program point.  If the program point is
+  /// right after a Stmt 'S', 'P' is the pre-context of 'S' and 'Q' is the
+  /// post-context of 'S'.  Otherwise, 'P' == 'Q'.
+  ///
+  /// A DualLocalVarContext sets the global context for VarDefinition lookup to
+  /// the post-context 'Q',  once CREATED or UPDATED to the next program
+  /// point.  One can temporarily switch the global context to either 'P' or 'Q'
+  /// using `switchToContextForScope`. The lifetime of the global context
+  /// switching is bound to the enclosing scope. The global context will be set
+  /// back to the prior state by the end of the scope.  This is done by the
+  /// returned ContextSwitchScope object.
+  ///
+  /// Note: The pre- and post-context of a Stmt are distinct only in Beta mode
+  /// (i.e., `Analyzer.Handler.issueBetaWarnings()`) because of the
+  /// out-parameter validation.  If not in Beta mode, the global context for
+  /// VarDefinition lookup is invisible, thus this wrapper has no impact on the
+  /// analysis.
+  class DualLocalVarContext {
+  public:
+    enum Point : char { Pre = 0, Post = 1 };
+
+    class ContextSwitchScope {
+      DualLocalVarContext &DC;
+      Point LastPoint;
+
+    public:
+      ContextSwitchScope(DualLocalVarContext &DC, Point LastPoint)
+          : DC(DC), LastPoint(LastPoint) {}
+      ContextSwitchScope(const ContextSwitchScope &) = delete;
+      ContextSwitchScope &operator=(const ContextSwitchScope &) = delete;
+      ~ContextSwitchScope() { DC.switchContextTo(LastPoint); }
+    };
+
+    /// Temporarily switch context to \p P as long as the returned object lives.
+    [[nodiscard]] ContextSwitchScope switchToContextForScope(Point P) {
+      Point PriorPoint = CurrPoint;
+      switchContextTo(P);
+      return ContextSwitchScope(*this, PriorPoint);
+    }
+
+    /// Update the pre- and post-contexts to be associated with the next Stmt \p
+    /// S. Set the global context to the post-context of \p S upon returning.
+    ///
+    /// If \p S is null, the behavior is as if the Stmt is a no-op--the
+    /// post-context will shift to be the pre-context and the new post-context
+    /// is the same as the old one, resulting in identical pre- and
+    /// post-contexts.
+    void moveToNextContext(const Stmt *S) {
+      PrePost[Pre] = PrePost[Post];
+
+      const LocalVariableMap::Context &NewPostCtx =
+          S ? Analyzer.LocalVarMap.getNextContext(CtxIndex, S, *PrePost[Post])
+            : *PrePost[Pre];
+
+      PrePost[Post] = &NewPostCtx;
+      switchContextTo(Post);
+    }
+
+    /// Constructs a DualLocalVarContext for the entry program point, where pre-
+    /// and post-contexts are both equal to the \p EntryContext.
+    DualLocalVarContext(ThreadSafetyAnalyzer &Analyzer, unsigned EntryIdx,
+                        const LocalVariableMap::Context *EntryContext)
+        : Analyzer(Analyzer), PrePost{EntryContext, EntryContext},
+          CurrPoint(Post), CtxIndex(EntryIdx) {
+      assert(EntryContext);
+      switchContextTo(Post);
+    }
+
+  private:
+    ThreadSafetyAnalyzer &Analyzer;
+    // PrePost[0] points to the pre-context and
+    // PrePost[1] points to the post-context:
+    std::array<const LocalVariableMap::Context *, 2> PrePost;
+    Point CurrPoint;
+    unsigned CtxIndex;
+
+    void switchContextTo(Point P) {
+      if (!Analyzer.Handler.issueBetaWarnings())
+        return;
+      Analyzer.SxBuilder.setLookupLocalVarExpr(
+          [Ctx = *PrePost[P],
+           Analyzer = &Analyzer](const NamedDecl *D) mutable -> const Expr * {
+            return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+          });
+      CurrPoint = P;
+    }
+  };
+
+  DualLocalVarContext LVarCtx;
 
   // To update the context used in attr-expr translation.  If `S` is non-null,
   // the context is updated to the program point right after 'S'.
-  void updateLocalVarMapCtx(const Stmt *S) {
-    if (S)
-      LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
-    if (!Analyzer->Handler.issueBetaWarnings())
-      return;
-    // The lookup closure needs to be reconstructed with the refreshed LVarCtx.
-    Analyzer->SxBuilder.setLookupLocalVarExpr(
-        [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
-          return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
-        });
-  }
+  void updateLocalVarMapCtx(const Stmt *S) { LVarCtx.moveToNextContext(S); }
 
   // helper functions
 
@@ -1818,8 +1903,8 @@ public:
   BuildLockset(ThreadSafetyAnalyzer *Anlzr, CFGBlockInfo &Info,
                const FactSet &FunctionExitFSet)
       : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
-        FunctionExitFSet(FunctionExitFSet), LVarCtx(Info.EntryContext),
-        CtxIndex(Info.EntryIndex) {
+        FunctionExitFSet(FunctionExitFSet),
+        LVarCtx(*Analyzer, Info.EntryIndex, &Info.EntryContext) {
     updateLocalVarMapCtx(nullptr);
   }
 
@@ -2124,6 +2209,18 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                               til::SExpr *Self, SourceLocation Loc) {
+  // Move to the call Stmt so that both pre- and post-context are available.
+  updateLocalVarMapCtx(Exp);
+
+  // Most function attributes are associated with the pre-context. Exceptions
+  // are AcquireCapability and AssertCapability, which ensure some locks are
+  // held after the call, and thus are associated with the post-context. They
+  // will require a temporary switch to the post-context during handling.
+  //
+  // Parameter attributes are restricted to scoped objects, and thus are NOT
+  // context-sensitive.
+  auto PreContextForThisScope =
+      LVarCtx.switchToContextForScope(DualLocalVarContext::Pre);
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
@@ -2154,6 +2251,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       // When we encounter a lock function, we need to add the lock to our
       // lockset.
       case attr::AcquireCapability: {
+        auto PostContextForThisScope =
+            LVarCtx.switchToContextForScope(DualLocalVarContext::Post);
         const auto *A = cast<AcquireCapabilityAttr>(At);
         Analyzer->getMutexIDs(A->isShared() ? SharedLocksToAdd
                                             : ExclusiveLocksToAdd,
@@ -2165,6 +2264,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       // a warning if it is already there, and will not generate a warning
       // if it is not removed.
       case attr::AssertCapability: {
+        auto PostContextForThisScope =
+            LVarCtx.switchToContextForScope(DualLocalVarContext::Post);
         const auto *A = cast<AssertCapabilityAttr>(At);
         CapExprSet AssertLocks;
         Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
@@ -2487,9 +2588,13 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   }
 
   auto *D = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
+
   if (D)
     handleCall(Exp, D);
-  updateLocalVarMapCtx(Exp);
+  else
+    // Even if we cannot handle the call, we need to update the context for the
+    // Stmt:
+    updateLocalVarMapCtx(Exp);
 }
 
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
