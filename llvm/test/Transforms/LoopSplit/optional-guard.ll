@@ -1,5 +1,4 @@
-; RUN: opt -passes='loop-simplify,lcssa,loop-split-test,verify' \
-; RUN:   -loop-split-points=4 -loop-split-unguarded=0 \
+; RUN: opt -passes=loop-split-test -loop-split-points=4 -loop-split-unguarded=0 \
 ; RUN:   -verify-dom-info -verify-loop-info -S < %s | FileCheck %s
 
 ; Per-partition entry guards are optional. The split loop is bottom-tested, so

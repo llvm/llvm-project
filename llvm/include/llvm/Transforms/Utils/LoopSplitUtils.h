@@ -94,6 +94,10 @@ private:
   /// Everything known about one partition: the caller-supplied range plus the
   /// state split() derives. Indexed by partition number in \c Partitions.
   struct PartitionInfo {
+    PartitionInfo() = default;
+    PartitionInfo(const SCEV *StartExpr, const SCEV *EndExpr)
+        : StartExpr(StartExpr), EndExpr(EndExpr) {}
+
     // Set by addPartition() / avoidPartitionGuard() before split():
     const SCEV *StartExpr = nullptr; // inclusive iteration range [Start, End].
     const SCEV *EndExpr = nullptr;

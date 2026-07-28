@@ -1,6 +1,6 @@
-; RUN: opt -passes='loop-simplify,lcssa,loop-split-test' \
-; RUN:   -loop-split-points=4,8 -loop-split-print-partition-map \
-; RUN:   -disable-output < %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt -passes=loop-split-test -loop-split-points=4,8 \
+; RUN:   -debug-only=loop-split-test -disable-output < %s 2>&1 | FileCheck %s
 
 ; LoopSplitUtils preserves the original-to-clone value map for every partition
 ; and exposes it through getPartitionValue(). Partition 0 reuses the original

@@ -118,7 +118,7 @@ struct LoopSplitUtils::SplitState {
 
 // Record a new partition with the given inclusive iteration range.
 void LoopSplitUtils::addPartition(const SCEV *Start, const SCEV *End) {
-  Partitions.emplace_back(PartitionInfo{Start, End});
+  Partitions.emplace_back(Start, End);
 }
 
 // Mark a partition so split() emits no entry guard for it.
@@ -166,10 +166,10 @@ static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE,
   const SCEV *IndSCEV = SE->getSCEV(Induction);
   // Match an affine add-recurrence and capture its constant step; accept a unit
   // step in either direction: +1 (ascending) or -1 (descending).
-  const SCEVConstant *Step;
-  if (!match(IndSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Step))))
+  const APInt *Step;
+  if (!match(IndSCEV, m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(Step))))
     return nullptr;
-  if (!Step->getValue()->isOne() && !Step->getValue()->isMinusOne())
+  if (!Step->isOne() && !Step->isAllOnes())
     return nullptr;
   const auto *AR = cast<SCEVAddRecExpr>(IndSCEV);
 
@@ -386,13 +386,14 @@ static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
                             DominatorTree *DT, LoopInfo *LI) {
   // Split the preheader: the upper half becomes the guard dominating the chain,
   // the lower half a clean preheader.
-  std::string PreheaderName = Preheader->getName().str();
   BasicBlock *NewPreheader =
       SplitBlock(Preheader, Preheader->getTerminator(), DT, LI);
   EntryGuard = Preheader;
   Preheader = NewPreheader;
+  // Move the original preheader's name onto the new preheader, then name the
+  // guard.
+  Preheader->takeName(EntryGuard);
   EntryGuard->setName("ls.guard0");
-  Preheader->setName(PreheaderName);
 }
 
 // Materialize each partition's start and clamped end in the entry guard and

@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
@@ -26,6 +27,7 @@
 #include "llvm/Transforms/Utils/LoopSplitUtils.h"
 
 using namespace llvm;
+using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-split-test"
 
@@ -41,12 +43,6 @@ static cl::list<unsigned> UnguardedPartitions(
              "guarantees they run at least one iteration)"),
     cl::CommaSeparated);
 
-static cl::opt<bool> PrintPartitionMap(
-    "loop-split-print-partition-map",
-    cl::desc("After splitting, print each original loop instruction's "
-             "counterpart in every partition (LoopSplitUtils::getPartitionValue)"),
-    cl::init(false));
-
 /// Build the partition list for \p L from the command-line split offsets and
 /// run the transform. Returns true if the loop was split.
 static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
@@ -57,12 +53,14 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return false;
   }
 
-  const auto *IndAR =
-      dyn_cast<SCEVAddRecExpr>(SE.getSCEV(LSU.getInductionVariable()));
-  if (!IndAR)
+  const SCEV *IndVarSCEV = SE.getSCEV(LSU.getInductionVariable());
+  const SCEV *Start;
+  const APInt *StepC;
+  if (!match(IndVarSCEV,
+             m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(StepC))))
     return false;
+  auto *IndAR = cast<SCEVAddRecExpr>(IndVarSCEV);
 
-  const SCEV *Start = IndAR->getStart();
   const SCEV *BTC = SE.getBackedgeTakenCount(L);
   const SCEV *End = IndAR->evaluateAtIteration(BTC, SE);
   Type *Ty = Start->getType();
@@ -72,9 +70,7 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // Build boundaries in iteration order, stepping away from Start by each
   // offset (down for a descending loop). Each offset opens a new partition at
   // iteration `Start +/- offset`; the previous partition ends one step before.
-  bool Descending = false;
-  if (const auto *StepC = dyn_cast<SCEVConstant>(IndAR->getStepRecurrence(SE)))
-    Descending = StepC->getValue()->isMinusOne();
+  bool Descending = StepC->isAllOnes();
 
   const SCEV *PrevStart = Start;
   const SCEV *One = SE.getOne(Ty);
@@ -101,30 +97,31 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 
   // Snapshot the original loop's named instructions before the transform so we
   // can query their per-partition counterparts afterwards (handles track any
-  // that the transform deletes).
-  SmallVector<WeakTrackingVH, 16> OrigValues;
-  if (PrintPartitionMap)
+  // that the transform deletes). Only used to print the debug map below.
+  [[maybe_unused]] SmallVector<WeakTrackingVH, 16> OrigValues;
+  LLVM_DEBUG({
     for (BasicBlock *BB : L->blocks())
       for (Instruction &I : *BB)
         if (I.hasName())
           OrigValues.push_back(&I);
+  });
 
   if (!LSU.split())
     return false;
 
-  if (PrintPartitionMap) {
+  LLVM_DEBUG({
     const unsigned N = LSU.getNumPartitions();
     for (unsigned P = 0; P < N; ++P) {
-      outs() << "LS-MAP partition " << P << ":\n";
+      dbgs() << "LS-MAP partition " << P << ":\n";
       for (WeakTrackingVH &VH : OrigValues) {
         if (!VH)
           continue;
         Value *M = LSU.getPartitionValue(VH, P);
-        outs() << "LS-MAP   " << VH->getName() << " -> "
+        dbgs() << "LS-MAP   " << VH->getName() << " -> "
                << (M ? M->getName() : "<none>") << "\n";
       }
     }
-  }
+  });
   return true;
 }
 
