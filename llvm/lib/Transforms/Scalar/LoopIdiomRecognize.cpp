@@ -1685,16 +1685,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // The table strategy is not possible in its current form without a byte-
     // multiple trip count.
     if (Info.TripCount % 8 == 0) {
-      ReportOptimized("table", "forced by user");
       optimizeCRCLoopUsingTableLookup(Info);
+      ReportOptimized("table", "forced by user");
       return true;
     }
     ReportMissed("table strategy forced, but not possible");
     return false;
   }
   case CRCStrategyKind::Clmul: {
-    ReportOptimized("clmul", "forced by user");
     optimizeCRCLoopUsingClmul(Info);
+    ReportOptimized("clmul", "forced by user");
     return true;
   }
   case CRCStrategyKind::Auto: {
@@ -1715,11 +1715,11 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     }
 
     if (TableStrategyCost <= ClmulStrategyCost) {
-      ReportOptimized("table", "most profitable strategy");
       optimizeCRCLoopUsingTableLookup(Info);
+      ReportOptimized("table", "most profitable strategy");
     } else {
-      ReportOptimized("clmul", "most profitable strategy");
       optimizeCRCLoopUsingClmul(Info);
+      ReportOptimized("clmul", "most profitable strategy");
     }
     return true;
   }
