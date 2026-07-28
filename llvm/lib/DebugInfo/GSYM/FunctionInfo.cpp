@@ -236,6 +236,66 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   return FuncInfoOffset;
 }
 
+void FunctionInfo::parseStatistics(
+    GsymDataExtractor &Data, std::map<uint32_t, uint64_t> &FuncInfoStats,
+    std::map<uint32_t, uint64_t> *MergedFuncInfoStats) {
+  uint64_t Offset = 0;
+  // FunctionInfo header: Size (a uint32_t) followed by Name (a string offset).
+  // The string offset width is 4 bytes in GSYM v1 but variable (1-8 bytes) in
+  // v2, so query it from the extractor instead of assuming 4.
+  const uint64_t FuncInfoHeaderSize = 4 + Data.getStringOffsetSize();
+  if (!Data.isValidOffsetForDataOfSize(Offset, FuncInfoHeaderSize))
+    return;
+  // Overhead includes: FunctionInfo's Size and Name fields,
+  // EndOfList terminator, and MergedFunctionsInfo's Count and FnSize fields.
+  FuncInfoStats[9] += FuncInfoHeaderSize; // FunctionInfo header: Size + Name
+  Offset += FuncInfoHeaderSize;
+  while (true) {
+    if (!Data.isValidOffsetForDataOfSize(Offset, 8))
+      return;
+    const uint32_t InfoType = Data.getU32(&Offset);
+    const uint32_t InfoLength = Data.getU32(&Offset);
+    if (InfoType == InfoType::EndOfList) {
+      FuncInfoStats[9] += 8; // FunctionInfo EndOfList terminator
+      return;
+    }
+    if (!Data.isValidOffsetForDataOfSize(Offset, InfoLength))
+      return;
+    // Include the 8 bytes for InfoType and InfoLength.
+    FuncInfoStats[InfoType] += InfoLength + 8;
+    // If this is a MergedFunctionsInfo section, parse the inner FunctionInfos
+    // to collect per-InfoType sub-statistics. A MergedFunctionsInfo should
+    // never be nested inside another MergedFunctionsInfo.
+    if (InfoType == InfoType::MergedFunctionsInfo && !MergedFuncInfoStats) {
+      errs()
+          << "error: MergedFunctionsInfo found inside a MergedFunctionsInfo, "
+             "which is not supported\n";
+    }
+    if (InfoType == InfoType::MergedFunctionsInfo && MergedFuncInfoStats) {
+      (*MergedFuncInfoStats)[9] += 8; // MergedFunctionsInfo TLV header
+      // Sub-range extractor inherits the parent's string offset size.
+      GsymDataExtractor MergedData(Data, Offset, InfoLength);
+      uint64_t MOffset = 0;
+      if (MergedData.isValidOffsetForDataOfSize(MOffset, 4)) {
+        uint32_t Count = MergedData.getU32(&MOffset);
+        (*MergedFuncInfoStats)[9] += 4; // MergedFunctionsInfo Count field
+        for (uint32_t I = 0; I < Count; ++I) {
+          if (!MergedData.isValidOffsetForDataOfSize(MOffset, 4))
+            break;
+          uint32_t FnSize = MergedData.getU32(&MOffset);
+          (*MergedFuncInfoStats)[9] += 4; // MergedFunctionsInfo FnSize field
+          if (!MergedData.isValidOffsetForDataOfSize(MOffset, FnSize))
+            break;
+          GsymDataExtractor FuncData(MergedData, MOffset, FnSize);
+          parseStatistics(FuncData, *MergedFuncInfoStats, nullptr);
+          MOffset += FnSize;
+        }
+      }
+    }
+    Offset += InfoLength;
+  }
+}
+
 llvm::Expected<LookupResult>
 FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
                      uint64_t FuncAddr, uint64_t Addr,

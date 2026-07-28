@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <map>
 
 namespace llvm {
 class raw_ostream;
@@ -202,6 +203,23 @@ struct FunctionInfo {
   lookup(GsymDataExtractor &Data, const GsymReader &GR, uint64_t FuncAddr,
          uint64_t Addr,
          std::optional<GsymDataExtractor> *MergedFuncsData = nullptr);
+
+  /// Parse the function info data and accumulate the size of each InfoType
+  /// into the provided map.
+  ///
+  /// \param Data The binary stream to read the data from.
+  ///
+  /// \param FuncInfoStats A map that will be updated with the size of each
+  /// InfoType found in the data. The sizes include the InfoType/InfoLength
+  /// header (8 bytes) plus the data payload.
+  ///
+  /// \param MergedFuncInfoStats If non-null, this map will be updated with
+  /// the per-InfoType sizes of the inner FunctionInfos within any
+  /// MergedFunctionsInfo sections.
+  LLVM_ABI static void
+  parseStatistics(GsymDataExtractor &Data,
+                  std::map<uint32_t, uint64_t> &FuncInfoStats,
+                  std::map<uint32_t, uint64_t> *MergedFuncInfoStats = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }
