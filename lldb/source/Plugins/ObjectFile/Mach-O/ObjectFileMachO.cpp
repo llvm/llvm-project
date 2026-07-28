@@ -32,6 +32,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -46,6 +47,7 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -1011,6 +1013,58 @@ bool ObjectFileMachO::ParseHeader(DataExtractorSP &extractor_sp,
   return false;
 }
 
+size_t ObjectFileMachO::ReadSectionData(Section *section,
+                                        lldb::offset_t section_offset,
+                                        void *dst, size_t dst_len) {
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_offset,
+                                                     dst, dst_len);
+
+  if (!section->GetName().starts_with("__zdebug_"))
+    return ObjectFile::ReadSectionData(section, section_offset, dst, dst_len);
+
+  DataExtractor data;
+  ReadSectionData(section, data);
+  return data.CopyData(section_offset, dst_len, dst);
+}
+
+size_t ObjectFileMachO::ReadSectionData(Section *section,
+                                        DataExtractor &section_data) {
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_data);
+
+  size_t result = ObjectFile::ReadSectionData(section, section_data);
+  if (result == 0 || !section->GetName().starts_with("__zdebug_"))
+    return result;
+
+  auto decompressor = llvm::object::Decompressor::create(
+      section->GetName(),
+      {reinterpret_cast<const char *>(section_data.GetDataStart()),
+       size_t(section_data.GetByteSize())},
+      GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
+  if (!decompressor) {
+    GetModule()->ReportWarning(
+        "unable to initialize decompressor for section '{0}': {1}",
+        section->GetName(), llvm::toString(decompressor.takeError()).c_str());
+    section_data.Clear();
+    return 0;
+  }
+
+  auto buffer_sp =
+      std::make_shared<DataBufferHeap>(decompressor->getDecompressedSize(), 0);
+  if (auto error = decompressor->decompress(
+          {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
+    GetModule()->ReportWarning("decompression of section '{0}' failed: {1}",
+                               section->GetName(),
+                               llvm::toString(std::move(error)).c_str());
+    section_data.Clear();
+    return 0;
+  }
+
+  section_data.SetData(buffer_sp);
+  return buffer_sp->GetByteSize();
+}
+
 bool ObjectFileMachO::ParseHeader() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
@@ -1464,7 +1518,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeDWARFDebugStrOffsetsDwo;
 
   llvm::StringRef stripped_name = section_name.GetStringRef();
-  if (stripped_name.consume_front("__debug_"))
+  if (stripped_name.consume_front("__debug_") ||
+      stripped_name.consume_front("__zdebug_"))
     return ObjectFile::GetDWARFSectionTypeFromName(stripped_name);
 
   if (section_name == g_sect_name_dwarf_apple_names)

@@ -19,6 +19,7 @@
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -36,6 +37,72 @@ class ObjectFileMachOTest : public ::testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileMachO> subsystems;
 };
 } // namespace
+
+#if LLVM_ENABLE_ZLIB
+TEST_F(ObjectFileMachOTest, GNUCompressedSection) {
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DWARF
+    vmaddr:          0
+    vmsize:          23
+    fileoff:         184
+    filesize:        23
+    maxprot:         7
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __zdebug_line
+        segname:         __DWARF
+        addr:            0
+        size:            23
+        offset:          184
+        align:           0
+        reloff:          0
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0
+        reserved2:       0
+        reserved3:       0
+        content:         5A4C49420000000000000003789C4B4C4A0600024D0127
+...
+)";
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  lldb::ModuleSP module = std::make_shared<Module>(file->moduleSpec());
+  ObjectFile *object = module->GetObjectFile();
+  ASSERT_TRUE(llvm::isa<ObjectFileMachO>(object));
+
+  SectionSP line = object->GetSectionList()->FindSectionByType(
+      eSectionTypeDWARFDebugLine, true);
+  ASSERT_TRUE(line);
+  EXPECT_EQ(line->GetName(), ConstString("__zdebug_line"));
+
+  lldb_private::DataExtractor data;
+  EXPECT_EQ(line->GetSectionData(data), 3u);
+  ASSERT_EQ(data.GetByteSize(), 3u);
+  EXPECT_EQ(
+      llvm::StringRef(reinterpret_cast<const char *>(data.GetDataStart()), 3),
+      "abc");
+
+  char tail[2];
+  EXPECT_EQ(object->ReadSectionData(line.get(), 1, tail, sizeof(tail)), 2u);
+  EXPECT_EQ(llvm::StringRef(tail, sizeof(tail)), "bc");
+}
+#endif
 
 #if defined(__APPLE__)
 TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
