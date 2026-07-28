@@ -2700,17 +2700,17 @@ void CheckHelper::CheckPassArg(
   }
 }
 
-static bool OverrideDummyNamesMatch(
+static std::optional<std::size_t> FindOverrideDummyNameMismatch(
     const Procedure &binding, const Procedure &overridden) {
   if (binding.dummyArguments.size() != overridden.dummyArguments.size()) {
-    return false;
+    return std::nullopt;
   }
   for (std::size_t j{0}; j < binding.dummyArguments.size(); ++j) {
     if (binding.dummyArguments[j].name != overridden.dummyArguments[j].name) {
-      return false;
+      return j;
     }
   }
-  return true;
+  return std::nullopt;
 }
 
 void CheckHelper::CheckProcBinding(
@@ -2783,7 +2783,12 @@ void CheckHelper::CheckProcBinding(
         const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
-          if (isNopass) {
+          if (FindOverrideDummyNameMismatch(*bindingChars, *overriddenChars)) {
+            SayWithDeclaration(*overridden,
+                "Dummy arguments of type-bound procedure '%s' and its override "
+                "must correspond by name and position"_err_en_US,
+                symbol.name());
+          } else if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
               SayWithDeclaration(*overridden,
                   "A NOPASS type-bound procedure and its override must have identical interfaces"_err_en_US);
@@ -2796,13 +2801,6 @@ void CheckHelper::CheckProcBinding(
               if (*passIndex != *overriddenPassIndex) {
                 SayWithDeclaration(*overridden,
                     "A type-bound procedure and its override must use the same PASS argument"_err_en_US);
-              } else if (!OverrideDummyNamesMatch(
-                             *bindingChars, *overriddenChars)) {
-                SayWithDeclaration(*overridden,
-                    "Passed-object dummy arguments of type-bound procedure "
-                    "'%s' "
-                    "and its override must correspond by name and position"_err_en_US,
-                    symbol.name());
               } else if (!bindingChars->CanOverride(
                              *overriddenChars, passIndex)) {
                 SayWithDeclaration(*overridden,
