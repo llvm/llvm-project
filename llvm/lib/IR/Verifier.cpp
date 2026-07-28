@@ -1770,6 +1770,26 @@ void Verifier::visitDIObjCProperty(const DIObjCProperty &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
 }
 
+void Verifier::visitDIProperty(const DIProperty &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_property, "invalid tag", &N);
+  if (auto *T = N.getRawType())
+    CheckDI(isType(T), "invalid type ref", &N, T);
+  if (auto *F = N.getRawFile())
+    CheckDI(isa<DIFile>(F), "invalid file", &N, F);
+  // TODO: Check getterForward. It ends up as the DW_AT_property_forward of a
+  // DW_TAG_property_getter, and the only thing the backend currently knows how
+  // to point at is the data member holding the property's backing storage.
+  //
+  // Note the DWARF specification is deliberately looser than we need to be
+  // here: it also allows a property getter to forward to a subprogram, a
+  // variable or a constant. Restricting this is a choice about what we support
+  // today, not a transcription of the spec, so the check should be tight enough
+  // that a wrong node is caught early rather than turning into bad DWARF.
+  //
+  // test/Verifier/diproperty.ll has the cases that must be rejected, and the
+  // diagnostic they expect.
+}
+
 void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_imported_module ||
               N.getTag() == dwarf::DW_TAG_imported_declaration,

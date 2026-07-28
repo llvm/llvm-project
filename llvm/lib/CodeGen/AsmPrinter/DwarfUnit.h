@@ -228,6 +228,7 @@ public:
   void addSourceLine(DIE &Die, const DILabel *L);
   void addSourceLine(DIE &Die, const DIType *Ty);
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
+  void addSourceLine(DIE &Die, const DIProperty *P);
 
   /// Add constant value entry in variable DIE.
   void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
@@ -389,6 +390,7 @@ private:
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);
+  void constructPropertyDIE(DIE &Buffer, const DIProperty *P);
   void constructTemplateTypeParameterDIE(DIE &Buffer,
                                          const DITemplateTypeParameter *TP);
   void constructTemplateValueParameterDIE(DIE &Buffer,

@@ -7253,6 +7253,10 @@ be used for the structure type.
                      getter: "getFoo", attributes: 7, type: !2)
 ```
 
+##### DIProperty
+
+TODO: write this.
+
 ##### DIImportedEntity
 
 `DIImportedEntity` nodes represent entities (such as modules) imported into a

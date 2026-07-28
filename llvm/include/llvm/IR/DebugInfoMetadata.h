@@ -223,6 +223,7 @@ public:
     case DILocalVariableKind:
     case DILabelKind:
     case DIObjCPropertyKind:
+    case DIPropertyKind:
     case DIImportedEntityKind:
     case DIModuleKind:
     case DIGenericSubrangeKind:
@@ -4422,6 +4423,90 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIObjCPropertyKind;
+  }
+};
+
+/// A property of a class or structure.
+///
+/// Represents a DWARF \c DW_TAG_property: an entity that is syntactically
+/// accessed like a data member, but whose access is implemented by invoking a
+/// user-defined or compiler-generated accessor.
+///
+/// Currently only the getter is modelled, and it must forward to a data member
+/// holding the property's backing storage. This describes languages that
+/// synthesize a property over separate storage, such as a Swift property
+/// wrapper, where \c x is a generated getter over a stored member \c _x. A
+/// consumer can then read the storage directly instead of calling the getter.
+class DIProperty : public DINode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  unsigned Line;
+
+  DIProperty(LLVMContext &C, StorageType Storage, unsigned Line,
+             ArrayRef<Metadata *> Ops);
+  ~DIProperty() = default;
+
+  static DIProperty *getImpl(LLVMContext &Context, StringRef Name, DIFile *File,
+                             unsigned Line, DIType *Type, DINode *GetterForward,
+                             StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, getCanonicalMDString(Context, Name), File, Line,
+                   Type, GetterForward, Storage, ShouldCreate);
+  }
+  LLVM_ABI static DIProperty *getImpl(LLVMContext &Context, MDString *Name,
+                                      Metadata *File, unsigned Line,
+                                      Metadata *Type, Metadata *GetterForward,
+                                      StorageType Storage,
+                                      bool ShouldCreate = true);
+
+  TempDIProperty cloneImpl() const {
+    return getTemporary(getContext(), getName(), getFile(), getLine(),
+                        getType(), getGetterForward());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIProperty,
+                    (StringRef Name, DIFile *File, unsigned Line, DIType *Type,
+                     DINode *GetterForward),
+                    (Name, File, Line, Type, GetterForward))
+  DEFINE_MDNODE_GET(DIProperty,
+                    (MDString * Name, Metadata *File, unsigned Line,
+                     Metadata *Type, Metadata *GetterForward),
+                    (Name, File, Line, Type, GetterForward))
+
+  TempDIProperty clone() const { return cloneImpl(); }
+
+  unsigned getLine() const { return Line; }
+  StringRef getName() const { return getStringOperand(0); }
+  DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
+  DIType *getType() const { return cast_or_null<DIType>(getRawType()); }
+
+  /// The entity the getter forwards to, i.e. the target of
+  /// \c DW_AT_property_forward on this property's \c DW_TAG_property_getter
+  /// child. This is the data member holding the property's backing storage.
+  DINode *getGetterForward() const {
+    return cast_or_null<DINode>(getRawGetterForward());
+  }
+
+  StringRef getFilename() const {
+    if (auto *F = getFile())
+      return F->getFilename();
+    return "";
+  }
+
+  StringRef getDirectory() const {
+    if (auto *F = getFile())
+      return F->getDirectory();
+    return "";
+  }
+
+  MDString *getRawName() const { return getOperandAs<MDString>(0); }
+  Metadata *getRawFile() const { return getOperand(1); }
+  Metadata *getRawType() const { return getOperand(2); }
+  Metadata *getRawGetterForward() const { return getOperand(3); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIPropertyKind;
   }
 };
 
