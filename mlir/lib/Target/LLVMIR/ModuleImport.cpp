@@ -181,6 +181,7 @@ static Attribute convertMetadataToAttrImpl(
     return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    // Metadata attributes cannot preserve distinctness, so bail out.
     if (node->isDistinct())
       return {};
     if (Attribute cached = attrMap.lookup(node))
