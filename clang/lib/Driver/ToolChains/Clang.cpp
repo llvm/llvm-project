@@ -7655,13 +7655,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   VersionTuple MSVT = TC.computeMSVCVersion(&D, Args);
-  if (MSVT.empty() && AuxTriple && AuxTriple->isWindowsMSVCEnvironment()) {
-    // The Windows MSVC aux-triple enables -fms-compatibility for the device,
-    // so get the version from the host toolchain, else the lowest supported.
-    MSVT = C.getDefaultToolChain().computeMSVCVersion(&D, Args);
-    if (MSVT.empty())
-      MSVT = VersionTuple(19, 16, 27023); // VS2017 v15.9
-  }
   if (!MSVT.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fms-compatibility-version=" + MSVT.getAsString()));
