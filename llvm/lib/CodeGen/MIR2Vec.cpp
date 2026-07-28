@@ -29,6 +29,8 @@ using namespace mir2vec;
 
 STATISTIC(MIRVocabMissCounter,
           "Number of lookups to MIR entities not present in the vocabulary");
+STATISTIC(MIRClasslessRegCounter,
+          "Number of register operands with no register class");
 
 namespace llvm {
 namespace mir2vec {
@@ -356,7 +358,8 @@ unsigned MIRVocabulary::getCommonOperandIndex(
   return static_cast<unsigned>(OperandType) - 1;
 }
 
-unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+std::optional<unsigned>
+MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
@@ -370,13 +373,30 @@ unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   if (Reg.isPhysical())
     RegClass = TRI.getMinimalPhysRegClass(Reg);
   else
-    RegClass = MRI.getRegClass(Reg);
+    RegClass = MRI.getRegClassOrNull(Reg);
 
-  if (RegClass)
-    return RegClass->getID();
-  // Fallback for registers without a class (shouldn't happen)
-  llvm_unreachable("Register operand without a valid register class");
-  return 0;
+  // Not every register belongs to a register class. This can happen for
+  // physical registers, e.g. X86's $mxcsr and $fpcw or AMDGPU's $mode, for
+  // which getMinimalPhysRegClass() returns nullptr. It can also happen for
+  // generic virtual registers that have not yet been through (or completed)
+  // GlobalISel's register bank selection, and thus carry an LLT or a
+  // RegisterBank instead of a TargetRegisterClass, for which
+  // getRegClassOrNull() returns nullptr.
+  // TODO: Avoid special-casing these registers at every use site. Classless
+  // registers currently fall back to a zero embedding in operator[] and to
+  // VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc handling
+  // the invalid/stack-slot cases already get. Give them a real vocabulary
+  // representation instead -- e.g. an explicit "no register class" entry, or
+  // keying generic vregs on their LLT/RegisterBank -- so that the lookup is
+  // total and the callers need no fallbacks.
+  if (!RegClass) {
+    LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
+                      << "; using zero vector.\n");
+    ++MIRClasslessRegCounter;
+    return std::nullopt;
+  }
+
+  return RegClass->getID();
 }
 
 Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(

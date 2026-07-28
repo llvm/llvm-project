@@ -3,7 +3,7 @@
 ; RUN: opt < %s -S -passes=openmp-opt-cgscc | FileCheck %s --check-prefixes=CHECK,CGSCC
 ; REQUIRES: amdgpu-registered-target
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 declare void @useI32(i32)
 declare void @unknown()

@@ -66,13 +66,6 @@ void addCfgConversionPass(mlir::PassManager &pm,
       pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
 }
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
-  ArrayValueCopyOptions options;
-  options.optimizeConflicts = optLevel != llvm::OptimizationLevel::O0;
-  addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableFirAvc, [&]() { return createArrayValueCopyPass(options); });
-}
-
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
     return fir::createMemoryAllocationOpt(
@@ -205,7 +198,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.setRegionSimplificationLevel(
       mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCSEPass());
-  fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
@@ -464,6 +456,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createEmitMIFGlobalCtors());
 
   if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
+    // Since some math operations may be converted to function calls by the
+    // ConvertMathToFuncs pass, we need to mark them with the omp.declare_target
+    // attribute if they're called from a target region.
+    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+
     // Remove all non target-related operations from host functions still
     // remaining at this point, if compiling for an OpenMP target device. This
     // is required before translating 'omp' dialect operations to LLVM IR.
@@ -484,6 +481,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
                                   MLIRToLLVMPassPipelineConfig &config,
                                   llvm::StringRef inputFilename) {
+  if (config.EnableOpenACC)
+    fir::acc::populateHLFIROpenACCPassPipeline(pm);
+
   fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
   if (config.EnableOpenMP)
     enableOpenMP = fir::EnableOpenMP::Full;

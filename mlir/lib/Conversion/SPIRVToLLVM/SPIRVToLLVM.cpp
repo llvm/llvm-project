@@ -919,6 +919,31 @@ public:
   }
 };
 
+/// Converts `spirv.VectorTimesScalar` to a broadcast of the scalar followed by
+/// an `llvm.fmul`.
+class VectorTimesScalarPattern
+    : public SPIRVToLLVMConversion<spirv::VectorTimesScalarOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::VectorTimesScalarOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::VectorTimesScalarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    unsigned numElements = op.getVector().getType().getNumElements();
+    Value broadcasted = broadcast(op.getLoc(), adaptor.getScalar(), numElements,
+                                  *getTypeConverter(), rewriter);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getVector(),
+                                              broadcasted);
+    return success();
+  }
+};
+
 /// Converts `spirv.SNegate` to `0 - x`.
 class SNegatePattern : public SPIRVToLLVMConversion<spirv::SNegateOp> {
 public:
@@ -1470,6 +1495,14 @@ public:
     auto position = rewriter.getInsertionPoint();
     auto *continueBlock = rewriter.splitBlock(currentBlock, position);
 
+    // Add arguments to the continue block for selections that yield values.
+    for (auto ty : op.getResultTypes()) {
+      Type dstTy = getTypeConverter()->convertType(ty);
+      if (!dstTy)
+        return rewriter.notifyMatchFailure(op, "failed to convert type");
+      continueBlock->addArgument(dstTy, loc);
+    }
+
     // Extract conditional branch information from the header block. By SPIR-V
     // dialect spec, it should contain `spirv.BranchConditional` or
     // `spirv.Switch` op. Note that `spirv.Switch op` is not supported at the
@@ -1938,7 +1971,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
-      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, SNegatePattern,
+      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
+      VectorTimesScalarPattern, SNegatePattern,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,

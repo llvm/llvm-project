@@ -502,7 +502,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   MachineModuleInfo &MMI =
       MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMP.getCachedResult<LibcallLoweringModuleAnalysis>(*Fn.getParent());
   if (!LibcallResult) {
     reportFatalUsageError("'" + LibcallLoweringModuleAnalysis::name() +
@@ -3964,6 +3964,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     case OPC_CheckImmAllZerosV:
       if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
+        break;
+      continue;
+    case OPC_CheckUndef:
+      if (!N.isUndef())
         break;
       continue;
 

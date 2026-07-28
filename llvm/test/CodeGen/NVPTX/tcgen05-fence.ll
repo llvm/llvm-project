@@ -18,7 +18,6 @@ define void @test_tcgen05_fence() {
 ; CHECK-LABEL: test_tcgen05_fence(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    tcgen05.fence::before_thread_sync;
 ; CHECK-NEXT:    tcgen05.fence::after_thread_sync;
@@ -34,7 +33,6 @@ define void @test_tcgen05_fence() {
 define void @test_tcgen05_wait() {
 ; CHECK-LABEL: test_tcgen05_wait(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    tcgen05.wait::ld.sync.aligned;

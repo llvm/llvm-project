@@ -35,12 +35,12 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -54,7 +54,6 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -3580,7 +3579,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -10924,6 +10923,12 @@ public:
                                         const UnresolvedSetImpl &Fns,
                                         bool PerformADL = true);
 
+  /// Perform lookup for an overloaded unary operator.
+  void LookupOverloadedUnaryOp(OverloadCandidateSet &CandidateSet,
+                               OverloadedOperatorKind Op,
+                               const UnresolvedSetImpl &Fns,
+                               ArrayRef<Expr *> Args, bool RequiresADL = true);
+
   /// Create a unary operation that may resolve to an overloaded
   /// operator.
   ///
@@ -13777,14 +13782,6 @@ public:
   /// when there are multiple errors or warnings in the same instantiation.
   // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
   unsigned LastEmittedCodeSynthesisContextDepth = 0;
-
-  /// The template instantiation callbacks to trace or track
-  /// instantiations (objects can be chained).
-  ///
-  /// This callbacks is used to print, trace or track template
-  /// instantiations as they are being constructed.
-  std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-      TemplateInstCallbacks;
 
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.

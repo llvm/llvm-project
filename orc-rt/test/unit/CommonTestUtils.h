@@ -11,6 +11,7 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/Session.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
 
@@ -46,20 +47,18 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
   return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
 }
 
-/// RunWrapperCall callback for tests that should never dispatch a wrapper
-/// call. Records a test failure on invocation, then completes the call with an
-/// out-of-band error so that any caller awaiting the result unblocks and fails
-/// too (rather than hanging), even in -Asserts builds or when the dispatch
-/// arrives on a non-test thread.
-inline void noDispatch(orc_rt_SessionRef S, uint64_t CallId,
-                       orc_rt_WrapperFunctionReturn Return,
-                       orc_rt_WrapperFunction, orc_rt::WrapperFunctionBuffer) {
-  ADD_FAILURE() << "unexpected wrapper-call dispatch in a no-dispatch session";
-  Return(S, CallId,
-         orc_rt::WrapperFunctionBuffer::createOutOfBandError(
-             "unexpected wrapper-call dispatch in a no-dispatch session")
-             .release());
+/// DispatchFn for tests that should never dispatch a task. Records a test
+/// failure on invocation, then runs the task inline so that any caller
+/// awaiting a result unblocks (rather than hanging) and the managed-code token
+/// is released, even in -Asserts builds or when the dispatch arrives on a
+/// non-test thread.
+inline void noDispatch(orc_rt::Session::Task T) {
+  ADD_FAILURE() << "unexpected dispatch in a no-dispatch session";
+  T();
 }
+
+/// DispatchFn that runs tasks on the current thread.
+inline void inlineDispatch(orc_rt::Session::Task T) { T(); }
 
 template <size_t Idx = 0> class OpCounter {
 public:

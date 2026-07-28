@@ -798,53 +798,6 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
   return pfunc(SWIGBridge::ToSWIGWrapper(process_sp));
 }
 
-PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecognizer(
-    const char *python_class_name, const char *session_dictionary_name) {
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated())
-    return PythonObject();
-
-  return pfunc();
-}
-
-PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  static char callee_name[] = "get_recognized_arguments";
-
-  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
-
-  PythonString str(callee_name);
-  PyObject *result =
-      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
-  return result;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  static char callee_name[] = "should_hide";
-
-  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
-
-  PythonString str(callee_name);
-
-  PyObject *result =
-      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
-  bool ret_val = result ? PyObject_IsTrue(result) : false;
-  Py_XDECREF(result);
-
-  return ret_val;
-}
-
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(
     void *module, const char *setting, const lldb::TargetSP &target_sp) {
   if (!module || !setting)
