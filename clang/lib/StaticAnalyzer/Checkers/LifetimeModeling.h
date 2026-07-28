@@ -17,6 +17,10 @@ getDanglingRegionsAfterReturn(SVal Source, ProgramStateRef State,
 bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
 
 bool isBoundToLifetimeSource(ProgramStateRef State, SVal Val);
+  
+/// Returns the descriptive name of the memory region or a placeholder if a
+/// descriptive name cannot be constructed for it.
+std::string getRegionName(const MemRegion *Reg);
 } // namespace clang::ento::lifetime_modeling
 
 #endif // LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_LIFETIMEMODELING_H

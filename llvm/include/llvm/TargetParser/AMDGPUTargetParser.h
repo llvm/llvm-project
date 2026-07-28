@@ -45,9 +45,9 @@ enum GPUKind : uint32_t {
 
 /// Instruction set architecture version.
 struct IsaVersion {
-  unsigned Major;
-  unsigned Minor;
-  unsigned Stepping;
+  uint8_t Major;
+  uint8_t Minor;
+  uint8_t Stepping;
 
   bool operator==(const IsaVersion &Other) const {
     return Major == Other.Major && Minor == Other.Minor &&

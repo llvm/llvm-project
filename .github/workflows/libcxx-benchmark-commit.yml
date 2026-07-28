@@ -114,5 +114,5 @@ jobs:
         run: |
           libcxx/utils/ci/lnt/submit-benchmarks             \
             --lnt-url "${LNT_URL}"                          \
-            --test-suite libcxx2                            \
+            --test-suite libcxx                             \
             "${COMMIT}.json"

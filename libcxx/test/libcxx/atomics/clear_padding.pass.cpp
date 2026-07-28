@@ -7,12 +7,25 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
 // UNSUPPORTED: gcc
-// UNSUPPORTED: clang-21, clang-22, clang-23, clang-24, apple-clang-21
+
+// Older versions of Clang don't support __builtin_clear_padding
+// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17, apple-clang-21
+
+// Older Clang doesn't handle __builtin_clear_padding correctly on Windows
+// (see https://github.com/llvm/llvm-project/issues/209787)
+// XFAIL: clang-23 && target={{.+}}-{{.+}}-windows-msvc
+// UNSUPPORTED: clang-24 && target={{.+}}-{{.+}}-windows-msvc
+
+// ASAN has a bug where it does not calculate the correct size
+// of ext_vector_type of fp80 long double
+// (see https://github.com/llvm/llvm-project/issues/212002)
+// XFAIL: clang-23 && asan
+// UNSUPPORTED: clang-24 && asan
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile -Wno-dynamic-class-memaccess
 
+#include <atomic>
 #include <cassert>
-#include <cstdio>
 #include <cstring>
 #include <new>
 
@@ -83,7 +96,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
     basic2.x = a;
     basic2.y = b;
     assert(memcmp(&basic1, &basic2, sizeof(B)) != 0);
-    __builtin_clear_padding(&basic2);
+    std::__clear_padding_if_needed(basic2);
     assert(memcmp(&basic1, &basic2, sizeof(B)) == 0);
   }
 
@@ -104,7 +117,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
     arr2.y[1] = d;
     arr2.c    = 0;
     assert(memcmp(&arr1, &arr2, sizeof(A)) != 0);
-    __builtin_clear_padding(&arr2);
+    std::__clear_padding_if_needed(arr2);
     assert(memcmp(&arr1, &arr2, sizeof(A)) == 0);
   }
 
@@ -120,7 +133,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
     ptr2.x = &a;
     ptr2.y = &b;
     assert(memcmp(&ptr1, &ptr2, sizeof(P)) != 0);
-    __builtin_clear_padding(&ptr2);
+    std::__clear_padding_if_needed(ptr2);
     assert(memcmp(&ptr1, &ptr2, sizeof(P)) == 0);
   }
 
@@ -137,7 +150,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
     three2.x = a;
     three2.y = b;
     three2.z = c;
-    __builtin_clear_padding(&three2);
+    std::__clear_padding_if_needed(three2);
     assert(memcmp(&three1, &three2, sizeof(Three)) == 0);
   }
 
@@ -152,7 +165,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
     memset(&normal2, 42, sizeof(N));
     normal2.a = a;
     normal2.b = b;
-    __builtin_clear_padding(&normal2);
+    std::__clear_padding_if_needed(normal2);
     assert(memcmp(&normal1, &normal2, sizeof(N)) == 0);
   }
 
@@ -174,7 +187,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
     base2.y = d;
     base2.z = a;
     assert(memcmp(&base1, &base2, sizeof(H)) != 0);
-    __builtin_clear_padding(&base2);
+    std::__clear_padding_if_needed(base2);
     assert(memcmp(&base1, &base2, sizeof(H)) == 0);
   }
 }
@@ -192,7 +205,7 @@ void otherStructTests() {
     basic2->x = 1;
     basic2->y = 2;
     assert(memcmp(basic1, basic2, sizeof(B)) != 0);
-    __builtin_clear_padding(basic2);
+    std::__clear_padding_if_needed(*basic2);
     assert(memcmp(basic1, basic2, sizeof(B)) == 0);
     delete basic2;
     delete basic1;
@@ -210,8 +223,9 @@ void otherStructTests() {
     basic4->x = 1;
     basic4->y = 2;
     assert(memcmp(basic3, basic4, sizeof(B)) != 0);
+    // libc++'s __clear_padding_if_needed does not handle volatile as std::atomic only clears the
+    // incoming object which is always a non-volatile copy
     __builtin_clear_padding(const_cast<volatile B*>(basic4));
-    __builtin_clear_padding(basic4);
     assert(memcmp(basic3, basic4, sizeof(B)) == 0);
     delete basic4;
     delete basic3;
@@ -232,7 +246,7 @@ void primitiveTests() {
   // no padding
   {
     int i1 = 42, i2 = 42;
-    __builtin_clear_padding(&i1); // does nothing
+    std::__clear_padding_if_needed(i1); // does nothing
     assert(i1 == 42);
     assert(memcmp(&i1, &i2, sizeof(int)) == 0);
   }
@@ -246,7 +260,7 @@ void primitiveTests() {
     d1 = 3.0L;
     d2 = 3.0L;
 
-    __builtin_clear_padding(&d1);
+    std::__clear_padding_if_needed(d1);
     assert(d1 == 3.0L);
     assert(memcmp(&d1, &d2, sizeof(long double)) == 0);
   }
@@ -260,7 +274,7 @@ void primitiveTests() {
 
     i1 = 37;
     i2 = 37;
-    __builtin_clear_padding(&i1);
+    std::__clear_padding_if_needed(i1);
     assert(i1 == 37);
     assert(memcmp(&i1, &i2, sizeof(T)) == 0);
   }
@@ -273,7 +287,7 @@ void primitiveTests() {
     memset(&c2, 0, sizeof(_Complex long double));
     c1 = 3.0L;
     c1 = 3.0L;
-    __builtin_clear_padding(&c1);
+    std::__clear_padding_if_needed(c1);
     //TODO
   }
 }
@@ -303,7 +317,7 @@ void structTests() {
     s2.b   = true;
 
     assert(memcmp(&s1, &s2, sizeof(S2)) != 0);
-    __builtin_clear_padding(&s1);
+    std::__clear_padding_if_needed(s1);
     assert(s1.s.x == 4);
     assert(s1.s.c == 'a');
     assert(s1.b == true);
@@ -328,7 +342,7 @@ void structTests() {
     s2.b = true;
 
     assert(memcmp(&s1, &s2, sizeof(S)) != 0);
-    __builtin_clear_padding(&s1);
+    std::__clear_padding_if_needed(s1);
     assert(s1.l == 3.0L);
     assert(s1.b == true);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
@@ -354,7 +368,7 @@ void structTests() {
     s2.b = true;
 
     assert(memcmp(&s1, &s2, sizeof(S)) != 0);
-    __builtin_clear_padding(&s1);
+    std::__clear_padding_if_needed(s1);
     assert(s1.i == 4);
     assert(s1.b == true);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
@@ -381,7 +395,7 @@ void structTests() {
     s2.c2 = 'b';
 
     assert(memcmp(&s1, &s2, sizeof(S)) != 0);
-    __builtin_clear_padding(&s1);
+    std::__clear_padding_if_needed(s1);
     assert(s1.c1 == 'a');
     assert(s1.c2 == 'b');
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
@@ -412,7 +426,7 @@ void structTests() {
     s2.c3 = 'c';
 
     assert(memcmp(&s1, &s2, sizeof(S)) != 0);
-    __builtin_clear_padding(&s1);
+    std::__clear_padding_if_needed(s1);
     assert(s1.c1 == 'a');
     assert(s1.c2 == 'b');
     assert(s1.c3 == 'c');
@@ -456,6 +470,10 @@ void structTests() {
     s2.y = 'a';
     s1.z = true;
     s2.z = true;
+    // for non trivially copyable types, __builtin_clear_padding matches gcc's behaviour
+    // where the pointer to the object must be known to the compiler
+    // using libc++'s __clear_padding_if_needed would make the object "unknown" to the compiler
+    // note that in atomic<T>, T must be trivially copyable
     __builtin_clear_padding(&s2);
     assert(s2.x == 0xFFFFFFFF);
     assert(s2.y == 'a');
@@ -517,6 +535,10 @@ void structTests() {
     s2.y  = 'a';
     s1.z  = true;
     s2.z  = true;
+    // for non trivially copyable types, __builtin_clear_padding matches gcc's behaviour
+    // where the pointer to the object must be known to the compiler
+    // using libc++'s __clear_padding_if_needed would make the object "unknown" to the compiler
+    // note that in atomic<T>, T must be trivially copyable
     __builtin_clear_padding(&s2);
     assert(s2.x1 == 0xFFFFFFFF);
     assert(s2.x2 == 0xFAFAFAFA);
@@ -579,6 +601,10 @@ void structTests() {
     s2.y  = 'a';
     s1.z  = true;
     s2.z  = true;
+    // for non trivially copyable types, __builtin_clear_padding matches gcc's behaviour
+    // where the pointer to the object must be known to the compiler
+    // using libc++'s __clear_padding_if_needed would make the object "unknown" to the compiler
+    // note that in atomic<T>, T must be trivially copyable
     __builtin_clear_padding(&s2);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
@@ -626,6 +652,10 @@ void structTests() {
     s2.b2 = true;
     s1.s  = true;
     s2.s  = true;
+    // for non trivially copyable types, __builtin_clear_padding matches gcc's behaviour
+    // where the pointer to the object must be known to the compiler
+    // using libc++'s __clear_padding_if_needed would make the object "unknown" to the compiler
+    // note that in atomic<T>, T must be trivially copyable
     __builtin_clear_padding(&s2);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
@@ -652,7 +682,7 @@ void structTests() {
     s2.b3 = 27;
     s1.b4 = 3;
     s2.b4 = 3;
-    __builtin_clear_padding(&s2);
+    std::__clear_padding_if_needed(s2);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
@@ -672,7 +702,7 @@ void structTests() {
     s1.b2 = 1;
     s2.b1 = 1;
     s2.b2 = 1;
-    __builtin_clear_padding(&s2);
+    std::__clear_padding_if_needed(s2);
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
@@ -714,7 +744,7 @@ void unionTests() {
     u1.c = '4';
     u2.c = '4';
 
-    __builtin_clear_padding(&u1); // should have no effect
+    std::__clear_padding_if_needed(u1); // should have no effect
     assert(u1.c == '4');
 
     assert(memcmp(&u1, &u2, sizeof(u)) == 0);
@@ -739,12 +769,14 @@ void unionTests() {
     u2.s1.c1 = '4';
 
     assert(memcmp(&u1, &u2, sizeof(u)) != 0);
-    __builtin_clear_padding(&u1);
+    std::__clear_padding_if_needed(u1);
     assert(u1.s1.c1 == '4');
     assert(memcmp(&u1, &u2, sizeof(u)) == 0);
   }
 }
 
+// libc++'s __clear_padding_if_needed does not handle arrays
+// as std::atomic does not support arrays
 void arrayTests() {
   // no padding
   {
@@ -846,7 +878,7 @@ void vectorTests() {
     v2[7] = true;
     v2[8] = false;
 
-    __builtin_clear_padding(&v1);
+    std::__clear_padding_if_needed(v1);
     assert(v1[0] == true);
     assert(v1[1] == false);
     assert(v1[7] == true);
@@ -867,7 +899,7 @@ void vectorTests() {
     v2[1] = 2.0L;
     v2[2] = 3.0L;
 
-    __builtin_clear_padding(&v1);
+    std::__clear_padding_if_needed(v1);
     assert(v1[0] == 1.0L);
     assert(v1[1] == 2.0L);
     assert(v1[2] == 3.0L);
@@ -887,7 +919,7 @@ void vectorTests() {
     v2[1] = 2.0f;
     v2[2] = 3.0f;
 
-    __builtin_clear_padding(&v1);
+    std::__clear_padding_if_needed(v1);
     assert(v1[0] == 1.0f);
     assert(v1[1] == 2.0f);
     assert(v1[2] == 3.0f);
