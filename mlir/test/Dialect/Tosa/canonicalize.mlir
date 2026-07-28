@@ -759,6 +759,19 @@ func.func @reshape_canonicalize_const_splat() -> (tensor<10xi32>, tensor<1x10xi3
 
 // -----
 
+// CHECK-LABEL: @reshape_canonicalize_const_resource
+func.func @reshape_canonicalize_const_resource() -> (tensor<5xi32>, tensor<1x5xi32>) {
+  // CHECK-DAG: %[[VAR0:.+]] = "tosa.const"() <{values = dense_resource<reshape_resource> : tensor<5xi32>}
+  // CHECK-DAG: %[[VAR1:.+]] = "tosa.const"() <{values = dense_resource<reshape_resource> : tensor<1x5xi32>}
+  // CHECK: return %[[VAR0]], %[[VAR1]]
+  %0 = "tosa.const"() {values = dense_resource<reshape_resource> : tensor<5xi32>} : () -> tensor<5xi32>
+  %2 = "tosa.const_shape"() {values = dense<[1, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.reshape %0, %2 : (tensor<5xi32>, !tosa.shape<2>) -> tensor<1x5xi32>
+  return %0 , %1 : tensor<5xi32>, tensor<1x5xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @reshape_canonicalize_const_sparse
 func.func @reshape_canonicalize_const_sparse() -> (tensor<3xi32>, tensor<1x3xi32>) {
   // CHECK: tosa.reshape
@@ -2266,3 +2279,10 @@ func.func @test_partially_foldable(%arg0: tensor<1x1x8x8xf32>, %arg1: tensor<1x2
   %2 = tosa.concat %0, %1 {axis = 1 : i32} : (tensor<1x2x8x8xf32>, tensor<1x2x8x8xf32>) -> tensor<1x4x8x8xf32>
   return %2 : tensor<1x4x8x8xf32>
 }
+{-#
+  dialect_resources: {
+    builtin: {
+      reshape_resource: "0x040000000000000001000000020000000300000004000000"
+    }
+  }
+#-}

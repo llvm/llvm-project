@@ -2140,6 +2140,17 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
         llvm::cast<ShapedType>(operand.getType()).clone(shapeVec));
   }
 
+  if (auto operand = llvm::dyn_cast_if_present<DenseResourceElementsAttr>(
+          adaptor.getInput1())) {
+    // Constants must have static shape.
+    if (!outputTy.hasStaticShape())
+      return {};
+
+    // Resource-backed constants can be rematerialized as a new view of the same
+    // underlying blob without duplicating the resource payload.
+    return DenseResourceElementsAttr::get(outputTy, operand.getRawHandle());
+  }
+
   return {};
 }
 
