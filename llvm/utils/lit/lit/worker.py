@@ -8,6 +8,7 @@ and store it in global variables. This reduces the cost of each task.
 import contextlib
 import os
 import signal
+import threading
 import time
 import traceback
 
@@ -20,7 +21,7 @@ _lit_config = None
 _parallelism_semaphores = None
 
 
-def initialize(lit_config, parallelism_semaphores):
+def initialize(lit_config, parallelism_semaphores, ignore_sigint=True):
     """Copy data shared by all test executions into worker processes"""
     global _lit_config
     global _parallelism_semaphores
@@ -30,7 +31,8 @@ def initialize(lit_config, parallelism_semaphores):
     # We use the following strategy for dealing with Ctrl+C/KeyboardInterrupt in
     # subprocesses created by the multiprocessing.Pool.
     # https://noswap.com/blog/python-multiprocessing-keyboardinterrupt
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if ignore_sigint:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def execute(test):
@@ -69,6 +71,7 @@ def _execute(test, lit_config):
     result.elapsed = time.time() - start
     result.start = start
     result.pid = os.getpid()
+    result.tid = threading.get_ident()
     return result
 
 

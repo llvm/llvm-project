@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import enum
 import os
 import pathlib
@@ -68,6 +69,48 @@ class TestUpdaterException(Exception):
 # COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
 # empty as a result of conditinal substitution.
 kPdbgRegex = "%dbg\\(([^)'\"]*)\\)((?:.|\\n)*)"
+
+
+class _UmaskGate:
+    def __init__(self):
+        self._cv = threading.Condition()
+        self._active_readers = 0
+        self._writer_active = False
+        self._writers_waiting = 0
+
+    @contextlib.contextmanager
+    def read(self):
+        with self._cv:
+            while self._writer_active or self._writers_waiting:
+                self._cv.wait()
+            self._active_readers += 1
+        try:
+            yield
+        finally:
+            with self._cv:
+                self._active_readers -= 1
+                if self._active_readers == 0:
+                    self._cv.notify_all()
+
+    @contextlib.contextmanager
+    def write(self):
+        with self._cv:
+            self._writers_waiting += 1
+            try:
+                while self._writer_active or self._active_readers > 0:
+                    self._cv.wait()
+            finally:
+                self._writers_waiting -= 1
+            self._writer_active = True
+        try:
+            yield
+        finally:
+            with self._cv:
+                self._writer_active = False
+                self._cv.notify_all()
+
+
+_umask_gate = _UmaskGate()
 
 
 def buildPdbgCommand(msg, cmd):
@@ -463,11 +506,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             # os.umask as the umask argument in subprocess.Popen is not
             # available before Python 3.9. Once LLVM requires at least Python
             # 3.9, this code should be updated to use umask argument.
-            old_umask = -1
-            if cmd_shenv.umask != -1:
-                old_umask = os.umask(cmd_shenv.umask)
-            procs.append(
-                subprocess.Popen(
+            def spawn():
+                return subprocess.Popen(
                     args,
                     cwd=cmd_shenv.cwd,
                     executable=executable,
@@ -479,9 +519,17 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     universal_newlines=True,
                     errors="replace",
                 )
-            )
-            if old_umask != -1:
-                os.umask(old_umask)
+
+            if cmd_shenv.umask != -1:
+                with _umask_gate.write():
+                    old_umask = os.umask(cmd_shenv.umask)
+                    try:
+                        procs.append(spawn())
+                    finally:
+                        os.umask(old_umask)
+            else:
+                with _umask_gate.read():
+                    procs.append(spawn())
             proc_not_counts.append(not_count)
             if not not_crash and not_args == ["not"]:
                 proc_not_fail_if_crash.append(True)

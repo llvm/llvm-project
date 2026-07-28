@@ -529,6 +529,13 @@ def parse_args():
         help="Show all features used in the test suite (in XFAIL, UNSUPPORTED and REQUIRES) and exit",
         action="store_true",
     )
+    debug_group.add_argument(
+        "--use-process-workers",
+        dest="use_process_workers",
+        action="store_true",
+        default=False,
+        help="Run tests in separate worker processes instead of threads",
+    )
 
     # LIT is special: environment variables override command line arguments.
     env_args = shlex.split(os.environ.get("LIT_OPTS", ""))

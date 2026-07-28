@@ -171,7 +171,7 @@ class GoogleTest(TestFormat):
                     "GTEST_SHARD_INDEX": os.environ.get("GTEST_SHARD_INDEX", shard_idx),
                 }
             )
-        test.config.environment.update(shard_env)
+        test_env = {**test.config.environment, **shard_env}
 
         cmd = [testPath]
         cmd = self.prepareCmd(cmd)
@@ -190,7 +190,7 @@ class GoogleTest(TestFormat):
         try:
             out, _, exitCode = lit.util.executeCommand(
                 cmd,
-                env=test.config.environment,
+                env=test_env,
                 timeout=test.config.maxIndividualTestTime,
                 redirect_stderr=True,
             )
@@ -353,6 +353,7 @@ class GoogleTest(TestFormat):
                         elapsed_time = float(testinfo["time"][:-1])
                         res = lit.Test.Result(returnCode, output, elapsed_time)
                         res.pid = test.result.pid or 0
+                        res.tid = test.result.tid or 0
                         res.start = start_time
                         start_time = start_time + elapsed_time
                         subtest.setResult(res)

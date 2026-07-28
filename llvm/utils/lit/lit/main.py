@@ -43,6 +43,7 @@ def main(builtin_params={}):
         pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
+        use_process_workers=opts.use_process_workers,
         maxRetriesPerTest=opts.maxRetriesPerTest,
         update_tests=opts.update_tests,
         maxIndividualTestTime=opts.maxIndividualTestTime,

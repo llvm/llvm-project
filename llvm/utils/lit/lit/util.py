@@ -447,15 +447,21 @@ def killProcessAndChildren(pid):
 
 def memoize(f):
     cache = {}  # Unbounded
+    lock = threading.Lock()
 
     def make_key(args, kwargs):
         return args, tuple(kwargs.items())
 
     def memoized(*args, **kwargs):
         key = make_key(args, kwargs)
-        if key not in cache:
-            cache[key] = f(*args, **kwargs)
-        return cache[key]
+        try:
+            return cache[key]
+        except KeyError:
+            pass
+        with lock:
+            if key not in cache:
+                cache[key] = f(*args, **kwargs)
+            return cache[key]
 
     return memoized
 

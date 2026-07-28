@@ -170,6 +170,7 @@ class Result:
         self.elapsed = elapsed
         self.start = None
         self.pid = None
+        self.tid = None
         # The metrics reported by this test.
         self.metrics = {}
         # The micro-test results reported by this test.

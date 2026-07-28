@@ -1,9 +1,15 @@
+import threading
 import multiprocessing
 import os
 import platform
 import sys
 import time
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    wait,
+)
 from concurrent.futures.process import BrokenProcessPool
 import concurrent.futures.process
 
@@ -135,53 +141,76 @@ class Run:
         except Exception:
             pass
 
+    def _abort_thread_executors(self, executors, future_to_test):
+        for future in list(future_to_test):
+            future.cancel()
+        for ex in executors:
+            if sys.version_info >= (3, 9):
+                ex.shutdown(wait=False, cancel_futures=True)
+            else:
+                ex.shutdown(wait=False)
+
     def _execute(self, deadline):
+        use_threads = not self.lit_config.use_process_workers
+
         self._increase_process_limit()
 
+        semaphore_class = (
+            threading.BoundedSemaphore
+            if use_threads
+            else multiprocessing.BoundedSemaphore
+        )
         semaphores = {
-            k: multiprocessing.BoundedSemaphore(v)
+            k: semaphore_class(v)
             for k, v in self.lit_config.parallelism_groups.items()
             if v is not None
         }
 
-        # Windows has a limit of 60 workers per pool, so we need to use multiple pools
-        # if we have more workers requested than the limit.
-        # Also, allow to override the limit with the LIT_WINDOWS_MAX_WORKERS_PER_POOL environment variable.
-        max_workers_per_pool = (
-            WINDOWS_MAX_WORKERS_PER_POOL if os.name == "nt" else self.workers
-        )
-        max_workers_per_pool = int(
-            os.getenv("LIT_WINDOWS_MAX_WORKERS_PER_POOL", max_workers_per_pool)
-        )
-
-        num_pools = max(1, _ceilDiv(self.workers, max_workers_per_pool))
-
-        # Distribute self.workers across num_pools as evenly as possible
-        workers_per_pool_list = [self.workers // num_pools] * num_pools
-        for pool_idx in range(self.workers % num_pools):
-            workers_per_pool_list[pool_idx] += 1
-
-        if num_pools > 1:
-            self.lit_config.note(
-                "Using %d pools balancing %d workers total distributed as %s (Windows worker limit workaround)"
-                % (num_pools, self.workers, workers_per_pool_list)
+        if use_threads:
+            lit.worker.initialize(self.lit_config, semaphores, ignore_sigint=False)
+            executors = [ThreadPoolExecutor(max_workers=self.workers)]
+        else:
+            # Windows has a limit of 60 workers per pool, so we need to use multiple pools
+            # if we have more workers requested than the limit.
+            # Also, allow to override the limit with the LIT_WINDOWS_MAX_WORKERS_PER_POOL environment variable.
+            max_workers_per_pool = (
+                WINDOWS_MAX_WORKERS_PER_POOL if os.name == "nt" else self.workers
+            )
+            max_workers_per_pool = int(
+                os.getenv("LIT_WINDOWS_MAX_WORKERS_PER_POOL", max_workers_per_pool)
             )
 
-        executors = [
-            ProcessPoolExecutor(
-                max_workers=pool_size,
-                initializer=lit.worker.initialize,
-                initargs=(self.lit_config, semaphores),
-            )
-            for pool_size in workers_per_pool_list
-        ]
+            num_pools = max(1, _ceilDiv(self.workers, max_workers_per_pool))
+
+            # Distribute self.workers across num_pools as evenly as possible
+            workers_per_pool_list = [self.workers // num_pools] * num_pools
+            for pool_idx in range(self.workers % num_pools):
+                workers_per_pool_list[pool_idx] += 1
+
+            if num_pools > 1:
+                self.lit_config.note(
+                    "Using %d pools balancing %d workers total distributed as %s (Windows worker limit workaround)"
+                    % (num_pools, self.workers, workers_per_pool_list)
+                )
+
+            executors = [
+                ProcessPoolExecutor(
+                    max_workers=pool_size,
+                    initializer=lit.worker.initialize,
+                    initargs=(self.lit_config, semaphores),
+                )
+                for pool_size in workers_per_pool_list
+            ]
 
         future_to_test = {}
 
         try:
             self._dispatch_and_wait(executors, future_to_test, deadline)
         except BaseException:
-            self._abort_executors(executors, future_to_test)
+            if use_threads:
+                self._abort_thread_executors(executors, future_to_test)
+            else:
+                self._abort_executors(executors, future_to_test)
             raise
         else:
             for ex in executors:

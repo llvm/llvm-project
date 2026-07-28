@@ -294,9 +294,10 @@ class TimeTraceReport(Report):
         elapsed_time = test.result.elapsed or 0.0
         start_time = test.result.start - first_start_time if test.result.start else 0.0
         pid = test.result.pid or 0
+        tid = test.result.tid or 0
         return {
             "pid": pid,
-            "tid": 1,
+            "tid": tid,
             "ph": "X",
             "ts": int(start_time * 1000000.0),
             "dur": int(elapsed_time * 1000000.0),

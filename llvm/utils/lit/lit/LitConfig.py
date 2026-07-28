@@ -41,6 +41,7 @@ class LitConfig:
         parallelism_groups={},
         per_test_coverage=False,
         gtest_sharding=True,
+        use_process_workers=False,
         update_tests=False,
     ):
         # The name of the test runner.
@@ -53,6 +54,7 @@ class LitConfig:
         self.valgrindUserArgs = list(valgrindArgs)
         self.noExecute = noExecute
         self.debug = debug
+        self.use_process_workers = bool(use_process_workers)
         self.isWindows = bool(isWindows)
         self.order = order
         self.params = dict(params)
