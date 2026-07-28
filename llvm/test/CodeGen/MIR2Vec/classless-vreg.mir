@@ -11,6 +11,8 @@
 # vocabulary entry rather than crashing.
 
 --- |
+  target triple = "x86_64-unknown-linux-gnu"
+
   define i32 @g(i32 %a) { ret i32 0 }
 ...
 ---
