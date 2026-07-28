@@ -5,7 +5,7 @@
 // get a real body if their device codegen is clean, or a trap body if it
 // would otherwise raise a target-mismatch diagnostic.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
