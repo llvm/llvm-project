@@ -1,0 +1,178 @@
+# REQUIRES: asserts
+#
+# RUN: llc -mtriple=riscv64 \
+# RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup -o - %s \
+# RUN:   | FileCheck -check-prefix=RV64 %s
+# RUN: llc -mtriple=riscv64 \
+# RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup \
+# RUN:   -run-pass=riscv-post-ra-expand-pseudo -o - %s \
+# RUN:   | FileCheck -check-prefix=RV64-EXPAND %s
+# RUN: llc -mtriple=riscv32 \
+# RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup -o - %s \
+# RUN:   | FileCheck -check-prefix=RV32 %s
+#
+# Test codegen for large stack-frame base address materializations.
+
+--- |
+  define void @test_same_region() nounwind { ret void }
+  define void @test_different_regions() nounwind { ret void }
+  define void @test_small_offset_no_pseudo() nounwind { ret void }
+  define void @test_rv32() nounwind { ret void }
+...
+---
+# Multiple accesses to stack slots in the same 4096-aligned region.
+# Each access independently materializes LUI+ADD to the same base.
+name: test_same_region
+alignment: 4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment: 8
+  hasCalls: false
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+  - { id: 1, size: 8, alignment: 8 }
+  - { id: 2, size: 16384, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; RV64-LABEL: name: test_same_region
+    ; RV64:      $x12 = LUI 4
+    ; RV64-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV64-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
+    ; RV64-NEXT: $x10 = LUI 4
+    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
+    ; RV64-NEXT: $x10 = LUI 4
+    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-NEXT: $x12 = LD killed $x10, 24 :: (load (s64))
+    ; RV64-NEXT: $x10 = LUI 4
+    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-NEXT: $x13 = LD killed $x10, 16 :: (load (s64))
+
+    ; RV64-EXPAND-LABEL: name: test_same_region
+    ; RV64-EXPAND:      $x12 = LUI 4
+    ; RV64-EXPAND-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV64-EXPAND-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
+    ; RV64-EXPAND-NEXT: $x10 = LUI 4
+    ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-EXPAND-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
+    ; RV64-EXPAND-NEXT: $x10 = LUI 4
+    ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-EXPAND-NEXT: $x12 = LD killed $x10, 24 :: (load (s64))
+    ; RV64-EXPAND-NEXT: $x10 = LUI 4
+    ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-EXPAND-NEXT: $x13 = LD killed $x10, 16 :: (load (s64))
+
+    SD $x10, %stack.0, 0 :: (store (s64))
+    SD $x11, %stack.1, 0 :: (store (s64))
+    $x12 = LD %stack.0, 0 :: (load (s64))
+    $x13 = LD %stack.1, 0 :: (load (s64))
+    PseudoRET
+...
+---
+# Accesses to stack slots in different 4096-aligned regions.
+name: test_different_regions
+alignment: 4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment: 8
+  hasCalls: false
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+  - { id: 1, size: 4096, alignment: 8 }
+  - { id: 2, size: 8, alignment: 8 }
+  - { id: 3, size: 16384, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; RV64-LABEL: name: test_different_regions
+    ; RV64:      $x12 = LUI 5
+    ; RV64-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV64-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
+    ; RV64-NEXT: $x10 = LUI 4
+    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
+
+    ; RV64-EXPAND-LABEL: name: test_different_regions
+    ; RV64-EXPAND:      $x12 = LUI 5
+    ; RV64-EXPAND-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV64-EXPAND-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
+    ; RV64-EXPAND-NEXT: $x10 = LUI 4
+    ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-EXPAND-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
+
+    SD $x10, %stack.0, 0 :: (store (s64))
+    SD $x11, %stack.2, 0 :: (store (s64))
+    PseudoRET
+...
+---
+# Small stack frame -- offsets fit in 12-bit signed immediate.
+name: test_small_offset_no_pseudo
+alignment: 4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment: 8
+  hasCalls: false
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+  - { id: 1, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; RV64-LABEL: name: test_small_offset_no_pseudo
+    ; RV64-NOT: LUI
+    ; RV64:     SD $x10, $x2, 8 :: (store (s64))
+    ; RV64-NEXT: SD $x11, $x2, 0 :: (store (s64))
+
+    ; RV64-EXPAND-LABEL: name: test_small_offset_no_pseudo
+    ; RV64-EXPAND-NOT: LUI
+    ; RV64-EXPAND:     SD $x10, $x2, 8 :: (store (s64))
+    ; RV64-EXPAND-NEXT: SD $x11, $x2, 0 :: (store (s64))
+
+    SD $x10, %stack.0, 0 :: (store (s64))
+    SD $x11, %stack.1, 0 :: (store (s64))
+    PseudoRET
+...
+---
+# RV32 -- verify with 32-bit stores/loads.
+name: test_rv32
+alignment: 4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment: 4
+  hasCalls: false
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+  - { id: 1, size: 4, alignment: 4 }
+  - { id: 2, size: 16384, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; RV32-LABEL: name: test_rv32
+    ; RV32:      $x12 = LUI 4
+    ; RV32-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV32-NEXT: SW $x10, killed $x12, 12 :: (store (s32))
+    ; RV32-NEXT: $x10 = LUI 4
+    ; RV32-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV32-NEXT: SW $x11, killed $x10, 8 :: (store (s32))
+    ; RV32-NEXT: $x10 = LUI 4
+    ; RV32-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV32-NEXT: $x12 = LW killed $x10, 12 :: (load (s32))
+    ; RV32-NEXT: $x10 = LUI 4
+    ; RV32-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV32-NEXT: $x13 = LW killed $x10, 8 :: (load (s32))
+
+    SW $x10, %stack.0, 0 :: (store (s32))
+    SW $x11, %stack.1, 0 :: (store (s32))
+    $x12 = LW %stack.0, 0 :: (load (s32))
+    $x13 = LW %stack.1, 0 :: (load (s32))
+    PseudoRET
+...
