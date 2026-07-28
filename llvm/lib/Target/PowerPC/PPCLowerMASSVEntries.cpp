@@ -46,7 +46,6 @@ public:
   StringRef getPassName() const override { return "PPC Lower MASS Entries"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
 private:
