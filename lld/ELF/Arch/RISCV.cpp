@@ -74,9 +74,12 @@ public:
 #define INTERNAL_R_RISCV_GPREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
-#define INTERNAL_R_RISCV_BASE_IDX_ADD 260
-#define INTERNAL_R_RISCV_BASE_IDX_LO12_I 261
-#define INTERNAL_R_RISCV_BASE_IDX_LO12_S 262
+#define INTERNAL_R_RISCV_BASE_IDX_X0REL_I 260
+#define INTERNAL_R_RISCV_BASE_IDX_X0REL_S 261
+#define INTERNAL_R_RISCV_BASE_IDX_X0REL_ADD 262
+#define INTERNAL_R_RISCV_BASE_IDX_GPREL_I 263
+#define INTERNAL_R_RISCV_BASE_IDX_GPREL_S 264
+#define INTERNAL_R_RISCV_BASE_IDX_GPREL_ADD 265
 
 const uint64_t dtpOffset = 0x800;
 
@@ -652,19 +655,37 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   }
 
-  case INTERNAL_R_RISCV_BASE_IDX_ADD: {
+  case INTERNAL_R_RISCV_BASE_IDX_X0REL_ADD: {
+    uint32_t insn = (read32le(loc) & ~(31 << 20)) | (X_X0 << 20);
+    write32le(loc, insn);
+    return;
+  }
+
+  case INTERNAL_R_RISCV_BASE_IDX_X0REL_I:
+  case INTERNAL_R_RISCV_BASE_IDX_X0REL_S: {
+    checkInt(ctx, loc, val, 12, rel);
+    uint32_t insn = read32le(loc);
+    if (rel.type == INTERNAL_R_RISCV_BASE_IDX_X0REL_I)
+      insn = setLO12_I(insn, val);
+    else
+      insn = setLO12_S(insn, val);
+    write32le(loc, insn);
+    return;
+  }
+
+  case INTERNAL_R_RISCV_BASE_IDX_GPREL_ADD: {
     uint32_t insn = (read32le(loc) & ~(31 << 20)) | (X_GP << 20);
     write32le(loc, insn);
     return;
   }
 
-  case INTERNAL_R_RISCV_BASE_IDX_LO12_I:
-  case INTERNAL_R_RISCV_BASE_IDX_LO12_S: {
+  case INTERNAL_R_RISCV_BASE_IDX_GPREL_I:
+  case INTERNAL_R_RISCV_BASE_IDX_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
     int64_t displace = SignExtend64(val - gp->getVA(ctx), bits);
     checkInt(ctx, loc, displace, 12, rel);
     uint32_t insn = read32le(loc);
-    if (rel.type == INTERNAL_R_RISCV_BASE_IDX_LO12_I)
+    if (rel.type == INTERNAL_R_RISCV_BASE_IDX_GPREL_I)
       insn = setLO12_I(insn, displace);
     else
       insn = setLO12_S(insn, displace);
@@ -1038,6 +1059,23 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     case R_RISCV_LO12_S:
       sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
       break;
+    case R_RISCV_BASE_IDX_ADD: {
+      uint32_t insn = read32le(sec.content().data() + r.offset) & 0xFE000000;
+      if (insn == 0) {
+        // remove add a0, a0, zero
+        sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+        remove = 4;
+      } else {
+        sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_X0REL_ADD;
+      }
+      break;
+    }
+    case R_RISCV_BASE_IDX_LO12_I:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_X0REL_I;
+      break;
+    case R_RISCV_BASE_IDX_LO12_S:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_X0REL_S;
+      break;
     }
     return;
   }
@@ -1062,13 +1100,13 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_S;
     break;
   case R_RISCV_BASE_IDX_ADD:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_ADD;
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_GPREL_ADD;
     break;
   case R_RISCV_BASE_IDX_LO12_I:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_LO12_I;
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_GPREL_I;
     break;
   case R_RISCV_BASE_IDX_LO12_S:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_LO12_S;
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_GPREL_S;
     break;
   }
 }
@@ -1381,9 +1419,12 @@ void RISCV::finalizeRelax(int passes) const {
           case INTERNAL_R_RISCV_GPREL_S:
           case INTERNAL_R_RISCV_X0REL_I:
           case INTERNAL_R_RISCV_X0REL_S:
-          case INTERNAL_R_RISCV_BASE_IDX_ADD:
-          case INTERNAL_R_RISCV_BASE_IDX_LO12_I:
-          case INTERNAL_R_RISCV_BASE_IDX_LO12_S:
+          case INTERNAL_R_RISCV_BASE_IDX_X0REL_I:
+          case INTERNAL_R_RISCV_BASE_IDX_X0REL_S:
+          case INTERNAL_R_RISCV_BASE_IDX_X0REL_ADD:
+          case INTERNAL_R_RISCV_BASE_IDX_GPREL_I:
+          case INTERNAL_R_RISCV_BASE_IDX_GPREL_S:
+          case INTERNAL_R_RISCV_BASE_IDX_GPREL_ADD:
             break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.

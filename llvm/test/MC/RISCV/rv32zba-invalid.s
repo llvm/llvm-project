@@ -15,15 +15,15 @@ sh3add.uw t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the foll
 # Base+index symbol names require a %base_idx_add modifier.
 sh1add a0, a0, a1, %hi(foo)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:20: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:20: note: unexpected extra operand for instruction
 # CHECK: :[[@LINE-3]]:20: note: operand must be a symbol with %base_idx_add specifier
 
 sh2add a0, a0, a1, %hi(foo)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:20: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:20: note:  unexpected extra operand for instruction
 # CHECK: :[[@LINE-3]]:20: note: operand must be a symbol with %base_idx_add specifier
 
 sh3add a0, a0, a1, %hi(foo)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:20: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:20: note: unexpected extra operand for instruction
 # CHECK: :[[@LINE-3]]:20: note: operand must be a symbol with %base_idx_add specifier
