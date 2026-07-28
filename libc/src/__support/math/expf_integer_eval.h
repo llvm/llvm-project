@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 
