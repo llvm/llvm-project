@@ -1027,7 +1027,7 @@ static char getSymbolNMTypeChar(GOFFObjectFile &, basic_symbol_iterator I) {
   case SymbolRef::ST_Function:
     return 't';
   default:
-    return '?';
+    llvm_unreachable("GOFFObjectFile::getSymbolType returned unexpected type");
   }
 }
 
