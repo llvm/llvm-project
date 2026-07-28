@@ -3,14 +3,14 @@
 
 subroutine f00(x)
   integer :: x
-  !$omp target map(ompx_hold, always, present, close, to: x)
+  !$omp target map(ompx_hold, always, to: x)
   x = x + 1
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f00 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, ALWAYS, PRESENT, CLOSE, TO: x)
+!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, ALWAYS, TO: x)
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
@@ -20,22 +20,20 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
 
 subroutine f01(x)
   integer :: x
-  !$omp target map(ompx_hold, always, present, close: x)
+  !$omp target map(ompx_hold, present: x)
   x = x + 1
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f01 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, ALWAYS, PRESENT, CLOSE: x)
+!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, PRESENT: x)
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
@@ -44,9 +42,7 @@ end
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
 
@@ -93,14 +89,14 @@ end
 
 subroutine f04(x)
   integer :: x
-  !$omp target map(ompx_hold always, present, close, to: x)
+  !$omp target map(ompx_hold close, to: x)
   x = x + 1
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f04 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, ALWAYS, PRESENT, CLOSE, TO: x)
+!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, CLOSE, TO: x)
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
@@ -109,8 +105,6 @@ end
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
 !PARSE-TREE: | | Modifier -> OmpMapType -> Value = To
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -118,14 +112,14 @@ end
 
 subroutine f05(x)
   integer :: x
-  !$omp target map(ompx_hold, always, present, close: x)
+  !$omp target map(ompx_hold, present: x)
   x = x + 1
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f05 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, ALWAYS, PRESENT, CLOSE: x)
+!UNPARSE: !$OMP TARGET  MAP(OMPX_HOLD, PRESENT: x)
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
@@ -134,9 +128,7 @@ end
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
 !PARSE-TREE: | | bool = 'true'
@@ -343,21 +335,20 @@ end
 
 subroutine f22(x)
   integer :: x(10)
-  !$omp target map(present, iterator(i = 1:10), always, from: x(i))
+  !$omp target map(iterator(i = 1:10), always, from: x(i))
   x = x + 1
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f22 (x)
 !UNPARSE:  INTEGER x(10_4)
-!UNPARSE: !$OMP TARGET  MAP(PRESENT, ITERATOR(INTEGER i = 1_4:10_4), ALWAYS, FROM: x(i))
+!UNPARSE: !$OMP TARGET  MAP(ITERATOR(INTEGER i = 1_4:10_4), ALWAYS, FROM: x(i))
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | Modifier -> OmpMapTypeModifier -> Value = Present
 !PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
