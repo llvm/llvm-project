@@ -12,10 +12,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The predicated store to the invariant address is sunk out of the loop.
 define void @invariant_pred_store_sunk_out_of_loop(ptr noalias %dst, ptr noalias readonly %src) {
 ; CHECK-LABEL: 'invariant_pred_store_sunk_out_of_loop'
-; CHECK:  Cost of 5 for VF 2: profitable to scalarize store i64 %sum.1, ptr %gep.dst, align 8
 ; CHECK:  Cost of 1 for VF 2: CLONE store vp<[[VP8:%[0-9]+]]>, ir<%gep.dst>
-; CHECK:  Cost for VF 2: 17 (Estimated cost per lane: 8.5)
-; CHECK:  LV: Selecting VF: 1.
+; CHECK:  Cost for VF 2: 12 (Estimated cost per lane: 6)
+; CHECK:  LV: Selecting VF: 2.
+; CHECK:  Cost of 1 for VF 2: CLONE store vp<[[VP8]]>, ir<%gep.dst>
 ;
 entry:
   %gep.dst = getelementptr inbounds i64, ptr %dst, i64 42
