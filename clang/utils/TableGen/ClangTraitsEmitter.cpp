@@ -153,6 +153,15 @@ void emitEnums(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "  UETT_Last = " << UETTs.size() + CXX11UETTs.size() - 1
      << " // UETT_Last == last UETT_XX in the enum.\n"
      << "};\n\n";
+
+  const auto ExpressionTraits =
+      getAllDerivedDefsInDeclOrder(Records, "ExpressionTrait");
+  OS << "/// Names for the expression traits.\n"
+        "enum ExpressionTrait {\n";
+  emitEnumerators(OS, ExpressionTraits);
+  OS << "  ET_Last = " << ExpressionTraits.size() - 1
+     << " // ET_Last == last ET_XX in the enum.\n"
+     << "};\n\n";
 }
 
 template <typename RangeT>
@@ -198,6 +207,9 @@ void emitArrays(const RecordKeeper &Records, raw_ostream &OS) {
       concat<const Record *const>(
           getAllDerivedDefsInDeclOrder(Records, "UnaryExprOrTypeTrait"),
           getAllDerivedDefsInDeclOrder(Records, "CXX11UnaryExprOrTypeTrait")));
+  emitNamesAndSpellings(
+      OS, "ExpressionTrait",
+      getAllDerivedDefsInDeclOrder(Records, "ExpressionTrait"));
 }
 
 void emitStdNameCases(const RecordKeeper &Records, raw_ostream &OS) {
