@@ -1463,7 +1463,8 @@ void APINotesSelectorDiagnosticReaderState::diagnoseUnused(Sema &S) const {
     S.Diag(SeenName->second.Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + SeenName->second.Name +
             "' has unmatched Where.Parameters " +
-            api_notes::formatAPINotesParameterSelector(Selector.Parameters))
+            api_notes::formatAPINotesParameterSelector(
+                Selector.ParameterSpellings))
                .str();
   }
 }

@@ -24,12 +24,12 @@ class Sema;
 struct APINotesParameterSelectorCandidates;
 namespace api_notes {
 class APINotesReader;
-}
+} // namespace api_notes
 
 /// One stored exact Where.Parameters selector tracked for diagnostics.
 struct APINotesSelectorDiagnosticEntry {
   api_notes::APINotesFunctionSelectorKey BroadKey;
-  llvm::SmallVector<std::string, 4> Parameters;
+  llvm::SmallVector<std::string, 4> ParameterSpellings;
   bool Used = false;
 };
 
@@ -62,7 +62,7 @@ struct APINotesSelectorDiagnosticReaderState {
     unsigned Index = Selectors.size();
     APINotesSelectorDiagnosticEntry Entry;
     Entry.BroadKey = Selector.Key.getWithoutParameterSelector();
-    Entry.Parameters = std::move(Selector.Parameters);
+    Entry.ParameterSpellings = std::move(Selector.ParameterSpellings);
     Selectors.push_back(std::move(Entry));
     SelectorIndices.insert({Selector.Key, Index});
   }

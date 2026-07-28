@@ -959,12 +959,12 @@ bool APINotesReader::Implementation::collectExactFunctionParameterSelectors(
 
     APINotesFunctionSelector Selector;
     Selector.Key = {Key, IsCXXMethod};
-    Selector.Parameters.reserve(Key.parameterTypeIDs->size());
+    Selector.ParameterSpellings.reserve(Key.parameterTypeIDs->size());
     for (IdentifierID TypeID : *Key.parameterTypeIDs) {
       std::optional<llvm::StringRef> TypeName = getIdentifierString(TypeID);
       if (!TypeName)
         return false;
-      Selector.Parameters.push_back(TypeName->str());
+      Selector.ParameterSpellings.push_back(TypeName->str());
     }
     Selectors.push_back(std::move(Selector));
   }
