@@ -13854,6 +13854,9 @@ def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
 def err_hlsl_sample_double_element_type
     : Error<"'%0' is not supported for resources containing %1">;
+def err_hlsl_sample_integer_element_type
+    : Error<"'%0' on resources containing %1 requires shader model 6.7 or "
+            "newer; the target shader model is %2">;
 def err_hlsl_samplecmp_requires_float
     : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
             "a floating point type">;

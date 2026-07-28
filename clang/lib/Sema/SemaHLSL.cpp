@@ -3833,6 +3833,37 @@ static bool CheckNoDoubleElementType(Sema &S, CallExpr *TheCall,
   return true;
 }
 
+// Sampling textures with an integer element type was introduced in SM 6.7 as
+// part of Advanced Texture Operations. The shader model only applies to DirectX
+// targets; Vulkan has no such restriction.
+static bool CheckIntegerElementTypeShaderModel(Sema &S, CallExpr *TheCall,
+                                               QualType ContainedType,
+                                               SampleKind Kind) {
+  // Comparison sampling requires a floating point element type at every shader
+  // model, which the caller diagnoses.
+  if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero)
+    return false;
+
+  // 'bool' is an integer type in HLSL, but sampling bool resources is never
+  // allowed, so it must not be reported as requiring shader model 6.7.
+  QualType EltTy = getResourceElementType(ContainedType);
+  if (!EltTy->isIntegerType() || EltTy->isBooleanType())
+    return false;
+
+  const TargetInfo &TI = S.Context.getTargetInfo();
+  if (!TI.getTriple().isDXIL())
+    return false;
+
+  VersionTuple SMVersion = TI.getPlatformMinVersion();
+  if (SMVersion >= VersionTuple(6, 7))
+    return false;
+
+  S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_sample_integer_element_type)
+      << getCurrentResourceMethodName(S, getSampleMethodName(Kind))
+      << ContainedType << SMVersion.getAsString();
+  return true;
+}
+
 static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
                                            bool IncludeArraySlice = true) {
   // Check the texture handle.
@@ -3947,6 +3978,10 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
          "Expecting a contained type for resource with a dimension "
          "attribute.");
   QualType ReturnType = ResourceTy->getContainedType();
+
+  if (CheckNoDoubleElementType(S, TheCall, ReturnType,
+                               IsCmp ? "GatherCmp" : "Gather"))
+    return true;
 
   if (IsCmp) {
     if (!ReturnType->hasFloatingRepresentation()) {
@@ -4099,6 +4134,9 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
 
   if (CheckNoDoubleElementType(S, TheCall, ReturnType,
                                getSampleMethodName(Kind)))
+    return true;
+
+  if (CheckIntegerElementTypeShaderModel(S, TheCall, ReturnType, Kind))
     return true;
 
   if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
