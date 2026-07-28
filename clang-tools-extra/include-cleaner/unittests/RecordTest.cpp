@@ -20,6 +20,7 @@
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Testing/TestAST.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -135,7 +136,7 @@ TEST_F(RecordASTTest, ImplicitTemplates) {
   }
   )cpp";
   Inputs.Code = R"cpp(
-  #include "dispatch.h"  
+  #include "dispatch.h"
   struct MyGetter {
     template <class T> static int get() { return T::value; }
   };
@@ -202,6 +203,46 @@ TEST_F(RecordPPTest, CapturesIncludes) {
                 AST.sourceManager().getMainFileID(), MainFile.point("M")));
   EXPECT_EQ(M.Resolved, std::nullopt);
   EXPECT_TRUE(M.Angled);
+}
+
+TEST_F(RecordPPTest, CapturesImports) {
+  llvm::Annotations MainFile(R"objc(
+    $H^#import "./header.h"
+    $M^#import <missing.h>
+  )objc");
+  Inputs.Code = MainFile.code();
+  Inputs.ExtraFiles["header.h"] = "";
+  Inputs.ErrorOK = true; // missing header
+  Inputs.ExtraArgs.push_back("-x");
+  Inputs.ExtraArgs.push_back("objective-c");
+  auto AST = build();
+
+  auto Includes = Recorded.Includes.all();
+  ASSERT_EQ(Includes.size(), 2u);
+  EXPECT_THAT(Includes[0], spelled("./header.h"));
+  EXPECT_EQ(Includes[0].Directive, clang::tooling::IncludeDirective::Import);
+  EXPECT_THAT(Includes[1], spelled("missing.h"));
+  EXPECT_EQ(Includes[1].Directive, clang::tooling::IncludeDirective::Import);
+}
+
+TEST_F(RecordPPTest, CapturesMixedDirectives) {
+  llvm::Annotations MainFile(R"objc(
+    $H^#import "./header.h"
+    $I^#include "./header2.h"
+  )objc");
+  Inputs.Code = MainFile.code();
+  Inputs.ExtraFiles["header.h"] = "";
+  Inputs.ExtraFiles["header2.h"] = "";
+  Inputs.ExtraArgs.push_back("-x");
+  Inputs.ExtraArgs.push_back("objective-c");
+  auto AST = build();
+
+  auto Includes = Recorded.Includes.all();
+  ASSERT_EQ(Includes.size(), 2u);
+  EXPECT_THAT(Includes[0], spelled("./header.h"));
+  EXPECT_EQ(Includes[0].Directive, clang::tooling::IncludeDirective::Import);
+  EXPECT_THAT(Includes[1], spelled("./header2.h"));
+  EXPECT_EQ(Includes[1].Directive, clang::tooling::IncludeDirective::Include);
 }
 
 TEST_F(RecordPPTest, CapturesMacroRefs) {

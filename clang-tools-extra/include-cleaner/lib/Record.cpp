@@ -18,30 +18,27 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
-#include <algorithm>
 #include <assert.h>
 #include <memory>
 #include <optional>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -79,6 +76,15 @@ public:
     I.Line = SM.getSpellingLineNumber(Hash);
     I.Spelled = SpelledFilename;
     I.Angled = IsAngled;
+    llvm::StringRef DirectiveName;
+    if (IncludeTok.is(tok::raw_identifier)) {
+      DirectiveName = IncludeTok.getRawIdentifier();
+    } else if (IncludeTok.getIdentifierInfo()) {
+      DirectiveName = IncludeTok.getIdentifierInfo()->getName();
+    }
+    if (DirectiveName == "import") {
+      I.Directive = clang::tooling::IncludeDirective::Import;
+    }
     Recorded.Includes.add(I);
   }
 
