@@ -618,15 +618,17 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
   // They only exist so that the calls to missing functions can validate.
   if (sym->hasTableIndex() || sym->isStub)
     return;
-  sym->setTableIndex(ctx.arg.tableBase + indirectFunctions.size());
-  indirectFunctions.emplace_back(sym);
 
-  // Pad with null function pointers if alignment is requesting.
+  // Pad with null function pointers if alignment is requested.
   if (ctx.arg.functionPointerAlignment > 1) {
-    while ((ctx.arg.tableBase + indirectFunctions.size()) % ctx.arg.functionPointerAlignment) {
+    while ((ctx.arg.tableBase + indirectFunctions.size()) %
+           ctx.arg.functionPointerAlignment) {
       indirectFunctions.push_back(nullptr);
     }
   }
+
+  sym->setTableIndex(ctx.arg.tableBase + indirectFunctions.size());
+  indirectFunctions.emplace_back(sym);
 }
 
 void ElemSection::writeBody() {

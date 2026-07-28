@@ -22,6 +22,8 @@ _start:
   drop
   i32.const func3
   drop
+  i32.const fptr
+  drop
   end_function
 
 .globl func1
@@ -39,23 +41,36 @@ func3:
   .functype func3 () -> ()
   end_function
 
+.section .data.fptr,"",@
+.globl fptr
+.p2align 2
+fptr:
+  .int32 func1
+  .size fptr, 4
+
 # CHECK-DEFAULT:        - Type:            ELEM
 # CHECK-DEFAULT-NEXT:     Segments:
 # CHECK-DEFAULT-NEXT:       - Offset:
 # CHECK-DEFAULT-NEXT:           Opcode:          I32_CONST
 # CHECK-DEFAULT-NEXT:           Value:           1
 # CHECK-DEFAULT-NEXT:         Functions:       [ 1, 2, 3 ]
+# CHECK-DEFAULT:        - Type:            DATA
+# CHECK-DEFAULT:            Content:         '01000000'
 
 # CHECK-2:        - Type:            ELEM
 # CHECK-2-NEXT:     Segments:
 # CHECK-2-NEXT:       - Offset:
 # CHECK-2-NEXT:           Opcode:          I32_CONST
 # CHECK-2-NEXT:           Value:           1
-# CHECK-2-NEXT:         Functions:       [ 1, 2, 0, 3, 0 ]
+# CHECK-2-NEXT:         Functions:       [ 0, 1, 0, 2, 0, 3 ]
+# CHECK-2:        - Type:            DATA
+# CHECK-2:            Content:         '02000000'
 
 # CHECK-3:        - Type:            ELEM
 # CHECK-3-NEXT:     Segments:
 # CHECK-3-NEXT:       - Offset:
 # CHECK-3-NEXT:           Opcode:          I32_CONST
 # CHECK-3-NEXT:           Value:           1
-# CHECK-3-NEXT:         Functions:       [ 1, 0, 2, 0, 0, 3, 0, 0 ]
+# CHECK-3-NEXT:         Functions:       [ 0, 0, 1, 0, 0, 2, 0, 0, 3 ]
+# CHECK-3:        - Type:            DATA
+# CHECK-3:            Content:         '03000000'
