@@ -633,7 +633,7 @@ TEST(WalkAST, ObjCMessageExprClassReceiver) {
 
 TEST(WalkAST, ObjCPropertyRefExprExplicit) {
   testWalk(R"objc(
-    @interface MyClass
+    @interface $implicit^MyClass
     @property(nonatomic) int $explicit^foo;
     @end
   )objc",
@@ -647,7 +647,7 @@ TEST(WalkAST, ObjCPropertyRefExprExplicit) {
 
 TEST(WalkAST, ObjCPropertyRefExprImplicitGetter) {
   testWalk(R"objc(
-    @interface MyClass
+    @interface $implicit^MyClass
     $explicit^- (int)foo;
     @end
   )objc",
@@ -661,7 +661,7 @@ TEST(WalkAST, ObjCPropertyRefExprImplicitGetter) {
 
 TEST(WalkAST, ObjCPropertyRefExprImplicitSetter) {
   testWalk(R"objc(
-    @interface MyClass
+    @interface $implicit^MyClass
     $explicit^- (void)setFoo:(int)val;
     @end
   )objc",
@@ -675,7 +675,7 @@ TEST(WalkAST, ObjCPropertyRefExprImplicitSetter) {
 
 TEST(WalkAST, ObjCPropertyRefExprExplicitSetter) {
   testWalk(R"objc(
-    @interface MyClass
+    @interface $implicit^MyClass
     @property(nonatomic) int $explicit^foo;
     @end
   )objc",
@@ -689,7 +689,7 @@ TEST(WalkAST, ObjCPropertyRefExprExplicitSetter) {
 
 TEST(WalkAST, ObjCPropertyRefExprProtocol) {
   testWalk(R"objc(
-    @protocol MyProtocol
+    @protocol $implicit^MyProtocol
     @property(nonatomic) int $explicit^foo;
     @end
   )objc",
@@ -697,6 +697,38 @@ TEST(WalkAST, ObjCPropertyRefExprProtocol) {
     void test(id<MyProtocol> obj) {
       int x = obj.^foo;
     }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassReceiver) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(class, nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      int x = MyClass.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprSuperReceiver) {
+  testWalk(R"objc(
+    @interface $implicit^ParentClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
   )objc",
            {"-x", "objective-c"});
 }
