@@ -36,8 +36,6 @@ If you want to build LLVM in Debug mode (`-DCMAKE_BUILD_TYPE=Debug`), consider u
 (e.g. `lld` or `mold`, by passing `-DLLVM_USE_LINKER=lld` or `-DLLVM_USE_LINKER=mold`);
 otherwise, you'll likely run out of memory unless you have a lot of RAM.
 
-Irrespective of build type (Release or Debug), you may also want to pass
-`-DLLVM_UNREACHABLE_OPTIMIZE=OFF` to get crash messages from `llvm_unreachable()`.
 See also {doc}`CMake` for more information about how to build LLVM.
 
 ### Reporting a Security Issue
