@@ -398,6 +398,20 @@ struct VPlanTransforms {
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
 
+  /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
+  /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
+  /// VPWidenPointerInductionRecipe will generate vectors only. If some users
+  /// require vectors while other require scalars, the scalar uses need to
+  /// extract the scalars from the generated vectors (Note that this is
+  /// different to how int/fp inductions are handled). Legalize
+  /// extract-from-ends using uniform VPReplicateRecipe of wide inductions to
+  /// use regular VPReplicateRecipe, so the correct end value is available. Also
+  /// optimize VPWidenIntOrFpInductionRecipe, if any of its users needs scalar
+  /// values, by providing them scalar steps built on the canonical scalar IV
+  /// and update the original IV's users. This is an optional optimization to
+  /// reduce the needs of vector extracts.
+  static void legalizeAndOptimizeInductions(VPlan &Plan);
+
   /// Try to narrow wide and replicating recipes to single scalar recipes for
   /// loops with the same VF, when the values are known to be uniform. Also
   /// narrows masked div/rem intrinsics with a safe divisor to unmasked scalar
