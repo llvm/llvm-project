@@ -3656,16 +3656,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       return GEPNoWrapFlags::none();
     };
 
-    // Try to replace ADD + GEP with GEP + GEP. Relax singleUse for a constant
-    // addend. The GEP sign-extends the index to the pointer width, so the split
-    // is sound only when sext(idx1 + idx2) = sext(idx1) + sext(idx2): require
-    // nsw unless the index is already pointer-width (no sign-extension).
+    // Try to replace ADD + GEP with GEP + GEP. Relax the single-use
+    // requirement when the addend is a constant.
     Value *Idx1, *Idx2;
     if (match(GEP.getOperand(1), m_AddLike(m_Value(Idx1), m_Value(Idx2))) &&
-        (GEP.getOperand(1)->hasOneUse() || match(Idx2, m_ConstantInt())) &&
-        (match(GEP.getOperand(1), m_NSWAddLike(m_Value(), m_Value())) ||
-         GEP.getOperand(1)->getType()->getScalarSizeInBits() >=
-             DL.getPointerSizeInBits(GEP.getPointerAddressSpace()))) {
+        (GEP.getOperand(1)->hasOneUse() || match(Idx2, m_ConstantInt()))) {
       //   %idx = add i64 %idx1, %idx2
       //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
