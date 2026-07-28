@@ -2029,21 +2029,14 @@ simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
   Value *LHS = II.getOperand(1);
   Value *RHS = II.getOperand(2);
   CmpInst::Predicate CmpPred = IInfo.getCmpPredicate();
-  const DataLayout &DL = II.getDataLayout();
+  bool IsWideICmp =
+      Opc == Instruction::ICmp && LHS->getType() != RHS->getType();
+  assert((IsWideICmp || LHS->getType() == RHS->getType()) &&
+         "Unexpected wide compare!");
 
-  // Canonicalise integer constants to the RHS.
-  if (Opc == Instruction::ICmp && ICmpInst::isCommutative(CmpPred) &&
-      isa<Constant>(LHS) && !isa<Constant>(RHS) &&
-      LHS->getType() == RHS->getType()) {
-    IC.replaceOperand(II, 1, RHS);
-    IC.replaceOperand(II, 2, LHS);
-    return &II;
-  }
-
-  // Canonicalise floating-point constants to the RHS.
-  if (Opc == Instruction::FCmp && FCmpInst::isCommutative(CmpPred) &&
-      isa<Constant>(LHS) && !isa<Constant>(RHS)) {
-    assert(LHS->getType() == RHS->getType() && "Unexpected wide compare!");
+  // Canonicalise constants to the RHS.
+  if ((ICmpInst::isCommutative(CmpPred) || FCmpInst::isCommutative(CmpPred)) &&
+      isa<Constant>(LHS) && !isa<Constant>(RHS) && !IsWideICmp) {
     IC.replaceOperand(II, 1, RHS);
     IC.replaceOperand(II, 2, LHS);
     return &II;
@@ -2053,7 +2046,7 @@ simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
   LHS = stripInactiveLanes(LHS, Pg);
   RHS = stripInactiveLanes(RHS, Pg);
 
-  if (LHS->getType() != RHS->getType()) {
+  if (IsWideICmp) {
     // We can do more for wide compares, but not using simplifyCmpInst.
     const APInt *LHSVal, *RHSVal;
     if (!match(LHS, m_APInt(LHSVal)) || !match(RHS, m_APInt(RHSVal)))
@@ -2064,7 +2057,6 @@ simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
     // and RHS the wrong element count.
     Type *WideVT = VectorType::get(RHS->getType()->getScalarType(),
                                    cast<VectorType>(LHS->getType()));
-    assert(Opc == Instruction::ICmp && "Only wide integer compares exist!");
     if (ICmpInst::isSigned(CmpPred)) {
       LHS = ConstantInt::get(WideVT, LHSVal->getSExtValue());
       RHS = ConstantInt::get(WideVT, RHSVal->getSExtValue());
@@ -2075,6 +2067,7 @@ simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
   }
 
   // TODO: Allow fast-math flags for calls to compare intrinsics.
+  const DataLayout &DL = II.getDataLayout();
   Value *SimpleII = simplifyCmpInst(CmpPred, LHS, RHS, DL);
 
   // No simplification happened.
