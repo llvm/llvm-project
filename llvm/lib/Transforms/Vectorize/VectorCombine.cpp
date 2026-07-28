@@ -2113,8 +2113,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
 
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
-    Value *GEPIdx =
-        materializeScalarizedGEPIndex(Idx, GEPIndexInfo, Builder);
+    Value *GEPIdx = materializeScalarizedGEPIndex(Idx, GEPIndexInfo, Builder);
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
         {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
