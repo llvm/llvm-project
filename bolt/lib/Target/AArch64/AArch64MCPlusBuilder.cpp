@@ -1433,6 +1433,7 @@ public:
       return MCSpecifierExpr::create(Expr, AArch64::S_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
+               RelType == ELF::R_AARCH64_TLSGD_ADR_PAGE21 ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
                RelType == ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
@@ -1448,6 +1449,7 @@ public:
       case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
       case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
       case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+      case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
       case ELF::R_AARCH64_TLSDESC_ADD_LO12:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -2965,6 +2967,8 @@ public:
     case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
     case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
     case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+    case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
+    case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
     case ELF::R_AARCH64_TLSDESC_ADD_LO12:
     case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
     case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
