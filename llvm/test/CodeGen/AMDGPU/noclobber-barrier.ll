@@ -830,23 +830,27 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @fence_in_loop() {
-; CHECK-LABEL: define amdgpu_kernel void @fence_in_loop() {
+define amdgpu_kernel void @fence_in_loop(ptr addrspace(3) %p3, ptr addrspace(1) %p1) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_in_loop(
+; CHECK-SAME: ptr addrspace(3) [[P3:%.*]], ptr addrspace(1) [[P1:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    store i32 0, ptr addrspace(3) null, align 4
+; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[P3]], align 4
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) null, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[I]])
 ; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 ; GCN-LABEL: fence_in_loop:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_load_dword s2, s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    s_and_b64 vcc, exec, -1
-; GCN-NEXT:    ds_write_b32 v0, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    ds_write_b32 v1, v0
 ; GCN-NEXT:  .LBB18_1: ; %bb1
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
@@ -857,11 +861,11 @@ define amdgpu_kernel void @fence_in_loop() {
 ; GCN-NEXT:  ; %bb.2: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 bb:
-  store i32 0, ptr addrspace(3) null
+  store i32 0, ptr addrspace(3) %p3
   br label %bb1
 
 bb1:
-  %i = load i32, ptr addrspace(1) null, align 4
+  %i = load i32, ptr addrspace(1) %p1, align 4
   call void (...) @llvm.fake.use(i32 %i)
   fence release
   br label %bb1
