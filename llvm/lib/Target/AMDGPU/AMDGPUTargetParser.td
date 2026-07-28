@@ -18,7 +18,7 @@ class AMDGPUArchFeature<string spelling> {
 }
 
 // R600-only.
-def FEATURE_FMA : AMDGPUArchFeature<"FEATURE_FMA">;
+def R600_FEATURE_FMA : AMDGPUArchFeature<"R600_FEATURE_FMA">;
 
 // Marks a Processor/ProcessorModel record as a canonical TargetParser GPU.
 class AMDGPUGPUInfo {
