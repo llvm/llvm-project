@@ -18,7 +18,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- Basic expression evaluation across fork/vfork ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork(self):
         """Test that expression evaluation succeeds when the expression calls fork()."""
@@ -31,7 +31,7 @@ class ExprWithForkTestCase(TestBase):
             "fork_and_return(42, false)", result_type="int", result_value="42"
         )
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork(self):
         """Test that expression evaluation succeeds when the expression calls vfork()."""
@@ -44,7 +44,7 @@ class ExprWithForkTestCase(TestBase):
             "fork_and_return(42, true)", result_type="int", result_value="42"
         )
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork_trap(self):
         """Test that expression evaluation handles a child process that triggers a SIGTRAP."""
@@ -59,7 +59,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- follow-fork-mode child override during expression evaluation ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork_follow_child(self):
         """Test that expression evaluation succeeds with follow-fork-mode child."""
@@ -80,7 +80,7 @@ class ExprWithForkTestCase(TestBase):
         # Verify we are still debugging the original process.
         self.assertEqual(process.GetProcessID(), original_pid)
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork_follow_child(self):
         """Test that expression evaluation succeeds with vfork and follow-fork-mode child."""
@@ -100,7 +100,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- stop-on-fork: fork interrupts expression immediately ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork_stop_on_fork(self):
         """Test that stop-on-fork interrupts expression evaluation on fork."""
@@ -119,7 +119,7 @@ class ExprWithForkTestCase(TestBase):
         # The expression should be interrupted due to the fork.
         self.assertTrue(value.GetError().Fail())
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork_stop_on_fork_process_state(self):
         """Test that process state is valid after stop-on-fork interrupts on fork."""
@@ -143,7 +143,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- stop-on-fork with vfork: deferred to vforkdone ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork_stop_on_fork(self):
         """Test that stop-on-fork with vfork defers to vforkdone and interrupts."""
@@ -163,7 +163,7 @@ class ExprWithForkTestCase(TestBase):
         # vfork) because stop-on-fork is set.
         self.assertTrue(value.GetError().Fail())
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork_stop_on_fork_process_state(self):
         """Test that process state is clean after vfork stop-on-fork interruption.
@@ -189,7 +189,7 @@ class ExprWithForkTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), original_pid)
         self.assertEqual(process.GetState(), lldb.eStateStopped)
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork_stop_on_fork_breakpoints_work(self):
         """Test that breakpoints are functional after vfork stop-on-fork.
@@ -219,7 +219,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- stop-on-fork=false (default): no interruption ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork_stop_on_fork_false(self):
         """Test that stop-on-fork=false allows fork expression to complete."""
@@ -239,7 +239,7 @@ class ExprWithForkTestCase(TestBase):
         self.assertSuccess(value.GetError())
         self.assertEqual(value.GetValueAsSigned(), 42)
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork_stop_on_fork_false(self):
         """Test that stop-on-fork=false allows vfork expression to complete."""
@@ -278,7 +278,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- stop-on-fork with follow-fork-mode child ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_fork_stop_on_fork_follow_child(self):
         """Test stop-on-fork + follow-child: expression interrupted, still on parent."""
@@ -302,7 +302,7 @@ class ExprWithForkTestCase(TestBase):
         self.assertTrue(value.GetError().Fail())
         self.assertEqual(process.GetProcessID(), original_pid)
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_with_vfork_stop_on_fork_follow_child(self):
         """Test stop-on-fork + vfork + follow-child: interrupted at vforkdone, still on parent."""
@@ -328,7 +328,7 @@ class ExprWithForkTestCase(TestBase):
 
     # --- concurrent fork on another thread during expression ---
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_concurrent_fork_other_thread(self):
         """Test that a fork on another thread during expression is handled correctly.
@@ -366,7 +366,7 @@ class ExprWithForkTestCase(TestBase):
         # Breakpoints should still be functional.
         self.expect_expr("x", result_type="int", result_value="42")
 
-    @skipIfWindows
+    @requirePOSIX
     @add_test_categories(["fork"])
     def test_expr_concurrent_fork_other_thread_follow_child(self):
         """Test that follow-fork-mode child is overridden during expression evaluation.

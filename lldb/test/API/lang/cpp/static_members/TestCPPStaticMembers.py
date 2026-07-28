@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
-    @skipIfWasm  # no expression evaluation
+    @requireNotWasm  # no expression evaluation
     def test_access_from_main(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -25,7 +25,7 @@ class TestCase(TestBase):
 
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
-    @skipIfWasm  # no expression evaluation
+    @requireNotWasm  # no expression evaluation
     def test_access_from_member_function(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -48,7 +48,7 @@ class TestCase(TestBase):
 
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
-    @skipIfWasm  # no expression evaluation
+    @requireNotWasm  # no expression evaluation
     def test_no_crash_in_IR_arithmetic(self):
         """
         Test that LLDB doesn't crash on evaluating specific expression involving

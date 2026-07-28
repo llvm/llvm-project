@@ -41,7 +41,7 @@ class TestOSPluginIndSYM(TestBase):
             return "{} not available".format(self.PORT)
         return None
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_python_os_plugin(self):
         """Test that the OS plugin in a dSYM works on attach."""
         executable = self.build_dsym("my_binary")

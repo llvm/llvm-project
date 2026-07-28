@@ -10,7 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfWasm  # no expression evaluation
+@requireNotWasm  # no expression evaluation
 class ExprInsideLambdaTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False

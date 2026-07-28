@@ -13,7 +13,7 @@ class BuiltinDebugTrapTestCase(TestBase):
 
     # __builtin_debugtrap lowers to the WebAssembly `unreachable` instruction, a
     # fatal trap that cannot be resumed as this test expects.
-    @skipIfWasm
+    @requireNotWasm
     def test(self):
         platform_stop_reason = lldb.eStopReasonSignal
         platform = self.getPlatform()

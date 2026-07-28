@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 MAX_PATH = 260
 
 
-@skipUnlessWindows
+@requireWindows
 class TestDAP_launch_longPath(lldbdap_testcase.DAPTestCaseBase):
     def _long_path(self, path):
         return lldbutil.get_extended_windows_path(path)

@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireNotWasm  # no expression evaluation
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
