@@ -722,13 +722,13 @@ template <typename NonUniformOp>
 static Value createGroupNonUniformBitwiseReduceOpImpl(
     OpBuilder &builder, Location loc, Value arg, bool isGroup, bool isUniform,
     std::optional<uint32_t> clusterSize) {
-  if (isUniform)
+  spirv::Scope scope =
+      isGroup ? spirv::Scope::Workgroup : spirv::Scope::Subgroup;
+  if (isUniform || scope != spirv::Scope::Subgroup)
     return Value();
 
   Type type = arg.getType();
-  auto scope = mlir::spirv::ScopeAttr::get(builder.getContext(),
-                                           isGroup ? spirv::Scope::Workgroup
-                                                   : spirv::Scope::Subgroup);
+  auto scopeAttr = mlir::spirv::ScopeAttr::get(builder.getContext(), scope);
   auto groupOp = spirv::GroupOperationAttr::get(
       builder.getContext(), clusterSize.has_value()
                                 ? spirv::GroupOperation::ClusteredReduce
@@ -740,7 +740,7 @@ static Value createGroupNonUniformBitwiseReduceOpImpl(
         builder, loc, builder.getI32Type(),
         builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
 
-  return NonUniformOp::create(builder, loc, type, scope, groupOp, arg,
+  return NonUniformOp::create(builder, loc, type, scopeAttr, groupOp, arg,
                               clusterSizeValue)
       .getResult();
 }
