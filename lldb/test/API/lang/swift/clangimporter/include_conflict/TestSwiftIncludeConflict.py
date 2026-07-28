@@ -21,7 +21,6 @@ class TestSwiftIncludeConflict(TestBase):
     @skipEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipUnlessDarwin
     @swiftTest
     def test(self):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.

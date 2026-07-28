@@ -6,7 +6,6 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftClashingABIName(TestBase):
     @skipEmbeddedSwift
     @swiftTest
-    @skipUnlessDarwin
     def test(self):
         """Test that expressions with types in modules with clashing abi names works"""
         self.build()
@@ -25,7 +24,6 @@ class TestSwiftClashingABIName(TestBase):
                     substrs=['a.Generic2<a.Generic<a.One>>', 't2 =', 't =', 'j = 98'])
     @skipEmbeddedSwift
     @swiftTest
-    @skipUnlessDarwin
     def test_in_self(self):
         """Test a library with a private import for which there is no debug info"""
         self.build()
