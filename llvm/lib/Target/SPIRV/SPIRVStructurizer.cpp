@@ -1196,7 +1196,6 @@ char SPIRVStructurizer::ID = 0;
 INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
                       "structurize SPIRV", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 
