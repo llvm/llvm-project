@@ -91,8 +91,7 @@ def TuneMOVIMMLongAccumXciFusion
                    CheckOpcode<LoadImmOp>,
                  ]>,
                  CheckOpcode<LongAccumXqciOp>,
-                 [],
-                 [TieReg<0, 0>]>;
+                 epilog=[TieReg<0, 0>]>;
 
 // Fuse move followed by long accumulate operation.
 def TuneMovALUXqciFusion
@@ -104,5 +103,4 @@ def TuneMovALUXqciFusion
                    CheckImmOperand<2, 0>
                  ]>,
                  CheckOpcode<LongAccumXqciOp>,
-                 [],
-                 [TieReg<0, 0>]>;
+                 epilog=[TieReg<0, 0>]>;
