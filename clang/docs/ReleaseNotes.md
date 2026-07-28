@@ -313,6 +313,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### C23 Feature Support
 
+- Clang now supports storage-class specifiers in compound literals.
+
 ### Objective-C Language Changes
 
 ### Non-comprehensive list of changes in this release

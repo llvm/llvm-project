@@ -18,6 +18,13 @@ using namespace clang::interp;
 State::~State() {}
 
 bool State::emitRelaxedDiag(SourceLocation Loc, diag::kind DiagId) {
+  // C23 6.6p14 permits additional forms of constant expressions.
+  if (Ctx.getLangOpts().C23 &&
+      DiagId == diag::note_constexpr_non_constexpr_compound_literal) {
+    addExtendedDiag(Loc, diag::ext_constexpr_compound_literal);
+    return true;
+  }
+
   if (!Ctx.getLangOpts().MSVCCompat ||
       (!EvalStatus.ExtendedDiag && !InConstantContext))
     return false;
