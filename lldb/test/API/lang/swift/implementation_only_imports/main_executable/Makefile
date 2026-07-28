@@ -1,7 +1,7 @@
 SWIFT_SOURCES=main.swift
-SWIFTFLAGS_EXTRAS= -I$(shell pwd)
+SWIFTFLAGS_EXTRAS= -I$(BUILDDIR)
 MODULENAME=main
-LD_EXTRAS=-L$(shell pwd)
+LD_EXTRAS=-L$(BUILDDIR)
 
 all: clean SomeLibrary.swiftmodule a.out
 

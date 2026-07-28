@@ -36,9 +36,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
 
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
-    @skipIfWindows
-    # This test needs a working Remote Mirrors implementation.
-    @skipIf(oslist=['windows'])
+    @skipEmbeddedSwiftOnWindows
     def test_dwarf_importer(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -75,9 +73,6 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     @skipEmbeddedSwift
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
-    @skipIfWindows
-    # This test needs a working Remote Mirrors implementation.
-    @skipIf(oslist=['windows'])
     def test_dwarf_importer_exprs(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -103,7 +98,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
-    @skipIfWindows
+    @skipEmbeddedSwiftOnWindows
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     def test_negative(self):
         lldb.SBDebugger.MemoryPressureDetected()

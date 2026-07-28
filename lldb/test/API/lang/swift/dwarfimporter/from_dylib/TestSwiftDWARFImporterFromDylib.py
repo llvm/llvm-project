@@ -11,7 +11,7 @@ class TestSwiftDWARFImporterFromDylib(lldbtest.TestBase):
     @skipEmbeddedSwift
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
-    @skipIf(oslist=['linux', 'windows'])
+    @skipIfLinux
     def test_dwarf_importer(self):
         self.build()
         #os.remove(self.getBuildArtifact('Foo.swiftmodule'))

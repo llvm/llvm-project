@@ -18,7 +18,6 @@ xfail lldb-shell :: Swift/runtime-initialization.test
 xfail lldb-shell :: SwiftREPL/ClosureScope.test
 xfail lldb-shell :: SwiftREPL/ExistentialTypes.test
 xfail lldb-shell :: SwiftREPL/OptionalUnowned.test
-xfail lldb-shell :: SwiftREPL/RedirectInputUnreadable.test
 
 ### Tests that pass locally, but fail in CI reliably ###
 
@@ -26,7 +25,6 @@ xfail lldb-shell :: SwiftREPL/RedirectInputUnreadable.test
 xfail lldb-shell :: SwiftREPL/ErrorReturn.test
 xfail lldb-shell :: SwiftREPL/Optional.test
 xfail lldb-shell :: SwiftREPL/RecursiveClass.test
-xfail lldb-shell :: SwiftREPL/Regex.test
 xfail lldb-shell :: SwiftREPL/SimpleExpressions.test
 xfail lldb-shell :: SwiftREPL/enum-singlecase.test
 
