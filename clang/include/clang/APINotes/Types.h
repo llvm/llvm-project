@@ -1076,12 +1076,6 @@ inline bool operator==(const APINotesFunctionSelectorKey &LHS,
   return LHS.Key == RHS.Key && LHS.IsCXXMethod == RHS.IsCXXMethod;
 }
 
-struct APINotesFunctionSelector {
-  APINotesFunctionSelectorKey Key;
-  /// Original parameter selector strings used for diagnostics.
-  llvm::SmallVector<std::string, 4> ParameterSpellings;
-};
-
 /// A temporary reference to an Objective-C selector, suitable for
 /// referencing selector data on the stack.
 ///

@@ -26,13 +26,6 @@ namespace api_notes {
 class APINotesReader;
 } // namespace api_notes
 
-/// One stored exact Where.Parameters selector tracked for diagnostics.
-struct APINotesSelectorDiagnosticEntry {
-  api_notes::APINotesFunctionSelectorKey BroadKey;
-  llvm::SmallVector<std::string, 4> ParameterSpellings;
-  bool Used = false;
-};
-
 /// Source name and location for a declaration seen by Sema.
 struct APINotesSelectorDiagnosticName {
   SourceLocation Loc;
@@ -46,9 +39,9 @@ struct APINotesSelectorDiagnosticName {
 /// end-of-TU diagnostics can warn about exact selectors for known names that
 /// were never matched.
 struct APINotesSelectorDiagnosticReaderState {
-  /// Maps exact selector keys to entries in Selectors.
-  llvm::DenseMap<api_notes::APINotesFunctionSelectorKey, unsigned>
-      SelectorIndices;
+  /// Exact Where.Parameters selector keys stored by API notes. The bool is
+  /// true once Sema sees a declaration matching the exact selector.
+  llvm::DenseMap<api_notes::APINotesFunctionSelectorKey, bool> SelectorUsed;
 
   /// Maps broad/name-only keys to a declaration location/name used for
   /// diagnostics.
@@ -56,24 +49,17 @@ struct APINotesSelectorDiagnosticReaderState {
                  APINotesSelectorDiagnosticName>
       SeenNames;
 
-  llvm::SmallVector<APINotesSelectorDiagnosticEntry, 4> Selectors;
-
-  void addSelector(api_notes::APINotesFunctionSelector Selector) {
-    unsigned Index = Selectors.size();
-    APINotesSelectorDiagnosticEntry Entry;
-    Entry.BroadKey = Selector.Key.getWithoutParameterSelector();
-    Entry.ParameterSpellings = std::move(Selector.ParameterSpellings);
-    Selectors.push_back(std::move(Entry));
-    SelectorIndices.insert({Selector.Key, Index});
+  void addSelector(const api_notes::APINotesFunctionSelectorKey &Key) {
+    SelectorUsed.try_emplace(Key, false);
   }
 
-  void addSelectors(llvm::SmallVectorImpl<api_notes::APINotesFunctionSelector>
-                        &NewSelectors) {
-    Selectors.reserve(NewSelectors.size());
-    SelectorIndices.reserve(NewSelectors.size());
-    SeenNames.reserve(NewSelectors.size());
-    for (auto &Selector : NewSelectors)
-      addSelector(std::move(Selector));
+  void
+  addSelectors(llvm::SmallVectorImpl<api_notes::APINotesFunctionSelectorKey>
+                   &Selectors) {
+    SelectorUsed.reserve(Selectors.size());
+    SeenNames.reserve(Selectors.size());
+    for (const auto &Selector : Selectors)
+      addSelector(Selector);
   }
 
   void noteSeenDeclaration(const api_notes::APINotesFunctionSelectorKey &Key,
@@ -82,9 +68,9 @@ struct APINotesSelectorDiagnosticReaderState {
   }
 
   void markUsed(const api_notes::APINotesFunctionSelectorKey &Key) {
-    auto KnownSelector = SelectorIndices.find(Key);
-    if (KnownSelector != SelectorIndices.end())
-      Selectors[KnownSelector->second].Used = true;
+    auto KnownSelector = SelectorUsed.find(Key);
+    if (KnownSelector != SelectorUsed.end())
+      KnownSelector->second = true;
   }
 
   void markCandidatesUsed(
@@ -93,7 +79,7 @@ struct APINotesSelectorDiagnosticReaderState {
           GetSelectorKey,
       const APINotesParameterSelectorCandidates &Candidates);
 
-  void diagnoseUnused(Sema &S) const;
+  void diagnoseUnused(Sema &S, api_notes::APINotesReader &Reader) const;
 };
 
 /// Selector diagnostic state for all API notes readers used by one Sema.

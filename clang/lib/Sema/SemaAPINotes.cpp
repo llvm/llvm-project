@@ -1083,7 +1083,7 @@ APINotesSelectorDiagnosticState::getOrCreateReaderState(
   if (!Inserted)
     return State;
 
-  SmallVector<api_notes::APINotesFunctionSelector, 4> Selectors;
+  SmallVector<api_notes::APINotesFunctionSelectorKey, 4> Selectors;
   if (!Reader.collectExactFunctionParameterSelectors(Selectors))
     return State;
 
@@ -1451,27 +1451,33 @@ void Sema::ProcessAPINotes(Decl *D) {
   }
 }
 
-void APINotesSelectorDiagnosticReaderState::diagnoseUnused(Sema &S) const {
-  for (const auto &Selector : Selectors) {
-    if (Selector.Used)
+void APINotesSelectorDiagnosticReaderState::diagnoseUnused(
+    Sema &S, api_notes::APINotesReader &Reader) const {
+  for (const auto &Selector : SelectorUsed) {
+    if (Selector.second)
       continue;
 
-    auto SeenName = SeenNames.find(Selector.BroadKey);
+    auto SeenName =
+        SeenNames.find(Selector.first.getWithoutParameterSelector());
     if (SeenName == SeenNames.end())
+      continue;
+
+    std::optional<SmallVector<std::string, 4>> ParameterSpellings =
+        Reader.getParameterSelectorSpellingsForDiagnostics(Selector.first);
+    if (!ParameterSpellings)
       continue;
 
     S.Diag(SeenName->second.Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + SeenName->second.Name +
             "' has unmatched Where.Parameters " +
-            api_notes::formatAPINotesParameterSelector(
-                Selector.ParameterSpellings))
+            api_notes::formatAPINotesParameterSelector(*ParameterSpellings))
                .str();
   }
 }
 
 void APINotesSelectorDiagnosticState::diagnoseUnused(Sema &S) const {
   for (const auto &ReaderSelectors : Readers)
-    ReaderSelectors.second.diagnoseUnused(S);
+    ReaderSelectors.second.diagnoseUnused(S, *ReaderSelectors.first);
 }
 
 void Sema::DiagnoseUnusedAPINotesSelectors() {

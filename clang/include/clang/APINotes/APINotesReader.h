@@ -220,7 +220,12 @@ public:
 
   /// Collect exact parameter selector keys stored by this reader.
   bool collectExactFunctionParameterSelectors(
-      llvm::SmallVectorImpl<APINotesFunctionSelector> &Selectors);
+      llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
+
+  /// Reconstruct parameter selector strings for a stored exact selector key.
+  std::optional<llvm::SmallVector<std::string, 4>>
+  getParameterSelectorSpellingsForDiagnostics(
+      const APINotesFunctionSelectorKey &Key);
 
   /// Look for information regarding the given enumerator.
   ///
