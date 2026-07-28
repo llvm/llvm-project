@@ -83,6 +83,10 @@ features cannot lower the translation-unit ABI level;
   Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
   `isKindInformative` and `isKindResultType`.
 
+- `CompletionString.availability` now returns instances of `AvailabilityKind`.
+  As a result, the `__str__` representation of its return values changed.
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
@@ -150,6 +154,8 @@ features cannot lower the translation-unit ABI level;
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
+
+- All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
 ### Removed Compiler Flags
 
@@ -336,6 +342,7 @@ features cannot lower the translation-unit ABI level;
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 
@@ -354,6 +361,8 @@ features cannot lower the translation-unit ABI level;
   they are now correctly accepted on such pointers.
 
 #### Bug Fixes to C++ Support
+
+- Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
@@ -415,9 +424,6 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
-- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
-  now uses the B-key by default.
-
 #### Android Support
 
 #### Windows Support
@@ -451,6 +457,8 @@ features cannot lower the translation-unit ABI level;
 ### clang-format
 
 ### libclang
+
+- visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
 

@@ -23223,6 +23223,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           // Follow all insert element instructions from the current buildvector
           // sequence.
           Instruction *Ins = VL0;
+          Instruction *Op;
           do {
             std::optional<unsigned> InsertIdx = getElementIndex(Ins);
             if (!InsertIdx)
@@ -23231,9 +23232,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
+            Op = Ins;
             Ins =
                 dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
-          } while (Ins);
+          } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
           SmallBitVector IsFirstPoison =
@@ -24624,7 +24626,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
         {DominatorTree::Insert, BB, ScalarBB},
         {DominatorTree::Insert, VecBB, Tail},
         {DominatorTree::Insert, ScalarBB, Tail}};
+    // Term (e.g. a switch) may have multiple edges to the same successor;
+    // dedupe so each distinct successor gets exactly one Insert/Delete pair.
+    SmallPtrSet<BasicBlock *, 4> UniqueSuccs;
     for (BasicBlock *Succ : successors(Term)) {
+      if (!UniqueSuccs.insert(Succ).second)
+        continue;
       Updates.push_back({DominatorTree::Insert, Tail, Succ});
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
