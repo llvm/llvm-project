@@ -12,6 +12,7 @@
 
 #include "X86FrameLowering.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -45,6 +46,23 @@ STATISTIC(NumFrameExtraProbe,
 STATISTIC(NumFunctionUsingPush2Pop2, "Number of functions using push2/pop2");
 
 using namespace llvm;
+
+bool llvm::requiresWinX64UnwindV3(const MachineFunction &MF) {
+  const Function &Fn = MF.getFunction();
+
+  // Whole module is in V3 mode.
+  if (Fn.getParent()->getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
+    return true;
+
+  // Otherwise promote a function that may use EGPR (R16-R31), which V1/V2
+  // unwind codes cannot encode. The per-function "+egpr" feature is the signal,
+  // so an auto-dispatch APX clone gets V3 while the baseline clone stays on the
+  // module default. We conservatively promote any egpr function rather than
+  // checking for an actual EGPR save, keeping this a cheap query. (PUSH2/POP2
+  // does not need V3: V1/V2 describe a PUSH2 as two SEH_PushReg codes.)
+  return Fn.needsUnwindTableEntry() &&
+         MF.getSubtarget<X86Subtarget>().hasEGPR();
+}
 
 static const TargetRegisterClass *
 getCalleeSavedSpillRC(MCRegister Reg, const X86Subtarget &STI,
@@ -1631,9 +1649,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                      MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
-  bool IsWin64UnwindV3 =
-      NeedsWin64CFI &&
-      Fn.getParent()->getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3;
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requiresWinX64UnwindV3(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
@@ -2515,9 +2531,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // For V3 unwind, epilog SEH pseudos are emitted inline before each
   // unwind-effecting instruction.
   bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.hasWinCFI() &&
-      MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
-          WinX64EHUnwindMode::V3;
+      NeedsWin64CFI && MF.hasWinCFI() && requiresWinX64UnwindV3(MF);
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -3299,9 +3313,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   bool NeedsWin64CFI =
       isWin64Prologue(MF) && MF.getFunction().needsUnwindTableEntry();
-  bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
-                           WinX64EHUnwindMode::V3;
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requiresWinX64UnwindV3(MF);
 
   // Reload XMMs from stack frame.
   for (const CalleeSavedInfo &I : CSI) {

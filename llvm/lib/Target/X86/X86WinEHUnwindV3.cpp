@@ -13,7 +13,10 @@
 ///   2. Check V3 capacity limits (<=31 prolog/epilog ops, <=7 epilogs).
 ///   3. Insert sub-fragment split points if limits are exceeded.
 ///
-/// The unwind version is set module-wide, not per-function.
+/// The unwind version is normally module-wide. When only an individual function
+/// needs V3 (see requiresWinX64UnwindV3()), this pass stamps each of its frames
+/// -- the entry block and every funclet -- with a per-function
+/// .seh_unwindversion 3, leaving the rest of the module on its default version.
 ///
 /// See https://learn.microsoft.com/en-us/cpp/build/x64-unwind-information-v3
 ///
@@ -225,30 +228,21 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
 }
 
 bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
-  WinX64EHUnwindMode Mode =
-      MF.getFunction().getParent()->getWinX64EHUnwindMode();
-
   Function &F = MF.getFunction();
   LLVMContext &Ctx = F.getContext();
 
-  // EGPR (R16-R31) requires V3 unwind info because V1/V2 cannot encode
-  // registers beyond R15. Only enforce this for functions that actually
-  // emit SEH unwind info — `nounwind` functions and targets that don't
-  // require unwind tables (e.g. cross-compilation host defaults) can use
-  // EGPR with any unwind mode since no SEH metadata is generated.
-  if (Mode != WinX64EHUnwindMode::V3) {
-    if (!F.needsUnwindTableEntry())
-      return false;
-    const auto &STI = MF.getSubtarget<X86Subtarget>();
-    if (STI.hasEGPR()) {
-      Ctx.diagnose(DiagnosticInfoUnsupported(
-          F, "EGPR (R16-R31) requires V3 unwind info on Windows x64"));
-      // Stripping the SEH pseudos modifies the function, so report a change.
-      suppressWinCFI(MF);
-      return true;
-    }
+  if (!requiresWinX64UnwindV3(MF))
     return false;
-  }
+
+  // Emit a per-function .seh_unwindversion 3 only when V3 is enabled for this
+  // function alone: in module-wide V3 the AsmPrinter emits it once, so stamping
+  // here would duplicate it. The gate also requires WinCFI -- without a
+  // .seh_proc there is nothing to version, and a lone SEH pseudo would trip an
+  // AsmPrinter assertion. The marker is per .seh_proc, hence stamped on each
+  // funclet in the loop below.
+  bool PerFunctionV3 =
+      MF.hasWinCFI() && MF.getFunction().getParent()->getWinX64EHUnwindMode() !=
+                            WinX64EHUnwindMode::V3;
 
   bool Changed = false;
   unsigned ApproxBytePos = 0;
@@ -259,6 +253,19 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   // Process each funclet (and the main function body) independently.
   // Each funclet gets its own UNWIND_INFO, so V3 limits apply per funclet.
   while (Iter != MF.end()) {
+    // Iter points at the funclet's first block; stamp the version here before
+    // analyzeFunclet advances past it.
+    if (PerFunctionV3) {
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      MachineBasicBlock &FuncletEntry = *Iter;
+      BuildMI(FuncletEntry, FuncletEntry.begin(),
+              FuncletEntry.findDebugLoc(FuncletEntry.begin()),
+              TII->get(X86::SEH_UnwindVersion))
+          .addImm(3)
+          .setMIFlag(MachineInstr::FrameSetup);
+      Changed = true;
+    }
+
     FuncletInfo Info = analyzeFunclet(MF, Iter, ApproxBytePos);
 
     if (Info.PrologOpCount > MaxV3PrologOps) {
