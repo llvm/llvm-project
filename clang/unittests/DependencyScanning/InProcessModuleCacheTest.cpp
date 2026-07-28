@@ -74,3 +74,23 @@ TEST(InProcessModuleCache, ReadReadInvalidation) {
   EXPECT_EQ(Buf1->getBuffer().begin(), Buf2->getBuffer().begin());
   EXPECT_EQ(Buf1->getBuffer().end(), Buf2->getBuffer().end());
 }
+
+TEST(InProcessModuleCache, TimestampUpdatedOnce) {
+  ModuleCacheEntries Entries;
+  AtomicLineLogger Logger;
+  std::shared_ptr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Entries, Logger);
+
+  StringRef Path = "M.pcm";
+  ASSERT_EQ(ModCache->getModuleTimestamp(Path), 0);
+
+  ModCache->updateModuleTimestamp(Path);
+  EXPECT_NE(ModCache->getModuleTimestamp(Path), 0);
+
+  // Every thread that read the module file asks to update its timestamp, no
+  // matter which one built it. Only the first update takes effect.
+  auto &Timestamp = Entries.Map[Path]->Timestamp;
+  Timestamp.store(42);
+  ModCache->updateModuleTimestamp(Path);
+  EXPECT_EQ(Timestamp.load(), 42);
+}

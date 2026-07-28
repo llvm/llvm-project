@@ -130,8 +130,16 @@ public:
     // Note: This essentially replaces FS contention with mutex contention.
     auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    // Multiple threads can ask to refresh the same timestamp, since each
+    // snapshots it before reading the module file (ModuleManager::addModule()).
+    // Only the first store matters: the timestamp is exclusively compared
+    // against the build session timestamp, which precedes all of them.
+    time_t Expected = 0;
+    time_t Now = llvm::sys::toTimeT(std::chrono::system_clock::now());
+    if (!Timestamp.compare_exchange_strong(Expected, Now))
+      return;
+
     Logger.log() << "timestamp_write: " << Filename;
-    Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
   void maybePrune(StringRef Path, time_t PruneInterval,
