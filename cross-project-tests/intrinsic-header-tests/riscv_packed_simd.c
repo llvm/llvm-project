@@ -2539,6 +2539,55 @@ int32x2_t test_pmulq_i32x2(int32x2_t a, int32x2_t b) {
 int32x2_t test_pmulqr_i32x2(int32x2_t a, int32x2_t b) {
   return __riscv_pmulqr_i32x2(a, b);
 }
+
+// CHECK-LABEL: test_ppaire_i8x4:
+// CHECK:       ppaire.b
+int8x4_t test_ppaire_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppaire_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u8x4:
+// CHECK:       ppaire.b
+uint8x4_t test_ppaire_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppaire_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i8x4:
+// CHECK:       ppaireo.b
+int8x4_t test_ppaireo_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppaireo_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u8x4:
+// CHECK:       ppaireo.b
+uint8x4_t test_ppaireo_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppaireo_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i8x4:
+// CHECK:       ppairoe.b
+int8x4_t test_ppairoe_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppairoe_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u8x4:
+// CHECK:       ppairoe.b
+uint8x4_t test_ppairoe_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppairoe_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i8x4:
+// CHECK:       ppairo.b
+int8x4_t test_ppairo_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppairo_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u8x4:
+// CHECK:       ppairo.b
+uint8x4_t test_ppairo_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppairo_u8x4(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pnzip_i8x4:
 // CHECK:       ppaire.b
 int8x4_t test_pnzip_i8x4(int16x2_t rs1, int16x2_t rs2) {
