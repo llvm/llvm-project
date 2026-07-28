@@ -400,12 +400,16 @@ public:
   virtual bool contains(StringRef Key) const {
     return contains(FunctionId(Key).getHashCode());
   }
-  virtual bool contains(uint64_t GUID) const = 0;
+  virtual bool contains(uint64_t GUID) const {
+    return getOrCreateSet(GUIDSet, *this, GetFunctionIdHash).contains(GUID);
+  }
 
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, size()); }
 
 protected:
+  mutable std::optional<DenseSet<uint64_t>> GUIDSet;
+
   static constexpr auto GetFunctionIdHash = [](FunctionId F) {
     return F.getHashCode();
   };
@@ -429,7 +433,6 @@ protected:
 class LazySampleProfileNameTable final : public SampleProfileNameTable {
   const uint8_t *Start = nullptr;
   size_t Size = 0;
-  mutable std::optional<DenseSet<uint64_t>> GUIDSet;
 
 public:
   LazySampleProfileNameTable(const uint8_t *Start, size_t Size)
@@ -454,7 +457,6 @@ public:
 class StringSampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
   mutable std::optional<DenseSet<StringRef>> NameSet;
-  mutable std::optional<DenseSet<uint64_t>> GUIDSet;
 
 public:
   explicit StringSampleProfileNameTable(std::vector<FunctionId> &&Vec)
@@ -472,15 +474,10 @@ public:
   bool contains(StringRef Key) const override {
     return getOrCreateSet(NameSet, Vec, GetFunctionIdString).contains(Key);
   }
-
-  bool contains(uint64_t GUID) const override {
-    return getOrCreateSet(GUIDSet, Vec, GetFunctionIdHash).contains(GUID);
-  }
 };
 
 class MD5SampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
-  mutable std::optional<DenseSet<uint64_t>> MD5Set;
 
 public:
   explicit MD5SampleProfileNameTable(std::vector<FunctionId> &&Vec)
@@ -493,10 +490,6 @@ public:
   FunctionId operator[](size_t Idx) const override {
     assert(Idx < Vec.size() && "Index out of bounds");
     return Vec[Idx];
-  }
-
-  bool contains(uint64_t GUID) const override {
-    return getOrCreateSet(MD5Set, Vec, GetFunctionIdHash).contains(GUID);
   }
 };
 
