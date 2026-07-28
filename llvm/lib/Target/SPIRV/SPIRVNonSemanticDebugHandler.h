@@ -196,8 +196,8 @@ public:
   /// SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
   /// outputModuleSection(MB_NonSemanticGlobalDI). Requires
   /// emitNonSemanticDebugStrings() to have run first when NSDI strings apply.
-  /// \returns true when module-scope NSDI emission ran; false when skipped.
-  bool emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+  /// Sets \c GlobalNSDIEnabled when module-scope NSDI emission completes.
+  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Called after the synthesized entry \c OpLabel has been emitted.
   void notifyEntryLabelEmitted(const MachineFunction &MF,
