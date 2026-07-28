@@ -181,6 +181,8 @@ static Attribute convertMetadataToAttrImpl(
     return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    if (node->isDistinct())
+      return {};
     if (Attribute cached = attrMap.lookup(node))
       return cached;
     // If `node` is already on the current search path, this is a back-edge into
@@ -206,8 +208,9 @@ static Attribute convertMetadataToAttrImpl(
 
 /// Converts the metadata node `md` to the matching LLVM dialect metadata
 /// attribute. Returns a null attribute for shapes that the dialect's
-/// metadata-attribute hierarchy does not currently model, including cyclic
-/// metadata graphs that the immutable metadata attributes cannot express.
+/// metadata-attribute hierarchy does not currently model, including distinct
+/// nodes and cyclic metadata graphs that the immutable metadata attributes
+/// cannot express.
 static Attribute convertMetadataToAttr(MLIRContext *ctx,
                                        const llvm::Metadata *md) {
   SmallPtrSet<const llvm::Metadata *, 8> path;
