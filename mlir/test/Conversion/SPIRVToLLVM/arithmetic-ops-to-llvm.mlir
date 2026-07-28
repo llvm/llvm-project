@@ -235,6 +235,27 @@ spirv.func @srem_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.VectorTimesScalar
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_times_scalar
+//  CHECK-SAME: %[[VECTOR:.*]]: vector<4xf32>, %[[SCALAR:.*]]: f32
+spirv.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) "None" {
+  // CHECK: %[[BCAST0:.*]] = llvm.mlir.poison : vector<4xf32>
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[BCAST1:.*]] = llvm.insertelement %[[SCALAR]], %[[BCAST0]][%[[ZERO]] : i32] : vector<4xf32>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[BCAST2:.*]] = llvm.insertelement %[[SCALAR]], %[[BCAST1]][%[[ONE]] : i32] : vector<4xf32>
+  // CHECK: %[[TWO:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: %[[BCAST3:.*]] = llvm.insertelement %[[SCALAR]], %[[BCAST2]][%[[TWO]] : i32] : vector<4xf32>
+  // CHECK: %[[THREE:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: %[[BCAST4:.*]] = llvm.insertelement %[[SCALAR]], %[[BCAST3]][%[[THREE]] : i32] : vector<4xf32>
+  // CHECK: llvm.fmul %[[VECTOR]], %[[BCAST4]] : vector<4xf32>
+  %0 = spirv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f32) -> vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.SNegate
 //===----------------------------------------------------------------------===//
 

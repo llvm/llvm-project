@@ -885,6 +885,7 @@ module std {
       export std.atomic.atomic_base // most of std::atomic methods are defined there
     }
     module check_memory_order     { header "__atomic/check_memory_order.h" }
+    module clear_padding          { header "__atomic/clear_padding.h" }
     module contention_t           { header "__atomic/contention_t.h" }
     module fence                  { header "__atomic/fence.h" }
     module floating_point_helper  { header "__atomic/floating_point_helper.h" }
@@ -2387,6 +2388,9 @@ module std {
       }
       module merge {
         header "__pstl/cpu_algos/merge.h"
+      }
+      module mismatch {
+        header "__pstl/cpu_algos/mismatch.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"

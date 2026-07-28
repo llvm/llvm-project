@@ -219,6 +219,7 @@ set(files
   __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
+  __atomic/clear_padding.h
   __atomic/contention_t.h
   __atomic/fence.h
   __atomic/floating_point_helper.h
@@ -680,6 +681,7 @@ set(files
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h

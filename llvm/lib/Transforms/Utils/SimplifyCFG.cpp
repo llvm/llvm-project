@@ -6139,17 +6139,22 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       PHI.removeIncomingValue(SI->getParent());
   }
 
-  // Clean up the default block - it may have phis or other instructions before
-  // the unreachable terminator.
-  if (!HasDefault)
-    createUnreachableSwitchDefault(SI, DTU);
+  // Clean up the default block.
+  SmallVector<DominatorTree::UpdateType, 2> Updates;
+  if (!HasDefault) {
+    BasicBlock *OrigDefaultBlock = SI->getDefaultDest();
+    OrigDefaultBlock->removePredecessor(BB);
+    Updates.push_back({DominatorTree::Delete, BB, OrigDefaultBlock});
+  }
 
   // Drop the switch.
   SI->eraseFromParent();
 
-  if (DTU && isa<UncondBrInst>(NewBI))
-    DTU->applyUpdates({{DominatorTree::Delete, BB, OtherDest}});
+  if (isa<UncondBrInst>(NewBI))
+    Updates.push_back({DominatorTree::Delete, BB, OtherDest});
 
+  if (DTU)
+    DTU->applyUpdates(Updates);
   return true;
 }
 
@@ -7828,9 +7833,10 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     }
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
-    Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
     I = SIW.removeCase(I);
     E = SIW->case_end();
+    if (!is_contained(successors(BB), DeadCaseBB))
+      Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
   }
 
   auto Case = SI->findCaseValue(Constant);
@@ -8688,6 +8694,10 @@ static bool mergeNestedCondBranch(CondBrInst *BI, DomTreeUpdater *DTU) {
 
   BasicBlock *BB3 = BB1BI->getSuccessor(0);
   BasicBlock *BB4 = BB1BI->getSuccessor(1);
+  // Bail out on trivial cases to avoid bothering to handle the special case in
+  // the code below.
+  if (BB3 == BB4)
+    return false;
   IRBuilder<> Builder(BI);
   BI->setCondition(
       Builder.CreateXor(BI->getCondition(), BB1BI->getCondition()));

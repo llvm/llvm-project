@@ -628,7 +628,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_reference_wrapper                    202403L
 # define __cpp_lib_saturation_arithmetic                202603L
 // # define __cpp_lib_senders                              202406L
-// # define __cpp_lib_smart_ptr_owner_equality             202306L
+# define __cpp_lib_smart_ptr_owner_equality             202306L
 # define __cpp_lib_span_at                              202311L
 # define __cpp_lib_sstream_from_string_view             202306L
 # define __cpp_lib_string_subview                       202506L

@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgcn -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgpu -Wno-unused-value %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple amdgpu -Wno-unused-value %s
 
 #define __device__ __attribute__((device))
