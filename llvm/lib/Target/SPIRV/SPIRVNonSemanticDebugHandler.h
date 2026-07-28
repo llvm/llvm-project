@@ -51,6 +51,9 @@ class SPIRVSubtarget;
 ///   the synthesized entry OpLabel when there are no OpVariables.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
+  static constexpr unsigned NSSet = static_cast<unsigned>(
+      SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
+
   struct CompileUnitInfo {
     const DICompileUnit *TheCU = nullptr;
     SmallString<128> FilePath;
@@ -157,8 +160,6 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   bool GlobalNSDIEnabled = false;
 
   SPIRV::ModuleAnalysisInfo *CurrentMAI = nullptr;
-
-  MCRegister CachedExtInstSetReg;
 
   const MachineFunction *CurrentMF = nullptr;
 
