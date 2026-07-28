@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 
 // Check that the "update" clause is represented in AST by OMPUpdateClause
-// when used on "atomic" consturct.
+// when used on "atomic" construct.
 int check_atomic(int x) {
   #pragma omp atomic update
   x = x + 1;
