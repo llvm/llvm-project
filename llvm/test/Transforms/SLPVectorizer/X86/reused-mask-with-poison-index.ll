@@ -8,24 +8,25 @@ define fastcc i32 @test(ptr %0, <2 x float> %1, i1 %2, float %3, float %4) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
 ; CHECK-NEXT:    br label %[[BB8:.*]]
 ; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi float [ 0.000000e+00, [[TMP5:%.*]] ], [ [[TMP58:%.*]], %[[TMP56:.*]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP59:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP60:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi float [ [[TMP7]], [[TMP5]] ], [ [[TMP61:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi float [ [[TMP6]], [[TMP5]] ], [ [[TMP62:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP63:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP64:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP65:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = phi float [ undef, [[TMP5]] ], [ [[TMP66:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP67:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP68:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP20:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP69:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP70:%.*]], %[[TMP56]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP71:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi float [ 0.000000e+00, [[TMP5:%.*]] ], [ [[TMP57:%.*]], %[[TMP56:.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP58:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP59:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi float [ [[TMP7]], [[TMP5]] ], [ [[TMP60:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi float [ [[TMP6]], [[TMP5]] ], [ [[TMP61:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP62:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP63:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP64:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi float [ undef, [[TMP5]] ], [ [[TMP65:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP66:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP67:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP68:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP69:%.*]], %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi float [ [[TMP4]], [[TMP5]] ], [ [[TMP70:%.*]], %[[TMP56]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP73:%.*]], %[[TMP56]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi float [ 0.000000e+00, [[TMP5]] ], [ [[TMP72:%.*]], %[[TMP56]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <4 x float> [ zeroinitializer, [[TMP5]] ], [ poison, %[[TMP56]] ]
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi <2 x float> [ zeroinitializer, [[TMP5]] ], [ poison, %[[TMP56]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = phi <2 x float> [ <float undef, float 0.000000e+00>, [[TMP5]] ], [ poison, %[[TMP56]] ]
 ; CHECK-NEXT:    br i1 false, label %[[BB57:.*]], label %[[BB27:.*]]
 ; CHECK:       [[BB27]]:
 ; CHECK-NEXT:    [[TMP28:%.*]] = fcmp olt float [[TMP22]], 0.000000e+00
@@ -37,15 +38,13 @@ define fastcc i32 @test(ptr %0, <2 x float> %1, i1 %2, float %3, float %4) {
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x float> [[TMP32]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP33]], <4 x float> zeroinitializer, <4 x float> zeroinitializer)
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x float> [[TMP25]], i64 0
-; CHECK-NEXT:    [[TMP38:%.*]] = fsub float [[TMP15]], [[TMP37]]
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x float> [[TMP25]], i64 1
-; CHECK-NEXT:    [[TMP49:%.*]] = fsub float [[TMP17]], [[TMP48]]
+; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <4 x float> [[TMP25]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP37:%.*]] = fsub <2 x float> [[TMP27]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP14]], i64 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <4 x float> [[TMP25]], <4 x float> poison, <2 x i32> <i32 poison, i32 2>
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <2 x float> [[TMP39]], <2 x float> [[TMP40]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP49]], i64 0
-; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP38]], i64 0
+; CHECK-NEXT:    [[TMP42:%.*]] = shufflevector <2 x float> zeroinitializer, <2 x float> [[TMP37]], <2 x i32> <i32 3, i32 1>
+; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <2 x float> zeroinitializer, <2 x float> [[TMP37]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP44:%.*]] = fmul <2 x float> [[TMP42]], [[TMP43]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = tail call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP41]], <2 x float> [[TMP26]], <2 x float> [[TMP44]])
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <2 x float> [[TMP45]], i64 0
@@ -56,8 +55,8 @@ define fastcc i32 @test(ptr %0, <2 x float> %1, i1 %2, float %3, float %4) {
 ; CHECK:       [[BB49:.*]]:
 ; CHECK-NEXT:    br label %[[BB50]]
 ; CHECK:       [[BB50]]:
-; CHECK-NEXT:    [[TMP51:%.*]] = phi float [ [[TMP12]], %[[BB49]] ], [ [[TMP19]], %[[BB48]] ], [ 0.000000e+00, %[[BB31]] ]
-; CHECK-NEXT:    [[TMP52:%.*]] = phi float [ [[TMP13]], %[[BB49]] ], [ [[TMP20]], %[[BB48]] ], [ 0.000000e+00, %[[BB31]] ]
+; CHECK-NEXT:    [[TMP50:%.*]] = phi float [ [[TMP12]], %[[BB49]] ], [ [[TMP19]], %[[BB48]] ], [ 0.000000e+00, %[[BB31]] ]
+; CHECK-NEXT:    [[TMP51:%.*]] = phi float [ [[TMP13]], %[[BB49]] ], [ [[TMP20]], %[[BB48]] ], [ 0.000000e+00, %[[BB31]] ]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB57]], label %[[BB53:.*]]
 ; CHECK:       [[BB53]]:
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
@@ -66,20 +65,20 @@ define fastcc i32 @test(ptr %0, <2 x float> %1, i1 %2, float %3, float %4) {
 ; CHECK:       [[TMP56]]:
 ; CHECK-NEXT:    br label %[[BB8]]
 ; CHECK:       [[BB57]]:
-; CHECK-NEXT:    [[TMP58]] = phi float [ [[TMP9]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP3]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP59]] = phi float [ [[TMP10]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP55]], %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
-; CHECK-NEXT:    [[TMP60]] = phi float [ [[TMP11]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP3]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP61]] = phi float [ [[TMP12]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
-; CHECK-NEXT:    [[TMP62]] = phi float [ [[TMP13]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP54]], %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
-; CHECK-NEXT:    [[TMP63]] = phi float [ [[TMP14]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP9]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP64]] = phi float [ [[TMP17]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP55]], %[[BB53]] ], [ [[TMP10]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP65]] = phi float [ [[TMP16]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP11]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP66]] = phi float [ [[TMP15]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
-; CHECK-NEXT:    [[TMP67]] = phi float [ [[TMP18]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
-; CHECK-NEXT:    [[TMP68]] = phi float [ [[TMP19]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP3]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP69]] = phi float [ [[TMP20]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP54]], %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
-; CHECK-NEXT:    [[TMP70]] = phi float [ [[TMP21]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP51]], %[[BB50]] ]
-; CHECK-NEXT:    [[TMP71]] = phi float [ [[TMP22]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP54]], %[[BB53]] ], [ [[TMP52]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP57]] = phi float [ [[TMP9]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP3]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP58]] = phi float [ [[TMP10]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP55]], %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
+; CHECK-NEXT:    [[TMP59]] = phi float [ [[TMP11]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP3]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP60]] = phi float [ [[TMP12]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
+; CHECK-NEXT:    [[TMP61]] = phi float [ [[TMP13]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP54]], %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
+; CHECK-NEXT:    [[TMP62]] = phi float [ [[TMP14]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP9]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP63]] = phi float [ [[TMP15]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP55]], %[[BB53]] ], [ [[TMP10]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP64]] = phi float [ [[TMP16]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP11]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP65]] = phi float [ [[TMP17]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
+; CHECK-NEXT:    [[TMP66]] = phi float [ [[TMP18]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
+; CHECK-NEXT:    [[TMP67]] = phi float [ [[TMP19]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP3]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP68]] = phi float [ [[TMP20]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP54]], %[[BB53]] ], [ 0.000000e+00, %[[BB50]] ]
+; CHECK-NEXT:    [[TMP69]] = phi float [ [[TMP21]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP50]], %[[BB50]] ]
+; CHECK-NEXT:    [[TMP70]] = phi float [ [[TMP22]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ [[TMP54]], %[[BB53]] ], [ [[TMP51]], %[[BB50]] ]
 ; CHECK-NEXT:    [[TMP72]] = phi float [ [[TMP24]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP24]], %[[BB50]] ]
 ; CHECK-NEXT:    [[TMP73]] = phi float [ [[TMP23]], %[[BB29]] ], [ 0.000000e+00, %[[BB27]] ], [ 0.000000e+00, %[[BB8]] ], [ 0.000000e+00, %[[BB53]] ], [ [[TMP23]], %[[BB50]] ]
 ; CHECK-NEXT:    [[TMP74:%.*]] = phi <4 x float> [ [[TMP25]], %[[BB29]] ], [ [[TMP25]], %[[BB27]] ], [ zeroinitializer, %[[BB8]] ], [ [[TMP34]], %[[BB53]] ], [ [[TMP34]], %[[BB50]] ]

@@ -302,6 +302,16 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
 /// unlike the plain opcode.
 Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 
+/// Returns true if \p I forms a vectorizable bundle on its own and its single
+/// user does not tear the vector apart. Loads and addresses are excluded: the
+/// tree is built without the users, so it does not pay off the extracts. A
+/// cast, feeding a multi-used cast, is excluded for the same reason, such a
+/// user stays scalar. The fp-to-int conversions move the result to the other
+/// register domain, so the extracts are paid on top of the repacking. The
+/// values, feeding the inserts, are vectorized together with them by the
+/// dedicated attempt.
+bool isOnceUsedSeed(const Instruction *I);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H

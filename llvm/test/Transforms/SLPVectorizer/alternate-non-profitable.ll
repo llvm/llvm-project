@@ -76,9 +76,14 @@ define <2 x float> @replace_through_casts_and_binop_and_unop(i16 %inp) {
 ; CHECK-LABEL: define <2 x float> @replace_through_casts_and_binop_and_unop(
 ; CHECK-SAME: i16 [[INP:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[INP]], -10
-; CHECK-NEXT:    [[TMP1:%.*]] = sitofp i16 [[ADD]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[ADD]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp <2 x i16> [[TMP7]] to <2 x float>
+; CHECK-NEXT:    [[TMP9:%.*]] = uitofp <2 x i16> [[TMP7]] to <2 x float>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i16 [[ADD]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd float [[TMP3]], 2.000000e+00
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP2]], i64 1
@@ -98,9 +103,14 @@ define <2 x float> @replace_through_casts_through_splat(i16 %inp) {
 ; CHECK-LABEL: define <2 x float> @replace_through_casts_through_splat(
 ; CHECK-SAME: i16 [[INP:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[INP]], -10
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i16 [[ADD]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[ADD]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = uitofp <2 x i16> [[TMP7]] to <2 x float>
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp <2 x i16> [[TMP7]] to <2 x float>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 2.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i16 [[ADD]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fneg float [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP4]], i64 1

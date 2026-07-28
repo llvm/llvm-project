@@ -676,4 +676,58 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
   }
 }
 
+/// Returns true if \p I is a part of a single-use chain, computing an address,
+/// which does not pay off the vectorization: a constant table is accessed by a
+/// gather, while the indices, unrelated between the lanes, require a full
+/// buildvector, unlike the ones, shifted by a constant from a common base.
+static bool isNonProfitableIndex(const Instruction *I) {
+  constexpr unsigned MaxIndexChainLength = 3;
+  // A constant shift of a common base is a cheap buildvector, while the loads
+  // are vectorized together with the indices, computed from them.
+  auto IsProfitableOperand = [](const Value *V) {
+    if (isa<Constant>(V))
+      return true;
+    if (const auto *Cast = dyn_cast<CastInst>(V); Cast && Cast->hasOneUse())
+      V = Cast->getOperand(0);
+    return isa<LoadInst>(V);
+  };
+  const User *U = I->user_back();
+  for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
+    if (const auto *GEP = dyn_cast<GetElementPtrInst>(U))
+      return isa<Constant>(GEP->getPointerOperand()) ||
+             none_of(I->operand_values(), IsProfitableOperand);
+    if (!isa<Instruction>(U) || !U->hasOneUse())
+      return false;
+    U = U->user_back();
+  }
+  return false;
+}
+
+bool isOnceUsedSeed(const Instruction *I) {
+  if (!I->hasOneUse() || isNonProfitableIndex(I))
+    return false;
+  // The operation with the identity or the absorbing constant is folded away
+  // before the codegen, the vector node only repacks the lanes.
+  if (const auto *BO = dyn_cast<BinaryOperator>(I)) {
+    unsigned Opcode = BO->getOpcode();
+    Type *Ty = BO->getType();
+    for (unsigned Idx : seq<unsigned>(2)) {
+      const auto *C = dyn_cast<Constant>(BO->getOperand(Idx));
+      if (C && (C == ConstantExpr::getBinOpIdentity(
+                         Opcode, Ty, /*AllowRHSConstant=*/Idx == 1) ||
+                C == ConstantExpr::getBinOpAbsorber(
+                         Opcode, Ty, /*AllowLHSConstant=*/Idx == 0)))
+        return false;
+    }
+  }
+  const User *U = I->user_back();
+  if (isa<ExtractElementInst>(I))
+    return isa<InsertElementInst, InsertValueInst>(U);
+  if (isa<CastInst>(I))
+    return !isa<FPToSIInst, FPToUIInst>(I) &&
+           (!isa<CastInst>(U) || U->hasOneUse());
+  return isa<BinaryOperator, UnaryOperator, SelectInst, FreezeInst, CallInst>(
+      I);
+}
+
 } // namespace llvm::slpvectorizer
