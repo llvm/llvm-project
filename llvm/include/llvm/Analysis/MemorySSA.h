@@ -1050,11 +1050,11 @@ public:
   ///
   /// This version of the function is mainly used to disambiguate phi translated
   /// pointers, where the value of a pointer may have changed from the initial
-  /// memory access. Note that this expects to be handed either a MemoryUse,
-  /// or an already potentially clobbering access. Unlike the above API, if
-  /// given a MemoryDef that clobbers the pointer as the starting access, it
-  /// will return that MemoryDef, whereas the above would return the clobber
-  /// starting from the use side of  the memory def.
+  /// memory access. Note that this expects to be handed a potentially
+  /// clobbering access (either a MemoryDef or a MemoryPhi). Unlike the above
+  /// API, if given a MemoryDef that clobbers the pointer as the starting
+  /// access, it will return that MemoryDef, whereas the above would return the
+  /// clobber starting from the use side of  the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   const MemoryLocation &,
                                                   BatchAAResults &AA) = 0;
