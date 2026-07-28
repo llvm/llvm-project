@@ -7646,6 +7646,18 @@ void Parser::ParseParameterDeclarationClause(
     AllowImplicitTypename = ImplicitTypenameContext::Yes;
   }
 
+  // A capability attribute on a parameter may name another parameter of the
+  // same prototype, declared later:
+  //
+  //   int kref_put_lock(struct kref *kref,
+  //                     void (*release)(struct kref *) RELEASE(lock),
+  //                     spinlock_t *lock);
+  //
+  // Defer those to the end of the clause, where every parameter is declared and
+  // the prototype scope is still open, so no scope need be re-entered.
+  LateParsedAttrList LateParamAttrs(/*PSoon=*/true,
+                                    /*LateAttrParseExperimentalExtOnly=*/true);
+
   do {
     // FIXME: Issue a diagnostic if we parsed an attribute-specifier-seq
     // before deciding this was a parameter-declaration-clause.
@@ -7703,7 +7715,7 @@ void Parser::ParseParameterDeclarationClause(
       ParmDeclarator.SetRangeBegin(ThisLoc);
 
     // Parse GNU attributes, if present.
-    MaybeParseGNUAttributes(ParmDeclarator);
+    MaybeParseGNUAttributes(ParmDeclarator, &LateParamAttrs);
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(DS.getAttributes());
 
@@ -7783,6 +7795,8 @@ void Parser::ParseParameterDeclarationClause(
       // added to the current scope.
       Decl *Param =
           Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator, ThisLoc);
+      // Claim deferred attributes now, before the next parameter can.
+      DistributeCLateParsedAttrs(Param, &LateParamAttrs);
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in
@@ -7895,6 +7909,12 @@ void Parser::ParseParameterDeclarationClause(
 
     // If the next token is a comma, consume it and keep reading arguments.
   } while (TryConsumeToken(tok::comma));
+
+  // Every parameter is declared and still in scope, so a deferred attribute can
+  // name any of them.
+  if (!LateParamAttrs.empty())
+    ParseLexedAttributeList(LateParamAttrs, /*D=*/nullptr, /*EnterScope=*/false,
+                            /*OnDefinition=*/false);
 }
 
 void Parser::ParseBracketDeclarator(Declarator &D) {

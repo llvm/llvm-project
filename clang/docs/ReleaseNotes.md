@@ -181,9 +181,18 @@ features cannot lower the translation-unit ABI level;
   };
   ```
 
+  and a requirement on a parameter may name another parameter of the same
+  prototype, declared later:
+
+  ```c++
+  int kref_put_lock(struct kref *kref,
+                    void (*release)(struct kref *) RELEASE(lock),
+                    spinlock_t *lock);
+  ```
+
   A requirement naming a parameter of the pointee, such as
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
-  working. Without the flag the forward reference remains an error.
+  working. Without the flag both forward references remain errors.
 
 ### Improvements to Clang's diagnostics
 

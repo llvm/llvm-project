@@ -63,3 +63,21 @@ struct WithGetter {
 };
 struct Mutex *get_mu(struct WithGetter *w) RETURN_CAP(w->mu);
 void use_getter(struct WithGetter *w) REQUIRES(get_mu(w));
+
+// An attribute on a parameter may name another parameter of the same prototype,
+// including one declared later -- the kref_put_lock() shape.
+void put_later(void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
+               struct Mutex *mu);
+
+// Naming an earlier parameter needs no late parsing; it works in both modes.
+void put_earlier(struct Mutex *mu, void (*release)(int) RELEASE(mu));
+
+// The requirement may also name a member reached through a later parameter.
+struct Holder {
+  struct Mutex mu;
+};
+void put_member(void (*release)(int) RELEASE(&h->mu), // early-error{{use of undeclared identifier 'h'}}
+                struct Holder *h);
+
+// A parameter of the pointee type is still resolved, in both modes.
+void pointee_param(void (*release)(struct Holder *inner) RELEASE(&inner->mu));
