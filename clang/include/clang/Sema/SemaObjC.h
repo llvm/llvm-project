@@ -691,7 +691,7 @@ public:
 
   /// ParseObjCSelectorExpression - Build selector expression for \@selector
   ExprResult ParseObjCSelectorExpression(Selector Sel, SourceLocation AtLoc,
-                                         SourceLocation SelectorLoc,
+                                         SourceLocation SelKWLoc,
                                          SourceLocation SelNameLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation RParenLoc,

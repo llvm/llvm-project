@@ -3199,7 +3199,7 @@ Parser::ParseObjCProtocolExpression(SourceLocation AtLoc) {
 }
 
 ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
-  SourceLocation SelectorLoc = ConsumeToken();
+  SourceLocation SelectorKeywordLoc = ConsumeToken();
 
   if (Tok.isNot(tok::l_paren))
     return ExprError(Diag(Tok, diag::err_expected_lparen_after) << "@selector");
@@ -3259,7 +3259,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
   T.consumeClose();
   Selector Sel = PP.getSelectorTable().getSelector(nColons, &KeyIdents[0]);
   return Actions.ObjC().ParseObjCSelectorExpression(
-      Sel, AtLoc, SelectorLoc, SelectorNameLoc, T.getOpenLocation(),
+      Sel, AtLoc, SelectorKeywordLoc, SelectorNameLoc, T.getOpenLocation(),
       T.getCloseLocation(), !HasOptionalParen);
 }
 

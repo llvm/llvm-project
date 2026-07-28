@@ -1417,7 +1417,7 @@ static ObjCMethodDecl *findMethodInCurrentClass(Sema &S, Selector Sel) {
 }
 
 ExprResult SemaObjC::ParseObjCSelectorExpression(
-    Selector Sel, SourceLocation AtLoc, SourceLocation SelectorLoc,
+    Selector Sel, SourceLocation AtLoc, SourceLocation SelKWLoc,
     SourceLocation SelNameLoc, SourceLocation LParenLoc,
     SourceLocation RParenLoc, bool WarnMultipleSelectors) {
   ASTContext &Context = getASTContext();
@@ -1431,13 +1431,13 @@ ExprResult SemaObjC::ParseObjCSelectorExpression(
       Selector MatchedSel = OM->getSelector();
       SourceRange SelectorRange(LParenLoc.getLocWithOffset(1),
                                 RParenLoc.getLocWithOffset(-1));
-      Diag(SelectorLoc, diag::warn_undeclared_selector_with_typo)
+      Diag(SelKWLoc, diag::warn_undeclared_selector_with_typo)
           << Sel << MatchedSel
           << FixItHint::CreateReplacement(SelectorRange,
                                           MatchedSel.getAsString());
 
     } else
-      Diag(SelectorLoc, diag::warn_undeclared_selector) << Sel;
+      Diag(SelKWLoc, diag::warn_undeclared_selector) << Sel;
   } else {
     DiagnoseMismatchedSelectors(SemaRef, AtLoc, Method, LParenLoc, RParenLoc,
                                 WarnMultipleSelectors);
