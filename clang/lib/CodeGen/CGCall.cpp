@@ -6361,8 +6361,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // Set type identifier metadata of indirect calls for call graph section.
       if (!CST.isNull()) {
         if (!CST->isFunctionProtoType()) {
+          // For unprototyped callees, reconstruct a prototype from the argument
+          // types passed at the call site (after default argument promotion).
           if (const auto *FNPT = CST->getAs<FunctionNoProtoType>()) {
             SmallVector<QualType, 8> ParamTypes;
+            // CallArgs already contains default-promoted argument types for
+            // unprototyped calls.
             for (const CallArg &Arg : CallArgs)
               ParamTypes.push_back(Arg.getType());
             FunctionProtoType::ExtProtoInfo EPI;

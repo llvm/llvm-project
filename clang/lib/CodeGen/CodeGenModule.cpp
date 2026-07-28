@@ -8651,10 +8651,6 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
 
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
-  if (auto *FNPT = T->getAs<FunctionNoProtoType>()) {
-    FunctionProtoType::ExtProtoInfo EPI;
-    T = getContext().getFunctionType(FNPT->getReturnType(), {}, EPI);
-  }
   return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
                                       /*ForceString=*/true);
 }
