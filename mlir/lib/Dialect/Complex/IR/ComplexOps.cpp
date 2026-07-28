@@ -256,11 +256,6 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
     if (getRhs() == sub.getRhs())
       return sub.getLhs();
 
-  // complex.add(b, complex.sub(a, b)) -> a
-  if (auto sub = getRhs().getDefiningOp<SubOp>())
-    if (getLhs() == sub.getRhs())
-      return sub.getLhs();
-
   // complex.add(a, complex.constant<0.0, 0.0>) -> a
   if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
     auto arrayAttr = constantOp.getValue();
