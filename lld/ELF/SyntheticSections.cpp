@@ -4119,9 +4119,9 @@ InputSection *ThunkSection::getTargetInputSection() const {
 // A forward thunk's distance grows when a thunk after it grows. Ordering
 // forward thunks by descending destination keeps the most promotable ones
 // lowest, where their growth stays below the rest. A backward thunk's distance
-// grows only with a promotion before it, already applied when we reach it, so
-// backward thunks need no ordering and stay ahead of forward thunks in creation
-// order.
+// grows only with a promotion before it, already applied by
+// ThunkSection::assignOffsets when we reach it, so backward thunks need no
+// ordering and stay ahead of forward thunks in creation order.
 void ThunkSection::sortByDestination() {
   uint64_t base = getVA();
   SmallVector<std::pair<uint64_t, Thunk *>, 0> keys;
