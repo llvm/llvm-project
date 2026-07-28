@@ -1207,6 +1207,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.putenv
     libc.src.stdlib.setenv
     libc.src.stdlib.unsetenv
     libc.src.stdlib.quick_exit
@@ -1334,6 +1335,9 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # sys/ptrace.h entrypoints
       libc.src.sys.ptrace.ptrace
+
+      # time.h entrypoints
+      libc.src.time.strptime
 
       # wchar.h entrypoints
       libc.src.wchar.swprintf
