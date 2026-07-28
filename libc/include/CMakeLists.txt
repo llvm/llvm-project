@@ -490,6 +490,17 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
+add_header_macro(
+  pwd
+  ../libc/include/pwd.yaml
+  pwd.h
+  DEPENDS
+    .llvm-libc-types.struct_passwd
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm_libc_common_h
+)
+
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   add_header_macro(
     ucontext
