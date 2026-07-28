@@ -352,9 +352,7 @@ public:
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<LiveIntervalsWrapperPass>();
       AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
@@ -367,7 +365,6 @@ INITIALIZE_PASS_BEGIN(PPCVSXFMAMutate, DEBUG_TYPE,
                       "PowerPC VSX FMA Mutation", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,
                     "PowerPC VSX FMA Mutation", false, false)
 

@@ -5,14 +5,14 @@
 # RUN:       }' > %t.script
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64le %s -o %t.o
-# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -T %t.script %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-LE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 # RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64 %s -o %t.o
-# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -T %t.script %t.o -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .branch_lt %t | FileCheck --check-prefix=BRANCH-BE %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s

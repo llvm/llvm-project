@@ -371,6 +371,8 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
+- Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
+
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
@@ -406,6 +408,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
+- Fixed an assertion failure in `-extract-api` when a documentation comment
+  contains invalid UTF-8. (#GH212393)
 
 ### OpenACC Specific Changes
 
