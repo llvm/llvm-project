@@ -136,7 +136,7 @@ long double    tanhl(long double x);
 
 //  C99
 
-bool signbit(arithmetic x);
+bool signbit(arithmetic x); // constexpr since C++23
 
 int fpclassify(arithmetic x); // constexpr since C++23
 
