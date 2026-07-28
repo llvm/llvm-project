@@ -45,8 +45,9 @@
 // _BitInt(N) is a C23 standard feature and a Clang extension in earlier C and C++.
 // __BITINT_MAXWIDTH__ is the portable probe: defined by every compiler that accepts _BitInt.
 // Note __has_extension(bit_int) is unusable because it is not recognized by Clang and produces 0.
-// Currently, MSVC STL has no plan to support _BitInt(N). So we should not enable test coverage for it.
-#if defined(__BITINT_MAXWIDTH__) && !defined(_MSVC_STL_VERSION)
+// Currently, library support for _BitInt(N) is an extension explicitly supported by libc++,
+// and test coverage is disabled for other implementations.
+#if defined(__BITINT_MAXWIDTH__) && defined(_LIBCPP_VERSION)
 #  define TEST_HAS_BITINT 1
 #else
 #  define TEST_HAS_BITINT 0
