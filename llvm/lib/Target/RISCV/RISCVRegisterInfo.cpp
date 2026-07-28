@@ -437,6 +437,18 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     }
   }
 
+  // Emit a PseudoAddUI instead of LUI+ADD when the offset is a multiple of
+  // 4096 and the source is the frame register. The frame register is invariant
+  // after PEI, so MachineLateInstrsCleanup can CSE identical pseudos. The
+  // pseudo is later expanded back to LUI+ADD.
+  if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
+      SrcReg == getFrameRegister(MF) && isInt<32>(Val) && (Val & 0xFFF) == 0) {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUI), DestReg)
+        .addReg(SrcReg)
+        .addImm(static_cast<uint32_t>(Val) >> 12);
+    return;
+  }
+
   unsigned Opc = RISCV::ADD;
   if (Val < 0) {
     Val = -Val;

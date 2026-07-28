@@ -11,7 +11,8 @@
 # RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup -o - %s \
 # RUN:   | FileCheck -check-prefix=RV32 %s
 #
-# Test codegen for large stack-frame base address materializations.
+# Test that identical large stack-frame base address materializations are
+# deduplicated by MachineLateInstrsCleanup via PseudoAddUI.
 
 --- |
   define void @test_same_region() nounwind { ret void }
@@ -21,7 +22,8 @@
 ...
 ---
 # Multiple accesses to stack slots in the same 4096-aligned region.
-# Each access independently materializes LUI+ADD to the same base.
+# PEI emits 4 PseudoAddUI, MachineLateInstrsCleanup CSEs to 2.
+# After expansion, only 2 LUI+ADD pairs remain instead of 4.
 name: test_same_region
 alignment: 4
 tracksRegLiveness: true
@@ -38,17 +40,11 @@ body: |
     liveins: $x10, $x11
 
     ; RV64-LABEL: name: test_same_region
-    ; RV64:      $x12 = LUI 4
-    ; RV64-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV64:      $x12 = PseudoAddUI $x2, 4
     ; RV64-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
-    ; RV64-NEXT: $x10 = LUI 4
-    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
-    ; RV64-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
-    ; RV64-NEXT: $x10 = LUI 4
-    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
-    ; RV64-NEXT: $x12 = LD killed $x10, 24 :: (load (s64))
-    ; RV64-NEXT: $x10 = LUI 4
-    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-NEXT: $x10 = PseudoAddUI $x2, 4
+    ; RV64-NEXT: SD $x11, $x10, 16 :: (store (s64))
+    ; RV64-NEXT: $x12 = LD $x10, 24 :: (load (s64))
     ; RV64-NEXT: $x13 = LD killed $x10, 16 :: (load (s64))
 
     ; RV64-EXPAND-LABEL: name: test_same_region
@@ -57,12 +53,8 @@ body: |
     ; RV64-EXPAND-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
     ; RV64-EXPAND-NEXT: $x10 = LUI 4
     ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
-    ; RV64-EXPAND-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
-    ; RV64-EXPAND-NEXT: $x10 = LUI 4
-    ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
-    ; RV64-EXPAND-NEXT: $x12 = LD killed $x10, 24 :: (load (s64))
-    ; RV64-EXPAND-NEXT: $x10 = LUI 4
-    ; RV64-EXPAND-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-EXPAND-NEXT: SD $x11, $x10, 16 :: (store (s64))
+    ; RV64-EXPAND-NEXT: $x12 = LD $x10, 24 :: (load (s64))
     ; RV64-EXPAND-NEXT: $x13 = LD killed $x10, 16 :: (load (s64))
 
     SD $x10, %stack.0, 0 :: (store (s64))
@@ -73,6 +65,7 @@ body: |
 ...
 ---
 # Accesses to stack slots in different 4096-aligned regions.
+# Different base anchors cannot be CSE'd with each other.
 name: test_different_regions
 alignment: 4
 tracksRegLiveness: true
@@ -90,11 +83,9 @@ body: |
     liveins: $x10, $x11
 
     ; RV64-LABEL: name: test_different_regions
-    ; RV64:      $x12 = LUI 5
-    ; RV64-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV64:      $x12 = PseudoAddUI $x2, 5
     ; RV64-NEXT: SD $x10, killed $x12, 24 :: (store (s64))
-    ; RV64-NEXT: $x10 = LUI 4
-    ; RV64-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV64-NEXT: $x10 = PseudoAddUI $x2, 4
     ; RV64-NEXT: SD $x11, killed $x10, 16 :: (store (s64))
 
     ; RV64-EXPAND-LABEL: name: test_different_regions
@@ -111,6 +102,7 @@ body: |
 ...
 ---
 # Small stack frame -- offsets fit in 12-bit signed immediate.
+# No PseudoAddUI generated.
 name: test_small_offset_no_pseudo
 alignment: 4
 tracksRegLiveness: true
@@ -126,7 +118,7 @@ body: |
     liveins: $x10, $x11
 
     ; RV64-LABEL: name: test_small_offset_no_pseudo
-    ; RV64-NOT: LUI
+    ; RV64-NOT: PseudoAddUI
     ; RV64:     SD $x10, $x2, 8 :: (store (s64))
     ; RV64-NEXT: SD $x11, $x2, 0 :: (store (s64))
 
@@ -157,17 +149,11 @@ body: |
     liveins: $x10, $x11
 
     ; RV32-LABEL: name: test_rv32
-    ; RV32:      $x12 = LUI 4
-    ; RV32-NEXT: $x12 = ADD $x2, killed $x12
+    ; RV32:      $x12 = PseudoAddUI $x2, 4
     ; RV32-NEXT: SW $x10, killed $x12, 12 :: (store (s32))
-    ; RV32-NEXT: $x10 = LUI 4
-    ; RV32-NEXT: $x10 = ADD $x2, killed $x10
-    ; RV32-NEXT: SW $x11, killed $x10, 8 :: (store (s32))
-    ; RV32-NEXT: $x10 = LUI 4
-    ; RV32-NEXT: $x10 = ADD $x2, killed $x10
-    ; RV32-NEXT: $x12 = LW killed $x10, 12 :: (load (s32))
-    ; RV32-NEXT: $x10 = LUI 4
-    ; RV32-NEXT: $x10 = ADD $x2, killed $x10
+    ; RV32-NEXT: $x10 = PseudoAddUI $x2, 4
+    ; RV32-NEXT: SW $x11, $x10, 8 :: (store (s32))
+    ; RV32-NEXT: $x12 = LW $x10, 12 :: (load (s32))
     ; RV32-NEXT: $x13 = LW killed $x10, 8 :: (load (s32))
 
     SW $x10, %stack.0, 0 :: (store (s32))
