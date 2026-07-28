@@ -1691,9 +1691,14 @@ ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
   assert(!Negate && "Must be called with Negate initialized to false");
 
   const Stmt *Cond = Block->getTerminatorCondition();
-  // We don't acquire try-locks on ?: branches, only when its result is used.
-  if (!Cond || isa<ConditionalOperator>(Block->getTerminatorStmt()))
+  if (!Cond)
     return {};
+
+  // We don't acquire try-locks on ?: branches, except when its result is used.
+  if (const auto *COp =
+          dyn_cast_if_present<ConditionalOperator>(Block->getTerminatorStmt()))
+    if (!COp->getType()->isVoidType())
+      return {};
 
   const LocalVarContext &LVarCtx = BlockInfo[Block->getBlockID()].ExitContext;
 
