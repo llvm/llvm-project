@@ -6,9 +6,11 @@ target triple = "aarch64"
 define void @high_half_trunc_interleave4(ptr %src, ptr %dst) {
 ; CHECK-LABEL: high_half_trunc_interleave4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    uzp2 z0.b, z1.b, z0.b
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-NEXT:    lsr z1.h, z1.h, #8
+; CHECK-NEXT:    lsr z0.h, z0.h, #8
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %x = load <vscale x 16 x i16>, ptr %src, align 2
@@ -35,9 +37,12 @@ define void @high_half_trunc_interleave4(ptr %src, ptr %dst) {
 define void @high_half_trunc_interleave4_byte_load(ptr %src, ptr %dst) {
 ; CHECK-LABEL: high_half_trunc_interleave4_byte_load:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0]
-; CHECK-NEXT:    str z1, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-NEXT:    lsr z1.h, z1.h, #8
+; CHECK-NEXT:    lsr z0.h, z0.h, #8
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
 entry:
   %bytes = load <vscale x 32 x i8>, ptr %src, align 2
