@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements folding ops such as transpose and broadcast into the
-// affine maps of the elementwise op.
+// affine maps of elementwise consumers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,8 +31,7 @@ using namespace mlir::linalg;
 namespace {
 template <typename ProducerOpTy>
 struct ElementwiseOpFolder {
-  // Helper function to fold broadcast etc into elementwise op.
-  // Producer in this context is `broadcast op` etc, consumer is elwise operand.
+  // Helper function to fold broadcast etc. into a consumer operand.
   static bool fold(OpOperand *elwiseOperand, AffineMap elwiseMap,
                    SmallVector<Value> &newIns,
                    SmallVector<AffineMap> &newMaps) {
@@ -48,35 +47,80 @@ struct ElementwiseOpFolder {
   }
 };
 
+template <typename ConsumerOpTy, typename... ProducerOps>
+static bool foldInputOperands(ConsumerOpTy op, SmallVector<Value> &newIns,
+                              SmallVector<AffineMap> &newMaps) {
+  bool changed = false;
+  for (OpOperand *operand : op.getDpsInputOperands()) {
+    AffineMap consumerMap = op.getMatchingIndexingMap(operand);
+    const bool folded = (ElementwiseOpFolder<ProducerOps>::fold(
+                             operand, consumerMap, newIns, newMaps) ||
+                         ...);
+    if (folded) {
+      changed = true;
+    } else {
+      newIns.push_back(operand->get());
+      newMaps.push_back(consumerMap);
+    }
+  }
+  return changed;
+}
+
 template <typename... ProducerOps>
 struct FoldIntoElementwisePattern : public OpRewritePattern<ElementwiseOp> {
   using OpRewritePattern<ElementwiseOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ElementwiseOp op,
                                 PatternRewriter &rewriter) const override {
-    bool changed = false;
     SmallVector<Value> newIns;
     SmallVector<AffineMap> newMaps;
-    for (OpOperand *operand : op.getDpsInputOperands()) {
-      AffineMap consumerMap = op.getMatchingIndexingMap(operand);
-      const bool folded = (ElementwiseOpFolder<ProducerOps>::fold(
-                               operand, consumerMap, newIns, newMaps) ||
-                           ...);
-      if (folded) {
-        changed = true;
-      } else {
-        // push in original operand and its map.
-        newIns.push_back(operand->get());
-        newMaps.push_back(consumerMap);
-      }
-    }
-    if (!changed)
+    if (!foldInputOperands<ElementwiseOp, ProducerOps...>(op, newIns, newMaps))
       return failure();
     newMaps.push_back(op.getIndexingMapsArray().back());
 
     rewriter.replaceOpWithNewOp<ElementwiseOp>(
         op, newIns, op.getDpsInits()[0], op.getKindAttr(),
         rewriter.getAffineMapArrayAttr(newMaps));
+    return success();
+  }
+};
+
+template <typename... ProducerOps>
+struct FoldIntoGenericPattern : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp op,
+                                PatternRewriter &rewriter) const override {
+    // Restrict this pattern to elementwise-like generic ops.
+    // It may be safe to do so reduction dimensions in some cases. But we try
+    // to focus on simple cases here.
+    if (!op.isAllParallelLoops())
+      return failure();
+
+    SmallVector<Value> newIns;
+    SmallVector<AffineMap> newMaps;
+    if (!foldInputOperands<GenericOp, ProducerOps...>(op, newIns, newMaps))
+      return failure();
+
+    // Keep all output operands and their maps unchanged. The body is cloned
+    // so that the block arguments continue to correspond to the new operand
+    // list.
+    SmallVector<AffineMap> allMaps = op.getIndexingMapsArray();
+    newMaps.append(allMaps.begin() + op.getNumDpsInputs(), allMaps.end());
+    // The maps of the rewritten op must still determine bounds for every loop
+    // dimension. Folding a broadcast can otherwise drop the only map result
+    // that covers a dimension.
+    // See `generic_broadcast_not_folded_non_invertible` in
+    // mlir/test/Dialect/Linalg/elementwise/fold.mlir for an example.
+    if (!inversePermutation(concatAffineMaps(newMaps, op.getContext())))
+      return failure();
+    auto newOp =
+        GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), newIns,
+                          op.getDpsInits(), newMaps, op.getIteratorTypesArray(),
+                          /*bodyBuild=*/nullptr, getPrunedAttributeList(op));
+    rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
+                               newOp.getRegion().begin());
+    rewriter.replaceOp(op, newOp->getResults());
     return success();
   }
 };
@@ -100,6 +144,7 @@ struct LinalgFoldIntoElementwisePass
 
 void mlir::linalg::populateLinalgFoldIntoElementwisePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldIntoElementwisePattern<TransposeOp, BroadcastOp>>(
+  patterns.add<FoldIntoElementwisePattern<TransposeOp, BroadcastOp>,
+               FoldIntoGenericPattern<TransposeOp, BroadcastOp>>(
       patterns.getContext());
 }

@@ -245,3 +245,168 @@ func.func @fold_failed_constant_map(%A: tensor<16xf32>, %B: tensor<16x32xf32>, %
                           ins(%A, %transposed_B : tensor<16xf32>, tensor<32x16xf32>) outs(%C : tensor<16xf32>) -> tensor<16xf32>
   return %result : tensor<16xf32>
 }
+
+// -----
+
+// CHECK-DAG: #[[GENERIC_IDENTITY:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[GENERIC_BROADCASTED:.+]] = affine_map<(d0, d1) -> (d0)>
+// CHECK:       func.func @generic_broadcast
+// CHECK-NOT:   linalg.broadcast
+// CHECK:       linalg.generic
+// CHECK-SAME:  indexing_maps = [#[[GENERIC_BROADCASTED]], #[[GENERIC_IDENTITY]]]
+// CHECK-SAME:  ins(%{{.*}} : tensor<8xf32>) outs(%{{.*}} : tensor<8x16xf32>)
+// CHECK:       linalg.yield
+//
+#identity_generic = affine_map<(d0, d1) -> (d0, d1)>
+
+func.func @generic_broadcast(%A: tensor<8xf32>, %B: tensor<8x16xf32>) -> tensor<8x16xf32> {
+  %empty = tensor.empty() : tensor<8x16xf32>
+  %broadcasted = linalg.broadcast ins(%A : tensor<8xf32>) outs(%empty : tensor<8x16xf32>) dimensions = [1]
+  %result = linalg.generic {
+    indexing_maps = [#identity_generic, #identity_generic],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%broadcasted : tensor<8x16xf32>) outs(%B : tensor<8x16xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = arith.addf %in, %in : f32
+    linalg.yield %v : f32
+  } -> tensor<8x16xf32>
+  return %result : tensor<8x16xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[GENERIC_IDENTITY:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[GENERIC_TRANSPOSED:.+]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK:       func.func @generic_transpose
+// CHECK-NOT:   linalg.transpose
+// CHECK:       linalg.generic
+// CHECK-SAME:  indexing_maps = [#[[GENERIC_TRANSPOSED]], #[[GENERIC_IDENTITY]]]
+// CHECK-SAME:  ins(%{{.*}} : tensor<16x8xf32>) outs(%{{.*}} : tensor<8x16xf32>)
+//
+func.func @generic_transpose(%A: tensor<16x8xf32>, %B: tensor<8x16xf32>) -> tensor<8x16xf32> {
+  %empty = tensor.empty() : tensor<8x16xf32>
+  %transposed = linalg.transpose
+      ins(%A : tensor<16x8xf32>) outs(%empty : tensor<8x16xf32>) permutation = [1, 0]
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%transposed : tensor<8x16xf32>) outs(%B : tensor<8x16xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = arith.addf %in, %in : f32
+    linalg.yield %v : f32
+  } -> tensor<8x16xf32>
+  return %result : tensor<8x16xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[GENERIC_IDENTITY:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[GENERIC_BROADCASTED:.+]] = affine_map<(d0, d1) -> (d0)>
+// CHECK-DAG: #[[GENERIC_TRANSPOSED:.+]] = affine_map<(d0, d1) -> (d1, d0)>
+// CHECK:       func.func @generic_broadcast_and_transpose
+// CHECK-NOT:   linalg.broadcast
+// CHECK-NOT:   linalg.transpose
+// CHECK:       linalg.generic
+// CHECK-SAME:  indexing_maps = [#[[GENERIC_BROADCASTED]], #[[GENERIC_TRANSPOSED]], #[[GENERIC_IDENTITY]], #[[GENERIC_IDENTITY]]]
+// CHECK-SAME:  ins(%{{.*}}, %{{.*}}, %{{.*}} : tensor<8xf32>, tensor<16x8xf32>, tensor<8x16xf32>) outs(%{{.*}} : tensor<8x16xf32>)
+//
+func.func @generic_broadcast_and_transpose(
+    %A: tensor<8xf32>, %B: tensor<16x8xf32>, %C: tensor<8x16xf32>,
+    %D: tensor<8x16xf32>) -> tensor<8x16xf32> {
+  %broadcast_empty = tensor.empty() : tensor<8x16xf32>
+  %broadcasted = linalg.broadcast
+      ins(%A : tensor<8xf32>) outs(%broadcast_empty : tensor<8x16xf32>) dimensions = [1]
+  %transpose_empty = tensor.empty() : tensor<8x16xf32>
+  %transposed = linalg.transpose
+      ins(%B : tensor<16x8xf32>) outs(%transpose_empty : tensor<8x16xf32>) permutation = [1, 0]
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%broadcasted, %transposed, %C : tensor<8x16xf32>, tensor<8x16xf32>, tensor<8x16xf32>) outs(%D : tensor<8x16xf32>) {
+  ^bb0(%broadcast: f32, %transpose: f32, %input: f32, %out: f32):
+    %sum = arith.addf %broadcast, %transpose : f32
+    %result = arith.addf %sum, %input : f32
+    linalg.yield %result : f32
+  } -> tensor<8x16xf32>
+  return %result : tensor<8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @generic_broadcast_multiple_uses
+// CHECK:       %[[BROADCAST:.*]] = linalg.broadcast
+// CHECK:       %[[RESULT:.*]] = linalg.generic
+// CHECK-SAME:  ins(%{{.*}} : tensor<8xf32>) outs(%{{.*}} : tensor<8x16xf32>)
+// CHECK:       return %[[BROADCAST]], %[[RESULT]] : tensor<8x16xf32>, tensor<8x16xf32>
+//
+func.func @generic_broadcast_multiple_uses(%A: tensor<8xf32>, %B: tensor<8x16xf32>)
+    -> (tensor<8x16xf32>, tensor<8x16xf32>) {
+  %empty = tensor.empty() : tensor<8x16xf32>
+  %broadcasted = linalg.broadcast
+      ins(%A : tensor<8xf32>) outs(%empty : tensor<8x16xf32>) dimensions = [1]
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%broadcasted : tensor<8x16xf32>) outs(%B : tensor<8x16xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = arith.addf %in, %in : f32
+    linalg.yield %v : f32
+  } -> tensor<8x16xf32>
+  return %broadcasted, %result : tensor<8x16xf32>, tensor<8x16xf32>
+}
+
+// -----
+
+// This pass currently folds only elementwise-like, all-parallel generic ops.
+// Keep a reduction generic unchanged, even though its input map is foldable.
+// CHECK-LABEL: func.func @generic_reduction_not_folded
+// CHECK:       linalg.broadcast
+// CHECK:       linalg.generic
+// CHECK-SAME:  iterator_types = ["parallel", "reduction"]
+//
+#reduction_map = affine_map<(d0, d1) -> (d0)>
+
+func.func @generic_reduction_not_folded(%A: tensor<8xf32>, %B: tensor<1xf32>) -> tensor<1xf32> {
+  %empty = tensor.empty() : tensor<1x8xf32>
+  %broadcasted = linalg.broadcast ins(%A : tensor<8xf32>) outs(%empty : tensor<1x8xf32>) dimensions = [0]
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, #reduction_map],
+    iterator_types = ["parallel", "reduction"]
+  } ins(%broadcasted : tensor<1x8xf32>) outs(%B : tensor<1xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = arith.addf %in, %out : f32
+    linalg.yield %v : f32
+  } -> tensor<1xf32>
+  return %result : tensor<1xf32>
+}
+
+// -----
+
+// Folding must preserve invertibility of all indexing maps. The broadcast
+// input is the only operand covering d1 before the rewrite.
+// CHECK-LABEL: func.func @generic_broadcast_not_folded_non_invertible
+// CHECK:       linalg.broadcast
+// CHECK:       linalg.generic
+// CHECK-SAME:  ins(%{{.*}} : tensor<8x16xf32>) outs(%{{.*}} : tensor<8xf32>)
+//
+func.func @generic_broadcast_not_folded_non_invertible(
+    %A: tensor<8xf32>, %B: tensor<8xf32>) -> tensor<8xf32> {
+  %empty = tensor.empty() : tensor<8x16xf32>
+  %broadcasted = linalg.broadcast
+      ins(%A : tensor<8xf32>) outs(%empty : tensor<8x16xf32>) dimensions = [1]
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0)>],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%broadcasted : tensor<8x16xf32>) outs(%B : tensor<8xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = arith.addf %in, %in : f32
+    linalg.yield %v : f32
+  } -> tensor<8xf32>
+  return %result : tensor<8xf32>
+}

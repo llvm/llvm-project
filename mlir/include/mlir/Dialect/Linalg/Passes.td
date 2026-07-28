@@ -170,15 +170,15 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
 }
 
 def LinalgFoldIntoElementwisePass : Pass<"linalg-fold-into-elementwise"> {
-  let summary = "Fold transpose and broadcast ops into elementwise";
+  let summary = "Fold transpose and broadcast ops into elementwise consumers";
   let dependentDialects = ["linalg::LinalgDialect"];
 
   let description = [{
-    Fold transpose or broadcast op that feeds a `linalg.elementwise` into the
-    elementwise op. `linalg.transpose` and `linalg.broadcast` producers whose
-    consumer indexing map is a projected permutation can be absorbed into the
-    indexing map of the `linalg.elementwise` by composing the producer's map
-    into the elementwise op's indexing map. Other operands remain untouched.
+    Fold a transpose or broadcast that feeds a `linalg.elementwise` or an
+    all-parallel `linalg.generic` into its consumer. `linalg.transpose` and
+    `linalg.broadcast` producers whose consumer indexing map is a projected
+    permutation can be absorbed into the consumer's indexing map by composing
+    the producer's map into it. Other operands remain untouched.
   }];
 }
 
