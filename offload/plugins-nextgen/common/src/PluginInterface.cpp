@@ -693,6 +693,16 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                            "failure to jit IR image");
     }
     Buffer = std::move(*CompiledImageOrErr);
+
+    StringEnvar JITSaveImage("LIBOMPTARGET_JIT_SAVE_IMAGE", "");
+    if (JITSaveImage.isPresent()) {
+      std::error_code EC;
+      raw_fd_ostream OS(JITSaveImage.get(), EC);
+      if (EC)
+        return Plugin::error(ErrorCode::HOST_IO, "saving JIT image file");
+      OS << Buffer->getBuffer();
+      OS.close();
+    }
   } else {
     Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
   }
