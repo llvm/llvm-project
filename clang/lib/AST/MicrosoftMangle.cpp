@@ -2168,6 +2168,11 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     Error("template argument (value type: fixed point)");
     return;
   }
+
+  case APValue::Reflection: {
+    Error("template argument (value type: reflection)");
+    return;
+  }
   }
 }
 

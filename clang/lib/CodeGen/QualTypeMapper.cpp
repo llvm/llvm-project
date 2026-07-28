@@ -156,6 +156,9 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
                                   /*IsBitInt=*/false);
 
+  case BuiltinType::MetaInfo:
+    llvm::reportFatalInternalError("std::meta::info is consteval-only type");
+
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
   case BuiltinType::SChar:

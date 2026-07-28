@@ -2237,8 +2237,28 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
 }
 
 void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): Add support for Null, TypeSourceInfo,
+  // TemplateReference and DeclRefExpr
+  VisitExpr(E);
+  ID.AddInteger(static_cast<int>(E->getKind()));
+  switch (E->getKind()) {
+  case ReflectionKind::Null:
+    return;
+  case ReflectionKind::Type: {
+    QualType QT = E->getTypeSourceInfo()->getType();
+    if (isTypeAliasAsReflectionName(QT)) {
+      if (const auto *TDT = QT->getAs<TypedefType>()) {
+        ID.AddBoolean(true);
+        VisitDecl(TDT->getDecl()->getCanonicalDecl());
+        return;
+      }
+    }
+    ID.AddBoolean(false);
+    VisitType(QT);
+    return;
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
 }
 
 void

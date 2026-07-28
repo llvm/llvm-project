@@ -4904,6 +4904,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
     case clang::BuiltinType::NullPtr:
       return lldb::eEncodingUint;
 
+    case clang::BuiltinType::MetaInfo:
+      return lldb::eEncodingUint;
+
     case clang::BuiltinType::Kind::ARCUnbridgedCast:
     case clang::BuiltinType::Kind::BoundMember:
     case clang::BuiltinType::Kind::BuiltinFn:
