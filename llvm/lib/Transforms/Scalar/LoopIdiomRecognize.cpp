@@ -1304,7 +1304,7 @@ public:
     // an underlying pointer.
     if (!Off || !BasePtr)
       return false;
-    int64_t OffVal = Off->getValue()->getSExtValue();
+    const APInt &OffVal = Off->getAPInt();
     // If null is defined then the base pointer can't be null
     if (TheLoad.getParent()->getParent()->nullPointerIsDefined() &&
         isa<ConstantPointerNull>(BasePtr->getValue()))
@@ -1319,7 +1319,7 @@ public:
     }
     // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
     // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
-    if (IsNegStride ? OffVal < LoadSize : OffVal > -LoadSize)
+    if (IsNegStride ? OffVal.slt(LoadSize) : OffVal.sgt(-LoadSize))
       return false;
     return true;
   }
