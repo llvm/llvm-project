@@ -12355,7 +12355,7 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
   Qualifiers RQuals = RHSCan.getLocalQualifiers();
 
   if (LQuals.withoutObjCGCAttr() != RQuals.withoutObjCGCAttr()) {
-    // Reject immediately, if anything but the GC qualifiers is different. 
+    // Reject immediately, if anything but the GC qualifiers is different.
     return {};
   }
 
@@ -12367,7 +12367,6 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
     // qualified __strong.
     Qualifiers::GC GC_L = LQuals.getObjCGCAttr();
     Qualifiers::GC GC_R = RQuals.getObjCGCAttr();
-
     assert((GC_L != GC_R) && "unequal qualifier sets had only equal elements");
 
     if (GC_L == Qualifiers::Weak || GC_R == Qualifiers::Weak)
