@@ -1101,11 +1101,10 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     return Context.getELFSection(CstPrefix + ".cst32", ELF::SHT_PROGBITS,
                                  MergeableCstFlags, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(".rodata", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+    return ReadOnlySection;
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return Context.getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
-                               ELF::SHF_ALLOC | ELF::SHF_WRITE);
+  return DataRelROSection;
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
@@ -1115,16 +1114,16 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     return getSectionForConstant(DL, Kind, C, Alignment, F);
 
   auto &Context = getContext();
-  StringRef CstPrefix = ".rodata";
   unsigned MergeableCstFlags = ELF::SHF_ALLOC;
   if (Kind.isMergeableConst() || Kind.isMergeableCString())
     MergeableCstFlags |= ELF::SHF_MERGE;
-  if (isLargeConstant(DL, Kind, C)) {
+  bool IsLarge = isLargeConstant(DL, Kind, C);
+  Twine CstPrefix = IsLarge ? ".lrodata":".rodata";
+  if (IsLarge) {
     MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
-    CstPrefix = ".lrodata";
   }
 
-  std::string SectionSuffixStr = "." + SectionSuffix.str() + ".";
+  Twine SectionSuffixStr = Twine(".") + SectionSuffix.str() + ".";
 
   if (Kind.isMergeableConst4())
     return Context.getELFSection(CstPrefix + ".cst4" + SectionSuffixStr,
