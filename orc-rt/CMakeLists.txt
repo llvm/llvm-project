@@ -132,5 +132,4 @@ add_subdirectory(tools)
 
 if(ORC_RT_INCLUDE_TESTS)
   add_subdirectory(test)
-  add_subdirectory(unittests)
 endif()

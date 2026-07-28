@@ -19,11 +19,11 @@
 #include "Utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
@@ -34,6 +34,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -42,6 +43,7 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
@@ -49,12 +51,15 @@
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/StateStack.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -330,12 +335,12 @@ public:
 protected:
   /// Initializes the visitor and returns the set of initial directives of
   /// interest to be matched the beginning of the pattern.
-  virtual OmpDirectiveSet initialize() = 0;
+  virtual llvm::omp::DirectiveSet initialize() = 0;
 
   /// Visits a single directive and, based on it, returns the set of other
   /// directives of interest that would be part of the pattern if nested inside.
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) = 0;
+  virtual llvm::omp::DirectiveSet visitDirective(lower::pft::Evaluation &eval,
+                                                 llvm::omp::Directive dir) = 0;
 
   /// Obtain the list of clauses of the given OpenMP block or loop construct
   /// evaluation. If it's not an OpenMP construct, no modifications are made to
@@ -392,14 +397,14 @@ private:
       return;
 
     const auto &ompEval{eval.get<parser::OpenMPConstruct>()};
-    OmpDirectiveSet visitNested{
+    llvm::omp::DirectiveSet visitNested{
         visitDirective(eval, parser::omp::GetOmpDirectiveName(ompEval).v)};
 
-    if (visitNested.empty())
+    if (visitNested.none())
       return;
 
     if (lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval)) {
-      OmpDirectiveSet prevDirs{directivesOfInterest};
+      llvm::omp::DirectiveSet prevDirs{directivesOfInterest};
       directivesOfInterest = visitNested;
       visitEval(*nestedEval);
       directivesOfInterest = prevDirs;
@@ -410,7 +415,7 @@ protected:
   semantics::SemanticsContext &semaCtx;
 
 private:
-  OmpDirectiveSet directivesOfInterest;
+  llvm::omp::DirectiveSet directivesOfInterest;
 };
 
 /// Helper pattern to navigate target SPMD.
@@ -420,13 +425,14 @@ public:
   virtual ~TargetSPMDVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet initialize() override {
+  virtual llvm::omp::DirectiveSet initialize() override {
     teamsVisited = false;
     return llvm::omp::allTargetSet;
   }
 
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     // The default implementation does nothing, except it returns the allowed
@@ -498,8 +504,9 @@ public:
   virtual ~HostEvalVisitor() = default;
 
 protected:
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     List<lower::omp::Clause> clauses;
@@ -623,8 +630,9 @@ public:
   }
 
 protected:
-  virtual OmpDirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                         llvm::omp::Directive dir) override {
+  virtual llvm::omp::DirectiveSet
+  visitDirective(lower::pft::Evaluation &eval,
+                 llvm::omp::Directive dir) override {
     using namespace llvm::omp;
 
     // We know this to be the case because any changes to the exec mode are made
@@ -972,6 +980,11 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   struct LevelInfo {
     llvm::SmallVector<lower::pft::Evaluation *> before;
     llvm::SmallVector<lower::pft::Evaluation *> after;
+
+    // Whether this level carries intervening code (i.e. imperfect nesting).
+    bool hasInterveningCode() const {
+      return !before.empty() || !after.empty();
+    }
   };
   llvm::SmallVector<LevelInfo> levels;
 
@@ -989,7 +1002,12 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
     LevelInfo level;
     bool pastDo = false;
     for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
-      if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>())
+      // A labeled DO loop leaves a no-op ContinueStmt for its terminating
+      // labeled statement (alongside the EndDoStmt). Skip it so it isn't
+      // misclassified as intervening code.
+      if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>() ||
+          e.getIf<parser::ContinueStmt>() ||
+          e.getIf<parser::CompilerDirective>())
         continue;
       // Semantics guarantees the only DoConstruct here is the next associated
       // loop (non-associated DO loops are rejected as intervening code).
@@ -1020,11 +1038,35 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   const auto ubs = loopNestOp.getLoopUpperBounds();
   const auto steps = loopNestOp.getLoopSteps();
 
+  // The intervening-code guards and terminal-value restoration do arithmetic
+  // on the collapsed loop bounds. If those bounds are host_eval block arguments
+  // of an enclosing omp.target region, such uses are illegal, so diagnose
+  // instead of emitting IR the omp.target verifier rejects.
+  const bool hasInterveningCode = llvm::any_of(
+      levels, [](const LevelInfo &l) { return l.hasInterveningCode(); });
+  if (hasInterveningCode) {
+    auto isHostEvalValue = [](mlir::Value v) {
+      auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(v);
+      if (!blockArg)
+        return false;
+      auto iface = mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
+          blockArg.getOwner()->getParentOp());
+      return iface &&
+             llvm::is_contained(iface.getHostEvalBlockArgs(), blockArg);
+    };
+    if (llvm::any_of(lbs, isHostEvalValue) ||
+        llvm::any_of(ubs, isHostEvalValue) ||
+        llvm::any_of(steps, isHostEvalValue))
+      TODO(loc, "collapsed loop nest with intervening code whose loop bounds "
+                "are evaluated on the host for an enclosing 'target' region");
+  }
+
   // Last value the induction variable at \p lvl actually takes:
   // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
   auto computeLastIV = [&](const int lvl) -> mlir::Value {
-    const auto constStep = fir::getIntIfConstant(steps[lvl]);
-    if (constStep && (*constStep == 1 || *constStep == -1))
+    const std::optional<llvm::APInt> constStep =
+        fir::getIntIfConstant(steps[lvl]);
+    if (constStep && (constStep->isOne() || constStep->isAllOnes()))
       return ubs[lvl];
     const mlir::Value lb = lbs[lvl];
     const mlir::Value ub = ubs[lvl];
@@ -2651,6 +2693,7 @@ genTargetClauses(lower::AbstractConverter &converter,
                  mlir::omp::TargetExtOperands &clauseOps,
                  DefaultMapsTy &defaultMaps,
                  llvm::SmallVectorImpl<Object> &hasDeviceAddrObjects,
+                 llvm::SmallVectorImpl<Object> &inReductionObjects,
                  llvm::SmallVectorImpl<Object> &isDevicePtrObjects,
                  llvm::SmallVectorImpl<Object> &mapObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
@@ -2666,12 +2709,33 @@ genTargetClauses(lower::AbstractConverter &converter,
     hostEvalInfo->collectValues(clauseOps.hostEvalVars);
   }
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
+  cp.processInReduction(loc, clauseOps, inReductionObjects);
+  // The host lowering of `target in_reduction` redirects each list item's
+  // dedicated implicit map entry to the per-task reduction-private storage
+  // returned by the runtime. A COMMON block member is accessed in the target
+  // body through the COMMON block storage map, not through its own member map
+  // entry, so the redirect would rewrite an unused map argument and the body
+  // would accumulate into the mapped original rather than the private copy.
+  // An EQUIVALENCE-associated variable has the same problem: it shares storage
+  // with another variable that may be mapped separately (e.g. `map(tofrom: j)`
+  // with `equivalence(i, j)`), so the body updates the aliased storage while
+  // the redirected runtime-private copy stays dead.
+  // Reject both cases until the redirect can target the storage map.
+  for (const Object &object : inReductionObjects)
+    if (const semantics::Symbol *sym = object.sym()) {
+      if (semantics::FindCommonBlockContaining(sym->GetUltimate()))
+        TODO(loc,
+             "TARGET construct with IN_REDUCTION of a COMMON block member");
+      if (semantics::FindEquivalenceSet(sym->GetUltimate()))
+        TODO(loc, "TARGET construct with IN_REDUCTION of an EQUIVALENCE "
+                  "storage-associated variable");
+    }
   cp.processIsDevicePtr(stmtCtx, clauseOps, isDevicePtrObjects);
   cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
-  cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
+  cp.processTODO<clause::Allocate, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
 
   // `target private(..)` is only supported in delayed privatization mode.
@@ -2782,8 +2846,10 @@ static void genTaskwaitClauses(lower::AbstractConverter &converter,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::TaskwaitOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processTODO<clause::Depend, clause::Nowait>(
-      loc, llvm::omp::Directive::OMPD_taskwait);
+  lower::StatementContext stmtCtx;
+  lower::SymMap &symTable = converter.getSymbolMap();
+  cp.processDepend(symTable, stmtCtx, clauseOps);
+  cp.processTODO<clause::Nowait>(loc, llvm::omp::Directive::OMPD_taskwait);
 }
 
 static void genWorkshareClauses(lower::AbstractConverter &converter,
@@ -3341,10 +3407,17 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  // Clauses for unrolling not yet implemnted
   ClauseProcessor cp(converter, semaCtx, item->clauses);
-  cp.processTODO<clause::Partial, clause::Full>(
-      loc, llvm::omp::Directive::OMPD_unroll);
+
+  // The `full` clause is not yet implemented.
+  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+
+  // Process the `partial` clause. If present, it may carry a constant unroll
+  // factor.
+  std::optional<int64_t> partialFactor;
+  bool hasPartial = cp.processPartial(partialFactor);
+  if (hasPartial && !partialFactor.has_value())
+    TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -3356,9 +3429,16 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   for (auto &&canonLoop : canonLoops)
     applyees.push_back(canonLoop.getCli());
 
-  // Apply unrolling to it
   auto cli = llvm::getSingleElement(canonLoops).getCli();
-  mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+
+  if (partialFactor.has_value()) {
+    // Partially unroll the loop by the given constant factor.
+    mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
+                                       static_cast<uint64_t>(*partialFactor));
+  } else {
+    // Apply heuristic unrolling to it.
+    mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+  }
 }
 
 static mlir::omp::MaskedOp
@@ -3735,10 +3815,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::TargetExtOperands clauseOps;
   DefaultMapsTy defaultMaps;
   llvm::SmallVector<Object> mapObjects, hasDeviceAddrObjects,
-      isDevicePtrObjects;
+      inReductionObjects, isDevicePtrObjects;
   genTargetClauses(converter, semaCtx, symTable, stmtCtx, eval, item->clauses,
                    loc, clauseOps, defaultMaps, hasDeviceAddrObjects,
-                   isDevicePtrObjects, mapObjects);
+                   inReductionObjects, isDevicePtrObjects, mapObjects);
 
   KernelTypeVisitor visitor(semaCtx, converter.getModuleOp());
   clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
@@ -3786,6 +3866,26 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*isTargetPrivitization=*/true);
   dsp.processStep1(&clauseOps);
 
+  // The host lowering of `target in_reduction` requires each list item to be
+  // implicitly mapped as an address-preserving entry whose map argument the
+  // redirect rewrites to the runtime reduction-private storage. When the same
+  // variable is also privatized on the target (implicitly, as with a
+  // host-associated scalar that defaults to firstprivate, or explicitly with
+  // `firstprivate(i) in_reduction(+:i)`), the force-map is suppressed because
+  // the symbol is already in the privatization set, and the firstprivate copy
+  // region then has no mold value for it, aborting translation. Reject until
+  // in_reduction can be reconciled with target privatization.
+  for (const Object &object : inReductionObjects)
+    if (const semantics::Symbol *sym = object.sym()) {
+      const semantics::Symbol &ultimate = sym->GetUltimate();
+      if (llvm::any_of(dsp.getAllSymbolsToPrivatize(),
+                       [&](const semantics::Symbol *priv) {
+                         return priv->GetUltimate() == ultimate;
+                       }))
+        TODO(loc,
+             "TARGET construct with IN_REDUCTION of a privatized variable");
+    }
+
   // Collect symbols that have dynamic substring accesses
   llvm::SmallPtrSet<const semantics::Symbol *, 8> symbolsWithDynamicSubstring;
   collectSymbolsWithDynamicSubstring(semaCtx, eval,
@@ -3796,7 +3896,16 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // symbols used inside the region that do not have explicit data-environment
   // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
   // clauses).
-  auto captureImplicitMap = [&](const semantics::Symbol &sym) {
+  //
+  // When `forceAddressPreserving` is set, the symbol is force-mapped as an
+  // address-preserving `capture(ByRef)` with implicit `tofrom` flags,
+  // bypassing the scalar default capture rules. This is used for `target
+  // in_reduction` list items, whose mapped pointer is passed as the `orig`
+  // argument of `__kmpc_task_reduction_get_th_data`; a ByCopy scalar capture
+  // would break the runtime lookup against the enclosing taskgroup's
+  // task_reduction descriptor.
+  auto captureImplicitMap = [&](const semantics::Symbol &sym,
+                                bool forceAddressPreserving = false) {
     // Structure component symbols don't have bindings, and can only be
     // explicitly mapped individually. If a member is captured implicitly
     // we map the entirety of the derived type when we find its symbol.
@@ -3805,12 +3914,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
     // if the symbol is part of an already mapped common block, do not make a
     // map for it.
-    if (const Fortran::semantics::Symbol *common =
-            Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate()))
-      if (llvm::any_of(mapObjects, [=](const Object &object) {
-            return object.sym() == common;
-          }))
-        return;
+    if (!forceAddressPreserving) {
+      if (const Fortran::semantics::Symbol *common =
+              Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate()))
+        if (llvm::any_of(mapObjects, [=](const Object &object) {
+              return object.sym() == common;
+            }))
+          return;
+    }
 
     // If we come across a symbol without a symbol address, we
     // return as we cannot process it, this is intended as a
@@ -3860,13 +3971,21 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         eleType = refType.getElementType();
 
       std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
-          mapFlagAndKind = getImplicitMapTypeAndKind(
-              firOpBuilder, converter, defaultMaps, eleType, loc, sym);
+          mapFlagAndKind;
+      if (forceAddressPreserving)
+        mapFlagAndKind = {mlir::omp::ClauseMapFlags::implicit |
+                              mlir::omp::ClauseMapFlags::to |
+                              mlir::omp::ClauseMapFlags::from,
+                          mlir::omp::VariableCaptureKind::ByRef};
+      else
+        mapFlagAndKind = getImplicitMapTypeAndKind(
+            firOpBuilder, converter, defaultMaps, eleType, loc, sym);
 
       mlir::FlatSymbolRefAttr mapperId;
       auto defaultmapBehaviour = getDefaultmapIfPresent(defaultMaps, eleType);
-      if (defaultmapBehaviour ==
-          clause::Defaultmap::ImplicitBehavior::Default) {
+      if (!forceAddressPreserving &&
+          defaultmapBehaviour ==
+              clause::Defaultmap::ImplicitBehavior::Default) {
         const semantics::DerivedTypeSpec *typeSpec =
             sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
         if (typeSpec) {
@@ -3888,7 +4007,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
-            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
+            //
+            // For an allocatable capture, only synthesize an implicit default
+            // mapper when the type requires one; a flat record does not.
+            if (!isPointer &&
+                (hasDefaultMapper ||
+                 (isAllocatable &&
+                  requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -3920,6 +4045,15 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           Object{const_cast<semantics::Symbol *>(&sym), std::nullopt});
     }
   };
+  // OpenMP requires `in_reduction` list items on `target` to be implicitly
+  // data-mapped. Force-map them as address-preserving captures before the
+  // generic implicit-map walk so that walk treats the symbols as already
+  // mapped via `isDuplicateMappedSymbol` and does not downgrade them to
+  // ByCopy.
+  for (const Object &object : inReductionObjects)
+    if (const semantics::Symbol *sym = object.sym())
+      captureImplicitMap(*sym, /*forceAddressPreserving=*/true);
+
   lower::pft::visitAllSymbols(eval, captureImplicitMap);
 
   auto targetOp = mlir::omp::TargetOp::create(firOpBuilder, loc, clauseOps);
@@ -3932,7 +4066,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   args.hasDeviceAddr.objects = hasDeviceAddrObjects;
   args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
   args.hostEvalVars = clauseOps.hostEvalVars;
-  // TODO: Add in_reduction syms and vars.
+  // `in_reduction` list items do not get their own entry block argument on
+  // `omp.target`; they are implicitly mapped (see the force-map above) and the
+  // target body accesses them through their `map_entries` block argument. The
+  // `in_reduction` operands remain on the op as host-side metadata.
   args.map.objects = mapObjects;
   args.map.vars = mapBaseValues;
   args.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
@@ -4899,11 +5036,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
       // statements or directives preventing them from being combined need the
       // attribute as well. Disallow block constructs that can only be outermost
       // leafs and loop transformation constructs.
-      OmpDirectiveSet combinableDirs =
+      llvm::omp::DirectiveSet combinableDirs =
           (llvm::omp::blockConstructSet &
-           ~OmpDirectiveSet{llvm::omp::Directive::OMPD_ordered,
-                            llvm::omp::Directive::OMPD_scope,
-                            llvm::omp::Directive::OMPD_taskgroup}) |
+           ~llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_ordered,
+                                    llvm::omp::Directive::OMPD_scope,
+                                    llvm::omp::Directive::OMPD_taskgroup}) |
           (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
       const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
       llvm::omp::Directive nestedDir =
@@ -4949,21 +5086,24 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
+  // Assumption clauses are hints with no representation in the OpenMP dialect,
+  // so this declarative directive is a no-op.
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+    TODO(converter.getCurrentLocation(),
+         "assumption clauses on the assumes directive");
 }
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+  // No lowering for the declarative directive itself; the recorded variants are
+  // resolved at call sites (see resolveDeclareVariantCallee in CallInterface).
 }
 
 static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, const clause::Combiner &combiner,
+    semantics::SemanticsContext &semaCtx, const StylizedInstance &combinerInst,
     const parser::OmpStylizedInstance &parserInst) {
   // Extract the typed assignment from the parser-level instance, if
   // the combiner is an assignment statement (as opposed to a call).
@@ -4977,8 +5117,12 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
         assign = &*wrapper->v;
   }
   ReductionProcessor::GenCombinerCBTy genCombinerCB;
-  const StylizedInstance &inst = combiner.v.front();
-  semantics::SomeExpr evalExpr = std::get<StylizedInstance::Instance>(inst.t);
+  // combinerInst is the combiner instance for the type currently being lowered
+  // (one per listed type, in typeNameList order): a multi-type declare
+  // reduction carries a distinct stylized instance per type so omp_out/omp_in
+  // are re-typed for each. Single-type is index 0 of one.
+  semantics::SomeExpr evalExpr =
+      std::get<StylizedInstance::Instance>(combinerInst.t);
 
   genCombinerCB = [&, evalExpr, assign](fir::FirOpBuilder &builder,
                                         mlir::Location loc, mlir::Type type,
@@ -4986,7 +5130,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                                         bool isByRef) {
     lower::SymMapScope scope(symTable);
     mlir::Value ompOutVar;
-    for (const Object &object : std::get<StylizedInstance::Variables>(inst.t)) {
+    for (const Object &object :
+         std::get<StylizedInstance::Variables>(combinerInst.t)) {
       mlir::Value addr = lhs;
       mlir::Type type = lhs.getType();
       std::string name = object.sym()->name().ToString();
@@ -5138,24 +5283,33 @@ static bool isSimpleReductionType(mlir::Type reductionType) {
   return false;
 }
 
-// Getting the type from a symbol compared to a DeclSpec is simpler since we do
-// not need to consider derived vs intrinsic types. Semantics is guaranteed to
-// generate these symbols.
+// Compute the reduction's element type from the given combiner instance's
+// stylized declaration symbol (omp_out), without checking whether lowering
+// supports it. A multi-type declare reduction carries one combiner instance per
+// listed type (typeNameList order), so the caller passes the instance for the
+// type being lowered. Shared by getReductionType (same-file, enforces support
+// with a TODO) and materializeUserReduction (skips an unsupported requested
+// type via isSimpleReductionType instead of aborting the consumer).
+// Getting the type from that symbol compared to the declared type-list (a
+// DeclarationTypeSpec) is simpler since we do not need to consider derived vs
+// intrinsic types. Semantics is guaranteed to generate these symbols.
 static mlir::Type
-getReductionType(lower::AbstractConverter &converter,
-                 const parser::OmpReductionSpecifier &specifier) {
-  const auto &combinerExpression =
-      std::get<std::optional<parser::OmpCombinerExpression>>(specifier.t)
-          .value();
-  const parser::OmpStylizedInstance &combinerInstance =
-      combinerExpression.v.front();
+computeReductionType(lower::AbstractConverter &converter,
+                     const parser::OmpStylizedInstance &combinerInstance) {
   const std::list<parser::OmpStylizedDeclaration> &declList =
       std::get<std::list<parser::OmpStylizedDeclaration>>(combinerInstance.t);
   const parser::OmpStylizedDeclaration &decl = declList.front();
   const auto &name = std::get<parser::ObjectName>(decl.var.t);
   const auto &symbol = semantics::SymbolRef(*name.symbol);
-  mlir::Type reductionType = converter.genType(symbol);
+  return converter.genType(symbol);
+}
 
+// Return the reduction's element type, emitting a TODO if lowering does not
+// support it.
+static mlir::Type
+getReductionType(lower::AbstractConverter &converter,
+                 const parser::OmpStylizedInstance &combinerInstance) {
+  mlir::Type reductionType = computeReductionType(converter, combinerInstance);
   if (!isSimpleReductionType(reductionType))
     TODO(converter.getCurrentLocation(),
          "declare reduction currently only supports trivial types, "
@@ -5191,10 +5345,20 @@ appendCombiner(const parser::OmpDeclareReductionDirective &construct,
   llvm_unreachable("Expecting reduction combiner");
 }
 
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OmpDeclareReductionDirective &construct) {
+// Lower a single declare-reduction directive. Serves both same-file lowering
+// (symOpt null, no filter) and separate-compilation materialization of an
+// imported reduction (symOpt is the source symbol, with a fresh SymMap).
+// When \p requestedOpName is non-empty (the lazy clause-driven path), only the
+// per-type instance whose scoped op name equals it is emitted, and lowerability
+// is checked per-type rather than for the whole declaration; same-file callers
+// pass an empty filter and lower every listed type as before. Mirrors
+// genOpenMPDeclareMapperImpl.
+static void genOpenMPDeclareReductionImpl(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx,
+    const parser::OmpDeclareReductionDirective &construct,
+    const semantics::Symbol *symOpt = nullptr,
+    llvm::StringRef requestedOpName = {}) {
   if (semaCtx.langOptions().OpenMPSimd)
     return;
 
@@ -5232,6 +5396,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       initExpr ? initExpr->v.begin()
                : std::list<parser::OmpStylizedInstance>::const_iterator{};
 
+  // Index of the type currently being lowered within the parallel per-type
+  // lists: typeNameList.v, the clause-level combiner instances (combiner.v),
+  // and the clause-level initializer instances. Single-type is index 0 of one.
+  unsigned instanceIdx = 0;
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
 
@@ -5239,7 +5407,25 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
            "Mismatched combiner instance count");
     const parser::OmpStylizedInstance &parserInst = *parserInstIt++;
 
-    mlir::Type reductionType = getReductionType(converter, specifier);
+    mlir::Type reductionType;
+    if (requestedOpName.empty()) {
+      // Same-file path: lower every listed type, emitting a TODO on an
+      // unsupported one exactly as before.
+      reductionType = getReductionType(converter, parserInst);
+    } else {
+      // Lazy per-type path: check lowerability for THIS type alone (not the
+      // whole-declaration gate), so a multi-type declaration with an
+      // unsupported sibling still materializes the requested supported type.
+      // An unsupported requested type is left unmaterialized (the clause then
+      // keeps its TODO).
+      reductionType = computeReductionType(converter, parserInst);
+      if (!isSimpleReductionType(reductionType)) {
+        if (initExpr)
+          ++parserInitInstIt;
+        ++instanceIdx;
+        continue;
+      }
+    }
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     // Compute the canonical reduction name the same way
     // processReductionArguments does.
@@ -5250,51 +5436,104 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                   common::visitors{
                       [&](const clause::DefinedOperator::IntrinsicOperator
                               &intrOp) -> std::string {
-                        ReductionProcessor::ReductionIdentifier redId =
-                            ReductionProcessor::getReductionType(intrOp);
-                        return ReductionProcessor::getReductionName(
-                            redId, converter.getFirOpBuilder().getKindMap(),
-                            reductionType, isByRef);
+                        // Directive side of the intrinsic-operator USER
+                        // reduction naming contract (clause side:
+                        // ReductionProcessor::processReductionArguments site
+                        // 2). A user `declare reduction(+:t)` is scoped by its
+                        // owning scope exactly like the defined-operator and
+                        // named paths, so two declarations for the same
+                        // (operator, type) in different scopes get distinct ops
+                        // instead of colliding on the one global builtin name.
+                        // Only user reductions reach here (builtins are created
+                        // directly by createDeclareReduction), so this always
+                        // scopes. The intrinsic-operator parse node carries no
+                        // reduction symbol: symOpt supplies it for separate
+                        // compilation; same-file it is resolved from the
+                        // current (declaration) scope under the operator's
+                        // mangled name (MakeNameFromOperator), which resolves
+                        // to the same ultimate the clause side finds, so both
+                        // name the op identically.
+                        const semantics::Symbol *redSymPtr = symOpt;
+                        if (!redSymPtr) {
+                          parser::CharBlock mangledOpName = semantics::omp::
+                              MangledIntrinsicOperatorReductionName(
+                                  ReductionProcessor::toParserIntrinsicOperator(
+                                      intrOp),
+                                  semaCtx);
+                          redSymPtr = semantics::omp::FindUserReductionSymbol(
+                              converter.getCurrentScope(), mangledOpName);
+                        }
+                        if (!redSymPtr)
+                          TODO(converter.getCurrentLocation(),
+                               "OpenMP user-defined intrinsic-operator declare "
+                               "reduction symbol was not found for lowering");
+                        const semantics::Symbol &redSym =
+                            redSymPtr->GetUltimate();
+                        return ReductionProcessor::getScopedUserReductionName(
+                            converter, redSym, reductionType, isByRef);
                       },
                       [&](const clause::DefinedOperator::DefinedOpName &opName)
                           -> std::string {
                         // Directive side of the user-defined operator reduction
                         // naming contract (the clause side is in
-                        // ReductionProcessor::processReductionArguments).
-                        // opName.v.sym() is the reduction symbol
-                        // "op<spelling>". Only single-declaration, single-type
-                        // reductions are supported; otherwise emit a clean
-                        // TODO.
+                        // ReductionProcessor::processReductionArguments). Name
+                        // the op via getScopedUserReductionName from the
+                        // symbol's ultimate (name, owner) plus the per-type
+                        // suffix, byte-identical to the clause reference.
+                        // symOpt supplies the source symbol for separate
+                        // compilation, else opName.v.sym(). Runs once per
+                        // listed type (the enclosing loop walks typeNameList in
+                        // lockstep with the per-type combiner/initializer
+                        // instances), emitting one op per (operator, type);
+                        // single-type is N=1.
                         const semantics::Symbol &redSym =
-                            opName.v.sym()->GetUltimate();
+                            symOpt ? symOpt->GetUltimate()
+                                   : opName.v.sym()->GetUltimate();
                         const auto *userDetails =
                             redSym.detailsIf<semantics::UserReductionDetails>();
-                        if (!userDetails || typeNameList.v.size() != 1 ||
-                            userDetails->GetDeclList().size() != 1 ||
-                            userDetails->GetTypeList().size() != 1)
+                        if (!userDetails)
                           TODO(converter.getCurrentLocation(),
                                "OpenMP user-defined operator declare reduction "
-                               "with multiple declarations or multiple types");
+                               "without user reduction details");
                         return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym);
+                            converter, redSym, reductionType, isByRef);
                       },
                   },
                   defOp.u);
             },
             [&](const clause::ProcedureDesignator &pd) -> std::string {
-              // Qualify the name with the scope in which the user-defined
-              // reduction is declared so that reductions with the same name
-              // in different scopes produce distinct omp.declare_reduction ops.
-              const semantics::Symbol *sym = pd.v.sym();
-              std::string name = sym->name().ToString();
-              return converter.mangleName(name, sym->GetUltimate().owner());
+              // Directive side of the named-reduction naming contract (clause
+              // side in ReductionProcessor::processReductionArguments). Name
+              // the op via getScopedUserReductionName from the source symbol's
+              // ultimate (name, owner) plus the per-type suffix, byte-identical
+              // to the clause reference. symOpt supplies the source symbol for
+              // separate compilation, else pd.v.sym(); GetUltimate keeps the
+              // name stable across a plain `use`. reductionType is the declared
+              // element type (already canonical), so unlike the clause side it
+              // needs no namingType normalization.
+              const semantics::Symbol &redSym =
+                  (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
+              return ReductionProcessor::getScopedUserReductionName(
+                  converter, redSym, reductionType, isByRef);
             },
         },
         redOp.u);
 
+    // Lazy path: emit only the op the clause requested, skipping this
+    // declaration's other listed types (keeping the per-type iterators in
+    // lockstep). Single-type is the N==1 case where the one name matches.
+    if (!requestedOpName.empty() && reductionNameStr != requestedOpName) {
+      if (initExpr)
+        ++parserInitInstIt;
+      ++instanceIdx;
+      continue;
+    }
+
+    assert(instanceIdx < combiner.v.size() &&
+           "Mismatched combiner instance count");
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
-        processReductionCombiner(converter, symTable, semaCtx, combiner,
-                                 parserInst);
+        processReductionCombiner(converter, symTable, semaCtx,
+                                 combiner.v[instanceIdx], parserInst);
     const parser::OmpStylizedInstance *parserInitInst = nullptr;
     if (initExpr) {
       assert(parserInitInstIt != initExpr->v.end() &&
@@ -5318,7 +5557,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
-    if (!cp.processInitializer(symTable, genInitValueCB, parserInitInst)) {
+    if (!cp.processInitializer(symTable, genInitValueCB, parserInitInst,
+                               instanceIdx)) {
       // No initializer clause provided. Per OpenMP, initialize as
       // default-initialized using the shared inline init helper.
       const semantics::DerivedTypeSpec *derivedTypeSpec = nullptr;
@@ -5371,6 +5611,75 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         mlir::omp::DeclareReductionOp>(
         converter, reductionNameStr, redType, converter.getCurrentLocation(),
         isByRef, genCombinerCB, genInitValueCB, reductionSym);
+    ++instanceIdx;
+  }
+}
+
+// Same-file delegator for a declare-reduction directive. Mirrors the
+// declare-mapper delegator: it forwards the enclosing SymMap so the combiner/
+// initializer callbacks share the current scope. Separate-compilation
+// materialization instead calls genOpenMPDeclareReductionImpl directly with a
+// fresh SymMap and the source reduction symbol.
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpDeclareReductionDirective &construct) {
+  genOpenMPDeclareReductionImpl(converter, symTable, semaCtx, construct);
+}
+
+// Lazily materialize the omp.declare_reduction op the reduction clause resolved
+// but did not find, for separate compilation. The clause side has already
+// resolved the exact imported reduction symbol and computed the per-type scoped
+// op name it needs; this emits exactly that one op (idempotently) instead of an
+// eager pre-pass materializing every accessible reduction. Called from the
+// clause bind sites in ReductionProcessor.cpp when the op is absent and the
+// reduction's defining module is a mod file.
+void Fortran::lower::materializeUserReduction(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const semantics::Symbol &resolvedReduction, llvm::StringRef requestedOpName,
+    mlir::Type requestedType, bool isByRef) {
+  // Per-type lowerability: an unsupported requested element type is not
+  // materialized, so the clause keeps its TODO. Checked here (not the
+  // all-types isLowerableUserReductionDecl gate) so a multi-type declaration
+  // with an unsupported sibling still materializes the requested supported
+  // type. The combiner-in-clause form is skipped per-declaration below.
+  (void)isByRef;
+  if (!isSimpleReductionType(requestedType))
+    return;
+  const semantics::Symbol &ultimate = resolvedReduction.GetUltimate();
+  const auto *userDetails =
+      ultimate.detailsIf<semantics::UserReductionDetails>();
+  if (!userDetails)
+    return;
+  for (const auto *decl : userDetails->GetDeclList()) {
+    const auto *reductionDecl =
+        std::get_if<parser::OmpDeclareReductionDirective>(&decl->u);
+    if (!reductionDecl)
+      continue;
+    // The combiner-in-clause form (OpenMP 6.0 `declare reduction(id:type)
+    // combiner(...)`) is not lowered even in the same-file path; skip it so an
+    // imported one does not abort. A referenced one still gets the clause TODO.
+    const auto &specifier =
+        DEREF(parser::omp::GetFirstArgument<parser::OmpReductionSpecifier>(
+            reductionDecl->v));
+    const auto &combinerExpr =
+        std::get<std::optional<parser::OmpCombinerExpression>>(specifier.t);
+    if (!combinerExpr.has_value())
+      continue;
+    // Mod-file reading runs only ResolveNames, so an imported combiner and
+    // initializer carry bound names but null typedExpr/typedCall (the same-file
+    // path fills these later in PerformStatementSemantics). Lowering reads the
+    // typed forms, so run expression analysis over this imported directive now;
+    // the genOpenMPDeclareReductionImpl -> createDeclareReductionHelper
+    // lookupSymbol cache makes a repeat call idempotent.
+    semantics::ExprChecker checker{semaCtx};
+    parser::Walk(*reductionDecl, checker);
+    // Fresh, materialization-local SymMap: the combiner/initializer callbacks
+    // created inside the impl capture it by reference and run synchronously
+    // during createDeclareReductionHelper, so it must outlive the impl call.
+    lower::SymMap materializeSymTable;
+    genOpenMPDeclareReductionImpl(converter, materializeSymTable, semaCtx,
+                                  *reductionDecl, &ultimate, requestedOpName);
   }
 }
 
@@ -5710,12 +6019,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
         fallback = getFallbackVariant(otherwiseClause->v->v->value());
-    } else if (const auto *defaultClause =
-                   std::get_if<parser::OmpClause::Default>(&clause.u)) {
-      if (const auto *dirSpecPtr = std::get_if<
-              common::Indirection<parser::OmpDirectiveSpecification>>(
-              &defaultClause->v.u))
-        fallback = getFallbackVariant(dirSpecPtr->value());
+    } else if (const auto *defaultVariantClause =
+                   std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)) {
+      const auto &dirSpec = defaultVariantClause->v.v;
+      fallback = getFallbackVariant(dirSpec.value());
     }
   }
 
@@ -5987,8 +6294,149 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPInteropConstruct &interopConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPInteropConstruct");
+  if (semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.genLocation(interopConstruct.source);
+  mlir::MLIRContext *context = firOpBuilder.getContext();
+
+  List<Clause> clauses = makeClauses(interopConstruct.v.Clauses(), semaCtx);
+
+  // Process shared clauses (depend, nowait, device) that apply to all
+  // action clauses.
+  lower::StatementContext stmtCtx;
+  mlir::omp::DependClauseOps dependOps;
+  mlir::omp::NowaitClauseOps nowaitOps;
+  mlir::Value deviceValue;
+
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processDepend(symTable, stmtCtx, dependOps);
+  cp.processNowait(nowaitOps);
+
+  // Process device clause manually.
+  for (auto &clause : clauses) {
+    if (auto *deviceClause = std::get_if<clause::Device>(&clause.u)) {
+      const auto &deviceExpr = std::get<SomeExpr>(deviceClause->t);
+      deviceValue = fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
+    }
+  }
+
+  // Helper to get the address of an interop variable from an Object.
+  auto getInteropVarAddr = [&](const Object &object) -> mlir::Value {
+    const semantics::Symbol *sym = object.sym();
+    assert(sym && "interop variable must have a symbol");
+    mlir::Value addr = converter.getSymbolAddress(*sym);
+    assert(addr && "interop variable must have a valid address");
+    return addr;
+  };
+
+  // Process action clauses: init, destroy, use.
+  for (auto &clause : clauses) {
+    if (auto *initClause = std::get_if<clause::Init>(&clause.u)) {
+      auto &interopVar = std::get<clause::Init::InteropVar>(initClause->t);
+      auto &interopTypes = std::get<clause::Init::InteropTypes>(initClause->t);
+      auto &interopPref =
+          std::get<std::optional<clause::Init::InteropPreference>>(
+              initClause->t);
+
+      mlir::Value interopVarAddr = getInteropVarAddr(interopVar);
+
+      // Convert interop types to MLIR attributes. A single init clause may
+      // list both `target` and `targetsync`; keep them on one op and let the
+      // LLVM-IR translation collapse them into a single runtime init call,
+      // matching Clang.
+      llvm::SmallVector<mlir::Attribute> interopTypeAttrs;
+      for (auto itype : interopTypes) {
+        switch (itype) {
+        case clause::Init::InteropType::Target:
+          interopTypeAttrs.push_back(mlir::omp::InteropTypeAttr::get(
+              context, mlir::omp::InteropType::target));
+          break;
+        case clause::Init::InteropType::Targetsync:
+          interopTypeAttrs.push_back(mlir::omp::InteropTypeAttr::get(
+              context, mlir::omp::InteropType::targetsync));
+          break;
+        }
+      }
+      auto interopTypesAttr = mlir::ArrayAttr::get(context, interopTypeAttrs);
+
+      // Convert prefer_type to I64ArrayAttr if present.
+      mlir::ArrayAttr preferTypeAttr;
+      if (interopPref) {
+        llvm::SmallVector<int64_t> prefValues;
+        for (auto &pref : *interopPref) {
+          // Try to evaluate as a constant integer (e.g., omp_ifr_cuda).
+          if (auto constVal = evaluate::ToInt64(pref)) {
+            prefValues.push_back(*constVal);
+          } else if (auto str =
+                         evaluate::GetScalarConstantValue<evaluate::Ascii>(
+                             pref)) {
+            // Map standard OpenMP foreign-runtime identifier strings to
+            // their well-known integer values (OpenMP 5.1, Table 22.2).
+            auto frId = llvm::StringSwitch<std::optional<int64_t>>(
+                            llvm::StringRef(*str).lower())
+                            .Case("cuda", 1)
+                            .Case("cuda_driver", 2)
+                            .Case("opencl", 3)
+                            .Case("sycl", 4)
+                            .Case("hip", 5)
+                            .Case("level_zero", 6)
+                            .Case("hsa", 7)
+                            .Default(std::nullopt);
+            if (frId)
+              prefValues.push_back(*frId);
+            else
+              TODO(loc, "unknown foreign-runtime identifier in "
+                        "prefer_type");
+          } else {
+            TODO(loc, "non-constant prefer_type value in interop init");
+          }
+        }
+        if (!prefValues.empty())
+          preferTypeAttr = firOpBuilder.getI64ArrayAttr(prefValues);
+      }
+
+      // Emit a single InteropInitOp carrying all interop-types from this init
+      // clause. The translation to LLVM IR collapses them into one runtime
+      // call, matching Clang (one init clause -> one __tgt_interop_init).
+      mlir::omp::InteropInitOp::create(
+          firOpBuilder, loc, interopVarAddr, interopTypesAttr, preferTypeAttr,
+          deviceValue,
+          dependOps.dependKinds.empty()
+              ? nullptr
+              : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+          dependOps.dependVars,
+          /*depend_iterated_kinds=*/nullptr,
+          /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+
+    } else if (auto *destroyClause = std::get_if<clause::Destroy>(&clause.u)) {
+      assert(destroyClause->v &&
+             "destroy clause must have an interop variable");
+      if (destroyClause->v) {
+        mlir::Value interopVarAddr = getInteropVarAddr(*destroyClause->v);
+        mlir::omp::InteropDestroyOp::create(
+            firOpBuilder, loc, interopVarAddr, deviceValue,
+            dependOps.dependKinds.empty()
+                ? nullptr
+                : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+            dependOps.dependVars,
+            /*depend_iterated_kinds=*/nullptr,
+            /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+      }
+
+    } else if (auto *useClause = std::get_if<clause::Use>(&clause.u)) {
+      mlir::Value interopVarAddr = getInteropVarAddr(useClause->v);
+      mlir::omp::InteropUseOp::create(
+          firOpBuilder, loc, interopVarAddr, deviceValue,
+          dependOps.dependKinds.empty()
+              ? nullptr
+              : firOpBuilder.getArrayAttr(dependOps.dependKinds),
+          dependOps.dependVars,
+          /*depend_iterated_kinds=*/nullptr,
+          /*depend_iterated=*/mlir::ValueRange{}, nowaitOps.nowait);
+    }
+  }
 }
 
 static void
@@ -6099,9 +6547,31 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumeDirective &assumeConstruct) {
-  mlir::Location clauseLocation = converter.genLocation(assumeConstruct.source);
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(clauseLocation, "OpenMP ASSUME construct");
+  if (!semaCtx.langOptions().OpenMPSimd) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    lower::StatementContext stmtCtx;
+
+    const parser::OmpDirectiveSpecification &beginSpec =
+        assumeConstruct.BeginDir();
+    for (const parser::OmpClause &clause : beginSpec.Clauses().v) {
+      mlir::Location clauseLoc = converter.genLocation(clause.source);
+      const auto *holds = std::get_if<parser::OmpClause::Holds>(&clause.u);
+      if (!holds) {
+        TODO(clauseLoc, "assumption clause is not implemented yet");
+      }
+      const parser::Expr &parserExpr = holds->v.v.value();
+      const semantics::SomeExpr *expr = semantics::GetExpr(semaCtx, parserExpr);
+      assert(expr && "Expecting analyzed expression for holds clause");
+
+      mlir::Value cond =
+          fir::getBase(converter.genExprValue(*expr, stmtCtx, &clauseLoc));
+      cond =
+          firOpBuilder.createConvert(clauseLoc, firOpBuilder.getI1Type(), cond);
+      mlir::LLVM::AssumeOp::create(firOpBuilder, clauseLoc, cond);
+    }
+    stmtCtx.finalizeAndPop();
+  }
+  genNestedEvaluations(converter, eval);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -6133,6 +6603,98 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 queue.begin(), critName);
 }
 
+// Copy the character value `str` into fresh stack memory with an appended NUL
+// and return a pointer to its first character. Fortran characters are not
+// NUL-terminated, so the terminator is needed for C runtime entry points (such
+// as `__kmpc_error`) that expect a NUL-terminated string.
+static mlir::Value genNullTerminatedString(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::ExtendedValue &str) {
+  fir::factory::CharacterExprHelper helper(builder, loc);
+  const mlir::Value addr = fir::getBase(str);
+  const mlir::Value len = fir::getLen(str);
+  const auto charTy =
+      mlir::cast<fir::CharacterType>(fir::unwrapRefType(addr.getType()));
+  mlir::MLIRContext *ctx = builder.getContext();
+  const mlir::Type idxTy = builder.getIndexType();
+  const mlir::Value idxLen = builder.createConvert(loc, idxTy, len);
+  const mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  const mlir::Value lenPlusOne =
+      mlir::arith::AddIOp::create(builder, loc, idxLen, one);
+
+  // Allocate `len + 1` characters and copy the message into them, leaving room
+  // for the terminating NUL.
+  const fir::CharBoxValue temp = helper.createCharacterTemp(charTy, lenPlusOne);
+  helper.createCopy(temp, fir::CharBoxValue{addr, len}, len);
+
+  // Address the buffer as an array of single characters so the terminating NUL
+  // can be stored at index `len`.
+  const auto singleTy = fir::CharacterType::get(
+      ctx, charTy.getFKind(), fir::CharacterType::singleton());
+  const mlir::Type singleRefTy = builder.getRefType(singleTy);
+  const mlir::Type seqRefTy = builder.getRefType(fir::SequenceType::get(
+      {fir::SequenceType::getUnknownExtent()}, singleTy));
+  const mlir::Value seq =
+      builder.createConvert(loc, seqRefTy, temp.getBuffer());
+  const mlir::Value nulAddr =
+      fir::CoordinateOp::create(builder, loc, singleRefTy, seq, idxLen);
+  const mlir::Value zero =
+      builder.createIntegerConstant(loc, builder.getI8Type(), 0);
+  const mlir::Value nul =
+      helper.createSingletonFromCode(zero, charTy.getFKind());
+  fir::StoreOp::create(builder, loc, nul, nulAddr);
+
+  // Pass a pointer to the first character of the buffer.
+  return builder.createConvert(loc, singleRefTy, temp.getBuffer());
+}
+
+// Lower an `!$omp error` directive. The `at(compilation)` form is handled
+// entirely in semantics, so only the `at(execution)` form reaches lowering,
+// where it becomes an `omp.error` operation.
+static void genErrorDirective(lower::AbstractConverter &converter,
+                              semantics::SemanticsContext &semaCtx,
+                              const parser::OmpErrorDirective &errDir) {
+  const semantics::omp::OmpErrorArgs args{
+      semantics::omp::GetErrorDirectiveArgs(errDir)};
+
+  if (args.at != parser::OmpAtClause::ActionTime::Execution ||
+      semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  std::optional<std::string> message;
+  MaybeExpr messageExpr;
+  if (args.message) {
+    if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
+        message = *val;
+      else
+        messageExpr = expr;
+    }
+  }
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = converter.getCurrentLocation();
+  const mlir::omp::ClauseSeverity sev =
+      args.severity == parser::OmpSeverityClause::SevLevel::Warning
+          ? mlir::omp::ClauseSeverity::warning
+          : mlir::omp::ClauseSeverity::fatal;
+
+  // A compile-time-constant message is stored directly on the operation as an
+  // attribute. A non-constant message is lowered to a null-terminated string in
+  // memory and passed as the `message_expr` operand.
+  mlir::StringAttr msgAttr;
+  mlir::Value msgExprVal;
+  if (message) {
+    msgAttr = builder.getStringAttr(*message);
+  } else if (messageExpr) {
+    lower::StatementContext stmtCtx;
+    fir::ExtendedValue str = converter.genExprAddr(loc, *messageExpr, stmtCtx);
+    msgExprVal = genNullTerminatedString(builder, loc, str);
+  }
+
+  mlir::omp::ErrorOp::create(builder, loc, sev, msgAttr, msgExprVal);
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -6141,10 +6703,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                     [&](const parser::OmpNothingDirective &) {
                       // nothing-directive is a no-op (OpenMP 5.2 [8.4])
                     },
-                    [&](const parser::OmpErrorDirective &) {
-                      if (!semaCtx.langOptions().OpenMPSimd)
-                        TODO(converter.getCurrentLocation(),
-                             "OmpErrorDirective");
+                    [&](const parser::OmpErrorDirective &errDir) {
+                      genErrorDirective(converter, semaCtx, errDir);
                     },
                 },
                 dir.u);
@@ -6477,7 +7037,7 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::OmpClauseSet reqs;
+    llvm::omp::ClauseSet reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
@@ -6537,3 +7097,7 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
     }
   }
 }
+
+// Walk scopes and materialize omp.declare_reduction ops for user-defined
+// operator reductions imported from modules (deleted: replaced by lazy,
+// clause-driven materialization).

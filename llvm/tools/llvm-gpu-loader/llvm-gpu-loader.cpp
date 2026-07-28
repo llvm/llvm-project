@@ -97,8 +97,7 @@ static void *copyArgumentVector(int Argc, const char **Argv,
 
   // We allocate enough space for a null terminated array and all the strings.
   void *DevArgv;
-  OFFLOAD_ERR(
-      olMemAlloc(Device, OL_ALLOC_TYPE_HOST, ArgSize + StringLen, &DevArgv));
+  OFFLOAD_ERR(olMemAllocHost(Device, ArgSize + StringLen, &DevArgv));
   if (!DevArgv)
     handleError(
         createStringError("Failed to allocate memory for environment."));

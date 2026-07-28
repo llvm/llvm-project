@@ -65,6 +65,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_fcntl
+  ../libc/include/sys/fcntl.yaml
+  sys/fcntl.h
+  DEPENDS
+    .fcntl
+)
+
+add_header_macro(
   dlfcn
   ../libc/include/dlfcn.yaml
   dlfcn.h
@@ -79,6 +87,14 @@ add_header_macro(
   endian.h
   DEPENDS
     .llvm-libc-macros.endian_macros
+    .llvm_libc_common_h
+)
+
+add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
     .llvm_libc_common_h
 )
 
@@ -204,6 +220,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   assert
   ../libc/include/assert.yaml
   assert.h
@@ -262,6 +288,14 @@ add_header_macro(
     .llvm-libc-types.errno_t
     .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
+)
+
+add_header_macro(
+  memory
+  ../libc/include/memory.yaml
+  memory.h
+  DEPENDS
+    .string
 )
 
 add_header_macro(
@@ -367,6 +401,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_signal
+  ../libc/include/sys/signal.yaml
+  sys/signal.h
+  DEPENDS
+    .signal
+)
+
+add_header_macro(
   stdbit
   ../libc/include/stdbit.yaml
   stdbit.h
@@ -441,6 +483,14 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.uid_t
     .llvm-libc-types.__getoptargv_t
+)
+
+add_header_macro(
+  sys_unistd
+  ../libc/include/sys/unistd.yaml
+  sys/unistd.h
+  DEPENDS
+    .unistd
 )
 
 add_header_macro(
@@ -921,6 +971,8 @@ add_header_macro(
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_group_req
+    .llvm-libc-types.struct_group_source_req
     .llvm-libc-types.struct_sockaddr_in
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
@@ -1043,12 +1095,31 @@ add_header_macro(
   )
 
 add_header_macro(
+  sys_poll
+  ../libc/include/sys/poll.yaml
+  sys/poll.h
+  DEPENDS
+    .poll
+)
+
+add_header_macro(
   nl_types
   ../libc/include/nl_types.yaml
   nl_types.h
   DEPENDS
     .llvm-libc-macros.nl_types_macros
     .llvm-libc-types.nl_catd
+  )
+
+add_header_macro(
+  langinfo
+  ../libc/include/langinfo.yaml
+  langinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.langinfo_macros
+    .llvm-libc-types.nl_item
+    .llvm-libc-types.locale_t
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility
