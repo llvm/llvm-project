@@ -49,22 +49,22 @@ void addEsdRecord(std::vector<char> &GOFFData, uint8_t Type, uint8_t ESDID,
 
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 3] = (char)Type;
-  GOFFData[Pos + 7] = (char)ESDID;          // ESDID.
-  GOFFData[Pos + 11] = (char)ParentESDID;   // Parent ESDID.
+  GOFFData[Pos + 7] = (char)ESDID;           // ESDID.
+  GOFFData[Pos + 11] = (char)ParentESDID;    // Parent ESDID.
   GOFFData[Pos + 24] = (char)(Length >> 24); // Length (big-endian).
   GOFFData[Pos + 25] = (char)(Length >> 16);
   GOFFData[Pos + 26] = (char)(Length >> 8);
   GOFFData[Pos + 27] = (char)(Length);
-  GOFFData[Pos + 40] = (char)NameSpaceID;   // Name Space ID
+  GOFFData[Pos + 40] = (char)NameSpaceID;     // Name Space ID
   GOFFData[Pos + 41] = (char)AdditionalFlags; // Additional Flags
 
   if (BehavioralAttributes) {
-    for (size_t Offset=0; Offset < 10; Offset++)
+    for (size_t Offset = 0; Offset < 10; Offset++)
       GOFFData[Pos + 60 + Offset] = (char)BehavioralAttributes[Offset];
   }
 
   GOFFData[Pos + 71] = (char)(Name.size()); // Size of symbol name.
-  size_t StringOffset = Pos + 72; // Start of Symbol name
+  size_t StringOffset = Pos + 72;           // Start of Symbol name
   for (uint8_t C : Name) {
     GOFFData[StringOffset] = (char)C;
     StringOffset++;
@@ -203,11 +203,11 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
 
   // ESD record. Symbol name is Hello.
   addEsdRecord(GOFFData, 0x02, 0x01,
-               {0xC8, // H
-                0x85, // e
-                0x93, // l
-                0x93, // l
-                0x96},// o
+               {0xC8,  // H
+                0x85,  // e
+                0x93,  // l
+                0x93,  // l
+                0x96}, // o
                0x01);
 
   // END record.
@@ -221,7 +221,8 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -267,16 +268,16 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
 
   // ESD record with continuation. Symbol name is Helloworld.
   addEsdRecord(GOFFContData, 0x02, 0x01,
-               {0xC8, // H
-                0x85, // e
-                0x93, // l
-                0x93, // l
-                0x96, // o
-                0xA6, // w
-                0x96, // o
-                0x99, // r
-                0x93, // l
-                0x84},// d
+               {0xC8,  // H
+                0x85,  // e
+                0x93,  // l
+                0x93,  // l
+                0x96,  // o
+                0xA6,  // w
+                0x96,  // o
+                0x99,  // r
+                0x93,  // l
+                0x84}, // d
                0x01);
 
   // END record.
@@ -290,7 +291,8 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -384,7 +386,8 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
           MemoryBufferRef(Data, "dummyGOFF"));
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -461,16 +464,15 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
   addHdrRecord(GOFFData);
 
   // ESD record 1. Symbol name is x.
-  addEsdRecord(GOFFData, 0x00, 0x01,
-               {0xa7}); // x
+  addEsdRecord(GOFFData, 0x00, 0x01, {0xa7}); // x
 
   // ESD record 2. Symbol name is Hello.
   addEsdRecord(GOFFData, 0x03, 0x02,
-               {0xC8, // H
-                0x85, // e
-                0x93, // l
-                0x93, // l
-                0x96},// o
+               {0xC8,  // H
+                0x85,  // e
+                0x93,  // l
+                0x93,  // l
+                0x96}, // o
                0x01);
 
   // END record.
@@ -484,7 +486,8 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
@@ -501,8 +504,7 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
   addHdrRecord(GOFFData);
 
   // ESD record with invalid symbol type 0x05.
-  addEsdRecord(GOFFData, 0x05, 0x01,
-               {0xC8}, // H
+  addEsdRecord(GOFFData, 0x05, 0x01, {0xC8}, // H
                0x01);
 
   // END record.
@@ -516,7 +518,8 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<SymbolRef::Type> SymbolType = Symbol.getType();
@@ -559,7 +562,8 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   for (SymbolRef Symbol : GOFFObj->symbols()) {
     Expected<SymbolRef::Type> SymbolType = Symbol.getType();
@@ -577,34 +581,33 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
 
   // ESD record. Symbol name is var#c.
   addEsdRecord(GOFFData, 0x00, 0x01,
-               {0xa5, // v
-                0x81, // a
-                0x99, // r
-                0x7b, // #
-                0x83});// c
+               {0xa5,   // v
+                0x81,   // a
+                0x99,   // r
+                0x7b,   // #
+                0x83}); // c
 
   // ESD record. Symbol name is c_CoDE64.
-  uint8_t BehavioralAttributes[] = {0x04, 0x04, 0x00, 0x0a,
-                                     0x00, 0x00, 0x03, 0x00,
-                                     0x00, 0x00};
+  uint8_t BehavioralAttributes[] = {0x04, 0x04, 0x00, 0x0a, 0x00,
+                                    0x00, 0x03, 0x00, 0x00, 0x00};
   addEsdRecord(GOFFData, 0x01, 0x02,
-               {0xc3, // c
-                0x6d, // _
-                0xc3, // c
-                0xd6, // o
-                0xc4, // D
-                0xc5, // E
-                0xf6, // 6
-                0xf4},// 4
+               {0xc3,  // c
+                0x6d,  // _
+                0xc3,  // c
+                0xd6,  // o
+                0xc4,  // D
+                0xc5,  // E
+                0xf6,  // 6
+                0xf4}, // 4
                0x01, 0x00, 0x01, 0x80, BehavioralAttributes, 0x08);
 
   // ESD record. Symbol name is var#c.
   addEsdRecord(GOFFData, 0x02, 0x03,
-               {0xa5, // v
-                0x81, // a
-                0x99, // r
-                0x7b, // #
-                0x83},// c
+               {0xa5,  // v
+                0x81,  // a
+                0x99,  // r
+                0x7b,  // #
+                0x83}, // c
                0x02);
 
   // TXT record.
@@ -633,7 +636,8 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
   auto Symbols = GOFFObj->symbols();
   ASSERT_EQ(std::distance(Symbols.begin(), Symbols.end()), 1);
   SymbolRef Symbol = *Symbols.begin();
