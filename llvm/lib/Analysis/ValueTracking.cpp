@@ -7542,6 +7542,23 @@ OverflowResult llvm::computeOverflowForSignedMul(const Value *LHS,
     if (LHSKnown.isNonNegative() || RHSKnown.isNonNegative())
       return OverflowResult::NeverOverflows;
   }
+
+  // Special case when we're multiplying a power-of-two value. In this case,
+  // we will never overflow as long as the shift amount is less than the number
+  // of sign bits.
+  if (isKnownToBeAPowerOfTwo(RHS, /*OrZero=*/false, SQ)) {
+    KnownBits LHSKnown = computeKnownBits(LHS, SQ);
+    KnownBits RHSKnown = computeKnownBits(RHS, SQ);
+    // If RHS is power of two, the only time it is negative would be
+    // the smallest value. In that case it never overflows only if
+    // LHS is zero or one. If LHS is really zero or one we would have
+    // simplified it somewhere else, therefore this pattern checks only
+    // when RHS is positive.
+    if (RHSKnown.isStrictlyPositive() &&
+        LHSKnown.countMinSignBits() > RHSKnown.countMaxTrailingZeros())
+      return OverflowResult::NeverOverflows;
+  }
+
   return OverflowResult::MayOverflow;
 }
 
