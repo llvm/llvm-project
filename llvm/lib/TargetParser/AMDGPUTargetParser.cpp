@@ -291,14 +291,14 @@ unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
   }
 }
 
-unsigned AMDGPU::getArchAttrR600(GPUKind AK) {
+R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
   switch (AK) {
 #define R600_GPU(NAME, ENUM, FEATURES)                                         \
   case ENUM:                                                                   \
     return FEATURES;
 #include "llvm/TargetParser/R600TargetParserDef.inc"
   default:
-    return FEATURE_NONE;
+    return R600_FEATURE_NONE;
   }
 }
 

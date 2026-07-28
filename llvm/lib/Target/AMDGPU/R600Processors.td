@@ -127,7 +127,7 @@ def : ProcessorAlias<"palm", "cedar">;
 
 def : R600ProcessorModel<"cypress", R600_VLIW5_Itin,
   [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFMA]> {
-  let ArchFeatures = [FEATURE_FMA];
+  let ArchFeatures = [R600_FEATURE_FMA];
 }
 
 def : ProcessorAlias<"hemlock", "cypress">;
@@ -163,7 +163,7 @@ def : ProcessorAlias<"aruba", "cayman">;
 
 def : R600ProcessorModel<"cayman", R600_VLIW4_Itin,
   [FeatureNorthernIslands, FeatureCaymanISA, FeatureFMA]> {
-  let ArchFeatures = [FEATURE_FMA];
+  let ArchFeatures = [R600_FEATURE_FMA];
 }
 
 def : R600ProcessorModel<"turks", R600_VLIW5_Itin,

@@ -37,8 +37,10 @@ struct GPUEntry {
 };
 } // namespace
 
-// Emit the ArchFeature spellings joined with '|', or FEATURE_NONE when empty.
-static void emitFeatureExpr(raw_ostream &OS, const Record *Rec) {
+// Emit the ArchFeature spellings joined with '|', or \p NoneSpelling when
+// empty.
+static void emitFeatureExpr(raw_ostream &OS, const Record *Rec,
+                            StringRef NoneSpelling) {
   ListSeparator LS("|");
   bool Any = false;
   for (const Record *F : Rec->getValueAsListOfDefs("ArchFeatures")) {
@@ -47,7 +49,7 @@ static void emitFeatureExpr(raw_ostream &OS, const Record *Rec) {
   }
 
   if (!Any)
-    OS << "FEATURE_NONE";
+    OS << NoneSpelling;
 }
 
 // Collect canonical GPUs and their aliases, in TableGen definition order.
@@ -116,7 +118,7 @@ static void emitR600(raw_ostream &OS, const RecordKeeper &RK) {
       OS << "R600_GPU(\"" << Name << "\", ";
       emitGPUKindEnum(OS, Name);
       OS << ", ";
-      emitFeatureExpr(OS, E.Rec);
+      emitFeatureExpr(OS, E.Rec, "R600_FEATURE_NONE");
       OS << ")\n";
     }
   }
