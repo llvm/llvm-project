@@ -985,8 +985,16 @@ func.func @dereference(%arg0: !emitc.ptr<i32>) {
 // -----
 
 func.func @pre_increment_unmatch_type(%arg0: !emitc.lvalue<i32>) {
-  // expected-error @+1 {{failed to verify that input and result reference the same type}}
-  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  // expected-error @+1 {{failed to verify that all of {operand, result} have same type}}
+  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.lvalue<i8>
+  return
+}
+
+// -----
+
+func.func @pre_increment_result_is_lvalue(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{result #0 must be EmitC lvalue type, but got 'i32'}}
+  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> i32
   return
 }
 
@@ -995,6 +1003,14 @@ func.func @pre_increment_unmatch_type(%arg0: !emitc.lvalue<i32>) {
 func.func @post_decrement_unmatch_type(%arg0: !emitc.lvalue<i32>) {
   // expected-error @+1 {{failed to verify that input and result reference the same type}}
   %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  return
+}
+
+// -----
+
+func.func @post_decrement_result_is_rvalue(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{result #0 must be type supported by EmitC, but got '!emitc.lvalue<i32>'}}
+  %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>
   return
 }
 
