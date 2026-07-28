@@ -756,8 +756,7 @@ void ExprEngine::handleConstructor(const Expr *E,
              "We should not have inlined this constructor!");
 
       for (ExplodedNode *N : DstEvaluated) {
-        DstEvaluatedPostProcessed.insert(Engine.makePostStmtNode(
-            E, N->getState(), N, /* MarkAsSink */ true));
+        Engine.makePostStmtNode(E, N->getState(), N, /*MarkAsSink=*/ true);
       }
 
       // There is no need to run the PostCall and PostStmt checker
@@ -831,9 +830,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
       Dest = MRMgr.getCXXTempObjectRegion(E, Pred->getStackFrame());
     } else {
       static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
-      Dst.insert(Engine.makeNode(Pred->getLocation().withTag(&T),
-                                 Pred->getState(), Pred,
-                                 /* MarkAsSink */ true));
+      Engine.makeNode(Pred->getLocation().withTag(&T), Pred->getState(), Pred,
+                      /*MarkAsSink=*/ true);
       return;
     }
   }

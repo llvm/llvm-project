@@ -444,8 +444,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           if (T->isReferenceType()) {
             // A bad_cast exception is thrown if input value is a reference.
             // Currently, we model this, by generating a sink.
-            Dst.insert(Engine.makePostStmtNode(CastE, state, Pred,
-                                               /* MarkAsSink */ true));
+            Engine.makePostStmtNode(CastE, state, Pred, /*MarkAsSink=*/ true);
             continue;
           } else {
             // If the cast fails on a pointer, bind to 0.
