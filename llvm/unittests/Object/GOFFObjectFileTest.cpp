@@ -26,14 +26,14 @@ size_t addNewRecord(std::vector<char> &Data) {
 void addEndRecord(std::vector<char> &GOFFData, uint8_t RecordCount = 0) {
   size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 1] = (char)0x40;
+  GOFFData[Pos + 1] = (char)0x40; // END record, non-continued.
   GOFFData[Pos + 11] = (char)RecordCount;
 }
 
 void addHdrRecord(std::vector<char> &GOFFData, uint8_t ArchLevel = 0) {
   size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
-  GOFFData[Pos + 1] = (char)0xF0;
+  GOFFData[Pos + 1] = (char)0xF0; // HDR record, non-continued.
   GOFFData[Pos + 50] = (char)ArchLevel;
 }
 
