@@ -409,9 +409,11 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA) {
   MemorySSAWalker *Walker = MSSA->getWalker();
-  SmallVector<MemoryAccess *> WorkList{Walker->getClobberingMemoryAccess(Load)};
-  SmallPtrSet<MemoryAccess *, 8> Visited;
   MemoryLocation Loc(MemoryLocation::get(Load));
+  MemoryUseOrDef *Use = MSSA->getMemoryAccess(Load);
+  SmallVector<MemoryAccess *> WorkList{
+      Walker->getClobberingMemoryAccess(Use->getDefiningAccess(), Loc)};
+  SmallPtrSet<MemoryAccess *, 8> Visited;
 
   LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *Load << '\n');
 
@@ -434,22 +436,20 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
     if (MemoryDef *Def = dyn_cast<MemoryDef>(MA)) {
       LLVM_DEBUG(dbgs() << "  Def: " << *Def->getMemoryInst() << '\n');
 
-      MemoryAccess *Next = Walker->getClobberingMemoryAccess(Def, Loc);
-      if (Next == Def) {
-        if (isReallyAClobber(Load->getPointerOperand(), Def, AA)) {
-          LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
-          return true;
-        }
-        Next = Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc);
+      if (isReallyAClobber(Load->getPointerOperand(), Def, AA)) {
+        LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
+        return true;
       }
 
-      WorkList.push_back(Next);
+      WorkList.push_back(
+          Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc));
       continue;
     }
 
     const MemoryPhi *Phi = cast<MemoryPhi>(MA);
     for (const auto &Use : Phi->incoming_values())
-      WorkList.push_back(cast<MemoryAccess>(&Use));
+      WorkList.push_back(
+          Walker->getClobberingMemoryAccess(cast<MemoryAccess>(&Use), Loc));
   }
 
   LLVM_DEBUG(dbgs() << "      -> no clobber\n");
