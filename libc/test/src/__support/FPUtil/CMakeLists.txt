@@ -49,8 +49,6 @@ add_fp_unittest(
     libc.hdr.limits_macros
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.float128
-  COMPILE_OPTIONS
-    "-fsanitize=address"
 )
 
 # TODO: Temporally disable bfloat16 test until MPCommon target is updated

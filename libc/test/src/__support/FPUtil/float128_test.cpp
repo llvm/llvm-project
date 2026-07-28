@@ -87,7 +87,8 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   ASSERT_EQ(static_cast<long long>(Float128(LLONG_MIN)), LLONG_MIN);
   ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
   ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
-  volatile int a = static_cast<int>(Float128(1e300));
+  volatile int a = static_cast<int>(Float128(
+      1e300)); // This might not give any error but gives a wrong value for now
 
   // FP exceptions
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);

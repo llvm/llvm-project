@@ -310,6 +310,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.uint128
+    libc.src.__support.CPP.limits
 )
 
 add_subdirectory(generic)
