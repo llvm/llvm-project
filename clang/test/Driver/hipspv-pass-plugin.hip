@@ -1,3 +1,4 @@
+// REQUIRES: spirv-registered-target
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
