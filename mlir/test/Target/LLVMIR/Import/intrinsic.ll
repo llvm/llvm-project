@@ -959,11 +959,11 @@ define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
 
 ; CHECK-LABEL:  llvm.func @vector_predication_intrinsics
 define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x float> %2, <8 x float> %3, <8 x i64> %4, <8 x double> %5, <8 x ptr> %6, i32 %7, float %8, ptr %9, ptr %10, <8 x i1> %11, i32 %12) {
-  ; CHECK: "llvm.intr.vp.add"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.add %{{.*}}, %{{.*}} : vector<8xi32>
   %14 = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.sub"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.sub %{{.*}}, %{{.*}} : vector<8xi32>
   %15 = call <8 x i32> @llvm.vp.sub.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.mul"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.mul %{{.*}}, %{{.*}} : vector<8xi32>
   %16 = call <8 x i32> @llvm.vp.mul.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.sdiv"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
   %17 = call <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
@@ -973,31 +973,31 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   %19 = call <8 x i32> @llvm.vp.srem.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.urem"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
   %20 = call <8 x i32> @llvm.vp.urem.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.ashr"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.ashr %{{.*}}, %{{.*}} : vector<8xi32>
   %21 = call <8 x i32> @llvm.vp.ashr.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.lshr"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.lshr %{{.*}}, %{{.*}} : vector<8xi32>
   %22 = call <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.shl"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.shl %{{.*}}, %{{.*}} : vector<8xi32>
   %23 = call <8 x i32> @llvm.vp.shl.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.or"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.or %{{.*}}, %{{.*}} : vector<8xi32>
   %24 = call <8 x i32> @llvm.vp.or.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.and"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.and %{{.*}}, %{{.*}} : vector<8xi32>
   %25 = call <8 x i32> @llvm.vp.and.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.xor"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.xor %{{.*}}, %{{.*}} : vector<8xi32>
   %26 = call <8 x i32> @llvm.vp.xor.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.fadd %{{.*}}, %{{.*}} : vector<8xf32>
   %27 = call <8 x float> @llvm.vp.fadd.v8f32(<8 x float> %2, <8 x float> %3, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fsub"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.fsub %{{.*}}, %{{.*}} : vector<8xf32>
   %28 = call <8 x float> @llvm.vp.fsub.v8f32(<8 x float> %2, <8 x float> %3, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fmul"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.fmul %{{.*}}, %{{.*}} : vector<8xf32>
   %29 = call <8 x float> @llvm.vp.fmul.v8f32(<8 x float> %2, <8 x float> %3, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fdiv"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.fdiv %{{.*}}, %{{.*}} : vector<8xf32>
   %30 = call <8 x float> @llvm.vp.fdiv.v8f32(<8 x float> %2, <8 x float> %3, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.frem"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.frem %{{.*}}, %{{.*}} : vector<8xf32>
   %31 = call <8 x float> @llvm.vp.frem.v8f32(<8 x float> %2, <8 x float> %3, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fneg"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.fneg %{{.*}} : vector<8xf32>
   %32 = call <8 x float> @llvm.vp.fneg.v8f32(<8 x float> %2, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fma"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %33 = call <8 x float> @llvm.vp.fma.v8f32(<8 x float> %2, <8 x float> %3, <8 x float> %3, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.reduce.add"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (i32, vector<8xi32>, vector<8xi1>, i32) -> i32
   %34 = call i32 @llvm.vp.reduce.add.v8i32(i32 %7, <8 x i32> %0, <8 x i1> %11, i32 %12)
@@ -1025,7 +1025,7 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   %45 = call float @llvm.vp.reduce.fmax.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.reduce.fmin"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
   %46 = call float @llvm.vp.reduce.fmin.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.select"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
+  ; CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<8xi1>, vector<8xi32>
   %47 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %11, <8 x i32> %0, <8 x i32> %1, i32 %12)
   ; CHECK: "llvm.intr.vp.merge"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
   %48 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %11, <8 x i32> %0, <8 x i32> %1, i32 %12)
@@ -1037,33 +1037,33 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   call void @llvm.experimental.vp.strided.store.v8i32.p0.i32(<8 x i32> %0, ptr %9, i32 %7, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.experimental.vp.strided.load"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, i32, vector<8xi1>, i32) -> vector<8xi32>
   %50 = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i32(ptr %9, i32 %7, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.trunc"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi64>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.trunc %{{.*}} : vector<8xi64> to vector<8xi32>
   %51 = call <8 x i32> @llvm.vp.trunc.v8i32.v8i64(<8 x i64> %4, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.zext"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi1>, i32) -> vector<8xi64>
+  ; CHECK: llvm.zext %{{.*}} : vector<8xi32> to vector<8xi64>
   %52 = call <8 x i64> @llvm.vp.zext.v8i64.v8i32(<8 x i32> %0, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.sext"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi1>, i32) -> vector<8xi64>
+  ; CHECK: llvm.sext %{{.*}} : vector<8xi32> to vector<8xi64>
   %53 = call <8 x i64> @llvm.vp.sext.v8i64.v8i32(<8 x i32> %0, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fptrunc"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf64>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.fptrunc %{{.*}} : vector<8xf64> to vector<8xf32>
   %54 = call <8 x float> @llvm.vp.fptrunc.v8f32.v8f64(<8 x double> %5, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fpext"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xi1>, i32) -> vector<8xf64>
+  ; CHECK: llvm.fpext %{{.*}} : vector<8xf32> to vector<8xf64>
   %55 = call <8 x double> @llvm.vp.fpext.v8f64.v8f32(<8 x float> %2, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fptoui"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf64>, vector<8xi1>, i32) -> vector<8xi64>
+  ; CHECK: llvm.fptoui %{{.*}} : vector<8xf64> to vector<8xi64>
   %56 = call <8 x i64> @llvm.vp.fptoui.v8i64.v8f64(<8 x double> %5, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fptosi"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf64>, vector<8xi1>, i32) -> vector<8xi64>
+  ; CHECK: llvm.fptosi %{{.*}} : vector<8xf64> to vector<8xi64>
   %57 = call <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double> %5, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.ptrtoint"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8x!llvm.ptr>, vector<8xi1>, i32) -> vector<8xi64>
+  ; CHECK: llvm.ptrtoint %{{.*}} : vector<8x!llvm.ptr> to vector<8xi64>
   %58 = call <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr> %6, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.inttoptr"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi64>, vector<8xi1>, i32) -> vector<8x!llvm.ptr>
+  ; CHECK: llvm.inttoptr %{{.*}} : vector<8xi64> to vector<8x!llvm.ptr>
   %59 = call <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64> %4, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
+  ; CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %60 = call <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float> %2, <8 x float> %3, <8 x float> %3, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.smax"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.intr.smax(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %61 = call <8 x i32> @llvm.vp.smax.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.smin"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.intr.smin(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %62 = call <8 x i32> @llvm.vp.smin.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.umax"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %63 = call <8 x i32> @llvm.vp.umax.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.umin"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
+  ; CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %64 = call <8 x i32> @llvm.vp.umin.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
   ret void
 }
