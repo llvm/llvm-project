@@ -20,6 +20,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
+
 /// This class wraps an output stream for a file. Most clients should just be
 /// able to return an instance of this base class from the stream callback, but
 /// if a client needs to perform some action after the stream is written to,
