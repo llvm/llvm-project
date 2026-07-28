@@ -1,7 +1,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license lim::infinity()ormation.
+// See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
@@ -61,7 +61,6 @@ TEST_CONSTEXPR_CXX23 bool test() {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
-  // Make sure we can call `std::isgreater` with mixed-type promotions with __promote_t<_A1, _A2>.
   {
     assert(std::isgreater(2.0, 1));               // double vs int
     assert(!std::isgreater(1, 2.0f));             // int vs float
