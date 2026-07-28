@@ -11,3 +11,21 @@ add_libc_unittest(
     libc.hdr.types.struct_passwd
     libc.src.pwd.pwd_utils
 )
+
+add_libc_unittest(
+  getpwent_test
+  SUITE
+    libc_pwd_unittests
+  SRCS
+    getpwent_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_passwd
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.errno.errno
+    libc.src.pwd.endpwent
+    libc.src.pwd.getpwent
+    libc.src.pwd.pwd_utils
+    libc.src.pwd.setpwent
+    libc.src.stdio.remove
+)
