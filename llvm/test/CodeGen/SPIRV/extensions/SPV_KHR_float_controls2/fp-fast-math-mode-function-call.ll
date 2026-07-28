@@ -4,21 +4,23 @@
 ; spurious FPFastMathMode decoration. SPV_KHR_float_controls2 extends
 ; FPFastMathMode to all *core* instructions, but not to extension-defined ones.
 
+; Without FC2: no decoration on call.
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_uniform_group_instructions %s -o - | FileCheck %s --check-prefix=NO-DECO
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_uniform_group_instructions %s -o - -filetype=obj | spirv-val %}
+
+; With FC2: decoration emitted on OpFunctionCall, not on extension instructions.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2,+SPV_KHR_uniform_group_instructions %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2,+SPV_KHR_uniform_group_instructions %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_uniform_group_instructions %s -o - | FileCheck %s --check-prefix=CHECK-NO-DECO
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_uniform_group_instructions %s -o - -filetype=obj | spirv-val %}
+; NO-DECO-NOT: FPFastMathMode
 
 ; CHECK-DAG: OpDecorate %[[#CALL_RES:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK: %[[#CALL_RES]] = OpFunctionCall %[[#]] %[[#]]
+; CHECK-DAG: %[[#CALL_RES]] = OpFunctionCall %[[#]] %[[#]]
+; CHECK-DAG: %[[#GFMUL_RES:]] = OpGroupFMulKHR
 
 ; OpGroupFMulKHR is defined by SPV_KHR_uniform_group_instructions, not core.
-; It should NOT get FPFastMathMode — FC2 only covers core instructions.
-; CHECK-NOT: OpDecorate %[[#GFMUL_RES:]] FPFastMathMode
-; CHECK: %[[#GFMUL_RES:]] = OpGroupFMulKHR
-
-; CHECK-NO-DECO-NOT: FPFastMathMode
+; It should NOT get FPFastMathMode because FC2 only covers core instructions.
+; CHECK-NOT: OpDecorate %[[#GFMUL_RES]] FPFastMathMode
 
 define internal spir_func float @helper(float %x) {
   %r = fmul float %x, %x
