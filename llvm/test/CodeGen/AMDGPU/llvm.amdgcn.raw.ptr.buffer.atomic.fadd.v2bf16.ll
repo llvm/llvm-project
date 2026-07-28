@@ -152,6 +152,7 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[10:11]
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v6
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s6 offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_xcnt 0x0

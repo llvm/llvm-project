@@ -13610,6 +13610,7 @@ define <2 x half> @flat_atomic_fmax_v2f16_saddr_rtn(ptr inreg %ptr, <2 x half> %
 ; GFX1250-NEXT:    v_pk_max_num_f16 v4, v0, v1
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
@@ -13667,6 +13668,7 @@ define void @flat_atomic_fmax_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1250-NEXT:    v_pk_max_num_f16 v0, v0, v3
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
@@ -13727,6 +13729,7 @@ define <2 x half> @flat_atomic_fmin_v2f16_saddr_rtn(ptr inreg %ptr, <2 x half> %
 ; GFX1250-NEXT:    v_pk_min_num_f16 v4, v0, v1
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
@@ -13784,6 +13787,7 @@ define void @flat_atomic_fmin_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1250-NEXT:    v_pk_min_num_f16 v0, v0, v3
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
@@ -13925,6 +13929,7 @@ define <2 x bfloat> @flat_atomic_fmax_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v4, v5, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
@@ -13983,6 +13988,7 @@ define void @flat_atomic_fmax_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1250-NEXT:    v_pk_max_num_bf16 v2, v3, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
@@ -14043,6 +14049,7 @@ define <2 x bfloat> @flat_atomic_fmin_v2bf16_saddr_rtn(ptr inreg %ptr, <2 x bflo
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v4, v5, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v2, v[4:5], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
@@ -14101,6 +14108,7 @@ define void @flat_atomic_fmin_v2bf16_saddr_nortn(ptr inreg %ptr, <2 x bfloat> %d
 ; GFX1250-NEXT:    v_pk_min_num_bf16 v2, v3, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v2, v1, v[2:3], s[0:1] offset:40 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3

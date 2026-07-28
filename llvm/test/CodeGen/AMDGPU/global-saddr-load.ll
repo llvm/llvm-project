@@ -4786,6 +4786,8 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-SDAG-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 4
@@ -4801,6 +4803,8 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s2, s2, 4
@@ -4890,8 +4894,12 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-SDAG-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 4
@@ -4907,8 +4915,12 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_add_co_i32 s0, s0, -1
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s2, s2, 4

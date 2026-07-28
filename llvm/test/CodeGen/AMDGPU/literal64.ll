@@ -143,6 +143,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_add_f64_e32 v[2:3], 0x4063233333333333, v[4:5]
+; GFX13-NEXT:    s_wait_xcnt 0x0
 ; GFX13-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]

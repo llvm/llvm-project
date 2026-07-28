@@ -34,6 +34,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -354,9 +355,6 @@ class SIInsertWaitcnts {
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
-    // Track which predecessors have contributed to Incoming state.
-    // Used to determine if we've seen all paths before optimizing soft waits.
-    SmallPtrSet<MachineBasicBlock *, 4> SeenPredecessors;
     BlockInfo() = default;
     BlockInfo(BlockInfo &&) = default;
     BlockInfo &operator=(BlockInfo &&) = default;
@@ -1923,7 +1921,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     // Update required wait count. If this is a soft waitcnt (= it was added
     // by an earlier pass), it may be entirely removed.
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
-    bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
+    bool TrySimplify =
+        Opcode != II.getOpcode() && !OptNone && AllowWaitDeletion;
 
     // Don't crash if the programmer used legacy waitcnt intrinsics, but don't
     // attempt to do more than that either.
@@ -2145,13 +2144,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
                               << "Old Instr: " << *It
                               << "New Instr: " << *WaitInstrs[CT] << '\n');
     } else {
-      if (AllowWaitDeletion) {
-        // Only delete waits if we've seen all predecessor states.
-        // Otherwise, keep them - they may become necessary after considering
-        // other edges.
-        WaitInstrs[CT]->eraseFromParent();
-        Modified = true;
-      }
+      WaitInstrs[CT]->eraseFromParent();
+      Modified = true;
     }
   }
 
@@ -3499,6 +3493,8 @@ bool SIInsertWaitcnts::run() {
   bool Modified = false;
 
   MachineBasicBlock &EntryBB = MF.front();
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
 
   if (!MFI->isEntryFunction() &&
       !MF.getFunction().hasFnAttribute(Attribute::Naked)) {
@@ -3593,21 +3589,17 @@ bool SIInsertWaitcnts::run() {
         if (BlockInfos.count(Pred))
           ++ReachablePredCount;
       }
-      bool AllowWaitDeletion = BI.SeenPredecessors.size() >= ReachablePredCount;
+      CycleRef Cycle = MCI.getCycle(MBB);
+      // For blocks in loops, we cannot make the assumption that we have visited
+      // all the predecessor blocks and that the brackets contain all incoming
+      // events. Since we need this information to reliably optimize out soft
+      // waits, we do not optimize out unnecessary soft waits.
+      // TODO - Add a soft wait optimization loop after we've arrived at an
+      // initial fixed point.
+      bool AllowWaitDeletion = !Cycle.isValid();
+
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets, AllowWaitDeletion);
       BI.Dirty = false;
-      if (!AllowWaitDeletion) {
-        BI.Dirty = true;
-        Repeat = true;
-      }
-
-      // Track that this predecessor has been processed for all successors,
-      // regardless of whether it has pending events. This ensures
-      // AllowWaitDeletion is only true when we've truly seen all predecessors.
-      for (MachineBasicBlock *Succ : MBB->successors()) {
-        BlockInfo &SuccBI = BlockInfos.find(Succ)->second;
-        SuccBI.SeenPredecessors.insert(MBB);
-      }
 
       if (Brackets->hasPendingEvent()) {
         BlockInfo *MoveBracketsToSucc = nullptr;

@@ -344,6 +344,7 @@ define void @struct_ptr_buffer_atomic_add_f32_noret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v7
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_add_f32 v0, v[8:9], s[0:3], s6 idxen offen
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_and_not1_wrexec_b32 s5, s5
@@ -514,6 +515,7 @@ define void @struct_ptr_buffer_atomic_add_v2f16_noret__vgpr_val__vgpr_rsrc__vgpr
 ; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v7
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_pk_add_f16 v0, v[8:9], s[0:3], s6 idxen offen
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_and_not1_wrexec_b32 s5, s5

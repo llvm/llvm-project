@@ -294,6 +294,7 @@ define float @struct_ptr_buffer_atomic_add_f32_rtn__vgpr_val__vgpr_rsrc__vgpr_vo
 ; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v7
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_add_f32 v0, v[8:9], s[0:3], s6 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
@@ -436,6 +437,7 @@ define <2 x half> @struct_ptr_buffer_atomic_add_v2f16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v7
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_pk_add_f16 v0, v[8:9], s[0:3], s6 idxen offen th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_xcnt 0x0

@@ -22,6 +22,7 @@ define amdgpu_kernel void @soft_wait_loop_fence(ptr addrspace(3) %lds, i32 %n) {
 ; CHECK-NEXT:    s_add_co_i32 s3, s3, 4
 ; CHECK-NEXT:    s_cmp_lt_i32 s2, s1
 ; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
@@ -66,6 +67,7 @@ define amdgpu_kernel void @soft_wait_loop_fence_multi_ds(ptr addrspace(3) %lds, 
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s3
 ; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; CHECK-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset0:2 offset1:3
 ; CHECK-NEXT:    s_wait_dscnt 0x0
