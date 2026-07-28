@@ -37,6 +37,24 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, TestBuildFConstantBFloatSemantics) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  // bfloat 1.0 -> 0x3F80
+  auto BF16One = B.buildFConstant(LLT::bfloat16(), 1.0);
+  const APFloat &BF16APF = BF16One->getOperand(1).getFPImm()->getValueAPF();
+  EXPECT_EQ(&BF16APF.getSemantics(), &APFloat::BFloat());
+  EXPECT_EQ(BF16APF.bitcastToAPInt().getZExtValue(), 0x3F80u);
+
+  // half 1.0 -> 0x3C00
+  auto F16One = B.buildFConstant(LLT::float16(), 1.0);
+  const APFloat &F16APF = F16One->getOperand(1).getFPImm()->getValueAPF();
+  EXPECT_EQ(&F16APF.getSemantics(), &APFloat::IEEEhalf());
+  EXPECT_EQ(F16APF.bitcastToAPInt().getZExtValue(), 0x3C00u);
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 

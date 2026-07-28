@@ -125,7 +125,7 @@ for.end:
 }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
-!1 = !{!"llvm.loop.distribute.enable", i1 true}
+!1 = !{!"llvm.loop.distribute.enable"}
 !2 = !{!"llvm.loop.distribute.followup_all", !{!"FollowupAll"}}
 !3 = !{!"llvm.loop.distribute.followup_coincident", !{!"FollowupCoincident", i1 false}}
 !4 = !{!"llvm.loop.distribute.followup_sequential", !{!"FollowupSequential", i32 8}}

@@ -625,6 +625,11 @@ constexpr const char *saveTempsValues[] = {
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
+void LinkerDriver::waitForLTOCleanup() {
+  if (lto)
+    lto->waitForLTOCleanup();
+}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(ctx, argsArr.slice(1));
@@ -706,6 +711,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     invokeELFT(link, args);
   }
+
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  waitForLTOCleanup();
 
   if (ctx.arg.timeTraceEnabled) {
     checkError(ctx.e, timeTraceProfilerWrite(
@@ -1318,9 +1327,10 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
 
 static bool getIsRela(Ctx &ctx, opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
-  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
-                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
-                           ctx.arg.emachine);
+  bool rela =
+      is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH, EM_PPC,
+                    EM_PPC64, EM_RISCV, EM_S390, EM_SPARCV9, EM_X86_64},
+                   ctx.arg.emachine);
   // If -z rel or -z rela is specified, use the last option.
   for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());

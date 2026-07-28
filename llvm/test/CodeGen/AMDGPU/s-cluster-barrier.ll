@@ -5,7 +5,7 @@
 define amdgpu_kernel void @kernel1() #0 {
 ; GFX12-LABEL: kernel1:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_wb
+; GFX12-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_cmp_eq_u32 0, 0

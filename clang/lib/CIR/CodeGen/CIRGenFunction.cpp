@@ -1644,6 +1644,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
+    case Type::LateParsedAttr:
       cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
       break;
 

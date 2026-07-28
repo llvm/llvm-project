@@ -153,6 +153,51 @@ def expectedFailureIf(condition, bugnumber=None):
         return expectedFailure_impl
 
 
+def requiresSwiftPlugin(min_apple_os_version=None):
+    """Mark a test that can only pass when LLDB has the Swift language plugin.
+
+    More and more of Foundation is implemented in Swift, so its values are
+    increasingly backed by native Swift types that only the Swift language
+    plugin knows how to format. A test exercising such a value passes when LLDB
+    is built with Swift support and is expected to fail otherwise.
+
+    Starting with macOS/iOS/... 26.0 all Apple OS share a common
+    version number, so ``min_apple_os_version`` describes the release
+    in which a value moved to Swift. Older OS versions, non-Apple
+    targets, and any build that has the Swift plugin are expected to
+    pass. When ``min_apple_os_version`` is omitted the plugin is
+    required on every Apple OS.
+    """
+
+    def decorate(func):
+        # An LLDB built with the Swift plugin satisfies the requirement.
+        if _get_bool_config("swift", fail_value=False):
+            return func
+
+        # Otherwise the test is expected to fail, but only on Apple targets
+        # that are new enough to have moved the value to Swift.
+        apple_oslist = lldbplatformutil.getDarwinOSTriples() + ["xros", "xrsimulator"]
+        expected = _match_decorator_property(
+            apple_oslist, lldbplatformutil.getPlatform()
+        )
+        if expected and min_apple_os_version is not None:
+            target = lldb.selected_platform
+            actual = "%d.%d" % (
+                target.GetOSMajorVersion(),
+                target.GetOSMinorVersion(),
+            )
+            expected = _check_expected_version(">=", str(min_apple_os_version), actual)
+
+        return expectedFailureIf(expected)(func)
+
+    # Support bare usage (@requiresSwiftPlugin) in addition to the parenthesized
+    # form (@requiresSwiftPlugin(min_apple_os_version=...)).
+    if callable(min_apple_os_version):
+        func, min_apple_os_version = min_apple_os_version, None
+        return decorate(func)
+    return decorate
+
+
 def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):

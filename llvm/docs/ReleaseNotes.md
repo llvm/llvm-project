@@ -6,8 +6,6 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # LLVM {{env.config.release}} Release Notes
 
-```{contents}
-```
 
 ````{only} PreRelease
 ```{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
@@ -70,10 +68,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AArch64 Backend
 
-* On AArch64 Windows targets, return address signing now uses the B-key by
-  default because Windows unwind information only supports B-key signing.
-
 ### Changes to the AMDGPU Backend
+
+* Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
+  and `amdgpu.sramecc` module flags.
 
 ### Changes to the ARM Backend
 
@@ -110,6 +108,8 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
 

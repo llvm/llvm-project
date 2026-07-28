@@ -92,6 +92,20 @@ int TestSimpleEquivalent(int X, int Y) {
   return 0;
 }
 
+#define NESTED_MACRO_A 0x0100
+#define NESTED_MACRO_B 0x0200
+#define NESTED_MACRO_AB (NESTED_MACRO_A | NESTED_MACRO_B)
+
+int TestNestedMacroOperands() {
+  int Result = NESTED_MACRO_A | NESTED_MACRO_AB | NESTED_MACRO_B;
+  Result |= NESTED_MACRO_A | NESTED_MACRO_B | NESTED_MACRO_A;
+  // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: operator has equivalent nested operands
+  Result |= NESTED_MACRO_AB | 0x0400 | NESTED_MACRO_AB;
+  // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: operator has equivalent nested operands
+  Result |= NESTED_MACRO_A | NESTED_MACRO_B | 0x0100;
+  return Result;
+}
+
 #ifndef TEST_MACRO
 #define VAL_1 2
 #define VAL_3 3
