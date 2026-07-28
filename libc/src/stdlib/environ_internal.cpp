@@ -269,7 +269,7 @@ int EnvironmentManager::put(char *string) {
   cpp::string_view sv(string);
   size_t eq_pos = sv.find_first_of('=');
 
-  // No '=' found: treat as unset (glibc/musl convention).
+  // No '=' found: treat as unset (POSIX behavior).
   if (eq_pos == cpp::string_view::npos)
     return unset(sv);
 

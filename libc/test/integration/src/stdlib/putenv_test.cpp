@@ -25,8 +25,7 @@ static char replace_var[] = "PUTENV_TEST=world";
 static char empty_value[] = "PUTENV_EMPTY=";
 static char special_chars[] = "PUTENV_SPECIAL=!@#$%^&*()";
 
-TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
-          [[maybe_unused]] char **envp) {
+TEST_MAIN() {
   // Test: Basic set
   {
     ASSERT_EQ(LIBC_NAMESPACE::putenv(set_var), 0);
@@ -66,7 +65,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "!@#$%^&*()"), 0);
   }
 
-  // Test: No '=' removes the variable (glibc/musl convention)
+  // Test: No '=' removes the variable (POSIX behavior)
   {
     // First set a variable via putenv
     static char var_to_remove[] = "REMOVE_ME=present";

@@ -133,7 +133,7 @@ public:
   // Insert a caller-provided "name=value" string into the environment.
   // The caller retains ownership of the string; the manager will not
   // free it. If string contains no '=', the named variable is removed
-  // (glibc/musl convention). Returns 0 on success, -1 on failure.
+  // (POSIX behavior). Returns 0 on success, -1 on failure.
   int put(char *string);
 
   // Remove a variable by name. Frees the string if we own it, then
