@@ -20717,8 +20717,8 @@ static SDValue performVEXT_VLCombine(SDNode *N,
   // where vext_vl is either vsext_vl or vzext_vl.
   using namespace SDPatternMatch;
   SDValue Src;
-  if (!sd_match(Inner, m_OneUse(m_Node(Opcode, m_Value(Src), m_Specific(Mask),
-                                       m_Specific(VL)))))
+  if (!sd_match(Inner,
+                m_OneUse(m_Node(Opcode, m_Value(Src), m_Value(), m_Value()))))
     return SDValue();
 
   MVT DstVT = N->getSimpleValueType(0);
