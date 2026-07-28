@@ -86,6 +86,15 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[LOG:.+]] = call double @llvm.log2.f64(double 1.000000e+02) #0
 //CHECK:   %[[CEIL:.+]] = call double @llvm.ceil.f64(double %[[LOG]]) #0
 //CHECK:   %[[UB:.+]] = fptoui double %[[CEIL]] to i32
+// Combine the original variable's incoming value (orig-val) into the first
+// buffer element once, before the prefix sum, so it is reflected in every
+// scan result and in the final reduction value.
+//CHECK:   %[[OBUFF:.+]] = load ptr, ptr %{{.*}}, align 8
+//CHECK:   %[[OELEMPTR:.+]] = getelementptr inbounds i32, ptr %[[OBUFF]], i32 1
+//CHECK:   %[[OORIG:.+]] = load i32, ptr %{{.*}}, align 4
+//CHECK:   %[[OELEM:.+]] = load i32, ptr %[[OELEMPTR]], align 4
+//CHECK:   %[[OCOMB:.+]] = add i32 %[[OELEM]], %[[OORIG]]
+//CHECK:   store i32 %[[OCOMB]], ptr %[[OELEMPTR]], align 4
 //CHECK:   br i1 {{.*}}, label %omp.outer.log.scan.body, label %omp.outer.log.scan.exit
 //CHECK: omp.outer.log.scan.exit:                          ; preds = %omp.inner.log.scan.exit, %omp_region.body{{.*}}
 //CHECK: @__kmpc_end_masked
@@ -116,9 +125,10 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK: omp.inscan.dispatch:                              ; preds = %omp_loop.body
 //CHECK:   br i1 true, label %omp.before.scan.bb, label %omp.after.scan.bb
 //CHECK: omp.before.scan.bb:
-//CHECK:   %[[ISFIRST:.+]] = icmp eq i32 %{{.*}}, 1
-//CHECK:   %[[SEED:.+]] = select i1 %[[ISFIRST]], i32 %{{.*}}, i32 0
-//CHECK:   store i32 %[[SEED]], ptr %[[REDPRIV:.+]], align 4
+// Each input-loop iteration resets the private reduction variable to the
+// reduction identity (0 for `+`). The original variable's incoming value
+// (orig-val) is NOT seeded here; it is combined once in the masked region.
+//CHECK:   store i32 0, ptr %{{.*}}, align 4
 //CHECK: omp.loop_nest.region:                             ; preds = %omp.before.scan.bb
 //CHECK:   %[[BUFFER:.+]] = load ptr, ptr %loadgep_vla, align 8
 //CHECK:   %[[ARRAYOFFSET2:.+]] = getelementptr inbounds i32, ptr %[[BUFFER]], i32 %{{.*}}

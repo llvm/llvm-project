@@ -5525,6 +5525,38 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
         ScanRedInfo->Span,
         llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
     Builder.SetInsertPoint(InputBB);
+    // Combine the original variable's incoming value (orig-val) into the first
+    // buffer element before computing the prefix sum. Per the OpenMP scan
+    // semantics orig-val is a single prefix element that must be reflected in
+    // every inclusive/exclusive scan result and in the final reduction value.
+    // Folding it in here lets the log-scan prefix computation propagate it into
+    // every element (and into the finals' read of `buffer[Span]`), regardless
+    // of whether an iteration's input phase accumulates into or overwrites the
+    // reduction variable. `select(Span > 0, 1, 0)` keeps the access in bounds
+    // when Span == 0: buffer[0] is otherwise unused and the finals' zero-trip
+    // guard discards it.
+    llvm::Value *HasElem = Builder.CreateICmpUGT(
+        ScanRedInfo->Span, llvm::ConstantInt::get(IndexTy, 0));
+    llvm::Value *FirstIdx =
+        Builder.CreateSelect(HasElem, llvm::ConstantInt::get(IndexTy, 1),
+                             llvm::ConstantInt::get(IndexTy, 0));
+    for (ReductionInfo RedInfo : ReductionInfos) {
+      Value *ReductionVal = RedInfo.PrivateVariable;
+      Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ReductionVal];
+      Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
+      Type *DestTy = RedInfo.ElementType;
+      Value *ElemPtr =
+          Builder.CreateInBoundsGEP(DestTy, Buff, FirstIdx, "arrayOffset");
+      Value *OrigVal = Builder.CreateLoad(DestTy, RedInfo.Variable);
+      Value *Elem = Builder.CreateLoad(DestTy, ElemPtr);
+      llvm::Value *Combined;
+      InsertPointOrErrorTy AfterIP =
+          RedInfo.ReductionGen(Builder.saveIP(), Elem, OrigVal, Combined);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
+      Builder.CreateStore(Combined, ElemPtr);
+    }
     // The log-scan prefix computation is only well-defined when there are at
     // least two elements: `log2(Span)` is invalid for Span == 0 and the loop
     // trip computation underflows/loops forever for Span <= 1. For Span <= 1
