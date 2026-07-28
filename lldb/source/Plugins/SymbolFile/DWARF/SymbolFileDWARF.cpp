@@ -97,7 +97,7 @@
 #include <cstring>
 
 #ifndef LLDB_DWO_DIAGNOSTIC_SUFFIX
-#define LLDB_DWO_DIAGNOSTIC_SUFFIX ""
+#define LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded."
 #endif
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
@@ -337,6 +337,10 @@ void SymbolFileDWARF::Terminate() {
 
 llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader.";
+}
+
+llvm::StringRef SymbolFileDWARF::GetDwoDiagnosticSuffix() {
+  return LLDB_DWO_DIAGNOSTIC_SUFFIX;
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
@@ -1922,13 +1926,14 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     }
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
-        "{1:x16}" LLDB_DWO_DIAGNOSTIC_SUFFIX,
-        error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
+        "{1:x16}. {2}",
+        error_dwo_path.GetPath().c_str(), cu_die.GetOffset(),
+        GetDwoDiagnosticSuffix()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "unable to locate separate debug file (dwo, dwp). Debugging will be "
-          "degraded" LLDB_DWO_DIAGNOSTIC_SUFFIX);
+          "unable to locate separate debug file (dwo, dwp). {0}",
+          GetDwoDiagnosticSuffix());
     }
     return nullptr;
   }
