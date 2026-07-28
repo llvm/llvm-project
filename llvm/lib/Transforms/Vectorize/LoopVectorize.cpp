@@ -6013,7 +6013,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     VPlanTransforms::expandSCEVsToVPInstructions(BestVPlan, *PSE.getSE());
   VPlanTransforms::cse(BestVPlan);
-  VPlanTransforms::cseUniformMemoryReads(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   // Removing branches and incoming values may expose additional simplification
   // opportunities.
@@ -6617,7 +6616,9 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     // Now optimize the initial VPlan.
     RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE, OrigLoop);
-    RUN_VPLAN_PASS(VPlanTransforms::widenPredicatedInvariantLoads, *Plan, TTI);
+    VPCostContext InvarLoadCostCtx(*CM.TLI, *Plan, CM, Config);
+    RUN_VPLAN_PASS(VPlanTransforms::widenPredicatedInvariantLoads, *Plan,
+                   InvarLoadCostCtx);
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);

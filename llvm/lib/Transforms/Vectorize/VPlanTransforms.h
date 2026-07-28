@@ -40,6 +40,7 @@ struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> ForceTargetSupportsMaskedMemoryOps;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
@@ -413,10 +414,6 @@ struct VPlanTransforms {
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);
 
-  /// CSE masked VPWidenLoadRecipes with identical operands inside a basic
-  /// block, ignoring candidates across an intervening write. No AA needed.
-  static void cseUniformMemoryReads(VPlan &Plan);
-
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
@@ -435,10 +432,11 @@ struct VPlanTransforms {
 
   /// Rewrite predicated VPReplicateRecipe loads from a loop-invariant address
   /// into a single-lane masked load + broadcast pattern. Only applied when
-  /// the target reports isLegalMaskedLoad for the element type. Gated by
-  /// -enable-masked-invariant-load.
+  /// the target reports isLegalMaskedLoad for the element type and when the new
+  /// lowering is not more expensive than the scalarized predicated load for all
+  /// vector VFs of \p Plan. Gated by -enable-masked-invariant-load.
   static void widenPredicatedInvariantLoads(VPlan &Plan,
-                                            const TargetTransformInfo &TTI);
+                                            VPCostContext &CostCtx);
 
   /// Sink predicated stores to the same address with complementary predicates
   /// (P and NOT P) to an unconditional store with select recipes for the
