@@ -12,7 +12,6 @@
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/Twine.h"
@@ -27,15 +26,6 @@ using namespace AMDGPU;
 namespace {
 constexpr unsigned NumAMDGPUSubArches =
     Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch + 1;
-
-// The frontend-visible SubtargetFeatures, one enumerator per bit in a GPU's
-// feature bitset (NUM_FEATURES is the count).
-enum AMDGPUFeature : unsigned {
-#define GET_AMDGPU_FEATURE_ENUM
-#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
-};
-
-using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
 
 // A legacy GPU name (e.g. "tahiti") mapped to the GPUKind it aliases.
 struct GPUNameAlias {
@@ -328,6 +318,20 @@ R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
   return Info ? Info->ArchFeatures : R600_FEATURE_NONE;
 }
 
+const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
+  static constexpr AMDGPUFeatureBitset Empty{};
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->Features : Empty;
+}
+
+void AMDGPU::getFeatureNames(const AMDGPUFeatureBitset &Features,
+                             SmallVectorImpl<StringRef> &Names) {
+  for (unsigned I = 0; I != NUM_FEATURES; ++I) {
+    if (Features.test(I))
+      Names.push_back(AMDGPUNameStrTab[AMDGPUFeatureNames[I]]);
+  }
+}
+
 void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values,
                                      Triple::SubArchType SubArch) {
   // XXX: Should this only report unique canonical names?
@@ -431,10 +435,9 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 // Overwrite false, existing entries are kept so user -mattr overrides win.
 static void addGPUFeatures(const GPUInfo &Info, bool Overwrite,
                            StringMap<bool> &Features) {
-  for (unsigned I = 0; I != NUM_FEATURES; ++I) {
-    if (!Info.Features.test(I))
-      continue;
-    StringRef Name = AMDGPUNameStrTab[AMDGPUFeatureNames[I]];
+  SmallVector<StringRef, NUM_FEATURES> Names;
+  getFeatureNames(Info.Features, Names);
+  for (StringRef Name : Names) {
     if (Overwrite)
       Features[Name] = true;
     else
