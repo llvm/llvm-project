@@ -1968,8 +1968,12 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
+        for (auto &p : isd->thunkSections) {
+          // Sort in pass 0, which creates most thunks.
+          if (pass == 0 && ctx.arg.zSortThunks)
+            p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
+        }
       });
 
   for (auto &p : thunkedSections)

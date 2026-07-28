@@ -218,6 +218,8 @@ jobs:
     outputs:
       macos-projects: ${{ steps.vars.outputs.macos-projects }}
       macos-check-targets: ${{ steps.vars.outputs.macos-check-targets }}
+      macos-runtimes: ${{ steps.vars.outputs.macos-runtimes }}
+      macos-runtimes-check-targets: ${{ steps.vars.outputs.macos-runtimes-check-targets }}
     steps:
       # For pull requests we get the changed files from the GitHub API, so we
       # only need a sparse checkout of .ci/ to run compute_projects.py. For
@@ -261,6 +263,8 @@ jobs:
 
           echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+          echo "macos-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
+          echo "macos-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
 
   premerge-check-macos:
     name: Build and Test macOS arm64
@@ -289,6 +293,8 @@ jobs:
           SCCACHE_REGION: us-west-2
           PROJECTS: ${{ needs.premerge-compute-macos.outputs.macos-projects }}
           CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-check-targets }}
+          RUNTIMES: ${{ needs.premerge-compute-macos.outputs.macos-runtimes }}
+          RUNTIMES_CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-runtimes-check-targets }}
           CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
         run: |
           export SCCACHE_IDLE_TIMEOUT=0
@@ -299,6 +305,7 @@ jobs:
                 -B build \
                 -S llvm \
                 -DLLVM_ENABLE_PROJECTS="${PROJECTS}" \
+                -DLLVM_ENABLE_RUNTIMES="${RUNTIMES}" \
                 -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DLLDB_INCLUDE_TESTS=OFF \
@@ -307,6 +314,10 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
           ninja -C build ${CHECK_TARGETS}
+
+          if [[ -n "${RUNTIMES_CHECK_TARGETS}" ]]; then
+            ninja -C build ${RUNTIMES_CHECK_TARGETS}
+          fi
       - name: Show sccache stats
         if: always()
         run: |

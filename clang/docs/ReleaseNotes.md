@@ -349,6 +349,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 
@@ -387,6 +388,10 @@ features cannot lower the translation-unit ABI level;
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
+  parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
+  Clang now diagnoses the error instead of asserting. (#GH211207)
+
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
@@ -401,6 +406,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
+- Fixed an assertion failure in `-extract-api` when a documentation comment
+  contains invalid UTF-8. (#GH212393)
 
 ### OpenACC Specific Changes
 
