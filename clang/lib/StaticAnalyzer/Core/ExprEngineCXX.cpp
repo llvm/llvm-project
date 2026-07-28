@@ -524,7 +524,7 @@ bindRequiredArrayElementToEnvironment(ProgramStateRef State,
 
 void ExprEngine::handleConstructor(const Expr *E,
                                    ExplodedNode *Pred,
-                                   ExplodedNodeSet &destNodes) {
+                                   ExplodedNodeSet &Dst) {
   const auto *CE = dyn_cast<CXXConstructExpr>(E);
   const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(E);
   assert(CE || CIE);
@@ -544,7 +544,7 @@ void ExprEngine::handleConstructor(const Expr *E,
       State = finishObjectConstruction(State, CE, SF);
       if (auto L = Target.getAs<Loc>())
         State = State->BindExpr(CE, SF, State->getSVal(*L, CE->getType()));
-      destNodes.insert(Engine.makePostStmtNode(CE, State, Pred));
+      Dst.insert(Engine.makePostStmtNode(CE, State, Pred));
       return;
     }
   }
@@ -584,7 +584,7 @@ void ExprEngine::handleConstructor(const Expr *E,
         static SimpleProgramPointTag T{"ExprEngine",
                                        "Skipping 0 size array construction"};
         PostStmt Loc(CE, Pred->getStackFrame(), &T);
-        destNodes.insert(Engine.makeNode(Loc, State, Pred));
+        Dst.insert(Engine.makeNode(Loc, State, Pred));
         return;
       }
 
@@ -777,7 +777,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   getCheckerManager().runCheckersForPostCall(DstPostCall,
                                              DstPostArgumentCleanup,
                                              *Call, *this);
-  getCheckerManager().runCheckersForPostStmt(destNodes, DstPostCall, E, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, E, *this);
 }
 
 void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
