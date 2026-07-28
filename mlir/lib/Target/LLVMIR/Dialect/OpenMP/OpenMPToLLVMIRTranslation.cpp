@@ -4871,12 +4871,17 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
                                            loopInfo->getLatch(), index);
 
-    // Scan reductions need a barrier at the end of the input (first) loop so
-    // that every thread has finished writing the temporary buffer before the
-    // masked prefix-sum reads it. A source-level `nowait` only elides the final
-    // barrier after the scan (second) loop, so force the barrier for the input
-    // loop regardless of `nowait` to avoid a data race.
-    bool needsBarrier = loopNeedsBarrier || (isInScanRegion && inputScanLoop);
+    // Scan reductions manage the barriers around the shared temporary buffer
+    // explicitly:
+    //  * The input (first) loop always needs its trailing barrier so that every
+    //    thread has finished writing the buffer before the masked prefix-sum
+    //    reads it; this is required even under `nowait`.
+    //  * The scan (second) loop must not emit its own trailing barrier here.
+    //    `emitScanReduction` emits a barrier *before* the masked region frees
+    //    the buffer (so no thread frees it while another is still reading it)
+    //    and, unless `nowait` is present, a barrier *after* it for
+    //    end-of-construct synchronization.
+    bool needsBarrier = isInScanRegion ? inputScanLoop : loopNeedsBarrier;
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
         ompBuilder->applyWorkshareLoop(
             ompLoc.DL, loopInfo, allocaIP, needsBarrier,
@@ -4930,7 +4935,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy redIP =
         ompBuilder->emitScanReduction(builder.saveIP(), reductionInfos,
-                                      scanInfo);
+                                      scanInfo, wsloopOp.getNowait());
     if (failed(handleError(redIP, opInst)))
       return failure();
 

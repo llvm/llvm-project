@@ -1940,11 +1940,17 @@ private:
   /// \param ReductionInfos Array type containing the ReductionOps.
   /// \param ScanRedInfo    Pointer to the ScanInfo objected created using
   ///                       `ScanInfoInitialize`.
+  /// \param NoWait         Whether the enclosing worksharing construct has a
+  ///                       `nowait` clause. The barrier that keeps the shared
+  ///                       scan buffer alive until every thread has finished
+  ///                       reading it is always emitted; only the
+  ///                       end-of-construct barrier after the masked region is
+  ///                       skipped when \p NoWait is set.
   ///
   /// \return error if any produced, else return success.
   Error emitScanBasedDirectiveFinalsIR(
       ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-      ScanInfo *ScanInfo);
+      ScanInfo *ScanInfo, bool NoWait = false);
 
   /// This function emits a helper that gathers Reduce lists from the first
   /// lane of every active warp to lanes in the first warp.
@@ -3173,12 +3179,16 @@ public:
   /// \param ReductionInfos Array type containing the ReductionOps.
   /// \param ScanRedInfo    Pointer to the ScanInfo objected created using
   ///                       `ScanInfoInitialize`.
+  /// \param NoWait         Whether the enclosing worksharing construct has a
+  ///                       `nowait` clause. Only the end-of-construct barrier
+  ///                       emitted after freeing the shared scan buffer is
+  ///                       elided; barriers required for correctness are kept.
   ///
   /// \returns The insertion position *after* the masked.
   LLVM_ABI InsertPointOrErrorTy emitScanReduction(
       const LocationDescription &Loc,
       ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-      ScanInfo *ScanRedInfo);
+      ScanInfo *ScanRedInfo, bool NoWait = false);
 
   /// This directive split and directs the control flow to input phase
   ///  blocks or scan phase blocks based on 1. whether input loop or scan loop

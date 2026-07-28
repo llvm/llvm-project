@@ -5414,7 +5414,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
 }
 
 Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
-    ArrayRef<ReductionInfo> ReductionInfos, ScanInfo *ScanRedInfo) {
+    ArrayRef<ReductionInfo> ReductionInfos, ScanInfo *ScanRedInfo,
+    bool NoWait) {
   auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                        ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Builder.restoreIP(CodeGenIP);
@@ -5453,27 +5454,45 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
   else
     Builder.SetInsertPoint(ScanRedInfo->OMPScanFinish);
 
-  llvm::Value *FilterVal = Builder.getInt32(0);
+  // Synchronize before the masked region frees the shared scan buffer. The
+  // scan (second) loop loads each thread's prefix value from the buffer, so
+  // every thread must have finished that loop before the single masked thread
+  // frees it; otherwise a thread still executing the loop could load from
+  // freed memory. A `masked` region is not a barrier, so this synchronization
+  // is required for correctness and is emitted even under `nowait`.
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
+      createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+  if (!AfterIP)
+    return AfterIP.takeError();
+  Builder.restoreIP(*AfterIP);
+
+  llvm::Value *FilterVal = Builder.getInt32(0);
+  AfterIP = createMasked(Builder.saveIP(), BodyGenCB, FiniCB, FilterVal);
 
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
-  BasicBlock *InputBB = Builder.GetInsertBlock();
-  if (InputBB->hasTerminator())
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
-  AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
-  if (!AfterIP)
-    return AfterIP.takeError();
-  Builder.restoreIP(*AfterIP);
+
+  // The barrier after the masked region provides the construct's
+  // end-of-construct synchronization and publishes the final reduction value
+  // stored into the original variable inside the masked region. Skip it when
+  // the construct has `nowait`, matching a normal worksharing loop.
+  if (!NoWait) {
+    BasicBlock *InputBB = Builder.GetInsertBlock();
+    if (InputBB->hasTerminator())
+      Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    AfterIP = createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+    if (!AfterIP)
+      return AfterIP.takeError();
+    Builder.restoreIP(*AfterIP);
+  }
   return Error::success();
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     const LocationDescription &Loc,
     ArrayRef<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-    ScanInfo *ScanRedInfo) {
+    ScanInfo *ScanRedInfo, bool NoWait) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -5590,7 +5609,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.restoreIP(*AfterIP);
-  Error Err = emitScanBasedDirectiveFinalsIR(ReductionInfos, ScanRedInfo);
+  Error Err =
+      emitScanBasedDirectiveFinalsIR(ReductionInfos, ScanRedInfo, NoWait);
   if (Err)
     return Err;
 
