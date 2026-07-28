@@ -1,4 +1,6 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o %t.spt
+; RUN: FileCheck %s --check-prefix=CHECK --input-file %t.spt
+; RUN: FileCheck %s --check-prefix=NO-DBG-FUNC --input-file %t.spt
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; DISubprogram definition scoped in a DINamespace. Namespace scopes are not yet
@@ -15,7 +17,8 @@
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit [[C100]] [[C5]] [[DS]] [[C0]]
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypeFunction [[C0]] [[VOID]]
-; CHECK-NOT: DebugFunction
+
+; NO-DBG-FUNC-NOT: DebugFunction
 
 target triple = "spirv64-unknown-unknown"
 
