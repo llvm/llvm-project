@@ -1863,8 +1863,8 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     assert(false);
     return llvm::createStringError("enum with unexpected offset");
   }
-  return ValueObjectCast::Create(valobj, ConstString(field_info.Name),
-                                 projected_type);
+  return valobj.GetSyntheticChildAtOffset(0, projected_type, /*can_create=*/true,
+                                          ConstString(field_info.Name));
 }
 
 std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
