@@ -12933,13 +12933,14 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
     return false;
 
   // The culprit reported by isConstantInitializer() may be wrapped in implicit
-  // casts that it does not look through: under ARC an object-pointer
-  // initializer is an `ImplicitCastExpr <ARCReclaimReturnedObject>`, and an
-  // `id`-typed (or otherwise differently-typed) variable adds an
-  // `ImplicitCastExpr <BitCast>` on top. Strip those so the ObjC-specific
-  // classification and per-element reporting below can see the underlying
-  // literal regardless of how it is wrapped.
-  const Expr *CulpritLiteral = Culprit->IgnoreImpCasts();
+  // casts and parentheses that it does not look through: under ARC an
+  // object-pointer initializer is an `ImplicitCastExpr
+  // <ARCReclaimReturnedObject>`, an `id`-typed (or otherwise differently-typed)
+  // variable adds an `ImplicitCastExpr <BitCast>` on top, and a parenthesized
+  // initializer such as `(@{...})` adds a `ParenExpr`. Strip all of these so
+  // the ObjC-specific classification and per-element reporting below can see
+  // the underlying literal regardless of how it is wrapped.
+  const Expr *CulpritLiteral = Culprit->IgnoreParenImpCasts();
 
   // Emit ObjC-specific diagnostics for non-constant literals at file scope.
   if (getLangOpts().ObjCConstantLiterals &&

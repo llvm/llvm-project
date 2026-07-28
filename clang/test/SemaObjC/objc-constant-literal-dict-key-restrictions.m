@@ -120,3 +120,26 @@ static id const dNumberKeyAsId = @{
 static NSArray *const aValueBad = @[
     @1,
     @(foo())]; // objc-error {{an array literal can only be used at file scope}}
+
+// ---- Rejected: parenthesized literal --------------------------------------
+// A parenthesized initializer such as `(@{...})` adds a `ParenExpr`; combined
+// with the implicit BitCast for an `id`-typed variable it would otherwise hide
+// the literal and fall back to the generic diagnostic. The specific-culprit
+// reporting must still fire through parentheses (including nested ones) for both
+// dictionary- and id-typed variables.
+
+static NSDictionary *const dParenValueBad = (@{
+    @"a" :
+    @(foo())}); // objc-error {{its keys are string literals}}
+
+static id const dParenIdValueBad = (@{
+    @"a" :
+    @(foo())}); // objc-error {{its keys are string literals}}
+
+static id const dNestedParenIdValueBad = ((@{
+    @"a" :
+    @(foo())})); // objc-error {{its keys are string literals}}
+
+static id const aParenIdValueBad = (@[
+    @1,
+    @(foo())]); // objc-error {{an array literal can only be used at file scope}}
