@@ -8192,6 +8192,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_ballot: {
+    Register Dst = MI.getOperand(0).getReg();
+    if (MRI.getType(Dst).getSizeInBits() < ST.getWavefrontSize()) {
+      Function &Fn = B.getMF().getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, "ballot return type is narrower than the wavefront size",
+          MI.getDebugLoc()));
+      B.buildUndef(Dst);
+      MI.eraseFromParent();
+    }
+    return true;
+  }
   case Intrinsic::sponentry:
     if (B.getMF().getInfo<SIMachineFunctionInfo>()->isBottomOfStack()) {
       // FIXME: The imported pattern checks for i32 instead of p5; if we fix
