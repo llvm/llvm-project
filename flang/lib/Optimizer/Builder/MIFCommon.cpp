@@ -33,6 +33,10 @@ std::string mif::getFullUniqName(mlir::Value addr) {
     return getFullUniqName(eb.getMemref());
   else if (auto ebc = mlir::dyn_cast<fir::EmboxCharOp>(op))
     return getFullUniqName(ebc.getMemref());
+  else if (auto ac = mlir::dyn_cast<fir::ArrayCoorOp>(op))
+    return getFullUniqName(ac.getMemref());
+  else if (auto c = mlir::dyn_cast<fir::ConvertOp>(op))
+    return getFullUniqName(c.getValue());
   else if (auto c = mlir::dyn_cast<fir::CoordinateOp>(op)) {
     if (c.getFieldIndicesAttr()) {
       mlir::Type eleTy = fir::getFortranElementType(c.getRef().getType());

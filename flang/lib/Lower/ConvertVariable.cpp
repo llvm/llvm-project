@@ -349,7 +349,6 @@ genCoarrayDefaultInitializerValue(Fortran::lower::AbstractConverter &converter,
   auto baseBoxType = mlir::cast<fir::BaseBoxType>(boxType);
   auto baseAddrType = baseBoxType.getBaseAddressType();
   auto type = fir::unwrapRefType(baseAddrType);
-  auto eleTy = fir::unwrapSequenceType(type);
   auto nullAddr = builder.createNullConstant(loc, baseAddrType);
   mlir::Value shape, slice;
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {

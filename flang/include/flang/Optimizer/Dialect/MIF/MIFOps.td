@@ -592,4 +592,41 @@ def mif_DeallocCoarrayOp
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Coarray Access
+//===----------------------------------------------------------------------===//
+
+def mif_GetCoarrayOp : mif_Op<"get_coarray", [AttrSizedOperandSegments]> {
+  let summary = "Fetch data in a coarray from an image number";
+  
+  let arguments = (ins Arg<AnyType, "", [MemRead]>:$coarray,
+                       Variadic<AnyIntegerType>:$cosubscripts,
+                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dest,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    `from` $coarray (`[` $cosubscripts^ `]`)? 
+    `to` $dest  (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_PutCoarrayOp : mif_Op<"put_coarray", [AttrSizedOperandSegments]> {
+  let summary = "Assign data to a coarray to an image number";
+  
+  let arguments = (ins Arg<AnyType, "", [MemWrite]>:$coarray,
+                       Variadic<AnyIntegerType>:$cosubscripts,
+                       Arg<AnyRefOrBoxType, "", [MemRead]>:$src,
+                       Optional<AnyRefOrBoxType>:$notify,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    `from` $src `to` $coarray (`[` $cosubscripts^ `]`)? 
+    (`notify` $notify^ )?
+    (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
 #endif // FORTRAN_DIALECT_MIF_MIF_OPS

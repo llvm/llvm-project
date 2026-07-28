@@ -1049,10 +1049,10 @@ using ExvAndCleanup =
 } // namespace
 
 // Helper to transform a fir::ExtendedValue to an hlfir::EntityWithAttributes.
-static hlfir::EntityWithAttributes
-extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
-                           const fir::ExtendedValue &exv, llvm::StringRef name,
-                           mlir::Operation *insertBefore = nullptr) {
+hlfir::EntityWithAttributes Fortran::lower::extendedValueToHlfirEntity(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    const fir::ExtendedValue &exv, llvm::StringRef name,
+    mlir::Operation *insertBefore) {
   mlir::Value firBase = fir::getBase(exv);
   mlir::Type firBaseTy = firBase.getType();
   if (fir::isa_trivial(firBaseTy))
@@ -1965,10 +1965,11 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     return std::nullopt; // subroutine call.
 
   if (fir::isPointerType(fir::getBase(result).getType()))
-    return extendedValueToHlfirEntity(loc, builder, result, tempResultName);
+    return Fortran::lower::extendedValueToHlfirEntity(loc, builder, result,
+                                                      tempResultName);
 
   if (!resultIsFinalized) {
-    hlfir::Entity resultEntity = extendedValueToHlfirEntity(
+    hlfir::Entity resultEntity = Fortran::lower::extendedValueToHlfirEntity(
         loc, builder, result, tempResultName, /*insertBefore=*/callOp);
     // Allocatable result must be freed, other results are stack allocated.
     const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
@@ -2031,7 +2032,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
                                             /*mayBePolymorphic=*/true,
                                             /*preserveLowerBounds=*/false)
           : result;
-  return extendedValueToHlfirEntity(
+  return Fortran::lower::extendedValueToHlfirEntity(
       loc, builder, loadedResult, tempResultName,
       /*insertBefore=*/!allocatable ? callOp : nullptr);
 }
@@ -2159,8 +2160,9 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
       builder, loc, callContext.getProcedureName(), resTy, isPresent,
       getArgument, loweredActuals.size(), callContext.stmtCtx);
 
-  return {hlfir::EntityWithAttributes{extendedValueToHlfirEntity(
-      loc, builder, result, ".tmp.custom_intrinsic_result")}};
+  return {
+      hlfir::EntityWithAttributes{Fortran::lower::extendedValueToHlfirEntity(
+          loc, builder, result, ".tmp.custom_intrinsic_result")}};
 }
 
 static unsigned getCorank(const Fortran::lower::SomeExpr &expr) {
@@ -2312,8 +2314,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
           mlir::Value boxStorage =
               fir::factory::genNullBoxStorage(builder, loc, boxTy);
           hlfir::EntityWithAttributes nullBoxEntity =
-              extendedValueToHlfirEntity(loc, builder, boxStorage,
-                                         ".tmp.null_box");
+              Fortran::lower::extendedValueToHlfirEntity(
+                  loc, builder, boxStorage, ".tmp.null_box");
           operands.emplace_back(Fortran::lower::translateToExtendedValue(
               loc, builder, nullBoxEntity, stmtCtx));
           continue;
@@ -2346,8 +2348,9 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     fn();
   if (!fir::getBase(resultExv))
     return std::nullopt;
-  hlfir::EntityWithAttributes resultEntity = extendedValueToHlfirEntity(
-      loc, builder, resultExv, ".tmp.intrinsic_result");
+  hlfir::EntityWithAttributes resultEntity =
+      Fortran::lower::extendedValueToHlfirEntity(loc, builder, resultExv,
+                                                 ".tmp.intrinsic_result");
   // Move result into memory into an hlfir.expr since they are immutable from
   // that point, and the result storage is some temp. "Null" is special: it
   // returns a null pointer variable that should not be transformed into a value
@@ -3021,8 +3024,8 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     }
     if (!exv)
       llvm_unreachable("bad switch");
-    actual = extendedValueToHlfirEntity(loc, builder, exv.value(),
-                                        "tmp.custom_intrinsic_arg");
+    actual = Fortran::lower::extendedValueToHlfirEntity(
+        loc, builder, exv.value(), "tmp.custom_intrinsic_arg");
     loweredActuals.emplace_back(Fortran::lower::PreparedActualArgument{
         actual, /*isPresent=*/std::nullopt});
   };
