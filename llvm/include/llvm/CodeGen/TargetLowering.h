@@ -3335,6 +3335,14 @@ public:
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }
 
+  /// Return true if the target lowers ISD::VECTOR_INTERLEAVE and
+  /// ISD::VECTOR_DEINTERLEAVE of the given Factor and VecTy
+  /// itself.
+  virtual bool isInterleaveIntrinsicSupported(unsigned /*Factor*/,
+                                              EVT /*VecTy*/) const {
+    return false;
+  }
+
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///

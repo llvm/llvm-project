@@ -438,6 +438,9 @@ public:
   bool isLegalFirstFaultLoad(EVT DataType, Align Alignment) const;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
+  bool isInterleaveIntrinsicSupported(unsigned Factor, EVT VT) const override {
+    return Factor > 2 && Factor <= 8;
+  }
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 

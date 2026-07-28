@@ -95,6 +95,14 @@ class VectorLegalizer {
   /// operations to legalize them.
   void Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  /// Expand a VECTOR_INTERLEAVE into shuffles.
+  void ExpandVectorInterleaveToShuffles(SDNode *Node,
+                                        SmallVectorImpl<SDValue> &Results);
+
+  /// Expand a VECTOR_DEINTERLEAVE into shuffles.
+  void ExpandVectorDeinterleaveToShuffles(SDNode *Node,
+                                          SmallVectorImpl<SDValue> &Results);
+
   /// Implements expansion for FP_TO_UINT; falls back to UnrollVectorOp if
   /// FP_TO_SINT isn't legal.
   void ExpandFP_TO_UINT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
@@ -491,6 +499,18 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::MASKED_SREM:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE: {
+    EVT VT = Node->getValueType(0);
+    unsigned Factor = Node->getNumOperands();
+    Action = TLI.getOperationAction(Node->getOpcode(), VT);
+    if (!TLI.isInterleaveIntrinsicSupported(Factor, VT))
+      Action = TargetLowering::Expand;
+    else if (Action == TargetLowering::Custom)
+      // Leave the node untouched for LegalizeDAG.
+      Action = TargetLowering::Legal;
+    break;
+  }
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
@@ -967,6 +987,70 @@ SDValue VectorLegalizer::ExpandStore(SDNode *N) {
   return TF;
 }
 
+void VectorLegalizer::ExpandVectorInterleaveToShuffles(
+    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
+  assert(Node->getOpcode() == ISD::VECTOR_INTERLEAVE && "Unexpected opcode");
+  EVT VT = Node->getValueType(0);
+  if (!VT.isFixedLengthVector())
+    return;
+
+  unsigned Factor = Node->getNumOperands();
+  unsigned NumElts = VT.getVectorNumElements();
+  SDLoc DL(Node);
+
+  // The interleaved value is the concatenation of the results, so build it as
+  // one wide shuffle and split that back up into one vector per factor.
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                                NumElts * Factor);
+  SmallVector<SDValue, 8> InVecs(Node->op_values());
+  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, InVecs);
+  SDValue Interleaved =
+      DAG.getVectorShuffle(WideVT, DL, Concat, DAG.getUNDEF(WideVT),
+                           createInterleaveMask(NumElts, Factor));
+
+  for (unsigned I = 0; I != Factor; ++I)
+    Results.push_back(
+        DAG.getExtractSubvector(DL, VT, Interleaved, I * NumElts));
+}
+
+void VectorLegalizer::ExpandVectorDeinterleaveToShuffles(
+    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
+  assert(Node->getOpcode() == ISD::VECTOR_DEINTERLEAVE && "Unexpected opcode");
+  EVT VT = Node->getValueType(0);
+  if (!VT.isFixedLengthVector())
+    return;
+
+  unsigned Factor = Node->getNumOperands();
+  unsigned NumElts = VT.getVectorNumElements();
+  SDLoc DL(Node);
+
+  // A factor of two is a plain two-input shuffle per result.
+  if (Factor == 2) {
+    for (unsigned I = 0; I != Factor; ++I)
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(0), Node->getOperand(1),
+                               createStrideMask(I, Factor, NumElts)));
+    return;
+  }
+
+  // Higher factors need more than the two inputs a shuffle has, so gather the
+  // operands into one wide vector, permute it and split the result back up.
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                                NumElts * Factor);
+  SmallVector<int, 16> Mask;
+  for (unsigned I = 0; I != Factor; ++I)
+    llvm::append_range(Mask, createStrideMask(I, Factor, NumElts));
+
+  SmallVector<SDValue, 8> InVecs(Node->op_values());
+  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, InVecs);
+  SDValue Deinterleaved =
+      DAG.getVectorShuffle(WideVT, DL, Concat, DAG.getUNDEF(WideVT), Mask);
+
+  for (unsigned I = 0; I != Factor; ++I)
+    Results.push_back(
+        DAG.getExtractSubvector(DL, VT, Deinterleaved, I * NumElts));
+}
+
 void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   switch (Node->getOpcode()) {
   case ISD::LOAD: {
@@ -981,6 +1065,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::MERGE_VALUES:
     for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
       Results.push_back(Node->getOperand(i));
+    return;
+  case ISD::VECTOR_INTERLEAVE:
+    ExpandVectorInterleaveToShuffles(Node, Results);
+    return;
+  case ISD::VECTOR_DEINTERLEAVE:
+    ExpandVectorDeinterleaveToShuffles(Node, Results);
     return;
   case ISD::SIGN_EXTEND_INREG:
     if (SDValue Expanded = ExpandSEXTINREG(Node)) {
