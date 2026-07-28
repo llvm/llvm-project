@@ -9036,9 +9036,11 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
             DTU->applyUpdates({{DominatorTree::Delete, Predecessor, BB}});
           return true;
         } else if (CondBrInst *BI = dyn_cast<CondBrInst>(T)) {
-          bool IsUncondBr = BI->getSuccessor(0) == BI->getSuccessor(1);
           BB->removePredecessor(Predecessor);
-          if (IsUncondBr) {
+          // Handle degenerate conditional branches.
+          if (BI->getSuccessor(0) == BI->getSuccessor(1)) {
+            // The only difference from the UncondBrInst path above is that it
+            // has two edges in CFG.
             BB->removePredecessor(Predecessor);
             // Turn unconditional branches into unreachables.
             Builder.CreateUnreachable();
