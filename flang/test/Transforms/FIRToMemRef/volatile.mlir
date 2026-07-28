@@ -1,14 +1,17 @@
 // RUN: fir-opt %s --fir-to-memref | FileCheck %s
+// The pass must not introduce any fir.convert that drops volatility.
+// RUN: fir-opt %s --strict-fir-volatile-verifier --fir-to-memref -o /dev/null
 
 // memref dialect currently has no way to express volatile loads and stores.
+// This test checks that FIR loads and stores from/to volatile references
+// stay as FIR.
 
 // CHECK-LABEL: func.func @volatile_scalar_dummy
 // CHECK:         %[[CAST:.*]] = fir.volatile_cast %arg0 : (!fir.ref<f128>) -> !fir.ref<f128, volatile>
 // CHECK:         %[[DECL:.*]] = fir.declare %[[CAST]]
-// CHECK:         %[[CONV1:.*]] = fir.convert %[[DECL]] :  (!fir.ref<f128, volatile>) -> memref<f128>
-// CHECK:         %[[LOAD:.*]] = memref.load %[[CONV1]][] : memref<f128>
-// CHECK:         %[[CONV2:.*]] = fir.convert %[[DECL]] :  (!fir.ref<f128, volatile>) -> memref<f128>
-// CHECK:         memref.store %[[LOAD]], %[[CONV2]][] : memref<f128>
+// CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]] : !fir.ref<f128, volatile>
+// CHECK:         fir.store %[[LOAD]] to %[[DECL]] : !fir.ref<f128, volatile>
+// CHECK-NOT:     memref
 func.func @volatile_scalar_dummy(%arg0: !fir.ref<f128>) {
   %0 = fir.undefined !fir.dscope
   %1 = fir.volatile_cast %arg0 : (!fir.ref<f128>) -> !fir.ref<f128, volatile>
@@ -23,10 +26,10 @@ func.func @volatile_scalar_dummy(%arg0: !fir.ref<f128>) {
 // CHECK:         %[[CONV:.*]] = fir.convert %[[ALLOCA]] : (memref<i32>) -> !fir.ref<i32>
 // CHECK:         %[[VCAST:.*]] = fir.volatile_cast %[[CONV]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 // CHECK:         %[[DECL:.*]] = fir.declare %[[VCAST]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "i"}
-// CHECK:         %[[CONV1:.*]] = fir.convert %[[DECL]] : (!fir.ref<i32, volatile>) -> memref<i32>
-// CHECK:         memref.store %{{.*}}, %[[CONV1]][] : memref<i32>
-// CHECK:         %[[CONV2:.*]] = fir.convert %[[DECL]] : (!fir.ref<i32, volatile>) -> memref<i32>
-// CHECK:         %[[LOAD:.*]] = memref.load %[[CONV2]][] : memref<i32>
+// CHECK:         fir.store %{{.*}} to %[[DECL]] : !fir.ref<i32, volatile>
+// CHECK:         %{{.*}} = fir.load %[[DECL]] : !fir.ref<i32, volatile>
+// CHECK-NOT:     memref.load
+// CHECK-NOT:     memref.store
 func.func @volatile_local() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "i"}
@@ -40,8 +43,9 @@ func.func @volatile_local() {
 // CHECK-LABEL: func.func @volatile_array_element
 // CHECK:         %[[VCAST:.*]] = fir.volatile_cast %arg0 : (!fir.ref<!fir.array<3xf32>>) -> !fir.ref<!fir.array<3xf32>, volatile>
 // CHECK:         %[[DECL:.*]] = fir.declare %[[VCAST]](%{{.*}}) dummy_scope {{.*}} {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "a"} : (!fir.ref<!fir.array<3xf32>, volatile>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xf32>, volatile>
-// CHECK:         %[[CONV:.*]] = fir.convert %[[DECL]] :  (!fir.ref<!fir.array<3xf32>, volatile>) -> memref<3xf32>
-// CHECK:         %[[LOAD:.*]] = memref.load %[[CONV]][%{{.*}}] : memref<3xf32>
+// CHECK:         %[[COOR:.*]] = fir.array_coor %[[DECL]](%{{.*}})
+// CHECK:         %{{.*}} = fir.load %[[COOR]] : !fir.ref<f32, volatile>
+// CHECK-NOT:     memref
 func.func @volatile_array_element(%arg0: !fir.ref<!fir.array<3xf32>>) {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -58,10 +62,10 @@ func.func @volatile_array_element(%arg0: !fir.ref<!fir.array<3xf32>>) {
 // CHECK:         %[[VCAST:.*]] = fir.volatile_cast %arg0 : (!fir.ref<f32>) -> !fir.ref<f32, volatile>
 // CHECK:         %[[VDECL:.*]] = fir.declare %[[VCAST]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "v"} : (!fir.ref<f32, volatile>, !fir.dscope) -> !fir.ref<f32, volatile>
 // CHECK:         %[[PDECL:.*]] = fir.declare %arg1 dummy_scope %{{.*}} {uniq_name = "p"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-// CHECK:         %[[VCONV:.*]] = fir.convert %[[VDECL]] : (!fir.ref<f32, volatile>) -> memref<f32>
-// CHECK:         %[[VLOAD:.*]] = memref.load %[[VCONV]][] : memref<f32>
+// CHECK:         %[[VLOAD:.*]] = fir.load %[[VDECL]] : !fir.ref<f32, volatile>
 // CHECK:         %[[PCONV:.*]] = fir.convert %[[PDECL]] : (!fir.ref<f32>) -> memref<f32>
 // CHECK:         memref.store %[[VLOAD]], %[[PCONV]][] : memref<f32>
+// CHECK-NOT:     memref.load
 func.func @mixed_volatile_and_plain(%arg0: !fir.ref<f32>, %arg1: !fir.ref<f32>) {
   %0 = fir.undefined !fir.dscope
   %1 = fir.volatile_cast %arg0 : (!fir.ref<f32>) -> !fir.ref<f32, volatile>
