@@ -115,6 +115,9 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsCPlusPlus(language) ||
          lldb_private::Language::LanguageIsObjC(language) ||
          lldb_private::Language::LanguageIsPascal(language) ||
+         // Use Clang to represent Go DWARF types until there is a dedicated
+         // Go type system.
+         language == eLanguageTypeGo ||
          // Use Clang for Rust until there is a proper language plugin for it
          language == eLanguageTypeRust ||
          // Use Clang for D until there is a proper language plugin for it
@@ -122,6 +125,15 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan;
 }
+
+class GoTypeSystemClang final : public TypeSystemClang {
+public:
+  using TypeSystemClang::TypeSystemClang;
+
+  lldb::LanguageType GetMinimumLanguage(lldb::opaque_compiler_type_t) override {
+    return lldb::eLanguageTypeGo;
+  }
+};
 
 // Checks whether m1 is an overload of m2 (as opposed to an override). This is
 // called by addOverridesForMethod to distinguish overrides (which share a
@@ -538,12 +550,22 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
     }
   }
 
+  auto create_type_system = [&](llvm::StringRef name) -> lldb::TypeSystemSP {
+    if (language == lldb::eLanguageTypeGo)
+      return std::make_shared<GoTypeSystemClang>(name, triple);
+    return std::make_shared<TypeSystemClang>(name, triple);
+  };
+
   if (module) {
     std::string ast_name =
         "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
-    return std::make_shared<TypeSystemClang>(ast_name, triple);
-  } else if (target && target->IsValid())
-    return std::make_shared<ScratchTypeSystemClang>(*target, triple);
+    return create_type_system(ast_name);
+  } else if (target && target->IsValid()) {
+    if (language == lldb::eLanguageTypeGo)
+      return create_type_system("Scratch ASTContext for Go");
+    else
+      return std::make_shared<ScratchTypeSystemClang>(*target, triple);
+  }
   return lldb::TypeSystemSP();
 }
 
@@ -562,6 +584,7 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForTypes() {
   languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
+  languages.Insert(lldb::eLanguageTypeGo);
   return languages;
 }
 

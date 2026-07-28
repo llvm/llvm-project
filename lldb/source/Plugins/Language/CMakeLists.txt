@@ -5,5 +5,6 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
 )
 
 add_subdirectory(CPlusPlus)
+add_subdirectory(Go)
 add_subdirectory(ObjC)
 add_subdirectory(ObjCPlusPlus)

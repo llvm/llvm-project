@@ -1,0 +1,44 @@
+Test DW_LANG_Go compile units with layouts used by the Go compiler and LLGo.
+The generic language layer handles the Go compiler's string layout. LLGo's
+distinct runtime layout remains visible for its marker-selected adapter.
+
+UNSUPPORTED: system-windows
+
+RUN: %clang_host %S/Inputs/go-language.c -std=c99 -g -S -emit-llvm -o - \
+RUN:   | sed -e 's/DW_LANG_C99/DW_LANG_Go/g' \
+RUN:         -e 's/producer: "[^"]*"/producer: "Go cmd\/compile"/' >%t.go.ll
+RUN: %clang_host %t.go.ll -g -o %t.go.exe
+RUN: %lldb -o "breakpoint set -n inspect" -o run \
+RUN:   -o "frame variable value text text_ptr array" -o continue \
+RUN:   -o "frame variable text text_ptr" -o quit -b %t.go.exe 2>&1 \
+RUN:   | FileCheck %s --check-prefix=GO
+
+RUN: %clang_host %S/Inputs/go-language.c -DLLGO_LAYOUT -std=c99 -g -S \
+RUN:   -emit-llvm -o - | sed -e 's/DW_LANG_C99/DW_LANG_Go/g' \
+RUN:   -e 's/producer: "[^"]*"/producer: "LLGo"/' >%t.llgo.ll
+RUN: %clang_host %t.llgo.ll -g -o %t.llgo.exe
+RUN: %lldb -o "breakpoint set -n inspect" -o run \
+RUN:   -o "frame variable value text text_ptr array" -o continue \
+RUN:   -o "frame variable text text_ptr" -o quit -b %t.llgo.exe 2>&1 \
+RUN:   | FileCheck %s --check-prefix=LLGO
+
+GO-NOT: this version of LLDB has no plugin for the language "go"
+GO: (long) value = 7
+GO: (string) text = "go"
+GO: (string *) text_ptr = {{.*}}"go"
+GO: (array2) array =
+GO: values = ([0] = 11, [1] = 13)
+GO: (string) text = ""
+GO: (string *) text_ptr = {{.*}}""
+
+LLGO-NOT: this version of LLDB has no plugin for the language "go"
+LLGO: (long) value = 7
+LLGO: (string) text = {
+LLGO: data =
+LLGO: len = 4
+LLGO: (string *) text_ptr =
+LLGO: (array2) array =
+LLGO: values = ([0] = 11, [1] = 13)
+LLGO: (string) text = {
+LLGO: len = 0
+LLGO: (string *) text_ptr =
