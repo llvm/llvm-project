@@ -116,13 +116,11 @@ def OptionalGroupD : TestFormat_Op<[{
 
 // When the format spells out each variadic operand group individually, the
 // segment sizes can be inferred from what was actually parsed, so the
-// `operandSegmentSizes` key is optional (but still validated if present).
+// `operandSegmentSizes` key is left completely untouched: it isn't read,
+// validated, or marked as a used key at all.
 // CHECK-LABEL: PropDictSegmentSizesInferred::setPropertiesFromParsedAttr
-// CHECK: auto operandSegmentSizesAttrName = ::mlir::StringAttr::get(ctx, "operandSegmentSizes");
-// CHECK-NEXT: usedKeys.insert(operandSegmentSizesAttrName);
-// CHECK-NEXT: auto attr = dict.get(operandSegmentSizesAttrName);
-// CHECK-NEXT: if (!attr && false) {
-// CHECK: if (attr && ::mlir::failed(::mlir::convertFromAttribute(prop.operandSegmentSizes, attr,
+// CHECK-NOT: operandSegmentSizes
+// CHECK: for (::mlir::NamedAttribute attr : dict) {
 def PropDictSegmentSizesInferred : TestFormat_Op<[{
   $a1 `:` $a2 prop-dict attr-dict
 }], [AttrSizedOperandSegments]>,
@@ -130,13 +128,13 @@ def PropDictSegmentSizesInferred : TestFormat_Op<[{
 
 // When the format uses a bulk `operands`/`type(operands)` directive, the
 // segment sizes can't be reconstructed from the parse, so the
-// `operandSegmentSizes` key is required.
+// `operandSegmentSizes` key is required and validated.
 // CHECK-LABEL: PropDictSegmentSizesRequired::setPropertiesFromParsedAttr
 // CHECK: auto operandSegmentSizesAttrName = ::mlir::StringAttr::get(ctx, "operandSegmentSizes");
 // CHECK-NEXT: usedKeys.insert(operandSegmentSizesAttrName);
 // CHECK-NEXT: auto attr = dict.get(operandSegmentSizesAttrName);
-// CHECK-NEXT: if (!attr && true) {
-// CHECK: if (attr && ::mlir::failed(::mlir::convertFromAttribute(prop.operandSegmentSizes, attr,
+// CHECK-NEXT: if (!attr) {
+// CHECK: if (::mlir::failed(::mlir::convertFromAttribute(prop.operandSegmentSizes, attr,
 def PropDictSegmentSizesRequired : TestFormat_Op<[{
   `(` operands `)` `:` type(operands) prop-dict attr-dict
 }], [AttrSizedOperandSegments]>,

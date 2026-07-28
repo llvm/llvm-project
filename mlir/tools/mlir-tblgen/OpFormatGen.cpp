@@ -1315,34 +1315,38 @@ if (!dict) {
 
   // `operandSegmentSizes`/`resultSegmentSizes` are trait-injected properties
   // not enumerated by `op.getProperties()`, so they need to be special-cased
-  // here, mirroring the handling in `setPropertiesFromAttr` in
-  // OpDefinitionsGen.cpp.
+  // here, mirroring `setPropertiesFromAttr` in OpDefinitionsGen.cpp. This is
+  // only necessary when the format can't infer the sizes itself (bulk
+  // `operands`/`type(results)` directives); when the format spells out each
+  // variadic group individually, `genParserVariadicSegmentResolution` always
+  // overwrites the property from the parsed operand/result groups, so the key
+  // is left completely untouched here (same as any other property not
+  // handled by this format).
   //
   // {0}: segment sizes property name
-  // {1}: isRequired
   const char *segmentSizesFromAttrFmt = R"decl(
 auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
 usedKeys.insert({0}AttrName);
 auto attr = dict.get({0}AttrName);
-if (!attr && {1}) {{
+if (!attr) {{
   emitError() << "expected key entry for {0} in DictionaryAttr to set "
              "Properties.";
   return ::mlir::failure();
 }
-if (attr && ::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
+if (::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
       return emitError() << "for `{0}`: ";
     })))
   return ::mlir::failure();
 )decl";
-  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands) {
     auto scope = body.scope("{\n", "}\n", /*indent=*/true);
-    body << formatv(segmentSizesFromAttrFmt, "operandSegmentSizes",
-                    fmt.allOperands);
+    body << formatv(segmentSizesFromAttrFmt, "operandSegmentSizes");
   }
-  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes) {
     auto scope = body.scope("{\n", "}\n", /*indent=*/true);
-    body << formatv(segmentSizesFromAttrFmt, "resultSegmentSizes",
-                    fmt.allResultTypes);
+    body << formatv(segmentSizesFromAttrFmt, "resultSegmentSizes");
   }
 
   // {0}: fromAttribute call

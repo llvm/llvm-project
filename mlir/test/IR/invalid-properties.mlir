@@ -43,20 +43,20 @@ func.func @wrong_dense_i32_array_prop_type() {
 
 // -----
 
-// `operandSegmentSizes` is not required in `<{...}>` for this op, since its
-// format spells out each variadic group individually
-// If it is present anyway, it
-// must still be well-formed: it should not be silently ignored.
-func.func @malformed_optional_operand_segment_sizes(%arg0: i64) {
-  // expected-error@+1 {{for `operandSegmentSizes`: expected DenseI32ArrayAttr}}
+// `operandSegmentSizes` is inferable from the individually-spelled-out
+// variadic groups in this op's format, so the custom parser never reads this
+// key at all: presence of the key is rejected as an unrecognized key, just
+// like any other name the op doesn't know about.
+func.func @unknown_optional_operand_segment_sizes(%arg0: i64) {
+  // expected-error@+1 {{unknown key '"operandSegmentSizes"' when parsing properties dictionary}}
   test.variadic_segment_prop %arg0, %arg0 : %arg0 : i64, i64 : i64 <{operandSegmentSizes = "bad"}> end
   return
 }
 
 // -----
 
-func.func @malformed_optional_result_segment_sizes(%arg0: i64) {
-  // expected-error@+1 {{for `resultSegmentSizes`: expected DenseI32ArrayAttr}}
+func.func @unknown_optional_result_segment_sizes(%arg0: i64) {
+  // expected-error@+1 {{unknown key '"resultSegmentSizes"' when parsing properties dictionary}}
   test.variadic_segment_prop %arg0, %arg0 : %arg0 : i64, i64 : i64 <{resultSegmentSizes = "bad"}> end
   return
 }
