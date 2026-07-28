@@ -83,7 +83,7 @@ public:
         Modules(std::move(Modules)), GlobalModule(GlobalModule) {}
   ~L0ProgramTy() = default;
 
-  L0ProgramTy(const L0ProgramTy &other) = delete;
+  L0ProgramTy(const L0ProgramTy &Other) = delete;
   L0ProgramTy(L0ProgramTy &&) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &&) = delete;

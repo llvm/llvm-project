@@ -46,6 +46,8 @@ TEST_P(olLaunchHostFunctionTest, SuccessSequence) {
 }
 
 TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
+  SKIP_KNOWN_FAILURE(LevelZero{"driver issue"});
+
   // Verify that a host kernel can block execution - A host task is created that
   // only resolves when Block is set to false.
   ol_kernel_launch_size_args_t LaunchArgs;

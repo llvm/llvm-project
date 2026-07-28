@@ -197,7 +197,6 @@ const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
 
 void VAListChecker::checkPreStmt(const VAArgExpr *VAA,
                                  CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
   const Expr *ArgExpr = VAA->getSubExpr();
   const MemRegion *VAList = getVAListAsRegion(C.getSVal(ArgExpr), ArgExpr, C);
   if (!VAList)

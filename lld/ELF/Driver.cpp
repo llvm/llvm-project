@@ -625,6 +625,11 @@ constexpr const char *saveTempsValues[] = {
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
+void LinkerDriver::waitForLTOCleanup() {
+  if (lto)
+    lto->waitForLTOCleanup();
+}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
   opt::InputArgList args = parser.parse(ctx, argsArr.slice(1));
@@ -706,6 +711,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     invokeELFT(link, args);
   }
+
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  waitForLTOCleanup();
 
   if (ctx.arg.timeTraceEnabled) {
     checkError(ctx.e, timeTraceProfilerWrite(
@@ -1318,9 +1327,10 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
 
 static bool getIsRela(Ctx &ctx, opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
-  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
-                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
-                           ctx.arg.emachine);
+  bool rela =
+      is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH, EM_PPC,
+                    EM_PPC64, EM_RISCV, EM_S390, EM_SPARCV9, EM_X86_64},
+                   ctx.arg.emachine);
   // If -z rel or -z rela is specified, use the last option.
   for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
@@ -1669,6 +1679,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
   ctx.arg.zSeparate = getZSeparate(args);
   ctx.arg.zShstk = hasZOption(args, "shstk");
+  ctx.arg.zSortThunks = getZFlag(args, "sort-thunks", "nosort-thunks", true);
   ctx.arg.zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   ctx.arg.zStartStopGC =
       getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
@@ -1961,15 +1972,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.versionDefinitions.push_back(
       {"global", (uint16_t)VER_NDX_GLOBAL, {}, {}});
 
-  // If --retain-symbol-file is used, we'll keep only the symbols listed in
-  // the file and discard all others.
+  // Keep only these symbols in .symtab (not .dynsym), matching GNU ld.
   if (auto *arg = args.getLastArg(OPT_retain_symbols_file)) {
-    ctx.arg.versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns.push_back(
-        {"*", /*isExternCpp=*/false, /*hasWildcard=*/true});
+    ctx.arg.retainSymbols.emplace();
     if (std::optional<MemoryBufferRef> buffer = readFile(ctx, arg->getValue()))
       for (StringRef s : args::getLines(*buffer))
-        ctx.arg.versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(
-            {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
+        ctx.arg.retainSymbols->insert(s);
   }
 
   for (opt::Arg *arg : args.filtered(OPT_warn_backrefs_exclude)) {

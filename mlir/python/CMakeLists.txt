@@ -41,15 +41,26 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
     extras/meta.py
 )
 
+# Keep this source group unconditional because runtime/*.py contains generic
+# memref helpers that do not depend on the ExecutionEngine extension. Only the
+# wrapper and type stub require _mlirExecutionEngine.
+set(_execution_engine_python_sources)
+if(MLIR_ENABLE_EXECUTION_ENGINE)
+  set(_execution_engine_python_sources
+    execution_engine.py
+    _mlir_libs/_mlirExecutionEngine.pyi
+  )
+endif()
+
 declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   ADD_TO_PARENT MLIRPythonSources
   SOURCES
-    execution_engine.py
-    _mlir_libs/_mlirExecutionEngine.pyi
+    ${_execution_engine_python_sources}
   SOURCES_GLOB
     runtime/*.py
 )
+unset(_execution_engine_python_sources)
 
 declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
   ROOT_DIR "${MLIR_SOURCE_DIR}/include"
