@@ -1196,31 +1196,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   const AArch64InstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
-  unsigned RegID = RegRC->getID();
 
   bool ConsiderOnlyHints =
       TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
 
-  // Discard generic strided-tuple hints that would use an otherwise unused
-  // callee-saved Z register. Registers already defined or allocated do not
-  // introduce an additional spill.
-  if (ST.hasSME() && ST.isStreaming() &&
-      (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
-       RegID == AArch64::ZPR4StridedOrContiguousRegClassID)) {
-    llvm::erase_if(Hints, [&](MCPhysReg Hint) {
-      for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR) {
-        if (regsOverlap(Hint, *CSR) && MRI.def_empty(*CSR) &&
-            !Matrix->isPhysRegUsed(*CSR))
-          return true;
-      }
-      return false;
-    });
-  }
-
   // For predicated SVE instructions where the inactive lanes are undef,
   // pick a destination register that is not unique to avoid introducing
   // a movprfx.
+  const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
   if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
     for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
       const MachineInstr &Def = *DefOp.getParent();
@@ -1283,7 +1266,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())
-    return ConsiderOnlyHints;
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
 
   // The SVE calling convention preserves registers Z8-Z23. As a result, there
   // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
@@ -1293,6 +1277,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // COPY_INTO_TRANSPOSED_TUPLE pseudos, we want to favour reducing copy
   // instructions over reducing the number of clobbered callee-save registers,
   // so we add the strided registers as a hint.
+  unsigned RegID = RegRC->getID();
   if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
 
@@ -1424,7 +1409,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       }
 
       if (!Hints.empty())
-        return ConsiderOnlyHints;
+        return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                         MF, VRM);
     }
   }
 
@@ -1455,7 +1441,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     }
   }
 
-  return ConsiderOnlyHints;
+  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                   VRM);
 }
 
 unsigned AArch64RegisterInfo::getLocalAddressRegister(

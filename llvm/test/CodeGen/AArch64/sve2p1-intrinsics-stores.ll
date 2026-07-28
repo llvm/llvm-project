@@ -24,14 +24,15 @@ define void @st1_x2_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vsc
 ; SME2-LABEL: st1_x2_i8:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1b { z2.b, z3.b }, pn8, [x0]
+; SME2-NEXT:    st1b { z1.b, z9.b }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -56,14 +57,15 @@ define void @st1_x2_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vs
 ; SME2-LABEL: st1_x2_i16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1h { z2.h, z3.h }, pn8, [x0]
+; SME2-NEXT:    st1h { z1.h, z9.h }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv8i16(<vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -88,14 +90,15 @@ define void @st1_x2_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <vs
 ; SME2-LABEL: st1_x2_i32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1w { z2.s, z3.s }, pn8, [x0]
+; SME2-NEXT:    st1w { z1.s, z9.s }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -120,14 +123,15 @@ define void @st1_x2_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <vs
 ; SME2-LABEL: st1_x2_i64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1d { z2.d, z3.d }, pn8, [x0]
+; SME2-NEXT:    st1d { z1.d, z9.d }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv2i64(<vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -152,14 +156,15 @@ define void @st1_x2_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, <v
 ; SME2-LABEL: st1_x2_f16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1h { z2.h, z3.h }, pn8, [x0]
+; SME2-NEXT:    st1h { z1.h, z9.h }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv8f16(<vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -184,14 +189,15 @@ define void @st1_x2_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn0,
 ; SME2-LABEL: st1_x2_bf16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1h { z2.h, z3.h }, pn8, [x0]
+; SME2-NEXT:    st1h { z1.h, z9.h }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv8bf16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -216,14 +222,15 @@ define void @st1_x2_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0, <
 ; SME2-LABEL: st1_x2_f32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1w { z2.s, z3.s }, pn8, [x0]
+; SME2-NEXT:    st1w { z1.s, z9.s }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv4f32(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -248,14 +255,15 @@ define void @st1_x2_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0, 
 ; SME2-LABEL: st1_x2_f64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1d { z2.d, z3.d }, pn8, [x0]
+; SME2-NEXT:    st1d { z1.d, z9.d }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x2.nxv2f64(<vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -282,16 +290,19 @@ define void @st1_x4_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vsc
 ; SME2-LABEL: st1_x4_i8:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1b { z4.b - z7.b }, pn8, [x0]
+; SME2-NEXT:    st1b { z1.b, z5.b, z9.b, z13.b }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -318,16 +329,19 @@ define void @st1_x4_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vs
 ; SME2-LABEL: st1_x4_i16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1h { z4.h - z7.h }, pn8, [x0]
+; SME2-NEXT:    st1h { z1.h, z5.h, z9.h, z13.h }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv8i16(<vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -354,16 +368,19 @@ define void @st1_x4_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <vs
 ; SME2-LABEL: st1_x4_i32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1w { z4.s - z7.s }, pn8, [x0]
+; SME2-NEXT:    st1w { z1.s, z5.s, z9.s, z13.s }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -390,16 +407,19 @@ define void @st1_x4_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <vs
 ; SME2-LABEL: st1_x4_i64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1d { z4.d - z7.d }, pn8, [x0]
+; SME2-NEXT:    st1d { z1.d, z5.d, z9.d, z13.d }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv2i64(<vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1, <vscale x 2 x i64> %zn2, <vscale x 2 x i64> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -426,16 +446,19 @@ define void @st1_x4_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, <v
 ; SME2-LABEL: st1_x4_f16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1h { z4.h - z7.h }, pn8, [x0]
+; SME2-NEXT:    st1h { z1.h, z5.h, z9.h, z13.h }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv8f16(<vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -462,16 +485,19 @@ define void @st1_x4_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn0,
 ; SME2-LABEL: st1_x4_bf16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1h { z4.h - z7.h }, pn8, [x0]
+; SME2-NEXT:    st1h { z1.h, z5.h, z9.h, z13.h }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv8bf16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -498,16 +524,19 @@ define void @st1_x4_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0, <
 ; SME2-LABEL: st1_x4_f32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1w { z4.s - z7.s }, pn8, [x0]
+; SME2-NEXT:    st1w { z1.s, z5.s, z9.s, z13.s }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv4f32(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -534,16 +563,19 @@ define void @st1_x4_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0, 
 ; SME2-LABEL: st1_x4_f64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    st1d { z4.d - z7.d }, pn8, [x0]
+; SME2-NEXT:    st1d { z1.d, z5.d, z9.d, z13.d }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.st1.pn.x4.nxv2f64(<vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -570,14 +602,15 @@ define void @stnt1_x2_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <v
 ; SME2-LABEL: stnt1_x2_i8:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1b { z2.b, z3.b }, pn8, [x0]
+; SME2-NEXT:    stnt1b { z1.b, z9.b }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -602,14 +635,15 @@ define void @stnt1_x2_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <
 ; SME2-LABEL: stnt1_x2_i16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1h { z2.h, z3.h }, pn8, [x0]
+; SME2-NEXT:    stnt1h { z1.h, z9.h }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv8i16(<vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -634,14 +668,15 @@ define void @stnt1_x2_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <
 ; SME2-LABEL: stnt1_x2_i32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1w { z2.s, z3.s }, pn8, [x0]
+; SME2-NEXT:    stnt1w { z1.s, z9.s }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -666,14 +701,15 @@ define void @stnt1_x2_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <
 ; SME2-LABEL: stnt1_x2_i64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1d { z2.d, z3.d }, pn8, [x0]
+; SME2-NEXT:    stnt1d { z1.d, z9.d }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv2i64(<vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -698,14 +734,15 @@ define void @stnt1_x2_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, 
 ; SME2-LABEL: stnt1_x2_f16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1h { z2.h, z3.h }, pn8, [x0]
+; SME2-NEXT:    stnt1h { z1.h, z9.h }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv8f16(<vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -730,14 +767,15 @@ define void @stnt1_x2_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn
 ; SME2-LABEL: stnt1_x2_bf16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1h { z2.h, z3.h }, pn8, [x0]
+; SME2-NEXT:    stnt1h { z1.h, z9.h }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv8bf16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -762,14 +800,15 @@ define void @stnt1_x2_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0,
 ; SME2-LABEL: stnt1_x2_f32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1w { z2.s, z3.s }, pn8, [x0]
+; SME2-NEXT:    stnt1w { z1.s, z9.s }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv4f32(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -794,14 +833,15 @@ define void @stnt1_x2_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0
 ; SME2-LABEL: stnt1_x2_f64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z3.d, z2.d
-; SME2-NEXT:    mov z2.d, z1.d
+; SME2-NEXT:    addvl sp, sp, #-2
+; SME2-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z2.d
 ; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1d { z2.d, z3.d }, pn8, [x0]
+; SME2-NEXT:    stnt1d { z1.d, z9.d }, pn8, [x0]
+; SME2-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #2
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x2.nxv2f64(<vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, target("aarch64.svcount") %pn, ptr %ptr);
@@ -828,16 +868,19 @@ define void @stnt1_x4_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <v
 ; SME2-LABEL: stnt1_x4_i8:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1b { z4.b - z7.b }, pn8, [x0]
+; SME2-NEXT:    stnt1b { z1.b, z5.b, z9.b, z13.b }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv16i8(<vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -864,16 +907,19 @@ define void @stnt1_x4_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <
 ; SME2-LABEL: stnt1_x4_i16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1h { z4.h - z7.h }, pn8, [x0]
+; SME2-NEXT:    stnt1h { z1.h, z5.h, z9.h, z13.h }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv8i16(<vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -900,16 +946,19 @@ define void @stnt1_x4_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <
 ; SME2-LABEL: stnt1_x4_i32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1w { z4.s - z7.s }, pn8, [x0]
+; SME2-NEXT:    stnt1w { z1.s, z5.s, z9.s, z13.s }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -936,16 +985,19 @@ define void @stnt1_x4_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <
 ; SME2-LABEL: stnt1_x4_i64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1d { z4.d - z7.d }, pn8, [x0]
+; SME2-NEXT:    stnt1d { z1.d, z5.d, z9.d, z13.d }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv2i64(<vscale x 2 x i64> %zn0, <vscale x 2 x i64> %zn1, <vscale x 2 x i64> %zn2, <vscale x 2 x i64> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -972,16 +1024,19 @@ define void @stnt1_x4_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, 
 ; SME2-LABEL: stnt1_x4_f16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1h { z4.h - z7.h }, pn8, [x0]
+; SME2-NEXT:    stnt1h { z1.h, z5.h, z9.h, z13.h }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv8f16(<vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -1008,16 +1063,19 @@ define void @stnt1_x4_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn
 ; SME2-LABEL: stnt1_x4_bf16:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1h { z4.h - z7.h }, pn8, [x0]
+; SME2-NEXT:    stnt1h { z1.h, z5.h, z9.h, z13.h }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv8bf16(<vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -1044,16 +1102,19 @@ define void @stnt1_x4_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0,
 ; SME2-LABEL: stnt1_x4_f32:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1w { z4.s - z7.s }, pn8, [x0]
+; SME2-NEXT:    stnt1w { z1.s, z5.s, z9.s, z13.s }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv4f32(<vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
@@ -1080,16 +1141,19 @@ define void @stnt1_x4_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0
 ; SME2-LABEL: stnt1_x4_f64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; SME2-NEXT:    addvl sp, sp, #-1
-; SME2-NEXT:    mov z7.d, z4.d
-; SME2-NEXT:    mov z6.d, z3.d
-; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; SME2-NEXT:    addvl sp, sp, #-3
+; SME2-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z13.d, z4.d
 ; SME2-NEXT:    mov z5.d, z2.d
-; SME2-NEXT:    mov z4.d, z1.d
+; SME2-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
+; SME2-NEXT:    mov z9.d, z3.d
+; SME2-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; SME2-NEXT:    mov p8.b, p0.b
-; SME2-NEXT:    stnt1d { z4.d - z7.d }, pn8, [x0]
+; SME2-NEXT:    stnt1d { z1.d, z5.d, z9.d, z13.d }, pn8, [x0]
+; SME2-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
+; SME2-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; SME2-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
-; SME2-NEXT:    addvl sp, sp, #1
+; SME2-NEXT:    addvl sp, sp, #3
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
   call void @llvm.aarch64.sve.stnt1.pn.x4.nxv2f64(<vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3, target("aarch64.svcount") %pn, ptr %ptr);
