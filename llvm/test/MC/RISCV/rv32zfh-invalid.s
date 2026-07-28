@@ -11,18 +11,18 @@ flh ft1, a0, -200 # CHECK: :[[@LINE]]:14: error: register must be a GPR
 fsw ft2, a1, 100 # CHECK: :[[@LINE]]:14: error: register must be a GPR
 
 # Invalid register names
-flh ft15, 100(a0) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
+flh ft15, 100(a0) # CHECK: :[[@LINE]]:5: error: register must be a FPR
 flh ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
-fsgnjn.h fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+fsgnjn.h fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: register must be a FPR
 
 # Integer registers where FP regs are expected
 fmv.x.h fs7, a2 # CHECK: :[[@LINE]]:9: error: register must be a GPR
 
 # FP registers where integer regs are expected
-fmv.h.x a8, ft2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+fmv.h.x a8, ft2 # CHECK: :[[@LINE]]:9: error: register must be a FPR
 
 # Rounding mode when a register is expected
-fmadd.h f10, f11, f12, ree # CHECK: :[[@LINE]]:24: error: invalid operand for instruction
+fmadd.h f10, f11, f12, ree # CHECK: :[[@LINE]]:24: error: register must be a FPR
 
 # Invalid rounding modes
 fmadd.h f10, f11, f12, f13, ree # CHECK: :[[@LINE]]:29: error: operand must be a valid floating point rounding mode mnemonic
@@ -30,7 +30,9 @@ fmsub.h f14, f15, f16, f17, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.h f18, f19, f20, f21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # Integer registers where FP regs are expected
-fadd.h a2, a1, a0 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+fadd.h a2, a1, a0 # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-1]]:8: note: register must be a FPR
+# CHECK: :[[@LINE-2]]:8: note: register must be a GPR when used as FPR
 
 # FP registers where integer regs are expected
 fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:11: error: register must be a GPR

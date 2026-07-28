@@ -115,6 +115,7 @@ def GPRAsFPR32 : AsmOperandClass {
   let Name = "GPRAsFPR32";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be a GPR when used as FPR";
 }
 
 def FPR32INX : RegisterOperand<GPRF32> {
