@@ -743,8 +743,7 @@ bool DwarfLinkerForBinary::linkImpl(
   GeneralLinker->setNumThreads(Options.Threads);
   GeneralLinker->setPrependPath(Options.PrependPath);
   GeneralLinker->setKeepFunctionForStatic(Options.KeepFunctionForStatic);
-  GeneralLinker->setDropIcfShrunkSubprograms(
-      Options.DropIcfShrunkSubprograms);
+  GeneralLinker->setDropIcfShrunkSubprograms(Options.DropIcfShrunkSubprograms);
   GeneralLinker->setThreadPool(ThreadPool);
   GeneralLinker->setInputVerificationHandler(
       [&](const DWARFFile &File, llvm::StringRef Output) {
@@ -1324,9 +1323,9 @@ DwarfLinkerForBinary::AddressManager::getSubprogramBinarySize(
     if (std::optional<uint64_t> AddressOffset =
             DIE.getDwarfUnit()->getIndexedAddressOffset(
                 AddrValue->getRawUValue()))
-      return SizeFromRelocs(
-          ValidDebugAddrRelocs, *AddressOffset,
-          *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize());
+      return SizeFromRelocs(ValidDebugAddrRelocs, *AddressOffset,
+                            *AddressOffset +
+                                DIE.getDwarfUnit()->getAddressByteSize());
     return std::nullopt;
   }
   default:
