@@ -2,7 +2,7 @@
 
 // A CUF kernel launched inside an acc.data region that maps a directly-addressed
 // (static) array. The kernel argument is the mapped variable itself, so it is
-// replaced by the acc.use_device result.
+// wrapped in acc.use_device and substituted directly.
 func.func @static_array() {
   %c1 = arith.constant 1 : i32
   %c100 = arith.constant 100 : index
@@ -23,14 +23,49 @@ func.func @static_array() {
 // CHECK: %[[DEV:.*]] = acc.use_device varPtr(%[[DECL]] : !fir.ref<!fir.array<100xi32>>)
 // CHECK: acc.host_data dataOperands(%[[DEV]]
 // CHECK: cuf.kernel_launch @kernel<<<{{.*}}>>>(%[[DEV]]) : (!fir.ref<!fir.array<100xi32>>)
-// CHECK: acc.terminator
+// CHECK: attributes {ifPresent}
+
+// -----
+
+// A CUF kernel launched with an array section. The launch argument is already an
+// interior pointer (&a(3)) computed on the host base. The pass wraps that
+// interior pointer directly in acc.use_device and substitutes it; the section
+// addressing is left untouched (not rebuilt on a device base).
+func.func @array_section() {
+  %c1 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %c100 = arith.constant 100 : index
+  %c3 = arith.constant 3 : index
+  %0 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEa"}
+  %sh = fir.shape %c100 : (index) -> !fir.shape<1>
+  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+  %2 = acc.copyin varPtr(%1 : !fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
+  acc.data dataOperands(%2 : !fir.ref<!fir.array<100xi32>>) {
+    %3 = fir.array_coor %1(%sh) %c3 : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %4 = fir.convert %3 : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
+    cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%4, %c2_i32) : (!fir.ref<!fir.array<?xi32>>, i32)
+    acc.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @array_section
+// CHECK: %[[DECL:.*]] = fir.declare
+// CHECK: acc.data
+// CHECK: %[[COOR:.*]] = fir.array_coor %[[DECL]]
+// CHECK: %[[CONV:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK: %[[DEV:.*]] = acc.use_device varPtr(%[[CONV]] : !fir.ref<!fir.array<?xi32>>)
+// CHECK: acc.host_data dataOperands(%[[DEV]]
+// CHECK: cuf.kernel_launch @kernel<<<{{.*}}>>>(%[[DEV]], {{.*}}) : (!fir.ref<!fir.array<?xi32>>, i32)
+// CHECK: attributes {ifPresent}
 
 // -----
 
 // A CUF kernel launched inside an acc.data region that maps a descriptor-based
-// (allocatable) variable. OpenACC maps the descriptor, so the data address is
-// recomputed as box_addr(load(<device descriptor>)) on the acc.use_device
-// result.
+// (allocatable) variable. OpenACC maps the descriptor, but the launch already
+// extracts the data address on the host via box_addr(load(<descriptor>)). The
+// pass wraps that data pointer in acc.use_device and substitutes it directly;
+// the descriptor addressing is left on the host descriptor and not rebuilt.
 func.func @descriptor_array() {
   %c1 = arith.constant 1 : i32
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "h", uniq_name = "_QFEh"}
@@ -48,12 +83,14 @@ func.func @descriptor_array() {
 
 // CHECK-LABEL: func.func @descriptor_array
 // CHECK: %[[DECL:.*]] = fir.declare
-// CHECK: %[[DEV:.*]] = acc.use_device varPtr(%[[DECL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-// CHECK: acc.host_data dataOperands(%[[DEV]]
-// CHECK: %[[LOAD:.*]] = fir.load %[[DEV]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// CHECK: acc.data
+// CHECK: %[[LOAD:.*]] = fir.load %[[DECL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 // CHECK: %[[CONV:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-// CHECK: cuf.kernel_launch @kernel<<<{{.*}}>>>(%[[CONV]]) : (!fir.ref<!fir.array<?xi32>>)
+// CHECK: %[[DEV:.*]] = acc.use_device varPtr(%[[CONV]] : !fir.ref<!fir.array<?xi32>>)
+// CHECK: acc.host_data dataOperands(%[[DEV]]
+// CHECK: cuf.kernel_launch @kernel<<<{{.*}}>>>(%[[DEV]]) : (!fir.ref<!fir.array<?xi32>>)
+// CHECK: attributes {ifPresent}
 
 // -----
 

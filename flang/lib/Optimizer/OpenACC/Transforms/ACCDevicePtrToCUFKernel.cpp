@@ -87,32 +87,6 @@ collectPresentAccVars(cuf::KernelLaunchOp launch, DominanceInfo &domInfo,
   return presentVars;
 }
 
-/// Reconstructs the addressing chain that produced `value` from `mappedVar`,
-/// substituting `deviceVar` for `mappedVar`. Only addressing ops are cloned;
-/// everything else (constants, shapes, ...) is reused as a live-in. New ops are
-/// created at `builder`'s current insertion point.
-static Value rebuildOnDevice(OpBuilder &builder, Value value, Value mappedVar,
-                             Value deviceVar) {
-  if (value == mappedVar)
-    return deviceVar;
-
-  Operation *def = value.getDefiningOp();
-  bool isViewStep = isa_and_nonnull<fir::FortranObjectViewOpInterface>(def);
-  bool isDescriptorLoad = false;
-  // Mirror getMappedVar: only a descriptor load is part of the addressing
-  // chain and must be rebuilt on the device descriptor; any other load is a
-  // live-in and is reused as-is.
-  if (auto load = dyn_cast_or_null<fir::LoadOp>(def))
-    isDescriptorLoad = isa<fir::BaseBoxType>(load.getType());
-  if (!isViewStep && !isDescriptorLoad)
-    return value;
-
-  IRMapping map;
-  for (Value operand : def->getOperands())
-    map.map(operand, rebuildOnDevice(builder, operand, mappedVar, deviceVar));
-  return builder.clone(*def, map)->getResult(0);
-}
-
 class ACCDevicePtrToCUFKernel
     : public fir::acc::impl::ACCDevicePtrToCUFKernelBase<
           ACCDevicePtrToCUFKernel> {
@@ -133,12 +107,8 @@ private:
   void rewriteLaunch(cuf::KernelLaunchOp launch) {
     // Collect kernel arguments that are references to a host variable made
     // present by an enclosing acc.data region.
-    struct MappedArg {
-      OpOperand *operand;
-      Value mappedVar;
-    };
-    llvm::SmallVector<MappedArg> mappedArgs;
-    llvm::SetVector<Value> mappedVars;
+    llvm::SmallVector<OpOperand *> deviceOperands;
+    llvm::SetVector<Value> deviceArgs;
 
     DominanceInfo domInfo;
     PostDominanceInfo postDomInfo;
@@ -151,45 +121,40 @@ private:
       // Check if mappedVar is present due to an enclosing OpenACC data region.
       if (!mappedVar || !presentAccVars.contains(mappedVar))
         continue;
-      mappedArgs.push_back({&operand, mappedVar});
-      mappedVars.insert(mappedVar);
+      deviceOperands.push_back(&operand);
+      deviceArgs.insert(arg);
     }
 
-    if (mappedArgs.empty())
+    if (deviceOperands.empty())
       return;
 
     OpBuilder builder(launch);
     Location loc = launch.getLoc();
 
-    // One acc.use_device per distinct mapped variable, emitted before the
+    // One acc.use_device per distinct kernel argument, emitted before the
     // launch so it dominates the host_data region.
-    llvm::DenseMap<Value, Value> deviceVars;
-    llvm::SmallVector<Value> dataOperands;
-    for (Value mappedVar : mappedVars) {
-      Value deviceVar = acc::UseDeviceOp::create(builder, loc, mappedVar,
+    llvm::DenseMap<Value, Value> deviceArgsMap;
+    llvm::SmallVector<Value> hostDataOperands;
+    for (Value arg : deviceArgs) {
+      Value deviceVar = acc::UseDeviceOp::create(builder, loc, arg,
                                                  /*structured=*/true,
                                                  /*implicit=*/false)
                             .getAccVar();
-      deviceVars[mappedVar] = deviceVar;
-      dataOperands.push_back(deviceVar);
+      deviceArgsMap[arg] = deviceVar;
+      hostDataOperands.push_back(deviceVar);
     }
 
     // Wrap the launch in an acc.host_data region.
     auto hostData =
-        acc::HostDataOp::create(builder, loc, /*ifCond=*/Value{}, dataOperands);
+        acc::HostDataOp::create(builder, loc, /*ifCond=*/Value{}, hostDataOperands);
     hostData.setIfPresent(true);
     Block *body = builder.createBlock(&hostData.getRegion());
     builder.setInsertionPointToStart(body);
     Operation *terminator = acc::TerminatorOp::create(builder, loc);
     launch->moveBefore(terminator);
 
-    // Recompute each mapped argument's address on the device pointer.
-    builder.setInsertionPoint(launch);
-    for (MappedArg &mappedArg : mappedArgs) {
-      Value arg = mappedArg.operand->get();
-      Value deviceVar = deviceVars[mappedArg.mappedVar];
-      mappedArg.operand->assign(
-          rebuildOnDevice(builder, arg, mappedArg.mappedVar, deviceVar));
+    for (OpOperand *operand : deviceOperands) {
+      operand->assign(deviceArgsMap[operand->get()]);
     }
   }
 };
