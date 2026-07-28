@@ -90,8 +90,6 @@ public:
   /// predicated, add the mask as last operand. Range.End may be decreased to
   /// ensure same recipe behavior  from \p Range.Start to \p Range.End.
   VPSingleDefRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
-
-  bool isConsecutiveWithoutVPlanBasedStrideSpeculation(VPInstruction *MemOp);
 };
 } // end namespace llvm
 

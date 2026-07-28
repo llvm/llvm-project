@@ -5550,8 +5550,6 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   SCEVUnionPredicate StridePredicates({}, *SE);
 
   erase_if(MemOps, [&](VPInstruction *VPI) -> bool {
-    if (RecipeBuilder.isConsecutiveWithoutVPlanBasedStrideSpeculation(VPI))
-      return false;
     auto *PtrOp = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                         : VPI->getOperand(1);
 
