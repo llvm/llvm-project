@@ -804,7 +804,8 @@ getFunctionSelectorKey(llvm::StringRef Name,
 
   AppendKeyPart(Name);
   OS << ';';
-  llvm::interleave(Parameters, OS, AppendKeyPart, "");
+  for (llvm::StringRef Parameter : Parameters)
+    AppendKeyPart(Parameter);
   return Key.str().str();
 }
 

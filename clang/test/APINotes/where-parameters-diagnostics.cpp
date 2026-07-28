@@ -1,6 +1,8 @@
 // RUN: rm -rf %t && split-file %s %t
 // RUN: not %clang_cc1 -fsyntax-only -fapinotes %t/diagnostics.cpp -I %t/WhereParametersDuplicateSelectorDiag 2>&1 | FileCheck %t/WhereParametersDuplicateSelectorDiag/APINotes.apinotes --check-prefix=DUPLICATE
 // RUN: rm -rf %t/ModulesCache && mkdir -p %t/ModulesCache
+// RUN: rm -rf %t/PragmaModulesCache && mkdir -p %t/PragmaModulesCache
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/PragmaModulesCache -fdisable-module-hash -fapinotes-modules -Wapinotes -fsyntax-only -I %t/WhereParametersPragmaDiag %t/pragma-diagnostics.cpp -x c++ 2>&1 | count 0
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersDiagnostics -fdisable-module-hash -fapinotes-modules -Wapinotes -fsyntax-only -I %S/Inputs/Headers %t/diagnostics.cpp -x c++ 2>&1 | FileCheck %s --check-prefix=UNMATCHED --implicit-check-not=diagnosticMatchedGlobal --implicit-check-not=diagnosticAliasMatchedGlobal --implicit-check-not=diagnosticMatchedMethod --implicit-check-not=diagnosticAliasMatchedMethod
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersDiagnostics -fdisable-module-hash -fapinotes-modules -Wno-apinotes -I %S/Inputs/Headers %t/diagnostics.cpp -ast-dump -ast-dump-filter diagnosticBroadGlobal -x c++ | FileCheck %s --check-prefix=BROAD-GLOBAL
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersDiagnostics -fdisable-module-hash -fapinotes-modules -Wno-apinotes -I %S/Inputs/Headers %t/diagnostics.cpp -ast-dump -ast-dump-filter DiagnosticWidget::diagnosticBroadMethod -x c++ | FileCheck %s --check-prefix=BROAD-METHOD
@@ -127,3 +129,34 @@ Tags:
       Parameters:
       - double
     SwiftName: allowedDouble(_:)
+
+
+//--- pragma-diagnostics.cpp
+#include "WhereParametersPragma.h"
+
+//--- WhereParametersPragmaDiag/module.modulemap
+module WhereParametersPragma { header "WhereParametersPragma.h" }
+
+//--- WhereParametersPragmaDiag/WhereParametersPragma.h
+#ifndef WHERE_PARAMETERS_PRAGMA_H
+#define WHERE_PARAMETERS_PRAGMA_H
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wapinotes"
+void pragmaMatched(int);
+#pragma clang diagnostic pop
+
+void pragmaMatched(float);
+
+#endif // WHERE_PARAMETERS_PRAGMA_H
+
+//--- WhereParametersPragmaDiag/WhereParametersPragma.apinotes
+---
+Name: WhereParametersPragma
+Functions:
+- Name: pragmaMatched
+  Where:
+    Parameters:
+    - int
+  SwiftName: pragmaMatched(_:)
+...

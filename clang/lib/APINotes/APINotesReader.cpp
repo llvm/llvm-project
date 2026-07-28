@@ -847,8 +847,8 @@ public:
   /// Collect exact parameter selector keys stored in the given function-like
   /// table.
   template <typename TableT>
-  bool collectExactFunctionParameterSelectors(
-      TableT *Table,
+  void collectExactFunctionParameterSelectors(
+      TableT &Table,
       llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
 
   /// Retrieve the selector ID for the given selector, or an empty
@@ -944,24 +944,19 @@ APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
 }
 
 template <typename TableT>
-bool APINotesReader::Implementation::collectExactFunctionParameterSelectors(
-    TableT *Table,
+void APINotesReader::Implementation::collectExactFunctionParameterSelectors(
+    TableT &Table,
     llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors) {
   static_assert(std::is_same_v<TableT, SerializedGlobalFunctionTable> ||
                 std::is_same_v<TableT, SerializedCXXMethodTable>);
   constexpr bool IsCXXMethod = std::is_same_v<TableT, SerializedCXXMethodTable>;
 
-  if (!Table)
-    return true;
-
-  for (const FunctionTableKey &Key : Table->keys()) {
+  for (const FunctionTableKey &Key : Table.keys()) {
     if (!Key.parameterTypeIDs)
       continue;
 
     Selectors.push_back(APINotesFunctionSelectorKey{Key, IsCXXMethod});
   }
-
-  return true;
 }
 
 std::optional<FunctionTableKey>
@@ -2530,12 +2525,14 @@ APINotesReader::getGlobalFunctionSelectorKey(
   return APINotesFunctionSelectorKey{*Key, /*IsCXXMethod=*/false};
 }
 
-bool APINotesReader::collectExactFunctionParameterSelectors(
+void APINotesReader::collectExactFunctionParameterSelectors(
     llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors) {
-  return Implementation->collectExactFunctionParameterSelectors(
-             Implementation->GlobalFunctionTable.get(), Selectors) &&
-         Implementation->collectExactFunctionParameterSelectors(
-             Implementation->CXXMethodTable.get(), Selectors);
+  if (Implementation->GlobalFunctionTable)
+    Implementation->collectExactFunctionParameterSelectors(
+        *Implementation->GlobalFunctionTable, Selectors);
+  if (Implementation->CXXMethodTable)
+    Implementation->collectExactFunctionParameterSelectors(
+        *Implementation->CXXMethodTable, Selectors);
 }
 
 std::optional<llvm::SmallVector<std::string, 4>>

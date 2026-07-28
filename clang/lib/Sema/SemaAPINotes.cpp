@@ -1084,9 +1084,7 @@ APINotesSelectorDiagnosticState::getOrCreateReaderState(
     return State;
 
   SmallVector<api_notes::APINotesFunctionSelectorKey, 4> Selectors;
-  if (!Reader.collectExactFunctionParameterSelectors(Selectors))
-    return State;
-
+  Reader.collectExactFunctionParameterSelectors(Selectors);
   State.addSelectors(Selectors);
   return State;
 }
@@ -1186,9 +1184,7 @@ void Sema::ProcessAPINotes(Decl *D) {
                                                       APINotesContext);
                 });
 
-          if (ParameterSelectorCandidates &&
-              !Diags.isIgnored(diag::warn_apinotes_message,
-                               FD->getLocation())) {
+          if (ParameterSelectorCandidates) {
             auto &DiagnosticState =
                 getAPINotesSelectorDiagnosticState(*this, Reader);
             if (auto BroadKey = Reader->getGlobalFunctionSelectorKey(
@@ -1408,9 +1404,7 @@ void Sema::ProcessAPINotes(Decl *D) {
                                                    Parameters);
                   });
 
-            if (ParameterSelectorCandidates &&
-                !Diags.isIgnored(diag::warn_apinotes_message,
-                                 CXXMethod->getLocation())) {
+            if (ParameterSelectorCandidates) {
               auto &DiagnosticState =
                   getAPINotesSelectorDiagnosticState(*this, Reader);
               if (auto BroadKey =
@@ -1484,6 +1478,7 @@ void Sema::DiagnoseUnusedAPINotesSelectors() {
   if (!APINotesSelectorDiagnostics)
     return;
 
-  APINotesSelectorDiagnostics->diagnoseUnused(*this);
+  if (!Diags.isIgnored(diag::warn_apinotes_message, SourceLocation()))
+    APINotesSelectorDiagnostics->diagnoseUnused(*this);
   APINotesSelectorDiagnostics.reset();
 }

@@ -15,7 +15,9 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <optional>
 #include <string>
@@ -28,10 +30,15 @@ class raw_ostream;
 namespace clang {
 namespace api_notes {
 
-std::string
-formatAPINotesParameterSelector(llvm::ArrayRef<llvm::StringRef> Parameters);
-std::string
-formatAPINotesParameterSelector(llvm::ArrayRef<std::string> Parameters);
+template <typename RangeT>
+std::string formatAPINotesParameterSelector(RangeT &&Parameters) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "[";
+  llvm::interleaveComma(Parameters, OS);
+  OS << "]";
+  return Result;
+}
 
 enum class RetainCountConventionKind {
   None,
@@ -1091,14 +1098,6 @@ struct ObjCSelectorRef {
 
 namespace llvm {
 template <> struct DenseMapInfo<clang::api_notes::FunctionTableKey> {
-  static clang::api_notes::FunctionTableKey getEmptyKey() {
-    return {0, ~uint32_t(0)};
-  }
-
-  static clang::api_notes::FunctionTableKey getTombstoneKey() {
-    return {0, ~uint32_t(0) - 1};
-  }
-
   static unsigned getHashValue(const clang::api_notes::FunctionTableKey &Key) {
     return Key.hashValue();
   }
@@ -1110,21 +1109,6 @@ template <> struct DenseMapInfo<clang::api_notes::FunctionTableKey> {
 };
 
 template <> struct DenseMapInfo<clang::api_notes::APINotesFunctionSelectorKey> {
-  // The local Key values below are DenseMap sentinels for the wrapper type.
-  // Key.Key stores the wrapped FunctionTableKey sentinel.
-  static clang::api_notes::APINotesFunctionSelectorKey getEmptyKey() {
-    clang::api_notes::APINotesFunctionSelectorKey Key;
-    Key.Key = DenseMapInfo<clang::api_notes::FunctionTableKey>::getEmptyKey();
-    return Key;
-  }
-
-  static clang::api_notes::APINotesFunctionSelectorKey getTombstoneKey() {
-    clang::api_notes::APINotesFunctionSelectorKey Key;
-    Key.Key =
-        DenseMapInfo<clang::api_notes::FunctionTableKey>::getTombstoneKey();
-    return Key;
-  }
-
   static unsigned
   getHashValue(const clang::api_notes::APINotesFunctionSelectorKey &Key) {
     return Key.hashValue();

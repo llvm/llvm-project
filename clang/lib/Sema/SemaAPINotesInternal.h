@@ -53,9 +53,8 @@ struct APINotesSelectorDiagnosticReaderState {
     SelectorUsed.try_emplace(Key, false);
   }
 
-  void
-  addSelectors(llvm::SmallVectorImpl<api_notes::APINotesFunctionSelectorKey>
-                   &Selectors) {
+  void addSelectors(
+      llvm::ArrayRef<api_notes::APINotesFunctionSelectorKey> Selectors) {
     SelectorUsed.reserve(Selectors.size());
     SeenNames.reserve(Selectors.size());
     for (const auto &Selector : Selectors)

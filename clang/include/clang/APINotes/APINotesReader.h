@@ -219,7 +219,7 @@ public:
                                std::optional<Context> Ctx = std::nullopt);
 
   /// Collect exact parameter selector keys stored by this reader.
-  bool collectExactFunctionParameterSelectors(
+  void collectExactFunctionParameterSelectors(
       llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
 
   /// Reconstruct parameter selector strings for a stored exact selector key.
