@@ -253,12 +253,12 @@ define void @reverse_load_store(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<1023>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-end-pointer inbounds ir<%gep.a>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-end-pointer inbounds i32, ir<%gep.a>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = reverse ir<%lv>
 ; CHECK-NEXT:      EMIT ir<%add> = add vp<[[VP5]]>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-end-pointer inbounds ir<%gep.b>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-end-pointer inbounds i32, ir<%gep.b>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = reverse ir<%add>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<-1>
@@ -446,7 +446,7 @@ define void @cond_reverse_load_store(ptr noalias %a, ptr noalias %b, ptr noalias
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<1023>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.cond> = getelementptr inbounds ir<%cond>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-end-pointer inbounds ir<%gep.cond>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-end-pointer inbounds i32, ir<%gep.cond>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%c> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = reverse ir<%c>
 ; CHECK-NEXT:      EMIT ir<%cmp> = icmp sgt vp<[[VP5]]>, ir<0>
@@ -454,13 +454,13 @@ define void @cond_reverse_load_store(ptr noalias %a, ptr noalias %b, ptr noalias
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-end-pointer inbounds ir<%gep.a>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-end-pointer inbounds i32, ir<%gep.a>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = reverse ir<%cmp>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = reverse ir<%lv>
 ; CHECK-NEXT:      EMIT ir<%add> = add vp<[[VP8]]>, ir<1>, ir<%cmp>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-end-pointer inbounds ir<%gep.b>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-end-pointer inbounds i32, ir<%gep.b>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = reverse ir<%cmp>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = reverse ir<%add>
 ; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, vp<[[VP11]]>, vp<[[VP10]]>

@@ -1435,7 +1435,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<%next.gep>, ir<-1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer inbounds ir<%ptr.iv.next>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer inbounds i8, ir<%ptr.iv.next>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = reverse ir<%l>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp ne vp<[[VP9]]>, ir<0>
