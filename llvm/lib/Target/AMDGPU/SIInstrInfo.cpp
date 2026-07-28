@@ -1138,23 +1138,32 @@ int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
   return Opcode;
 }
 
+// For a 64-bit value defined by a REG_SEQUENCE with half of the result being 0,
+// find the instruction that defines exactly the bits in the other half, and
+// return a pair containing that instruction and an unsigned indicating which 32
+// bits are nonzero.  The unsigned is 0 if the lower 32 bits are nonzero and 1
+// if the upper 32 bits are nonzero.
 std::pair<MachineInstr *, unsigned>
-SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI,
-                                      const MachineRegisterInfo &MRI) const {
+SIInstrInfo::analyzePartiallyZeroRegSequence(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
   if (MI.getOpcode() != AMDGPU::REG_SEQUENCE || MI.getNumOperands() != 5)
     return std::make_pair(nullptr, 0);
 
   int64_t SubRegValues[2];
   bool SubRegIsConst[2];
   MachineInstr *RealDefs[2];
+
+  // Visit subreg-index operands of the REG_SEQUENCE instruction (MI)
   for (unsigned I : {2, 4}) {
     unsigned ArrayIdx = MI.getOperand(I).getImm() == AMDGPU::sub0 ? 0 : 1;
     Register Subreg = MI.getOperand(I - 1).getReg();
-    RealDefs[ArrayIdx] = MRI.getUniqueVRegDef(Subreg);
+    RealDefs[ArrayIdx] = MRI.getVRegDef(Subreg);
     SubRegIsConst[ArrayIdx] = getConstValDefinedInReg(
         *RealDefs[ArrayIdx], Subreg, SubRegValues[ArrayIdx]);
   }
 
+  // Visit indices of SubRegValues and SubRegIsConst arrays filled in by
+  // previous loop
   for (unsigned I : {0, 1})
     if (SubRegIsConst[I] && !SubRegValues[I] &&
         MRI.getRegClass(RealDefs[(I + 1) % 2]->getOperand(0).getReg())
@@ -11299,7 +11308,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     std::pair<MachineInstr *, unsigned> RegSequence2;
     MachineInstr *Src2Def = MRI->getVRegDef(SrcReg2);
     if (!Src2Def ||
-        !(Src2Def = (RegSequence2 = pierceThroughRegSequence(*Src2Def, *MRI))
+        !(Src2Def = (RegSequence2 = analyzePartiallyZeroRegSequence(*Src2Def, *MRI))
                         .first) ||
         !getFoldableImm(Src2Def->getOperand(0).getReg(), *MRI, CmpValue))
       return false;
@@ -11345,7 +11354,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!Def)
       return false;
 
-    auto RegSequence = pierceThroughRegSequence(*Def, *MRI);
+    auto RegSequence = analyzePartiallyZeroRegSequence(*Def, *MRI);
     if (!RegSequence.first)
       return false;
 
