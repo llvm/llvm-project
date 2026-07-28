@@ -267,7 +267,9 @@ Improvements to C++20 Modules support
 
 - Fixed handling of relative paths in prebuilt module files
 
-- Added a ``--skip-preamble-build`` command-line option
+- Clangd's preamble optimization is skipped for translation units
+  that use modules. (The two features have buggy interactions, and
+  modules independently provide much of the same performance benefit.)
 
 - Support different modules with the same name in a project
 
