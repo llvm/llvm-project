@@ -468,11 +468,7 @@ entry:
 ; lane 1 combines B with 0 first, then adds A. This is the same shape (a
 ; real value mixed with an unrelated identity placeholder in one column,
 ; e.g. add(B, 0)) as a real gather-buildvector regression that combined
-; several unrelated `or`-with-0 expressions; getReassocColumnsQuality()
-; should recognize a column that is one real value plus the opcode's own
-; identity constant as cheap (isReassocIdentityConstant()), not just "2
-; unique values", so this still finds the clean 2-column [A, B] split
-; instead of leaving 0 diluting whichever column it naturally landed in.
+; several unrelated `or`-with-0 expressions;
 ;
 ; S[0] = (A[0] + B[0]) + 0
 ; S[1] = (B[1] + 0) + A[1]
@@ -508,5 +504,127 @@ entry:
 
   store i32 %add0, ptr %Sarray, align 4
   store i32 %add1, ptr %idxS1, align 4
+  ret void
+}
+
+; The same 4 load families per lane, but each lane's chain consumes them in
+; a different order: lane 0 is ((B+D)+C)+A, lane 1 is ((A+B)+C)+D. Peeling
+; goes through transient mixed columns (a load leaf against a nested add),
+; after which the columns realign into consecutive-load pairs.
+define void @test_reassoc_add_permuted_operands(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_permuted_operands(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i8, ptr [[SARRAY]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i8> [[TMP3]], <2 x i8> [[TMP0]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw <2 x i8> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw <2 x i8> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i8> [[TMP0]], <2 x i8> [[TMP3]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw <2 x i8> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    store i8 [[TMP7]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    store i8 [[TMP8]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i8, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i8, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i8, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i8, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i8, ptr %Sarray, i64 1
+
+  %A0 = load i8, ptr %Aarray, align 8
+  %A1 = load i8, ptr %idxA1, align 8
+
+  %B0 = load i8, ptr %Barray, align 8
+  %B1 = load i8, ptr %idxB1, align 8
+
+  %C0 = load i8, ptr %Carray, align 8
+  %C1 = load i8, ptr %idxC1, align 8
+
+  %D0 = load i8, ptr %Darray, align 8
+  %D1 = load i8, ptr %idxD1, align 8
+
+  %addB0D0 = add nuw nsw i8 %D0, %B0
+  %addA1B1 = add nuw nsw i8 %B1, %A1
+  %addB0C0D0 = add nuw nsw i8 %C0, %addB0D0
+  %addA1B1C1 = add nuw nsw i8 %addA1B1, %C1
+  %add0 = add nuw nsw i8 %addB0C0D0, %A0
+  %add1 = add nuw nsw i8 %D1, %addA1B1C1
+  store i8 %add0, ptr %Sarray, align 8
+  store i8 %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Shift leaves sit at different chain positions per lane (lane 0 slots 0,3;
+; lane 1 slots 0,1). Same-key shift columns are paired by the family of the
+; shift's own operand, so shlA* pairs with shlA* (consecutive loads) instead
+; of pairing by encounter order.
+define void @test_reassoc_add_shl_operands(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_shl_operands(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds i8, ptr [[AARRAY]], i64 1
+; CHECK-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds i8, ptr [[BARRAY]], i64 1
+; CHECK-NEXT:    [[IDXC1:%.*]] = getelementptr inbounds i8, ptr [[CARRAY]], i64 1
+; CHECK-NEXT:    [[IDXD1:%.*]] = getelementptr inbounds i8, ptr [[DARRAY]], i64 1
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i8, ptr [[SARRAY]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load i8, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = load i8, ptr [[IDXA1]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[C0:%.*]] = load i8, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[C1:%.*]] = load i8, ptr [[IDXC1]], align 8
+; CHECK-NEXT:    [[D0:%.*]] = load i8, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[D1:%.*]] = load i8, ptr [[IDXD1]], align 8
+; CHECK-NEXT:    [[SHLA0:%.*]] = shl nuw i8 [[A0]], 3
+; CHECK-NEXT:    [[SHLA1:%.*]] = shl nuw i8 [[A1]], 3
+; CHECK-NEXT:    [[SHLB1:%.*]] = shl nuw i8 [[B1]], 3
+; CHECK-NEXT:    [[SHLC0:%.*]] = shl nuw i8 [[C0]], 3
+; CHECK-NEXT:    [[ADDA0C0:%.*]] = add nuw nsw i8 [[SHLA0]], [[C0]]
+; CHECK-NEXT:    [[ADDA1B1:%.*]] = add nuw nsw i8 [[SHLB1]], [[SHLA1]]
+; CHECK-NEXT:    [[ADDA0C0D0:%.*]] = add nuw nsw i8 [[ADDA0C0]], [[D0]]
+; CHECK-NEXT:    [[ADDA1B1C1:%.*]] = add nuw nsw i8 [[ADDA1B1]], [[C1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i8 [[ADDA0C0D0]], [[SHLC0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i8 [[ADDA1B1C1]], [[D1]]
+; CHECK-NEXT:    store i8 [[TMP9]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    store i8 [[TMP10]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i8, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i8, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i8, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i8, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i8, ptr %Sarray, i64 1
+
+  %A0 = load i8, ptr %Aarray, align 8
+  %A1 = load i8, ptr %idxA1, align 8
+
+  %B1 = load i8, ptr %idxB1, align 8
+
+  %C0 = load i8, ptr %Carray, align 8
+  %C1 = load i8, ptr %idxC1, align 8
+
+  %D0 = load i8, ptr %Darray, align 8
+  %D1 = load i8, ptr %idxD1, align 8
+
+  %shlA0 = shl nuw i8 %A0, 3
+  %shlA1 = shl nuw i8 %A1, 3
+  %shlB1 = shl nuw i8 %B1, 3
+  %shlC0 = shl nuw i8 %C0, 3
+
+  %addA0C0 = add nuw nsw i8 %shlA0, %C0
+  %addA1B1 = add nuw nsw i8 %shlB1, %shlA1
+  %addA0C0D0 = add nuw nsw i8 %addA0C0, %D0
+  %addA1B1C1 = add nuw nsw i8 %addA1B1, %C1
+  %add0 = add nuw nsw i8 %addA0C0D0, %shlC0
+  %add1 = add nuw nsw i8 %addA1B1C1, %D1
+  store i8 %add0, ptr %Sarray, align 8
+  store i8 %add1, ptr %idxS1, align 8
   ret void
 }
