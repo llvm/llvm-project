@@ -140,12 +140,16 @@ set(LIBOMP_LDFLAGS "" CACHE STRING
 if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
+  if("${LIBOMP_ARCH}" STREQUAL "ppc")
+    # PPC (32-bit) on AIX needs libcompiler_rt for __atomic_load_8, etc.
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -lcompiler_rt")
   endif()
 else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
 endif()
 
+if("${LIBOMP_ARCH}" STREQUAL "mips" OR "${LIBOMP_ARCH}" STREQUAL "mips64")
   set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
 endif()
 

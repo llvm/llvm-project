@@ -134,11 +134,12 @@ set(OPENMP_TEST_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}" CACHE STRING
   "Additional compiler flags to use for testing Fortran programs (e.g. additional module search paths via -fintrinsic-modules-path )")
 
 set(ENABLE_LIBOMPTARGET ON)
-# Currently libomptarget cannot be compiled on Windows or MacOS X.
+# Currently libomptarget cannot be compiled on Windows, MacOS X, or WebAssembly.
 # Since the device plugins are only supported on Linux anyway,
 # there is no point in trying to compile libomptarget on other OSes.
 # 32-bit systems are not supported either.
-if (APPLE OR WIN32 OR WASM32 OR WASM64 OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES
+if (APPLE OR WIN32 OR "${CMAKE_SYSTEM_NAME}" MATCHES "^(Emscripten|WASI)$" OR
+    NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES
     OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
