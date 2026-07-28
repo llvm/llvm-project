@@ -390,6 +390,25 @@ TEST_F(FormatTestComments, SpacesInBlockComments) {
   verifyFormat("/*comment*/", "/*comment */", Style);
 }
 
+TEST_F(FormatTestComments, SpacesInMultilineBlockComments) {
+  FormatStyle Style = getLLVMStyleWithColumns(20);
+  Style.ReflowComments = FormatStyle::RCS_IndentOnly;
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa */",
+               "/*aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa*/",
+               Style);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Never;
+  verifyFormat("/*aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa*/",
+               "/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa */",
+               Style);
+}
+
 TEST_F(FormatTestComments, SpacesInBlockCommentsIgnoreParamAndDocComments) {
   FormatStyle Style = getLLVMStyle();
 

@@ -780,7 +780,7 @@ void BreakableBlockComment::adaptStartOfLine(
   if (LineIndex == 0) {
     StringRef Text = tokenAt(LineIndex).TokenText;
     if (Style.SpacesInBlockComments != FormatStyle::SIBCS_Leave &&
-        Lines.size() == 1 && Text.size() >= 4) {
+        Text.size() >= 4) {
       const bool IsDocComment =
           Text.starts_with("/**") || Text.starts_with("/*!");
       const bool IsParamComment = Text.drop_back(2).trim(Blanks).ends_with("=");
