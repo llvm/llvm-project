@@ -243,6 +243,30 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+option(COMPILER_RT_USE_LIBC_MATH
+      "Use LLVM libc math routines for floating-point builtins" OFF)
+
+# Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
+# <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
+macro(use_libc_builtin list_var name)
+  list(REMOVE_ITEM ${list_var} ${name}.c)
+  list(APPEND ${list_var} ${name}.cpp)
+endmacro()
+
+if(COMPILER_RT_USE_LIBC_MATH)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+  endif()
+
+  get_target_property(_libc_include_dirs llvm-libc-common-utilities
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${_libc_include_dirs})
+  add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+endif()
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
@@ -808,6 +832,7 @@ if (APPLE)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
+set(amdgpu_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})
@@ -1122,6 +1147,38 @@ else ()
       get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
       set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
       file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
+
+      # For spirv64, produce a combined bitcode file alongside the static archive.
+      # -mlink-builtin-bitcode expects raw LLVM IR and cannot unpack a static archive,
+      # so we use llvm-link to merge the archive members into a single .bc file.
+      if("${arch}" MATCHES "^spirv64")
+        find_program(LLVM_LINK llvm-link
+          PATHS ${LLVM_TOOLS_BINARY_DIR}
+          NO_DEFAULT_PATH)
+        if(LLVM_LINK)
+          set(SPIRV64_BC_OUTPUT "${BUILTIN_LIB_OUTPUT_DIR}/lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
+          add_custom_command(
+            OUTPUT "${SPIRV64_BC_OUTPUT}"
+            COMMAND "${LLVM_LINK}"
+                    "$<TARGET_FILE:clang_rt.builtins-spirv64>"
+                    -o "${SPIRV64_BC_OUTPUT}"
+            DEPENDS clang_rt.builtins-${arch}
+            COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc"
+            VERBATIM)
+          add_custom_target(clang_rt.builtins-spirv64-bc ALL
+            DEPENDS "${SPIRV64_BC_OUTPUT}")
+          add_dependencies(builtins clang_rt.builtins-spirv64-bc)
+          get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
+          install(FILES "${SPIRV64_BC_OUTPUT}"
+                  DESTINATION "${BUILTIN_INSTALL_DIR}"
+                  COMPONENT builtins)
+        else()
+          message(WARNING
+            "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "
+            "skipping libclang_rt.builtins.bc for spirv64")
+        endif()
+      endif()
+
       cmake_pop_check_state()
     endif ()
   endforeach ()

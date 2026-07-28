@@ -695,7 +695,7 @@ class ObjcopyJobAction : public JobAction {
   void anchor() override;
 
 public:
-  ObjcopyJobAction(Action *Input, types::ID Type);
+  ObjcopyJobAction(ActionList &Inputs, types::ID Type);
 
   static bool classof(const Action *A) {
     return A->getKind() == ObjcopyJobClass;

@@ -10,6 +10,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
@@ -71,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -1067,6 +1069,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       LanguageProperties::GetSettingName(), "Language settings.", true,
       Language::GetGlobalLanguageProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      "diagnostics", "Diagnostics settings.", true,
+      Diagnostics::GetGlobalProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",
@@ -1899,11 +1904,11 @@ CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
   return {};
 }
 
-bool Debugger::EnableLog(llvm::StringRef channel,
-                         llvm::ArrayRef<const char *> categories,
-                         llvm::StringRef log_file, uint32_t log_options,
-                         size_t buffer_size, LogHandlerKind log_handler_kind,
-                         llvm::raw_ostream &error_stream) {
+llvm::Error Debugger::EnableLog(llvm::StringRef channel,
+                                llvm::ArrayRef<const char *> categories,
+                                llvm::StringRef log_file, uint32_t log_options,
+                                size_t buffer_size,
+                                LogHandlerKind log_handler_kind) {
 
   std::shared_ptr<LogHandler> log_handler_sp;
   if (m_callback_handler_sp) {
@@ -1928,11 +1933,10 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         flags |= File::eOpenOptionTruncate;
       llvm::Expected<FileUP> file = FileSystem::Instance().Open(
           FileSpec(log_file), flags, lldb::eFilePermissionsFileDefault, false);
-      if (!file) {
-        error_stream << "Unable to open log file '" << log_file
-                     << "': " << llvm::toString(file.takeError()) << "\n";
-        return false;
-      }
+      if (!file)
+        return llvm::createStringErrorV("Unable to open log file '{}': {}",
+                                        log_file,
+                                        llvm::fmt_consume(file.takeError()));
 
       log_handler_sp =
           CreateLogHandler(log_handler_kind, (*file)->GetDescriptor(),
@@ -1945,8 +1949,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
   if (log_options == 0)
     log_options = LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
 
-  return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
-                               error_stream);
+  return Log::EnableLogChannel(log_handler_sp, log_options, channel,
+                               categories);
 }
 
 ScriptInterpreter *

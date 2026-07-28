@@ -55,12 +55,27 @@ serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBCXX_TEST_PARAMS)
 
 include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
-                "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
-                @ONLY)
+# The test suite is driven by a generated lit.site.cfg that loads the various other configuration
+# files needed by it. In order:
+# - The harness configuration, which defines substitutions needed for the test suite's own function
+#   (e.g. the path to Python).
+# - The libc++ substitutions file, which adds libc++ specific substitutions, such as the location of
+#   include paths. Those are needed for libc++ specific tests.
+# - The user-selected site configuration, which defines substitutions that determine e.g. how to
+#   build, link and run the tests.
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/harness-configuration.cfg.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/harness-configuration.cfg"
+               @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/libcxx-substitutions.cfg.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/libcxx-substitutions.cfg"
+               @ONLY)
+string(REGEX REPLACE "\\.in$" "" _resolved_config_name "${LIBCXX_TEST_CONFIG}")
+get_filename_component(_resolved_config_name "${_resolved_config_name}" NAME)
+set(LIBCXX_RESOLVED_TEST_CONFIG "${CMAKE_CURRENT_BINARY_DIR}/${_resolved_config_name}")
+configure_file("${LIBCXX_TEST_CONFIG}" "${LIBCXX_RESOLVED_TEST_CONFIG}" @ONLY)
 
 configure_lit_site_cfg(
-  "${LIBCXX_TEST_CONFIG}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/configs/lit.site.cfg.in"
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   MAIN_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py")
 

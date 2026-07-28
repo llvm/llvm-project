@@ -721,9 +721,9 @@ void applySimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register CondBit = MRI.cloneVirtualRegister(Op0Wide);
   B.buildAnd(
       CondBit, AddDst,
-      B.buildConstant(LLT::scalar(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
+      B.buildConstant(LLT::integer(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
   B.buildICmp(CmpInst::ICMP_NE, ResStatus, CondBit,
-              B.buildConstant(LLT::scalar(32), 0));
+              B.buildConstant(LLT::integer(32), 0));
 
   // Update ZEXts users of the result value. Because all uses are in the
   // no-overflow case, we know that the top bits are 0 and we can ignore ZExts.
@@ -918,7 +918,7 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   auto &MAMProxy =
       MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
           *MF.getFunction().getParent());
   if (!LibcallResult)

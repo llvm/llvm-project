@@ -239,12 +239,27 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let constructor = "mlir::createCallConvLoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
   let options = [
-    Option<"target", "target", "std::string", /*default=*/"\"\"",
-           "Target whose ABI rules drive classification (currently: test)">,
+    Option<"target", "target", "cir::CallConvTarget",
+           /*default=*/"cir::CallConvTarget::None",
+           "Target whose ABI rules drive classification",
+           [{::llvm::cl::values(
+             clEnumValN(cir::CallConvTarget::Test, "test",
+                        "MLIR test ABI target"),
+             clEnumValN(cir::CallConvTarget::X86_64, "x86_64",
+                        "x86_64 System V")
+           )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",
            "Function attribute name carrying a pre-built FunctionClassification "
            "DictionaryAttr (alternative to target=, used by tests)">,
+    Option<"x86AvxAbiLevel", "x86-avx-abi-level", "llvm::abi::X86AVXABILevel",
+           /*default=*/"llvm::abi::X86AVXABILevel::None",
+           "AVX ABI level for the x86_64 target",
+           [{::llvm::cl::values(
+             clEnumValN(llvm::abi::X86AVXABILevel::None, "none", "No AVX"),
+             clEnumValN(llvm::abi::X86AVXABILevel::AVX, "avx", "AVX"),
+             clEnumValN(llvm::abi::X86AVXABILevel::AVX512, "avx512", "AVX512")
+           )}]>,
   ];
 }
 

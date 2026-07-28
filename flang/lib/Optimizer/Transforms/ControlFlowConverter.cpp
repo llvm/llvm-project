@@ -8,19 +8,14 @@
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "flang/Optimizer/Support/InternalNames.h"
-#include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/derived-api.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace fir {
@@ -83,10 +78,19 @@ public:
 
     // Initalization block
     rewriter.setInsertionPointToEnd(initBlock);
-    auto diff = mlir::arith::SubIOp::create(rewriter, loc, high, low);
-    auto distance = mlir::arith::AddIOp::create(rewriter, loc, diff, step);
+    auto toIndex = [&](mlir::Value value) -> mlir::Value {
+      if (value.getType().isIndex())
+        return value;
+      return fir::ConvertOp::create(rewriter, loc, rewriter.getIndexType(),
+                                    value);
+    };
+    mlir::Value lowIndex = toIndex(low);
+    mlir::Value highIndex = toIndex(high);
+    mlir::Value stepIndex = toIndex(step);
+    auto diff = mlir::arith::SubIOp::create(rewriter, loc, highIndex, lowIndex);
+    auto distance = mlir::arith::AddIOp::create(rewriter, loc, diff, stepIndex);
     mlir::Value iters =
-        mlir::arith::DivSIOp::create(rewriter, loc, distance, step);
+        mlir::arith::DivSIOp::create(rewriter, loc, distance, stepIndex);
 
     if (forceLoopToExecuteOnce) {
       auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);

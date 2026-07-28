@@ -43,6 +43,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
              N->dump(&DAG));
   SDValue R = SDValue();
 
+  // See if the target wants to custom expand this node.
+  if (CustomLowerNode(N, N->getValueType(ResNo), true))
+    return;
+
   switch (N->getOpcode()) {
   default:
 #ifndef NDEBUG
@@ -448,32 +452,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDLoc DL(N);
-  SDValue SourceValue = N->getOperand(0);
-  SDValue SinkValue = N->getOperand(1);
-  SDValue EltSizeInBytes = N->getOperand(2);
-  SDValue LaneOffset = N->getOperand(3);
-
-  EVT PtrVT = SourceValue->getValueType(0);
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-
-  // Take the difference between the pointers and divided by the element size,
-  // to see how many lanes separate them.
-  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
-  if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
-
-  // The pointers do not alias if:
-  //  * Diff <= 0 || LaneOffset < Diff (WAR_MASK)
-  //  * Diff == 0 || LaneOffset < abs(Diff) (RAW_MASK)
-  // Note: If LaneOffset is zero, both cases will fold to "true".
-  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                     Diff.getValueType());
-  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
-  return DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
-                     DAG.getSetCC(DL, CmpVT, LaneOffset, Diff, ISD::SETULT));
+  // Reuse the expansion (which should scalarize).
+  SDValue Mask = TLI.expandLoopDependenceMask(N, DAG);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N),
+                     N->getValueType(0).getScalarType(), Mask,
+                     DAG.getVectorIdxConstant(0, DL));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
@@ -748,9 +731,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
   if (BoolVT.bitsLT(CondVT))
     Cond = DAG.getNode(ISD::TRUNCATE, SDLoc(N), BoolVT, Cond);
 
-  return DAG.getSelect(SDLoc(N),
-                       LHS.getValueType(), Cond, LHS,
-                       GetScalarizedVector(N->getOperand(2)));
+  return DAG.getSelect(SDLoc(N), LHS.getValueType(), Cond, LHS,
+                       GetScalarizedVector(N->getOperand(2)), N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SELECT(SDNode *N) {
@@ -859,6 +841,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   LLVM_DEBUG(dbgs() << "Scalarize node operand " << OpNo << ": ";
              N->dump(&DAG));
   SDValue Res = SDValue();
+
+  // See if the target wants to custom scalarize this node.
+  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))
+    return false;
 
   switch (N->getOpcode()) {
   default:
@@ -7489,19 +7475,16 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // We cannot just use the widened operands directly: since they might be
   // individually widened, using them directly will result in de-interleaving
   // the "padded" lanes that sit in the middle of the vector. Instead, we should
-  // not just concat but also "re-pack" these operands before extracting new
+  // not concat the widened operands but the original ones to effectively
+  // generate a "packed" concated and widened vector, before extracting new
   // operand vectors with the widened type.
   EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        WidenEC.multiplyCoefficientBy(Factor));
-  SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
-  for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
-    const SDValue Op = N->getOperand(Idx);
-    // Note that we insert these widened operands with offsets derived from
-    // the original vector length.
-    PackedWidenVec = DAG.getInsertSubvector(
-        DL, PackedWidenVec, GetWidenedVector(Op),
-        OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
-  }
+  EVT ConcatVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                  OrigEC.multiplyCoefficientBy(Factor));
+  SDValue ConcatOp = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, N->ops());
+  SDValue PackedWidenVec = DAG.getInsertSubvector(
+      DL, DAG.getUNDEF(PackedWidenVT), ConcatOp, /*Idx=*/0U);
 
   // Extract the new widened operand vectors.
   SmallVector<SDValue, 8> NewOps(Factor, SDValue());

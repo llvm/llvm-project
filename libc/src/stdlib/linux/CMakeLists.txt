@@ -10,6 +10,33 @@ add_header_library(
 )
 
 add_entrypoint_object(
+  realpath
+  SRCS
+    realpath.cpp
+  HDRS
+    ../realpath.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.limits_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.stat.kernel_statx_types
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
+    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
+    libc.src.__support.OSUtil.path
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
   setenv
   SRCS
     setenv.cpp
@@ -17,6 +44,20 @@ add_entrypoint_object(
     ../setenv.h
   DEPENDS
     libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
+  putenv
+  SRCS
+    putenv.cpp
+  HDRS
+    ../putenv.h
+  DEPENDS
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
