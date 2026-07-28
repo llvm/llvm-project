@@ -534,13 +534,10 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   static constexpr llvm::StringLiteral g_DictionaryM("__NSDictionaryM");
   static constexpr llvm::StringLiteral g_Dictionary1(
       "__NSSingleEntryDictionaryI");
-  static constexpr llvm::StringLiteral g_DictionaryImmutable(
-      "__NSDictionaryM_Immutable");
   static constexpr llvm::StringLiteral g_DictionaryMFrozen(
       "__NSFrozenDictionaryM");
   static constexpr llvm::StringLiteral g_DictionaryMLegacy(
       "__NSDictionaryM_Legacy");
-  static constexpr llvm::StringLiteral g_Dictionary0("__NSDictionary0");
   static constexpr llvm::StringLiteral g_DictionaryCF("__CFDictionary");
   static constexpr llvm::StringLiteral g_DictionaryNSCF("__NSCFDictionary");
   static constexpr llvm::StringLiteral g_DictionaryCFRef("CFDictionaryRef");
