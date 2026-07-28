@@ -134,14 +134,13 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
                                         7);                                    \
   }
 
-#if __riscv_xlen == 64
 #define __packed_narrow_even2(name, rty, ty, sty)                              \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2);              \
+    return __builtin_convertvector(__rs1, rty);                                \
   }
 #define __packed_narrow_even4(name, rty, ty, sty)                              \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2, 4, 6);        \
+    return __builtin_convertvector(__rs1, rty);                                \
   }
 #define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
@@ -151,24 +150,6 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 1, 3, 5, 7);        \
   }
-#else
-#define __packed_narrow_even2(name, rty, ty, sty)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(__rs1, rty);                                \
-  }
-#define __packed_narrow_even4(name, rty, ty, sty)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(__rs1, rty);                                \
-  }
-#define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(((uty)__rs1) >> 16, rty);                   \
-  }
-#define __packed_narrow_odd4(name, rty, ty, sty, uty)                          \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(((uty)__rs1) >> 8, rty);                    \
-  }
-#endif
 
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */

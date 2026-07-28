@@ -4,13 +4,13 @@
 # RUN:       .text_low 0x2000: { *(.text_low) } \
 # RUN:       .text_high 0x2002000 : { *(.text_high) } \
 # RUN:       }' > %t.script
-# RUN: ld.lld -pie -T %t.script %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -pie -T %t.script %t.o -o %t
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC-PIE %s
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## RELATIVE relocs relocating NOBITS .branch_lt do not cause --check-dynamic-relocations errors.
-# RUN: ld.lld -shared -T %t.script %t.o -o %t.so --apply-dynamic-relocs --check-dynamic-relocations
+# RUN: ld.lld -z nosort-thunks -shared -T %t.script %t.o -o %t.so --apply-dynamic-relocs --check-dynamic-relocations
 # RUN: llvm-readelf -S %t.so | FileCheck --check-prefix=SEC-SHARED %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
 
