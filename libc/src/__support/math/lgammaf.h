@@ -405,7 +405,7 @@ LIBC_INLINE float lgammaf(float x) {
       double inv_x2 = inv_x * inv_x;
       if (x_abs > 0x44fa0000u) {
         constexpr fputil::ExceptValues<float, 3> LGAMMAF_EXCEPTS_BERN2{{
-        // input,      toward-zero result, RU, RD, RN
+            // input,      toward-zero result, RU, RD, RN
             {0x46541516u, 0x47e1c01bu, 1, 0, 0},
             {0x46b16323u, 0x48483adeu, 1, 0, 1},
             {0xc6f7e151u, 0xc89116deu, 0, 1, 0},
@@ -420,7 +420,7 @@ LIBC_INLINE float lgammaf(float x) {
       } else if (x_abs > 0x42920000u) {
         // Exceptional cases of this range.
         constexpr fputil::ExceptValues<float, 2> LGAMMAF_EXCEPTS_BERN4{{
-        // input,      toward-zero result, RU, RD, RN
+            // input,      toward-zero result, RU, RD, RN
             {0x449acf07u, 0x45ecd680u, 1, 0, 1},
             {0xc33139a3u, 0xc43991afu, 0, 1, 0},
         }};
@@ -438,7 +438,7 @@ LIBC_INLINE float lgammaf(float x) {
       } else {
         // Exceptional cases of this range.
         constexpr fputil::ExceptValues<float, 2> LGAMMAF_EXCEPTS_B10{{
-        // input,      toward-zero result, RU, RD, RN
+            // input,      toward-zero result, RU, RD, RN
             {0x42468b59u, 0x430f25a7u, 1, 0, 0},
             {0xc134eb14u, 0xc1875615u, 0, 1, 0},
         }};
@@ -472,7 +472,7 @@ LIBC_INLINE float lgammaf(float x) {
       }
     } else {
       constexpr fputil::ExceptValues<float, 3> LGAMMAF_EXCEPTS_HUGE{{
-        // input,      toward-zero result, RU, RD, RN
+          // input,      toward-zero result, RU, RD, RN
           {0x65fca09fu, 0x68cead59u, 1, 0, 1},
           {0x716e5dd5u, 0x747e2bb9u, 1, 0, 0},
           {0x77ac5674u, 0x7acf27b2u, 1, 0, 1},
