@@ -17,7 +17,8 @@ define void @test_wrap_i32_address_space(ptr addrspace(1) %a, ptr addrspace(1) %
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[A1]], [[B2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15032385537
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 15032385536
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ;
