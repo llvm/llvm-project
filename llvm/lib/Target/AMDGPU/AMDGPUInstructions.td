@@ -886,10 +886,6 @@ def fmaxnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
    (fmaxnum node:$src0, node:$src1)]
 >;
 
-def fsub_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
-  [(fsub node:$src0, node:$src1)]
->;
-
 def fminnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee_oneuse node:$src0, node:$src1),
    (fminnum_oneuse node:$src0, node:$src1)]

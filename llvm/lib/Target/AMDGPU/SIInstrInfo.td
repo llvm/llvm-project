@@ -913,6 +913,11 @@ def VOP3PModsNeg : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
 }]>;
 
+def XorSISrcModsNeg : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() ^ SISrcMods::NEG,
+                                    SDLoc(N), MVT::i32);
+}]>;
+
 def VOP3PModsNegs : SDNodeXForm<timm, [{
   unsigned Mods = SISrcMods::OP_SEL_1;
   if (N->getZExtValue())

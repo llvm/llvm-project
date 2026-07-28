@@ -284,18 +284,18 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 SRCMODS.NEG), (i32 0),
               DSTCLAMP.NONE)>;
 
-  // (fsub x, y) -> (fma y, -1.0, x)
+  // (fsub x, y) -> (fma (-y), 1.0, x)
   def : GCNPat <
-    (f32 (fsub_nnan (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
-                    (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
-    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 NegOneImm), $src0_mods, $src0,
+    (f32 (fsub (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst (XorSISrcModsNeg $src1_mods), $src1, (i32 ImmMods), (i32 OneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 
-  // (fsub x, y) -> (fma y, -1.0, x)
+  // (fsub x, y) -> (fma (-y), 1.0, x)
   def : GCNPat <
-    (f32 (fsub_nnan (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_mods)),
-                    (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
-    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 NegOneImm), $src0_mods, $src0,
+    (f32 (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
+    (mix_inst (XorSISrcModsNeg $src1_mods), $src1, (i32 ImmMods), (i32 OneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 }
 
