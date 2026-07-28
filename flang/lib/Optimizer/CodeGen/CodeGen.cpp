@@ -3075,17 +3075,33 @@ struct XArrayCoorOpConversion
         if (normalSlice)
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
+      // Choose wrap flags from the pre-cast step so constants stay visible.
+      // Positive const: nsw|nuw. Negative const: nsw only (nuw is poison).
+      // Zero/unknown: none.
+      mlir::LLVM::IntegerOverflowFlags indexFlags = addMulFlags;
+      if (normalSlice) {
+        mlir::Value stepOperand = operands[sliceOffset + 2];
+        if (std::optional<llvm::APInt> stepCst =
+                fir::getIntIfConstant(stepOperand)) {
+          if (stepCst->isZero())
+            indexFlags = mlir::LLVM::IntegerOverflowFlags::none;
+          else if (stepCst->isNegative())
+            indexFlags = nsw;
+        } else {
+          indexFlags = mlir::LLVM::IntegerOverflowFlags::none;
+        }
+      }
       auto idx =
           mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, subFlags);
       mlir::Value diff = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx,
-                                                   step, addMulFlags);
+                                                   step, indexFlags);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
         auto adj = mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb,
                                              subFlags);
         diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj,
-                                         addMulFlags);
+                                         indexFlags);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -3100,9 +3116,9 @@ struct XArrayCoorOpConversion
       } else {
         // Use stride computed at last iteration.
         auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
-                                            addMulFlags);
+                                            indexFlags);
         offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
-                                           addMulFlags);
+                                           indexFlags);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
