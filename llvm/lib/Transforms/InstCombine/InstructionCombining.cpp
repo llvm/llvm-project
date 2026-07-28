@@ -1529,14 +1529,17 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
 //        -> ({s|u}itofp (int_binop x, y))
 //    2) (fp_binop ({s|u}itofp x), FpC)
 //        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+//    3) (fsub FpC, ({s|u}itofp x))
+//        -> ({s|u}itofp (int_sub (fpto{s|u}i FpC), x))
 //
 // Assuming the sign of the cast for x/y is `OpsFromSigned`.
 Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
     BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
-    Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown) {
+    Constant *FpC, unsigned FpCOp,
+    SmallVectorImpl<WithCache<const Value *>> &OpsKnown) {
 
   Type *FPTy = BO.getType();
-  Type *IntTy = IntOps[0]->getType();
+  Type *IntTy = IntOps[FpC ? 1 - FpCOp : 0]->getType();
 
   unsigned IntSz = IntTy->getScalarSizeInBits();
   // This is the maximum number of inuse bits by the integer where the int -> fp
@@ -1602,37 +1605,34 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
            IsNonZero(OpNo);
   };
 
-  // If we have a constant rhs, see if we can losslessly convert it to an int.
-  if (Op1FpC != nullptr) {
+  // If we have a constant operand, see if we can losslessly convert it to an
+  // int.
+  if (FpC != nullptr) {
     // Signed + Mul req non-zero
     if (OpsFromSigned && BO.getOpcode() == Instruction::FMul &&
-        !match(Op1FpC, m_NonZeroFP()))
+        !match(FpC, m_NonZeroFP()))
       return nullptr;
 
-    Constant *Op1IntC = ConstantFoldCastOperand(
-        OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, Op1FpC,
-        IntTy, DL);
-    if (Op1IntC == nullptr)
+    Constant *IntC = ConstantFoldCastOperand(
+        OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, FpC, IntTy,
+        DL);
+    if (IntC == nullptr)
       return nullptr;
     if (ConstantFoldCastOperand(OpsFromSigned ? Instruction::SIToFP
                                               : Instruction::UIToFP,
-                                Op1IntC, FPTy, DL) != Op1FpC)
+                                IntC, FPTy, DL) != FpC)
       return nullptr;
 
-    // First try to keep sign of cast the same.
-    IntOps[1] = Op1IntC;
+    IntOps[FpCOp] = IntC;
   }
 
   // Ensure lhs/rhs integer types match.
   if (IntTy != IntOps[1]->getType())
     return nullptr;
 
-  if (Op1FpC == nullptr) {
-    if (!IsValidPromotion(1))
+  for (unsigned OpNo = 0; OpNo != 2; ++OpNo)
+    if ((!FpC || OpNo != FpCOp) && !IsValidPromotion(OpNo))
       return nullptr;
-  }
-  if (!IsValidPromotion(0))
-    return nullptr;
 
   // Final we check if the integer version of the binop will not overflow.
   BinaryOperator::BinaryOps IntOpc;
@@ -1691,6 +1691,8 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
 //        -> ({s|u}itofp (int_binop x, y))
 //    2) (fp_binop ({s|u}itofp x), FpC)
 //        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+//    3) (fsub FpC, ({s|u}itofp x))
+//        -> ({s|u}itofp (int_sub (fpto{s|u}i FpC), x))
 Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   // Don't perform the fold on vectors, as the integer operation may be much
   // more expensive than the float operation in that case.
@@ -1698,16 +1700,23 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
     return nullptr;
 
   std::array<Value *, 2> IntOps = {nullptr, nullptr};
-  Constant *Op1FpC = nullptr;
+  Constant *FpC = nullptr;
+  unsigned FpCOp = 1;
   // Check for:
   //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
   //    2) (binop ({s|u}itofp x), FpC)
-  if (!match(BO.getOperand(0), m_IToFP(m_Value(IntOps[0]))))
+  //    3) (fsub FpC, ({s|u}itofp y))
+  if (match(BO.getOperand(0), m_IToFP(m_Value(IntOps[0])))) {
+    if (!match(BO.getOperand(1), m_Constant(FpC)) &&
+        !match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1]))))
+      return nullptr;
+  } else if (BO.getOpcode() == Instruction::FSub &&
+             match(BO.getOperand(0), m_Constant(FpC)) &&
+             match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1])))) {
+    FpCOp = 0;
+  } else {
     return nullptr;
-
-  if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
-      !match(BO.getOperand(1), m_IToFP(m_Value(IntOps[1]))))
-    return nullptr;
+  }
 
   // Cache KnownBits a bit to potentially save some analysis.
   SmallVector<WithCache<const Value *>, 2> OpsKnown = {IntOps[0], IntOps[1]};
@@ -1715,11 +1724,11 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
   // Try treating x/y as coming from both `uitofp` and `sitofp`. There are
   // different constraints depending on the sign of the cast.
   // NB: `(uitofp nneg X)` == `(sitofp nneg X)`.
-  if (Instruction *R = foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/false,
-                                                    IntOps, Op1FpC, OpsKnown))
+  if (Instruction *R = foldFBinOpOfIntCastsFromSign(
+          BO, /*OpsFromSigned=*/false, IntOps, FpC, FpCOp, OpsKnown))
     return R;
-  return foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/true, IntOps,
-                                      Op1FpC, OpsKnown);
+  return foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/true, IntOps, FpC,
+                                      FpCOp, OpsKnown);
 }
 
 /// A binop with a constant operand and a sign-extended boolean operand may be
