@@ -16836,53 +16836,13 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               IncrExpr.get()->getEndLoc());
 
   // 8. Build finalization statements for fused loops.
-  // For each fused loop i: final_value_i = lb_i + ni_i * st_i.
-  SmallVector<Stmt *, 8> FusedLoopFinalization;
-  for (unsigned I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
-    // Skip non-regular loops (transformations, range-based loops, etc.).
-    if (!SeqAnalysis.Loops[I].isRegularLoop())
-      continue;
-
-    // Check if this is a ForStmt.
-    if (!isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt))
-      continue;
-
-    // Get the user's actual loop variable.
-    assert(!SeqAnalysis.Loops[I].HelperExprs.Counters.empty() &&
-           "Expected at least one counter for the loop");
-    auto *UserLoopVarRef =
-        cast<DeclRefExpr>(SeqAnalysis.Loops[I].HelperExprs.Counters[0]);
-    auto *UserLoopVarDecl = cast<VarDecl>(UserLoopVarRef->getDecl());
-
-    // Skip internal OpenMP variables (they start with .omp.).
-    if (UserLoopVarDecl->getName().starts_with(".omp."))
-      continue;
-
-    // Build: user_var = lb + ni * st.
-    // ni * st.
-    ExprResult FinalValue = SemaRef.BuildBinOp(
-        CurScope, SourceLocation(), BO_Mul, MakeVarDeclRef(NIVarDecls[J]),
-        MakeVarDeclRef(STVarDecls[J]));
-    if (!FinalValue.isUsable())
-      return StmtError();
-
-    // lb + (ni * st).
-    FinalValue =
-        SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_Add,
-                           MakeVarDeclRef(LBVarDecls[J]), FinalValue.get());
-    if (!FinalValue.isUsable())
-      return StmtError();
-
-    // user_var = final_value.
-    FinalValue = SemaRef.BuildBinOp(
-        CurScope, SourceLocation(), BO_Assign,
-        buildDeclRefExpr(SemaRef, UserLoopVarDecl, UserLoopVarDecl->getType(),
-                         UserLoopVarDecl->getLocation(), false),
-        FinalValue.get());
-    if (!FinalValue.isUsable())
-      return StmtError();
-
-    FusedLoopFinalization.push_back(FinalValue.get());
+  // Collect HelperExprs from the fused loops.
+  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
+  for (unsigned I = FirstVal - 1; I < LastVal; ++I) {
+    if (SeqAnalysis.Loops[I].isRegularLoop() &&
+        isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt)) {
+      FusedLoopHelpers.push_back(SeqAnalysis.Loops[I].HelperExprs);
+    }
   }
 
   //  In the case of looprange, the result of fuse won't simply
@@ -16933,16 +16893,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                                       SourceLocation(), SourceLocation());
   }
 
-  Stmt *Finals = nullptr;
-  if (!FusedLoopFinalization.empty()) {
-    Finals = CompoundStmt::Create(Context, FusedLoopFinalization,
-                                  FPOptionsOverride(), SourceLocation(),
-                                  SourceLocation());
-  }
-
   return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                   NumGeneratedTopLevelLoops, AStmt, FusionStmt,
-                                  buildPreInits(Context, PreInits), Finals);
+                                  buildPreInits(Context, PreInits),
+                                  buildLoopFinalization(Context, FusedLoopHelpers));
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
