@@ -304,7 +304,12 @@ uint64_t COFFObjectFile::getSectionAlignment(DataRefImpl Ref) const {
 }
 
 bool COFFObjectFile::isSectionCompressed(DataRefImpl Sec) const {
-  return false;
+  Expected<StringRef> NameOrErr = getSectionName(Sec);
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
+    return false;
+  }
+  return NameOrErr->ltrim("._").starts_with("zdebug_");
 }
 
 bool COFFObjectFile::isSectionText(DataRefImpl Ref) const {

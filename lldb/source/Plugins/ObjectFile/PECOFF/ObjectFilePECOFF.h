@@ -118,6 +118,13 @@ public:
 
   void CreateSections(lldb_private::SectionList &unified_section_list) override;
 
+  size_t ReadSectionData(lldb_private::Section *section,
+                         lldb::offset_t section_offset, void *dst,
+                         size_t dst_len) override;
+
+  size_t ReadSectionData(lldb_private::Section *section,
+                         lldb_private::DataExtractor &section_data) override;
+
   void Dump(lldb_private::Stream *s) override;
 
   lldb_private::ArchSpec GetArchitecture() override;

@@ -1,0 +1,35 @@
+# REQUIRES: zlib
+# RUN: yaml2obj %s -o %t \
+# RUN:   -DINFO=5A4C4942000000000000000C789CE3606060606100010E0600009C0015
+# RUN: llvm-dwarfdump --debug-info %t | FileCheck %s
+# RUN: yaml2obj %s -o %t.invalid \
+# RUN:   -DINFO=4241442100000000000000000000000000000000000000000000000000
+# RUN: not llvm-dwarfdump --debug-info %t.invalid 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ERR
+
+# CHECK: .debug_info contents:
+# CHECK: Compile Unit: length = 0x00000008
+# CHECK-SAME: version = 0x0004
+# CHECK-SAME: addr_size = 0x08
+
+# ERR: error: failed to decompress
+# ERR-SAME: corrupted compressed section header
+
+--- !COFF
+OptionalHeader:
+  SectionAlignment: 4096
+  FileAlignment:   512
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .zdebug_info
+    VirtualSize:     29
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    SectionData:     '[[INFO]]'
+  - Name:            .zdebug_abbrev
+    VirtualSize:     21
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    SectionData:     5A4C49420000000000000001789C63000000010001
+symbols:         []
+...

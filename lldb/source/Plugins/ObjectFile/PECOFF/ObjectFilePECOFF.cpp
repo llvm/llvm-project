@@ -33,6 +33,7 @@
 
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -958,6 +959,58 @@ bool ObjectFilePECOFF::IsStripped() {
   return false;
 }
 
+size_t ObjectFilePECOFF::ReadSectionData(Section *section,
+                                         lldb::offset_t section_offset,
+                                         void *dst, size_t dst_len) {
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_offset,
+                                                     dst, dst_len);
+
+  if (!section->GetName().starts_with(".zdebug_"))
+    return ObjectFile::ReadSectionData(section, section_offset, dst, dst_len);
+
+  DataExtractor data;
+  ReadSectionData(section, data);
+  return data.CopyData(section_offset, dst_len, dst);
+}
+
+size_t ObjectFilePECOFF::ReadSectionData(Section *section,
+                                         DataExtractor &section_data) {
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_data);
+
+  size_t result = ObjectFile::ReadSectionData(section, section_data);
+  if (result == 0 || !section->GetName().starts_with(".zdebug_"))
+    return result;
+
+  auto decompressor = llvm::object::Decompressor::create(
+      section->GetName(),
+      {reinterpret_cast<const char *>(section_data.GetDataStart()),
+       size_t(section_data.GetByteSize())},
+      GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
+  if (!decompressor) {
+    GetModule()->ReportWarning(
+        "unable to initialize decompressor for section '{0}': {1}",
+        section->GetName(), llvm::toString(decompressor.takeError()).c_str());
+    section_data.Clear();
+    return 0;
+  }
+
+  auto buffer_sp =
+      std::make_shared<DataBufferHeap>(decompressor->getDecompressedSize(), 0);
+  if (auto error = decompressor->decompress(
+          {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
+    GetModule()->ReportWarning("decompression of section '{0}' failed: {1}",
+                               section->GetName(),
+                               llvm::toString(std::move(error)).c_str());
+    section_data.Clear();
+    return 0;
+  }
+
+  section_data.SetData(buffer_sp);
+  return buffer_sp->GetByteSize();
+}
+
 SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
                                              const section_header_t &sect) {
   ConstString const_sect_name(sect_name);
@@ -990,7 +1043,7 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
       return eSectionTypeData;
   }
 
-  if (sect_name.consume_front(".debug_"))
+  if (sect_name.consume_front(".debug_") || sect_name.consume_front(".zdebug_"))
     return GetDWARFSectionTypeFromName(sect_name);
 
   SectionType section_type =
