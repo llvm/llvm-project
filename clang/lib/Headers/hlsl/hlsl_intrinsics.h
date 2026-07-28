@@ -327,27 +327,5 @@ constexpr matrix<T, R, C> mul(matrix<T, R, C> x, T y) {
   return x * y;
 }
 
-//===----------------------------------------------------------------------===//
-// cross builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn T cross(T x, T y)
-/// \brief Returns the cross product of two floating-point, 3D vectors.
-/// \param x [in] The first floating-point, 3D vector.
-/// \param y [in] The second floating-point, 3D vector.
-///
-/// Result is the cross product of x and y, i.e., the resulting
-/// components are, in order :
-/// x[1] * y[2] - y[1] * x[2]
-/// x[2] * y[0] - y[2] * x[0]
-/// x[0] * y[1] - y[0] * x[1]
-
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half3 cross(half3 x, half3 y) { return __detail::cross_impl(x, y); }
-
-constexpr float3 cross(float3 x, float3 y) {
-  return __detail::cross_impl(x, y);
-}
-
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
