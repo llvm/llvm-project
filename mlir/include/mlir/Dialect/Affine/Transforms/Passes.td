@@ -385,6 +385,8 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let options = [
     Option<"promoteSingleIter", "promote-single-iter", "bool",
            /*default=*/"true", "Promote single iteration loops">,
+    Option<"useExpensiveMath", "use-expensive-math", "bool", /*default=*/"false",
+           "Use the Presburger to constantize loop upper bounds (higher analysis cost)">
   ];
 }
 
@@ -463,19 +465,6 @@ def AffineFoldMemRefAliasOps : Pass<"affine-fold-memref-alias-ops"> {
     `memref` dialect but adds handling specific to affine operations.
   }];
   let dependentDialects = ["memref::MemRefDialect"];
-}
-
-def AffineLoopConstantizeBounds : Pass<"affine-loop-constantize-bounds"> {
-  let summary = "Constantize affine loop bounds using range analysis";
-  let description = [{
-    The pass leverages value range analysis (e.g., via the Presburger library)
-    to transform affine loops with dynamic symbolic bounds into a static-trip-count
-    main loop and a residual tail loop.
-
-    By rewriting the main loop to have strict compile-time constant bounds
-    (typically normalized to `0` to `TC_safe` with step `1`), it exposes the loop
-    body to downstream affine optimization pipelines.
-  }];
 }
 
 #endif // MLIR_DIALECT_AFFINE_PASSES
