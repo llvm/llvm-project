@@ -6,8 +6,6 @@ add_flang_library(FIRTransforms
   AffinePromotion.cpp
   AlgebraicSimplification.cpp
   AnnotateConstant.cpp
-  ArrayValueCopy.cpp
-  ArrayValueCopy.cpp
   AssumedRankOpConversion.cpp
   CUDA/CUFAddConstructor.cpp
   CUDA/CUFAllocationConversion.cpp

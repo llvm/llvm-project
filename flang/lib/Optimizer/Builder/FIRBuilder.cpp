@@ -1203,15 +1203,6 @@ fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
       [&](const auto &) { return fir::getTypeParams(exv); });
 }
 
-llvm::SmallVector<mlir::Value>
-fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
-                            fir::ArrayLoadOp load) {
-  mlir::Type memTy = load.getMemref().getType();
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(memTy))
-    return getFromBox(loc, builder, boxTy, load.getMemref());
-  return load.getTypeparams();
-}
-
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
                                         llvm::StringRef name) {
   // For "long" identifiers use a hash value
