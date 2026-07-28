@@ -65,8 +65,8 @@ LLVM_ABI extern const char *RunAsMainWrapperName;
 LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
 LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
 
-LLVM_ABI extern const char *DispatchName;
-LLVM_ABI extern const char *DispatchCtxName;
+LLVM_ABI extern const char *const DispatchName;
+LLVM_ABI extern const char *const DispatchCtxName;
 
 /// Symbol names for memory management implementation.
 /// FIXME: We should find a better home for this struct.
