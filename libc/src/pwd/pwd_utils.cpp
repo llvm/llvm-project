@@ -13,6 +13,7 @@
 
 #include "src/pwd/pwd_utils.h"
 #include "hdr/errno_macros.h"
+#include "hdr/types/struct_passwd.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
 #include "src/string/string_utils.h"
