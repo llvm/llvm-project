@@ -1148,4 +1148,53 @@ exit:
   ret i32 %iv
 }
 
+; %guard is equivalent to %iv slt smin(%n, 49).
+define void @smin_bound_requires_induction(i32 %n) {
+; CHECK-LABEL: @smin_bound_requires_induction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
+; CHECK-NEXT:    [[BOUND:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 49)
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP_BODY:%.*]], label [[LOOP_EXIT:%.*]]
+; CHECK:       loop.body:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_INC]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_INC]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_EXIT]]
+; CHECK:       loop.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pos = icmp sgt i32 %n, 0
+  call void @llvm.assume(i1 %pos)
+  %bound = call i32 @llvm.smin.i32(i32 %n, i32 49)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop.latch ]
+  %guard = icmp slt i32 %iv, %bound
+  br i1 %guard, label %loop.body, label %loop.exit
+
+loop.body:
+  call void @side_effect()
+  br label %loop.latch
+
+loop.latch:
+  %iv.inc = add i32 %iv, 1
+  %be.cond = icmp slt i32 %iv.inc, %bound
+  br i1 %be.cond, label %loop.header, label %loop.exit
+
+loop.exit:
+  ret void
+}
+
+declare i32 @llvm.smin.i32(i32, i32)
+declare void @llvm.assume(i1)
+
 !0 = !{i32 0, i32 2147483647}
