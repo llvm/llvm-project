@@ -97,7 +97,7 @@ void mock::MockLiboffload::initDefault() {
                             ol_device_info_t PropName, size_t PropSize,
                             void *PropValue) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
-        EXPECT_NE(PropSize, 0);
+        EXPECT_GT(PropSize, 0);
         EXPECT_NE(PropValue, nullptr);
 
         switch (PropName) {
@@ -166,7 +166,7 @@ void mock::MockLiboffload::initDefault() {
                             ol_program_handle_t *Program) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
-        EXPECT_NE(ProgDataSize, 0);
+        EXPECT_GT(ProgDataSize, 0);
         EXPECT_NE(Program, nullptr);
         *Program = mock::createDummyHandleWithData<ol_program_handle_t>(
             reinterpret_cast<unsigned char *>(&Device), sizeof(Device));
@@ -178,7 +178,7 @@ void mock::MockLiboffload::initDefault() {
                             size_t ProgDataSize, bool *Valid) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
-        EXPECT_NE(ProgDataSize, 0);
+        EXPECT_GT(ProgDataSize, 0);
         EXPECT_NE(Valid, nullptr);
         *Valid = true;
         return OL_SUCCESS;
