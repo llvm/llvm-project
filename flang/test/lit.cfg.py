@@ -132,6 +132,9 @@ config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 if config.default_sysroot:
     config.available_features.add("default_sysroot")
 
+if config.clang_default_unwindlib:
+    config.available_features.add(f"default-unwindlib={config.clang_default_unwindlib}")
+
 host_triple = config.host_triple.split("-")
 config.available_features.add(f"{host_triple[0]}-host")
 
