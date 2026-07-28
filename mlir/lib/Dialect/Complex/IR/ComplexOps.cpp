@@ -270,15 +270,6 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
     }
   }
 
-  // complex.add(complex.constant<0.0, 0.0>, a) -> a
-  if (auto constantOp = getLhs().getDefiningOp<ConstantOp>()) {
-    auto arrayAttr = constantOp.getValue();
-    if (llvm::cast<FloatAttr>(arrayAttr[0]).getValue().isZero() &&
-        llvm::cast<FloatAttr>(arrayAttr[1]).getValue().isZero()) {
-      return getRhs();
-    }
-  }
-
   return {};
 }
 
