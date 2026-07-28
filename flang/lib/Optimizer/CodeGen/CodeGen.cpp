@@ -3076,7 +3076,8 @@ struct XArrayCoorOpConversion
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
       // Wrap flags from the pre-cast step (keeps constants recognizable).
-      // Positive: nsw|nuw. Negative: nsw (result may be < 0). Zero/unknown: none.
+      // Positive: nsw|nuw. Negative: nsw (result may be < 0). Zero/unknown:
+      // none.
       mlir::LLVM::IntegerOverflowFlags indexFlags = addMulFlags;
       if (normalSlice) {
         mlir::Value stepOperand = operands[sliceOffset + 2];
