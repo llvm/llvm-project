@@ -154,7 +154,7 @@ unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
 }
 
 // Check if a sequence of tokens is like
-//    "#include ("header.h" | <header.h>)".
+//    "#(include | import) ("header.h" | <header.h>)".
 // If it is, \p Tok will be the token after this directive; otherwise, it can be
 // any token after the given \p Tok (including \p Tok).
 bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
@@ -163,7 +163,9 @@ bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
     return true;
   };
   if (Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
-      Tok.is(tok::raw_identifier) && Tok.getRawIdentifier() == "include") {
+      Tok.is(tok::raw_identifier) &&
+      (Tok.getRawIdentifier() == "include" ||
+       Tok.getRawIdentifier() == "import")) {
     if (Lex.LexFromRawLexer(Tok))
       return false;
     if (Tok.is(tok::string_literal))
@@ -246,7 +248,7 @@ inline StringRef trimInclude(StringRef IncludeName) {
 }
 
 const char IncludeRegexPattern[] =
-    R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
+    "^[\t ]*#[\t ]*(import|include)[^\"<]*([\"<][^\">]*[\">])";
 
 // The filename of Path excluding extension.
 // Used to match implementation with headers, this differs from sys::path::stem:
