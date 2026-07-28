@@ -1242,9 +1242,6 @@ public:
   // in addThunkSection() for more details.
   bool roundUpSizeForErrata = false;
 
-  // True for a ThunkSection placed immediately before its target section.
-  bool isPrefix = false;
-
 private:
   SmallVector<Thunk *, 0> thunks;
   size_t size = 0;
