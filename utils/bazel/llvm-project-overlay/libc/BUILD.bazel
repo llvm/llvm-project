@@ -8326,6 +8326,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
@@ -8758,8 +8759,9 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_gamma_util",
-        ":errno_macros",
-        ":fenv_macros",
+        ":__support_math_log",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
     ],
 )
 

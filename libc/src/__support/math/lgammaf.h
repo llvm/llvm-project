@@ -267,25 +267,26 @@ LIBC_INLINE float lgammaf(float x) {
         0x1.d1e293fa801bbp-18,  -0x1.38b436ce1b3b9p-19, 0x1.a838eec563338p-21,
         -0x1.1a6a9cf4aee4bp-22, 0x1.8387c2a068b06p-24,  -0x1.5ee6ae8c133f7p-25,
         0x1.f195cf3f4b24ep-27};
-    double d = abs_xd - MID_M3;
-    double d2 = d * d, d4 = d2 * d2, d8 = d4 * d4;
-    double p01 = fputil::multiply_add(d, POLY_M3[1], POLY_M3[0]);
-    double p23 = fputil::multiply_add(d, POLY_M3[3], POLY_M3[2]);
-    double p45 = fputil::multiply_add(d, POLY_M3[5], POLY_M3[4]);
-    double p67 = fputil::multiply_add(d, POLY_M3[7], POLY_M3[6]);
-    double p89 = fputil::multiply_add(d, POLY_M3[9], POLY_M3[8]);
-    double p1011 = fputil::multiply_add(d, POLY_M3[11], POLY_M3[10]);
-    double p1213 = fputil::multiply_add(d, POLY_M3[13], POLY_M3[12]);
-    double p1415 = fputil::multiply_add(d, POLY_M3[15], POLY_M3[14]);
-    double q03 = fputil::multiply_add(d2, p23, p01);
-    double q47 = fputil::multiply_add(d2, p67, p45);
-    double q811 = fputil::multiply_add(d2, p1011, p89);
-    double q1215 = fputil::multiply_add(d2, p1415, p1213);
-    double r07 = fputil::multiply_add(d4, q47, q03);
-    double r815 = fputil::multiply_add(d4, q1215, q811);
-    double poly = fputil::multiply_add(d8, r815, r07);
-    lgamma_val = (abs_xd - 2.0) * poly;
-    if (xbits.is_neg()) {
+    if (!xbits.is_neg()) {
+      double d = abs_xd - MID_M3;
+      double d2 = d * d, d4 = d2 * d2, d8 = d4 * d4;
+      double p01 = fputil::multiply_add(d, POLY_M3[1], POLY_M3[0]);
+      double p23 = fputil::multiply_add(d, POLY_M3[3], POLY_M3[2]);
+      double p45 = fputil::multiply_add(d, POLY_M3[5], POLY_M3[4]);
+      double p67 = fputil::multiply_add(d, POLY_M3[7], POLY_M3[6]);
+      double p89 = fputil::multiply_add(d, POLY_M3[9], POLY_M3[8]);
+      double p1011 = fputil::multiply_add(d, POLY_M3[11], POLY_M3[10]);
+      double p1213 = fputil::multiply_add(d, POLY_M3[13], POLY_M3[12]);
+      double p1415 = fputil::multiply_add(d, POLY_M3[15], POLY_M3[14]);
+      double q03 = fputil::multiply_add(d2, p23, p01);
+      double q47 = fputil::multiply_add(d2, p67, p45);
+      double q811 = fputil::multiply_add(d2, p1011, p89);
+      double q1215 = fputil::multiply_add(d2, p1415, p1213);
+      double r07 = fputil::multiply_add(d4, q47, q03);
+      double r815 = fputil::multiply_add(d4, q1215, q811);
+      double poly = fputil::multiply_add(d8, r815, r07);
+      lgamma_val = (abs_xd - 2.0) * poly;
+    } else {
       // Near the regular lgamma zero at x ~= -2.7475: subtractive cancellation
       // in the reflection formula kills precision. Use a Taylor expansion
       // centered at the zero. Range bits in (0x402f95c2, 0x40301b93).
