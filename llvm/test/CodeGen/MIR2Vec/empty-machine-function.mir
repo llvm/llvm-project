@@ -6,6 +6,8 @@
 # the zero vector instead.
 
 --- |
+  target triple = "x86_64-unknown-linux-gnu"
+
   define void @no_body() { ret void }
 
   define void @has_body() { ret void }
