@@ -156,6 +156,8 @@ Error SDTRewriter::postEmitFinalizer() {
     SDTNotePatcher->addLE64Patch(SDTInfo.PCOffset, NewAddress);
   }
 
+  SDTMarkers.clear();
+
   return Error::success();
 }
 

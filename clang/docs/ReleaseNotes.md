@@ -95,6 +95,10 @@ features cannot lower the translation-unit ABI level;
 
 #### C++2d Feature Support
 
+- Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
+  following new Unicode recommendations), applied as a DR to all C++ language
+  modes.
+
 #### C++2c Feature Support
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
@@ -345,6 +349,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
+- Fixed USR generation for declarations whose signature mentions a class-type
+  non-type template parameter. (#GH212351)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -380,6 +387,10 @@ features cannot lower the translation-unit ABI level;
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
+
+- Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
+  parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
+  Clang now diagnoses the error instead of asserting. (#GH211207)
 
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
@@ -427,6 +438,12 @@ features cannot lower the translation-unit ABI level;
 #### Android Support
 
 #### Windows Support
+
+- Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
+  over-aligned base class is followed by another base class. MSVC on Arm64 (but
+  not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
+  subsequent base; Clang now does the same.
+  ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
 
