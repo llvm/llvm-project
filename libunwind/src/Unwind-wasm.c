@@ -19,7 +19,8 @@
 #include "unwind.h"
 #include <threads.h>
 
-thread_local struct _Unwind_LandingPadContext __wasm_lpad_context;
+_LIBUNWIND_EXPORT thread_local struct _Unwind_LandingPadContext
+    __wasm_lpad_context;
 
 /// Called by __cxa_throw.
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
