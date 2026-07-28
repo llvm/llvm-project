@@ -335,3 +335,19 @@ func.func @fold_to_non_operand_value(%x: i64, %cond: i1) -> i64 {
   %cast2 = builtin.unrealized_conversion_cast %cast1 : index to i64
   return %cast2 : i64
 }
+
+// -----
+
+// SCCP propagates the constant attribute produced by llvm.mlir.undef's fold
+// (an LLVM::UndefAttr) into arith.bitcast's fold, which must gracefully bail
+// instead of asserting.
+
+// CHECK-LABEL: func @bitcast_of_foreign_constant_attr
+func.func @bitcast_of_foreign_constant_attr() -> f64 {
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i64
+  // CHECK: %[[CAST:.*]] = arith.bitcast %[[UNDEF]] : i64 to f64
+  // CHECK: return %[[CAST]] : f64
+  %0 = llvm.mlir.undef : i64
+  %1 = arith.bitcast %0 : i64 to f64
+  return %1 : f64
+}
