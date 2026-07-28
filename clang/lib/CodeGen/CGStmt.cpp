@@ -975,7 +975,11 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
   }
-  EmitBranch(ContBlock);
+  {
+    // There is no need to emit line number for an unconditional branch.
+    auto NL = ApplyDebugLocation::CreateEmpty(*this);
+    EmitBranch(ContBlock);
+  }
 
   // Emit the 'else' code if present.
   if (Else) {
