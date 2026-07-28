@@ -83,24 +83,25 @@ enum class MLGOModelChoice {
 };
 
 static llvm::cl::opt<MLGOModelChoice> SelectedMLGOModel(
-    "mlgo-model",
-    llvm::cl::desc("Select the MLGO model to execute:"),
+    "mlgo-model", llvm::cl::desc("Select the MLGO model to execute:"),
     llvm::cl::init(MLGOModelChoice::Default),
-    llvm::cl::values(
-        clEnumValN(MLGOModelChoice::Default, "default", "Use standard heuristic")
-#define MLGO_MODEL(CLASS_NAME, CLI_FLAG) \
-        , clEnumValN(MLGOModelChoice::CLASS_NAME, CLI_FLAG, "Use the " CLI_FLAG " MLGO model")
+    llvm::cl::values(clEnumValN(MLGOModelChoice::Default, "default",
+                                "Use standard heuristic")
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  , clEnumValN(MLGOModelChoice::CLASS_NAME, CLI_FLAG,                          \
+               "Use the " CLI_FLAG " MLGO model")
 #include "llvm/Analysis/MLGOModels.def"
-    )
-);
+                         ));
 
-static std::unique_ptr<MLModelRunner> createMLGOModelRunner(LLVMContext &Ctx, const std::vector<TensorSpec> &InputFeatures) {
+static std::unique_ptr<MLModelRunner>
+createMLGOModelRunner(LLVMContext &Ctx,
+                      const std::vector<TensorSpec> &InputFeatures) {
   switch (SelectedMLGOModel) {
-    case MLGOModelChoice::Default:
-      return nullptr;
-#define MLGO_MODEL(CLASS_NAME, CLI_FLAG) \
-    case MLGOModelChoice::CLASS_NAME: \
-      return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
+  case MLGOModelChoice::Default:
+    return nullptr;
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  case MLGOModelChoice::CLASS_NAME:                                            \
+    return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
 #include "llvm/Analysis/MLGOModels.def"
   }
   llvm_unreachable("Unknown MLGO model type!");
@@ -115,7 +116,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
 #if defined(LLVM_HAVE_EMITC_COMPILE_INLINER)
       && SelectedMLGOModel == MLGOModelChoice::Default
 #endif
-     )
+  )
     return nullptr;
   auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
       -> std::unique_ptr<MLModelRunner> {

@@ -22,8 +22,7 @@
 
 namespace llvm {
 
-template <class TGen>
-class EmitCModelRunner final : public MLModelRunner {
+template <class TGen> class EmitCModelRunner final : public MLModelRunner {
 public:
   template <class FType>
   EmitCModelRunner(LLVMContext &Ctx, const FType &InputSpec,

@@ -69,21 +69,23 @@ static llvm::cl::opt<MLGORegAllocModelChoice> SelectedMLGORegAllocModel(
     "regalloc-mlgo-model",
     llvm::cl::desc("Select the MLGO model to execute for register allocation:"),
     llvm::cl::init(MLGORegAllocModelChoice::Default),
-    llvm::cl::values(
-        clEnumValN(MLGORegAllocModelChoice::Default, "default", "Use standard heuristic")
-#define MLGO_MODEL(CLASS_NAME, CLI_FLAG) \
-        , clEnumValN(MLGORegAllocModelChoice::CLASS_NAME, CLI_FLAG, "Use the " CLI_FLAG " MLGO model")
+    llvm::cl::values(clEnumValN(MLGORegAllocModelChoice::Default, "default",
+                                "Use standard heuristic")
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  , clEnumValN(MLGORegAllocModelChoice::CLASS_NAME, CLI_FLAG,                  \
+               "Use the " CLI_FLAG " MLGO model")
 #include "llvm/CodeGen/RegAllocEvictModels.def"
-    )
-);
+                         ));
 
-static std::unique_ptr<MLModelRunner> createMLGORegAllocModelRunner(LLVMContext &Ctx, const std::vector<TensorSpec> &InputFeatures) {
+static std::unique_ptr<MLModelRunner>
+createMLGORegAllocModelRunner(LLVMContext &Ctx,
+                              const std::vector<TensorSpec> &InputFeatures) {
   switch (SelectedMLGORegAllocModel) {
-    case MLGORegAllocModelChoice::Default:
-      return nullptr;
-#define MLGO_MODEL(CLASS_NAME, CLI_FLAG) \
-    case MLGORegAllocModelChoice::CLASS_NAME: \
-      return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
+  case MLGORegAllocModelChoice::Default:
+    return nullptr;
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  case MLGORegAllocModelChoice::CLASS_NAME:                                    \
+    return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
 #include "llvm/CodeGen/RegAllocEvictModels.def"
   }
   llvm_unreachable("Unknown MLGO model type!");
@@ -406,7 +408,8 @@ public:
       if (InteractiveChannelBaseName.empty()) {
 #if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
         if (SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default) {
-          Runner = createMLGORegAllocModelRunner(MF.getFunction().getContext(), InputFeatures);
+          Runner = createMLGORegAllocModelRunner(MF.getFunction().getContext(),
+                                                 InputFeatures);
         } else
 #endif
         {
@@ -1064,7 +1067,8 @@ llvm::createReleaseModeAdvisorProvider(LLVMContext &Ctx) {
   return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
                  !InteractiveChannelBaseName.empty()
 #if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
-                 || SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default
+                 ||
+                 SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default
 #endif
              ? new ReleaseModeEvictionAdvisorProvider(Ctx)
              : nullptr;
@@ -1083,7 +1087,8 @@ llvm::createReleaseModeAdvisorAnalysisLegacy() {
   return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
                  !InteractiveChannelBaseName.empty()
 #if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
-                 || SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default
+                 ||
+                 SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default
 #endif
              ? new ReleaseModeEvictionAdvisorAnalysisLegacy()
              : nullptr;
