@@ -59,6 +59,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
+  // Make sure we can call `std::islessequal` with mixed-type promotions.
   {
     assert(!std::islessequal(2.0, 1));              // double vs int
     assert(std::islessequal(1, 2.0f));              // int vs float
