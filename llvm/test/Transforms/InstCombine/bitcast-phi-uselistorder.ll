@@ -11,9 +11,10 @@ define double @test(i1 %c, ptr %p) {
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load double, ptr @Q, align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[LOAD1]], [[IF]] ]
-; CHECK-NEXT:    store double [[TMP0]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    ret double [[TMP0]]
+; CHECK-NEXT:    [[CAST:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[LOAD1]], [[IF]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[CAST]] to i64
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret double [[CAST]]
 ;
 entry:
   br i1 %c, label %if, label %end

@@ -1306,6 +1306,13 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
     // x86_amx type happy.
     if (V->getType()->isX86_AMXTy())
       return false;
+    // Don't fold integer↔float bitcasts. Backends may canonicalize NaN
+    // values on floating-point loads/stores (e.g., x87) which would
+    // corrupt NaN payload bits stored through an integer type.
+    // See llvm/llvm-project#44497.
+    if (V->getType()->isFPOrFPVectorTy() !=
+        BC->getType()->isFPOrFPVectorTy())
+      return false;
     if (!SI.isAtomic() || isSupportedAtomicType(V->getType())) {
       combineStoreToNewValue(IC, SI, V);
       return true;
