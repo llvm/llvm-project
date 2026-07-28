@@ -40,7 +40,30 @@ public:
   virtual void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                               FunctionArgList &args) = 0;
 
+  virtual RValue emitCUDAKernelCallExpr(CIRGenFunction &cgf,
+                                        const CUDAKernelCallExpr *expr,
+                                        ReturnValueSlot retValue);
+
   virtual mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) = 0;
+
+  virtual mlir::Operation *getKernelStub(mlir::Operation *handle) = 0;
+
+  /// Adjust linkage of shadow variables in host compilation
+  virtual void internalizeDeviceSideVar(const VarDecl *d,
+                                        cir::GlobalLinkageKind &linkage) = 0;
+
+  /// Check whether a variable is a device variable and register it if true.
+  virtual void handleVarRegistration(const VarDecl *vd, cir::GlobalOp var) = 0;
+
+  /// Perform module finalization: on device side, mark ODR-used device
+  /// variables as compiler-used. Mirrors OG's CGCUDARuntime::finalizeModule.
+  virtual void finalizeModule() {}
+
+  /// Returns function or variable name on device side even if the current
+  /// compilation is for host.
+  virtual std::string getDeviceSideName(const NamedDecl *nd) = 0;
+
+  virtual void handleGlobalReplace(cir::GlobalOp oldGV, cir::GlobalOp newGV) {}
 };
 
 CIRGenCUDARuntime *createNVCUDARuntime(CIRGenModule &cgm);

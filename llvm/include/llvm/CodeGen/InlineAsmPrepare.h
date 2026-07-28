@@ -10,20 +10,13 @@
 #define LLVM_CODEGEN_INLINEASMPREPARE_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class TargetMachine;
-
-class InlineAsmPreparePass : public PassInfoMixin<InlineAsmPreparePass> {
-  const TargetMachine *TM;
-
+class InlineAsmPreparePass
+    : public RequiredPassInfoMixin<InlineAsmPreparePass> {
 public:
-  explicit InlineAsmPreparePass(const TargetMachine &TM) : TM(&TM) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

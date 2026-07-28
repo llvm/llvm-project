@@ -82,7 +82,7 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
 }
 
 void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
-                                   MemberAccess access, MethodOptions options,
+                                   MethodOptions options,
                                    MemberAttributes attrs) {
   clang::QualType method_qt =
       m_ast_builder.GetOrCreateClangType(PdbTypeSymId(type_idx));
@@ -99,11 +99,10 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
     }
   }
 
-  lldb::AccessType access_type = TranslateMemberAccess(access);
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct, access_type,
+      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct,
       attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
@@ -128,7 +127,12 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            VirtualBaseClassRecord &base) {
-  AddBaseClassForTypeIndex(base.BaseType, base.getAccess(), base.VTableIndex);
+  // Don't create indirect virtual bases. These records indicate that at least
+  // one base class C of this class virtually inherits the specified class.
+  // We already added that virtual base when creating C. There, it's present as
+  // LF_VBCLASS.
+  if (cvr.Kind == LF_VBCLASS)
+    AddBaseClassForTypeIndex(base.BaseType, base.getAccess(), base.VTableIndex);
 
   return Error::success();
 }
@@ -152,10 +156,8 @@ Error UdtRecordCompleter::visitKnownMember(
 
   CompilerType member_ct = m_ast_builder.ToCompilerType(member_type);
 
-  lldb::AccessType access =
-      TranslateMemberAccess(static_data_member.getAccess());
   auto decl = TypeSystemClang::AddVariableToRecordType(
-      m_derived_ct, static_data_member.Name, member_ct, access);
+      m_derived_ct, static_data_member.Name, member_ct);
 
   // Static constant members may be a const[expr] declaration.
   // Query the symbol's value as the variable initializer if valid.
@@ -177,10 +179,18 @@ Error UdtRecordCompleter::visitKnownMember(
 
         clang::QualType qual_type = decl->getType();
         unsigned type_width = decl->getASTContext().getIntWidth(qual_type);
-        unsigned constant_width = constant.Value.getBitWidth();
+
+        // Get the minimum bit width to encode this constant value.
+        // The bit width of the APSInt might be larger than the bits required to
+        // encode the value.
+        unsigned min_constant_width = 0;
+        if (qual_type->isUnsignedIntegerOrEnumerationType())
+          min_constant_width = constant.Value.getActiveBits();
+        else
+          min_constant_width = constant.Value.getSignificantBits();
 
         if (qual_type->isIntegralOrEnumerationType()) {
-          if (type_width >= constant_width) {
+          if (type_width >= min_constant_width) {
             TypeSystemClang::SetIntegerInitializerForVariable(
                 decl, constant.Value.extOrTrunc(type_width));
           } else {
@@ -189,7 +199,7 @@ Error UdtRecordCompleter::visitKnownMember(
                      "which resolves to a wider constant value ({4} bits). "
                      "Ignoring constant.",
                      m_derived_ct.GetTypeName(), static_data_member.Name,
-                     member_ct.GetTypeName(), type_width, constant_width);
+                     member_ct.GetTypeName(), type_width, min_constant_width);
           }
         } else {
           lldb::BasicType basic_type_enum = member_ct.GetBasicTypeEnumeration();
@@ -197,7 +207,7 @@ Error UdtRecordCompleter::visitKnownMember(
           case lldb::eBasicTypeFloat:
           case lldb::eBasicTypeDouble:
           case lldb::eBasicTypeLongDouble:
-            if (type_width == constant_width) {
+            if (type_width == min_constant_width) {
               TypeSystemClang::SetFloatingInitializerForVariable(
                   decl, basic_type_enum == lldb::eBasicTypeFloat
                             ? llvm::APFloat(constant.Value.bitsToFloat())
@@ -210,7 +220,7 @@ Error UdtRecordCompleter::visitKnownMember(
                   "which resolves to a constant value of mismatched width "
                   "({4} bits). Ignoring constant.",
                   m_derived_ct.GetTypeName(), static_data_member.Name,
-                  member_ct.GetTypeName(), type_width, constant_width);
+                  member_ct.GetTypeName(), type_width, min_constant_width);
             }
             break;
           default:
@@ -293,8 +303,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            OneMethodRecord &one_method) {
-  AddMethod(one_method.Name, one_method.Type, one_method.getAccess(),
-            one_method.getOptions(), one_method.Attrs);
+  AddMethod(one_method.Name, one_method.Type, one_method.getOptions(),
+            one_method.Attrs);
 
   return Error::success();
 }
@@ -311,8 +321,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
       method_list_type, method_list));
 
   for (const OneMethodRecord &method : method_list.Methods)
-    AddMethod(overloaded.Name, method.Type, method.getAccess(),
-              method.getOptions(), method.Attrs);
+    AddMethod(overloaded.Name, method.Type, method.getOptions(), method.Attrs);
 
   return Error::success();
 }
@@ -322,8 +331,24 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   Declaration decl;
   llvm::StringRef name = DropNameScope(enumerator.getName());
 
+  clang::EnumDecl *enum_decl = TypeSystemClang::GetAsEnumDecl(m_derived_ct);
+  if (!enum_decl)
+    return Error::success();
+
+  llvm::APSInt val = enumerator.Value;
+  clang::QualType int_ty = enum_decl->getIntegerType();
+  uint64_t n_bits = m_ast_builder.clang().getASTContext().getTypeSize(int_ty);
+  if (n_bits == 0)
+    return Error::success();
+
+  // MSVC encodes 64 Bit unsigned enum values as signed integers. For example,
+  // ULONGLONG_MAX will be encoded as -1. LLVM encodes all values as unsigned.
+  // Fix this by explicitly setting the bit width and signedness.
+  val = val.extOrTrunc(n_bits);
+  val.setIsSigned(int_ty->isSignedIntegerType());
+
   m_ast_builder.clang().AddEnumerationValueToEnumerationType(
-      m_derived_ct, decl, name.str().c_str(), enumerator.Value);
+      m_derived_ct, decl, name.str().c_str(), val);
   return Error::success();
 }
 
@@ -374,7 +399,7 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
   case Member::Field: {
     field_decl = TypeSystemClang::AddFieldToRecordType(
         parent_ct, field->name, m_ast_builder.ToCompilerType(field->qt),
-        field->access, field->bitfield_width);
+        field->bitfield_width);
     bit_size = field->bit_size;
     break;
   };
@@ -387,8 +412,8 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     metadata.SetUserID(pdb->anonymous_id);
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
-        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
-        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, metadata);
+        parent_decl_ctx, OptionalClangModuleID(), "", llvm::to_underlying(kind),
+        lldb::eLanguageTypeC_plus_plus, metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);
@@ -407,8 +432,8 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     TypeSystemClang::CompleteTagDeclarationDefinition(record_ct);
     clang::RecordDecl *record_decl = clang.GetAsRecordDecl(record_ct);
     m_ast_builder.GetClangASTImporter().SetRecordLayout(record_decl, layout);
-    field_decl = TypeSystemClang::AddFieldToRecordType(
-        parent_ct, "", record_ct, lldb::eAccessPublic, 0);
+    field_decl =
+        TypeSystemClang::AddFieldToRecordType(parent_ct, "", record_ct, 0);
     // Mark this record decl as completed.
     DeclStatus status;
     status.resolved = true;

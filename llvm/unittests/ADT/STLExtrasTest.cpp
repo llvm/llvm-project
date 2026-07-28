@@ -1170,7 +1170,7 @@ TEST(STLExtrasTest, getSingleElement) {
 }
 
 TEST(STLExtrasTest, hasNItems) {
-  const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
+  const std::list<int> V0 = {}, V1 = {1};
   const std::list<int> V3 = {1, 3, 5};
 
   EXPECT_TRUE(hasNItems(V0, 0));
@@ -1191,7 +1191,7 @@ TEST(STLExtrasTest, hasNItems) {
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
-  const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
+  const std::list<int> V1 = {1}, V2 = {1, 2};
   const std::list<int> V3 = {1, 3, 5};
 
   EXPECT_TRUE(hasNItemsOrMore(V1, 1));
@@ -1806,6 +1806,32 @@ struct Bar {};
 
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
+
+TEST(STLExtrasTest, HasEqualityComparison) {
+  struct NoEqualityComparison {};
+  static_assert(!has_equality_comparison_v<NoEqualityComparison>);
+
+  // Mutating equality comparison doesn't count.
+  struct MutatingEqualityComparison {
+    bool operator==(MutatingEqualityComparison &Other) { return false; }
+  };
+  static_assert(!has_equality_comparison_v<MutatingEqualityComparison>);
+
+  struct PublicEqualityComparison {
+    bool operator==(const PublicEqualityComparison &Other) const {
+      return false;
+    }
+  };
+  static_assert(has_equality_comparison_v<PublicEqualityComparison>);
+
+  struct StructA {};
+  struct StructB {
+    bool operator==(const StructA &Other) const { return false; }
+  };
+  static_assert(has_equality_comparison_v<StructB, StructA>);
+
+  SUCCEED();
+}
 
 TEST(STLExtrasTest, Search) {
   // Test finding a subsequence in the middle.

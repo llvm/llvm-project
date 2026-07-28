@@ -12,11 +12,6 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
@@ -219,17 +214,6 @@ public:
                                const char *session_dictionary_name,
                                const lldb::ProcessSP &process_sp);
 
-  static python::PythonObject
-  LLDBSWIGPython_CreateFrameRecognizer(const char *python_class_name,
-                                       const char *session_dictionary_name);
-
-  static PyObject *
-  LLDBSwigPython_GetRecognizedArguments(PyObject *implementor,
-                                        const lldb::StackFrameSP &frame_sp);
-
-  static bool LLDBSwigPython_ShouldHide(PyObject *implementor,
-                                        const lldb::StackFrameSP &frame_sp);
-
   static bool LLDBSWIGPythonRunScriptKeywordProcess(
       const char *python_function_name, const char *session_dictionary_name,
       const lldb::ProcessSP &process, std::string &output);
@@ -273,9 +257,9 @@ void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H

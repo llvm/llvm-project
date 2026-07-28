@@ -70,6 +70,44 @@ INTERPRETER OPTIONS
 
   Set the value of `llvm.vscale` to N. The default value is 4.
 
+.. option:: -seed=N
+
+  Set the seed for random number generator to N. By default, the seed is 0.
+
+.. option:: -undef-behavior=mode
+
+  Set the behavior for undefined values (e.g., load from uninitialized memory or freeze a poison value).
+  The options for `mode` are:
+
+  * `nondet`: Each load from the same uninitialized byte yields a freshly random value. This is the default behavior.
+  * `zero`: Uninitialized values are treated as zero.
+
+.. option:: -nan-behavior=mode
+
+  Set the behavior for payload preserving behavior of floating-point NaN values.
+  The options for `mode` are:
+
+  * `nondet`: The actual behavior is randomly chosen from the modes below. This is the default behavior.
+  * `preferred`: The quiet bit is set and the payload is all-zero.
+  * `quieting`: The quiet bit is set and the payload is copied from any input operand that is a NaN.
+  * `unchanged`: The quiet bit and payload are copied from any input operand that is a NaN.
+  * `target-specific`: The quiet bit is set and the payload is picked from a known target-specific set of extra possible NaN payloads.
+
+.. option:: -deterministic
+
+  Disable interpreter-introduced non-determinism (off by default).
+  This option implies '``-undef-behavior=zero``' and '``-nan-behavior=preferred``'.
+
+.. option:: -fuse-fmuladd
+
+  Treat '``llvm.fmuladd.*``' as '``llvm.fma.*``'. It is the default behavior.
+  Otherwise, it is expanded into a \* b + c.
+
+.. option:: -disable-verify
+
+  Disable the validation of the input LLVM IR. The user is responsible for the validity of inputs.
+  The verifier is executed by default.
+
 EXIT STATUS
 -----------
 

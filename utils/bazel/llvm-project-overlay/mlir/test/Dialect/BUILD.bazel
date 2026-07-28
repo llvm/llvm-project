@@ -9,8 +9,9 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
-            "EmitC/tosa/td.mlir",
+            "Builtin/Bytecode/builtin_fixed_0.mlirbc",
             "Vector/vector-sink-transform.mlir",
+            "//llvm:llc",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
             "//mlir:mlir-pdll",
@@ -29,7 +30,6 @@ package(default_visibility = ["//visibility:public"])
     for src in glob(
         include = ["**/*.mlir"],
         exclude = [
-            "EmitC/tosa/td.mlir",
             "IRDL/*.irdl.mlir",
             "Linalg/td/*.mlir",
             "Linalg/transpose-matmul-*.mlir",

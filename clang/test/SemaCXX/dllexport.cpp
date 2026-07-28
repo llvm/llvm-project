@@ -1131,3 +1131,28 @@ template<typename T> template<typename U> __declspec(dllexport) constexpr int CT
 //===----------------------------------------------------------------------===//
 // The MS ABI doesn't provide a stable mangling for lambdas, so they can't be imported or exported.
 auto Lambda = []() __declspec(dllexport) -> bool { return true; }; // non-gnu-error {{lambda cannot be declared 'dllexport'}}
+
+//===----------------------------------------------------------------------===//
+// Inherited constructors: unsupported export warnings
+//===----------------------------------------------------------------------===//
+
+struct VariadicBase {
+  VariadicBase(int, ...);
+};
+
+struct __declspec(dllexport) VariadicChild : VariadicBase {
+  using VariadicBase::VariadicBase; // expected-warning{{exporting inherited constructor is not yet supported; 'dllexport' ignored on inherited constructor with variadic arguments}}
+};
+
+struct NontrivialDtorParam {
+  int x;
+  ~NontrivialDtorParam();
+};
+
+struct CalleeCleanupBase {
+  CalleeCleanupBase(NontrivialDtorParam);
+};
+
+struct __declspec(dllexport) CalleeCleanupChild : CalleeCleanupBase {
+  using CalleeCleanupBase::CalleeCleanupBase; // ms-warning{{exporting inherited constructor is not yet supported; 'dllexport' ignored on inherited constructor with callee-cleanup parameters}}
+};

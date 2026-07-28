@@ -45,7 +45,10 @@ def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
 // ComplexType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
+def Builtin_Complex : Builtin_Type<"Complex", "complex",
+    [DeclareTypeInterfaceMethods<DenseElementTypeInterface,
+      ["getDenseElementBitSize", "convertToAttribute", "convertFromAttribute"]>
+    ]> {
   let summary = "Complex number with a parameterized element type";
   let description = [{
     Syntax:
@@ -560,7 +563,9 @@ def Builtin_Graph : Builtin_FunctionLike<"Graph", "graph">;
 //===----------------------------------------------------------------------===//
 
 def Builtin_Index : Builtin_Type<"Index", "index",
-    [VectorElementTypeInterface]> {
+    [DeclareTypeInterfaceMethods<DenseElementTypeInterface,
+      ["getDenseElementBitSize", "convertToAttribute", "convertFromAttribute"]>,
+     VectorElementTypeInterface]> {
   let summary = "Integer-like type with unknown platform-dependent bit width";
   let description = [{
     Syntax:
@@ -591,7 +596,10 @@ def Builtin_Index : Builtin_Type<"Index", "index",
 //===----------------------------------------------------------------------===//
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer",
-    [VectorElementTypeInterface, QuantStorageTypeInterface]> {
+    [VectorElementTypeInterface, QuantStorageTypeInterface,
+     DeclareTypeInterfaceMethods<DenseElementTypeInterface, [
+         "getDenseElementBitSize", "convertToAttribute",
+         "convertFromAttribute"]>]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -672,7 +680,13 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
 
     /// Get the storage type as a string.
     std::string getStorageTypeName(bool isSigned) const {
-      return (isSigned ? "i" : "u") + std::to_string(getWidth());
+      if (isSignless()) {
+        return (isSigned ? "i" : "u") + std::to_string(getWidth());
+      } else {
+        std::string s;
+        llvm::raw_string_ostream(s) << *this;
+        return s;
+      }
     }
 
     /// Check if this integer type uses packed representation.
@@ -1221,6 +1235,28 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Token : Builtin_Type<"Token", "token"> {
+  let summary = "Token type";
+  let description = [{
+    Syntax:
+
+    ```
+    token-type ::= `token`
+    ```
+
+    A use of a token SSA value is a pointer to an operation (in case of an
+    OpResult) or a pointer to a region (in case of an entry block argument).
+    A token carries no runtime data and cannot be forwarded. Tokens are
+    excluded from the `AnyType` type constraint. Operations must define
+    `TokenProducerTrait` to produce token results or token region entry block
+    arguments, and must define `TokenConsumerTrait` to consume token operands.
+  }];
 }
 
 //===----------------------------------------------------------------------===//

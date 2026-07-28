@@ -3,12 +3,11 @@
 ; instructions are reordered.
 
 ; RUN: opt %s  -strip-debug -o %t.no_debug.ll -S
-; RUN: llc -O2 -mcpu=gfx1250 < %s             -misched=gcn-iterative-ilp -filetype=obj -o %t.with_debug.o
-; RUN: llc -O2 -mcpu=gfx1250 < %t.no_debug.ll -misched=gcn-iterative-ilp -filetype=obj -o %t.no_debug.o
+; RUN: llc -O2 -mtriple=amdgpu12.50-amd-amdhsa < %s             -misched=gcn-iterative-ilp -filetype=obj -o %t.with_debug.o
+; RUN: llc -O2 -mtriple=amdgpu12.50-amd-amdhsa < %t.no_debug.ll -misched=gcn-iterative-ilp -filetype=obj -o %t.no_debug.o
 ; RUN: llvm-strip %t.with_debug.o %t.no_debug.o
 ; RUN: cmp %t.with_debug.o %t.no_debug.o
 
-target triple = "amdgcn-amd-amdhsa"
 
 declare void @llvm.amdgcn.s.barrier() #0
 
@@ -17,7 +16,7 @@ entry:
     #dbg_value(ptr addrspace(1) null, !4, !DIExpression(), !13)
   tail call void @llvm.amdgcn.s.barrier()
   fence acquire
-  store float 0.000000e+00, ptr addrspace(3) null, align 4
+  store float 0.000000e+00, ptr addrspace(3) zeroinitializer, align 4
   %f26 = fsub <2 x float> %f14, %f33
   %f27 = shufflevector <2 x float> %f26, <2 x float> zeroinitializer, <14 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %f28 = shufflevector <14 x float> zeroinitializer, <14 x float> %f27, <14 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15>

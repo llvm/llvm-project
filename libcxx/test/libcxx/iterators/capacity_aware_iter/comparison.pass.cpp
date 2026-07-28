@@ -22,6 +22,7 @@
 // operator<=>
 
 #include <__iterator/capacity_aware_iterator.h>
+#include <cassert>
 #include <compare>
 #include <concepts>
 #include <iterator>

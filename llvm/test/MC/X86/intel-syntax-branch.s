@@ -1,7 +1,7 @@
-// RUN: llvm-mc -triple i686-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s --check-prefixes=CHECK-32,CHECK
-// RUN: llvm-mc -triple x86_64-unknown-unknown --defsym X64=1 -x86-asm-syntax=intel %s | FileCheck %s --check-prefixes=CHECK-64,CHECK
+// RUN: llvm-mc -triple i686-unknown-unknown -x86-asm-syntax=intel --output-asm-variant=0 %s | FileCheck %s --check-prefixes=CHECK-32,CHECK
+// RUN: llvm-mc -triple x86_64-unknown-unknown --defsym X64=1 -x86-asm-syntax=intel --output-asm-variant=0 %s | FileCheck %s --check-prefixes=CHECK-64,CHECK
 
-// RUN: not llvm-mc -triple i686-unknown-unknown --defsym ERR=1 -x86-asm-syntax=intel %s 2>&1 | FileCheck %s --check-prefixes=ERR-32
+// RUN: not llvm-mc -triple i686-unknown-unknown --defsym ERR=1 -x86-asm-syntax=intel --output-asm-variant=0 %s 2>&1 | FileCheck %s --check-prefixes=ERR-32
 
 t0:
 call direct_branch

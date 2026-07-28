@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the aspect enumeration, which is used
+/// to identify characteristics of the device.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL___IMPL_ASPECT_HPP
 #define _LIBSYCL___IMPL_ASPECT_HPP

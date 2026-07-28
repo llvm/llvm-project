@@ -10,8 +10,10 @@
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -23,17 +25,56 @@ using namespace lldb_private;
 using namespace lldb;
 
 namespace {
+class MockABI : public ABI {
+public:
+  // The only relevant method of this ABI:
+  lldb::addr_t FixAnyAddress(lldb::addr_t pc) override {
+    return pc & 0xf0ffffffffffffffULL;
+  }
+
+  explicit MockABI(ProcessSP process_sp)
+      : ABI(std::move(process_sp), std::make_unique<llvm::MCRegisterInfo>()) {}
+  static ABISP CreateInstance(ProcessSP process_sp, const ArchSpec &) {
+    return std::make_shared<MockABI>(std::move(process_sp));
+  }
+  llvm::StringRef GetPluginName() override { return "mock"; }
+  size_t GetRedZoneSize() const override { return 0; }
+  bool PrepareTrivialCall(Thread &, addr_t, addr_t, addr_t,
+                          llvm::ArrayRef<addr_t>) const override {
+    return false;
+  }
+  bool GetArgumentValues(Thread &, ValueList &) const override { return false; }
+  Status SetReturnValueObject(StackFrameSP &, ValueObjectSP &) override {
+    return {};
+  }
+  UnwindPlanSP CreateFunctionEntryUnwindPlan() override { return nullptr; }
+  UnwindPlanSP CreateDefaultUnwindPlan() override { return nullptr; }
+  bool RegisterIsVolatile(const RegisterInfo *) override { return false; }
+  bool CallFrameAddressIsValid(addr_t) override { return false; }
+  bool CodeAddressIsValid(addr_t) override { return false; }
+  void
+  AugmentRegisterInfo(std::vector<DynamicRegisterInfo::Register> &) override {}
+
+protected:
+  ValueObjectSP GetReturnValueObjectImpl(Thread &,
+                                         CompilerType &) const override {
+    return nullptr;
+  }
+};
+
 class MemoryTest : public ::testing::Test {
 public:
   void SetUp() override {
     FileSystem::Initialize();
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
+    PluginManager::RegisterPlugin("mock", "mock ABI", MockABI::CreateInstance);
   }
   void TearDown() override {
     PlatformMacOSX::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
+    PluginManager::UnregisterPlugin(MockABI::CreateInstance);
   }
 };
 
@@ -366,7 +407,7 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
   {
     llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
     llvm::SmallVector<Range<addr_t, size_t>> ranges = {
-        {0x12345, 128}, {0x11112222, 128}, {0x77777777, 128}};
+        {0x6789, 128}, {0x333344444, 128}, {0x99999999, 128}};
     llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
         dummy_process.ReadMemoryRanges(ranges, buffer);
     for (auto [range, memory] : llvm::zip(ranges, read_results)) {
@@ -520,4 +561,144 @@ TEST_F(MemoryTest, TestReadCStringsFromMemory) {
   for (auto [maybe_str, expected_answer] :
        llvm::zip(expected_valid_strings, expected_answers))
     EXPECT_EQ(maybe_str, expected_answer);
+}
+
+TEST_F(MemoryTest, TestReadPointersFromMemory) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process);
+
+  // Read pointers at arbitrary addresses.
+  llvm::SmallVector<addr_t> ptr_locs = {0x0, 0x100, 0x2000, 0x123400};
+  // Because of how DummyReaderProcess works, each byte of a memory read result
+  // is its address modulo 256:
+  constexpr addr_t expected_result = 0x0706050403020100;
+
+  llvm::SmallVector<std::optional<addr_t>> read_results =
+      process->ReadPointersFromMemory(ptr_locs);
+
+  for (std::optional<addr_t> maybe_ptr : read_results) {
+    ASSERT_TRUE(maybe_ptr.has_value());
+    EXPECT_EQ(*maybe_ptr, expected_result);
+  }
+}
+
+TEST_F(MemoryTest, TestReadUnsignedIntegersFromMemory) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process);
+
+  { // Test reads of size 1
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/1);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      EXPECT_EQ(*maybe_int, static_cast<uint8_t>(loc));
+    }
+  }
+
+  { // Test reads of size 2
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/2);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      uint64_t lsb = static_cast<uint8_t>(loc);
+      uint64_t expected_result = ((lsb + 1) << 8) | lsb;
+      EXPECT_EQ(*maybe_int, expected_result);
+    }
+  }
+
+  { // Test reads of size 4
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/4);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      uint64_t lsb = static_cast<uint8_t>(loc);
+      uint64_t expected_result =
+          ((lsb + 3) << 24) | ((lsb + 2) << 16) | ((lsb + 1) << 8) | lsb;
+      EXPECT_EQ(*maybe_int, expected_result);
+    }
+  }
+
+  { // Test reads of size 8
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/8);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      uint64_t lsb = static_cast<uint8_t>(loc);
+      uint64_t expected_result = ((lsb + 7) << 56) | ((lsb + 6) << 48) |
+                                 ((lsb + 5) << 40) | ((lsb + 4) << 32) |
+                                 ((lsb + 3) << 24) | ((lsb + 2) << 16) |
+                                 ((lsb + 1) << 8) | lsb;
+      EXPECT_EQ(*maybe_int, expected_result);
+    }
+  }
+}
+
+// A process that, when asked to read memory from address X, returns the top
+// byte of X.
+class DummyMSBReaderProcess : public Process {
+public:
+  // Only call this method with exactly one range.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buffer) override {
+    buffer[0] = static_cast<uint8_t>(ranges[0].GetRangeBase() >> 56);
+    return {{buffer.take_front(1)}};
+  }
+  // Boilerplate, nothing interesting below.
+  DummyMSBReaderProcess(TargetSP target_sp, ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+  bool CanDebug(TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
+  size_t DoReadMemory(addr_t, void *, size_t, Status &) override {
+    llvm_unreachable("don't call this");
+  }
+};
+
+TEST_F(MemoryTest, TestReadMemoryRangesClearMetadata) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyMSBReaderProcess>(target_sp, listener_sp);
+
+  llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0xff0123456789abcd, 1}};
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process_sp->ReadMemoryRanges(ranges, buffer);
+  ASSERT_EQ(read_results.size(), 1ull);
+  ASSERT_EQ(read_results[0].size(), 1ull);
+  ASSERT_EQ(read_results[0][0], 0xf0); // The ABI masks with 0xf0.
 }

@@ -154,15 +154,14 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
 
 std::optional<SmallVector<int64_t>>
 getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
-  bool failed = false;
-  SmallVector<int64_t> res = llvm::map_to_vector(ofrs, [&](OpFoldResult ofr) {
+  SmallVector<int64_t> res;
+  res.reserve(ofrs.size());
+  for (OpFoldResult ofr : ofrs) {
     auto cv = getConstantIntValue(ofr);
     if (!cv.has_value())
-      failed = true;
-    return cv.value_or(0);
-  });
-  if (failed)
-    return std::nullopt;
+      return std::nullopt;
+    res.push_back(cv.value());
+  }
   return res;
 }
 
@@ -322,6 +321,12 @@ std::optional<APInt> constantTripCount(
     // Note: LB and UB could match at runtime, even though they are different
     // SSA values. That case cannot be detected here.
     return APInt(bitwidth, 0);
+  }
+  if (isZeroInteger(lb) && ub == step) {
+    // Fast path: LB == 0 && UB == step. The loop has a single iteration.
+    // Note: LB and UB could match at runtime, even though they are different
+    // SSA values. That case cannot be detected here.
+    return APInt(bitwidth, 1);
   }
 
   std::optional<std::pair<APInt, bool>> maybeStepCst =

@@ -11,6 +11,15 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ACCEmitNYIFlang
+    : Pass<"acc-emit-nyi-flang", "mlir::ModuleOp"> {
+  let summary = "Emit not-yet-implemented messages for OpenACC";
+  let description = [{
+    Emits not-yet-implemented messages for OpenACC directives that are not yet
+    supported through code generation.
+  }];
+}
+
 def ACCInitializeFIRAnalyses
     : Pass<"acc-initialize-fir-analyses", "mlir::ModuleOp"> {
   let summary = "Initialize FIR analyses for OpenACC passes";
@@ -18,9 +27,14 @@ def ACCInitializeFIRAnalyses
     This pass initializes analyses that can be used by subsequent OpenACC passes
     in the pipeline. It creates and caches the OpenACCSupport analysis with a
     FIR-specific implementation that can handle FIR types and operations.
-    It also initializes FIR's AliasAnalysis for use in OpenACC passes.
+    It can also initialize FIR's AliasAnalysis for use in OpenACC passes.
     This pass needs to rerun if any analyses were invalidated by MLIR's framework.
   }];
+  let options = [
+    Option<"addFIRAliasAnalysis", "add-fir-alias-analysis", "bool",
+           /*default=*/"true",
+           "Initialize FIR AliasAnalysis for use by subsequent OpenACC passes.">
+  ];
   // In addition to pre-registering the needed analyses, this pass also
   // pre-registers the dialects that various OpenACC passes may generate.
   let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
@@ -68,6 +82,19 @@ def ACCUseDeviceCanonicalizer
     runtime calls.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
+def ACCDeclareActionConversion
+    : Pass<"acc-declare-action-conversion", "mlir::ModuleOp"> {
+  let summary = "Convert acc declare action attributes to function calls";
+  let description = [{
+    Implements OpenACC specification (section 2.13.2 in OpenACC 3.4) for
+    allocation/deallocation actions of allocatables and pointers in declare
+    directives. Lowering generates recipe functions and marks the operations
+    that allocate or deallocate the object; this pass finds those operations
+    and inserts calls to the corresponding recipes.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect"];
 }
 
 def ACCOptimizeFirstprivateMap

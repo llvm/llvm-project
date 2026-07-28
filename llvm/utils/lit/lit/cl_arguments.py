@@ -19,7 +19,8 @@ class TestOrder(enum.Enum):
 class TestOutputLevel(enum.IntEnum):
     OFF = 0
     FAILED = 1
-    ALL = 2
+    FAILED_OR_FLAKY = 2
+    ALL = 3
 
     @classmethod
     def create(cls, value):
@@ -27,6 +28,8 @@ class TestOutputLevel(enum.IntEnum):
             return cls.OFF
         if value == "failed":
             return cls.FAILED
+        if value == "failed-or-flaky":
+            return cls.FAILED_OR_FLAKY
         if value == "all":
             return cls.ALL
         raise ValueError(f"invalid output level {repr(value)} of type {type(value)}")
@@ -51,6 +54,10 @@ class TestOutputAction(argparse.Action):
         ) > TestOutputLevel.create(value):
             setattr(namespace, "test_output", value)
 
+
+_TIME_TESTS_OPT = "--time-tests"
+_TIME_TESTS_SLOWEST_DEFAULT = 20
+_TIME_TESTS_PREFIX = f"{_TIME_TESTS_OPT}="
 
 class AliasAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -112,7 +119,7 @@ def parse_args():
         "--test-output",
         help="Control whether the executed commands and their outputs are printed after each test has executed (default off). "
         "If --print-result-after is set lower than the level given to --test-output, --print-result-after is raised to match.",
-        choices=["off", "failed", "all"],
+        choices=["off", "failed", "failed-or-flaky", "all"],
         default="off",
         action=TestOutputAction,
     )
@@ -120,7 +127,7 @@ def parse_args():
         "--print-result-after",
         help="Control which the executed test names and results are printed after each test has executed (default all). "
         "If --test-output is set higher than the level given to --print-result-after, --test-output is lowered to match.",
-        choices=["off", "failed", "all"],
+        choices=["off", "failed", "failed-or-flaky", "all"],
         default="all",
         action=TestOutputAction,
     )
@@ -232,6 +239,14 @@ def parse_args():
         help="Do not use curses based progress bar (default)",
         action="store_false",
     )
+    format_group.add_argument(
+        "--min-output-interval",
+        dest="minOutputInterval",
+        help="Limit updates to progressbar to at most once per INTERVAL, in seconds. Set to 0 to disable ratelimit (default - no ratelimit).",
+        default=0.0,
+        metavar="INTERVAL",
+        type=_non_negative_float,
+    )
 
     # Note: this does not generate flags for user-defined result codes.
     success_codes = [c for c in lit.Test.ResultCode.all_codes() if not c.isFailure]
@@ -264,6 +279,16 @@ def parse_args():
         action="append",
         default=[],
         type=os.path.abspath,
+    )
+    execution_group.add_argument(
+        "--pass-env",
+        dest="pass_env",
+        metavar="NAME",
+        help="Pass the named environment variable through to the test"
+        " environment (in addition to the built-in allow-list). May be"
+        " specified multiple times.",
+        action="append",
+        default=[],
     )
     execution_group.add_argument(
         "--vg", dest="useValgrind", help="Run tests under valgrind", action="store_true"
@@ -371,9 +396,12 @@ def parse_args():
         action="store_true",
     )
     execution_test_time_group.add_argument(
-        "--time-tests",
-        help="Track elapsed wall time for each test printed in a histogram",
+        _TIME_TESTS_OPT,
+        help="Track elapsed wall time for each test and print a histogram; "
+        "optionally limit the slowest-test list with =N or report all with =all "
+        f"(default slowest count: {_TIME_TESTS_SLOWEST_DEFAULT})",
         action="store_true",
+        default=None,
     )
 
     selection_group = parser.add_argument_group("Test Selection")
@@ -454,6 +482,20 @@ def parse_args():
         action="store_true",
     )
     selection_group.add_argument(
+        "--unsupported",
+        metavar="LIST",
+        type=_semicolon_list,
+        help="Mark tests with paths in the semicolon separated list as UNSUPPORTED",
+        default=os.environ.get("LIT_UNSUPPORTED", ""),
+    )
+    selection_group.add_argument(
+        "--unsupported-not",
+        metavar="LIST",
+        type=_semicolon_list,
+        help="Do not mark tests with paths in the semicolon separated list as UNSUPPORTED",
+        default=os.environ.get("LIT_UNSUPPORTED_NOT", ""),
+    )
+    selection_group.add_argument(
         "--num-shards",
         dest="numShards",
         metavar="M",
@@ -490,8 +532,21 @@ def parse_args():
 
     # LIT is special: environment variables override command line arguments.
     env_args = shlex.split(os.environ.get("LIT_OPTS", ""))
-    args = sys.argv[1:] + env_args
+    try:
+        # --time-tests is preprocessed here: bare --time-tests defaults to 20,
+        # and --time-tests=N / --time-tests=all set the slowest-test limit.
+        # Values must use = (e.g. --time-tests=all), since `lit --time-tests all`
+        # could mean "show all slow tests" or "run the test directory all".
+        args, time_tests = _extract_time_tests_args(sys.argv[1:] + env_args)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
     opts = parser.parse_args(args)
+    opts.time_tests = time_tests
+
+    if opts.time_tests is not None and opts.skip_test_time_recording:
+        parser.error(
+            f"argument --skip-test-time-recording: not allowed with argument {_TIME_TESTS_OPT}"
+        )
 
     # Validate command line options
     if opts.incremental:
@@ -530,6 +585,28 @@ def _positive_int(arg):
     return _int(arg, "positive", lambda i: i > 0)
 
 
+def _time_tests_count(arg):
+    if arg.lower() == "all":
+        return "all"
+    return _positive_int(arg)
+
+
+def _extract_time_tests_args(args):
+    processed = []
+    time_tests = None
+    for arg in args:
+        if arg == _TIME_TESTS_OPT:
+            time_tests = _TIME_TESTS_SLOWEST_DEFAULT
+        elif arg.startswith(_TIME_TESTS_PREFIX):
+            value = arg[len(_TIME_TESTS_PREFIX) :]
+            if not value:
+                raise _error(f"argument {_TIME_TESTS_OPT} requires a value after '='")
+            time_tests = _time_tests_count(value)
+        else:
+            processed.append(arg)
+    return processed, time_tests
+
+
 def _non_negative_int(arg):
     return _int(arg, "non-negative", lambda i: i >= 0)
 
@@ -543,6 +620,24 @@ def _int(arg, kind, pred):
     if not pred(i):
         raise _error(desc, kind, arg)
     return i
+
+
+def _non_negative_float(arg):
+    return _float(arg, "non-negative", lambda f: f >= 0.0)
+
+
+def _float(arg, kind, pred):
+    try:
+        f = float(arg)
+        if not pred(f):
+            raise argparse.ArgumentTypeError(
+                f"requires {kind} float, but found '{arg}'"
+            )
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"conversion error - requires {kind} float, but found '{arg}'"
+        )
+    return f
 
 
 def _case_insensitive_regex(arg):

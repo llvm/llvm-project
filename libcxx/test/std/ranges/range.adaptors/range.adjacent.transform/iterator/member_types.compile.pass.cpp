@@ -15,6 +15,7 @@
 #include <ranges>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "test_iterators.h"
 
@@ -137,6 +138,10 @@ void test() {
   test<GetFirst, 1, int, false>();
   test<GetFirst, 2, int, false>();
   test<GetFirst, 3, int, false>();
+
+  test<GetFirstAsXvalue, 1, int, false>();
+  test<GetFirstAsXvalue, 2, int, false>();
+  test<GetFirstAsXvalue, 3, int, false>();
 
   test<Multiply, 1, int, true>();
   test<Multiply, 2, int, true>();

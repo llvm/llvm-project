@@ -261,6 +261,15 @@ bool ThreadElfCore::CalculateStopInfo() {
     }
   }
 
+  // The above code references the siginfo_t bytes from the NT_SIGINFO note.
+  // This is not the only way to get a signo in an ELF core, and so
+  // ThreadELFCore has a m_signo variable for these cases, which is populated
+  // with a non-zero value when there is no NT_SIGINFO note. However if this is
+  // 0, it's the default value and we have no valid signal and should not report
+  // a stop info.
+  if (m_signo == 0 && m_siginfo_bytes.empty())
+    return false;
+
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   return true;
 }
@@ -494,7 +503,7 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
 
   constexpr size_t fname_len = std::extent_v<decltype(prpsinfo.pr_fname)>;
   static_assert(fname_len > 0, "This should always be non zero");
-  const llvm::StringRef fname = info.GetNameAsStringRef();
+  const llvm::StringRef fname = info.GetName();
   auto fname_begin = fname.begin();
   std::copy_n(fname_begin, std::min(fname_len, fname.size()),
               prpsinfo.pr_fname);

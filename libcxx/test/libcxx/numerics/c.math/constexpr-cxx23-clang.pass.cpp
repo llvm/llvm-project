@@ -22,6 +22,9 @@
 // We don't control the implementation of these functions on windows
 // UNSUPPORTED: windows
 
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cmath>
 #include <cstdlib>
 #include <cassert>
@@ -200,9 +203,9 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmaf(1.0f, 1.0f, 1.0f) == 2.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmal(1.0L, 1.0L, 1.0L) == 2.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0f) == FP_NORMAL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0) == FP_NORMAL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fpclassify(-1.0L) == FP_NORMAL);
+  ASSERT_CONSTEXPR_CXX23(std::fpclassify(-1.0f) == FP_NORMAL);
+  ASSERT_CONSTEXPR_CXX23(std::fpclassify(-1.0) == FP_NORMAL);
+  ASSERT_CONSTEXPR_CXX23(std::fpclassify(-1.0L) == FP_NORMAL);
 
   ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0f) == 1);
   ASSERT_CONSTEXPR_CXX23(std::isfinite(-1.0) == 1);

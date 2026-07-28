@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize64 -disassemble -o - %s | FileCheck %s
+# RUN: llvm-mc -triple=amdgpu12.50 -mattr=+wavefrontsize64 -disassemble -o - %s | FileCheck %s
 
 # Make sure there's no assertion when trying to use an unsupported
 # wave64 on a wave32-only target

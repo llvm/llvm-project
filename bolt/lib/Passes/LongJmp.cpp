@@ -22,8 +22,6 @@ using namespace llvm;
 namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
-extern llvm::cl::opt<unsigned> AlignText;
-extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
@@ -317,7 +315,9 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
 uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
     uint64_t DotAddress) {
-  DotAddress = alignTo(DotAddress, llvm::Align(opts::AlignFunctions));
+  DotAddress =
+      alignTo(DotAddress, std::max<uint64_t>(BC.AlignFunctions,
+                                             BC.MaxColdCodeAlignment.load()));
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
@@ -330,8 +330,10 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
     DotAddress += Func->estimateColdSize();
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
   }
   return DotAddress;
 }
@@ -367,10 +369,15 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
   auto runColdLayout = [&]() {
+    // Mirror the extra hugify alignment inserted by final section allocation
+    // after the last non-cold section. Account for it before assigning cold
+    // fragment addresses so range checks see the hot-to-cold gap.
+    if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
+      DotAddress = alignTo(DotAddress, BC.AlignText);
     DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
     ColdLayoutDone = true;
     if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
   };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
@@ -394,8 +401,10 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     else
       DotAddress += Func->estimateHotSize();
 
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
     ++CurrentIndex;
   }
 
@@ -435,16 +444,18 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
     // Initial padding
     if (EstimatedTextSize <= BC.OldTextSectionSize) {
       DotAddress = BC.OldTextSectionAddress;
-      uint64_t Pad =
-          offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
+      uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.AlignText));
       if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
         DotAddress += Pad;
       }
     }
   }
 
-  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize)
-    DotAddress = alignTo(BC.LayoutStartAddress, opts::AlignText);
+  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
+    uint64_t TextAlign =
+        std::max<uint64_t>(BC.AlignText, BC.MaxMainCodeAlignment.load());
+    DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
+  }
 
   tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
 }
@@ -818,13 +829,25 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
         return;
       }
 
-      // Insert a new block after the current one and use it as a trampoline.
+      // If the other successor is a fall-through, invert the condition code.
+      BinaryBasicBlock *NextBB =
+          BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
+      bool IsReversibleBranch = MIB->isReversibleBranch(Inst);
+      bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
+
+      // Create a trampoline basic block for the fall-through target of the
+      // branch if its condition cannot be inverted.
+      if (ShouldReverseBranch && !IsReversibleBranch) {
+        const uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
+        BinaryBasicBlock *FallThrough =
+            addTrampolineAfter(BB, NextBB, NextCount);
+        BB->replaceSuccessor(NextBB, FallThrough, NextCount);
+      }
+
+      // Create a trampoline basic block for the taken target of the branch.
       TrampolineBB = addTrampolineAfter(BB, TargetBB, Count);
 
-      // If the other successor is a fall-through, invert the condition code.
-      const BinaryBasicBlock *const NextBB =
-          BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      if (BB->getConditionalSuccessor(false) == NextBB) {
+      if (ShouldReverseBranch && IsReversibleBranch) {
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
         MIB->reverseBranchCondition(Inst, NextBB->getLabel(), BC.Ctx.get());

@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -74,8 +75,23 @@ STATISTIC(NumTailMerge , "Number of block tails merged");
 STATISTIC(NumHoist     , "Number of times common instructions are hoisted");
 STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 
-static cl::opt<cl::boolOrDefault> FlagEnableTailMerge("enable-tail-merge",
-                              cl::init(cl::BOU_UNSET), cl::Hidden);
+static cl::opt<cl::boolOrDefault>
+    FlagEnableTailMerge("enable-tail-merge",
+                        cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
+
+// Override the common-code hoisting sub-phase of BranchFolding. Unset by
+// default, in which case the value configured by the caller is used.
+static cl::opt<cl::boolOrDefault> FlagEnableHoistCommonCode(
+    "branch-folder-hoist-common-code", cl::init(cl::boolOrDefault::BOU_UNSET),
+    cl::Hidden,
+    cl::desc("Override common-code hoisting in the BranchFolding pass"));
+
+// Override the basic-block reordering sub-phase of BranchFolding. Unset by
+// default, in which case the value configured by the caller is used.
+static cl::opt<cl::boolOrDefault> FlagEnableBlockReordering(
+    "branch-folder-reorder-blocks", cl::init(cl::boolOrDefault::BOU_UNSET),
+    cl::Hidden,
+    cl::desc("Override basic-block reordering in the BranchFolding pass"));
 
 // Throttle for huge numbers of predecessors (compile speed problems)
 static cl::opt<unsigned>
@@ -93,10 +109,16 @@ namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
 class BranchFolderLegacy : public MachineFunctionPass {
+  bool EnableCommonHoist;
+  bool EnableBasicBlockReordering;
+
 public:
   static char ID;
 
-  explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
+  explicit BranchFolderLegacy(bool EnableCommonHoist = true,
+                              bool EnableBasicBlockReordering = true)
+      : MachineFunctionPass(ID), EnableCommonHoist(EnableCommonHoist),
+        EnableBasicBlockReordering(EnableBasicBlockReordering) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -105,6 +127,7 @@ public:
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -137,19 +160,14 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
         "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
 
   auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
+  Folder.setBasicBlockReordering(true);
   if (Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
                               MF.getSubtarget().getRegisterInfo()))
     return getMachineFunctionPassPreservedAnalyses();
 
-  if (MDT)
-    MDT->updateBlockNumbers();
-  if (MPDT)
-    MPDT->updateBlockNumbers();
   return PreservedAnalyses::all();
 }
 
@@ -165,9 +183,10 @@ bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   MBFIWrapper MBBFreqInfo(
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   BranchFolder Folder(
-      EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
+      EnableTailMerge, EnableCommonHoist, MBBFreqInfo,
       getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI(),
       &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
+  Folder.setBasicBlockReordering(EnableBasicBlockReordering);
   return Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
                                  MF.getSubtarget().getRegisterInfo());
 }
@@ -176,14 +195,19 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
                            MBFIWrapper &FreqInfo,
                            const MachineBranchProbabilityInfo &ProbInfo,
                            ProfileSummaryInfo *PSI, unsigned MinTailLength)
-    : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
-      MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
+    : EnableHoistCommonCode(CommonHoist), EnableBasicBlockReordering(true),
+      MinCommonTailLength(MinTailLength), MBBFreqInfo(FreqInfo), MBPI(ProbInfo),
+      PSI(PSI) {
   switch (FlagEnableTailMerge) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     EnableTailMerge = DefaultEnableTailMerge;
     break;
-  case cl::BOU_TRUE: EnableTailMerge = true; break;
-  case cl::BOU_FALSE: EnableTailMerge = false; break;
+  case cl::boolOrDefault::BOU_TRUE:
+    EnableTailMerge = true;
+    break;
+  case cl::boolOrDefault::BOU_FALSE:
+    EnableTailMerge = false;
+    break;
   }
 }
 
@@ -205,10 +229,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
       MF->eraseAdditionalCallInfo(&MI);
 
   // Remove the block.
-  MF->erase(MBB);
-  EHScopeMembership.erase(MBB);
   if (MLI)
     MLI->removeBlock(MBB);
+  MF->erase(MBB);
+  EHScopeMembership.erase(MBB);
 }
 
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
@@ -235,6 +259,16 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   UpdateLiveIns = MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF);
   if (!UpdateLiveIns)
     MRI.invalidateLiveness();
+
+  // Command-line flags take final precedence over the caller-configured values,
+  // letting individual BranchFolding sub-phases be toggled (for tests and for
+  // targets that only want a safe subset of the optimization).
+  if (FlagEnableHoistCommonCode != cl::boolOrDefault::BOU_UNSET)
+    EnableHoistCommonCode =
+        FlagEnableHoistCommonCode == cl::boolOrDefault::BOU_TRUE;
+  if (FlagEnableBlockReordering != cl::boolOrDefault::BOU_UNSET)
+    EnableBasicBlockReordering =
+        FlagEnableBlockReordering == cl::boolOrDefault::BOU_TRUE;
 
   bool MadeChange = false;
 
@@ -791,6 +825,15 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
   return true;
 }
 
+/// Ensure undef flag is preserved only when it is present in both instructions.
+static void mergeUndefFlag(MachineInstr &Merged, const MachineInstr &Other) {
+  for (unsigned I = 0, E = Merged.getNumOperands(); I != E; ++I) {
+    MachineOperand &MO = Merged.getOperand(I);
+    if (MO.isReg() && MO.isUndef() && !Other.getOperand(I).isUndef())
+      MO.setIsUndef(false);
+  }
+}
+
 static void
 mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
                 MachineBasicBlock &MBBCommon) {
@@ -826,15 +869,9 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
     // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoadOrStore())
       MBBICommon->cloneMergedMemRefs(*MBB->getParent(), {&*MBBICommon, &*MBBI});
+
     // Drop undef flags if they aren't present in all merged instructions.
-    for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MBBICommon->getOperand(I);
-      if (MO.isReg() && MO.isUndef()) {
-        const MachineOperand &OtherMO = MBBI->getOperand(I);
-        if (!OtherMO.isUndef())
-          MO.setIsUndef(false);
-      }
-    }
+    mergeUndefFlag(*MBBICommon, *MBBI);
 
     ++MBBI;
     ++MBBICommon;
@@ -1356,6 +1393,15 @@ static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
       copyDebugInfoToPredecessor(TII, MBB, *PredBB);
 }
 
+static bool areConditionalsEqual(ArrayRef<MachineOperand> CurCond,
+                                 ArrayRef<MachineOperand> PriorCond) {
+  return !CurCond.empty() &&
+         llvm::equal(CurCond, PriorCond,
+                     [](const MachineOperand &LHS, const MachineOperand &RHS) {
+                       return LHS.isIdenticalTo(RHS);
+                     });
+}
+
 bool BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   bool MadeChange = false;
   MachineFunction &MF = *MBB->getParent();
@@ -1516,6 +1562,21 @@ ReoptimizeBlock:
       }
     }
 
+    // If we have a block that consists of a single conditional branch
+    // instruction that is exactly identical to the terminator in the previous
+    // block, we can remove this block.
+    if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
+        areConditionalsEqual(CurCond, PriorCond)) {
+      // We remove the branch from the previous basic block rather than this
+      // one in case there are other blocks that specifically branch to this
+      // one.
+      TII->removeBranch(PrevBB);
+      PrevBB.removeSuccessor(CurTBB);
+      MadeChange = true;
+      ++NumBranchOpts;
+      goto ReoptimizeBlock;
+    }
+
     // If this block has no successors (e.g. it is a return block or ends with
     // a call to a no-return function like abort or __cxa_throw) and if the pred
     // falls through into this block, and if it would otherwise fall through
@@ -1524,8 +1585,8 @@ ReoptimizeBlock:
     // We consider it more likely that execution will stay in the function (e.g.
     // due to loops) than it is to exit it.  This asserts in loops etc, moving
     // the assert condition out of the loop body.
-    if (MBB->succ_empty() && !PriorCond.empty() && !PriorFBB &&
-        MachineFunction::iterator(PriorTBB) == FallThrough &&
+    if (EnableBasicBlockReordering && MBB->succ_empty() && !PriorCond.empty() &&
+        !PriorFBB && MachineFunction::iterator(PriorTBB) == FallThrough &&
         !MBB->canFallThrough()) {
       bool DoTransform = true;
 
@@ -1721,7 +1782,7 @@ ReoptimizeBlock:
   // If the prior block doesn't fall through into this block, and if this
   // block doesn't fall through into some other block, see if we can find a
   // place to move this block where a fall-through will happen.
-  if (!PrevBB.canFallThrough()) {
+  if (EnableBasicBlockReordering && !PrevBB.canFallThrough()) {
     // Now we know that there was no fall-through into this block, check to
     // see if it has a fall-through into its successor.
     bool CurFallsThru = MBB->canFallThrough();
@@ -2160,6 +2221,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
              "Expected non-debug lockstep");
 
+      // Drop undef flag on the hoisted instruction if it was not present in
+      // both of the original ones.
+      mergeUndefFlag(*TI, *FI);
+
       // Merge debug locs on hoisted instructions.
       TI->setDebugLoc(
           DILocation::getMergedLocation(TI->getDebugLoc(), FI->getDebugLoc()));
@@ -2175,4 +2240,9 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
   ++NumHoist;
   return true;
+}
+
+FunctionPass *llvm::createBranchFolder(bool EnableCommonHoist,
+                                       bool EnableBasicBlockReordering) {
+  return new BranchFolderLegacy(EnableCommonHoist, EnableBasicBlockReordering);
 }

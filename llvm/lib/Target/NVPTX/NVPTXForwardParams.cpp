@@ -65,9 +65,9 @@ static bool traverseMoveUse(MachineInstr &U, const MachineRegisterInfo &MRI,
     LoadInsts.push_back(&U);
     return true;
   }
-  case NVPTX::cvta_local:
+  case NVPTX::cvta_local_32:
   case NVPTX::cvta_local_64:
-  case NVPTX::cvta_to_local:
+  case NVPTX::cvta_to_local_32:
   case NVPTX::cvta_to_local_64: {
     for (auto &U2 : MRI.use_instructions(U.operands_begin()->getReg()))
       if (!traverseMoveUse(U2, MRI, RemoveList, LoadInsts))
@@ -102,7 +102,7 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
     (LI->uses().begin() + LDInstBasePtrOpIdx)
         ->ChangeToES(ParamSymbol->getSymbolName());
     (LI->uses().begin() + LDInstAddrSpaceOpIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::Param);
+        ->ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
   }
   return true;
 }

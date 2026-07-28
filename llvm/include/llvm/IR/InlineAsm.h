@@ -181,14 +181,6 @@ public:
     bool hasArg() const {
       return Type == isInput || (Type == isOutput && isIndirect);
     }
-
-    /// hasRegMemConstraints - Returns true if and only if the constraint
-    /// codes are "rm". This is useful when converting between a register form
-    /// to a memory form.
-    bool hasRegMemConstraints() const {
-      return Codes.size() == 2 && is_contained(Codes, "r") &&
-             is_contained(Codes, "m");
-    }
   };
 
   /// ParseConstraints - Split up the constraint string into the specific
@@ -452,6 +444,10 @@ public:
     }
   };
 
+  static AsmDialect getDialect(unsigned ExtraInfo) {
+    return ExtraInfo & Extra_AsmDialect ? AD_Intel : AD_ATT;
+  }
+
   static std::vector<StringRef> getExtraInfoNames(unsigned ExtraInfo) {
     std::vector<StringRef> Result;
     if (ExtraInfo & InlineAsm::Extra_HasSideEffects)
@@ -467,9 +463,7 @@ public:
     if (ExtraInfo & InlineAsm::Extra_MayUnwind)
       Result.push_back("unwind");
 
-    AsmDialect Dialect =
-        InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect));
-
+    AsmDialect Dialect = getDialect(ExtraInfo);
     if (Dialect == InlineAsm::AD_ATT)
       Result.push_back("attdialect");
     if (Dialect == InlineAsm::AD_Intel)

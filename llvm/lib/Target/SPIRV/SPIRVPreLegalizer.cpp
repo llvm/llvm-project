@@ -20,7 +20,9 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
@@ -39,6 +41,12 @@ public:
 void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+static inline void invalidateAndEraseMI(SPIRVGlobalRegistry *GR,
+                                        MachineInstr *MI) {
+  GR->invalidateMachineInstr(MI);
+  MI->eraseFromParent();
 }
 
 static void
@@ -126,13 +134,10 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     if (!MRI.getRegClassOrNull(Reg) && RC)
       MRI.setRegClass(Reg, RC);
     MRI.replaceRegWith(MI->getOperand(0).getReg(), Reg);
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
+    invalidateAndEraseMI(GR, MI);
   }
-  for (MachineInstr *MI : ToEraseComposites) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToEraseComposites)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void foldConstantsIntoIntrinsics(MachineFunction &MF,
@@ -151,10 +156,8 @@ static void foldConstantsIntoIntrinsics(MachineFunction &MF,
       }
       ToErase.push_back(&MI);
     }
-    for (MachineInstr *MI : ToErase) {
-      GR->invalidateMachineInstr(MI);
-      MI->eraseFromParent();
-    }
+    for (MachineInstr *MI : ToErase)
+      invalidateAndEraseMI(GR, MI);
     ToErase.clear();
   }
 }
@@ -195,7 +198,7 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
 // We lower G_BITCAST to OpBitcast here to avoid a MachineVerifier error.
 // The verifier checks if the source and destination LLTs of a G_BITCAST are
 // different, but this check is too strict for SPIR-V's typed pointers, which
-// may have the same LLT but different SPIRVType (e.g. pointers to different
+// may have the same LLT but different SPIRV type (e.g. pointers to different
 // pointee types). By lowering to OpBitcast here, we bypass the verifier's
 // check. See discussion in https://github.com/llvm/llvm-project/pull/110270
 // for more context.
@@ -235,10 +238,8 @@ static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -258,7 +259,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
       auto SC =
-          isa<FunctionType>(ElemTy)
+          isa<FunctionType>(ElemTy) &&
+                  ST->canUseExtension(
+                      SPIRV::Extension::SPV_INTEL_function_pointers)
               ? SPIRV::StorageClass::CodeSectionINTEL
               : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
       SPIRVTypeInst AssignedPtrType =
@@ -279,10 +282,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       }
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // Translating GV, IRTranslator sometimes generates following IR:
@@ -295,9 +296,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 //  %1 = G_ZEXT %2
 //  G_MEMCPY ... %2 ...
 //
-// New registers have no SPIRVType and no register class info.
+// New registers have no SPIRV type and no register class info.
 //
-// Set SPIRVType for GV, propagate it from GV to other instructions,
+// Set SPIRV type for GV, propagate it from GV to other instructions,
 // also set register classes.
 static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
                                         SPIRVGlobalRegistry *GR,
@@ -394,7 +395,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
+  return std::min(std::max<unsigned>(PowerOf2Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
@@ -468,6 +469,125 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 }
 } // namespace llvm
 
+// Sign-sensitive integer ops: their result depends on the value of the input
+// sign bit at position (width-1). On sub-pow2 widths the general widening
+// loop is a pure LLT relabel, which leaves the sign bit at the *original*
+// position instead of the widened MSB. These ops therefore need an explicit
+// G_SEXT_INREG on each value operand to move the sign bit up.
+//
+// Signed-vs-unsigned G_ICMP is distinguished by its predicate operand.
+//
+// TODO: follow-up PRs will add the remaining sign-sensitive opcodes
+// (e.g. G_SMIN/G_SMAX, G_SADDSAT/G_SSUBSAT, signed overflow ops).
+static bool isSignSensitiveOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_SREM:
+    return true;
+  case TargetOpcode::G_ICMP:
+    return CmpInst::isSigned(
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()));
+  default:
+    return false;
+  }
+}
+
+struct SignSensitiveWideningInfo {
+  // Width before widening of each value-operand vreg (one entry per vreg).
+  DenseMap<Register, unsigned> OrigWidth;
+  // Ops whose value operand(s) need replacing, ordered for reproducible vreg
+  // numbering.
+  SmallVector<MachineInstr *> Worklist;
+};
+
+// Collect sign-sensitive ops with narrow scalar value operands and their
+// pre-widening widths, before later passes retype those vregs to pow2 LLTs
+// and the original width is no longer recoverable.
+static SignSensitiveWideningInfo
+recordSignSensitiveOperandWidths(MachineFunction &MF,
+                                 MachineRegisterInfo &MRI) {
+  SignSensitiveWideningInfo Info;
+  auto RecordIfNarrow = [&](Register Reg) {
+    LLT Ty = MRI.getType(Reg);
+    if (!Ty.isScalar())
+      return false;
+    unsigned W = Ty.getScalarSizeInBits();
+    if (widenBitWidthToNextPow2(W) == W)
+      return false;
+    Info.OrigWidth.try_emplace(Reg, W);
+    return true;
+  };
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSignSensitiveOp(MI))
+        continue;
+      // Value operands are the trailing two, past any def or predicate.
+      unsigned N = MI.getNumOperands();
+      const MachineOperand &LHS = MI.getOperand(N - 2);
+      const MachineOperand &RHS = MI.getOperand(N - 1);
+      // Sign-sensitive opcodes carry register operands only.
+      assert(LHS.isReg() && RHS.isReg());
+      bool NeedsRewrite = RecordIfNarrow(LHS.getReg());
+      NeedsRewrite = RecordIfNarrow(RHS.getReg()) || NeedsRewrite;
+      if (NeedsRewrite)
+        Info.Worklist.push_back(&MI);
+    }
+  }
+  return Info;
+}
+
+// For every recorded sign-sensitive op, insert G_SEXT_INREG on each value
+// operand whose original width was narrower than the widened pow2 width and
+// retype the operand's vreg LLT in place to the widened width.
+//
+// Info must have been populated by recordSignSensitiveOperandWidths before
+// other passes retyped the vregs; otherwise the narrow widths needed here
+// are lost.
+//
+// TODO: handle vector operands.
+static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                                  MachineIRBuilder &MIB,
+                                  MachineRegisterInfo &MRI,
+                                  const SignSensitiveWideningInfo &Info) {
+  // Emit G_SEXT_INREG from Reg's recorded narrow width; retypes Reg to the
+  // widened width and returns the sign-extended vreg.
+  auto SignExtendReg = [&](Register Reg, unsigned OldW,
+                           MachineInstr &MI) -> Register {
+    unsigned NewW = widenBitWidthToNextPow2(OldW);
+    LLT NewLLT = LLT::scalar(NewW);
+    SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
+    Register SExted = MRI.createGenericVirtualRegister(NewLLT);
+    GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
+    MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
+    MRI.setType(Reg, NewLLT);
+    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
+    MIB.buildSExtInReg(SExted, Reg, OldW);
+    return SExted;
+  };
+
+  // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
+  // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
+  // per use.
+  for (MachineInstr *MI : Info.Worklist) {
+    unsigned N = MI->getNumOperands();
+    MachineOperand &LHS = MI->getOperand(N - 2);
+    MachineOperand &RHS = MI->getOperand(N - 1);
+    Register LHSReg = LHS.getReg();
+    Register RHSReg = RHS.getReg();
+    if (auto It = Info.OrigWidth.find(LHSReg); It != Info.OrigWidth.end())
+      LHS.setReg(SignExtendReg(LHSReg, It->second, *MI));
+    // Same vreg on both sides (e.g. G_ICMP slt %x, %x): reuse the sext just
+    // emitted for LHS instead of emitting a second one.
+    if (RHSReg == LHSReg) {
+      RHS.setReg(LHS.getReg());
+      continue;
+    }
+    if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
+      RHS.setReg(SignExtendReg(RHSReg, It->second, *MI));
+  }
+}
+
 static void
 generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder MIB,
@@ -485,6 +605,97 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
       ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST->canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
+
+  if (!IsExtendedInts) {
+    // Without arbitrary precision integer extensions, SPIR-V only supports
+    // integer widths of 8, 16, 32, 64. Non-standard widths (e.g., i24, i40)
+    // must be widened to the next power of two.
+    //
+    // Record the original widths of sign-sensitive operands before either
+    // the G_TRUNC handling or the general widening loop retypes vregs, then
+    // rewrite those ops after G_TRUNC processing using the recorded widths.
+    SignSensitiveWideningInfo SignSensitiveInfo =
+        recordSignSensitiveOperandWidths(MF, MRI);
+
+    // G_TRUNC requires special handling because its semantics depend on the
+    // original destination width. For example:
+    //   %dst:s24 = G_TRUNC %src:s64
+    // After widening s24 to s32, we cannot simply do:
+    //   %dst:s32 = G_TRUNC %src:s64
+    // because this would keep 32 bits instead of 24. Instead, we insert a
+    // G_AND to mask the value to the original width:
+    //   %mask:s64 = G_CONSTANT 0xFFFFFF      ; 24-bit mask
+    //   %masked:s64 = G_AND %src:s64, %mask
+    //   %dst:s32 = G_TRUNC %masked:s64
+    // If src and dst widen to the same size, G_TRUNC is replaced entirely:
+    //   %mask:s64 = G_CONSTANT 0xFFFFFFFFFF  ; 40-bit mask
+    //   %dst:s64 = G_AND %src:s64, %mask
+    SmallVector<MachineInstr *, 8> TruncToRemove;
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
+        unsigned MIOp = MI.getOpcode();
+        if (MIOp != TargetOpcode::G_TRUNC)
+          continue;
+        assert(MI.getNumOperands() == 2);
+        assert(MI.getOperand(0).isReg());
+        assert(MI.getOperand(1).isReg());
+
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(1).getReg();
+
+        LLT DstTy = MRI.getType(DstReg);
+        LLT SrcTy = MRI.getType(SrcReg);
+        assert((DstTy.isScalar() || DstTy.isVector()) &&
+               (SrcTy.isScalar() || SrcTy.isVector()) &&
+               "Expected scalar or vector G_TRUNC types");
+        assert(DstTy.isVector() == SrcTy.isVector() &&
+               "Expected matching scalar/vector G_TRUNC types");
+        assert((!DstTy.isVector() ||
+                DstTy.getElementCount() == SrcTy.getElementCount()) &&
+               "Expected equal vector element counts");
+
+        unsigned OriginalDstWidth = DstTy.getScalarSizeInBits();
+        unsigned OriginalSrcWidth = SrcTy.getScalarSizeInBits();
+
+        unsigned NewDstWidth = widenBitWidthToNextPow2(OriginalDstWidth);
+        unsigned NewSrcWidth = widenBitWidthToNextPow2(OriginalSrcWidth);
+        LLT NewDstTy = DstTy.changeElementSize(NewDstWidth);
+        LLT NewSrcTy = SrcTy.changeElementSize(NewSrcWidth);
+
+        // No Dst width change means no truncation semantics change, but the
+        // source still needs a legal type.
+        if (OriginalDstWidth == NewDstWidth) {
+          MRI.setType(SrcReg, NewSrcTy);
+          continue;
+        }
+
+        MRI.setType(SrcReg, NewSrcTy);
+        MRI.setType(DstReg, NewDstTy);
+
+        MIB.setInsertPt(MBB, MI.getIterator());
+        APInt Mask = APInt::getLowBitsSet(NewSrcWidth, OriginalDstWidth);
+        MachineInstrBuilder MaskReg =
+            DstTy.isVector()
+                ? MIB.buildBuildVectorConstant(
+                      NewSrcTy,
+                      SmallVector<APInt, 4>(DstTy.getNumElements(), Mask))
+                : MIB.buildConstant(NewSrcTy, Mask);
+        Register MaskedReg = MRI.createGenericVirtualRegister(NewSrcTy);
+        MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
+
+        if (NewSrcWidth == NewDstWidth) {
+          MRI.replaceRegWith(DstReg, MaskedReg);
+          TruncToRemove.push_back(&MI);
+        } else {
+          MI.getOperand(1).setReg(MaskedReg);
+        }
+      }
+    }
+    for (MachineInstr *MI : TruncToRemove)
+      MI->eraseFromParent();
+
+    widenSignSensitiveOps(MF, GR, MIB, MRI, SignSensitiveInfo);
+  }
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
@@ -513,6 +724,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        // The intrinsic also carries vector-of-pointer values produced by
+        // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
+        // the vreg's LLT.
+        LLT RegTy = MRI.getType(Reg);
+        if (RegTy.isValid() && RegTy.isVector())
+          AssignedPtrType = GR->getOrCreateSPIRVVectorType(
+              AssignedPtrType, RegTy.getNumElements(), MIB, true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
@@ -623,12 +841,11 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     auto It = RegsAlreadyAddedToDT.find(MI);
     if (It != RegsAlreadyAddedToDT.end())
       MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
+    invalidateAndEraseMI(GR, MI);
   }
 
   // Address the case when IRTranslator introduces instructions with new
-  // registers without SPIRVType associated.
+  // registers without associated SPIRV type.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       switch (MI.getOpcode()) {
@@ -676,8 +893,7 @@ collectInlineAsmInstrOperands(MachineInstr *MI,
     if (MO.isReg() && MO.isDef()) {
       if (!Ops)
         return MO.getReg();
-      else
-        DefReg = MO.getReg();
+      DefReg = MO.getReg();
     } else if (Ops) {
       Ops->push_back(Idx);
     }
@@ -759,11 +975,31 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                        .addUse(AsmReg);
     for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
       AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
+
+    // IRTranslator gets a bit confused when lowering inline ASM with outputs
+    // and inserts a spurious COPY & TRUNC as registers are assumed to be i64;
+    // we have to clean that up here to prevent erroneous trunc casts either on
+    // a struct (for multiple outputs) or same width integers to get lowered
+    // into SPIR-V
+    if (MRI.hasOneUse(DefReg)) {
+      MachineInstr &CopyMI = *MRI.use_instr_begin(DefReg);
+      if (CopyMI.getOpcode() == TargetOpcode::COPY) {
+        Register CopyDst = CopyMI.getOperand(0).getReg();
+        if (MRI.hasOneUse(CopyDst)) {
+          MachineInstr &TruncMI = *MRI.use_instr_begin(CopyDst);
+          if (TruncMI.getOpcode() == TargetOpcode::G_TRUNC) {
+            MRI.setType(DefReg, GR->getRegType(RetType));
+            Register TruncReg = TruncMI.defs().begin()->getReg();
+            MRI.replaceRegWith(TruncReg, DefReg);
+            invalidateAndEraseMI(GR, &TruncMI);
+            invalidateAndEraseMI(GR, &CopyMI);
+          }
+        }
+      }
+    }
   }
-  for (MachineInstr *MI : ToProcess) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToProcess)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -788,15 +1024,6 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static uint32_t convertFloatToSPIRVWord(float F) {
-  union {
-    float F;
-    uint32_t Spir;
-  } FPMaxError;
-  FPMaxError.F = F;
-  return FPMaxError.Spir;
-}
-
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
@@ -815,8 +1042,7 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                 Intrinsic::spv_assign_fpmaxerror_decoration)) {
         ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
             MI.getOperand(2).getMetadata()->getOperand(0));
-        uint32_t OpValue =
-            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+        uint32_t OpValue = OpV->getValueAPF().bitcastToAPInt().getZExtValue();
 
         buildOpDecorate(MI.getOperand(1).getReg(), MIB,
                         SPIRV::Decoration::FPMaxErrorDecorationINTEL,
@@ -830,10 +1056,8 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // LLVM allows the switches to use registers as cases, while SPIR-V required
@@ -883,10 +1107,8 @@ static void cleanupHelperInstructions(MachineFunction &MF,
     }
   }
 
-  for (MachineInstr *MI : ToEraseMI) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToEraseMI)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // Find all usages of G_BLOCK_ADDR in our intrinsics and replace those
@@ -988,14 +1210,13 @@ static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           ConstantExpr::getIntToPtr(Replacement, BA->getType()));
       BA->destroyConstant();
     }
-    GR->invalidateMachineInstr(BlockAddrI);
-    BlockAddrI->eraseFromParent();
+    invalidateAndEraseMI(GR, BlockAddrI);
   }
 }
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
   if (MBB.empty())
-    return true;
+    return MBB.getNextNode() != nullptr;
 
   // Branching SPIR-V intrinsics are not detected by this generic method.
   // Thus, we can only trust negative result.

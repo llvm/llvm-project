@@ -317,16 +317,16 @@ public:
   /// \return
   ///     Returns false if this DynamicLoader cannot gather information
   ///     about the shared cache / has no concept of a shared cache.
-  virtual bool
-  GetSharedCacheInformation(lldb::addr_t &base_address, UUID &uuid,
-                            LazyBool &using_shared_cache,
-                            LazyBool &private_shared_cache,
-                            lldb_private::FileSpec &shared_cache_path) {
+  virtual bool GetSharedCacheInformation(
+      lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
+      LazyBool &private_shared_cache, lldb_private::FileSpec &shared_cache_path,
+      std::optional<uint64_t> &size) {
     base_address = LLDB_INVALID_ADDRESS;
     uuid.Clear();
     using_shared_cache = eLazyBoolCalculate;
     private_shared_cache = eLazyBoolCalculate;
     shared_cache_path.Clear();
+    size.reset();
     return false;
   }
 
@@ -359,8 +359,8 @@ public:
 protected:
   // Utility methods for derived classes
 
-  /// Find a module in the target that matches the given file.
-  lldb::ModuleSP FindModuleViaTarget(const FileSpec &file);
+  /// Find a module in the target that matches the given module spec.
+  lldb::ModuleSP FindModuleViaTarget(const ModuleSpec &module_spec);
 
   /// Checks to see if the target module has changed, updates the target
   /// accordingly and returns the target executable module.

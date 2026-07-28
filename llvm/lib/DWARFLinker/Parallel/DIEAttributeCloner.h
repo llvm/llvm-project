@@ -99,14 +99,11 @@ protected:
     InputDIEIdx = InUnit.getDIEIndex(InputDieEntry);
 
     // Use DW_FORM_strp form for string attributes for DWARF version less than 5
-    // or if output unit is type unit and we need to produce deterministic
-    // result. (We can not generate deterministic results for debug_str_offsets
-    // section when attributes are cloned parallelly).
-    Use_DW_FORM_strp =
-        (InUnit.getVersion() < 5) ||
-        (OutUnit.isTypeUnit() &&
-         ((InUnit.getGlobalData().getOptions().Threads != 1) &&
-          !InUnit.getGlobalData().getOptions().AllowNonDeterministicOutput));
+    // or if output unit is type unit and attributes are cloned in parallel
+    // (debug_str_offsets ordering would be non-deterministic otherwise).
+    Use_DW_FORM_strp = (InUnit.getVersion() < 5) ||
+                       (OutUnit.isTypeUnit() &&
+                        InUnit.getGlobalData().getOptions().Threads != 1);
   }
 
   /// Clone string attribute.

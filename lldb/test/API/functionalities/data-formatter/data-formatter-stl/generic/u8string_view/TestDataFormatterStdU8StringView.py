@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 class StdU8StringViewDataFormatterTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
         lldbutil.run_to_source_breakpoint(

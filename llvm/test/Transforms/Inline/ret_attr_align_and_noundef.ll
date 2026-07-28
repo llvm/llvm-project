@@ -421,6 +421,43 @@ define i8 @caller16_not_intersecting_ranges() {
   ret i8 %r
 }
 
+define i8 @callee_range_multi_ret(i1 %c) {
+; CHECK-LABEL: define i8 @callee_range_multi_ret(i1 %c) {
+; CHECK-NEXT:    br i1 %c, label %bb1, label %bb2
+; CHECK:       bb1:
+; CHECK-NEXT:    [[R1:%.*]] = call range(i8 0, 20) i8 @val8()
+; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[R2:%.*]] = call range(i8 10, 30) i8 @val8()
+; CHECK-NEXT:    ret i8 [[R2]]
+;
+  br i1 %c, label %bb1, label %bb2
+
+bb1:
+  %r1 = call range(i8 0, 20) i8 @val8()
+  ret i8 %r1
+
+bb2:
+  %r2 = call range(i8 10, 30) i8 @val8()
+  ret i8 %r2
+}
+
+define i8 @caller_range_multi_ret_okay_intersect(i1 %c) {
+; CHECK-LABEL: define i8 @caller_range_multi_ret_okay_intersect(i1 %c) {
+; CHECK-NEXT:    br i1 %c, label %bb1.i, label %bb2.i
+; CHECK:       bb1.i:
+; CHECK-NEXT:    [[R1_I:%.*]] = call range(i8 5, 20) i8 @val8()
+; CHECK-NEXT:    br label %callee_range_multi_ret.exit
+; CHECK:       bb2.i:
+; CHECK-NEXT:    [[R2_I:%.*]] = call range(i8 10, 25) i8 @val8()
+; CHECK-NEXT:    br label %callee_range_multi_ret.exit
+; CHECK:       callee_range_multi_ret.exit:
+; CHECK-NEXT:    [[R_I:%.*]] = phi i8 [ [[R1_I]], %bb1.i ], [ [[R2_I]], %bb2.i ]
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 5, 25) i8 @callee_range_multi_ret(i1 %c)
+  ret i8 %r
+}
 
 define ptr @caller_bad_ret_prop(ptr %p1, ptr %p2, i64 %x, ptr %other) {
 ; CHECK-LABEL: define ptr @caller_bad_ret_prop

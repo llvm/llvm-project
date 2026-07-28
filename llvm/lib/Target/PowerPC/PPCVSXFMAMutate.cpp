@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
@@ -47,7 +48,7 @@ static cl::opt<bool> DisableVSXFMAMutate(
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
 namespace llvm { namespace PPC {
-  int64_t getAltVSXFMAOpcode(uint32_t Opcode);
+int32_t getAltVSXFMAOpcode(uint32_t Opcode);
 } }
 
 namespace {
@@ -356,6 +357,7 @@ public:
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };

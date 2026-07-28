@@ -440,6 +440,9 @@ Register ARMFastISel::ARMMoveToIntReg(MVT VT, Register SrcReg) {
 // (the high and the low) into integer registers then use a move to get
 // the combined constant into an FP reg.
 Register ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return Register();
+
   const APFloat Val = CFP->getValueAPF();
   bool is64bit = VT == MVT::f64;
 
@@ -680,8 +683,7 @@ Register ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   if (!isLoadTypeLegal(AI->getType(), VT))
     return Register();
 
-  DenseMap<const AllocaInst*, int>::iterator SI =
-    FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   // This will get lowered later into the correct offsets and registers
   // via rewriteXFrameIndex.
@@ -814,8 +816,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
     }
     case Instruction::Alloca: {
       const AllocaInst *AI = cast<AllocaInst>(Obj);
-      DenseMap<const AllocaInst*, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
         Addr.setKind(Address::FrameIndexBase);
         Addr.setFI(SI->second);
@@ -1265,7 +1266,7 @@ static ARMCC::CondCodes getComparePred(CmpInst::Predicate Pred) {
 }
 
 bool ARMFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
@@ -1894,7 +1895,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   default:
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
-    if (Subtarget->hasVFP2Base() && !isVarArg) {
+    if (Subtarget->hasFPRegs() && !isVarArg) {
       if (!TM.isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
@@ -2908,7 +2909,7 @@ bool ARMFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);

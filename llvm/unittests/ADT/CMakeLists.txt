@@ -30,6 +30,7 @@ add_llvm_unittest(ADTTests
   EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
+  EytzingerTest.cpp
   FallibleIteratorTest.cpp
   FloatingPointMode.cpp
   FoldingSet.cpp
@@ -65,6 +66,7 @@ add_llvm_unittest(ADTTests
   PriorityWorklistTest.cpp
   RadixTreeTest.cpp
   RangeAdapterTest.cpp
+  RepeatedTest.cpp
   RewriteBufferTest.cpp
   SCCIteratorTest.cpp
   STLExtrasTest.cpp
@@ -83,6 +85,7 @@ add_llvm_unittest(ADTTests
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
   SparseSetTest.cpp
+  StableHashingTest.cpp
   StatisticTest.cpp
   StringExtrasTest.cpp
   StringMapTest.cpp

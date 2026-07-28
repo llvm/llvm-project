@@ -756,6 +756,8 @@ def : MnemonicAlias<"addccc", "addxcc">, Requires<[HasV9]>;
 def : MnemonicAlias<"subc", "subx">, Requires<[HasV9]>;
 def : MnemonicAlias<"subccc", "subxcc">, Requires<[HasV9]>;
 
+def : MnemonicAlias<"lzd", "lzcnt">;
+
 // Solaris Natural Instructions extension
 // We match GCC's coverage of the extension; everything except setn & setnhi.
 // See also: https://docs.oracle.com/cd/E53394_01/html/E54833/gmael.html

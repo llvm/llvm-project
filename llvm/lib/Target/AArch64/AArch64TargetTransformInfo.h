@@ -49,16 +49,8 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
 
-  static const FeatureBitset InlineInverseFeatures;
-
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
-
-  enum MemIntrinsicType {
-    VECTOR_LDST_TWO_ELEMENTS,
-    VECTOR_LDST_THREE_ELEMENTS,
-    VECTOR_LDST_FOUR_ELEMENTS
-  };
 
   /// Given a add/sub/mul operation, detect a widening addl/subl/mull pattern
   /// where both operands can be treated like extends. Returns the minimal type
@@ -165,8 +157,6 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
-
   bool shouldMaximizeVectorBandwidth(
       TargetTransformInfo::RegisterKind K) const override;
 
@@ -181,7 +171,8 @@ public:
     return VF.getKnownMinValue() * ST->getVScaleForTuning();
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool prefersVectorizedAddressing() const override;
 
@@ -286,6 +277,8 @@ public:
   InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;
 
+  bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
@@ -304,10 +297,8 @@ public:
     if (Ty->isPointerTy())
       return true;
 
-    if (Ty->isBFloatTy() && ST->hasBF16())
-      return true;
-
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() || Ty->isHalfTy() || Ty->isFloatTy() ||
+        Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
@@ -321,10 +312,11 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
-        DataType->getPrimitiveSizeInBits() != 128)
-      return false; // Fall back to scalarization of masked operations.
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
+      unsigned Bits = DataType->getPrimitiveSizeInBits();
+      if (Bits != 64 && Bits != 128)
+        return false; // Fall back to scalarization of masked operations.
+    }
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
@@ -462,25 +454,22 @@ public:
 
   unsigned getGISelRematGlobalCost() const override { return 2; }
 
+  InstructionCost getBranchMispredictPenalty() const override;
+
   unsigned getMinTripCountTailFoldingThreshold() const override {
     return ST->hasSVE() ? 5 : 0;
   }
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
-    if (ST->hasSVE())
-      return IVUpdateMayOverflow
-                 ? TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck
-                 : TailFoldingStyle::DataAndControlFlow;
-
-    return TailFoldingStyle::DataWithoutLaneMask;
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return ST->hasSVE() ? TailFoldingStyle::DataAndControlFlow
+                        : TailFoldingStyle::DataWithoutLaneMask;
   }
 
   bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
 
   unsigned getEpilogueVectorizationMinVF() const override;
 
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override;
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
 
   bool supportsScalableVectors() const override {
     return ST->isSVEorStreamingSVEAvailable();
@@ -544,13 +533,15 @@ public:
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override {
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override {
     // We can vectorize store v4i8.
     if (ScalarMemTy->isIntegerTy(8) && isPowerOf2_32(VF) && VF >= 4)
       return 4;
 
-    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
   }
 
   std::optional<unsigned> getMinPageSize() const override { return 4096; }

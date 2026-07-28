@@ -1,6 +1,6 @@
 # REQUIRES: systemz
 # RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
-# RUN: echo '.tbss; .globl b, c; b: .zero 4; c:' | llvm-mc -filetype=obj -triple=s390x-unknown-linux - -o %t1.o
+# RUN: echo '.tbss; .globl b, c; b: .zero 4; c:' | llvm-mc -filetype=obj -triple=s390x --crel - -o %t1.o
 # RUN: ld.lld -shared -soname=t1.so %t1.o -o %t1.so
 
 # RUN: ld.lld -shared %t.o %t1.o -o %t.so

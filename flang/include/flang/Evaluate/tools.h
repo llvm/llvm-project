@@ -50,6 +50,9 @@ struct IsVariableHelper
   Result operator()(const CoarrayRef &) const { return true; }
   Result operator()(const ComplexPart &) const { return true; }
   Result operator()(const ProcedureDesignator &) const;
+  template <typename T> Result operator()(const ConditionalExpr<T> &) const {
+    return false;
+  }
   template <typename T> Result operator()(const Expr<T> &x) const {
     if constexpr (common::HasMember<T, AllIntrinsicTypes> ||
         std::is_same_v<T, SomeDerived>) {
@@ -1117,6 +1120,21 @@ bool HasConstant(const Expr<SomeType> &);
 // Predicate: Does an expression contain a component
 bool HasStructureComponent(const Expr<SomeType> &expr);
 
+// Predicate: does an expression contain a procedure reference?
+bool HasProcedureRef(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a VOLATILE or ASYNCHRONOUS symbol?
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
+
+// Can a scalar real RHS expression in an assignment be rewritten as a split
+// sum expression tree?
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+
+// Try to rewrite a scalar real sum as a split sum expression tree.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
@@ -1296,7 +1314,15 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
+// Get the symbol vectors of the expression where symbols are grouped together
+// if they are part of the same component expression.
+//
+// Example: a%b + c%d
+// Will be grouped as: [(a, b), (c, d)]
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
+
 bool IsCUDADeviceSymbol(const Symbol &sym);
+bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1307,6 +1333,28 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
       return true;
     }
   }
+  return false;
+}
+
+// Non-allocatable module-level managed/unified variables use pointer
+// indirection through a companion global in __nv_managed_data__.
+// Explicit data transfers (cudaMemcpy) must be avoided for these
+// variables since they would target the shadow address rather than
+// the actual unified memory address.
+inline bool IsNonAllocatableModuleCUDAManagedSymbol(const Symbol &sym) {
+  const Symbol &ultimate = sym.GetUltimate();
+  if (!IsCUDAManagedOrUnifiedSymbol(ultimate))
+    return false;
+  if (ultimate.attrs().test(semantics::Attr::ALLOCATABLE))
+    return false;
+  return ultimate.owner().IsModule();
+}
+
+template <typename A>
+inline bool HasNonAllocatableModuleCUDAManagedSymbols(const A &expr) {
+  for (const Symbol &sym : CollectCudaSymbols(expr))
+    if (IsNonAllocatableModuleCUDAManagedSymbol(sym))
+      return true;
   return false;
 }
 
@@ -1321,6 +1369,9 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   }
   return symbols.size();
 }
+
+// Get the number of unique symbols with CUDA device attribute.
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
 
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
@@ -1349,10 +1400,35 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special cases performed on the host:
-  // - Only managed or unifed symbols are involved on RHS and LHS.
-  // - LHS is managed or unified and the RHS is host only.
-  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
+    return false;
+
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
+  // Managed/unified data is host-addressable, so several assignments are
+  // performed on the host and need no explicit data transfer:
+  // - A whole-allocatable left-hand side involving managed/unified data: the
+  //   assignment has reallocation semantics and is performed on the host.
+  // - Element-wise (scalar) access to managed/unified data.
+  // - A right-hand side expression involving managed/unified data assigned into
+  //   a host-addressable (managed/unified or host) left-hand side: evaluating
+  //   it on the host avoids materializing a temporary.
+  // - A managed/unified left-hand side assigned from host-only data.
+  // A whole-array assignment whose right-hand side is a managed/unified
+  // variable is a synchronous data transfer that waits for previously launched
+  // kernels.
+  if ((IsAllocatableDesignator(lhs) &&
+          (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+          lhs.Rank() == 0) ||
+      (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
+          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+          lhs.Rank() == 0) ||
+      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) &&
+          (lhsNbManagedSymbols >= 1 || !HasCUDADeviceAttrs(lhs))) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
@@ -1362,6 +1438,9 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1376,6 +1455,7 @@ enum class Operator {
   Call,
   Constant,
   Convert,
+  Conditional,
   Div,
   Eq,
   Eqv,
@@ -1523,6 +1603,11 @@ std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 // How many ancestors does have a derived type have?
 std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1545,6 +1630,8 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);

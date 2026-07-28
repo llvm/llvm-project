@@ -11,5 +11,5 @@ add_clang_library(clangCrossTU
   clangBasic
   clangDriver
   clangFrontend
-  clangIndex
+  clangUnifiedSymbolResolution
   )

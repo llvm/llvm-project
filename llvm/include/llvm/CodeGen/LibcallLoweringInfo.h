@@ -37,31 +37,30 @@ public:
 
   /// Get the libcall routine name for the specified libcall.
   // FIXME: This should be removed. Only LibcallImpl should have a name.
-  LLVM_ABI const char *getLibcallName(RTLIB::Libcall Call) const {
+  const char *getLibcallName(RTLIB::Libcall Call) const {
     // FIXME: Return StringRef
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpls[Call])
         .data();
   }
 
   /// Return the lowering's selection of implementation call for \p Call
-  LLVM_ABI RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
     return LibcallImpls[Call];
   }
 
   /// Rename the default libcall routine name for the specified libcall.
-  LLVM_ABI void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
+  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     LibcallImpls[Call] = Impl;
   }
 
   // FIXME: Remove this wrapper in favor of directly using
   // getLibcallImplCallingConv
-  LLVM_ABI CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
+  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
     return RTLCI.LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
-  LLVM_ABI CallingConv::ID
-  getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
     return RTLCI.LibcallImplCallingConvs[Call];
   }
 
@@ -79,7 +78,7 @@ public:
 };
 
 /// Record a mapping from subtarget to LibcallLoweringInfo.
-class LibcallLoweringModuleAnalysisResult {
+class ModuleLibcallLoweringInfo {
 private:
   using LibcallLoweringMap =
       DenseMap<const TargetSubtargetInfo *, LibcallLoweringInfo>;
@@ -87,8 +86,8 @@ private:
   const RTLIB::RuntimeLibcallsInfo *RTLCI = nullptr;
 
 public:
-  LibcallLoweringModuleAnalysisResult() = default;
-  LibcallLoweringModuleAnalysisResult(RTLIB::RuntimeLibcallsInfo &RTLCI)
+  ModuleLibcallLoweringInfo() = default;
+  ModuleLibcallLoweringInfo(RTLIB::RuntimeLibcallsInfo &RTLCI)
       : RTLCI(&RTLCI) {}
 
   void init(const RTLIB::RuntimeLibcallsInfo *RT) { RTLCI = RT; }
@@ -115,16 +114,16 @@ private:
   friend AnalysisInfoMixin<LibcallLoweringModuleAnalysis>;
   LLVM_ABI static AnalysisKey Key;
 
-  LibcallLoweringModuleAnalysisResult LibcallLoweringMap;
+  ModuleLibcallLoweringInfo LibcallLoweringMap;
 
 public:
-  using Result = LibcallLoweringModuleAnalysisResult;
+  using Result = ModuleLibcallLoweringInfo;
 
   LLVM_ABI Result run(Module &M, ModuleAnalysisManager &);
 };
 
 class LLVM_ABI LibcallLoweringInfoWrapper : public ImmutablePass {
-  LibcallLoweringModuleAnalysisResult Result;
+  ModuleLibcallLoweringInfo Result;
   RuntimeLibraryInfoWrapper *RuntimeLibcallsWrapper = nullptr;
 
 public:
@@ -136,7 +135,7 @@ public:
     return getResult(M).getLibcallLowering(Subtarget);
   }
 
-  const LibcallLoweringModuleAnalysisResult &getResult(const Module &M) {
+  const ModuleLibcallLoweringInfo &getResult(const Module &M) {
     if (!Result)
       Result.init(&RuntimeLibcallsWrapper->getRTLCI(M));
     return Result;

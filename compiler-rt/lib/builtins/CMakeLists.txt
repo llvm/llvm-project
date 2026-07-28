@@ -57,6 +57,19 @@ if (COMPILER_RT_STANDALONE_BUILD)
     ON)
 endif()
 
+function(set_special_properties source_file)
+  cmake_parse_arguments(ARG "" "" "SUPERSEDES;PROVIDES" ${ARGN})
+  if(ARG_SUPERSEDES)
+    set_property(SOURCE ${source_file}
+      PROPERTY crt_supersedes "${ARG_SUPERSEDES}")
+  endif()
+  if(ARG_PROVIDES AND NOT COMPILER_RT_BUILTINS_STANDALONE_BUILD)
+    set_property(SOURCE ${source_file}
+      DIRECTORY ${COMPILER_RT_SOURCE_DIR}
+      PROPERTY crt_provides "${ARG_PROVIDES}")
+  endif()
+endfunction()
+
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
@@ -230,6 +243,30 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+option(COMPILER_RT_USE_LIBC_MATH
+      "Use LLVM libc math routines for floating-point builtins" OFF)
+
+# Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
+# <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
+macro(use_libc_builtin list_var name)
+  list(REMOVE_ITEM ${list_var} ${name}.c)
+  list(APPEND ${list_var} ${name}.cpp)
+endmacro()
+
+if(COMPILER_RT_USE_LIBC_MATH)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+  endif()
+
+  get_target_property(_libc_include_dirs llvm-libc-common-utilities
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${_libc_include_dirs})
+  add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+endif()
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
@@ -336,13 +373,16 @@ if (NOT MSVC)
     )
   endif()
 
-  if (NOT ANDROID)
+  if(NOT ANDROID AND (NOT WIN32 OR MINGW))
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       ${x86_80_BIT_SOURCES}
       x86_64/floatdixf.c
     )
-    if (NOT WIN32)
+
+    # TODO(compnerd) floatundixf.S currently implements the SysV calling
+    # convention, this must be ported to the Windows ABI.
+    if(NOT WIN32)
       set(x86_64_SOURCES
         ${x86_64_SOURCES}
         x86_64/floatundixf.S
@@ -380,7 +420,6 @@ if (NOT MSVC)
   if (NOT ANDROID)
     set(i386_SOURCES
       ${i386_SOURCES}
-      ${x86_80_BIT_SOURCES}
       i386/floatdixf.S
       i386/floatundixf.S
     )
@@ -392,6 +431,12 @@ if (NOT MSVC)
       i386/chkstk.S
       i386/chkstk2.S
     )
+  endif()
+
+  if(NOT ANDROID AND NOT (WIN32 AND NOT MINGW))
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES})
   endif()
 else () # MSVC
   # Use C versions of functions when building on MSVC
@@ -445,8 +490,35 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
 
   if(implicit_it_flag)
     set(assembly_files
+      arm/addsf3.S
       arm/mulsf3.S
       arm/divsf3.S
+      arm/adddf3.S
+      arm/muldf3.S
+      arm/divdf3.S
+      arm/cmpdf2.S
+      arm/cmpsf2.S
+      arm/gedf2.S
+      arm/gesf2.S
+      arm/unorddf2.S
+      arm/unordsf2.S
+      arm/extendsfdf2.S
+      arm/fixdfdi.S
+      arm/fixdfsi.S
+      arm/fixsfdi.S
+      arm/fixsfsi.S
+      arm/fixunsdfdi.S
+      arm/fixunsdfsi.S
+      arm/fixunssfdi.S
+      arm/fixunssfsi.S
+      arm/floatdidf.S
+      arm/floatdisf.S
+      arm/floatsidf.S
+      arm/floatsisf.S
+      arm/floatundidf.S
+      arm/floatunsidf.S
+      arm/floatunsisf.S
+      arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
@@ -455,6 +527,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/fnan2.c
       arm/fnorm2.c
       arm/funder.c
+      arm/dnan2.c
+      arm/dnorm2.c
+      arm/dunder.c
       )
   endif()
 endif()
@@ -487,17 +562,41 @@ set(arm_sync_SOURCES
 set(thumb1_base_SOURCES
   arm/divsi3.S
   arm/udivsi3.S
-  arm/comparesf2.S
-  arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
+set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
+set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/addsf3fast.S
+    arm/thumb1/cmpdf2.S
+    arm/thumb1/cmpsf2.S
+    arm/thumb1/gedf2.S
+    arm/thumb1/gesf2.S
+    arm/thumb1/unorddf2.S
+    arm/thumb1/unordsf2.S
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
+    ${thumb1_base_SOURCES}
+  )
+  set_special_properties(arm/thumb1/addsf3fast.S
+    SUPERSEDES addsf3.c subsf3.c PROVIDES addsf3 subsf3)
+  set_special_properties(arm/thumb1/cmpdf2.S
+    SUPERSEDES comparedf2.c PROVIDES comparedf2)
+  set_special_properties(arm/thumb1/cmpsf2.S
+    SUPERSEDES comparesf2.c PROVIDES comparesf2)
+else()
+  # Other Thumb1 assembly implementations which do not fall under the
+  # COMPILER_RT_ARM_OPTIMIZED_FP umbrella
+  set(thumb1_base_SOURCES
+    arm/thumb1/addsf3.S
+    arm/comparesf2.S
     ${thumb1_base_SOURCES}
   )
 endif()
@@ -733,6 +832,7 @@ if (APPLE)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
+set(amdgpu_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})
@@ -875,6 +975,8 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(spirv64_SOURCES ${GENERIC_SOURCES})
+
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
@@ -882,8 +984,6 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
-  wasm/__c_longjmp.S
-  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
@@ -945,15 +1045,13 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  if(COMPILER_RT_GPU_BUILD)
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
-    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
-                   -fconvergent-functions BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                      "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
     endif()
@@ -970,7 +1068,7 @@ else ()
   elseif(COMPILER_RT_BAREMETAL_BUILD)
     foreach (arch ${BUILTIN_SUPPORTED_ARCH})
       if("${arch}" MATCHES "arm64|aarch64")
-        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+        list(APPEND BUILTIN_DEFS TARGET_BAREMETAL_AARCH64)
       endif()
     endforeach ()
   endif()
@@ -1089,10 +1187,10 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
     endif()
   endforeach()
   # FIXME: On AIX, we have to archive built shared libraries into a static
-  # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
+  # archive, i.e., libcompiler_rt.a. Once cmake adds support of such usage for AIX,
   # this ad-hoc part can be removed.
   if(OS_NAME MATCHES "AIX")
-    archive_aix_libatomic(clang_rt.atomic libatomic
+    archive_aix_libatomic(clang_rt.atomic libcompiler_rt
                           ARCHS ${BUILTIN_SUPPORTED_ARCH}
                           PARENT_TARGET builtins-standalone-atomic)
   endif()

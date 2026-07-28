@@ -47,6 +47,9 @@ public:
   // Return if this method is static.
   bool isStatic() const;
 
+  // Return if the method is a pure virtual one.
+  bool isPureVirtual() const;
+
   // Return if the method is only a declaration.
   bool isDeclaration() const;
 
