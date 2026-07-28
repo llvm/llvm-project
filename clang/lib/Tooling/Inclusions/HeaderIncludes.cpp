@@ -7,11 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Token.h"
+#include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Inclusions/IncludeStyle.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
+#include <algorithm>
+#include <cassert>
+#include <climits>
+#include <functional>
 #include <optional>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 namespace clang {
 namespace tooling {
@@ -429,13 +446,13 @@ void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
 }
 
 std::optional<tooling::Replacement>
-HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
+HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
                        IncludeDirective Directive) const {
-  assert(IncludeName == trimInclude(IncludeName));
+  assert(Header == trimInclude(Header));
   // If a <header> ("header") already exists in code, "header" (<header>) with
   // different quotation and/or directive will still be inserted.
   // FIXME: figure out if this is the best behavior.
-  auto It = ExistingIncludes.find(IncludeName);
+  auto It = ExistingIncludes.find(Header);
   if (It != ExistingIncludes.end()) {
     for (const auto &Inc : It->second)
       if (Inc.Directive == Directive &&
@@ -444,7 +461,7 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
         return std::nullopt;
   }
   std::string Quoted =
-      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
+      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", Header));
   StringRef QuotedName = Quoted;
   int Priority = Categories.getIncludePriority(
       QuotedName, /*CheckMainHeader=*/!MainIncludeFound);
