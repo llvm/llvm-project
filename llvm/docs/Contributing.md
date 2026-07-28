@@ -32,7 +32,7 @@ use the built binaries to reproduce the failure described in the bug.
 
 Use a Release build (`-DCMAKE_BUILD_TYPE=Release` with assertions (`-DLLVM_ENABLE_ASSERTIONS=On`).
 If you want to build LLVM in Debug mode (`-DCMAKE_BUILD_TYPE=Debug`), consider using
-`LLVM_PARALLEL_LINK_JOBS` and set the linker to anything other than GNU `ld`
+`-DLLVM_PARALLEL_LINK_JOBS=number` and set the linker to anything other than GNU `ld`
 (e.g. `lld` or `mold`, by passing `-DLLVM_USE_LINKER=lld` or `-DLLVM_USE_LINKER=mold`);
 otherwise, you'll likely run out of memory unless you have a lot of RAM.
 
