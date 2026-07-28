@@ -35,7 +35,7 @@ func.func @ext_array_coor_shifted_nuw_ineligble(%arg0: !fir.ref<!fir.array<?xi32
 
 // -----
 
-// Reverse section: known negative step — nsw ok, nuw is poison.
+// Reverse section: known negative step — nsw only (result may be < 0).
 
 func.func @ext_array_coor_reverse_slice(%arg0: !fir.ref<!fir.array<10xi32>>) {
   %extent = arith.constant 10 : i64
