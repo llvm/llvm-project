@@ -135,6 +135,15 @@ public:
   }
 };
 
+class GoScratchTypeSystemClang final : public ScratchTypeSystemClang {
+public:
+  using ScratchTypeSystemClang::ScratchTypeSystemClang;
+
+  lldb::LanguageType GetMinimumLanguage(lldb::opaque_compiler_type_t) override {
+    return lldb::eLanguageTypeGo;
+  }
+};
+
 // Checks whether m1 is an overload of m2 (as opposed to an override). This is
 // called by addOverridesForMethod to distinguish overrides (which share a
 // vtable entry) from overloads (which require distinct entries).
@@ -550,21 +559,16 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  auto create_type_system = [&](llvm::StringRef name) -> lldb::TypeSystemSP {
-    if (language == lldb::eLanguageTypeGo)
-      return std::make_shared<GoTypeSystemClang>(name, triple);
-    return std::make_shared<TypeSystemClang>(name, triple);
-  };
-
   if (module) {
     std::string ast_name =
         "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
-    return create_type_system(ast_name);
+    if (language == lldb::eLanguageTypeGo)
+      return std::make_shared<GoTypeSystemClang>(ast_name, triple);
+    return std::make_shared<TypeSystemClang>(ast_name, triple);
   } else if (target && target->IsValid()) {
     if (language == lldb::eLanguageTypeGo)
-      return create_type_system("Scratch ASTContext for Go");
-    else
-      return std::make_shared<ScratchTypeSystemClang>(*target, triple);
+      return std::make_shared<GoScratchTypeSystemClang>(*target, triple);
+    return std::make_shared<ScratchTypeSystemClang>(*target, triple);
   }
   return lldb::TypeSystemSP();
 }
