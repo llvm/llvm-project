@@ -47,9 +47,33 @@ function(mlgo_compile_models models mlir_opt mlir_translate target_type
     set(EMITC_MLIR "${CMAKE_CURRENT_BINARY_DIR}/${CLASS_NAME}_emitc.mlir")
     set(HEADER_FILE "${LLVM_INCLUDE_DIR}/${include_subdir}/${CLASS_NAME}.h")
 
+    # Pass pipeline to lower MLIR models to EmitC dialect
+    set(EMITC_PASSES
+      "func.func(tosa-to-linalg-named,tosa-to-linalg,tosa-to-arith,tosa-to-tensor)"
+      "symbol-privatize"
+      "scalarize-single-element-tensor-return"
+      "one-shot-bufferize{bufferize-function-boundaries=true function-boundary-type-conversion=identity-layout-map buffer-alignment=0}"
+      "buffer-results-to-out-params{hoist-static-allocs=true}"
+      "func.func(promote-buffers-to-stack)"
+      "buffer-deallocation-pipeline"
+      "func.func(convert-linalg-to-loops)"
+      "expand-strided-metadata"
+      "canonicalize"
+      "memref-elide-reinterpret-cast"
+      "convert-to-emitc"
+      "wrap-emitc-func-in-class{class-name-format=${CLASS_NAME}}"
+      "mlgo-add-reflection-map{included-field-attrs=tf_saved_model.index_path}"
+      "math-expand-ops{ops=rsqrt}"
+      "arith-expand"
+      "convert-math-to-emitc"
+      "convert-arith-to-emitc"
+    )
+    string(JOIN "," PASS_PIPELINE ${EMITC_PASSES})
+    set(PASS_PIPELINE "builtin.module(${PASS_PIPELINE})")
+
     # 1. Run MLIR pipeline to compile MODEL_PATH to EmitC MLIR
     add_custom_command(OUTPUT ${EMITC_MLIR}
-      COMMAND ${mlir_opt} "--pass-pipeline=builtin.module(func.func(tosa-to-linalg-named,tosa-to-linalg,tosa-to-arith,tosa-to-tensor),symbol-privatize,mlgo-scalarize-single-element-tensor-return,one-shot-bufferize{bufferize-function-boundaries=true function-boundary-type-conversion=identity-layout-map buffer-alignment=0},buffer-results-to-out-params{hoist-static-allocs=true},func.func(promote-buffers-to-stack),buffer-deallocation-pipeline,func.func(convert-linalg-to-loops),expand-strided-metadata,canonicalize,memref-elide-reinterpret-cast,convert-to-emitc,wrap-emitc-func-in-class{class-name-format=${CLASS_NAME}},math-expand-ops{ops=rsqrt},arith-expand,convert-math-to-emitc,convert-arith-to-emitc)"
+      COMMAND ${mlir_opt} "--pass-pipeline=${PASS_PIPELINE}"
       ${MODEL_PATH} -o ${EMITC_MLIR}
       DEPENDS ${MODEL_PATH}
       VERBATIM
