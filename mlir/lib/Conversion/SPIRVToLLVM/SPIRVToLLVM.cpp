@@ -930,8 +930,8 @@ public:
   LogicalResult
   matchAndRewrite(spirv::VectorTimesScalarOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcType = op.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
