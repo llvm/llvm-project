@@ -6490,8 +6490,12 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   // C++ member pointers start with a '::' or a nested-name.
   // Member pointers get special handling, since there's no place for the
   // scope spec in the generic path below.
+  // A 'decltype' can only begin a nested-name-specifier if it is followed by
+  // '('; otherwise it is not a decltype-specifier at all and must not be
+  // parsed as one.
   if (getLangOpts().CPlusPlus &&
-      (Tok.is(tok::coloncolon) || Tok.is(tok::kw_decltype) ||
+      (Tok.is(tok::coloncolon) ||
+       (Tok.is(tok::kw_decltype) && NextToken().is(tok::l_paren)) ||
        (Tok.is(tok::identifier) &&
         (NextToken().is(tok::coloncolon) || NextToken().is(tok::less))) ||
        Tok.is(tok::annot_cxxscope))) {
