@@ -493,7 +493,7 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   bool NeedBlockSplit = false;
   Register DataReg = MI.getOperand(0).getReg();
   for (MachineBasicBlock::iterator I = InsPt, E = MI.getIterator();
-       I != E; ++I) {
+       !I.getInstrIterator().isEnd() && I != E; ++I) {
     if (I->modifiesRegister(DataReg, TRI)) {
       NeedBlockSplit = true;
       break;

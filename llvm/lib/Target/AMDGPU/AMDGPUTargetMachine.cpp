@@ -1843,7 +1843,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
-  
+
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass(&MachineSchedulerID, &GCNPreRAOptimizationsID);
 
@@ -2608,7 +2608,7 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  //insertPass<PHIEliminationPass>(SILowerControlFlowPass());
+  // insertPass<PHIEliminationPass>(SILowerControlFlowPass());
 
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
