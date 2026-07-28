@@ -95,6 +95,10 @@ features cannot lower the translation-unit ABI level;
 
 #### C++2d Feature Support
 
+- Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
+  following new Unicode recommendations), applied as a DR to all C++ language
+  modes.
+
 #### C++2c Feature Support
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
