@@ -53,7 +53,9 @@ LIBC_INLINE void *operator new[](size_t, void *p) { return p; }
 // header file in all libc source files where operator delete is called ensures
 // that only libc call sites use these replacement operator delete functions.
 
-#ifndef LIBC_COMPILER_IS_MSVC
+#include "src/__support/macros/sanitizer.h"
+
+#if !defined(LIBC_COMPILER_IS_MSVC) && !defined(LIBC_HAS_ADDRESS_SANITIZER)
 #define DELETE_NAME(name)                                                      \
   __asm__(LLVM_LIBC_STRINGIFY(LIBC_NAMESPACE) "_" LLVM_LIBC_STRINGIFY(name))
 #else
