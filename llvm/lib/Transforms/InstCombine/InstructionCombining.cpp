@@ -694,17 +694,46 @@ static bool leftDistributesOverRight(Instruction::BinaryOps LOp,
 
 /// Return whether "(X LOp Y) ROp Z" is always equal to
 /// "(X ROp Z) LOp (Y ROp Z)".
-static bool rightDistributesOverLeft(Instruction::BinaryOps LOp,
-                                     Instruction::BinaryOps ROp) {
-  if (Instruction::isCommutative(ROp))
-    return leftDistributesOverRight(ROp, LOp);
+bool InstCombinerImpl::rightDistributesOverLeft(
+    BinaryOperator &LOp, Instruction::BinaryOps ROpcode) {
+  if (Instruction::isCommutative(ROpcode))
+    return leftDistributesOverRight(ROpcode, LOp.getOpcode());
+
+  Value *Z;
+  const APInt *ShiftAmt;
+  // %s0 = ashr exact %v0, N
+  // %s1 = ashr exact %v1, N
+  // %r  = add %s0, %s1
+  // ->
+  // %a = add %v0, %v1
+  // %r = ashr %a, N
+  //
+  // If %v0 + %v1 never wraps.
+  if ((ROpcode == Instruction::AShr || ROpcode == Instruction::LShr) &&
+      match(&LOp,
+            m_BinOp(m_Exact(m_BinOp(ROpcode, m_Value(),
+                                    m_Value(Z, m_APInt(ShiftAmt)))),
+                    m_Exact(m_BinOp(ROpcode, m_Value(), m_Deferred(Z)))))) {
+    bool IsSigned = ROpcode == Instruction::AShr;
+    // Instead of asking directly on whether %v0 + %v1 overflows, we ask
+    // if %r times (1<<N) overflows. Because this works on either cases
+    // where we know a bit more about operands (i.e. %v0, %v1), through
+    // things like llvm.assume, or we know a bit more about the result (i.e.
+    // %r).
+    APInt MulAmt = APInt::getOneBitSet(ShiftAmt->getBitWidth(), 0);
+    MulAmt <<= *ShiftAmt;
+    ConstantInt *MulAmtVal = Builder.getInt(MulAmt);
+    if (computeOverflow(Instruction::Mul, IsSigned, &LOp, MulAmtVal, &LOp) ==
+        OverflowResult::NeverOverflows)
+      return true;
+  }
 
   // (X {&|^} Y) >> Z <--> (X >> Z) {&|^} (Y >> Z) for all shifts.
-  return Instruction::isBitwiseLogicOp(LOp) && Instruction::isShift(ROp);
+  return Instruction::isBitwiseLogicOp(LOp.getOpcode()) &&
+         Instruction::isShift(ROpcode);
 
-  // TODO: It would be nice to handle division, aka "(X + Y)/Z = X/Z + Y/Z",
-  // but this requires knowing that the addition does not overflow and other
-  // such subtleties.
+  // TODO: It would be nice to handle the general division cases, aka "(X + Y)/Z
+  // = X/Z + Y/Z",
 }
 
 /// This function returns identity value for given opcode, which can be used to
@@ -750,10 +779,11 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
 
 /// This tries to simplify binary operations by factorizing out common terms
 /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
-static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
-                               InstCombiner::BuilderTy &Builder,
-                               Instruction::BinaryOps InnerOpcode, Value *A,
-                               Value *B, Value *C, Value *D) {
+Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
+                                          const SimplifyQuery &SQ,
+                                          Instruction::BinaryOps InnerOpcode,
+                                          Value *A, Value *B, Value *C,
+                                          Value *D) {
   assert(A && B && C && D && "All values must be provided");
 
   Value *V = nullptr;
@@ -785,7 +815,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   }
 
   // Does "(X op Y) op' Z" always equal "(X op' Z) op (Y op' Z)"?
-  if (!RetVal && rightDistributesOverLeft(TopLevelOpcode, InnerOpcode)) {
+  if (!RetVal && rightDistributesOverLeft(I, InnerOpcode)) {
     // Does the instruction have the form "(A op' B) op (C op' B)" or, in the
     // commutative case, "(A op' B) op (B op' D)"?
     if (B == D || (InnerCommutative && B == C)) {
@@ -1175,23 +1205,21 @@ Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
   // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
   // a common term.
   if (Op0 && Op1 && LHSOpcode == RHSOpcode)
-    if (Value *V = tryFactorization(I, SQ, Builder, LHSOpcode, A, B, C, D))
+    if (Value *V = tryFactorization(I, SQ, LHSOpcode, A, B, C, D))
       return V;
 
   // The instruction has the form "(A op' B) op (C)".  Try to factorize common
   // term.
   if (Op0)
     if (Value *Ident = getIdentityValue(LHSOpcode, RHS))
-      if (Value *V =
-              tryFactorization(I, SQ, Builder, LHSOpcode, A, B, RHS, Ident))
+      if (Value *V = tryFactorization(I, SQ, LHSOpcode, A, B, RHS, Ident))
         return V;
 
   // The instruction has the form "(B) op (C op' D)".  Try to factorize common
   // term.
   if (Op1)
     if (Value *Ident = getIdentityValue(RHSOpcode, LHS))
-      if (Value *V =
-              tryFactorization(I, SQ, Builder, RHSOpcode, LHS, Ident, C, D))
+      if (Value *V = tryFactorization(I, SQ, RHSOpcode, LHS, Ident, C, D))
         return V;
 
   return nullptr;
@@ -1213,7 +1241,7 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
     return R;
 
   // Expansion.
-  if (Op0 && rightDistributesOverLeft(Op0->getOpcode(), TopLevelOpcode)) {
+  if (Op0 && rightDistributesOverLeft(*Op0, TopLevelOpcode)) {
     // The instruction has the form "(A op' B) op C".  See if expanding it out
     // to "(A op C) op' (B op C)" results in simplifications.
     Value *A = Op0->getOperand(0), *B = Op0->getOperand(1), *C = RHS;
