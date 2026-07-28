@@ -3579,23 +3579,14 @@ bool SIInsertWaitcnts::run() {
 
       if (ST.hasWaitXcnt())
         Modified |= removeRedundantSoftXcnts(*MBB);
-      // Only allow soft wait deletion if we've seen all reachable predecessors.
-      // This prevents premature deletion on the first pass through loop headers
-      // before back-edge state is known. We only count predecessors that are
-      // in BlockInfos (i.e., reachable via RPO traversal) to avoid infinite
-      // loops when unreachable blocks exist.
-      unsigned ReachablePredCount = 0;
-      for (MachineBasicBlock *Pred : MBB->predecessors()) {
-        if (BlockInfos.count(Pred))
-          ++ReachablePredCount;
-      }
-      CycleRef Cycle = MCI.getCycle(MBB);
+
       // For blocks in loops, we cannot make the assumption that we have visited
       // all the predecessor blocks and that the brackets contain all incoming
       // events. Since we need this information to reliably optimize out soft
       // waits, we do not optimize out unnecessary soft waits.
       // TODO - Add a soft wait optimization loop after we've arrived at an
       // initial fixed point.
+      CycleRef Cycle = MCI.getCycle(MBB);
       bool AllowWaitDeletion = !Cycle.isValid();
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets, AllowWaitDeletion);
