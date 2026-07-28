@@ -1150,6 +1150,8 @@ static VPValue *reconstructSSAImpl(VPBasicBlock *VPBB,
                                    DenseMap<VPBasicBlock *, VPValue *> &Defs) {
   if (VPValue *Def = Defs.lookup(VPBB))
     return Def;
+  // If the entry block is reached and there's still no def, then Defs is
+  // missing a definition that covers this path.
   assert(VPBB->getNumPredecessors() && "Not all paths have def");
 
   if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
