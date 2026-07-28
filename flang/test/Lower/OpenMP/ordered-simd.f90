@@ -34,14 +34,14 @@ subroutine ws_ordered_simd(n)
 
 ! CHECK-LABEL: func @_QPws_ordered_simd
 ! CHECK:         omp.wsloop ordered(0) {
-! CHECK:           omp.simd linear({{.*}}) {
+! CHECK:           omp.simd private({{.*}}) {
 ! CHECK:             omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:               omp.ordered.region par_level_simd {
 ! CHECK:                 omp.terminator
 ! CHECK:               }
 ! CHECK:               omp.yield
 ! CHECK:             }
-! CHECK:           } {linear_var_types = [i32], omp.composite}
+! CHECK:           } {omp.composite}
 ! CHECK:         } {omp.composite}
 
   !$omp do simd ordered

@@ -168,7 +168,7 @@ subroutine test_simd
  !DEF: /test_simd/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do simd
- !DEF: /test_simd/OtherConstruct1/i (OmpLinear, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_simd/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
   !DEF: /test_simd/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
@@ -195,11 +195,11 @@ subroutine test_simd_multi
  !DEF: /test_simd_multi/k ObjectEntity INTEGER(4)
  integer i, j, k
 !$omp parallel do simd  collapse(3)
- !DEF: /test_simd_multi/OtherConstruct1/i (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+ !DEF: /test_simd_multi/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_simd_multi/OtherConstruct1/j (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_simd_multi/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do j=6,10
-   !DEF: /test_simd_multi/OtherConstruct1/k (OmpLastPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_simd_multi/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
    do k=11,15
     !DEF: /test_simd_multi/OtherConstruct1/a (OmpShared) HostAssoc REAL(4)
     !REF: /test_simd_multi/OtherConstruct1/k

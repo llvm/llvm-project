@@ -26,6 +26,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -2232,9 +2233,11 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     return;
   }
 
+  llvm::omp::Directive directive{GetContext().directive};
   int64_t level{*depth.value};
   Symbol::Flag ivDSA;
-  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
+  if (!llvm::omp::allSimdSet.test(directive) ||
+      llvm::omp::allDoSet.test(directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1 && version < 60) {
     ivDSA = Symbol::Flag::OmpLinear;
@@ -2242,18 +2245,69 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
-  Scope &scope{currScope()};
+  // Collect all symbols that appear in linear/lastprivate clauses
+  llvm::DenseSet<const Symbol *> linearObjs;
+  llvm::DenseSet<const Symbol *> lastprivateObjs;
+  bool explicitDSA{false};
+  auto getObjSymbols = [&](const parser::OmpObjectList &objs,
+                           llvm::DenseSet<const Symbol *> &syms) {
+    for (const parser::OmpObject &obj : objs.v) {
+      const parser::Name *objName{};
+      common::visit(common::visitors{
+                        [&](const parser::Designator &designator) {
+                          objName =
+                              parser::GetDesignatorNameIfDataRef(designator);
+                        },
+                        [&](const parser::Name &name) { objName = &name; },
+                        [&](const auto &other) {},
+                    },
+          obj.u);
+      if (objName && objName->symbol) {
+        syms.insert(&objName->symbol->GetUltimate());
+      }
+    }
+  };
+  for (const parser::OmpClause &clause : x.BeginDir().Clauses().v) {
+    if (auto *linear{std::get_if<parser::OmpClause::Linear>(&clause.u)}) {
+      getObjSymbols(std::get<parser::OmpObjectList>(linear->v.t), linearObjs);
+    } else if (auto *lastprivate{
+                   std::get_if<parser::OmpClause::Lastprivate>(&clause.u)}) {
+      getObjSymbols(
+          std::get<parser::OmpObjectList>(lastprivate->v.t), lastprivateObjs);
+    }
+  }
 
+  Scope &scope{currScope()};
   if (auto doLoops{omp::CollectAffectedDoLoops(x, version, &context_)}) {
     for (const parser::DoConstruct *loop : *doLoops) {
       const parser::Name *iv{GetLoopIndex(*loop)};
       if (!iv || (iv->symbol && IsLocalInsideScope(*iv->symbol, scope))) {
         continue;
       }
+      // Override explicitly set linear/lastprivate DSA on DO SIMD directives
+      if (auto *symbol{iv->symbol}) {
+        const Symbol *ult{&symbol->GetUltimate()};
+        std::optional<Symbol::Flag> dsa;
+        if (linearObjs.count(ult))
+          dsa = Symbol::Flag::OmpLinear;
+        else if (lastprivateObjs.count(ult))
+          dsa = Symbol::Flag::OmpLastPrivate;
+        if (dsa.has_value()) {
+          if (llvm::omp::allSimdSet.test(directive) &&
+              llvm::omp::allDoSet.test(directive)) {
+            explicitDSA = true;
+            ivDSA = Symbol::Flag::OmpPrivate;
+          }
+        }
+      }
       if (auto *symbol{ResolveOmp(*iv, ivDSA, scope)}) {
         SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
         iv->symbol = symbol; // adjust the symbol within region
-        AddToContextObjectWithDSA(*symbol, ivDSA);
+        if (explicitDSA) {
+          AddToContextObjectWithExplicitDSA(*symbol, ivDSA);
+        } else {
+          AddToContextObjectWithDSA(*symbol, ivDSA);
+        }
       }
     }
   }
@@ -3047,7 +3101,31 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
     return;
   }
 
-  if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
+  // Explicit symbol flags for iteration variables in DO SIMD directives may
+  // have already been set by PrivatizeAssociatedLoopIndex().
+  Symbol::Flags prevFlags;
+  Symbol *symbol{};
+  if (name->symbol) {
+    auto it{currScope().find(name->source)};
+    if (it != currScope().end()) {
+      symbol = &*it->second;
+      prevFlags = symbol->flags();
+    }
+  }
+  bool doSimd{llvm::omp::allDoSet.test(directive) &&
+      llvm::omp::allSimdSet.test(directive)};
+  bool setDSA{!symbol || !doSimd ||
+      (ompFlag != Symbol::Flag::OmpLastPrivate &&
+          ompFlag != Symbol::Flag::OmpLinear) ||
+      !symbol->test(Symbol::Flag::OmpExplicit) ||
+      !symbol->test(Symbol::Flag::OmpPreDetermined) ||
+      (prevFlags.test(Symbol::Flag::OmpFirstPrivate) &&
+          ompFlag == Symbol::Flag::OmpLastPrivate)};
+  if (setDSA) {
+    symbol = ResolveOmp(*name, ompFlag, currScope());
+  }
+
+  if (symbol) {
     auto checkExclusivelists{//
         [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
             const Symbol *symbol2, Symbol::Flag secondOmpFlag) {
@@ -3063,7 +3141,9 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
     if (dataCopyingAttributeFlags.test(ompFlag)) {
       CheckDataCopyingClause(*name, *symbol, ompFlag);
     } else {
-      AddToContextObjectWithExplicitDSA(*symbol, ompFlag);
+      if (setDSA) {
+        AddToContextObjectWithExplicitDSA(*symbol, ompFlag);
+      }
       if (dataSharingAttributeFlags.test(ompFlag)) {
         CheckMultipleAppearances(*name, *symbol, ompFlag);
       }
