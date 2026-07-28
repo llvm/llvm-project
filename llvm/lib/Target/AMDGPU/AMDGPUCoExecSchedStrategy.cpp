@@ -14,6 +14,7 @@
 #include "AMDGPUCoExecSchedStrategy.h"
 #include "AMDGPUBarrierLatency.h"
 #include "AMDGPUIGroupLP.h"
+#include "AMDGPUWMMASchedule.h"
 #include "GCNHazardRecognizer.h"
 #include "llvm/Support/Debug.h"
 
@@ -1346,6 +1347,8 @@ llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  // Also run the WMMA ds_load scheduling mutation under CoExec.
+  DAG->addMutation(createAMDGPUWMMAScheduleDAGMutation(C->MF));
   return DAG;
 }
 
