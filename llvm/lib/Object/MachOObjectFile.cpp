@@ -2057,7 +2057,12 @@ Expected<SectionRef> MachOObjectFile::getSection(StringRef SectionName) const {
 }
 
 bool MachOObjectFile::isSectionCompressed(DataRefImpl Sec) const {
-  return false;
+  Expected<StringRef> NameOrErr = getSectionName(Sec);
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
+    return false;
+  }
+  return NameOrErr->ltrim("._").starts_with("zdebug_");
 }
 
 bool MachOObjectFile::isSectionText(DataRefImpl Sec) const {

@@ -2100,7 +2100,7 @@ class DWARFObjInMemory final : public DWARFObject {
 
   /// If Sec is compressed section, decompresses and updates its contents
   /// provided by Data. Otherwise leaves it unchanged.
-  Error maybeDecompress(const object::SectionRef &Sec, StringRef Name,
+  Error maybeDecompress(const object::SectionRef &Sec, StringRef &Name,
                         StringRef &Data) {
     if (!Sec.isCompressed())
       return Error::success();
@@ -2116,6 +2116,10 @@ class DWARFObjInMemory final : public DWARFObject {
 
     UncompressedSections.push_back(std::move(Out));
     Data = UncompressedSections.back();
+
+    StringRef NormalizedName = Name.ltrim("._");
+    if (NormalizedName.starts_with("zdebug_"))
+      Name = NormalizedName.drop_front();
 
     return Error::success();
   }

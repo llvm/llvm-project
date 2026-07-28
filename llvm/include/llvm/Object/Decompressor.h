@@ -45,6 +45,7 @@ public:
 private:
   Decompressor(StringRef Data);
 
+  Error consumeCompressedGNUHeader();
   Error consumeCompressedHeader(bool Is64Bit, bool IsLittleEndian);
 
   StringRef SectionData;

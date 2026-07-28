@@ -1,0 +1,67 @@
+# REQUIRES: zlib
+# RUN: yaml2obj %s -o %t \
+# RUN:   -DINFO=5A4C4942000000000000000C789CE3606060606100010E0600009C0015
+# RUN: llvm-dwarfdump --debug-info %t | FileCheck %s
+# RUN: yaml2obj %s -o %t.invalid \
+# RUN:   -DINFO=4241442100000000000000000000000000000000000000000000000000
+# RUN: not llvm-dwarfdump --debug-info %t.invalid 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ERR
+
+# CHECK: .debug_info contents:
+# CHECK: Compile Unit: length = 0x00000008
+# CHECK-SAME: version = 0x0004
+# CHECK-SAME: addr_size = 0x08
+
+# ERR: error: failed to decompress
+# ERR-SAME: corrupted compressed section header
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      232
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DWARF
+    vmaddr:          0
+    vmsize:          50
+    fileoff:         264
+    filesize:        50
+    maxprot:         7
+    initprot:        3
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __zdebug_info
+        segname:         __DWARF
+        addr:            0
+        size:            29
+        offset:          264
+        align:           0
+        reloff:          0
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0
+        reserved2:       0
+        reserved3:       0
+        content:         '[[INFO]]'
+      - sectname:        __zdebug_abbrev
+        segname:         __DWARF
+        addr:            29
+        size:            21
+        offset:          293
+        align:           0
+        reloff:          0
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0
+        reserved2:       0
+        reserved3:       0
+        content:         5A4C49420000000000000001789C63000000010001
+...

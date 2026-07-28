@@ -21,13 +21,30 @@ using namespace object;
 Expected<Decompressor> Decompressor::create(StringRef Name, StringRef Data,
                                             bool IsLE, bool Is64Bit) {
   Decompressor D(Data);
-  if (Error Err = D.consumeCompressedHeader(Is64Bit, IsLE))
+  const bool IsGNUStyle = Name.ltrim("._").starts_with("zdebug_");
+  if (Error Err = IsGNUStyle ? D.consumeCompressedGNUHeader()
+                             : D.consumeCompressedHeader(Is64Bit, IsLE))
     return std::move(Err);
   return D;
 }
 
 Decompressor::Decompressor(StringRef Data)
     : SectionData(Data), DecompressedSize(0) {}
+
+Error Decompressor::consumeCompressedGNUHeader() {
+  if (!SectionData.starts_with("ZLIB"))
+    return createError("corrupted compressed section header");
+  if (const char *Reason =
+          llvm::compression::getReasonIfUnsupported(compression::Format::Zlib))
+    return createError(Reason);
+  if (SectionData.size() < 12)
+    return createError("corrupted uncompressed section size");
+
+  CompressionType = DebugCompressionType::Zlib;
+  DecompressedSize = read64be(SectionData.data() + 4);
+  SectionData = SectionData.substr(12);
+  return Error::success();
+}
 
 Error Decompressor::consumeCompressedHeader(bool Is64Bit, bool IsLittleEndian) {
   using namespace ELF;
