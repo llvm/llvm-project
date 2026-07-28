@@ -3653,8 +3653,7 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
     }
 
     const auto *SF = I->getStackFrame();
-    const auto &Loc = ProgramPoint::getProgramPoint(
-        NodeEx, ProgramPoint::PostLoadKind, SF, tag);
+    PostLoad Loc(NodeEx, SF, tag);
     Dst.insert(Engine.makeNode(Loc, state->BindExpr(BoundEx, SF, V), I));
   }
 }
@@ -3683,9 +3682,8 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst, const Stmt *NodeEx,
     // "Variable 'p' initialized to a null pointer value"
 
     static SimpleProgramPointTag tag(TagProviderName, "Location");
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(
-        NodeEx, ProgramPoint::PostStmtKind, Pred->getStackFrame(), &tag);
-    Src.insert(Engine.makeNode(L, state, Pred));
+    PostStmt Loc(NodeEx, Pred->getStackFrame(), &tag);
+    Src.insert(Engine.makeNode(Loc, state, Pred));
   }
 
   ExplodedNodeSet Tmp;

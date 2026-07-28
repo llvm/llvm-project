@@ -583,9 +583,8 @@ void ExprEngine::handleConstructor(const Expr *E,
       if (isZeroSizeArray()) {
         static SimpleProgramPointTag T{"ExprEngine",
                                        "Skipping 0 size array construction"};
-        const ProgramPoint &P = ProgramPoint::getProgramPoint(
-            CE, ProgramPoint::PostStmtKind, Pred->getStackFrame(), &T);
-        destNodes.insert(Engine.makeNode(P, State, Pred));
+        PostStmt Loc(CE, Pred->getStackFrame(), &T);
+        destNodes.insert(Engine.makeNode(Loc, State, Pred));
         return;
       }
 
@@ -663,9 +662,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (State != Pred->getState()) {
     static SimpleProgramPointTag T("ExprEngine",
                                    "Prepare for object construction");
-    const ProgramPoint &P = ProgramPoint::getProgramPoint(
-        E, ProgramPoint::PreStmtKind, Pred->getStackFrame(), &T);
-    Pred = Engine.makeNode(P, State, Pred);
+    Pred = Engine.makeNode(PreStmt(E, SF, &T), State, Pred);
     if (!Pred)
       return;
   }
@@ -706,8 +703,7 @@ void ExprEngine::handleConstructor(const Expr *E,
           State = State->bindDefaultZero(Target, SF);
       }
 
-      const ProgramPoint &P = ProgramPoint::getProgramPoint(
-          CE, ProgramPoint::PreStmtKind, N->getStackFrame(), /*tag=*/nullptr);
+      PreStmt P(CE, N->getStackFrame(), /*tag=*/nullptr);
       PreInitialized.insert(Engine.makeNode(P, State, N));
     }
   } else {
