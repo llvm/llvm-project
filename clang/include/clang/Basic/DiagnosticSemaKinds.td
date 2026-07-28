@@ -14278,6 +14278,9 @@ def note_acc_reduction_combiner_forming
            "operator|final assignment operator}0">;
 
 // AMDGCN type diagnostics
+def err_amdgcn_target_ext_type_unsupported : Error<
+  "AMDGPU built-in type %0 is not supported on target '%1'">;
+
 def err_amdgcn_invalid_field_not_a_wrapper : Error<
   "field with barrier type %0 seen in a structure that is not a named barrier wrapper">;
 def note_amdgcn_not_a_named_barrier_wrapper_too_many_fields : Note<

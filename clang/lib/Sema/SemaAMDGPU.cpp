@@ -1080,6 +1080,24 @@ void SemaAMDGPU::DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD) {
   DiagnoseUnguardedBuiltins(SemaRef).IssueDiagnostics(FD->getBody());
 }
 
+bool SemaAMDGPU::checkAMDGPUTypeSupport(QualType Ty, SourceLocation Loc) {
+  ASTContext &Ctx = getASTContext();
+  llvm::Triple TT = Ctx.getTargetInfo().getTriple();
+  const Type *BaseTy = Ty->getPointeeOrArrayElementType();
+
+  if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+    // The AMDGPU named barrier type requires special handling in the back-end
+    // and is not supported for SPIR-V
+    if (BaseTy->isAMDGPUNamedBarrierType()) {
+      SemaRef.Diag(Loc, diag::err_amdgcn_target_ext_type_unsupported)
+          << Ty << TT.str();
+      return false;
+    }
+  }
+
+  return true;
+}
+
 static FieldDecl *getNamedBarrierField(const RecordDecl *R) {
   for (FieldDecl *FD : R->fields()) {
     QualType FDTy = FD->getType();

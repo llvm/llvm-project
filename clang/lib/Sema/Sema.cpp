@@ -2396,6 +2396,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
 
+    if (TI.hasAMDGPUTypes())
+      AMDGPU().checkAMDGPUTypeSupport(Ty, Loc);
+
     if (auto *VT = Ty->getAs<VectorType>();
         VT && FD &&
         (VT->getVectorKind() == VectorKind::SveFixedLengthData ||

@@ -9240,6 +9240,13 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
                                 CallerFeatureMap);
   }
 
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewVD->getLocation())) {
+      NewVD->setInvalidDecl();
+      return;
+    }
+  }
+
   if (T.hasAddressSpace() &&
       !CheckVarDeclSizeAddressSpace(NewVD, T.getAddressSpace())) {
     NewVD->setInvalidDecl();
