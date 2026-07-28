@@ -126,9 +126,11 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       // These flags are passed unconditionally instead of gating on -g: in
       // RDC-mode links this job runs in a clang invoked by
       // clang-linker-wrapper where the original -g is not visible, but the
-      // debug info itself travels in the bitcode. The flags only allow
-      // extensions and select the debug info form; with debug-info-free
-      // bitcode the output is unchanged.
+      // debug info itself travels in the bitcode. SPV_KHR_non_semantic_info
+      // and the debug info version only take effect when the bitcode carries
+      // debug info. SPV_INTEL_optnone is not tied to debug info: clang emits
+      // optnone at -O0 even without -g, and the emitter needs the extension
+      // allowed to encode it.
       TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
                        ",+SPV_INTEL_optnone");
       TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
