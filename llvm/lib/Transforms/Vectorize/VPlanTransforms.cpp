@@ -885,10 +885,6 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
   if (!WideIV)
     return nullptr;
 
-  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
-    return nullptr;
-
   // Calculate the final index.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *CanonicalIV = LoopRegion->getCanonicalIV();
@@ -5811,7 +5807,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarSExtOrTrunc(
+      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
           VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(

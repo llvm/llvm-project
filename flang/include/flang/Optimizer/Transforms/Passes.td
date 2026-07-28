@@ -558,7 +558,10 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "register every plain host module global that is mirrored in the "
            "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
-           "time and HMM/ATS handles migration.">
+           "time and HMM/ATS handles migration.">,
+    Option<"priority", "priority", "int32_t", /*default=*/"0",
+           "Priority for the CUDA Fortran global constructor in "
+           "llvm.mlir.global_ctors.">
   ];
 }
 
