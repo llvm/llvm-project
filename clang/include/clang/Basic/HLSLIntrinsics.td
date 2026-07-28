@@ -1319,7 +1319,6 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 \param Pow The specified power.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Reads the value from the lane across the X axis of the quad.

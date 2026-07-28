@@ -484,6 +484,8 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(normalize)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(pow)
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins overloads
