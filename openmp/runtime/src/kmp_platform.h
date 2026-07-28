@@ -298,8 +298,9 @@
 #if (1 != KMP_ARCH_X86 + KMP_ARCH_X86_64 + KMP_ARCH_ARM + KMP_ARCH_PPC64 +     \
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
               KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
-              KMP_ARCH_S390X + KMP_ARCH_WASM32 + KMP_ARCH_WASM64 + KMP_ARCH_PPC +                  \
-              KMP_ARCH_AARCH64_32 + KMP_ARCH_SPARC + KMP_ARCH_ARM64EC)
+              KMP_ARCH_S390X + KMP_ARCH_WASM32 + KMP_ARCH_WASM64 +             \
+              KMP_ARCH_PPC + KMP_ARCH_AARCH64_32 + KMP_ARCH_SPARC +            \
+              KMP_ARCH_ARM64EC)
 #error Unknown or unsupported architecture
 #endif
 

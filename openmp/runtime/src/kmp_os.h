@@ -183,7 +183,8 @@ typedef unsigned long long kmp_uint64;
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64 || KMP_ARCH_WASM64 || KMP_ARCH_ARM64EC
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64 || KMP_ARCH_WASM64 ||    \
+    KMP_ARCH_ARM64EC
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
