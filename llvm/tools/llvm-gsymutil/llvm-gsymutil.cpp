@@ -511,12 +511,11 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
   // Make sure there is DWARF to convert first.
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
       Obj,
-      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
-      nullptr,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process, nullptr,
       /*DWPName=*/"",
       /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
       /*WarningHandler=*/WithColor::defaultWarningHandler,
-      /*ThreadSafe*/true);
+      /*ThreadSafe*/ true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
@@ -919,7 +918,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       error(GSYMPath, Gsym.takeError());
 
     if (ShowStatistics) {
-      Gsym->dumpStatistics(GSYMPath, OS, StatisticsFormat);
+      (*Gsym)->dumpStatistics(GSYMPath, OS, StatisticsFormat);
       continue;
     }
 

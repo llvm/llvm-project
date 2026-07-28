@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
-#include <map>
 
 namespace llvm {
 class raw_ostream;
@@ -29,6 +28,27 @@ namespace gsym {
 
 class GsymCreator;
 class GsymReader;
+class GsymDataExtractor;
+
+/// Byte-size accounting for a FunctionInfo, broken down by field / InfoType.
+/// Populated by FunctionInfo::parseStatistics. Every value is a byte count and
+/// each on-disk byte of a FunctionInfo is attributed to exactly one member:
+///   FunctionInfo = SizeAndName + LineTableInfo + InlineInfo + CallSiteInfo +
+///                  MergedFuncInfo + EndOfList
+/// (the per-InfoType members include that section's 8-byte InfoType+InfoLength
+/// header). InfoTypeInfoLengthCountAndFnSize is only used for the inner
+/// (merged) breakdown and captures the MergedFunctionsInfo structural bytes:
+/// its own InfoType+InfoLength (8) plus Count (4) plus each FnSize (4).
+struct FunctionInfoStats {
+  uint64_t SizeAndName = 0;
+  uint64_t LineTableInfo = 0;
+  uint64_t InlineInfo = 0;
+  uint64_t CallSiteInfo = 0;
+  uint64_t MergedFuncInfo = 0;
+  uint64_t EndOfList = 0;
+  uint64_t InfoTypeInfoLengthCountAndFnSize = 0;
+};
+
 /// Function information in GSYM files encodes information for one contiguous
 /// address range. If a function has discontiguous address ranges, they will
 /// need to be encoded using multiple FunctionInfo objects.
@@ -126,9 +146,7 @@ struct FunctionInfo {
   /// address and name will be filled in.
   ///
   /// \returns A boolean indicating if this FunctionInfo is valid.
-  bool isValid() const {
-    return Name != 0;
-  }
+  bool isValid() const { return Name != 0; }
 
   /// Decode an object from a binary data stream.
   ///
@@ -204,22 +222,22 @@ struct FunctionInfo {
          uint64_t Addr,
          std::optional<GsymDataExtractor> *MergedFuncsData = nullptr);
 
-  /// Parse the function info data and accumulate the size of each InfoType
-  /// into the provided map.
+  /// Parse the function info data and accumulate the byte size of each field /
+  /// InfoType into \a Stats.
   ///
-  /// \param Data The binary stream to read the data from.
+  /// \param Data The binary stream to read the data from. Its string-offset
+  /// size is used to size the FunctionInfo Name field (4 bytes in GSYM v1,
+  /// 1-8 bytes in v2).
   ///
-  /// \param FuncInfoStats A map that will be updated with the size of each
-  /// InfoType found in the data. The sizes include the InfoType/InfoLength
-  /// header (8 bytes) plus the data payload.
+  /// \param Stats Updated with the per-field byte sizes for this FunctionInfo.
   ///
-  /// \param MergedFuncInfoStats If non-null, this map will be updated with
-  /// the per-InfoType sizes of the inner FunctionInfos within any
-  /// MergedFunctionsInfo sections.
+  /// \param MergedFuncInfoStats If non-null, and a MergedFunctionsInfo section
+  /// is present, this is updated with the byte breakdown of the inner
+  /// FunctionInfos plus the MergedFunctionsInfo structural bytes
+  /// (InfoTypeInfoLengthCountAndFnSize).
   LLVM_ABI static void
-  parseStatistics(GsymDataExtractor &Data,
-                  std::map<uint32_t, uint64_t> &FuncInfoStats,
-                  std::map<uint32_t, uint64_t> *MergedFuncInfoStats = nullptr);
+  parseStatistics(GsymDataExtractor &Data, FunctionInfoStats &Stats,
+                  FunctionInfoStats *MergedFuncInfoStats = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }
