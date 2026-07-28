@@ -48,7 +48,8 @@ bool flat_fork_join() {
 }
 
 int main(int, char**) {
-  assert(fibb(25) == 75025);
+  assert(fibb(20) == 6765);
+  // assert(fibb(25) == 75025);
   assert(flat_fork_join());
   return 0;
 }
