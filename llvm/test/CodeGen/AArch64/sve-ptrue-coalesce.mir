@@ -685,7 +685,7 @@ body:             |
 
 ...
 ---
-name:            ptrue_s_replaces_ptrue_d_for_d_user_ld1_st1_reg_imm
+name:            ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_imm
 alignment:       2
 tracksRegLiveness: true
 registers:
@@ -701,7 +701,7 @@ body:             |
   bb.0:
     liveins: $x0, $z0
 
-    ; ENABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ld1_st1_reg_imm
+    ; ENABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_imm
     ; ENABLED: liveins: $x0, $z0
     ; ENABLED-NEXT: {{  $}}
     ; ENABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -711,7 +711,7 @@ body:             |
     ; ENABLED-NEXT: ST1W_IMM [[COPY1]], [[PTRUE_D]], [[COPY]], 0 :: (store (<vscale x 4 x s32>))
     ; ENABLED-NEXT: RET_ReallyLR
     ;
-    ; DISABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ld1_st1_reg_imm
+    ; DISABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_imm
     ; DISABLED: liveins: $x0, $z0
     ; DISABLED-NEXT: {{  $}}
     ; DISABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -731,7 +731,7 @@ body:             |
 
 ...
 ---
-name:            ptrue_s_replaces_ptrue_d_for_d_user_ld1_st1_reg_reg
+name:            ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_reg
 alignment:       2
 tracksRegLiveness: true
 registers:
@@ -749,7 +749,7 @@ body:             |
   bb.0:
     liveins: $x0, $x1, $z0
 
-    ; ENABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ld1_st1_reg_reg
+    ; ENABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_reg
     ; ENABLED: liveins: $x0, $x1, $z0
     ; ENABLED-NEXT: {{  $}}
     ; ENABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -760,7 +760,7 @@ body:             |
     ; ENABLED-NEXT: ST1W [[COPY2]], [[PTRUE_D]], [[COPY]], [[COPY1]] :: (store (<vscale x 4 x s32>))
     ; ENABLED-NEXT: RET_ReallyLR
     ;
-    ; DISABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ld1_st1_reg_reg
+    ; DISABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ld1_st1_reg_reg
     ; DISABLED: liveins: $x0, $x1, $z0
     ; DISABLED-NEXT: {{  $}}
     ; DISABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -828,7 +828,7 @@ body:             |
 
 ...
 ---
-name:            ptrue_s_replaces_ptrue_d_for_d_user_ldnt1_stnt1_reg_imm
+name:            ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_imm
 alignment:       2
 tracksRegLiveness: true
 registers:
@@ -844,7 +844,7 @@ body:             |
   bb.0:
     liveins: $x0, $z0
 
-    ; ENABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ldnt1_stnt1_reg_imm
+    ; ENABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_imm
     ; ENABLED: liveins: $x0, $z0
     ; ENABLED-NEXT: {{  $}}
     ; ENABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -854,7 +854,7 @@ body:             |
     ; ENABLED-NEXT: STNT1W_ZRI [[COPY1]], [[PTRUE_D]], [[COPY]], 0 :: (store (<vscale x 4 x s32>))
     ; ENABLED-NEXT: RET_ReallyLR
     ;
-    ; DISABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ldnt1_stnt1_reg_imm
+    ; DISABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_imm
     ; DISABLED: liveins: $x0, $z0
     ; DISABLED-NEXT: {{  $}}
     ; DISABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -874,7 +874,7 @@ body:             |
 
 ...
 ---
-name:            ptrue_s_replaces_ptrue_d_for_d_user_ldnt1_stnt1_reg_reg
+name:            ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_reg
 alignment:       2
 tracksRegLiveness: true
 registers:
@@ -892,7 +892,7 @@ body:             |
   bb.0:
     liveins: $x0, $x1, $z0
 
-    ; ENABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ldnt1_stnt1_reg_reg
+    ; ENABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_reg
     ; ENABLED: liveins: $x0, $x1, $z0
     ; ENABLED-NEXT: {{  $}}
     ; ENABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
@@ -903,7 +903,7 @@ body:             |
     ; ENABLED-NEXT: STNT1W_ZRR [[COPY2]], [[PTRUE_D]], [[COPY]], [[COPY1]] :: (store (<vscale x 4 x s32>))
     ; ENABLED-NEXT: RET_ReallyLR
     ;
-    ; DISABLED-LABEL: name: ptrue_s_replaces_ptrue_d_for_d_user_ldnt1_stnt1_reg_reg
+    ; DISABLED-LABEL: name: ptrue_d_replaces_ptrue_s_for_d_user_ldnt1_stnt1_reg_reg
     ; DISABLED: liveins: $x0, $x1, $z0
     ; DISABLED-NEXT: {{  $}}
     ; DISABLED-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
