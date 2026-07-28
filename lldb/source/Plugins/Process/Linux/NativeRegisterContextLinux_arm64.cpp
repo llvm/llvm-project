@@ -84,7 +84,8 @@ NativeRegisterContextLinux_arm64::GetInvalidationMask(
     // both ZA and ZT being enabled.
     return RegisterSetType::ZA_HEADER | RegisterSetType::ZA |
            RegisterSetType::ZT;
-  llvm_unreachable("Unhandled register set");
+  default:
+    llvm_unreachable("Unhandled register set");
   }
 }
 
