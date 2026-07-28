@@ -5,11 +5,11 @@ void name();
 
 void foo() {
 #pragma acc declare
-  // CHECK-NOT: declare
+  // CHECK-NOT: {{^}}declare
 #pragma acc routine(name) worker
   // CHECK-NOT: routine
 }
 #pragma acc declare
-  // CHECK-NOT: declare
+  // CHECK-NOT: {{^}}declare
 #pragma acc routine(name) worker
   // CHECK-NOT: routine

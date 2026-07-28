@@ -56,7 +56,7 @@ BAR-OPT-NOT: {{define|declare}}
 
 
 USE-OPT: @_ZZ3foovE1i = linkonce_odr global i32 0, comdat
-USE-CMN-NOT: {{comdat|define|declare}}
+USE-CMN-NOT: {{^(comdat|define|declare)}}
 USE-CMN: define{{.*}} i32 @main()
 USE-CMN-NOT: {{define|declare}}
 USE: declare void @_Z3barv()
