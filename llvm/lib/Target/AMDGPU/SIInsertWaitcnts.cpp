@@ -1323,7 +1323,7 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
   // operations that use a different counter (like SAMPLE_CNT).
   static constexpr AMDGPU::InstCounterType VmemCounters[] = {
       AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT,
-      AMDGPU::DS_CNT,   AMDGPU::ASYNC_CNT, AMDGPU::TENSOR_CNT};
+      AMDGPU::DS_CNT,   AMDGPU::ASYNC_CNT};
   HWEvents VmemEvents = llvm::accumulate(
       VmemCounters, HWEvents(), [&](HWEvents Acc, AMDGPU::InstCounterType T) {
         return Acc | Context->getWaitEvents(T);
