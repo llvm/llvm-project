@@ -8989,7 +8989,7 @@ LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
   return Legalized;
 }
 
-// Round a wide fp value down to ResultTy's element size, forcing inexact
+// Round a wide fp value to ResultTy's element size, forcing inexact
 // results to the odd value so a subsequent narrowing round is correct. This
 // avoids double-rounding when narrowing e.g. f64 -> f32 -> bf16. See Boldo &
 // Melquiond, "When double rounding is odd" (2005).
@@ -9043,8 +9043,9 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_BF16(MachineInstr &MI) {
 
   LLT F32Ty = SrcTy.changeElementType(LLT::float32());
   Register OddF32 = lowerRoundInexactToOdd(F32Ty, SrcReg);
-  MI.getOperand(1).setReg(OddF32);
-  return lowerFPTRUNC_F32_TO_BF16(MI);
+  MIRBuilder.buildFPTrunc(DstReg, OddF32, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult
