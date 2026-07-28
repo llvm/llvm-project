@@ -6551,7 +6551,6 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   // integer type is the same size as the pointer type.
   auto CompatibleSizes = [&](Type *PtrTy, Type *IntTy) {
     unsigned IntWidth = IntTy->getScalarType()->getIntegerBitWidth();
-    PtrTy = PtrTy->getScalarType();
     unsigned IndexWidth = DL.getAddressSizeInBits(PtrTy);
     unsigned PtrWidth = DL.getPointerTypeSizeInBits(PtrTy);
     // For ptrtoint/inttoptr, we must check that IntWidth == IndexWidth and also
@@ -6566,26 +6565,26 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
       HasPtrToInt = true;
     } else if (auto *PtrToAddrOp1 = dyn_cast<PtrToAddrOperator>(Op1)) {
       NewOp1 = PtrToAddrOp1->getOperand(0);
-    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
+    } else if (auto *RHSC = dyn_cast<Constant>(Op1)) {
       NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
 
     // For ptrtoaddr, IntWidth == IndexWidth is implied and we don't need to
     // check PtrWidth.
-    if (!HasPtrToInt || CompatibleSizes(SrcTy, DestTy))
-      if (NewOp1 && NewOp1->getType() == Op0Src->getType())
-        return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
+    if ((!HasPtrToInt || CompatibleSizes(SrcTy, DestTy)) &&
+        (NewOp1 && NewOp1->getType() == Op0Src->getType()))
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
   // Do the same in the other direction for icmp (inttoptr x), (inttoptr/c).
   if (CastOp0->getOpcode() == Instruction::IntToPtr &&
       CompatibleSizes(DestTy, SrcTy)) {
     Value *NewOp1 = nullptr;
-    if (auto *IntToPtrOp1 = dyn_cast<IntToPtrInst>(ICmp.getOperand(1))) {
+    if (auto *IntToPtrOp1 = dyn_cast<IntToPtrInst>(Op1)) {
       Value *IntSrc = IntToPtrOp1->getOperand(0);
       if (IntSrc->getType() == Op0Src->getType())
         NewOp1 = IntToPtrOp1->getOperand(0);
-    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
+    } else if (auto *RHSC = dyn_cast<Constant>(Op1)) {
       NewOp1 = ConstantFoldConstant(ConstantExpr::getPtrToInt(RHSC, SrcTy), DL);
     }
 
