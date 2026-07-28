@@ -141,10 +141,10 @@ TEST(IListIteratorTest, ReverseConstructor) {
   L.insert(L.end(), B);
 
   // Save typing.
-  typedef simple_ilist<Node>::iterator iterator;
-  typedef simple_ilist<Node>::reverse_iterator reverse_iterator;
-  typedef simple_ilist<Node>::const_iterator const_iterator;
-  typedef simple_ilist<Node>::const_reverse_iterator const_reverse_iterator;
+  using iterator = simple_ilist<Node>::iterator;
+  using reverse_iterator = simple_ilist<Node>::reverse_iterator;
+  using const_iterator = simple_ilist<Node>::const_iterator;
+  using const_reverse_iterator = simple_ilist<Node>::const_reverse_iterator;
 
   // Check conversion values.
   EXPECT_EQ(L.begin(), iterator(L.rend()));

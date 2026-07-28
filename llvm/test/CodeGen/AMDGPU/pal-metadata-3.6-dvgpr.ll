@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgpu12.00--amdpal <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 34
@@ -196,7 +196,7 @@ define dllexport amdgpu_hs void @hs_shader() {
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
-attributes #0 = { nounwind memory(readwrite) "target-features"=",+wavefrontsize64,+cumode" "amdgpu-dynamic-vgpr-block-size"="16" }
+attributes #0 = { nounwind memory(readwrite) "target-features"="+wavefrontsize64,+cumode" "amdgpu-dynamic-vgpr-block-size"="16" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" "amdgpu-dynamic-vgpr-block-size"="16" }
 

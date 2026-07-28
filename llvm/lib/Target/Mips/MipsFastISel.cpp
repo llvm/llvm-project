@@ -74,6 +74,7 @@
 using namespace llvm;
 
 extern cl::opt<bool> EmitJalrReloc;
+extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -82,7 +83,7 @@ class MipsFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -246,8 +247,10 @@ private:
 public:
   // Backend specific FastISel code.
   explicit MipsFastISel(FunctionLoweringInfo &funcInfo,
-                        const TargetLibraryInfo *libInfo)
-      : FastISel(funcInfo, libInfo), TM(funcInfo.MF->getTarget()),
+                        const TargetLibraryInfo *libInfo,
+                        const LibcallLoweringInfo *libcallLowering)
+      : FastISel(funcInfo, libInfo, libcallLowering),
+        TM(funcInfo.MF->getTarget()),
         Subtarget(&funcInfo.MF->getSubtarget<MipsSubtarget>()),
         TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()) {
     MFI = funcInfo.MF->getInfo<MipsFunctionInfo>();
@@ -283,6 +286,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
   llvm_unreachable("should not be called");
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
 CCAssignFn *MipsFastISel::CCAssignFnForCall(CallingConv::ID CC) const {
@@ -334,8 +338,7 @@ Register MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i32 &&
          "Alloca should always return a pointer.");
 
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&Mips::GPR32RegClass);
@@ -525,8 +528,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -948,7 +950,7 @@ bool MipsFastISel::selectStore(const Instruction *I) {
 // This can cause a redundant sltiu to be generated.
 // FIXME: try and eliminate this in a future patch.
 bool MipsFastISel::selectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *BrBB = FuncInfo.MBB;
   //
   // TBB is the basic block for the case where the comparison is true.
@@ -1491,7 +1493,7 @@ bool MipsFastISel::fastLowerArguments() {
   // Account for the reserved argument area on ABI's that have one (O32).
   // It seems strange to do this on the caller side but it's necessary in
   // SelectionDAG's implementation.
-  IncomingArgSizeInBytes = std::min(getABI().GetCalleeAllocdArgSizeInBytes(CC),
+  IncomingArgSizeInBytes = std::max(getABI().GetCalleeAllocdArgSizeInBytes(CC),
                                     IncomingArgSizeInBytes);
 
   MF->getInfo<MipsFunctionInfo>()->setFormalArgInfo(IncomingArgSizeInBytes,
@@ -1952,8 +1954,8 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  if (!isa<ConstantInt>(I->getOperand(1)) ||
-      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
+  if (!NoZeroDivCheck && (!isa<ConstantInt>(I->getOperand(1)) ||
+                          dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
     emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
   }
 
@@ -2077,7 +2079,7 @@ bool MipsFastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::Or:
   case Instruction::Xor:
     return selectLogicalOp(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return selectBranch(I);
   case Instruction::Ret:
     return selectRet(I);
@@ -2161,8 +2163,9 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 namespace llvm {
 
 FastISel *Mips::createFastISel(FunctionLoweringInfo &funcInfo,
-                               const TargetLibraryInfo *libInfo) {
-  return new MipsFastISel(funcInfo, libInfo);
+                               const TargetLibraryInfo *libInfo,
+                               const LibcallLoweringInfo *libcallLowering) {
+  return new MipsFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 } // end namespace llvm

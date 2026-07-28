@@ -89,7 +89,6 @@ void registerTestComposeSubView();
 void registerTestCompositePass();
 void registerTestControlFlowSink();
 void registerTestConvertToSPIRVPass();
-void registerTestDataLayoutPropagation();
 void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
@@ -100,10 +99,12 @@ void registerTestDynamicPipelinePass();
 void registerTestRemarkPass();
 void registerTestEmulateNarrowTypePass();
 void registerTestFooAnalysisPass();
+void registerTestStagedAnalysesPass();
 void registerTestComposeSubView();
 void registerTestMultiBuffering();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
+void registerTestIntegerDivisibilityAnalysisPass();
 void registerTestInterfaces();
 void registerTestIRVisitorsPass();
 void registerTestLastModifiedPass();
@@ -131,7 +132,6 @@ void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMemRefToLLVMWithTransforms();
 void registerTestReshardingPartitionPass();
-void registerTestShardSimplificationsPass();
 void registerTestMultiBuffering();
 void registerTestNextAccessPass();
 void registerTestNVGPULowerings();
@@ -140,6 +140,7 @@ void registerTestOneShotModuleBufferizePass();
 void registerTestOpaqueLoc();
 void registerTestOpLoweringPasses();
 void registerTestPadFusion();
+void registerTestParallelLoopUnrollingPass();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUpliftWhileToFor();
 void registerTestSCFUtilsPass();
@@ -181,7 +182,7 @@ void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
-void registerTestPasses() {
+static void registerTestPasses() {
   registerCloneTestPasses();
   registerConvertToTargetEnvPass();
   registerPrintTosaAvailabilityPass();
@@ -238,7 +239,6 @@ void registerTestPasses() {
   mlir::test::registerTestCompositePass();
   mlir::test::registerTestControlFlowSink();
   mlir::test::registerTestConvertToSPIRVPass();
-  mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
   mlir::test::registerTestDeadCodeAnalysisPass();
   mlir::test::registerTestDecomposeCallGraphTypes();
@@ -249,10 +249,12 @@ void registerTestPasses() {
   mlir::test::registerTestRemarkPass();
   mlir::test::registerTestEmulateNarrowTypePass();
   mlir::test::registerTestFooAnalysisPass();
+  mlir::test::registerTestStagedAnalysesPass();
   mlir::test::registerTestComposeSubView();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
+  mlir::test::registerTestIntegerDivisibilityAnalysisPass();
   mlir::test::registerTestInterfaces();
   mlir::test::registerTestIrdlTestDialectConversionPass();
   mlir::test::registerTestIRVisitorsPass();
@@ -280,7 +282,6 @@ void registerTestPasses() {
   mlir::test::registerTestMemRefStrideCalculation();
   mlir::test::registerTestMemRefToLLVMWithTransforms();
   mlir::test::registerTestReshardingPartitionPass();
-  mlir::test::registerTestShardSimplificationsPass();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestNVGPULowerings();
@@ -289,6 +290,7 @@ void registerTestPasses() {
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestPadFusion();
+  mlir::test::registerTestParallelLoopUnrollingPass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUpliftWhileToFor();
   mlir::test::registerTestSCFUtilsPass();

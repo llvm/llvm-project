@@ -26,7 +26,7 @@ namespace mca {
 
 class LLVM_ABI View : public HWEventListener {
 public:
-  virtual ~View() = default;
+  ~View() override = default;
 
   virtual void printView(llvm::raw_ostream &OS) const = 0;
   virtual StringRef getNameAsString() const = 0;

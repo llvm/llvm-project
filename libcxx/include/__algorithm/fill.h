@@ -15,6 +15,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,6 +28,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _ForwardIterator, class _Sentinel, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __value) {
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (is_same<_ForwardIterator, _Sentinel>::value && __is_segmented_iterator_v<_ForwardIterator>) {
+    using __local_iterator_t = typename __segmented_iterator_traits<_ForwardIterator>::__local_iterator;
+    std::__for_each_segment(__first, __last, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
+      std::__fill(__lfirst, __llast, __value);
+    });
+    return __last;
+  }
+#endif
   for (; __first != __last; ++__first)
     *__first = __value;
   return __first;
@@ -41,18 +51,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
 __fill(_RandomAccessIterator __first, _RandomAccessIterator __last, const _Tp& __value) {
   return std::__fill_n(__first, __last - __first, __value);
 }
-
-#ifndef _LIBCPP_CXX03_LANG
-template <class _SegmentedIterator, class _Tp, __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-_SegmentedIterator __fill(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value) {
-  using __local_iterator_t = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
-  std::__for_each_segment(__first, __last, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
-    std::__fill(__lfirst, __llast, __value);
-  });
-  return __last;
-}
-#endif // !_LIBCPP_CXX03_LANG
 
 template <class _ForwardIterator, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void

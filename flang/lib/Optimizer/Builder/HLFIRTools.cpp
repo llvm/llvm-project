@@ -250,7 +250,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
                   const fir::ExtendedValue &exv, llvm::StringRef name,
                   fir::FortranVariableFlagsAttr flags, mlir::Value dummyScope,
                   mlir::Value storage, std::uint64_t storageOffset,
-                  cuf::DataAttributeAttr dataAttr) {
+                  cuf::DataAttributeAttr dataAttr, unsigned dummyArgNo) {
 
   mlir::Value base = fir::getBase(exv);
   assert(fir::conformsWithPassByRef(base.getType()) &&
@@ -281,7 +281,7 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
       [](const auto &) {});
   auto declareOp = hlfir::DeclareOp::create(
       builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-      storageOffset, flags, dataAttr);
+      storageOffset, flags, dataAttr, dummyArgNo);
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
@@ -402,9 +402,9 @@ hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
       fir::BoxType::get(var.getElementOrSequenceType(), isVolatile);
   if (forceBoxType) {
     boxType = forceBoxType;
-    mlir::Type baseType =
-        fir::ReferenceType::get(fir::unwrapRefType(forceBoxType.getEleTy()));
-    addr = builder.createConvert(loc, baseType, addr);
+    mlir::Type baseType = fir::ReferenceType::get(
+        fir::unwrapRefType(forceBoxType.getEleTy()), forceBoxType.isVolatile());
+    addr = builder.createConvertWithVolatileCast(loc, baseType, addr);
   }
   auto embox = fir::EmboxOp::create(builder, loc, boxType, addr, shape,
                                     /*slice=*/mlir::Value{}, typeParams);
@@ -467,7 +467,7 @@ static mlir::Value genUBound(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lb, mlir::Value extent,
                              mlir::Value one) {
   if (auto constantLb = fir::getIntIfConstant(lb))
-    if (*constantLb == 1)
+    if (constantLb->isOne())
       return extent;
   extent = builder.createConvert(loc, one.getType(), extent);
   lb = builder.createConvert(loc, one.getType(), lb);
@@ -761,14 +761,17 @@ std::optional<std::int64_t> hlfir::getCharLengthIfConst(hlfir::Entity entity) {
     llvm::SmallVector<mlir::Value> param;
     if (getExprLengthParameters(expr, param)) {
       assert(param.size() == 1 && "characters must have one length parameters");
-      return fir::getIntIfConstant(param.pop_back_val());
+      if (std::optional<llvm::APInt> constant =
+              fir::getIntIfConstant(param.pop_back_val()))
+        return constant->trySExtValue();
     }
     return std::nullopt;
   }
 
   // entity is a var
   if (mlir::Value len = tryGettingNonDeferredCharLen(entity))
-    return fir::getIntIfConstant(len);
+    if (std::optional<llvm::APInt> constant = fir::getIntIfConstant(len))
+      return constant->trySExtValue();
   auto charType =
       mlir::cast<fir::CharacterType>(entity.getFortranElementType());
   if (charType.hasConstantLen())
@@ -905,7 +908,8 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
   if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
     for (auto extent : llvm::enumerate(shapeOp.getExtents()))
       if (auto cstExtent = fir::getIntIfConstant(extent.value()))
-        typeShape[extent.index()] = *cstExtent;
+        if (std::optional<std::int64_t> cstExtent64 = cstExtent->trySExtValue())
+          typeShape[extent.index()] = *cstExtent64;
   return hlfir::ExprType::get(elementType.getContext(), typeShape, elementType,
                               isPolymorphic);
 }
@@ -1301,7 +1305,8 @@ static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                    hlfir::Entity entity, mlir::Type targetType) {
+                    hlfir::Entity entity, mlir::Type targetType,
+                    unsigned corank) {
   // fir::factory::createBoxValue is not meant to deal with procedures.
   // Dereference procedure pointers here.
   if (entity.isProcedurePointer())
@@ -1317,7 +1322,7 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Value base = fir::getBase(exv);
   if (fir::isa_trivial(base.getType()))
     exv = placeTrivialInMemory(loc, builder, base, targetType);
-  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv);
+  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv, corank);
   return {box, cleanup};
 }
 
@@ -1390,6 +1395,78 @@ bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {
         return true;
 
   return false;
+}
+
+static void combineAndStoreElement(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity lhs,
+    hlfir::Entity rhs, bool temporaryLHS,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)> *scalarCombineAndAssign,
+    mlir::ArrayAttr accessGroups) {
+  if (scalarCombineAndAssign) {
+    (*scalarCombineAndAssign)(loc, builder, lhs, rhs, accessGroups);
+    return;
+  }
+  hlfir::Entity valueToAssign = hlfir::loadTrivialScalar(loc, builder, rhs);
+  if (accessGroups)
+    if (auto load = valueToAssign.getDefiningOp<fir::LoadOp>())
+      load.setAccessGroupsAttr(accessGroups);
+  auto assign = hlfir::AssignOp::create(builder, loc, valueToAssign, lhs,
+                                        /*realloc=*/false,
+                                        /*keep_lhs_length_if_realloc=*/false,
+                                        /*temporary_lhs=*/temporaryLHS);
+  if (accessGroups)
+    assign->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
+}
+
+void hlfir::genNoAliasArrayAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)> *scalarCombineAndAssign,
+    mlir::ArrayAttr accessGroups) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> extents =
+      hlfir::getIndexExtents(loc, builder, lhsShape);
+  if (rhs.isArray()) {
+    mlir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
+    llvm::SmallVector<mlir::Value> rhsExtents =
+        hlfir::getIndexExtents(loc, builder, rhsShape);
+    extents = fir::factory::deduceOptimalExtents(extents, rhsExtents);
+  }
+  hlfir::LoopNest loopNest =
+      hlfir::genLoopNest(loc, builder, extents,
+                         /*isUnordered=*/true, emitWorkshareLoop);
+  builder.setInsertionPointToStart(loopNest.body);
+  auto rhsArrayElement =
+      hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
+  if (!scalarCombineAndAssign)
+    rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
+  auto lhsArrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+  combineAndStoreElement(loc, builder, lhsArrayElement, rhsArrayElement,
+                         temporaryLHS, scalarCombineAndAssign, accessGroups);
+}
+
+void hlfir::genNoAliasAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)> *scalarCombineAndAssign,
+    mlir::ArrayAttr accessGroups) {
+  if (lhs.isArray()) {
+    genNoAliasArrayAssignment(loc, builder, rhs, lhs, emitWorkshareLoop,
+                              temporaryLHS, scalarCombineAndAssign,
+                              accessGroups);
+    return;
+  }
+  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  combineAndStoreElement(loc, builder, lhs, rhs, temporaryLHS,
+                         scalarCombineAndAssign, accessGroups);
 }
 
 std::pair<hlfir::Entity, bool>
@@ -1624,25 +1701,38 @@ hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
 hlfir::Entity hlfir::gen1DSection(mlir::Location loc,
                                   fir::FirOpBuilder &builder,
                                   hlfir::Entity array, int64_t dim,
-                                  mlir::ArrayRef<mlir::Value> lbounds,
                                   mlir::ArrayRef<mlir::Value> extents,
                                   mlir::ValueRange oneBasedIndices,
                                   mlir::ArrayRef<mlir::Value> typeParams) {
   assert(array.isVariable() && "array must be a variable");
   assert(dim > 0 && dim <= array.getRank() && "invalid dim number");
+  llvm::SmallVector<mlir::Value> lbounds =
+      getNonDefaultLowerBounds(loc, builder, array);
   mlir::Value one =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
   hlfir::DesignateOp::Subscripts subscripts;
   unsigned indexId = 0;
   for (int i = 0; i < array.getRank(); ++i) {
     if (i == dim - 1) {
-      mlir::Value ubound = genUBound(loc, builder, lbounds[i], extents[i], one);
-      subscripts.emplace_back(
-          hlfir::DesignateOp::Triplet{lbounds[i], ubound, one});
+      // (...,:, ..)
+      if (lbounds.empty()) {
+        subscripts.emplace_back(
+            hlfir::DesignateOp::Triplet{one, extents[i], one});
+      } else {
+        mlir::Value ubound =
+            genUBound(loc, builder, lbounds[i], extents[i], one);
+        subscripts.emplace_back(
+            hlfir::DesignateOp::Triplet{lbounds[i], ubound, one});
+      }
     } else {
-      mlir::Value index =
-          genUBound(loc, builder, lbounds[i], oneBasedIndices[indexId++], one);
-      subscripts.emplace_back(index);
+      // (...,lb + one_based_index - 1, ..)
+      if (lbounds.empty()) {
+        subscripts.emplace_back(oneBasedIndices[indexId++]);
+      } else {
+        mlir::Value index = genUBound(loc, builder, lbounds[i],
+                                      oneBasedIndices[indexId++], one);
+        subscripts.emplace_back(index);
+      }
     }
   }
   mlir::Value sectionShape =
@@ -1689,7 +1779,7 @@ bool hlfir::designatePreservesContinuity(hlfir::DesignateOp op) {
         i += 2;
         mlir::Value step = subscripts[i++];
         auto constantStep = fir::getIntIfConstant(step);
-        if (!constantStep || *constantStep != 1)
+        if (!constantStep || !constantStep->isOne())
           return false;
       }
     } else {
@@ -1710,9 +1800,10 @@ bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
     return false;
 
   return mlir::TypeSwitch<mlir::Operation *, bool>(def)
-      .Case<fir::EmboxOp>(
-          [&](auto op) { return fir::isContiguousEmbox(op, checkWhole); })
-      .Case<fir::ReboxOp>([&](auto op) {
+      .Case([&](fir::EmboxOp op) {
+        return fir::isContiguousEmbox(op, checkWhole);
+      })
+      .Case([&](fir::ReboxOp op) {
         hlfir::Entity box{op.getBox()};
         return fir::reboxPreservesContinuity(
                    op, box.mayHaveNonDefaultLowerBounds(), checkWhole) &&
@@ -1721,7 +1812,20 @@ bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
       .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
         return isSimplyContiguous(op.getMemref(), checkWhole);
       })
-      .Case<fir::ConvertOp>(
-          [&](auto op) { return isSimplyContiguous(op.getValue()); })
+      .Case(
+          [&](fir::ConvertOp op) { return isSimplyContiguous(op.getValue()); })
       .Default([](auto &&) { return false; });
+}
+
+bool hlfir::isInsideHlfirWhereMaskedExpression(mlir::Region &region) {
+  hlfir::WhereOp whereOp = region.getParentOfType<hlfir::WhereOp>();
+  if (!whereOp)
+    return false;
+  // If the where is nested inside another where, even its mask region must
+  // be evaluated masked.
+  if (whereOp->getParentOfType<hlfir::WhereOp>())
+    return true;
+  // The top-level where mask is not itself controlled by any other where mask,
+  // all other expressions nested under the where must be evaluated masked.
+  return !whereOp.getMaskRegion().isAncestor(&region);
 }

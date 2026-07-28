@@ -186,15 +186,15 @@ functions are checked:
 * wscanf()
 * wscanf_s()
 
-This check is an alias of check :doc:`bugprone-unused-return-value <../bugprone/unused-return-value>`
-with a fixed set of functions.
+This check is an alias of check :doc:`bugprone-unused-return-value
+<../bugprone/unused-return-value>` with a fixed set of functions.
 
 Suppressing issues by casting to ``void`` is enabled by default and can be
 disabled by setting `AllowCastToVoid` option to `false`.
 
 The check corresponds to a part of CERT C Coding Standard rule `ERR33-C.
 Detect and handle standard library errors
-<https://wiki.sei.cmu.edu/confluence/display/c/ERR33-C.+Detect+and+handle+standard+library+errors>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/error-handling-err/err33-c/>`_.
 The list of checked functions is taken from the rule, with following exception:
 
 * The check can not differentiate if a function is called with ``NULL``

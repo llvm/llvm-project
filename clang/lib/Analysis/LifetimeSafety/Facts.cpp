@@ -8,68 +8,140 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/AST/Decl.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 
 namespace clang::lifetimes::internal {
 
 void Fact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                const OriginManager &) const {
+                const OriginManager &, const LoanPropagationAnalysis *) const {
   OS << "Fact (Kind: " << static_cast<int>(K) << ")\n";
 }
 
 void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
-                     const OriginManager &OM) const {
+                     const OriginManager &OM,
+                     const LoanPropagationAnalysis *) const {
   OS << "Issue (";
-  LM.getLoan(getLoanID()).dump(OS);
+  LM.getLoan(getLoanID())->dump(OS);
   OS << ", ToOrigin: ";
   OM.dump(getOriginID(), OS);
   OS << ")\n";
 }
 
 void ExpireFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
-                      const OriginManager &) const {
+                      const OriginManager &OM,
+                      const LoanPropagationAnalysis *LPA) const {
   OS << "Expire (";
-  LM.getLoan(getLoanID()).dump(OS);
+  getAccessPath().dump(OS);
+  if (auto OID = getOriginID()) {
+    OS << ", Origin: ";
+    OM.dump(*OID, OS);
+  }
   OS << ")\n";
 }
 
-void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                          const OriginManager &OM) const {
-  OS << "OriginFlow (Dest: ";
+void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
+                          const OriginManager &OM,
+                          const LoanPropagationAnalysis *LPA) const {
+  OS << "OriginFlow: \n";
+  OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
-  OS << ", Src: ";
+  if (LPA) {
+    LoanSet DestinationLoans = LPA->getLoans(getDestOriginID(), this);
+    if (DestinationLoans.isEmpty())
+      OS << " has no loans";
+    else {
+      OS << " has loans to { ";
+      for (LoanID LID : DestinationLoans) {
+        LM.getLoan(LID)->getAccessPath().dump(OS);
+        OS << " ";
+      }
+      OS << "}";
+    }
+  }
+  OS << "\n";
+  OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
+  OS << "\n";
+}
+
+void MovedOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM,
+                           const LoanPropagationAnalysis *) const {
+  OS << "MovedOrigins (";
+  OM.dump(getMovedOrigin(), OS);
   OS << ")\n";
 }
 
-void ReturnOfOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                              const OriginManager &OM) const {
-  OS << "ReturnOfOrigin (";
-  OM.dump(getReturnedOriginID(), OS);
-  OS << ")\n";
+void ReturnEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM,
+                            const LoanPropagationAnalysis *) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Return)\n";
+}
+
+void FieldEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM,
+                           const LoanPropagationAnalysis *) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Field)\n";
+}
+
+void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM,
+                            const LoanPropagationAnalysis *) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Global)\n";
 }
 
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                   const OriginManager &OM) const {
+                   const OriginManager &OM,
+                   const LoanPropagationAnalysis *) const {
   OS << "Use (";
-  OM.dump(getUsedOrigin(OM), OS);
+  size_t NumUsedOrigins = getUsedOrigins()->getLength();
+  size_t I = 0;
+  for (const OriginList *Cur = getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin(), ++I) {
+    OM.dump(Cur->getOuterOriginID(), OS);
+    if (I < NumUsedOrigins - 1)
+      OS << ", ";
+  }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
 }
 
+void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                                const OriginManager &OM,
+                                const LoanPropagationAnalysis *) const {
+  OS << "InvalidateOrigin (";
+  OM.dump(getInvalidatedOrigin(), OS);
+  OS << ")\n";
+}
+
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                         const OriginManager &) const {
+                         const OriginManager &,
+                         const LoanPropagationAnalysis *) const {
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
+}
+
+void KillOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                          const OriginManager &OM,
+                          const LoanPropagationAnalysis *) const {
+  OS << "KillOrigin (";
+  OM.dump(getKilledOrigin(), OS);
+  OS << ")\n";
 }
 
 llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
   llvm::StringMap<ProgramPoint> AnnotationToPointMap;
-  for (const CFGBlock *Block : BlockToFactsMap.keys()) {
-    for (const Fact *F : getFacts(Block)) {
+  for (const auto &BlockFacts : BlockToFacts) {
+    for (const Fact *F : BlockFacts) {
       if (const auto *TPF = F->getAs<TestPointFact>()) {
         StringRef PointName = TPF->getAnnotation();
-        assert(AnnotationToPointMap.find(PointName) ==
-                   AnnotationToPointMap.end() &&
+        assert(!AnnotationToPointMap.contains(PointName) &&
                "more than one test points with the same name");
         AnnotationToPointMap[PointName] = F;
       }
@@ -78,7 +150,8 @@ llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
   return AnnotationToPointMap;
 }
 
-void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
+void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC,
+                       const LoanPropagationAnalysis *LPA) const {
   llvm::dbgs() << "==========================================\n";
   llvm::dbgs() << "       Lifetime Analysis Facts:\n";
   llvm::dbgs() << "==========================================\n";
@@ -88,15 +161,24 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
   // Print blocks in the order as they appear in code for a stable ordering.
   for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
     llvm::dbgs() << "  Block B" << B->getBlockID() << ":\n";
-    auto It = BlockToFactsMap.find(B);
-    if (It != BlockToFactsMap.end()) {
-      for (const Fact *F : It->second) {
-        llvm::dbgs() << "    ";
-        F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
-      }
+    for (const Fact *F : getFacts(B)) {
+      llvm::dbgs() << "    ";
+      F->dump(llvm::dbgs(), LoanMgr, OriginMgr, LPA);
     }
     llvm::dbgs() << "  End of Block\n";
   }
 }
 
+llvm::ArrayRef<const Fact *>
+FactManager::getBlockContaining(ProgramPoint P) const {
+  return BlockToFacts[getBlockID(P)];
+}
+
+size_t FactManager::getBlockID(ProgramPoint P) const {
+  for (size_t i = 0; i < BlockToFacts.size(); ++i)
+    for (const Fact *F : BlockToFacts[i])
+      if (F == P)
+        return i;
+  llvm_unreachable("Failed to find BlockID for given ProgramPoint");
+}
 } // namespace clang::lifetimes::internal

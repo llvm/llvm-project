@@ -25,7 +25,7 @@ template <typename, bool> class DominatorTreeBase;
 template <typename> class SmallVectorImpl;
 
 namespace Intrinsic {
-typedef unsigned ID;
+using ID = unsigned;
 }
 
 // Specializations of this template should provide the types used by the
@@ -94,6 +94,12 @@ public:
                                const BlockT &block);
 
   static bool isConstantOrUndefValuePhi(const InstructionT &Instr);
+
+  /// Whether \p V is always uniform and will not be added to UniformValues.
+  /// For IR this identifies constants and globals; for MIR it returns false
+  /// (all registers are tracked).
+  static bool isAlwaysUniform(ConstValueRefT V);
+
   const BlockT *getDefBlock(ConstValueRefT value) const;
 
   Printable print(const BlockT *block) const;

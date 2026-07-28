@@ -1,4 +1,5 @@
-// REQUIRES: shell
+// Path seperator differences
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/resource_directory/* %t

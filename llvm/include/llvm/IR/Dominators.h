@@ -32,7 +32,6 @@
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
-#include <algorithm>
 #include <utility>
 
 namespace llvm {
@@ -61,35 +60,6 @@ using BBUpdates = ArrayRef<llvm::cfg::Update<BasicBlock *>>;
 using BBDomTreeGraphDiff = GraphDiff<BasicBlock *, false>;
 using BBPostDomTreeGraphDiff = GraphDiff<BasicBlock *, true>;
 
-extern template LLVM_TEMPLATE_ABI void Calculate<BBDomTree>(BBDomTree &DT);
-extern template LLVM_TEMPLATE_ABI void
-CalculateWithUpdates<BBDomTree>(BBDomTree &DT, BBUpdates U);
-
-extern template LLVM_TEMPLATE_ABI void
-Calculate<BBPostDomTree>(BBPostDomTree &DT);
-
-extern template LLVM_TEMPLATE_ABI void
-InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-extern template LLVM_TEMPLATE_ABI void
-InsertEdge<BBPostDomTree>(BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-extern template LLVM_TEMPLATE_ABI void
-DeleteEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-extern template LLVM_TEMPLATE_ABI void
-DeleteEdge<BBPostDomTree>(BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-extern template LLVM_TEMPLATE_ABI void
-ApplyUpdates<BBDomTree>(BBDomTree &DT, BBDomTreeGraphDiff &,
-                        BBDomTreeGraphDiff *);
-extern template LLVM_TEMPLATE_ABI void
-ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT, BBPostDomTreeGraphDiff &,
-                            BBPostDomTreeGraphDiff *);
-
-extern template LLVM_TEMPLATE_ABI bool
-Verify<BBDomTree>(const BBDomTree &DT, BBDomTree::VerificationLevel VL);
-extern template LLVM_TEMPLATE_ABI bool
-Verify<BBPostDomTree>(const BBPostDomTree &DT,
-                      BBPostDomTree::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
@@ -112,26 +82,13 @@ public:
     return Start;
   }
 
-  const BasicBlock *getEnd() const {
-    return End;
-  }
-
-  /// Check if this is the only edge between Start and End.
-  LLVM_ABI bool isSingleEdge() const;
+  const BasicBlock *getEnd() const { return End; }
 };
 
 template <> struct DenseMapInfo<BasicBlockEdge> {
   using BBInfo = DenseMapInfo<const BasicBlock *>;
 
   LLVM_ABI static unsigned getHashValue(const BasicBlockEdge *V);
-
-  static inline BasicBlockEdge getEmptyKey() {
-    return BasicBlockEdge(BBInfo::getEmptyKey(), BBInfo::getEmptyKey());
-  }
-
-  static inline BasicBlockEdge getTombstoneKey() {
-    return BasicBlockEdge(BBInfo::getTombstoneKey(), BBInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const BasicBlockEdge &Edge) {
     return hash_combine(BBInfo::getHashValue(Edge.getStart()),
@@ -295,21 +252,19 @@ public:
 
 /// Printer pass for the \c DominatorTree.
 class DominatorTreePrinterPass
-    : public PassInfoMixin<DominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<DominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit DominatorTreePrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c DominatorTree.
-struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
+struct DominatorTreeVerifierPass
+    : RequiredPassInfoMixin<DominatorTreeVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Enables verification of dominator trees.

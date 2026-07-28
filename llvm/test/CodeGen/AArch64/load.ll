@@ -230,9 +230,9 @@ define <2 x i64> @load_v2i64(ptr %ptr) {
 define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b) {
 ; CHECK-SD-LABEL: load_v2i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-SD-NEXT:    add x8, x0, #1
-; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -269,9 +269,8 @@ define <32 x i8> @load_v32i8(ptr %ptr) {
 define <2 x i16> @load_v2i16(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v2i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-SD-NEXT:    add x8, x0, #2
-; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;

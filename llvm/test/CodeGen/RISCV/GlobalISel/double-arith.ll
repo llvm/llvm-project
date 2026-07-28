@@ -121,8 +121,6 @@ define double @fdiv_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.sqrt.f64(double)
-
 define double @fsqrt_d(double %a) nounwind {
 ; CHECKIFD-LABEL: fsqrt_d:
 ; CHECKIFD:       # %bb.0:
@@ -149,8 +147,6 @@ define double @fsqrt_d(double %a) nounwind {
   %1 = call double @llvm.sqrt.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.copysign.f64(double, double)
 
 define double @fsgnj_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fsgnj_d:
@@ -239,8 +235,8 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV32I-LABEL: fsgnjn_d:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    xor a3, a3, a2
+; RV32I-NEXT:    slli a1, a1, 1
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    or a1, a1, a2
@@ -249,9 +245,9 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV64I-LABEL: fsgnjn_d:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    slli a2, a2, 63
 ; RV64I-NEXT:    xor a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a0, a1
@@ -260,8 +256,6 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
   %2 = call double @llvm.copysign.f64(double %a, double %1)
   ret double %2
 }
-
-declare double @llvm.fabs.f64(double)
 
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
@@ -305,8 +299,6 @@ define double @fabs_d(double %a, double %b) nounwind {
   ret double %3
 }
 
-declare double @llvm.minnum.f64(double, double)
-
 define double @fmin_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmin_d:
 ; CHECKIFD:       # %bb.0:
@@ -333,8 +325,6 @@ define double @fmin_d(double %a, double %b) nounwind {
   %1 = call double @llvm.minnum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.maxnum.f64(double, double)
 
 define double @fmax_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmax_d:
@@ -363,8 +353,6 @@ define double @fmax_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.minimumnum.f64(double, double)
-
 define double @fminimumnum_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fminimumnum_d:
 ; CHECKIFD:       # %bb.0:
@@ -392,8 +380,6 @@ define double @fminimumnum_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.maximumnum.f64(double, double)
-
 define double @fmaximumnum_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmaximumnum_d:
 ; CHECKIFD:       # %bb.0:
@@ -420,8 +406,6 @@ define double @fmaximumnum_d(double %a, double %b) nounwind {
   %1 = call double @llvm.maximumnum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.fma.f64(double, double, double)
 
 define double @fmadd_d(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fmadd_d:
@@ -771,7 +755,6 @@ define double @fnmadd_d_3(double %a, double %b, double %c) nounwind {
   ret double %neg
 }
 
-
 define double @fnmadd_nsz(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fnmadd_nsz:
 ; CHECKIFD:       # %bb.0:
@@ -1094,8 +1077,8 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32IFD-NEXT:    fcvt.d.w fa5, zero
 ; RV32IFD-NEXT:    fadd.d fa4, fa0, fa5
 ; RV32IFD-NEXT:    fadd.d fa3, fa1, fa5
-; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fmul.d fa4, fa4, fa3
+; RV32IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV32IFD-NEXT:    fneg.d fa4, fa4
 ; RV32IFD-NEXT:    fsub.d fa0, fa4, fa5
 ; RV32IFD-NEXT:    ret
@@ -1105,8 +1088,8 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64IFD-NEXT:    fmv.d.x fa5, zero
 ; RV64IFD-NEXT:    fadd.d fa4, fa0, fa5
 ; RV64IFD-NEXT:    fadd.d fa3, fa1, fa5
-; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV64IFD-NEXT:    fmul.d fa4, fa4, fa3
+; RV64IFD-NEXT:    fadd.d fa5, fa2, fa5
 ; RV64IFD-NEXT:    fneg.d fa4, fa4
 ; RV64IFD-NEXT:    fsub.d fa0, fa4, fa5
 ; RV64IFD-NEXT:    ret

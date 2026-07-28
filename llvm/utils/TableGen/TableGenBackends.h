@@ -15,8 +15,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 #define LLVM_UTILS_TABLEGEN_TABLEGENBACKENDS_H
 
-#include <string>
-
 // A TableGen backend is a function that looks like
 //
 //    EmitFoo(RecordKeeper &RK, raw_ostream &OS /*, anything else you need */ )

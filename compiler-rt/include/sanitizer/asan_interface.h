@@ -102,7 +102,7 @@ int SANITIZER_CDECL __asan_address_is_poisoned(void const volatile *addr);
 /// address of the first such byte. Otherwise returns 0.
 ///
 /// \param beg Start of memory region.
-/// \param size Start of memory region.
+/// \param size Size of memory region.
 /// \returns Address of first poisoned byte.
 void *SANITIZER_CDECL __asan_region_is_poisoned(void *beg, size_t size);
 
@@ -173,6 +173,56 @@ int SANITIZER_CDECL __asan_get_report_access_type(void);
 ///
 /// \returns Access size in bytes.
 size_t SANITIZER_CDECL __asan_get_report_access_size(void);
+
+/// Gets the source address or address range involved in the current error
+/// (e.g., memcpy source, or the address being read from).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_src_address(const void **out_addr,
+                                                  size_t *out_size);
+
+/// Gets the destination address or address range involved in the current error
+/// (e.g., memcpy dest, or the address being written to).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_dest_address(const void **out_addr,
+                                                   size_t *out_size);
+
+/// Gets the address or address range being deallocated in the current error
+/// (lifetime is terminated).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_dealloc_address(const void **out_addr,
+                                                      size_t *out_size);
+
+/// Gets the first non-dereferenced operand address involved in the current
+/// error (e.g., pointer comparison or ODR violation).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size. Zero may be reported.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_first_address(const void **out_addr,
+                                                    size_t *out_size);
+
+/// Gets the second non-dereferenced operand address involved in the current
+/// error (e.g., pointer comparison or ODR violation).
+///
+/// \param out_addr [out] Storage for the address.
+/// \param out_size [out] Storage for the range size. Zero may be reported.
+///
+/// \returns 1 if found, 0 otherwise.
+int SANITIZER_CDECL __asan_get_report_second_address(const void **out_addr,
+                                                     size_t *out_size);
 
 /// Gets the bug description of an ASan error (useful for calling from a
 /// debugger).
@@ -332,6 +382,14 @@ void SANITIZER_CDECL __asan_handle_no_return(void);
 /// Update allocation stack trace for the given allocation to the current stack
 /// trace. Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __asan_update_allocation_context(void *addr);
+
+/// Suppresses fake stack for the current thread.
+/// Temporarily disables use-after-return detection for current thread.
+void SANITIZER_CDECL __asan_suppress_fake_stack(void);
+
+/// Unsupresses fake stack for the current thread.
+/// Should be paired with a previous __asan_suppress_fake_stack() call.
+void SANITIZER_CDECL __asan_unsuppress_fake_stack(void);
 
 #ifdef __cplusplus
 } // extern "C"

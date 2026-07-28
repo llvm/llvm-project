@@ -98,6 +98,16 @@ TEST_P(olGetDeviceInfoTest, SuccessProductName) {
   ASSERT_EQ(std::strlen(Name.data()), Size - 1);
 }
 
+TEST_P(olGetDeviceInfoTest, SuccessUID) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_UID, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> UID;
+  UID.resize(Size);
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_UID, Size, UID.data()));
+  ASSERT_EQ(std::strlen(UID.data()), Size - 1);
+}
+
 TEST_P(olGetDeviceInfoTest, HostProductName) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_PRODUCT_NAME, &Size));
@@ -107,6 +117,16 @@ TEST_P(olGetDeviceInfoTest, HostProductName) {
   ASSERT_SUCCESS(
       olGetDeviceInfo(Host, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data()));
   ASSERT_EQ(std::strlen(Name.data()), Size - 1);
+}
+
+TEST_P(olGetDeviceInfoTest, HostUID) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_UID, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> UID;
+  UID.resize(Size);
+  ASSERT_SUCCESS(olGetDeviceInfo(Host, OL_DEVICE_INFO_UID, Size, UID.data()));
+  ASSERT_EQ(std::strlen(UID.data()), Size - 1);
 }
 
 TEST_P(olGetDeviceInfoTest, SuccessVendor) {
@@ -181,12 +201,19 @@ OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthFloat, uint32_t,
                              OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(NativeVectorWidthDouble, uint32_t,
                              OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE, 0);
+OL_DEVICE_INFO_TEST_SUCCESS(SingleFPSupport, bool,
+                            OL_DEVICE_INFO_SINGLE_FP_SUPPORT);
+OL_DEVICE_INFO_TEST_SUCCESS(DoubleFPSupport, bool,
+                            OL_DEVICE_INFO_DOUBLE_FP_SUPPORT);
+OL_DEVICE_INFO_TEST_SUCCESS(HalfFPSupport, bool,
+                            OL_DEVICE_INFO_HALF_FP_SUPPORT);
 OL_DEVICE_INFO_TEST_SUCCESS(NativeVectorWidthHalf, uint32_t,
                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
 OL_DEVICE_INFO_TEST_VALUE_GT(MaxClockFrequency, uint32_t,
                              OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(MemoryClockRate, uint32_t,
                              OL_DEVICE_INFO_MEMORY_CLOCK_RATE, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NumLanes, uint32_t, OL_DEVICE_INFO_NUM_LANES, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(AddressBits, uint32_t, OL_DEVICE_INFO_ADDRESS_BITS,
                              0);
 OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(MaxMemAllocSize, uint64_t,
@@ -197,6 +224,11 @@ OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(GlobalMemSize, uint64_t,
                                     OL_DEVICE_INFO_GLOBAL_MEM_SIZE, 0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(GlobalMemSize, uint64_t,
                                  OL_DEVICE_INFO_GLOBAL_MEM_SIZE);
+OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(SharedMemSize, uint64_t,
+                                    OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                                    0);
+OL_DEVICE_INFO_TEST_HOST_SUCCESS(SharedMemSize, uint64_t,
+                                 OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
 
 TEST_P(olGetDeviceInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;

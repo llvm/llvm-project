@@ -92,9 +92,13 @@ def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
 
-def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
+def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
-def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))>;
+def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
 class CustomOperandClass<string name, bit optional, string predicateMethod,
                          string parserMethod, string defaultMethod>
@@ -122,12 +126,12 @@ class CustomOperandProps<bit optional = 0, string name = NAME> {
   string OperandType = "OPERAND_IMMEDIATE";
 }
 
-class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
+class CustomOperand<bit optional = 0, string name = NAME, ValueType type = i32>
   : Operand<type>, CustomOperandProps<optional, name>;
 
 class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
                  string printer = "print"#name>
-    : CustomOperand<type, optional, name> {
+    : CustomOperand<optional, name, type=type> {
   let ImmTy = "ImmTyNone";
   let ParserMethod = "";
   let PrintMethod = printer;
@@ -140,7 +144,7 @@ def u16imm : ImmOperand<i16, "U16Imm", 0, "printU16ImmOperand">;
 
 class ValuePredicatedOperand<CustomOperand op, string valuePredicate,
                              bit optional = 0>
-    : CustomOperand<op.Type, optional> {
+    : CustomOperand<optional, type=op.Type> {
   let ImmTy = op.ImmTy;
   defvar OpPredicate = op.ParserMatchClass.PredicateMethod;
   let PredicateMethod =
@@ -204,6 +208,13 @@ class is_canonicalized_2<SDPatternOperator op> : PatFrag<
     const SITargetLowering &Lowering =
               *static_cast<const SITargetLowering *>(getTargetLowering());
 
+    // A poison operand is trivially canonical, but packing it is
+    // pointless. Leave those to the cheaper build_vector-with-undef
+    // patterns rather than materializing a v_pack for a don't-care
+    // lane.
+    if (N->getOperand(0).isUndef() || N->getOperand(1).isUndef())
+      return false;
+
     return Lowering.isCanonicalized(*CurDAG, N->getOperand(0)) &&
       Lowering.isCanonicalized(*CurDAG, N->getOperand(1));
    }]> {
@@ -225,6 +236,22 @@ class FoldTernaryOpPat<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
 
 def imad : FoldTernaryOpPat<mul, add>;
 
+// Match binary op with source operands that won't fold into sdwa patterns.
+class BinOp_no_sdwa<SDPatternOperator binop> : PatFrag<
+  (ops node:$lhs, node:$rhs),
+  (binop node:$lhs, node:$rhs),
+  [{
+    return !isSDWAOperand(Op.getOperand(0).getNode()) &&
+           !isSDWAOperand(Op.getOperand(1).getNode());
+  }]> {
+  let GISelPredicateCode = [{
+    return true; // TODO
+  }];
+}
+
+def AMDGPUmul_i24_no_sdwa : BinOp_no_sdwa<AMDGPUmul_i24>;
+def AMDGPUmul_u24_no_sdwa : BinOp_no_sdwa<AMDGPUmul_u24>;
+
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;
 def smin_oneuse : HasOneUseBinOp<smin>;
@@ -245,7 +272,8 @@ def or_oneuse : HasOneUseBinOp<or>;
 def xor_oneuse : HasOneUseBinOp<xor>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
 
-def not_oneuse : HasOneUseUnaryOp<not>;
+def not_oneuse  : HasOneUseUnaryOp<not>;
+def vnot_oneuse : HasOneUseUnaryOp<vnot>;
 
 def add_oneuse : HasOneUseBinOp<add>;
 def sub_oneuse : HasOneUseBinOp<sub>;
@@ -636,15 +664,11 @@ multiclass local_addr_space_atomic_op {
     }
 }
 
-defm int_amdgcn_global_atomic_csub : noret_op;
 defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
 defm int_amdgcn_flat_atomic_fmin_num : noret_op;
 defm int_amdgcn_flat_atomic_fmax_num : noret_op;
 defm int_amdgcn_global_atomic_fmin_num : noret_op;
 defm int_amdgcn_global_atomic_fmax_num : noret_op;
-defm int_amdgcn_atomic_cond_sub_u32 : local_addr_space_atomic_op;
-defm int_amdgcn_atomic_cond_sub_u32 : flat_addr_space_atomic_op;
-defm int_amdgcn_atomic_cond_sub_u32 : global_addr_space_atomic_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op> {
   let HasNoUse = true in
@@ -695,6 +719,8 @@ defm atomic_load_fmin : binary_atomic_op_fp_all_as<atomic_load_fmin>;
 defm atomic_load_fmax : binary_atomic_op_fp_all_as<atomic_load_fmax>;
 defm atomic_load_uinc_wrap : binary_atomic_op_all_as<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op_all_as<atomic_load_udec_wrap>;
+defm atomic_load_usub_cond : binary_atomic_op_all_as<atomic_load_usub_cond>;
+defm atomic_load_usub_sat : binary_atomic_op_all_as<atomic_load_usub_sat>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
@@ -745,23 +771,14 @@ int FP32_ONE = 0x3f800000;
 int FP32_NEG_ONE = 0xbf800000;
 int FP64_ONE = 0x3ff0000000000000;
 int FP64_NEG_ONE = 0xbff0000000000000;
+int BF16_ONE = 0x3F80;
+int BF16_NEG_ONE = 0xBF80;
 }
 def CONST : Constants;
 
-def FP_ZERO : PatLeaf <
-  (fpimm),
-  [{return N->getValueAPF().isZero();}]
->;
-
-def FP_ONE : PatLeaf <
-  (fpimm),
-  [{return N->isExactlyValue(1.0);}]
->;
-
-def FP_HALF : PatLeaf <
-  (fpimm),
-  [{return N->isExactlyValue(0.5);}]
->;
+def fpimm_zero : FPImmLeaf<fAny, [{ return Imm.isZero(); }]> ;
+def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isOne(); }]> ;
+def fpimm_half : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.5); }]> ;
 
 /* Generic helper patterns for intrinsics */
 /* -------------------------------------- */
@@ -806,42 +823,35 @@ class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
   (vt rc:$addr)
 >;
 
-// rotr pattern
-class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
-  (rotr i32:$src0, i32:$src1),
-  (BIT_ALIGN $src0, $src0, $src1)
->;
-
 // Special conversion patterns
 
-def cvt_rpi_i32_f32 : PatFrag <
+let GIIgnoreCopies = 1 in
+def cvt_rpi_i32_f32 : PatFrag<
   (ops node:$src),
-  (fp_to_sint (ffloor (fadd $src, FP_HALF))),
-  [{ (void) N; return TM.Options.NoNaNsFPMath; }]
->;
+  (fp_to_sint (ffloor_nnan (fadd $src, fpimm_half)))
+>, GISelFlags;
 
-def cvt_flr_i32_f32 : PatFrag <
+def cvt_flr_i32_f32 : PatFrag<
   (ops node:$src),
-  (fp_to_sint (ffloor $src)),
-  [{ (void)N; return TM.Options.NoNaNsFPMath; }]
+  (fp_to_sint (ffloor_nnan $src))
 >;
 
 let AddedComplexity = 2 in {
 class IMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
-  (add (AMDGPUmul_i24 i32:$src0, i32:$src1), i32:$src2),
+  (add (AMDGPUmul_i24_no_sdwa i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
 
 class UMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
-  (add (AMDGPUmul_u24 i32:$src0, i32:$src1), i32:$src2),
+  (add (AMDGPUmul_u24_no_sdwa i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
 } // AddedComplexity.
 
 class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
-  (fdiv FP_ONE, vt:$src),
+  (fdiv fpimm_one, vt:$src),
   (RcpInst $src)
 >;
 
@@ -862,7 +872,7 @@ class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
     return CurDAG->isKnownNeverNaN(SDValue(N,0));
   }];
   let GISelPredicateCode = [{
-    return isKnownNeverNaN(MI.getOperand(0).getReg(), MRI);
+    return VT->isKnownNeverNaN(MI.getOperand(0).getReg());
   }];
 }
 

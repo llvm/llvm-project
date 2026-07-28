@@ -19,15 +19,12 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -62,6 +59,10 @@ private:
   bool HasLayout = false;
   bool HasFinalLayout = false;
   bool RelaxAll = false;
+
+  // Cumulative upstream size change during `relaxOnce`. Used to compensate
+  // forward-reference displacements in `evaluateFixup`.
+  int64_t Stretch = 0;
 
   SectionListType Sections;
 
@@ -111,7 +112,9 @@ private:
   unsigned relaxOnce(unsigned FirstStable);
 
   /// Perform relaxation on a single fragment.
-  bool relaxFragment(MCFragment &F);
+  void relaxFragment(MCFragment &F);
+  void relaxAlign(MCFragment &F);
+  void relaxPrefAlign(MCFragment &F);
   void relaxInstruction(MCFragment &F);
   void relaxLEB(MCFragment &F);
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
@@ -193,13 +196,14 @@ public:
   bool hasFinalLayout() const { return HasFinalLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
+  int64_t getStretch() const { return Stretch; }
 
   const_iterator begin() const { return Sections.begin(); }
   const_iterator end() const { return Sections.end(); }
 
   SmallVectorImpl<const MCSymbol *> &getSymbols() { return Symbols; }
-  iterator_range<pointee_iterator<
-      typename SmallVector<const MCSymbol *, 0>::const_iterator>>
+  iterator_range<
+      pointee_iterator<SmallVector<const MCSymbol *, 0>::const_iterator>>
   symbols() const {
     return make_pointee_range(Symbols);
   }

@@ -14,6 +14,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -104,14 +105,6 @@ public:
   /// \return
   ///     A const reference to the method name object.
   ConstString GetName() const;
-
-  /// Get the memory cost of this object.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  ///     The returned value does not include the bytes for any
-  ///     shared string values.
-  virtual size_t MemorySize() const;
 
 protected:
   /// Function method name (not a mangled name).
@@ -231,14 +224,6 @@ public:
   ///     A const reference to the mangled name object.
   const Mangled &GetMangled() const;
 
-  /// Get the memory cost of this object.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  ///     The returned value does not include the bytes for any
-  ///     shared string values.
-  size_t MemorySize() const override;
-
 private:
   /// Mangled inlined function name (can be empty if there is no mangled
   /// information).
@@ -342,19 +327,11 @@ public:
   Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
 
 private:
-  void ParseSymbolFileAndResolve(ModuleList &images);
+  Function *ResolveCallee(ModuleList &images);
 
-  // Used to describe a direct call.
-  //
-  // Either the callee's mangled name or its definition, discriminated by
-  // \ref resolved.
-  union {
-    const char *symbol_name;
-    Function *def;
-  } lazy_callee;
-
-  /// Whether or not an attempt was made to find the callee's definition.
-  bool resolved = false;
+  const char *m_symbol_name;
+  std::once_flag m_resolved_flag;
+  Function *m_callee_def = nullptr;
 };
 
 /// An indirect call site. Used to represent call sites where the address of
@@ -459,22 +436,43 @@ public:
 
   lldb::LanguageType GetLanguage() const;
 
-  /// Find the file and line number of the source location of the start of the
-  /// function.  This will use the declaration if present and fall back on the
-  /// line table if that fails.  So there may NOT be a line table entry for
-  /// this source file/line combo.
+  /// Find the source file and line number for the start of the function.
+  ///
+  /// This prefers the function's declaration and only falls back to
+  /// GetStartLineTableEntry when the function has none. The declaration line
+  /// need not correspond to any line table row, which is why this reports a
+  /// bare source file and line rather than a LineEntry.
   ///
   /// \param[out] source_file
   ///     The source file.
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(lldb::SupportFileSP &source_file_sp,
+  void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                               uint32_t &line_no);
+
+  /// Get the line table entry for the function's entry point.
+  ///
+  /// When the entry address is not covered by a line row, this returns the
+  /// first line entry that begins within the function's range instead.
+  ///
+  /// Unlike GetStartLineSourceInfo, this consults only the line table, never
+  /// the declaration, so the result is always a real line table entry and
+  /// carries its address range and index.
+  ///
+  /// \param[out] line_entry
+  ///     The resulting line entry.
+  ///
+  /// \param[out] index
+  ///     If non-null, set to the index of the line entry in the line table.
+  ///
+  /// \return
+  ///     True if a line entry was found, false otherwise.
+  bool GetStartLineTableEntry(LineEntry &line_entry, uint32_t *index = nullptr);
 
   using SourceRange = Range<uint32_t, uint32_t>;
   /// Find the file and line number range of the function.
-  llvm::Expected<std::pair<lldb::SupportFileSP, SourceRange>> GetSourceInfo();
+  llvm::Expected<std::pair<SupportFileNSP, SourceRange>> GetSourceInfo();
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).
@@ -586,14 +584,6 @@ public:
   ///
   /// \see SymbolContextScope
   void DumpSymbolContext(Stream *s) override;
-
-  /// Get the memory cost of this object.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  ///     The returned value does not include the bytes for any
-  ///     shared string values.
-  size_t MemorySize() const;
 
   /// Get whether compiler optimizations were enabled for this function
   ///

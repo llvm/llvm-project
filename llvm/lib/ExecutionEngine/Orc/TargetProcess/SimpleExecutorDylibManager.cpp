@@ -44,6 +44,17 @@ SimpleExecutorDylibManager::open(const std::string &Path, uint64_t Mode) {
   return ExecutorAddr::fromPtr(Resolvers.back().get());
 }
 
+ExecutorResolver::ResolveResult
+SimpleExecutorDylibManager::resolve(ExecutorAddr Resolver,
+                                    RemoteSymbolLookupSet Lookup) {
+  using TmpResult = MSVCPExpected<std::vector<std::optional<ExecutorAddr>>>;
+  std::promise<TmpResult> P;
+  auto F = P.get_future();
+  Resolver.toPtr<ExecutorResolver *>()->resolveAsync(
+      std::move(Lookup), [&](TmpResult R) { P.set_value(std::move(R)); });
+  return F.get();
+}
+
 Error SimpleExecutorDylibManager::shutdown() {
 
   DylibSet DS;
@@ -63,9 +74,22 @@ void SimpleExecutorDylibManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&openWrapper);
   M[rt::SimpleExecutorDylibManagerResolveWrapperName] =
       ExecutorAddr::fromPtr(&resolveWrapper);
+
+  {
+    // Also provide NativeDylibManager symbols for compatibility with
+    // controllers configured to use the ORC runtime's NativeDylibManager
+    // interface.
+    // FIXME: We should codify a "simple" dylib manager interface and make
+    // SimpleExecutorDylibManager its LLVM-based implementation, and
+    // NativeDylibManager its ORC-runtime implementation.
+    const auto &SNs = rt::orc_rt_NativeDylibManagerSPSSymbols;
+    M[SNs.InstanceName] = ExecutorAddr::fromPtr(this);
+    M[SNs.OpenName] = ExecutorAddr::fromPtr(&openWrapper);
+    M[SNs.ResolveName] = ExecutorAddr::fromPtr(&resolveWrapper);
+  }
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::openWrapper(const char *ArgData, size_t ArgSize) {
   return shared::
       WrapperFunction<rt::SPSSimpleExecutorDylibManagerOpenSignature>::handle(
@@ -75,23 +99,14 @@ SimpleExecutorDylibManager::openWrapper(const char *ArgData, size_t ArgSize) {
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
                                            size_t ArgSize) {
-  using ResolveResult = ExecutorResolver::ResolveResult;
   return shared::WrapperFunction<
              rt::SPSSimpleExecutorDylibManagerResolveSignature>::
       handle(ArgData, ArgSize,
-             [](ExecutorAddr Obj, RemoteSymbolLookupSet L) -> ResolveResult {
-               using TmpResult =
-                   MSVCPExpected<std::vector<std::optional<ExecutorSymbolDef>>>;
-               std::promise<TmpResult> P;
-               auto F = P.get_future();
-               Obj.toPtr<ExecutorResolver *>()->resolveAsync(
-                   std::move(L),
-                   [&](TmpResult R) { P.set_value(std::move(R)); });
-               return F.get();
-             })
+             shared::makeMethodWrapperHandler(
+                 &SimpleExecutorDylibManager::resolve))
           .release();
 }
 

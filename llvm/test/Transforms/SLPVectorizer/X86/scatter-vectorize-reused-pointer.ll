@@ -5,11 +5,11 @@ define void @test(i1 %c, ptr %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP1:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr [[ARG:%.*]], i32 8, <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i64> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr align 8 [[ARG:%.*]], <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i64> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <5 x i64> [[TMP1]], <5 x i64> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP3:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr [[ARG]], i32 8, <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr align 8 [[ARG]], <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i64> poison)
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <5 x i64> [[TMP3]], <5 x i64> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:

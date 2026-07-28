@@ -10,7 +10,7 @@
 ; return 100: discriminator 4
 ; return 99:  discriminator 6
 
-define i32 @_Z3fooi(i32 %i) #0 !dbg !4 {
+define i32 @_Z3fooi(i32 %i) !dbg !4 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   store i32 %i, ptr %2, align 4, !tbaa !13
@@ -49,10 +49,7 @@ define i32 @_Z3fooi(i32 %i) #0 !dbg !4 {
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}

@@ -1,0 +1,28 @@
+# Check that BOLT handles case when TLSDESC is relaxed to LE
+# with NOP+NOP+MOVZ+MOVK layout (as produced by some linkers like mold).
+# The TLSDESC_ADD_LO12 relocation lands on a MOVZ instruction, which is
+# not a valid target for the S_LO12 specifier.
+
+# REQUIRES: system-linux
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-linux %s -o %t.o
+# RUN: ld.lld --emit-relocs -shared %t.o -o %t.so
+# RUN: llvm-bolt %t.so -o %t.bolt 2>&1 | FileCheck %s
+
+# CHECK-NOT: invalid fixup for movz/movk instruction
+# CHECK-NOT: BOLT-ERROR: Emission failed.
+
+  .text
+  .globl _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+.Lblock:
+  movz x0, #0, lsl #16
+  ret
+  .cfi_endproc
+  .size _start, .-_start
+
+  .reloc .Lblock,  R_AARCH64_TLSDESC_ADD_LO12, tls_var
+
+  .globl tls_var
+  .type tls_var, @tls_object

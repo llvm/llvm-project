@@ -129,8 +129,8 @@ func.func @test(%a: memref<10xf32>) {
   %lb = arith.constant 0 : index
   %st = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %p1 = acc.private varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-  acc.parallel private(@privatization_memref_10_f32 -> %p1 : memref<10xf32>) {
+  %p1 = acc.private varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+  acc.parallel private(%p1 : memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
@@ -142,8 +142,8 @@ func.func @test(%a: memref<10xf32>) {
 
 // CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
-// CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-// CHECK: acc.parallel private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) {
+// CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK: acc.parallel private(%[[PRIVATE]] : memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
@@ -167,9 +167,9 @@ func.func @test(%a: memref<10xf32>) {
   %lb = arith.constant 0 : index
   %st = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %p1 = acc.private varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+  %p1 = acc.private varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
   acc.parallel {
-    acc.loop private(@privatization_memref_10_f32 -> %p1 : memref<10xf32>) control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
+    acc.loop private(%p1 : memref<10xf32>) control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
     } attributes {independent = [#acc.device_type<none>]}
@@ -180,9 +180,9 @@ func.func @test(%a: memref<10xf32>) {
 
 // CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
-// CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+// CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
 // CHECK: acc.parallel  {
-// CHECK:   acc.loop private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
+// CHECK:   acc.loop private(%[[PRIVATE]] : memref<10xf32>) control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
 // CHECK:   } attributes {independent = [#acc.device_type<none>]}
@@ -205,8 +205,8 @@ func.func @test(%a: memref<10xf32>) {
   %lb = arith.constant 0 : index
   %st = arith.constant 1 : index
   %c10 = arith.constant 10 : index
-  %p1 = acc.private varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-  acc.serial private(@privatization_memref_10_f32 -> %p1 : memref<10xf32>) {
+  %p1 = acc.private varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+  acc.serial private(%p1 : memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
@@ -218,8 +218,8 @@ func.func @test(%a: memref<10xf32>) {
 
 // CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
-// CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-// CHECK: acc.serial private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) {
+// CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) recipe(@privatization_memref_10_f32) -> memref<10xf32>
+// CHECK: acc.serial private(%[[PRIVATE]] : memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield

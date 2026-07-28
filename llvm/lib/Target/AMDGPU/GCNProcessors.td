@@ -24,33 +24,21 @@ def : ProcessorModel<"gfx600", SIFullSpeedModel,
   FeatureISAVersion6_0_0.Features
 >;
 
-def : ProcessorModel<"tahiti", SIFullSpeedModel,
-  FeatureISAVersion6_0_0.Features
->;
+def : ProcessorAlias<"tahiti", "gfx600">;
 
 def : ProcessorModel<"gfx601", SIQuarterSpeedModel,
   FeatureISAVersion6_0_1.Features
 >;
 
-def : ProcessorModel<"pitcairn", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
-
-def : ProcessorModel<"verde", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
+def : ProcessorAlias<"pitcairn", "gfx601">;
+def : ProcessorAlias<"verde", "gfx601">;
 
 def : ProcessorModel<"gfx602", SIQuarterSpeedModel,
   FeatureISAVersion6_0_2.Features
 >;
 
-def : ProcessorModel<"hainan", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_2.Features
->;
-
-def : ProcessorModel<"oland", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_2.Features
->;
+def : ProcessorAlias<"hainan", "gfx602">;
+def : ProcessorAlias<"oland", "gfx602">;
 
 //===------------------------------------------------------------===//
 // GCN GFX7 (Sea Islands (CI)).
@@ -60,17 +48,13 @@ def : ProcessorModel<"gfx700", SIQuarterSpeedModel,
   FeatureISAVersion7_0_0.Features
 >;
 
-def : ProcessorModel<"kaveri", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_0.Features
->;
+def : ProcessorAlias<"kaveri", "gfx700">;
 
 def : ProcessorModel<"gfx701", SIFullSpeedModel,
   FeatureISAVersion7_0_1.Features
 >;
 
-def : ProcessorModel<"hawaii", SIFullSpeedModel,
-  FeatureISAVersion7_0_1.Features
->;
+def : ProcessorAlias<"hawaii", "gfx701">;
 
 def : ProcessorModel<"gfx702", SIQuarterSpeedModel,
   FeatureISAVersion7_0_2.Features
@@ -80,21 +64,14 @@ def : ProcessorModel<"gfx703", SIQuarterSpeedModel,
   FeatureISAVersion7_0_3.Features
 >;
 
-def : ProcessorModel<"kabini", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_3.Features
->;
-
-def : ProcessorModel<"mullins", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_3.Features
->;
+def : ProcessorAlias<"kabini", "gfx703">;
+def : ProcessorAlias<"mullins", "gfx703">;
 
 def : ProcessorModel<"gfx704", SIQuarterSpeedModel,
   FeatureISAVersion7_0_4.Features
 >;
 
-def : ProcessorModel<"bonaire", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_4.Features
->;
+def : ProcessorAlias<"bonaire", "gfx704">;
 
 def : ProcessorModel<"gfx705", SIQuarterSpeedModel,
   FeatureISAVersion7_0_5.Features
@@ -108,53 +85,34 @@ def : ProcessorModel<"gfx801", SIQuarterSpeedModel,
   FeatureISAVersion8_0_1.Features
 >;
 
-def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_1.Features
->;
+def : ProcessorAlias<"carrizo", "gfx801">;
 
 def : ProcessorModel<"gfx802", SIQuarterSpeedModel,
   FeatureISAVersion8_0_2.Features
 >;
 
-def : ProcessorModel<"iceland", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_2.Features
->;
-
-def : ProcessorModel<"tonga", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_2.Features
->;
+def : ProcessorAlias<"iceland", "gfx802">;
+def : ProcessorAlias<"tonga", "gfx802">;
 
 def : ProcessorModel<"gfx803", SIQuarterSpeedModel,
   FeatureISAVersion8_0_3.Features
 >;
 
-def : ProcessorModel<"fiji", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
-
-def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
-
-def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
+def : ProcessorAlias<"fiji", "gfx803">;
+def : ProcessorAlias<"polaris10", "gfx803">;
+def : ProcessorAlias<"polaris11", "gfx803">;
 
 def : ProcessorModel<"gfx805", SIQuarterSpeedModel,
   FeatureISAVersion8_0_5.Features
 >;
 
-def : ProcessorModel<"tongapro", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_5.Features
->;
+def : ProcessorAlias<"tongapro", "gfx805">;
 
 def : ProcessorModel<"gfx810", SIQuarterSpeedModel,
   FeatureISAVersion8_1_0.Features
 >;
 
-def : ProcessorModel<"stoney", SIQuarterSpeedModel,
-  FeatureISAVersion8_1_0.Features
->;
+def : ProcessorAlias<"stoney", "gfx810">;
 
 //===------------------------------------------------------------===//
 // GCN GFX9.
@@ -301,12 +259,34 @@ def : ProcessorModel<"gfx1152", GFX11SpeedModel,
 >;
 
 def : ProcessorModel<"gfx1153", GFX11SpeedModel,
-  FeatureISAVersion11_5_3.Features
+  FeatureISAVersion11_5_Common.Features
 >;
 
-// [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1153]
+def : ProcessorModel<"gfx1154", GFX11SpeedModel,
+  FeatureISAVersion11_5_Common.Features
+>;
+
+def : ProcessorModel<"gfx1170", GFX11SpeedModel,
+  FeatureISAVersion11_7_Common.Features
+>;
+
+def : ProcessorModel<"gfx1171", GFX11SpeedModel,
+  FeatureISAVersion11_7_Common.Features
+>;
+
+def : ProcessorModel<"gfx1172", GFX11SpeedModel,
+  FeatureISAVersion11_7_Common.Features
+>;
+
+// [gfx1100, gfx1101, gfx1102, gfx1103,
+//  gfx1150, gfx1151, gfx1152, gfx1153, gfx1154]
 def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
+>;
+
+// [gfx1170, gfx1171, gfx1172]
+def : ProcessorModel<"gfx11-7-generic", GFX11SpeedModel,
+  FeatureISAVersion11_7_Generic.Features
 >;
 
 //===----------------------------------------------------------------------===//
@@ -330,6 +310,24 @@ def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
   FeatureISAVersion12_50.Features
 >;
 
-def : ProcessorModel<"gfx1251", GFX1250SpeedModel,
+def : ProcessorModel<"gfx1251", GFX1251SpeedModel,
   FeatureISAVersion12_51.Features
+>;
+
+// [gfx1250, gfx1251]
+def : ProcessorModel<"gfx12-5-generic", GFX125xGenericSpeedModel,
+  FeatureISAVersion12_5_Generic.Features
+>;
+
+//===----------------------------------------------------------------------===//
+// GCN GFX13.
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx1310", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+>;
+
+// [gfx1310]
+def : ProcessorModel<"gfx13-generic", GFX12SpeedModel,
+  FeatureISAVersion13_Generic.Features
 >;

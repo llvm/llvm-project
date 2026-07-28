@@ -92,9 +92,92 @@ private:
 
   llvm::StringRef chooseMarker(llvm::ArrayRef<llvm::StringRef> Options,
                                llvm::StringRef Text) const;
-  bool punctuationIndicatesLineBreak(llvm::StringRef Line) const;
-  bool isHardLineBreakIndicator(llvm::StringRef Rest) const;
-  bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) const;
+
+  /// Checks if the given line ends with punctuation that indicates a line break
+  /// (.:,;!?).
+  ///
+  /// If \p IsMarkdown is false, lines ending with 2 spaces are also considered
+  /// as indicating a line break. This is not needed for markdown because the
+  /// client renderer will handle this case.
+  bool punctuationIndicatesLineBreak(llvm::StringRef Line,
+                                     bool IsMarkdown) const;
+
+  /// Checks if the given line starts with a hard line break indicator.
+  ///
+  /// If \p IsMarkdown is true, only '@' and '\' are considered as indicators.
+  /// Otherwise, '-', '*', '@', '\', '>', '#', '`' and a digit followed by '.'
+  /// or ')' are also considered as indicators.
+  bool isHardLineBreakIndicator(llvm::StringRef Rest, bool IsMarkdown) const;
+
+  /// Checks if a hard line break should be added after the given line.
+  bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest,
+                            bool IsMarkdown) const;
+
+  /// \brief Go through the contents line by line to handle the newlines
+  /// and required spacing correctly for markdown rendering.
+  ///
+  /// Newlines are added if:
+  /// - the line ends with punctuation that indicates a line break (.:,;!?)
+  /// - the next line starts with a hard line break indicator \\ (escaped
+  /// markdown/doxygen command) or @ (doxygen command)
+  ///
+  /// This newline handling is only used when the client requests markdown
+  /// for hover/signature help content.
+  /// Markdown does not add any newlines inside paragraphs unless the user
+  /// explicitly adds them. For hover/signature help content, we still want to
+  /// add newlines in some cases to improve readability, especially when doxygen
+  /// parsing is disabled or not implemented (like for signature help).
+  /// Therefore we add newlines in the above mentioned cases.
+  ///
+  /// In addition to that, we need to consider that the user can configure
+  /// clangd to treat documentation comments as plain text, while the client
+  /// requests markdown.
+  /// In this case, all markdown syntax is escaped and will
+  /// not be rendered as expected by markdown.
+  /// Examples are lists starting with '-' or headings starting with '#'.
+  /// With the above next line heuristics, these cases are also covered by the
+  /// '\\' new line indicator.
+  ///
+  /// FIXME: The heuristic fails e.g. for lists starting with '*' because it is
+  /// also used for emphasis in markdown and should not be treated as a newline.
+  ///
+  /// \param OS The stream to render to.
+  /// \param ParagraphText The text of the paragraph to render.
+  void renderNewlinesMarkdown(llvm::raw_ostream &OS,
+                              llvm::StringRef ParagraphText) const;
+
+  /// \brief Go through the contents line by line to handle the newlines
+  /// and required spacing correctly for plain text rendering.
+  ///
+  /// Newlines are added if:
+  /// - the line ends with 2 spaces and a newline follows
+  /// - the line ends with punctuation that indicates a line break (.:,;!?)
+  /// - the next line starts with a hard line break indicator (-@>#`\\ or a
+  ///   digit followed by '.' or ')'), ignoring leading whitespace.
+  ///
+  /// Otherwise, newlines in the input are replaced with a single space.
+  ///
+  /// Multiple spaces are collapsed into a single space.
+  ///
+  /// Lines containing only whitespace are ignored.
+  ///
+  /// This newline handling is used when the server is configured to provide
+  /// Plaintext hover content.
+  ///
+  /// In case the client requests Markdown content:
+  /// - the newline "character" needs to be a Markdown line break (two spaces
+  /// followed by `\n`).
+  ///   Otherwise the linebreak will not be rendered correctly.
+  ///   This can be controlled by the \p UseMarkdownLinebreaks parameter.
+  /// - verbatim newlines are replaced with a space to replicate Markdown render
+  /// behaviour inside paragraphs.
+  ///
+  /// \param OS The stream to render to.
+  /// \param ParagraphText The text of the paragraph to render.
+  /// \param UseMarkdownLinebreaks Indicates whether to use markdown linebreaks
+  void renderNewlinesPlaintext(llvm::raw_ostream &OS,
+                               llvm::StringRef ParagraphText,
+                               bool UseMarkdownLinebreaks) const;
 };
 
 /// Represents a sequence of one or more documents. Knows how to print them in a

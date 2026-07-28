@@ -25,7 +25,7 @@ class Module;
 class MLInlineAdvice;
 class ProfileSummaryInfo;
 
-class MLInlineAdvisor : public InlineAdvisor {
+class LLVM_ABI MLInlineAdvisor : public InlineAdvisor {
 public:
   MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
                   std::function<std::unique_ptr<MLModelRunner>(
@@ -33,7 +33,7 @@ public:
                       GetModelRunner,
                   std::function<bool(CallBase &)> GetDefaultAdvice);
 
-  virtual ~MLInlineAdvisor() = default;
+  ~MLInlineAdvisor() override = default;
 
   void onPassEntry(LazyCallGraph::SCC *SCC) override;
   void onPassExit(LazyCallGraph::SCC *SCC) override;
@@ -101,11 +101,11 @@ private:
 
 /// InlineAdvice that tracks changes post inlining. For that reason, it only
 /// overrides the "successful inlining" extension points.
-class MLInlineAdvice : public InlineAdvice {
+class LLVM_ABI MLInlineAdvice : public InlineAdvice {
 public:
   MLInlineAdvice(MLInlineAdvisor *Advisor, CallBase &CB,
                  OptimizationRemarkEmitter &ORE, bool Recommendation);
-  virtual ~MLInlineAdvice() = default;
+  ~MLInlineAdvice() override = default;
 
   void recordInliningImpl() override;
   void recordInliningWithCalleeDeletedImpl() override;

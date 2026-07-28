@@ -37,11 +37,8 @@ static constexpr const char *SingleRangeNames[] = {
     "replace",
     "replace_if",
     "generate",
-    "remove",
-    "remove_if",
     "remove_copy",
     "remove_copy_if",
-    "unique",
     "unique_copy",
     "sample",
     "partition_point",
@@ -60,9 +57,7 @@ static constexpr const char *SingleRangeNames[] = {
     "shift_left",
     "shift_right",
     "is_partitioned",
-    "partition",
     "partition_copy",
-    "stable_partition",
     "sort",
     "stable_sort",
     "is_sorted",
@@ -80,6 +75,9 @@ static constexpr const char *SingleRangeNames[] = {
     "destroy",
 };
 
+static constexpr const char *SingleRangeBeginResultNames[] = {
+    "remove", "remove_if", "stable_partition", "partition", "unique"};
+
 static constexpr const char *TwoRangeNames[] = {
     "equal",
     "mismatch",
@@ -96,14 +94,19 @@ static constexpr const char *TwoRangeNames[] = {
     "is_permutation",
 };
 
-static constexpr const char *SinglePivotRangeNames[] = {"rotate", "rotate_copy",
+static constexpr const char *SinglePivotRangeNames[] = {"rotate_copy",
                                                         "inplace_merge"};
+
+static constexpr const char *SinglePivotRangeBeginResultNames[] = {"rotate"};
 
 namespace {
 class StdReplacer : public utils::UseRangesCheck::Replacer {
 public:
-  explicit StdReplacer(SmallVector<UseRangesCheck::Signature> Signatures)
-      : Signatures(std::move(Signatures)) {}
+  using ResultUsePolicy = utils::UseRangesCheck::Replacer::ResultUsePolicy;
+
+  explicit StdReplacer(SmallVector<UseRangesCheck::Signature> Signatures,
+                       ResultUsePolicy ResultPolicy = {})
+      : Signatures(std::move(Signatures)), ResultPolicy(ResultPolicy) {}
   std::optional<std::string>
   getReplaceName(const NamedDecl &OriginalName) const override {
     return ("std::ranges::" + OriginalName.getName()).str();
@@ -112,9 +115,13 @@ public:
   getReplacementSignatures() const override {
     return Signatures;
   }
+  ResultUsePolicy getResultUsePolicy(const NamedDecl &, bool) const override {
+    return ResultPolicy;
+  }
 
 private:
   SmallVector<UseRangesCheck::Signature> Signatures;
+  ResultUsePolicy ResultPolicy;
 };
 
 class StdAlgorithmReplacer : public StdReplacer {
@@ -135,7 +142,6 @@ class StdNumericReplacer : public StdReplacer {
 } // namespace
 
 utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
-
   utils::UseRangesCheck::ReplacerMap Result;
 
   // template<typename Iter> Func(Iter first, Iter last,...).
@@ -153,14 +159,28 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
 
   static const Signature SinglePivotFunc[] = {SinglePivotRange};
 
-  static const std::pair<ArrayRef<Signature>, ArrayRef<const char *>>
-      AlgorithmNames[] = {{SingleRangeFunc, SingleRangeNames},
-                          {TwoRangeFunc, TwoRangeNames},
-                          {SinglePivotFunc, SinglePivotRangeNames}};
+  using ResultPolicy = StdReplacer::ResultUsePolicy;
+  using PolicyKind = ResultPolicy::Kind;
+  const ResultPolicy DefaultPolicy;
+  const ResultPolicy BeginResultPolicy = {
+      PolicyKind::AppendAccessorForUsedResult, ".begin()"};
+
+  struct AlgorithmGroup {
+    ArrayRef<Signature> Signatures;
+    ArrayRef<const char *> Names;
+    ResultPolicy Policy;
+  };
+  const AlgorithmGroup AlgorithmNames[] = {
+      {SingleRangeFunc, SingleRangeNames, DefaultPolicy},
+      {SingleRangeFunc, SingleRangeBeginResultNames, BeginResultPolicy},
+      {TwoRangeFunc, TwoRangeNames, DefaultPolicy},
+      {SinglePivotFunc, SinglePivotRangeNames, DefaultPolicy},
+      {SinglePivotFunc, SinglePivotRangeBeginResultNames, BeginResultPolicy},
+  };
   SmallString<64> Buff;
-  for (const auto &[Signatures, Values] : AlgorithmNames) {
+  for (const auto &[Signatures, Values, Policy] : AlgorithmNames) {
     auto Replacer = llvm::makeIntrusiveRefCnt<StdAlgorithmReplacer>(
-        SmallVector<UseRangesCheck::Signature>{Signatures});
+        SmallVector<UseRangesCheck::Signature>{Signatures}, Policy);
     for (const auto &Name : Values) {
       Buff.assign({"::std::", Name});
       Result.try_emplace(Buff, Replacer);
@@ -190,16 +210,15 @@ bool UseRangesCheck::isLanguageVersionSupported(
 }
 ArrayRef<std::pair<StringRef, StringRef>>
 UseRangesCheck::getFreeBeginEndMethods() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::begin", "::std::end"}, {"::std::cbegin", "::std::cend"}};
   return Refs;
 }
 std::optional<UseRangesCheck::ReverseIteratorDescriptor>
 UseRangesCheck::getReverseDescriptor() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::rbegin", "::std::rend"}, {"::std::crbegin", "::std::crend"}};
-  return ReverseIteratorDescriptor{UseReversePipe ? "std::views::reverse"
-                                                  : "std::ranges::reverse_view",
-                                   "<ranges>", Refs, UseReversePipe};
+  return ReverseIteratorDescriptor{"std::views::reverse", "<ranges>", Refs,
+                                   UseReversePipe};
 }
 } // namespace clang::tidy::modernize

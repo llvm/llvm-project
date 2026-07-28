@@ -44,6 +44,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
@@ -112,6 +113,10 @@ namespace {
     if (E->isPRValue())
       return E->getType();
     return Ctx.getLValueReferenceType(E->getType());
+  }
+
+  static unsigned countNonVirtualBases(const CXXRecordDecl *RD) {
+    return llvm::count_if(RD->bases(), [](auto &B) { return !B.isVirtual(); });
   }
 
   /// Attempts to unwrap a CallExpr (with an alloc_size attribute) from an Expr.
@@ -732,11 +737,6 @@ namespace {
 namespace llvm {
 template<> struct DenseMapInfo<ObjectUnderConstruction> {
   using Base = DenseMapInfo<APValue::LValueBase>;
-  static ObjectUnderConstruction getEmptyKey() {
-    return {Base::getEmptyKey(), {}}; }
-  static ObjectUnderConstruction getTombstoneKey() {
-    return {Base::getTombstoneKey(), {}};
-  }
   static unsigned getHashValue(const ObjectUnderConstruction &Object) {
     return hash_value(Object);
   }
@@ -793,13 +793,8 @@ namespace {
   /// rules.  For example, the RHS of (0 && foo()) is not evaluated.  We can
   /// evaluate the expression regardless of what the RHS is, but C only allows
   /// certain things in certain situations.
-  class EvalInfo : public interp::State {
+  class EvalInfo final : public interp::State {
   public:
-    ASTContext &Ctx;
-
-    /// EvalStatus - Contains information about the evaluation.
-    Expr::EvalStatus &EvalStatus;
-
     /// CurrentCall - The top of the constexpr call stack.
     CallStackFrame *CurrentCall;
 
@@ -918,16 +913,8 @@ namespace {
     /// initialization.
     uint64_t ArrayInitIndex = -1;
 
-    /// HasActiveDiagnostic - Was the previous diagnostic stored? If so, further
-    /// notes attached to it will also be stored, otherwise they will not be.
-    bool HasActiveDiagnostic;
-
-    /// Have we emitted a diagnostic explaining why we couldn't constant
-    /// fold (not just why it's not strictly a constant expression)?
-    bool HasFoldFailureDiagnostic;
-
     EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
-        : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
+        : State(const_cast<ASTContext &>(C), S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
@@ -935,17 +922,13 @@ namespace {
                       /*This=*/nullptr,
                       /*CallExpr=*/nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
-          EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false) {
+          EvaluatingDeclValue(nullptr) {
       EvalMode = Mode;
     }
 
     ~EvalInfo() {
       discardCleanups();
     }
-
-    ASTContext &getASTContext() const override { return Ctx; }
-    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -989,7 +972,7 @@ namespace {
       // We use the number of constexpr steps as a proxy for the maximum size
       // of arrays to avoid exhausting the system resources, as initialization
       // of each element is likely to take some number of steps anyway.
-      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+      uint64_t Limit = getLangOpts().ConstexprStepLimit;
       if (Limit != 0 && ElemCount > Limit) {
         if (Diag)
           FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
@@ -1016,7 +999,7 @@ namespace {
     }
 
     bool nextStep(const Stmt *S) {
-      if (Ctx.getLangOpts().ConstexprStepLimit == 0)
+      if (getLangOpts().ConstexprStepLimit == 0)
         return true;
 
       if (!StepsLeft) {
@@ -1053,7 +1036,7 @@ namespace {
     };
 
     StdAllocatorCaller getStdAllocatorCaller(StringRef FnName) const {
-      for (const CallStackFrame *Call = CurrentCall; Call != &BottomFrame;
+      for (const CallStackFrame *Call = CurrentCall; Call->Caller != nullptr;
            Call = Call->Caller) {
         const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Call->Callee);
         if (!MD)
@@ -1100,110 +1083,12 @@ namespace {
     }
 
   private:
-    interp::Frame *getCurrentFrame() override { return CurrentCall; }
-    const interp::Frame *getBottomFrame() const override { return &BottomFrame; }
-
-    bool hasActiveDiagnostic() override { return HasActiveDiagnostic; }
-    void setActiveDiagnostic(bool Flag) override { HasActiveDiagnostic = Flag; }
-
-    void setFoldFailureDiagnostic(bool Flag) override {
-      HasFoldFailureDiagnostic = Flag;
-    }
-
-    Expr::EvalStatus &getEvalStatus() const override { return EvalStatus; }
-
-    // If we have a prior diagnostic, it will be noting that the expression
-    // isn't a constant expression. This diagnostic is more important,
-    // unless we require this evaluation to produce a constant expression.
-    //
-    // FIXME: We might want to show both diagnostics to the user in
-    // EvaluationMode::ConstantFold mode.
-    bool hasPriorDiagnostic() override {
-      if (!EvalStatus.Diag->empty()) {
-        switch (EvalMode) {
-        case EvaluationMode::ConstantFold:
-        case EvaluationMode::IgnoreSideEffects:
-          if (!HasFoldFailureDiagnostic)
-            break;
-          // We've already failed to fold something. Keep that diagnostic.
-          [[fallthrough]];
-        case EvaluationMode::ConstantExpression:
-        case EvaluationMode::ConstantExpressionUnevaluated:
-          setActiveDiagnostic(false);
-          return true;
-        }
-      }
-      return false;
-    }
+    const interp::Frame *getCurrentFrame() override { return CurrentCall; }
 
     unsigned getCallStackDepth() override { return CallStackDepth; }
+    bool stepsLeft() const override { return StepsLeft > 0; }
 
   public:
-    /// Should we continue evaluation after encountering a side-effect that we
-    /// couldn't model?
-    bool keepEvaluatingAfterSideEffect() const override {
-      switch (EvalMode) {
-      case EvaluationMode::IgnoreSideEffects:
-        return true;
-
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-      case EvaluationMode::ConstantFold:
-        // By default, assume any side effect might be valid in some other
-        // evaluation of this expression from a different context.
-        return checkingPotentialConstantExpression() ||
-               checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we have had a side-effect, and determine whether we should
-    /// keep evaluating.
-    bool noteSideEffect() override {
-      EvalStatus.HasSideEffects = true;
-      return keepEvaluatingAfterSideEffect();
-    }
-
-    /// Should we continue evaluation after encountering undefined behavior?
-    bool keepEvaluatingAfterUndefinedBehavior() {
-      switch (EvalMode) {
-      case EvaluationMode::IgnoreSideEffects:
-      case EvaluationMode::ConstantFold:
-        return true;
-
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-        return checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we hit something that was technically undefined behavior, but
-    /// that we can evaluate past it (such as signed overflow or floating-point
-    /// division by zero.)
-    bool noteUndefinedBehavior() override {
-      EvalStatus.HasUndefinedBehavior = true;
-      return keepEvaluatingAfterUndefinedBehavior();
-    }
-
-    /// Should we continue evaluation as much as possible after encountering a
-    /// construct which can't be reduced to a value?
-    bool keepEvaluatingAfterFailure() const override {
-      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
-      if (Limit != 0 && !StepsLeft)
-        return false;
-
-      switch (EvalMode) {
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-      case EvaluationMode::ConstantFold:
-      case EvaluationMode::IgnoreSideEffects:
-        return checkingPotentialConstantExpression() ||
-               checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
     /// Notes that we failed to evaluate an expression that other expressions
     /// directly depend on, and determine if we should keep evaluating. This
     /// should only be called if we actually intend to keep evaluating.
@@ -1262,8 +1147,10 @@ namespace {
     void keepDiagnostics() { Enabled = false; }
     ~FoldConstant() {
       if (Enabled && HadNoPriorDiags && !Info.EvalStatus.Diag->empty() &&
-          !Info.EvalStatus.HasSideEffects)
+          !Info.EvalStatus.HasSideEffects) {
         Info.EvalStatus.Diag->clear();
+        Info.EvalStatus.DiagEmitted = false;
+      }
       Info.EvalMode = OldMode;
     }
   };
@@ -1564,6 +1451,13 @@ namespace {
     unsigned getLValueCallIndex() const { return Base.getCallIndex(); }
     unsigned getLValueVersion() const { return Base.getVersion(); }
 
+    bool pointsToCompleteClass(const CXXRecordDecl *D) const {
+      if (Designator.Entries.empty())
+        return true;
+
+      return Designator.MostDerivedType->getAsCXXRecordDecl() == D;
+    }
+
     void moveInto(APValue &V) const {
       if (Designator.Invalid)
         V = APValue(Base, Offset, APValue::NoLValuePath(), IsNullPtr);
@@ -1675,7 +1569,7 @@ namespace {
         return;
       }
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
-        assert(getType(Base).getNonReferenceType()->isPointerType() ||
+        assert(!Base || getType(Base).getNonReferenceType()->isPointerType() ||
                getType(Base).getNonReferenceType()->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
         Designator.addUnsizedArrayUnchecked(ElemTy);
@@ -1885,12 +1779,13 @@ static bool EvaluateIntegerOrLValue(const Expr *E, APValue &Result,
                                     EvalInfo &Info);
 static bool EvaluateFloat(const Expr *E, APFloat &Result, EvalInfo &Info);
 static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
+static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info,
-                                  std::string *StringResult = nullptr);
+static std::optional<uint64_t>
+EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
+                      std::string *StringResult = nullptr);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -1972,19 +1867,24 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 
 /// Produce a string describing the given constexpr call.
 void CallStackFrame::describe(raw_ostream &Out) const {
-  unsigned ArgIndex = 0;
-  bool IsMemberCall =
-      isa<CXXMethodDecl>(Callee) && !isa<CXXConstructorDecl>(Callee) &&
-      cast<CXXMethodDecl>(Callee)->isImplicitObjectMemberFunction();
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  clang::PrintingPolicy PrintingPolicy = Info.Ctx.getPrintingPolicy();
+  PrintingPolicy.SuppressLambdaBody = true;
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
 
   if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
-      Object->printPretty(Out, /*Helper=*/nullptr, Info.Ctx.getPrintingPolicy(),
+      Object->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
           Out << "->";
@@ -1992,8 +1892,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Out << ".";
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
-      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr,
-                                  Info.Ctx.getPrintingPolicy(),
+      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                                   /*Indentation=*/0);
       Out << ".";
     } else {
@@ -2004,27 +1903,21 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
-    IsMemberCall = false;
   }
 
   Out << '(';
 
-  for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
-       E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
-    if (ArgIndex > (unsigned)IsMemberCall)
-      Out << ", ";
-
-    const ParmVarDecl *Param = *I;
-    APValue *V = Info.getParamSlot(Arguments, Param);
+  llvm::ListSeparator Comma;
+  for (const ParmVarDecl *Param :
+       Callee->parameters().slice(ExplicitInstanceParam)) {
+    Out << Comma;
+    const APValue *V = Info.getParamSlot(Arguments, Param);
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
     else
       Out << "<...>";
-
-    if (ArgIndex == 0 && IsMemberCall)
-      Out << "->" << *Callee << '(';
   }
 
   Out << ')';
@@ -2100,7 +1993,9 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCEncodeExprClass:
     return true;
   case Expr::ObjCBoxedExprClass:
-    return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
+  case Expr::ObjCArrayLiteralClass:
+  case Expr::ObjCDictionaryLiteralClass:
+    return cast<ObjCObjectLiteral>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
     return IsOpaqueConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
@@ -2299,7 +2194,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
                                   const FieldDecl *SubobjectDecl,
-                                  CheckedTemporaries &CheckedTemps);
+                                  CheckedTemporaries &CheckedTemps,
+                                  bool IsCompleteClass = true);
 
 /// Check that this reference or pointer core constant expression is a valid
 /// value for an address or reference constant expression. Return true if we
@@ -2406,16 +2302,17 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant, unless we're
-      // evaluating a value for use only in name mangling.
-      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
-        // FIXME: Diagnostic!
+      // evaluating a value for use only in name mangling, and unless it's a
+      // static local. For the latter case, we'd still need to evaluate the
+      // constant expression in case we're inside a (inlined) function.
+      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>() &&
+          !Var->isStaticLocal())
         return false;
 
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
-      if (Info.getASTContext().getLangOpts().CUDA &&
-          Info.getASTContext().getLangOpts().CUDAIsDevice &&
-          Info.getASTContext().CUDAConstantEvalCtx.NoWrongSidedVars) {
+      if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
+          Info.Ctx.CUDAConstantEvalCtx.NoWrongSidedVars) {
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
@@ -2543,7 +2440,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
                                   const FieldDecl *SubobjectDecl,
-                                  CheckedTemporaries &CheckedTemps) {
+                                  CheckedTemporaries &CheckedTemps,
+                                  bool IsCompleteClass) {
   if (!Value.hasValue()) {
     if (SubobjectDecl) {
       Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
@@ -2589,6 +2487,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
+        if (BS.isVirtual())
+          continue;
         const APValue &BaseValue = Value.getStructBase(BaseIndex);
         if (!BaseValue.hasValue()) {
           SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
@@ -2598,7 +2498,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         }
         if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(), BaseValue,
                                    Kind, /*SubobjectDecl=*/nullptr,
-                                   CheckedTemps))
+                                   CheckedTemps, /*IsCompleteClass=*/false))
           return false;
         ++BaseIndex;
       }
@@ -2611,6 +2511,27 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                  Value.getStructField(I->getFieldIndex()), Kind,
                                  I, CheckedTemps))
         return false;
+    }
+
+    if (IsCompleteClass) {
+      if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
+        unsigned BaseIndex = 0;
+        for (const CXXBaseSpecifier &BS : CD->vbases()) {
+          assert(BS.isVirtual());
+          const APValue &BaseValue = Value.getStructVirtualBase(BaseIndex);
+          if (!BaseValue.hasValue()) {
+            SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+            Info.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+                << BS.getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
+            return false;
+          }
+          if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
+                                     BaseValue, Kind, /*SubobjectDecl=*/nullptr,
+                                     CheckedTemps, /*IsCompleteClass=*/false))
+            return false;
+          ++BaseIndex;
+        }
+      }
     }
   }
 
@@ -2718,6 +2639,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
     Result = Val.getMemberPointerDecl();
     return true;
   case APValue::Vector:
+  case APValue::Matrix:
   case APValue::Array:
   case APValue::Struct:
   case APValue::Union:
@@ -2741,8 +2663,11 @@ static bool EvaluateAsBooleanCondition(const Expr *E, bool &Result,
 template<typename T>
 static bool HandleOverflow(EvalInfo &Info, const Expr *E,
                            const T &SrcValue, QualType DestType) {
-  Info.CCEDiag(E, diag::note_constexpr_overflow)
-    << SrcValue << DestType;
+  Info.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << DestType;
+  if (const auto *OBT = DestType->getAs<OverflowBehaviorType>();
+      OBT && OBT->isTrapKind()) {
+    return false;
+  }
   return Info.noteUndefinedBehavior();
 }
 
@@ -2768,7 +2693,7 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
 /// So return "tonearest" mode instead of "dynamic".
 static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   llvm::RoundingMode RM =
-      E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
+      E->getFPFeaturesInEffect(Info.getLangOpts()).getRoundingMode();
   if (RM == llvm::RoundingMode::Dynamic)
     RM = llvm::RoundingMode::NearestTiesToEven;
   return RM;
@@ -2782,7 +2707,7 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   if (Info.InConstantContext)
     return true;
 
-  FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+  FPOptions FPO = E->getFPFeaturesInEffect(Info.getLangOpts());
   if ((St & APFloat::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
     // Inexact result means that it depends on rounding mode. If the requested
@@ -2890,7 +2815,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
 
   APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
   Result = Value.trunc(LHS.getBitWidth());
-  if (Result.extend(BitWidth) != Value) {
+  if (Result.extend(BitWidth) != Value && !E->getType().isWrapType()) {
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
@@ -3255,8 +3180,24 @@ static bool HandleLValueDirectBase(EvalInfo &Info, const Expr *E, LValue &Obj,
     RL = &Info.Ctx.getASTRecordLayout(Derived);
   }
 
-  Obj.addDecl(Info, E, Base, /*Virtual*/ false);
+  Obj.addDecl(Info, E, Base, /*Virtual=*/false);
   Obj.getLValueOffset() += RL->getBaseClassOffset(Base);
+  return true;
+}
+
+static bool HandleLValueDirectVirtualBase(EvalInfo &Info, const Expr *E,
+                                          LValue &Obj,
+                                          const CXXRecordDecl *Derived,
+                                          const CXXRecordDecl *Base,
+                                          const ASTRecordLayout *RL = nullptr) {
+  if (!RL) {
+    if (Derived->isInvalidDecl())
+      return false;
+    RL = &Info.Ctx.getASTRecordLayout(Derived);
+  }
+
+  Obj.addDecl(Info, E, Base, /*Virtual=*/true);
+  Obj.getLValueOffset() += RL->getVBaseClassOffset(Base);
   return true;
 }
 
@@ -3323,8 +3264,17 @@ static bool HandleLValueMember(EvalInfo &Info, const Expr *E, LValue &LVal,
                                const FieldDecl *FD,
                                const ASTRecordLayout *RL = nullptr) {
   if (!RL) {
-    if (FD->getParent()->isInvalidDecl()) return false;
-    RL = &Info.Ctx.getASTRecordLayout(FD->getParent());
+    const RecordDecl *RD = FD->getParent();
+    if (RD->isInvalidDecl())
+      return false;
+    // There are some cases where the base is not yet complete but we haven't
+    // disagnosed (such as in a template instantation of an attribute that
+    // references the expression, ala enable_if).  These aren't necessarily
+    // constant expressions so we return 'false', but they might be, so we don't
+    // diagnose.
+    if (!RD->isCompleteDefinition())
+      return false;
+    RL = &Info.Ctx.getASTRecordLayout(RD);
   }
 
   unsigned I = FD->getFieldIndex();
@@ -3489,12 +3439,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
              "missing value for local variable");
       if (Info.checkingPotentialConstantExpression())
         return false;
-      // FIXME: This diagnostic is bogus; we do support captures. Is this code
-      // still reachable at all?
-      Info.FFDiag(E->getBeginLoc(),
-                  diag::note_unimplemented_constexpr_lambda_feature_ast)
-          << "captures not currently allowed";
-      return false;
+
+      llvm_unreachable(
+          "A variable in a frame should either be a local or a parameter");
     }
   }
 
@@ -3616,7 +3563,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
-  Result = VD->getEvaluatedValue();
+  Result = const_cast<APValue *>(VD->getEvaluatedValue());
 
   if (!Result && !AllowConstexprUnknown)
     return false;
@@ -3630,10 +3577,18 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
                              const CXXRecordDecl *Base) {
   Base = Base->getCanonicalDecl();
   unsigned Index = 0;
-  for (CXXRecordDecl::base_class_const_iterator I = Derived->bases_begin(),
-         E = Derived->bases_end(); I != E; ++I, ++Index) {
-    if (I->getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
+  for (const CXXBaseSpecifier &B : Derived->bases()) {
+    if (B.isVirtual())
+      continue;
+    if (B.getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
       return Index;
+    ++Index;
+  }
+
+  for (const CXXBaseSpecifier &B : Derived->vbases()) {
+    if (B.getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
+      return Index;
+    ++Index;
   }
 
   llvm_unreachable("base class missing from derived class's bases list");
@@ -3713,6 +3668,13 @@ static void expandArray(APValue &Array, unsigned Index) {
   if (NewValue.hasArrayFiller())
     NewValue.getArrayFiller() = Array.getArrayFiller();
   Array.swap(NewValue);
+}
+
+// Expand an indeterminate vector to materialize all elements.
+static void expandVector(APValue &Vec, unsigned NumElements) {
+  assert(Vec.isIndeterminate());
+  SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
+  Vec = APValue(Elts.data(), Elts.size());
 }
 
 /// Determine whether a type would actually be read by an lvalue-to-rvalue
@@ -3828,6 +3790,377 @@ static bool CheckArraySize(EvalInfo &Info, const ConstantArrayType *CAT,
       /*Diag=*/true);
 }
 
+static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
+                             QualType SourceTy, QualType DestTy,
+                             APValue const &Original, APValue &Result) {
+  // boolean must be checked before integer
+  // since IsIntegerType() is true for bool
+  if (SourceTy->isBooleanType()) {
+    if (DestTy->isBooleanType()) {
+      Result = Original;
+      return true;
+    }
+    if (DestTy->isIntegerType() || DestTy->isRealFloatingType()) {
+      bool BoolResult;
+      if (!HandleConversionToBool(Original, BoolResult))
+        return false;
+      uint64_t IntResult = BoolResult;
+      QualType IntType = DestTy->isIntegerType()
+                             ? DestTy
+                             : Info.Ctx.getIntTypeForBitwidth(64, false);
+      Result = APValue(Info.Ctx.MakeIntValue(IntResult, IntType));
+    }
+    if (DestTy->isRealFloatingType()) {
+      APValue Result2 = APValue(APFloat(0.0));
+      if (!HandleIntToFloatCast(Info, E, FPO,
+                                Info.Ctx.getIntTypeForBitwidth(64, false),
+                                Result.getInt(), DestTy, Result2.getFloat()))
+        return false;
+      Result = std::move(Result2);
+    }
+    return true;
+  }
+  if (SourceTy->isIntegerType()) {
+    if (DestTy->isRealFloatingType()) {
+      Result = APValue(APFloat(0.0));
+      return HandleIntToFloatCast(Info, E, FPO, SourceTy, Original.getInt(),
+                                  DestTy, Result.getFloat());
+    }
+    if (DestTy->isBooleanType()) {
+      bool BoolResult;
+      if (!HandleConversionToBool(Original, BoolResult))
+        return false;
+      uint64_t IntResult = BoolResult;
+      Result = APValue(Info.Ctx.MakeIntValue(IntResult, DestTy));
+      return true;
+    }
+    if (DestTy->isIntegerType()) {
+      Result = APValue(
+          HandleIntToIntCast(Info, E, DestTy, SourceTy, Original.getInt()));
+      return true;
+    }
+  } else if (SourceTy->isRealFloatingType()) {
+    if (DestTy->isRealFloatingType()) {
+      Result = Original;
+      return HandleFloatToFloatCast(Info, E, SourceTy, DestTy,
+                                    Result.getFloat());
+    }
+    if (DestTy->isBooleanType()) {
+      bool BoolResult;
+      if (!HandleConversionToBool(Original, BoolResult))
+        return false;
+      uint64_t IntResult = BoolResult;
+      Result = APValue(Info.Ctx.MakeIntValue(IntResult, DestTy));
+      return true;
+    }
+    if (DestTy->isIntegerType()) {
+      Result = APValue(APSInt());
+      return HandleFloatToIntCast(Info, E, SourceTy, Original.getFloat(),
+                                  DestTy, Result.getInt());
+    }
+  }
+
+  Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+  return false;
+}
+
+// do the heavy lifting for casting to aggregate types
+// because we have to deal with bitfields specially
+static bool constructAggregate(EvalInfo &Info, const FPOptions FPO,
+                               const Expr *E, APValue &Result,
+                               QualType ResultType,
+                               SmallVectorImpl<APValue> &Elements,
+                               SmallVectorImpl<QualType> &ElTypes) {
+
+  SmallVector<std::tuple<APValue *, QualType, unsigned>> WorkList = {
+      {&Result, ResultType, 0}};
+
+  unsigned ElI = 0;
+  while (!WorkList.empty() && ElI < Elements.size()) {
+    auto [Res, Type, BitWidth] = WorkList.pop_back_val();
+
+    if (Type->isRealFloatingType()) {
+      if (!handleScalarCast(Info, FPO, E, ElTypes[ElI], Type, Elements[ElI],
+                            *Res))
+        return false;
+      ElI++;
+      continue;
+    }
+    if (Type->isIntegerType()) {
+      if (!handleScalarCast(Info, FPO, E, ElTypes[ElI], Type, Elements[ElI],
+                            *Res))
+        return false;
+      if (BitWidth > 0) {
+        if (!Res->isInt())
+          return false;
+        APSInt &Int = Res->getInt();
+        unsigned OldBitWidth = Int.getBitWidth();
+        unsigned NewBitWidth = BitWidth;
+        if (NewBitWidth < OldBitWidth)
+          Int = Int.trunc(NewBitWidth).extend(OldBitWidth);
+      }
+      ElI++;
+      continue;
+    }
+    if (Type->isVectorType()) {
+      QualType ElTy = Type->castAs<VectorType>()->getElementType();
+      unsigned NumEl = Type->castAs<VectorType>()->getNumElements();
+      SmallVector<APValue> Vals(NumEl);
+      for (unsigned I = 0; I < NumEl; ++I) {
+        if (!handleScalarCast(Info, FPO, E, ElTypes[ElI], ElTy, Elements[ElI],
+                              Vals[I]))
+          return false;
+        ElI++;
+      }
+      *Res = APValue(Vals.data(), NumEl);
+      continue;
+    }
+    if (Type->isConstantArrayType()) {
+      QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
+                          ->getElementType();
+      uint64_t Size =
+          cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))->getZExtSize();
+      *Res = APValue(APValue::UninitArray(), Size, Size);
+      for (int64_t I = Size - 1; I > -1; --I)
+        WorkList.emplace_back(&Res->getArrayInitializedElt(I), ElTy, 0u);
+      continue;
+    }
+    if (Type->isRecordType()) {
+      const RecordDecl *RD = Type->getAsRecordDecl();
+
+      unsigned NumBases = 0;
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+        NumBases = CXXRD->getNumBases();
+
+      *Res = APValue(APValue::UninitStruct(), NumBases, RD->getNumFields());
+
+      SmallVector<std::tuple<APValue *, QualType, unsigned>> ReverseList;
+      // we need to traverse backwards
+      // Visit the base classes.
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        if (CXXRD->getNumBases() > 0) {
+          assert(CXXRD->getNumBases() == 1);
+          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[0];
+          ReverseList.emplace_back(&Res->getStructBase(0), BS.getType(), 0u);
+        }
+      }
+
+      // Visit the fields.
+      for (FieldDecl *FD : RD->fields()) {
+        unsigned FDBW = 0;
+        if (FD->isUnnamedBitField())
+          continue;
+        if (FD->isBitField()) {
+          FDBW = FD->getBitWidthValue();
+        }
+
+        ReverseList.emplace_back(&Res->getStructField(FD->getFieldIndex()),
+                                 FD->getType(), FDBW);
+      }
+
+      std::reverse(ReverseList.begin(), ReverseList.end());
+      llvm::append_range(WorkList, ReverseList);
+      continue;
+    }
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+  return true;
+}
+
+static bool handleElementwiseCast(EvalInfo &Info, const Expr *E,
+                                  const FPOptions FPO,
+                                  SmallVectorImpl<APValue> &Elements,
+                                  SmallVectorImpl<QualType> &SrcTypes,
+                                  SmallVectorImpl<QualType> &DestTypes,
+                                  SmallVectorImpl<APValue> &Results) {
+
+  assert((Elements.size() == SrcTypes.size()) &&
+         (Elements.size() == DestTypes.size()));
+
+  for (unsigned I = 0, ESz = Elements.size(); I < ESz; ++I) {
+    APValue Original = Elements[I];
+    QualType SourceTy = SrcTypes[I];
+    QualType DestTy = DestTypes[I];
+
+    if (!handleScalarCast(Info, FPO, E, SourceTy, DestTy, Original, Results[I]))
+      return false;
+  }
+  return true;
+}
+
+static unsigned elementwiseSize(EvalInfo &Info, QualType BaseTy) {
+
+  SmallVector<QualType> WorkList = {BaseTy};
+
+  unsigned Size = 0;
+  while (!WorkList.empty()) {
+    QualType Type = WorkList.pop_back_val();
+    if (Type->isRealFloatingType() || Type->isIntegerType() ||
+        Type->isBooleanType()) {
+      ++Size;
+      continue;
+    }
+    if (Type->isVectorType()) {
+      unsigned NumEl = Type->castAs<VectorType>()->getNumElements();
+      Size += NumEl;
+      continue;
+    }
+    if (Type->isConstantMatrixType()) {
+      unsigned NumEl =
+          Type->castAs<ConstantMatrixType>()->getNumElementsFlattened();
+      Size += NumEl;
+      continue;
+    }
+    if (Type->isConstantArrayType()) {
+      QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
+                          ->getElementType();
+      uint64_t ArrSize =
+          cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))->getZExtSize();
+      for (uint64_t I = 0; I < ArrSize; ++I) {
+        WorkList.push_back(ElTy);
+      }
+      continue;
+    }
+    if (Type->isRecordType()) {
+      const RecordDecl *RD = Type->getAsRecordDecl();
+
+      // Visit the base classes.
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        if (CXXRD->getNumBases() > 0) {
+          assert(CXXRD->getNumBases() == 1);
+          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[0];
+          WorkList.push_back(BS.getType());
+        }
+      }
+
+      // visit the fields.
+      for (FieldDecl *FD : RD->fields()) {
+        if (FD->isUnnamedBitField())
+          continue;
+        WorkList.push_back(FD->getType());
+      }
+      continue;
+    }
+  }
+  return Size;
+}
+
+static bool hlslAggSplatHelper(EvalInfo &Info, const Expr *E, APValue &SrcVal,
+                               QualType &SrcTy) {
+  SrcTy = E->getType();
+
+  if (!Evaluate(SrcVal, Info, E))
+    return false;
+
+  assert((SrcVal.isFloat() || SrcVal.isInt() ||
+          (SrcVal.isVector() && SrcVal.getVectorLength() == 1)) &&
+         "Not a valid HLSLAggregateSplatCast.");
+
+  if (SrcVal.isVector()) {
+    assert(SrcTy->isVectorType() && "Type mismatch.");
+    SrcTy = SrcTy->castAs<VectorType>()->getElementType();
+    SrcVal = SrcVal.getVectorElt(0);
+  }
+  if (SrcVal.isMatrix()) {
+    assert(SrcTy->isConstantMatrixType() && "Type mismatch.");
+    SrcTy = SrcTy->castAs<ConstantMatrixType>()->getElementType();
+    SrcVal = SrcVal.getMatrixElt(0, 0);
+  }
+  return true;
+}
+
+static bool flattenAPValue(EvalInfo &Info, const Expr *E, APValue Value,
+                           QualType BaseTy, SmallVectorImpl<APValue> &Elements,
+                           SmallVectorImpl<QualType> &Types, unsigned Size) {
+
+  SmallVector<std::pair<APValue, QualType>> WorkList = {{Value, BaseTy}};
+  unsigned Populated = 0;
+  while (!WorkList.empty() && Populated < Size) {
+    auto [Work, Type] = WorkList.pop_back_val();
+
+    if (Work.isFloat() || Work.isInt()) {
+      Elements.push_back(Work);
+      Types.push_back(Type);
+      Populated++;
+      continue;
+    }
+    if (Work.isVector()) {
+      assert(Type->isVectorType() && "Type mismatch.");
+      QualType ElTy = Type->castAs<VectorType>()->getElementType();
+      for (unsigned I = 0; I < Work.getVectorLength() && Populated < Size;
+           I++) {
+        Elements.push_back(Work.getVectorElt(I));
+        Types.push_back(ElTy);
+        Populated++;
+      }
+      continue;
+    }
+    if (Work.isMatrix()) {
+      assert(Type->isConstantMatrixType() && "Type mismatch.");
+      const auto *MT = Type->castAs<ConstantMatrixType>();
+      QualType ElTy = MT->getElementType();
+      // Matrix elements are flattened in row-major order.
+      for (unsigned Row = 0; Row < Work.getMatrixNumRows() && Populated < Size;
+           Row++) {
+        for (unsigned Col = 0;
+             Col < Work.getMatrixNumColumns() && Populated < Size; Col++) {
+          Elements.push_back(Work.getMatrixElt(Row, Col));
+          Types.push_back(ElTy);
+          Populated++;
+        }
+      }
+      continue;
+    }
+    if (Work.isArray()) {
+      assert(Type->isConstantArrayType() && "Type mismatch.");
+      QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
+                          ->getElementType();
+      for (int64_t I = Work.getArraySize() - 1; I > -1; --I) {
+        WorkList.emplace_back(Work.getArrayInitializedElt(I), ElTy);
+      }
+      continue;
+    }
+
+    if (Work.isStruct()) {
+      assert(Type->isRecordType() && "Type mismatch.");
+
+      const RecordDecl *RD = Type->getAsRecordDecl();
+
+      SmallVector<std::pair<APValue, QualType>> ReverseList;
+      // Visit the fields.
+      for (FieldDecl *FD : RD->fields()) {
+        if (FD->isUnnamedBitField())
+          continue;
+        ReverseList.emplace_back(Work.getStructField(FD->getFieldIndex()),
+                                 FD->getType());
+      }
+
+      std::reverse(ReverseList.begin(), ReverseList.end());
+      llvm::append_range(WorkList, ReverseList);
+
+      // Visit the base classes.
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        if (CXXRD->getNumBases() > 0) {
+          assert(CXXRD->getNumBases() == 1);
+          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[0];
+          const APValue &Base = Work.getStructBase(0);
+
+          // Can happen in error cases.
+          if (!Base.isStruct())
+            return false;
+
+          WorkList.emplace_back(Base, BS.getType());
+        }
+      }
+      continue;
+    }
+    Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+  return true;
+}
+
 namespace {
 /// A handle to a complete object (an object that is not a subobject of
 /// another object).
@@ -3914,10 +4247,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // IsWithinLifetime, resulting in false.
       if (I != 0 && handler.AccessKind == AK_IsWithinLifetime)
         return false;
-      if (!Info.checkingPotentialConstantExpression())
+      if (!Info.checkingPotentialConstantExpression()) {
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isIndeterminate()
             << E->getSourceRange();
+        NoteLValueLocation(Info, Obj.Base);
+      }
       return handler.failed();
     }
 
@@ -3975,7 +4310,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     if (I == N) {
-      if (!handler.found(*O, ObjType))
+      if (!handler.found(*O, ObjType, Obj.Base))
         return false;
 
       // If we modified a bit-field, truncate it to the right width.
@@ -3988,6 +4323,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     LastField = nullptr;
+
+    // The value of an atomic object is represented like a value of the
+    // underlying type, so look through the _Atomic wrapper.
+    if (const AtomicType *AT = ObjType->getAs<AtomicType>())
+      ObjType = Info.Ctx.getQualifiedType(AT->getValueType(),
+                                          ObjType.getQualifiers());
+
     if (ObjType->isArrayType()) {
       // Next subobject is an array element.
       const ArrayType *AT = Info.Ctx.getAsArrayType(ObjType);
@@ -4063,7 +4405,16 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
-      return handler.found(O->getVectorElt(Index), ObjType);
+
+      if (O->isIndeterminate()) {
+        if (isRead(handler.AccessKind)) {
+          Info.FFDiag(E);
+          return handler.failed();
+        }
+        expandVector(*O, NumElements);
+      }
+      assert(O->isVector() && "unexpected object during vector element access");
+      return handler.found(O->getVectorElt(Index), ObjType, Obj.Base);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
           !Obj.mayAccessMutableMembers(Info, handler.AccessKind)) {
@@ -4107,7 +4458,13 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // Next subobject is a base class.
       const CXXRecordDecl *Derived = ObjType->getAsCXXRecordDecl();
       const CXXRecordDecl *Base = getAsBaseClass(Sub.Entries[I]);
-      O = &O->getStructBase(getBaseIndex(Derived, Base));
+
+      unsigned BaseIndex = getBaseIndex(Derived, Base);
+      unsigned NumNonVirtualBases = O->getStructNumBases();
+      if (BaseIndex >= NumNonVirtualBases) {
+        O = &O->getStructVirtualBase(BaseIndex - NumNonVirtualBases);
+      } else
+        O = &O->getStructBase(BaseIndex);
 
       ObjType = getSubobjectType(ObjType, Info.Ctx.getCanonicalTagType(Base));
     }
@@ -4123,7 +4480,7 @@ struct ExtractSubobjectHandler {
 
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     Result = Subobj;
     if (AccessKind == AK_ReadObjectRepresentation)
       return true;
@@ -4169,7 +4526,7 @@ struct ModifySubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     if (!checkConst(SubobjType))
       return false;
     // We've been given ownership of NewVal, so just swap it in.
@@ -4288,8 +4645,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     std::tie(Frame, Depth) =
         Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
     if (!Frame) {
-      Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
-        << AK << LVal.Base.is<const ValueDecl*>();
+      Info.FFDiag(E, diag::note_constexpr_access_uninit, 1)
+          << AK << /*Indeterminate=*/false << E->getSourceRange();
       NoteLValueLocation(Info, LVal.Base);
       return CompleteObject();
     }
@@ -4638,6 +4995,30 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
   return Obj && extractSubobject(Info, Conv, Obj, LVal.Designator, RVal, AK);
 }
 
+static bool hlslElementwiseCastHelper(EvalInfo &Info, const Expr *E,
+                                      QualType DestTy,
+                                      SmallVectorImpl<APValue> &SrcVals,
+                                      SmallVectorImpl<QualType> &SrcTypes) {
+  APValue Val;
+  if (!Evaluate(Val, Info, E))
+    return false;
+
+  // must be dealing with a record
+  if (Val.isLValue()) {
+    LValue LVal;
+    LVal.setFrom(Info.Ctx, Val);
+    if (!handleLValueToRValueConversion(Info, E, E->getType(), LVal, Val))
+      return false;
+  }
+
+  unsigned NEls = elementwiseSize(Info, DestTy);
+  // flatten the source
+  if (!flattenAPValue(Info, E, Val, E->getType(), SrcVals, SrcTypes, NEls))
+    return false;
+
+  return true;
+}
+
 /// Perform an assignment of Val to LVal. Takes ownership of Val.
 static bool handleAssignment(EvalInfo &Info, const Expr *E, const LValue &LVal,
                              QualType LValType, APValue &Val) {
@@ -4675,7 +5056,7 @@ struct CompoundAssignSubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     switch (Subobj.getKind()) {
     case APValue::Int:
       return found(Subobj.getInt(), SubobjType);
@@ -4694,6 +5075,7 @@ struct CompoundAssignSubobjectHandler {
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
           << /*read of=*/0 << /*uninitialized object=*/1
           << E->getLHS()->getSourceRange();
+      NoteLValueLocation(Info, Base);
       return false;
     default:
       // FIXME: can this happen?
@@ -4822,7 +5204,7 @@ struct IncDecSubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     // Stash the old value. Also clear Old, so we don't clobber it later
     // if we're post-incrementing a complex.
     if (Old) {
@@ -4878,14 +5260,16 @@ struct IncDecSubobjectHandler {
     if (AccessKind == AK_Increment) {
       ++Value;
 
-      if (!WasNegative && Value.isNegative() && E->canOverflow()) {
+      if (!WasNegative && Value.isNegative() && E->canOverflow() &&
+          !SubobjType.isWrapType()) {
         APSInt ActualValue(Value, /*IsUnsigned*/true);
         return HandleOverflow(Info, E, ActualValue, SubobjType);
       }
     } else {
       --Value;
 
-      if (WasNegative && !Value.isNegative() && E->canOverflow()) {
+      if (WasNegative && !Value.isNegative() && E->canOverflow() &&
+          !SubobjType.isWrapType()) {
         unsigned BitWidth = Value.getBitWidth();
         APSInt ActualValue(Value.sext(BitWidth + 1), /*IsUnsigned*/false);
         ActualValue.setBit(BitWidth);
@@ -5143,7 +5527,8 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
 
 /// Get the value to use for a default-initialized object of type T.
 /// Return false if it encounters something invalid.
-static bool handleDefaultInitValue(QualType T, APValue &Result) {
+static bool handleDefaultInitValue(QualType T, APValue &Result,
+                                   bool IsCompleteClass = true) {
   bool Success = true;
 
   // If there is already a value present don't overwrite it.
@@ -5159,15 +5544,21 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
       Result = APValue((const FieldDecl *)nullptr);
       return true;
     }
-    Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
-                     std::distance(RD->field_begin(), RD->field_end()));
+
+    // bases() includes directly specified virtual bases as well.
+    unsigned NonVirtualBases = countNonVirtualBases(RD);
+    Result =
+        APValue(APValue::UninitStruct(), NonVirtualBases, RD->getNumFields(),
+                IsCompleteClass ? RD->getNumVBases() : 0);
 
     unsigned Index = 0;
-    for (CXXRecordDecl::base_class_const_iterator I = RD->bases_begin(),
-                                                  End = RD->bases_end();
-         I != End; ++I, ++Index)
-      Success &=
-          handleDefaultInitValue(I->getType(), Result.getStructBase(Index));
+    for (const CXXBaseSpecifier &B : RD->bases()) {
+      if (B.isVirtual())
+        continue;
+      Success &= handleDefaultInitValue(
+          B.getType(), Result.getStructBase(Index), /*IsCompleteClass=*/false);
+      ++Index;
+    }
 
     for (const auto *I : RD->fields()) {
       if (I->isUnnamedBitField())
@@ -5175,6 +5566,21 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
       Success &= handleDefaultInitValue(
           I->getType(), Result.getStructField(I->getFieldIndex()));
     }
+
+    if (IsCompleteClass) {
+      Index = 0;
+
+      for (const auto &B : RD->vbases()) {
+        Success &= handleDefaultInitValue(B.getType(),
+                                          Result.getStructVirtualBase(Index),
+                                          /*IsCompleteClass=*/false);
+        ++Index;
+      }
+    } else {
+      // Virtual bases should only exist at the top level of an APValue.
+      assert(Result.getStructNumVirtualBases() == 0);
+    }
+
     return Success;
   }
 
@@ -5184,7 +5590,6 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
     if (Result.hasArrayFiller())
       Success &=
           handleDefaultInitValue(AT->getElementType(), Result.getArrayFiller());
-
     return Success;
   }
 
@@ -5451,10 +5856,13 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     }
 
     const CaseStmt *CS = cast<CaseStmt>(SC);
-    APSInt LHS = CS->getLHS()->EvaluateKnownConstInt(Info.Ctx);
-    APSInt RHS = CS->getRHS() ? CS->getRHS()->EvaluateKnownConstInt(Info.Ctx)
-                              : LHS;
-    if (LHS <= Value && Value <= RHS) {
+    const Expr *LHS = CS->getLHS();
+    const Expr *RHS = CS->getRHS();
+    if (LHS->isValueDependent() || (RHS && RHS->isValueDependent()))
+      return ESR_Failed;
+    APSInt LHSValue = LHS->EvaluateKnownConstInt(Info.Ctx);
+    APSInt RHSValue = RHS ? RHS->EvaluateKnownConstInt(Info.Ctx) : LHSValue;
+    if (LHSValue <= Value && Value <= RHSValue) {
       Found = SC;
       break;
     }
@@ -5664,6 +6072,12 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
       if (VD && !CheckLocalVariableDeclaration(Info, VD))
         return ESR_Failed;
+
+      if (const auto *ESD = dyn_cast<CXXExpansionStmtDecl>(D)) {
+        assert(ESD->getInstantiations() && "not expanded?");
+        return EvaluateStmt(Result, Info, ESD->getInstantiations(), Case);
+      }
+
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
       if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
@@ -5936,6 +6350,40 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
   }
 
+  case Stmt::CXXExpansionStmtInstantiationClass: {
+    BlockScopeRAII Scope(Info);
+    const auto *Expansion = cast<CXXExpansionStmtInstantiation>(S);
+    for (const Stmt *PreambleStmt : Expansion->getPreambleStmts()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, PreambleStmt);
+      if (ESR != ESR_Succeeded) {
+        if (ESR != ESR_Failed && !Scope.destroy())
+          return ESR_Failed;
+        return ESR;
+      }
+    }
+
+    // No need to push an extra scope for these since they're already
+    // CompoundStmts.
+    EvalStmtResult ESR = ESR_Succeeded;
+    for (const Stmt *Instantiation : Expansion->getInstantiations()) {
+      ESR = EvaluateStmt(Result, Info, Instantiation);
+      if (ESR == ESR_Failed ||
+          ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))
+        return ESR;
+      if (ESR != ESR_Continue) {
+        // Succeeded here actually means we encountered a 'break'.
+        assert(ESR == ESR_Succeeded || ESR == ESR_Returned);
+        break;
+      }
+    }
+
+    // Map Continue back to Succeeded if we fell off the end of the loop.
+    if (ESR == ESR_Continue)
+      ESR = ESR_Succeeded;
+
+    return Scope.destroy() ? ESR : ESR_Failed;
+  }
+
   case Stmt::SwitchStmtClass:
     return EvaluateSwitch(Result, Info, cast<SwitchStmt>(S));
 
@@ -5956,7 +6404,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
 
-    auto LO = Info.getASTContext().getLangOpts();
+    auto LO = Info.Ctx.getLangOpts();
     if (LO.CXXAssumptions && !LO.MSVCCompat) {
       for (auto *Attr : AS->getAttrs()) {
         auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
@@ -5967,7 +6415,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (Assumption->isValueDependent())
           return ESR_Failed;
 
-        if (Assumption->HasSideEffects(Info.getASTContext()))
+        if (Assumption->HasSideEffects(Info.Ctx))
           continue;
 
         bool Value;
@@ -6104,7 +6552,9 @@ struct CheckDynamicTypeHandler {
   AccessKinds AccessKind;
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) { return true; }
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
+    return true;
+  }
   bool found(APSInt &Value, QualType SubobjType) { return true; }
   bool found(APFloat &Value, QualType SubobjType) { return true; }
 };
@@ -6196,15 +6646,12 @@ static std::optional<DynamicType> ComputeDynamicType(EvalInfo &Info,
   if (This.Designator.Invalid)
     return std::nullopt;
 
-  // Refuse to compute a dynamic type in the presence of virtual bases. This
-  // shouldn't happen other than in constant-folding situations, since literal
-  // types can't have virtual bases.
-  //
-  // Note that consumers of DynamicType assume that the type has no virtual
-  // bases, and will need modifications if this restriction is relaxed.
+  // Refuse to compute a dynamic type in the presence of virtual bases
+  // before C++26. This shouldn't happen other than in constant-folding
+  // situations, since literal types can't have virtual bases.
   const CXXRecordDecl *Class =
       This.Designator.MostDerivedType->getAsCXXRecordDecl();
-  if (!Class || Class->getNumVBases()) {
+  if (!Class || (!Info.getLangOpts().CPlusPlus26 && Class->getNumVBases())) {
     Info.FFDiag(E);
     return std::nullopt;
   }
@@ -6338,10 +6785,18 @@ static bool HandleCovariantReturnAdjustment(EvalInfo &Info, const Expr *E,
 static bool isBaseClassPublic(const CXXRecordDecl *Derived,
                               const CXXRecordDecl *Base) {
   for (const CXXBaseSpecifier &BaseSpec : Derived->bases()) {
+    if (BaseSpec.isVirtual())
+      continue;
     auto *BaseClass = BaseSpec.getType()->getAsCXXRecordDecl();
     if (BaseClass && declaresSameEntity(BaseClass, Base))
       return BaseSpec.getAccessSpecifier() == AS_public;
   }
+  for (const CXXBaseSpecifier &BaseSpec : Derived->vbases()) {
+    auto *BaseClass = BaseSpec.getType()->getAsCXXRecordDecl();
+    if (BaseClass && declaresSameEntity(BaseClass, Base))
+      return BaseSpec.getAccessSpecifier() == AS_public;
+  }
+
   llvm_unreachable("Base is not a direct base of Derived");
 }
 
@@ -6454,7 +6909,7 @@ struct StartLifetimeOfUnionMemberHandler {
 
   typedef bool result_type;
   bool failed() { return Failed; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     // We are supposed to perform no initialization but begin the lifetime of
     // the object. We interpret that as meaning to do what default
     // initialization of the object would do if all constructors involved were
@@ -6709,13 +7164,20 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   // Skip this for non-union classes with no fields; in that case, the defaulted
   // copy/move does not actually read the object.
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Callee);
-  if (MD && MD->isDefaulted() &&
-      (MD->getParent()->isUnion() ||
-       (MD->isTrivial() &&
-        isReadByLvalueToRvalueConversion(MD->getParent())))) {
+
+  auto IsTrivialMemoryOperation = [&](const CXXMethodDecl *MD) {
+    if (!MD || !MD->isDefaulted())
+      return false;
+    if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
+      return false;
+    return MD->getParent()->isUnion() ||
+           (MD->isTrivial() &&
+            isReadByLvalueToRvalueConversion(MD->getParent()));
+  };
+
+  if (IsTrivialMemoryOperation(MD)) {
     unsigned ExplicitOffset = MD->isExplicitObjectMemberFunction() ? 1 : 0;
-    assert(ObjectArg &&
-           (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()));
+    assert(ObjectArg);
     APValue RHSValue;
     if (!handleTrivialCopy(Info, MD->getParamDecl(0), Args[0], RHSValue,
                            MD->getParent()->isUnion()))
@@ -6750,17 +7212,40 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   return ESR == ESR_Returned;
 }
 
+static bool HandleConstructorCall(const Expr *E, const LValue &This,
+                                  CallRef Call,
+                                  const CXXConstructorDecl *Definition,
+                                  EvalInfo &Info, APValue &Result,
+                                  bool IsCompleteClass = true);
+
+static bool HandleConstructorCall(const Expr *E, const LValue &This,
+                                  ArrayRef<const Expr *> Args,
+                                  const CXXConstructorDecl *Definition,
+                                  EvalInfo &Info, APValue &Result,
+                                  bool IsCompleteClass = true) {
+  CallScopeRAII CallScope(Info);
+  CallRef Call = Info.CurrentCall->createCall(Definition);
+  if (!EvaluateArgs(Args, Call, Info, Definition))
+    return false;
+
+  return HandleConstructorCall(E, This, Call, Definition, Info, Result,
+                               IsCompleteClass) &&
+         CallScope.destroy();
+}
+
 /// Evaluate a constructor call.
 static bool HandleConstructorCall(const Expr *E, const LValue &This,
                                   CallRef Call,
                                   const CXXConstructorDecl *Definition,
-                                  EvalInfo &Info, APValue &Result) {
+                                  EvalInfo &Info, APValue &Result,
+                                  bool IsCompleteClass) {
+
   SourceLocation CallLoc = E->getExprLoc();
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
   const CXXRecordDecl *RD = Definition->getParent();
-  if (RD->getNumVBases()) {
+  if (!Info.getLangOpts().CPlusPlus26 && RD->getNumVBases()) {
     Info.FFDiag(CallLoc, diag::note_constexpr_virtual_base) << RD;
     return false;
   }
@@ -6809,10 +7294,11 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 
   // Reserve space for the struct members.
   if (!Result.hasValue()) {
-    if (!RD->isUnion())
-      Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
-                       std::distance(RD->field_begin(), RD->field_end()));
-    else
+    if (!RD->isUnion()) {
+      unsigned NonVirtualBases = countNonVirtualBases(RD);
+      Result = APValue(APValue::UninitStruct(), NonVirtualBases,
+                       RD->getNumFields(), RD->getNumVBases());
+    } else
       // A union starts with no active member.
       Result = APValue((const FieldDecl*)nullptr);
   }
@@ -6825,9 +7311,9 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 
   bool Success = true;
   unsigned BasesSeen = 0;
-#ifndef NDEBUG
-  CXXRecordDecl::base_class_const_iterator BaseIt = RD->bases_begin();
-#endif
+  unsigned VirtualBasesSeen = 0;
+  unsigned NonVirtualBases = countNonVirtualBases(RD);
+
   CXXRecordDecl::field_iterator FieldIt = RD->field_begin();
   auto SkipToField = [&](FieldDecl *FD, bool Indirect) {
     // We might be initializing the same field again if this is an indirect
@@ -6857,18 +7343,23 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     FieldDecl *FD = nullptr;
     if (I->isBaseInitializer()) {
       QualType BaseType(I->getBaseClass(), 0);
-#ifndef NDEBUG
-      // Non-virtual base classes are initialized in the order in the class
-      // definition. We have already checked for virtual base classes.
-      assert(!BaseIt->isVirtual() && "virtual base for literal type");
-      assert(Info.Ctx.hasSameUnqualifiedType(BaseIt->getType(), BaseType) &&
-             "base class initializers not in expected order");
-      ++BaseIt;
-#endif
-      if (!HandleLValueDirectBase(Info, I->getInit(), Subobject, RD,
-                                  BaseType->getAsCXXRecordDecl(), &Layout))
-        return false;
-      Value = &Result.getStructBase(BasesSeen++);
+      if (I->isBaseVirtual()) {
+        if (This.pointsToCompleteClass(RD)) {
+          if (!HandleLValueDirectVirtualBase(Info, I->getInit(), Subobject, RD,
+                                             BaseType->getAsCXXRecordDecl(),
+                                             &Layout))
+            return false;
+          Value = &Result.getStructVirtualBase(VirtualBasesSeen++);
+        } else {
+          continue;
+        }
+
+      } else {
+        if (!HandleLValueDirectBase(Info, I->getInit(), Subobject, RD,
+                                    BaseType->getAsCXXRecordDecl(), &Layout))
+          return false;
+        Value = &Result.getStructBase(BasesSeen++);
+      }
     } else if ((FD = I->getMember())) {
       if (!HandleLValueMember(Info, I->getInit(), Subobject, FD, &Layout))
         return false;
@@ -6954,7 +7445,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 
     // This is the point at which the dynamic type of the object becomes this
     // class type.
-    if (I->isBaseInitializer() && BasesSeen == RD->getNumBases())
+    if (I->isBaseInitializer() && BasesSeen == NonVirtualBases)
       EvalObj.finishedConstructingBases();
   }
 
@@ -6975,22 +7466,9 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
          LifetimeExtendedScope.destroy();
 }
 
-static bool HandleConstructorCall(const Expr *E, const LValue &This,
-                                  ArrayRef<const Expr*> Args,
-                                  const CXXConstructorDecl *Definition,
-                                  EvalInfo &Info, APValue &Result) {
-  CallScopeRAII CallScope(Info);
-  CallRef Call = Info.CurrentCall->createCall(Definition);
-  if (!EvaluateArgs(Args, Call, Info, Definition))
-    return false;
-
-  return HandleConstructorCall(E, This, Call, Definition, Info, Result) &&
-         CallScope.destroy();
-}
-
 static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
                                   const LValue &This, APValue &Value,
-                                  QualType T) {
+                                  QualType T, bool IsCompleteClass = true) {
   // Objects can only be destroyed while they're within their lifetimes.
   // FIXME: We have no representation for whether an object of type nullptr_t
   // is in its lifetime; it usually doesn't matter. Perhaps we should model it
@@ -7054,9 +7532,17 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
     return true;
   }
 
-  if (RD->getNumVBases()) {
+  if (!Info.getLangOpts().CPlusPlus26 && RD->getNumVBases()) {
     Info.FFDiag(CallRange.getBegin(), diag::note_constexpr_virtual_base) << RD;
     return false;
+  }
+
+  // If an anonymous union would be destroyed, some enclosing destructor must
+  // have been explicitly defined, and the anonymous union destruction should
+  // have no effect.
+  if (RD->isAnonymousStructOrUnion() && RD->isUnion()) {
+    Value = APValue();
+    return true;
   }
 
   const CXXDestructorDecl *DD = RD->getDestructor();
@@ -7065,17 +7551,12 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
     return false;
   }
 
-  if (!DD || DD->isTrivial() ||
-      (RD->isAnonymousStructOrUnion() && RD->isUnion())) {
+  if (!DD || DD->isTrivial()) {
     // A trivial destructor just ends the lifetime of the object. Check for
     // this case before checking for a body, because we might not bother
     // building a body for a trivial destructor. Note that it doesn't matter
     // whether the destructor is constexpr in this case; all trivial
     // destructors are constexpr.
-    //
-    // If an anonymous union would be destroyed, some enclosing destructor must
-    // have been explicitly defined, and the anonymous union destruction should
-    // have no effect.
     Value = APValue();
     return true;
   }
@@ -7093,10 +7574,12 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
                        CallRef());
 
   // We're now in the period of destruction of this object.
-  unsigned BasesLeft = RD->getNumBases();
   EvalInfo::EvaluatingDestructorRAII EvalObj(
       Info,
       ObjectUnderConstruction{This.getLValueBase(), This.Designator.Entries});
+  unsigned NonVirtualBases = countNonVirtualBases(RD);
+  unsigned NumVirtualBases = RD->getNumVBases();
+  unsigned BasesLeft = NonVirtualBases;
   if (!EvalObj.DidInsert) {
     // C++2a [class.dtor]p19:
     //   the behavior is undefined if the destructor is invoked for an object
@@ -7138,11 +7621,13 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
       return false;
   }
 
-  if (BasesLeft != 0)
+  if (BasesLeft != 0 || NumVirtualBases != 0)
     EvalObj.startedDestroyingBases();
 
   // Destroy base classes in reverse order.
   for (const CXXBaseSpecifier &Base : llvm::reverse(RD->bases())) {
+    if (Base.isVirtual())
+      continue;
     --BasesLeft;
 
     QualType BaseType = Base.getType();
@@ -7153,10 +7638,31 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
 
     APValue *SubobjectValue = &Value.getStructBase(BasesLeft);
     if (!HandleDestructionImpl(Info, CallRange, Subobject, *SubobjectValue,
-                               BaseType))
+                               BaseType, /*IsCompleteClass=*/false))
       return false;
   }
   assert(BasesLeft == 0 && "NumBases was wrong?");
+
+  // Virtual bases.
+  if (IsCompleteClass) {
+    unsigned VirtualBasesLeft = NumVirtualBases;
+    for (const CXXBaseSpecifier &Base : llvm::reverse(RD->vbases())) {
+      --VirtualBasesLeft;
+
+      QualType BaseType = Base.getType();
+      LValue Subobject = This;
+      if (!HandleLValueDirectVirtualBase(Info, &LocE, Subobject, RD,
+                                         BaseType->getAsCXXRecordDecl(),
+                                         &Layout))
+        return false;
+
+      APValue *SubobjectValue = &Value.getStructVirtualBase(VirtualBasesLeft);
+      if (!HandleDestructionImpl(Info, CallRange, Subobject, *SubobjectValue,
+                                 BaseType, /*IsCompleteClass=*/false))
+        return false;
+    }
+    assert(VirtualBasesLeft == 0 && "NumVirtualBases was wrong?");
+  }
 
   // The period of destruction ends now. The object is gone.
   Value = APValue();
@@ -7172,7 +7678,7 @@ struct DestroyObjectHandler {
 
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     return HandleDestructionImpl(Info, E->getSourceRange(), This, Subobj,
                                  SubobjType);
   }
@@ -7474,6 +7980,8 @@ class APValueToBufferConverter {
     case APValue::FixedPoint:
       // FIXME: We should support these.
 
+    case APValue::LValue:
+    case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
     case APValue::AddrLabelDiff: {
@@ -7482,9 +7990,6 @@ class APValueToBufferConverter {
           << Ty;
       return false;
     }
-
-    case APValue::LValue:
-      llvm_unreachable("LValue subobject in bit_cast?");
     }
     llvm_unreachable("Unhandled APValue::ValueKind");
   }
@@ -7756,14 +8261,15 @@ class BufferToAPValueConverter {
 
   std::optional<APValue> visit(const RecordType *RTy, CharUnits Offset) {
     const RecordDecl *RD = RTy->getAsRecordDecl();
+    if (RD->isInvalidDecl())
+      return std::nullopt;
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     unsigned NumBases = 0;
     if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       NumBases = CXXRD->getNumBases();
 
-    APValue ResultVal(APValue::UninitStruct(), NumBases,
-                      std::distance(RD->field_begin(), RD->field_end()));
+    APValue ResultVal(APValue::UninitStruct(), NumBases, RD->getNumFields());
 
     // Visit the base classes.
     if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
@@ -8104,6 +8610,7 @@ private:
     {
       SpeculativeEvaluationRAII Speculate(Info, &Diag);
       Diag.clear();
+      Info.EvalStatus.DiagEmitted = false;
       StmtVisitorTy::Visit(E->getTrueExpr());
       if (Diag.empty())
         return;
@@ -8666,6 +9173,25 @@ public:
     case CK_UserDefinedConversion:
       return StmtVisitorTy::Visit(E->getSubExpr());
 
+    case CK_HLSLArrayRValue: {
+      const Expr *SubExpr = E->getSubExpr();
+      if (!SubExpr->isGLValue()) {
+        APValue Val;
+        if (!Evaluate(Val, Info, SubExpr))
+          return false;
+        return DerivedSuccess(Val, E);
+      }
+
+      LValue LVal;
+      if (!EvaluateLValue(SubExpr, LVal, Info))
+        return false;
+      APValue RVal;
+      // Note, we use the subexpression's type in order to retain cv-qualifiers.
+      if (!handleLValueToRValueConversion(Info, E, SubExpr->getType(), LVal,
+                                          RVal))
+        return false;
+      return DerivedSuccess(RVal, E);
+    }
     case CK_LValueToRValue: {
       LValue LVal;
       if (!EvaluateLValue(E->getSubExpr(), LVal, Info))
@@ -8937,8 +9463,8 @@ public:
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitStringLiteral(const StringLiteral *E) {
-    return Success(APValue::LValueBase(
-        E, 0, Info.getASTContext().getNextStringLiteralVersion()));
+    return Success(
+        APValue::LValueBase(E, 0, Info.Ctx.getNextStringLiteralVersion()));
   }
   bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E) { return Success(E); }
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
@@ -8965,7 +9491,7 @@ public:
     case CK_LValueBitCast:
       this->CCEDiag(E, diag::note_constexpr_invalid_cast)
           << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-          << Info.Ctx.getLangOpts().CPlusPlus;
+          << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
       if (!Visit(E->getSubExpr()))
         return false;
       Result.Designator.setInvalid();
@@ -9360,7 +9886,7 @@ bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     if (Success) {
       Result.setFrom(Info.Ctx, Val);
       HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
-                                VT->getNumElements(), Index.getExtValue());
+                                VT->getNumElements(), Index.getZExtValue());
     }
 
     return Success;
@@ -9580,6 +10106,12 @@ public:
       EvaluateIgnoredValue(Info, E->getSubExpr());
     return Error(E);
   }
+  bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
+  }
+  bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E) {
+    return E->isExpressibleAsConstantInitializer() ? Success(E) : Error(E);
+  }
   bool VisitAddrLabelExpr(const AddrLabelExpr *E)
       { return Success(E); }
   bool VisitCallExpr(const CallExpr *E);
@@ -9704,6 +10236,19 @@ bool PointerExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
 }
 
 bool PointerExprEvaluator::VisitUnaryAddrOf(const UnaryOperator *E) {
+  // [C11 6.5.3.2p3]: if the operand of '&' is the result of a unary '*'
+  // operator, neither operator is evaluated and the result is as if both were
+  // omitted (except that the operators' constraints, already enforced by Sema,
+  // still apply, and the result is not an lvalue). So '&*p' is just the pointer
+  // value 'p' with no dereference, and forming it is therefore not undefined
+  // behavior even when 'p' is null, e.g. '&*(int *)0'. Evaluate the pointer
+  // operand directly so we don't spuriously diagnose a null dereference.
+  if (!Info.getLangOpts().CPlusPlus) {
+    const Expr *Sub = E->getSubExpr()->IgnoreParens();
+    if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
+        Deref && Deref->getOpcode() == UO_Deref)
+      return evaluatePointer(Deref->getSubExpr(), Result);
+  }
   return evaluateLValue(E->getSubExpr(), Result);
 }
 
@@ -9909,7 +10454,7 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     return CharUnits::One();
 
   const bool AlignOfReturnsPreferred =
-      Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and _Alignof
@@ -9921,6 +10466,56 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     return Ctx.getTypeAlignInChars(T.getTypePtr());
   else
     llvm_unreachable("GetAlignOfType on a non-alignment ExprKind");
+}
+
+// Convert a builtin ID to the canonical x86 builtin ID the constant evaluators
+// dispatch on in their x86 target-specific cases, or 0 if \p BuiltinOp is a
+// target builtin those cases should not handle.
+//
+// Target-independent builtins are returned unchanged. Target builtin IDs of
+// different targets overlap (each target numbers its builtins from
+// Builtin::FirstTSBuiltin), so a target builtin ID is only meaningful for the
+// target that owns it. Determine the owning target (translating an auxiliary ID
+// back to its canonical value) and only return the ID when x86 owns it;
+// otherwise an overlapping ID could be misinterpreted as an unrelated x86
+// builtin.
+unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
+                                        unsigned BuiltinOp) {
+  // Target-independent builtins have the same ID regardless of the target, so
+  // they can be dispatched as-is. This is the common case and is intentionally
+  // kept to a single comparison so callers can use this on hot paths (e.g. the
+  // bytecode interpreter's builtin dispatch) without re-deriving the ID from
+  // the call expression.
+  if (BuiltinOp < Builtin::FirstTSBuiltin)
+    return BuiltinOp;
+
+  // Determine the target that owns this builtin, translating an auxiliary ID
+  // back to its canonical value.
+  const TargetInfo *OwningTarget;
+  if (Ctx.BuiltinInfo.isAuxBuiltinID(BuiltinOp)) {
+    OwningTarget = Ctx.getAuxTargetInfo();
+    BuiltinOp = Ctx.BuiltinInfo.getAuxBuiltinID(BuiltinOp);
+  } else {
+    OwningTarget = &Ctx.getTargetInfo();
+  }
+
+  if (!OwningTarget)
+    return 0;
+
+  // x86 and x86_64 share a single builtin set and are the only architectures
+  // whose target-specific builtins the constant evaluators currently fold.
+  switch (OwningTarget->getTriple().getArch()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return BuiltinOp;
+  default:
+    return 0;
+  }
+}
+
+unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
+                                        const CallExpr *E) {
+  return ConvertBuiltinIDToX86BuiltinID(Ctx, E->getBuiltinCallee());
 }
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
@@ -9997,7 +10592,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
 bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return visitNonBuiltinCallExpr(E);
-  return VisitBuiltinCallExpr(E, E->getBuiltinCallee());
+  return VisitBuiltinCallExpr(E, ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E));
 }
 
 // Determine if T is a character type for which we guarantee that
@@ -10510,6 +11105,13 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
                                               ArraySizeModifier::Normal, 0);
+  } else if (E->isArray()) {
+    // We have an array new-expression whose array size could not be
+    // determined, e.g. 'new int[]()', where the bound is neither given nor
+    // deducible from the initializer. This is ill-formed and already
+    // diagnosed, so bail out rather than mis-evaluating a scalar allocation
+    // as an array (which would later crash the evaluator).
+    return false;
   } else {
     assert(!AllocType->isArrayType() &&
            "array allocation with non-array new");
@@ -10534,20 +11136,13 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         }
         return true;
       }
-      bool found(APValue &Subobj, QualType SubobjType) {
+      bool found(APValue &Subobj, QualType SubobjType,
+                 APValue::LValueBase Base) {
         if (!checkConst(SubobjType))
           return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
         // old name of the object to be used to name the new object.
-        unsigned SubobjectSize = 1;
-        unsigned AllocSize = 1;
-        if (auto *CAT = dyn_cast<ConstantArrayType>(AllocType))
-          AllocSize = CAT->getZExtSize();
-        if (auto *CAT = dyn_cast<ConstantArrayType>(SubobjType))
-          SubobjectSize = CAT->getZExtSize();
-        if (SubobjectSize < AllocSize ||
-            !Info.Ctx.hasSimilarType(Info.Ctx.getBaseElementType(SubobjType),
-                                     Info.Ctx.getBaseElementType(AllocType))) {
+        if (!Info.Ctx.hasSimilarType(SubobjType, AllocType)) {
           Info.FFDiag(E, diag::note_constexpr_placement_new_wrong_type)
               << SubobjType << AllocType;
           return false;
@@ -10564,6 +11159,22 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         return false;
       }
     } Handler = {Info, E, AllocType, AK, nullptr};
+
+    if (AllocType->isArrayType() &&
+        Result.Designator.MostDerivedIsArrayElement &&
+        Result.Designator.Entries.back().getAsArrayIndex() == 0) {
+      // The destination of placement new is pointing to the first element
+      // of an array.  There's a special case in [expr.const]: "[...] if T is an
+      // array type, to the first element of such an object [...]".  Handle
+      // that case here by dropping the last entry in the designator list.
+      QualType AllocElementType =
+          Info.Ctx.getAsArrayType(AllocType)->getElementType();
+      if (Info.Ctx.hasSimilarType(AllocElementType,
+                                  Result.Designator.MostDerivedType)) {
+        Result.Designator.truncate(Info.Ctx, Result.Base,
+                                   Result.Designator.MostDerivedPathLength - 1);
+      }
+    }
 
     CompleteObject Obj = findCompleteObject(Info, E, AK, Result, AllocType);
     if (!Obj || !findSubobject(Info, E, Obj, Result.Designator, Handler))
@@ -10738,6 +11349,7 @@ namespace {
     bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 }
 
@@ -10750,26 +11362,38 @@ namespace {
 ///       zero-initialized
 static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
                                           const RecordDecl *RD,
-                                          const LValue &This, APValue &Result) {
+                                          const LValue &This, APValue &Result,
+                                          bool IsCompleteClass = true) {
   assert(!RD->isUnion() && "Expected non-union class type");
   const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD);
-  Result = APValue(APValue::UninitStruct(), CD ? CD->getNumBases() : 0,
-                   std::distance(RD->field_begin(), RD->field_end()));
+
+  if (CD) {
+    unsigned NonVirtualBases = countNonVirtualBases(CD);
+    Result =
+        APValue(APValue::UninitStruct(), NonVirtualBases, RD->getNumFields(),
+                IsCompleteClass ? CD->getNumVBases() : 0);
+  } else {
+    Result = APValue(APValue::UninitStruct(), 0, RD->getNumFields());
+  }
 
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
   if (CD) {
     unsigned Index = 0;
-    for (CXXRecordDecl::base_class_const_iterator I = CD->bases_begin(),
-           End = CD->bases_end(); I != End; ++I, ++Index) {
-      const CXXRecordDecl *Base = I->getType()->getAsCXXRecordDecl();
+
+    for (const auto &B : CD->bases()) {
+      if (B.isVirtual())
+        continue;
+      const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
       LValue Subobject = This;
       if (!HandleLValueDirectBase(Info, E, Subobject, CD, Base, &Layout))
         return false;
       if (!HandleClassZeroInitialization(Info, E, Base, Subobject,
-                                         Result.getStructBase(Index)))
+                                         Result.getStructBase(Index),
+                                         /*IsCompleteClass=*/false))
         return false;
+      ++Index;
     }
   }
 
@@ -10786,6 +11410,21 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
     if (!EvaluateInPlace(
           Result.getStructField(I->getFieldIndex()), Info, Subobject, &VIE))
       return false;
+  }
+
+  if (CD && This.pointsToCompleteClass(CD)) {
+    unsigned Index = 0;
+    for (const auto &B : CD->vbases()) {
+      const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
+      LValue Subobject = This;
+      if (!HandleLValueDirectVirtualBase(Info, E, Subobject, CD, Base, &Layout))
+        return false;
+      if (!HandleClassZeroInitialization(Info, E, Base, Subobject,
+                                         Result.getStructVirtualBase(Index),
+                                         /*IsCompleteClass=*/false))
+        return false;
+      ++Index;
+    }
   }
 
   return true;
@@ -10813,9 +11452,12 @@ bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
     return EvaluateInPlace(Result.getUnionValue(), Info, Subobject, &VIE);
   }
 
-  if (isa<CXXRecordDecl>(RD) && cast<CXXRecordDecl>(RD)->getNumVBases()) {
-    Info.FFDiag(E, diag::note_constexpr_virtual_base) << RD;
-    return false;
+  if (!Info.getLangOpts().CPlusPlus26) {
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        CXXRD && CXXRD->getNumVBases()) {
+      Info.FFDiag(E, diag::note_constexpr_virtual_base) << RD;
+      return false;
+    }
   }
 
   return HandleClassZeroInitialization(Info, E, RD, This, Result);
@@ -10848,6 +11490,58 @@ bool RecordExprEvaluator::VisitCastExpr(const CastExpr *E) {
       RD = Base;
     }
     Result = *Value;
+    return true;
+  }
+  case CK_HLSLAggregateSplatCast: {
+    APValue Val;
+    QualType ValTy;
+
+    if (!hlslAggSplatHelper(Info, E->getSubExpr(), Val, ValTy))
+      return false;
+
+    unsigned NEls = elementwiseSize(Info, E->getType());
+    // splat our Val
+    SmallVector<APValue> SplatEls(NEls, Val);
+    SmallVector<QualType> SplatType(NEls, ValTy);
+
+    // cast the elements and construct our struct result
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!constructAggregate(Info, FPO, E, Result, E->getType(), SplatEls,
+                            SplatType))
+      return false;
+
+    return true;
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcEls;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, E->getSubExpr(), E->getType(), SrcEls,
+                                   SrcTypes))
+      return false;
+
+    // cast the elements and construct our struct result
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!constructAggregate(Info, FPO, E, Result, E->getType(), SrcEls,
+                            SrcTypes))
+      return false;
+
+    return true;
+  }
+  case CK_ToUnion: {
+    const FieldDecl *Field = E->getTargetUnionField();
+    LValue Subobject = This;
+    if (!HandleLValueMember(Info, E, Subobject, Field))
+      return false;
+    Result = APValue(Field);
+    if (!EvaluateInPlace(Result.getUnionValue(), Info, Subobject,
+                         E->getSubExpr()))
+      return false;
+    if (Field->isBitField()) {
+      if (!truncateBitfieldValue(Info, E->getSubExpr(), Result.getUnionValue(),
+                                 Field))
+        return false;
+    }
     return true;
   }
   }
@@ -10914,7 +11608,7 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   if (!Result.hasValue())
     Result = APValue(APValue::UninitStruct(), CXXRD ? CXXRD->getNumBases() : 0,
-                     std::distance(RD->field_begin(), RD->field_end()));
+                     RD->getNumFields());
   unsigned ElementNo = 0;
   bool Success = true;
 
@@ -10961,6 +11655,11 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
     // the initializer list.
     ImplicitValueInitExpr VIE(HaveInit ? Info.Ctx.IntTy : Field->getType());
     const Expr *Init = HaveInit ? Args[ElementNo++] : &VIE;
+
+    // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+    // aren't supposed to be modified.
+    if (isa<NoInitExpr>(Init))
+      continue;
 
     if (Field->getType()->isIncompleteArrayType()) {
       if (auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType())) {
@@ -11121,8 +11820,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
   if (ClosureClass->isInvalidDecl())
     return false;
 
-  const size_t NumFields =
-      std::distance(ClosureClass->field_begin(), ClosureClass->field_end());
+  const size_t NumFields = ClosureClass->getNumFields();
 
   assert(NumFields == (size_t)std::distance(E->capture_init_begin(),
                                             E->capture_init_end()) &&
@@ -11158,6 +11856,13 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
     }
   }
   return Success;
+}
+
+bool RecordExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 static bool EvaluateRecord(const Expr *E, const LValue &This,
@@ -11344,6 +12049,76 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     for (unsigned I = 0; I < NElts; I++)
       Elements.push_back(Val.getVectorElt(I));
     return Success(Elements, E);
+  }
+  case CK_HLSLMatrixTruncation: {
+    // Matrix truncation occurs in row-major order.
+    APValue Val;
+    if (!EvaluateMatrix(SE, Val, Info))
+      return Error(E);
+    SmallVector<APValue, 16> Elements;
+    for (unsigned Row = 0;
+         Row < Val.getMatrixNumRows() && Elements.size() < NElts; Row++)
+      for (unsigned Col = 0;
+           Col < Val.getMatrixNumColumns() && Elements.size() < NElts; Col++)
+        Elements.push_back(Val.getMatrixElt(Row, Col));
+    return Success(Elements, E);
+  }
+  case CK_HLSLAggregateSplatCast: {
+    APValue Val;
+    QualType ValTy;
+
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
+
+    // cast our Val once.
+    APValue Result;
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!handleScalarCast(Info, FPO, E, ValTy, VTy->getElementType(), Val,
+                          Result))
+      return false;
+
+    SmallVector<APValue, 4> SplatEls(NElts, Result);
+    return Success(SplatEls, E);
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcVals, SrcTypes))
+      return false;
+
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    SmallVector<QualType, 4> DestTypes(NElts, VTy->getElementType());
+    SmallVector<APValue, 4> ResultEls(NElts);
+    if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
+                               ResultEls))
+      return false;
+    return Success(ResultEls, E);
+  }
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_IntegralCast:
+  case CK_FloatingCast:
+  case CK_FloatingToBoolean:
+  case CK_IntegralToBoolean: {
+    // These casts apply element-wise when the source is a vector type.
+    assert(SETy->isVectorType() && "expected vector source type");
+    APValue SrcVal;
+    if (!EvaluateVector(SE, SrcVal, Info))
+      return Error(E);
+
+    assert(SrcVal.getVectorLength() == NElts);
+    QualType SrcEltTy = SETy->castAs<VectorType>()->getElementType();
+    QualType DstEltTy = VTy->getElementType();
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+
+    SmallVector<APValue, 4> ResultEls(NElts);
+    for (unsigned I = 0; I < NElts; ++I) {
+      if (!handleScalarCast(Info, FPO, E, SrcEltTy, DstEltTy,
+                            SrcVal.getVectorElt(I), ResultEls[I]))
+        return Error(E);
+    }
+    return Success(ResultEls, E);
   }
   default:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
@@ -11618,101 +12393,188 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
-static bool evalPshufbBuiltin(EvalInfo &Info, const CallExpr *Call,
-                              APValue &Out) {
-  APValue SrcVec, ControlVec;
-  if (!EvaluateAsRValue(Info, Call->getArg(0), SrcVec))
-    return false;
-  if (!EvaluateAsRValue(Info, Call->getArg(1), ControlVec))
-    return false;
+static bool evalShuffleGeneric(
+    EvalInfo &Info, const CallExpr *Call, APValue &Out,
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+        GetSourceIndex) {
 
   const auto *VT = Call->getType()->getAs<VectorType>();
   if (!VT)
     return false;
 
-  QualType ElemT = VT->getElementType();
-  unsigned NumElts = VT->getNumElements();
+  unsigned ShuffleMask = 0;
+  APValue A, MaskVector, B;
+  bool IsVectorMask = false;
+  bool IsSingleOperand = (Call->getNumArgs() == 2);
 
+  if (IsSingleOperand) {
+    QualType MaskType = Call->getArg(1)->getType();
+    if (MaskType->isVectorType()) {
+      IsVectorMask = true;
+      if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+          !EvaluateAsRValue(Info, Call->getArg(1), MaskVector))
+        return false;
+      B = A;
+    } else if (MaskType->isIntegerType()) {
+      APSInt MaskImm;
+      if (!EvaluateInteger(Call->getArg(1), MaskImm, Info))
+        return false;
+      ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+      if (!EvaluateAsRValue(Info, Call->getArg(0), A))
+        return false;
+      B = A;
+    } else {
+      return false;
+    }
+  } else {
+    QualType Arg2Type = Call->getArg(2)->getType();
+    if (Arg2Type->isVectorType()) {
+      IsVectorMask = true;
+      if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+          !EvaluateAsRValue(Info, Call->getArg(1), MaskVector) ||
+          !EvaluateAsRValue(Info, Call->getArg(2), B))
+        return false;
+    } else if (Arg2Type->isIntegerType()) {
+      APSInt MaskImm;
+      if (!EvaluateInteger(Call->getArg(2), MaskImm, Info))
+        return false;
+      ShuffleMask = static_cast<unsigned>(MaskImm.getZExtValue());
+      if (!EvaluateAsRValue(Info, Call->getArg(0), A) ||
+          !EvaluateAsRValue(Info, Call->getArg(1), B))
+        return false;
+    } else {
+      return false;
+    }
+  }
+
+  unsigned NumElts = VT->getNumElements();
   SmallVector<APValue, 64> ResultElements;
   ResultElements.reserve(NumElts);
 
-  for (unsigned Idx = 0; Idx != NumElts; ++Idx) {
-    APValue CtlVal = ControlVec.getVectorElt(Idx);
-    APSInt CtlByte = CtlVal.getInt();
-    uint8_t Ctl = static_cast<uint8_t>(CtlByte.getZExtValue());
+  for (unsigned DstIdx = 0; DstIdx != NumElts; ++DstIdx) {
+    if (IsVectorMask) {
+      ShuffleMask = static_cast<unsigned>(
+          MaskVector.getVectorElt(DstIdx).getInt().getZExtValue());
+    }
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
 
-    if (Ctl & 0x80) {
-      APValue Zero(Info.Ctx.MakeIntValue(0, ElemT));
-      ResultElements.push_back(Zero);
+    if (SrcIdx < 0) {
+      // Zero out this element
+      QualType ElemTy = VT->getElementType();
+      if (ElemTy->isRealFloatingType()) {
+        ResultElements.push_back(
+            APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      } else if (ElemTy->isIntegerType()) {
+        APValue Zero(Info.Ctx.MakeIntValue(0, ElemTy));
+        ResultElements.push_back(APValue(Zero));
+      } else {
+        // Other types of fallback logic
+        ResultElements.push_back(APValue());
+      }
     } else {
-      unsigned LaneBase = (Idx / 16) * 16;
-      unsigned SrcOffset = Ctl & 0x0F;
-      unsigned SrcIdx = LaneBase + SrcOffset;
-
-      ResultElements.push_back(SrcVec.getVectorElt(SrcIdx));
+      const APValue &Src = (SrcVecIdx == 0) ? A : B;
+      ResultElements.push_back(Src.getVectorElt(SrcIdx));
     }
   }
+
   Out = APValue(ResultElements.data(), ResultElements.size());
   return true;
 }
+static bool ConvertDoubleToFloatStrict(EvalInfo &Info, const Expr *E,
+                                       APFloat OrigVal, APValue &Result) {
 
-static bool evalPshufBuiltin(EvalInfo &Info, const CallExpr *Call,
-                             bool IsShufHW, APValue &Out) {
-  APValue Vec;
-  APSInt Imm;
-  if (!EvaluateAsRValue(Info, Call->getArg(0), Vec))
+  if (OrigVal.isInfinity()) {
+    Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << 0;
     return false;
-  if (!EvaluateInteger(Call->getArg(1), Imm, Info))
+  }
+  if (OrigVal.isNaN()) {
+    Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << 1;
     return false;
-
-  const auto *VT = Call->getType()->getAs<VectorType>();
-  if (!VT)
-    return false;
-
-  QualType ElemT = VT->getElementType();
-  unsigned ElemBits = Info.Ctx.getTypeSize(ElemT);
-  unsigned NumElts = VT->getNumElements();
-
-  unsigned LaneBits = 128u;
-  unsigned LaneElts = LaneBits / ElemBits;
-  if (!LaneElts || (NumElts % LaneElts) != 0)
-    return false;
-
-  uint8_t Ctl = static_cast<uint8_t>(Imm.getZExtValue());
-
-  SmallVector<APValue, 32> ResultElements;
-  ResultElements.reserve(NumElts);
-
-  for (unsigned Idx = 0; Idx != NumElts; Idx++) {
-    unsigned LaneBase = (Idx / LaneElts) * LaneElts;
-    unsigned LaneIdx = Idx % LaneElts;
-    unsigned SrcIdx = Idx;
-    unsigned Sel = (Ctl >> (2 * LaneIdx)) & 0x3;
-
-    if (ElemBits == 32) {
-      SrcIdx = LaneBase + Sel;
-    } else {
-      constexpr unsigned HalfSize = 4;
-      bool InHigh = LaneIdx >= HalfSize;
-      if (!IsShufHW && !InHigh) {
-        SrcIdx = LaneBase + Sel;
-      } else if (IsShufHW && InHigh) {
-        unsigned Rel = LaneIdx - HalfSize;
-        Sel = (Ctl >> (2 * Rel)) & 0x3;
-        SrcIdx = LaneBase + HalfSize + Sel;
-      }
-    }
-
-    ResultElements.push_back(Vec.getVectorElt(SrcIdx));
   }
 
-  Out = APValue(ResultElements.data(), ResultElements.size());
+  APFloat Val = OrigVal;
+  bool LosesInfo = false;
+  APFloat::opStatus Status = Val.convert(
+      APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &LosesInfo);
+
+  if (LosesInfo || Val.isDenormal()) {
+    Info.CCEDiag(E, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+
+  if (Status != APFloat::opOK) {
+    Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+
+  Result = APValue(Val);
   return true;
+}
+static bool evalShiftWithCount(
+    EvalInfo &Info, const CallExpr *Call, APValue &Out,
+    llvm::function_ref<APInt(const APInt &, uint64_t)> ShiftOp,
+    llvm::function_ref<APInt(const APInt &, unsigned)> OverflowOp) {
+
+  APValue Source, Count;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), Source) ||
+      !EvaluateAsRValue(Info, Call->getArg(1), Count))
+    return false;
+
+  assert(Call->getNumArgs() == 2);
+
+  QualType SourceTy = Call->getArg(0)->getType();
+  assert(SourceTy->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+
+  QualType DestEltTy = SourceTy->castAs<VectorType>()->getElementType();
+  unsigned DestEltWidth = Source.getVectorElt(0).getInt().getBitWidth();
+  unsigned DestLen = Source.getVectorLength();
+  bool IsDestUnsigned = DestEltTy->isUnsignedIntegerType();
+  unsigned CountEltWidth = Count.getVectorElt(0).getInt().getBitWidth();
+  unsigned NumBitsInQWord = 64;
+  unsigned NumCountElts = NumBitsInQWord / CountEltWidth;
+  SmallVector<APValue, 64> Result;
+  Result.reserve(DestLen);
+
+  uint64_t CountLQWord = 0;
+  for (unsigned EltIdx = 0; EltIdx != NumCountElts; ++EltIdx) {
+    uint64_t Elt = Count.getVectorElt(EltIdx).getInt().getZExtValue();
+    CountLQWord |= (Elt << (EltIdx * CountEltWidth));
+  }
+
+  for (unsigned EltIdx = 0; EltIdx != DestLen; ++EltIdx) {
+    APInt Elt = Source.getVectorElt(EltIdx).getInt();
+    if (CountLQWord < DestEltWidth) {
+      Result.push_back(
+          APValue(APSInt(ShiftOp(Elt, CountLQWord), IsDestUnsigned)));
+    } else {
+      Result.push_back(
+          APValue(APSInt(OverflowOp(Elt, DestEltWidth), IsDestUnsigned)));
+    }
+  }
+  Out = APValue(Result.data(), Result.size());
+  return true;
+}
+
+std::optional<APFloat> EvalScalarMinMaxFp(const APFloat &A, const APFloat &B,
+                                          std::optional<APSInt> RoundingMode,
+                                          bool IsMin) {
+  APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+  if (RoundingMode.value_or(DefaultMode) != 4)
+    return std::nullopt;
+  if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+      B.isInfinity() || B.isDenormal())
+    return std::nullopt;
+  if (A.isZero() && B.isZero())
+    return B;
+  return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
 }
 
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
+
+  unsigned BuiltinOp = ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E);
 
   auto EvaluateBinOpExpr =
       [&](llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -11746,7 +12608,141 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
-  switch (E->getBuiltinCallee()) {
+  auto EvaluateFpBinOpExpr =
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
+              Fn,
+          bool IsScalar = false) {
+        assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
+        APValue A, B;
+        if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+            !EvaluateAsRValue(Info, E->getArg(1), B))
+          return false;
+
+        assert(A.isVector() && B.isVector());
+        assert(A.getVectorLength() == B.getVectorLength());
+
+        std::optional<APSInt> RoundingMode;
+        if (E->getNumArgs() == 3) {
+          APSInt Imm;
+          if (!EvaluateInteger(E->getArg(2), Imm, Info))
+            return false;
+          RoundingMode = Imm;
+        }
+
+        unsigned NumElems = A.getVectorLength();
+        SmallVector<APValue, 4> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          if (IsScalar && EltNum > 0) {
+            ResultElements.push_back(A.getVectorElt(EltNum));
+            continue;
+          }
+          const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
+          const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
+          std::optional<APFloat> Result = Fn(EltA, EltB, RoundingMode);
+          if (!Result)
+            return false;
+          ResultElements.push_back(APValue(*Result));
+        }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
+  auto EvaluateScalarFpRoundMaskBinOp =
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 5);
+        APValue VecA, VecB, VecSrc;
+        APSInt MaskVal, Rounding;
+
+        if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+            !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
+            !EvaluateAsRValue(Info, E->getArg(2), VecSrc) ||
+            !EvaluateInteger(E->getArg(3), MaskVal, Info) ||
+            !EvaluateInteger(E->getArg(4), Rounding, Info))
+          return false;
+
+        unsigned NumElems = VecA.getVectorLength();
+        SmallVector<APValue, 8> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        if (MaskVal.getZExtValue() & 1) {
+          const APFloat &EltA = VecA.getVectorElt(0).getFloat();
+          const APFloat &EltB = VecB.getVectorElt(0).getFloat();
+          std::optional<APFloat> Result = Fn(EltA, EltB, Rounding);
+          if (!Result)
+            return false;
+          ResultElements.push_back(APValue(*Result));
+        } else {
+          ResultElements.push_back(VecSrc.getVectorElt(0));
+        }
+
+        for (unsigned I = 1; I < NumElems; ++I)
+          ResultElements.push_back(VecA.getVectorElt(I));
+
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
+  auto EvalSelectScalar = [&](unsigned Len) -> bool {
+    APSInt Mask;
+    APValue AVal, WVal;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(1), AVal) ||
+        !EvaluateAsRValue(Info, E->getArg(2), WVal))
+      return false;
+
+    bool TakeA0 = (Mask.getZExtValue() & 1u) != 0;
+    SmallVector<APValue, 4> Res;
+    Res.reserve(Len);
+    Res.push_back(TakeA0 ? AVal.getVectorElt(0) : WVal.getVectorElt(0));
+    for (unsigned I = 1; I < Len; ++I)
+      Res.push_back(WVal.getVectorElt(I));
+    APValue V(Res.data(), Res.size());
+    return Success(V, E);
+  };
+
+  auto EvalVectorDotProduct = [&](bool IsSaturating) -> bool {
+    APValue Source, OperandA, OperandB;
+    if (!EvaluateVector(E->getArg(0), Source, Info) ||
+        !EvaluateVector(E->getArg(1), OperandA, Info) ||
+        !EvaluateVector(E->getArg(2), OperandB, Info)) {
+      return false;
+    }
+
+    unsigned NumSrcElems = Source.getVectorLength();
+    unsigned NumOperandElems = OperandA.getVectorLength();
+    unsigned ElemsPerLane = NumOperandElems / NumSrcElems;
+
+    assert(OperandA.getVectorLength() == OperandB.getVectorLength());
+
+    SmallVector<APValue, 16> Result;
+    Result.reserve(NumSrcElems);
+    for (unsigned I = 0; I != NumSrcElems; ++I) {
+      APSInt DotProduct = Source.getVectorElt(I).getInt();
+      DotProduct = DotProduct.extend(64);
+      for (unsigned J = 0; J != ElemsPerLane; ++J) {
+        APSInt OpA = APSInt(
+            OperandA.getVectorElt(ElemsPerLane * I + J).getInt().extend(64),
+            false);
+        APSInt OpB = APSInt(
+            OperandB.getVectorElt(ElemsPerLane * I + J).getInt().extend(64),
+            false);
+        DotProduct += OpA * OpB;
+      }
+      if (IsSaturating) {
+        DotProduct = APSInt(DotProduct.truncSSat(32), false);
+      } else {
+        DotProduct = APSInt(DotProduct.trunc(32), false);
+      }
+      Result.push_back(APValue(DotProduct));
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
+  };
+
+  switch (BuiltinOp) {
   default:
     return false;
   case Builtin::BI__builtin_elementwise_popcount:
@@ -11762,7 +12758,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       APSInt Elt = Source.getVectorElt(EltNum).getInt();
-      switch (E->getBuiltinCallee()) {
+      switch (BuiltinOp) {
       case Builtin::BI__builtin_elementwise_popcount:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), Elt.popcount()),
@@ -11811,6 +12807,108 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     });
 
+  case X86::BI__builtin_ia32_extract128i256:
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256: {
+    APValue SourceVec, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceImm))
+      return false;
+
+    if (!SourceVec.isVector())
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    unsigned RetLen = RetVT->getNumElements();
+    unsigned Idx = SourceImm.getInt().getZExtValue() & 1;
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+
+    for (unsigned I = 0; I < RetLen; I++)
+      ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
+
+    return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cvtmask2b128:
+  case clang::X86::BI__builtin_ia32_cvtmask2b256:
+  case clang::X86::BI__builtin_ia32_cvtmask2b512:
+  case clang::X86::BI__builtin_ia32_cvtmask2w128:
+  case clang::X86::BI__builtin_ia32_cvtmask2w256:
+  case clang::X86::BI__builtin_ia32_cvtmask2w512:
+  case clang::X86::BI__builtin_ia32_cvtmask2d128:
+  case clang::X86::BI__builtin_ia32_cvtmask2d256:
+  case clang::X86::BI__builtin_ia32_cvtmask2d512:
+  case clang::X86::BI__builtin_ia32_cvtmask2q128:
+  case clang::X86::BI__builtin_ia32_cvtmask2q256:
+  case clang::X86::BI__builtin_ia32_cvtmask2q512: {
+    assert(E->getNumArgs() == 1);
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info))
+      return false;
+
+    QualType VecTy = E->getType();
+    const VectorType *VT = VecTy->castAs<VectorType>();
+    unsigned VectorLen = VT->getNumElements();
+    QualType ElemTy = VT->getElementType();
+    unsigned ElemWidth = Info.Ctx.getTypeSize(ElemTy);
+
+    SmallVector<APValue, 16> Elems;
+    for (unsigned I = 0; I != VectorLen; ++I) {
+      bool BitSet = Mask[I];
+      APSInt ElemVal(ElemWidth, /*isUnsigned=*/false);
+      if (BitSet) {
+        ElemVal.setAllBits();
+      }
+      Elems.push_back(APValue(ElemVal));
+    }
+    return Success(APValue(Elems.data(), VectorLen), E);
+  }
+
+  case X86::BI__builtin_ia32_extracti32x4_256_mask:
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:
+  case X86::BI__builtin_ia32_extractf32x4_mask:
+  case X86::BI__builtin_ia32_extracti32x8_mask:
+  case X86::BI__builtin_ia32_extractf32x8_mask:
+  case X86::BI__builtin_ia32_extracti64x2_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_256_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+  case X86::BI__builtin_ia32_extractf64x4_mask: {
+    APValue SourceVec, MergeVec;
+    APSInt Imm, MaskImm;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(2), MergeVec) ||
+        !EvaluateInteger(E->getArg(3), MaskImm, Info))
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    unsigned RetLen = RetVT->getNumElements();
+
+    if (!SourceVec.isVector() || !MergeVec.isVector())
+      return false;
+    unsigned SrcLen = SourceVec.getVectorLength();
+    unsigned Lanes = SrcLen / RetLen;
+    unsigned Lane = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
+    unsigned Base = Lane * RetLen;
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+    for (unsigned I = 0; I < RetLen; ++I) {
+      if (MaskImm[I])
+        ResultElements.push_back(SourceVec.getVectorElt(Base + I));
+      else
+        ResultElements.push_back(MergeVec.getVectorElt(I));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
   case clang::X86::BI__builtin_ia32_pavgb256:
@@ -11826,6 +12924,38 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return (llvm::APIntOps::mulsExtended(LHS, RHS).ashr(14) + 1)
           .extractBits(16, 1);
     });
+
+  case clang::X86::BI__builtin_ia32_psadbw128:
+  case clang::X86::BI__builtin_ia32_psadbw256:
+  case clang::X86::BI__builtin_ia32_psadbw512: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    assert(SourceLHS.isVector() && SourceRHS.isVector());
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    assert(SourceLen == SourceRHS.getVectorLength());
+    assert((SourceLen % 8) == 0);
+
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(SourceLen / 8);
+
+    for (unsigned Lane = 0; Lane != SourceLen; Lane += 8) {
+      APInt Sum(64, 0);
+      for (unsigned I = 0; I != 8; ++I) {
+        APInt LHS = SourceLHS.getVectorElt(Lane + I).getInt().extOrTrunc(8);
+        APInt RHS = SourceRHS.getVectorElt(Lane + I).getInt().extOrTrunc(8);
+        Sum += llvm::APIntOps::abdu(LHS, RHS).zext(64);
+      }
+      ResultElements.push_back(APValue(APSInt(Sum, DestUnsigned)));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
 
   case clang::X86::BI__builtin_ia32_pmaddubsw128:
   case clang::X86::BI__builtin_ia32_pmaddubsw256:
@@ -11852,7 +12982,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       const APSInt &HiRHS = SourceRHS.getVectorElt(EltNum + 1).getInt();
       unsigned BitWidth = 2 * LoLHS.getBitWidth();
 
-      switch (E->getBuiltinCallee()) {
+      switch (BuiltinOp) {
       case clang::X86::BI__builtin_ia32_pmaddubsw128:
       case clang::X86::BI__builtin_ia32_pmaddubsw256:
       case clang::X86::BI__builtin_ia32_pmaddubsw512:
@@ -11872,6 +13002,169 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_bmacor16x16x16_v16hi:
+  case clang::X86::BI__builtin_ia32_bmacor16x16x16_v32hi:
+  case clang::X86::BI__builtin_ia32_bmacxor16x16x16_v16hi:
+  case clang::X86::BI__builtin_ia32_bmacxor16x16x16_v32hi: {
+    // Bit Matrix Multiply and Accumulate (AVX512BMM). Each 256-bit lane holds
+    // a 16x16 bit matrix as 16 x i16 elements; element i is row i and bit j of
+    // that element is entry [i][j]. The accumulator (third argument, src1 in
+    // the AMD ISA) provides the initial value of each result bit, into which
+    // the bit-matrix product of the first two arguments (src2 * src3) is
+    // reduced with OR (vbmacor) or XOR (vbmacxor):
+    //   for i in 0..15, j in 0..15:
+    //     bit = C[16*i+j]
+    //     for k in 0..15: bit OP= A[16*i+k] & B[16*k+j]
+    //     dest[16*i+j] = bit
+    APValue SourceA, SourceB, SourceC;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceC))
+      return false;
+
+    bool IsXor = E->getBuiltinCallee() ==
+                     clang::X86::BI__builtin_ia32_bmacxor16x16x16_v16hi ||
+                 E->getBuiltinCallee() ==
+                     clang::X86::BI__builtin_ia32_bmacxor16x16x16_v32hi;
+
+    unsigned SourceLen = SourceA.getVectorLength();
+    assert(SourceLen % 16 == 0 && "BMM operates on 256-bit lanes of 16 x i16");
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+
+    SmallVector<APValue, 32> ResultElements(SourceLen);
+    for (unsigned Lane = 0; Lane != SourceLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        uint16_t A =
+            (uint16_t)SourceA.getVectorElt(Lane + I).getInt().getZExtValue();
+        uint16_t Dst =
+            (uint16_t)SourceC.getVectorElt(Lane + I).getInt().getZExtValue();
+        for (unsigned J = 0; J != 16; ++J) {
+          // Seed the reduction with the accumulator bit, then fold in each
+          // product term with the same operator (OR for vbmacor, XOR for
+          // vbmacxor).
+          unsigned Bit = (Dst >> J) & 1u;
+          for (unsigned K = 0; K != 16; ++K) {
+            uint16_t B = (uint16_t)SourceB.getVectorElt(Lane + K)
+                             .getInt()
+                             .getZExtValue();
+            unsigned Product = ((A >> K) & 1u) & ((B >> J) & 1u);
+            Bit = IsXor ? (Bit ^ Product) : (Bit | Product);
+          }
+          Dst = (Dst & ~(uint16_t(1) << J)) | (uint16_t(Bit) << J);
+        }
+        ResultElements[Lane + I] =
+            APValue(APSInt(APInt(16, Dst), DestUnsigned));
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_dbpsadbw128:
+  case clang::X86::BI__builtin_ia32_dbpsadbw256:
+  case clang::X86::BI__builtin_ia32_dbpsadbw512: {
+    APValue SourceA, SourceB, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceImm))
+      return false;
+
+    unsigned SourceLen = SourceA.getVectorLength();
+    constexpr unsigned LaneSize = 16; // 128-bit lane = 16 bytes
+    unsigned Imm = SourceImm.getInt().getZExtValue();
+
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    // Phase 1: Shuffle SourceB using all four 2-bit fields of imm8.
+    // Within each 128-bit lane, for group j (0..3), select a 4-byte block
+    // from SourceB based on bits [2*j+1:2*j] of imm8.
+    SmallVector<uint8_t, 64> Shuffled(SourceLen);
+    for (unsigned I = 0; I < SourceLen; I += LaneSize) {
+      for (unsigned J = 0; J < 4; ++J) {
+        unsigned Part = (Imm >> (2 * J)) & 3;
+        for (unsigned K = 0; K < 4; ++K) {
+          Shuffled[I + 4 * J + K] = static_cast<uint8_t>(
+              SourceB.getVectorElt(I + 4 * Part + K).getInt().getZExtValue());
+        }
+      }
+    }
+
+    // Phase 2: Sliding SAD computation.
+    // For every group of 4 output u16 values, compute absolute differences
+    // using overlapping windows into SourceA and the shuffled array.
+    unsigned Size = SourceLen / 2; // number of output u16 elements
+    for (unsigned I = 0; I < Size; I += 4) {
+      unsigned Sad[4] = {0, 0, 0, 0};
+      for (unsigned J = 0; J < 4; ++J) {
+        uint8_t A1 = static_cast<uint8_t>(
+            SourceA.getVectorElt(2 * I + J).getInt().getZExtValue());
+        uint8_t A2 = static_cast<uint8_t>(
+            SourceA.getVectorElt(2 * I + J + 4).getInt().getZExtValue());
+        uint8_t B0 = Shuffled[2 * I + J];
+        uint8_t B1 = Shuffled[2 * I + J + 1];
+        uint8_t B2 = Shuffled[2 * I + J + 2];
+        uint8_t B3 = Shuffled[2 * I + J + 3];
+        Sad[0] += (A1 > B0) ? (A1 - B0) : (B0 - A1);
+        Sad[1] += (A1 > B1) ? (A1 - B1) : (B1 - A1);
+        Sad[2] += (A2 > B2) ? (A2 - B2) : (B2 - A2);
+        Sad[3] += (A2 > B3) ? (A2 - B3) : (B3 - A2);
+      }
+      for (unsigned R = 0; R < 4; ++R)
+        ResultElements.push_back(
+            APValue(APSInt(APInt(16, Sad[R]), DestUnsigned)));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_mpsadbw128:
+  case clang::X86::BI__builtin_ia32_mpsadbw256: {
+    APValue SourceA, SourceB;
+    APSInt SourceImm;
+    if (!EvaluateVector(E->getArg(0), SourceA, Info) ||
+        !EvaluateVector(E->getArg(1), SourceB, Info) ||
+        !EvaluateInteger(E->getArg(2), SourceImm, Info))
+      return false;
+    unsigned SourceLen = SourceA.getVectorLength();
+    constexpr unsigned LaneSize = 16;
+    assert((SourceLen == LaneSize || SourceLen == 2 * LaneSize) &&
+           "MPSADBW operates on 128-bit or 256-bit vectors");
+    unsigned NumLanes = SourceLen / LaneSize;
+    unsigned Imm = SourceImm.getZExtValue();
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+      unsigned Ctrl = (Imm >> (3 * Lane)) & 0x7;
+      unsigned AOff = ((Ctrl >> 2) & 1) * 4;
+      unsigned BOff = (Ctrl & 3) * 4;
+      for (unsigned J = 0; J != 8; ++J) {
+        uint16_t Sad = 0;
+        for (unsigned K = 0; K != 4; ++K) {
+          uint8_t A = static_cast<uint8_t>(
+              SourceA.getVectorElt(Lane * LaneSize + AOff + J + K)
+                  .getInt()
+                  .getZExtValue());
+          uint8_t B = static_cast<uint8_t>(
+              SourceB.getVectorElt(Lane * LaneSize + BOff + K)
+                  .getInt()
+                  .getZExtValue());
+          Sad += (A > B) ? (A - B) : (B - A);
+        }
+        ResultElements.push_back(APValue(APSInt(APInt(16, Sad), DestUnsigned)));
+      }
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
@@ -11975,13 +13268,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_packuswb256:
   case X86::BI__builtin_ia32_packuswb512:
     return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
-      unsigned DstBits = Src.getBitWidth() / 2;
-      if (Src.isNegative())
-        return APInt::getZero(DstBits);
-      if (Src.isIntN(DstBits))
-        return APInt((Src).trunc(DstBits));
-      return APInt::getAllOnes(DstBits);
+      return APSInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
+  case clang::X86::BI__builtin_ia32_selectss_128:
+    return EvalSelectScalar(4);
+  case clang::X86::BI__builtin_ia32_selectsd_128:
+    return EvalSelectScalar(2);
+  case clang::X86::BI__builtin_ia32_selectsh_128:
+  case clang::X86::BI__builtin_ia32_selectsbf_128:
+    return EvalSelectScalar(8);
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
@@ -12001,7 +13296,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
       APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
 
-      switch (E->getBuiltinCallee()) {
+      switch (BuiltinOp) {
       case clang::X86::BI__builtin_ia32_pmuludq128:
       case clang::X86::BI__builtin_ia32_pmuludq256:
       case clang::X86::BI__builtin_ia32_pmuludq512:
@@ -12108,7 +13403,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
       APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
-      switch (E->getBuiltinCallee()) {
+      switch (BuiltinOp) {
       case Builtin::BI__builtin_elementwise_max:
         ResultElements.push_back(
             APValue(APSInt(std::max(LHS, RHS),
@@ -12187,6 +13482,85 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_compressdf128_mask:
+  case X86::BI__builtin_ia32_compressdf256_mask:
+  case X86::BI__builtin_ia32_compressdf512_mask:
+  case X86::BI__builtin_ia32_compressdi128_mask:
+  case X86::BI__builtin_ia32_compressdi256_mask:
+  case X86::BI__builtin_ia32_compressdi512_mask:
+  case X86::BI__builtin_ia32_compresshi128_mask:
+  case X86::BI__builtin_ia32_compresshi256_mask:
+  case X86::BI__builtin_ia32_compresshi512_mask:
+  case X86::BI__builtin_ia32_compressqi128_mask:
+  case X86::BI__builtin_ia32_compressqi256_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compresssf128_mask:
+  case X86::BI__builtin_ia32_compresssf256_mask:
+  case X86::BI__builtin_ia32_compresssf512_mask:
+  case X86::BI__builtin_ia32_compresssi128_mask:
+  case X86::BI__builtin_ia32_compresssi256_mask:
+  case X86::BI__builtin_ia32_compresssi512_mask: {
+    APValue Source, Passthru;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), Passthru))
+      return false;
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(2), Mask, Info))
+      return false;
+
+    unsigned NumElts = Source.getVectorLength();
+    SmallVector<APValue, 64> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Mask[I])
+        ResultElements.push_back(Source.getVectorElt(I));
+    }
+    for (unsigned I = ResultElements.size(); I != NumElts; ++I) {
+      ResultElements.push_back(Passthru.getVectorElt(I));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_expanddf128_mask:
+  case X86::BI__builtin_ia32_expanddf256_mask:
+  case X86::BI__builtin_ia32_expanddf512_mask:
+  case X86::BI__builtin_ia32_expanddi128_mask:
+  case X86::BI__builtin_ia32_expanddi256_mask:
+  case X86::BI__builtin_ia32_expanddi512_mask:
+  case X86::BI__builtin_ia32_expandhi128_mask:
+  case X86::BI__builtin_ia32_expandhi256_mask:
+  case X86::BI__builtin_ia32_expandhi512_mask:
+  case X86::BI__builtin_ia32_expandqi128_mask:
+  case X86::BI__builtin_ia32_expandqi256_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandsf128_mask:
+  case X86::BI__builtin_ia32_expandsf256_mask:
+  case X86::BI__builtin_ia32_expandsf512_mask:
+  case X86::BI__builtin_ia32_expandsi128_mask:
+  case X86::BI__builtin_ia32_expandsi256_mask:
+  case X86::BI__builtin_ia32_expandsi512_mask: {
+    APValue Source, Passthru;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), Passthru))
+      return false;
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(2), Mask, Info))
+      return false;
+
+    unsigned NumElts = Source.getVectorLength();
+    SmallVector<APValue, 64> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    unsigned SourceIdx = 0;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Mask[I])
+        ResultElements.push_back(Source.getVectorElt(SourceIdx++));
+      else
+        ResultElements.push_back(Passthru.getVectorElt(I));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case X86::BI__builtin_ia32_vpconflictsi_128:
   case X86::BI__builtin_ia32_vpconflictsi_256:
   case X86::BI__builtin_ia32_vpconflictsi_512:
@@ -12244,6 +13618,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case X86::BI__builtin_ia32_psignb128:
+  case X86::BI__builtin_ia32_psignb256:
+  case X86::BI__builtin_ia32_psignw128:
+  case X86::BI__builtin_ia32_psignw256:
+  case X86::BI__builtin_ia32_psignd128:
+  case X86::BI__builtin_ia32_psignd256:
+    return EvaluateBinOpExpr([](const APInt &AElem, const APInt &BElem) {
+      if (BElem.isZero())
+        return APInt::getZero(AElem.getBitWidth());
+      if (BElem.isNegative())
+        return -AElem;
+      return AElem;
+    });
 
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
@@ -12317,11 +13705,210 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case X86::BI__builtin_ia32_cvtsd2ss: {
+    APValue VecA, VecB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), VecB))
+      return false;
+
+    SmallVector<APValue, 4> Elements;
+
+    APValue ResultVal;
+    if (!ConvertDoubleToFloatStrict(Info, E, VecB.getVectorElt(0).getFloat(),
+                                    ResultVal))
+      return false;
+
+    Elements.push_back(ResultVal);
+
+    unsigned NumEltsA = VecA.getVectorLength();
+    for (unsigned I = 1; I < NumEltsA; ++I) {
+      Elements.push_back(VecA.getVectorElt(I));
+    }
+
+    return Success(Elements, E);
+  }
+  case X86::BI__builtin_ia32_cvtsd2ss_round_mask: {
+    APValue VecA, VecB, VecSrc, MaskValue;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), VecSrc) ||
+        !EvaluateAsRValue(Info, E->getArg(3), MaskValue))
+      return false;
+
+    unsigned Mask = MaskValue.getInt().getZExtValue();
+    SmallVector<APValue, 4> Elements;
+
+    if (Mask & 1) {
+      APValue ResultVal;
+      if (!ConvertDoubleToFloatStrict(Info, E, VecB.getVectorElt(0).getFloat(),
+                                      ResultVal))
+        return false;
+      Elements.push_back(ResultVal);
+    } else {
+      Elements.push_back(VecSrc.getVectorElt(0));
+    }
+
+    unsigned NumEltsA = VecA.getVectorLength();
+    for (unsigned I = 1; I < NumEltsA; ++I) {
+      Elements.push_back(VecA.getVectorElt(I));
+    }
+
+    return Success(Elements, E);
+  }
+  case X86::BI__builtin_ia32_cvtpd2ps:
+  case X86::BI__builtin_ia32_cvtpd2ps256:
+  case X86::BI__builtin_ia32_cvtpd2ps_mask:
+  case X86::BI__builtin_ia32_cvtpd2ps512_mask: {
+
+    const auto BuiltinID = BuiltinOp;
+    bool IsMasked = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps_mask ||
+                     BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
+
+    APValue InputValue;
+    if (!EvaluateAsRValue(Info, E->getArg(0), InputValue))
+      return false;
+
+    APValue MergeValue;
+    unsigned Mask = 0xFFFFFFFF;
+    bool NeedsMerge = false;
+    if (IsMasked) {
+      APValue MaskValue;
+      if (!EvaluateAsRValue(Info, E->getArg(2), MaskValue))
+        return false;
+      Mask = MaskValue.getInt().getZExtValue();
+      auto NumEltsResult = E->getType()->getAs<VectorType>()->getNumElements();
+      for (unsigned I = 0; I < NumEltsResult; ++I) {
+        if (!((Mask >> I) & 1)) {
+          NeedsMerge = true;
+          break;
+        }
+      }
+      if (NeedsMerge) {
+        if (!EvaluateAsRValue(Info, E->getArg(1), MergeValue))
+          return false;
+      }
+    }
+
+    unsigned NumEltsResult =
+        E->getType()->getAs<VectorType>()->getNumElements();
+    unsigned NumEltsInput = InputValue.getVectorLength();
+    SmallVector<APValue, 8> Elements;
+    for (unsigned I = 0; I < NumEltsResult; ++I) {
+      if (IsMasked && !((Mask >> I) & 1)) {
+        if (!NeedsMerge) {
+          return false;
+        }
+        Elements.push_back(MergeValue.getVectorElt(I));
+        continue;
+      }
+
+      if (I >= NumEltsInput) {
+        Elements.push_back(APValue(APFloat::getZero(APFloat::IEEEsingle())));
+        continue;
+      }
+
+      APValue ResultVal;
+      if (!ConvertDoubleToFloatStrict(
+              Info, E, InputValue.getVectorElt(I).getFloat(), ResultVal))
+        return false;
+
+      Elements.push_back(ResultVal);
+    }
+    return Success(Elements, E);
+  }
+
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              unsigned NumElemPerLane = LaneBits / 32;
+              unsigned NumSelectableElems = NumElemPerLane / 2;
+              unsigned BitsPerElem = 2;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned MaskBits = 8;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned ElemInLane = DstIdx % NumElemPerLane;
+              unsigned LaneOffset = Lane * NumElemPerLane;
+              unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+              unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
+              unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+              return {SrcIdx, static_cast<int>(LaneOffset + Index)};
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              unsigned NumElemPerLane = LaneBits / 64;
+              unsigned NumSelectableElems = NumElemPerLane / 2;
+              unsigned BitsPerElem = 1;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned MaskBits = 8;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned ElemInLane = DstIdx % NumElemPerLane;
+              unsigned LaneOffset = Lane * NumElemPerLane;
+              unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+              unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
+              unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+              return {SrcIdx, static_cast<int>(LaneOffset + Index)};
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_insertps128: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              // Bits [3:0]: zero mask - if bit is set, zero this element
+              if ((Mask & (1 << DstIdx)) != 0) {
+                return {0, -1};
+              }
+              // Bits [7:6]: select element from source vector Y (0-3)
+              // Bits [5:4]: select destination position (0-3)
+              unsigned SrcElem = (Mask >> 6) & 0x3;
+              unsigned DstElem = (Mask >> 4) & 0x3;
+              if (DstIdx == DstElem) {
+                // Insert element from source vector (B) at this position
+                return {1, static_cast<int>(SrcElem)};
+              } else {
+                // Copy from destination vector (A)
+                return {0, static_cast<int>(DstIdx)};
+              }
+            }))
+      return false;
+    return Success(R, E);
+  }
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512: {
     APValue R;
-    if (!evalPshufbBuiltin(Info, E, R))
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
+              uint8_t Ctlb = static_cast<uint8_t>(ShuffleMask);
+              if (Ctlb & 0x80)
+                return std::make_pair(0, -1);
+
+              unsigned LaneBase = (DstIdx / 16) * 16;
+              unsigned SrcOffset = Ctlb & 0x0F;
+              unsigned SrcIdx = LaneBase + SrcOffset;
+              return std::make_pair(0, static_cast<int>(SrcIdx));
+            }))
       return false;
     return Success(R, E);
   }
@@ -12330,7 +13917,21 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pshuflw256:
   case X86::BI__builtin_ia32_pshuflw512: {
     APValue R;
-    if (!evalPshufBuiltin(Info, E, false, R))
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              constexpr unsigned ElemBits = 16u;
+              constexpr unsigned LaneElts = LaneBits / ElemBits;
+              constexpr unsigned HalfSize = 4;
+              unsigned LaneBase = (DstIdx / LaneElts) * LaneElts;
+              unsigned LaneIdx = DstIdx % LaneElts;
+              if (LaneIdx < HalfSize) {
+                unsigned Sel = (Mask >> (2 * LaneIdx)) & 0x3;
+                return std::make_pair(0, static_cast<int>(LaneBase + Sel));
+              }
+              return std::make_pair(0, static_cast<int>(DstIdx));
+            }))
       return false;
     return Success(R, E);
   }
@@ -12339,16 +13940,244 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pshufhw256:
   case X86::BI__builtin_ia32_pshufhw512: {
     APValue R;
-    if (!evalPshufBuiltin(Info, E, true, R))
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              constexpr unsigned ElemBits = 16u;
+              constexpr unsigned LaneElts = LaneBits / ElemBits;
+              constexpr unsigned HalfSize = 4;
+              unsigned LaneBase = (DstIdx / LaneElts) * LaneElts;
+              unsigned LaneIdx = DstIdx % LaneElts;
+              if (LaneIdx >= HalfSize) {
+                unsigned Rel = LaneIdx - HalfSize;
+                unsigned Sel = (Mask >> (2 * Rel)) & 0x3;
+                return std::make_pair(
+                    0, static_cast<int>(LaneBase + HalfSize + Sel));
+              }
+              return std::make_pair(0, static_cast<int>(DstIdx));
+            }))
       return false;
     return Success(R, E);
   }
 
   case X86::BI__builtin_ia32_pshufd:
   case X86::BI__builtin_ia32_pshufd256:
-  case X86::BI__builtin_ia32_pshufd512: {
+  case X86::BI__builtin_ia32_pshufd512:
+  case X86::BI__builtin_ia32_vpermilps:
+  case X86::BI__builtin_ia32_vpermilps256:
+  case X86::BI__builtin_ia32_vpermilps512: {
     APValue R;
-    if (!evalPshufBuiltin(Info, E, false, R))
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              constexpr unsigned LaneBits = 128u;
+              constexpr unsigned ElemBits = 32u;
+              constexpr unsigned LaneElts = LaneBits / ElemBits;
+              unsigned LaneBase = (DstIdx / LaneElts) * LaneElts;
+              unsigned LaneIdx = DstIdx % LaneElts;
+              unsigned Sel = (Mask >> (2 * LaneIdx)) & 0x3;
+              return std::make_pair(0, static_cast<int>(LaneBase + Sel));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilvarpd:
+  case X86::BI__builtin_ia32_vpermilvarpd256:
+  case X86::BI__builtin_ia32_vpermilvarpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              unsigned NumElemPerLane = 2;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned Offset = Mask & 0b10 ? 1 : 0;
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilpd:
+  case X86::BI__builtin_ia32_vpermilpd256:
+  case X86::BI__builtin_ia32_vpermilpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Control) {
+          unsigned NumElemPerLane = 2;
+          unsigned BitsPerElem = 1;
+          unsigned MaskBits = 8;
+          unsigned IndexMask = 0x1;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (Control >> BitIndex) & IndexMask;
+          return std::make_pair(0, static_cast<int>(LaneOffset + Index));
+        }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_permdf256:
+  case X86::BI__builtin_ia32_permdi256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Control) {
+          // permute4x64 operates on 4 64-bit elements
+          // For element i (0-3), extract bits [2*i+1:2*i] from Control
+          unsigned Index = (Control >> (2 * DstIdx)) & 0x3;
+          return std::make_pair(0, static_cast<int>(Index));
+        }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpermilvarps:
+  case X86::BI__builtin_ia32_vpermilvarps256:
+  case X86::BI__builtin_ia32_vpermilvarps512: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, int> {
+              unsigned NumElemPerLane = 4;
+              unsigned Lane = DstIdx / NumElemPerLane;
+              unsigned Offset = Mask & 0b11;
+              return std::make_pair(
+                  0, static_cast<int>(Lane * NumElemPerLane + Offset));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vpmultishiftqb128:
+  case X86::BI__builtin_ia32_vpmultishiftqb256:
+  case X86::BI__builtin_ia32_vpmultishiftqb512: {
+    assert(E->getNumArgs() == 2);
+
+    APValue A, B;
+    if (!Evaluate(A, Info, E->getArg(0)) || !Evaluate(B, Info, E->getArg(1)))
+      return false;
+
+    assert(A.getVectorLength() == B.getVectorLength());
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytes = A.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+      APInt BQWord(64, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Byte = B.getVectorElt(Idx).getInt().getZExtValue();
+        BQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Ctrl = A.getVectorElt(Idx).getInt().getZExtValue() & 0x3F;
+
+        APInt Byte(8, 0);
+        for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+          Byte.setBitVal(BitIdx, BQWord[(Ctrl + BitIdx) & 0x3F]);
+        }
+        Result.push_back(APValue(APSInt(Byte, /*isUnsigned*/ true)));
+      }
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_phminposuw128: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ElemBitWidth = Info.Ctx.getTypeSize(ElemQT);
+
+    APInt MinIndex(ElemBitWidth, 0);
+    APInt MinVal = Source.getVectorElt(0).getInt();
+    for (unsigned I = 1; I != SourceLen; ++I) {
+      APInt Val = Source.getVectorElt(I).getInt();
+      if (MinVal.ugt(Val)) {
+        MinVal = Val;
+        MinIndex = I;
+      }
+    }
+
+    bool ResultUnsigned = E->getCallReturnType(Info.Ctx)
+                              ->castAs<VectorType>()
+                              ->getElementType()
+                              ->isUnsignedIntegerOrEnumerationType();
+
+    SmallVector<APValue, 8> Result;
+    Result.reserve(SourceLen);
+    Result.emplace_back(APSInt(MinVal, ResultUnsigned));
+    Result.emplace_back(APSInt(MinIndex, ResultUnsigned));
+    for (unsigned I = 0; I != SourceLen - 2; ++I) {
+      Result.emplace_back(APSInt(APInt(ElemBitWidth, 0), ResultUnsigned));
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_psraq128:
+  case X86::BI__builtin_ia32_psraq256:
+  case X86::BI__builtin_ia32_psraq512:
+  case X86::BI__builtin_ia32_psrad128:
+  case X86::BI__builtin_ia32_psrad256:
+  case X86::BI__builtin_ia32_psrad512:
+  case X86::BI__builtin_ia32_psraw128:
+  case X86::BI__builtin_ia32_psraw256:
+  case X86::BI__builtin_ia32_psraw512: {
+    APValue R;
+    if (!evalShiftWithCount(
+            Info, E, R,
+            [](const APInt &Elt, uint64_t Count) { return Elt.ashr(Count); },
+            [](const APInt &Elt, unsigned Width) {
+              return Elt.ashr(Width - 1);
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_psllq128:
+  case X86::BI__builtin_ia32_psllq256:
+  case X86::BI__builtin_ia32_psllq512:
+  case X86::BI__builtin_ia32_pslld128:
+  case X86::BI__builtin_ia32_pslld256:
+  case X86::BI__builtin_ia32_pslld512:
+  case X86::BI__builtin_ia32_psllw128:
+  case X86::BI__builtin_ia32_psllw256:
+  case X86::BI__builtin_ia32_psllw512: {
+    APValue R;
+    if (!evalShiftWithCount(
+            Info, E, R,
+            [](const APInt &Elt, uint64_t Count) { return Elt.shl(Count); },
+            [](const APInt &Elt, unsigned Width) {
+              return APInt::getZero(Width);
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_psrlq128:
+  case X86::BI__builtin_ia32_psrlq256:
+  case X86::BI__builtin_ia32_psrlq512:
+  case X86::BI__builtin_ia32_psrld128:
+  case X86::BI__builtin_ia32_psrld256:
+  case X86::BI__builtin_ia32_psrld512:
+  case X86::BI__builtin_ia32_psrlw128:
+  case X86::BI__builtin_ia32_psrlw256:
+  case X86::BI__builtin_ia32_psrlw512: {
+    APValue R;
+    if (!evalShiftWithCount(
+            Info, E, R,
+            [](const APInt &Elt, uint64_t Count) { return Elt.lshr(Count); },
+            [](const APInt &Elt, unsigned Width) {
+              return APInt::getZero(Width);
+            }))
       return false;
     return Success(R, E);
   }
@@ -12468,14 +14297,14 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         // Without a fallback, a zero element is undefined
         if (!Fallback) {
           Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
-              << /*IsTrailing=*/(E->getBuiltinCallee() ==
+              << /*IsTrailing=*/(BuiltinOp ==
                                  Builtin::BI__builtin_elementwise_ctzg);
           return false;
         }
         ResultElements.push_back(Fallback->getVectorElt(EltNum));
         continue;
       }
-      switch (E->getBuiltinCallee()) {
+      switch (BuiltinOp) {
       case Builtin::BI__builtin_elementwise_clzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countl_zero()),
@@ -12545,7 +14374,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       for (unsigned I = 0; I != EltsPerLane; I += 2) {
         APSInt LHSA = SourceLHS.getVectorElt(LaneStart + I).getInt();
         APSInt LHSB = SourceLHS.getVectorElt(LaneStart + I + 1).getInt();
-        switch (E->getBuiltinCallee()) {
+        switch (BuiltinOp) {
         case clang::X86::BI__builtin_ia32_phaddw128:
         case clang::X86::BI__builtin_ia32_phaddw256:
         case clang::X86::BI__builtin_ia32_phaddd128:
@@ -12579,7 +14408,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       for (unsigned I = 0; I != EltsPerLane; I += 2) {
         APSInt RHSA = SourceRHS.getVectorElt(LaneStart + I).getInt();
         APSInt RHSB = SourceRHS.getVectorElt(LaneStart + I + 1).getInt();
-        switch (E->getBuiltinCallee()) {
+        switch (BuiltinOp) {
         case clang::X86::BI__builtin_ia32_phaddw128:
         case clang::X86::BI__builtin_ia32_phaddw256:
         case clang::X86::BI__builtin_ia32_phaddd128:
@@ -12639,7 +14468,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       for (unsigned I = 0; I != HalfElemsPerLane; ++I) {
         APFloat LHSA = SourceLHS.getVectorElt(L + (2 * I) + 0).getFloat();
         APFloat LHSB = SourceLHS.getVectorElt(L + (2 * I) + 1).getFloat();
-        switch (E->getBuiltinCallee()) {
+        switch (BuiltinOp) {
         case clang::X86::BI__builtin_ia32_haddpd:
         case clang::X86::BI__builtin_ia32_haddps:
         case clang::X86::BI__builtin_ia32_haddps256:
@@ -12658,7 +14487,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       for (unsigned I = 0; I != HalfElemsPerLane; ++I) {
         APFloat RHSA = SourceRHS.getVectorElt(L + (2 * I) + 0).getFloat();
         APFloat RHSB = SourceRHS.getVectorElt(L + (2 * I) + 1).getFloat();
-        switch (E->getBuiltinCallee()) {
+        switch (BuiltinOp) {
         case clang::X86::BI__builtin_ia32_haddpd:
         case clang::X86::BI__builtin_ia32_haddps:
         case clang::X86::BI__builtin_ia32_haddps256:
@@ -12677,6 +14506,96 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case clang::X86::BI__builtin_ia32_addsubpd:
+  case clang::X86::BI__builtin_ia32_addsubps:
+  case clang::X86::BI__builtin_ia32_addsubpd256:
+  case clang::X86::BI__builtin_ia32_addsubps256: {
+    // Addsub: alternates between subtraction and addition
+    // Result[i] = (i % 2 == 0) ? (a[i] - b[i]) : (a[i] + b[i])
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+    unsigned NumElems = SourceLHS.getVectorLength();
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumElems);
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+
+    for (unsigned I = 0; I != NumElems; ++I) {
+      APFloat LHS = SourceLHS.getVectorElt(I).getFloat();
+      APFloat RHS = SourceRHS.getVectorElt(I).getFloat();
+      if (I % 2 == 0) {
+        // Even indices: subtract
+        LHS.subtract(RHS, RM);
+      } else {
+        // Odd indices: add
+        LHS.add(RHS, RM);
+      }
+      ResultElements.push_back(APValue(LHS));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case clang::X86::BI__builtin_ia32_pclmulqdq128:
+  case clang::X86::BI__builtin_ia32_pclmulqdq256:
+  case clang::X86::BI__builtin_ia32_pclmulqdq512: {
+    // PCLMULQDQ: carry-less multiplication of selected 64-bit halves
+    // imm8 bit 0: selects lower (0) or upper (1) 64 bits of first operand
+    // imm8 bit 4: selects lower (0) or upper (1) 64 bits of second operand
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    APSInt Imm8;
+    if (!EvaluateInteger(E->getArg(2), Imm8, Info))
+      return false;
+
+    // Extract bits 0 and 4 from imm8
+    bool SelectUpperA = (Imm8 & 0x01) != 0;
+    bool SelectUpperB = (Imm8 & 0x10) != 0;
+
+    unsigned NumElems = SourceLHS.getVectorLength();
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumElems);
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+
+    // Process each 128-bit lane
+    for (unsigned Lane = 0; Lane < NumElems; Lane += 2) {
+      // Get the two 64-bit halves of the first operand
+      APSInt A0 = SourceLHS.getVectorElt(Lane + 0).getInt();
+      APSInt A1 = SourceLHS.getVectorElt(Lane + 1).getInt();
+      // Get the two 64-bit halves of the second operand
+      APSInt B0 = SourceRHS.getVectorElt(Lane + 0).getInt();
+      APSInt B1 = SourceRHS.getVectorElt(Lane + 1).getInt();
+
+      // Select the appropriate 64-bit values based on imm8
+      APInt A = SelectUpperA ? A1 : A0;
+      APInt B = SelectUpperB ? B1 : B0;
+
+      // Extend both operands to 128 bits for carry-less multiplication
+      APInt A128 = A.zext(128);
+      APInt B128 = B.zext(128);
+
+      // Use APIntOps::clmul for carry-less multiplication
+      APInt Result = llvm::APIntOps::clmul(A128, B128);
+
+      // Split the 128-bit result into two 64-bit halves
+      APSInt ResultLow(Result.extractBits(64, 0), DestUnsigned);
+      APSInt ResultHigh(Result.extractBits(64, 64), DestUnsigned);
+
+      ResultElements.push_back(APValue(ResultLow));
+      ResultElements.push_back(APValue(ResultHigh));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case Builtin::BI__builtin_elementwise_clmul:
+    return EvaluateBinOpExpr(llvm::APIntOps::clmul);
+  case Builtin::BI__builtin_elementwise_pext:
+    return EvaluateBinOpExpr(llvm::APIntOps::pext);
+  case Builtin::BI__builtin_elementwise_pdep:
+    return EvaluateBinOpExpr(llvm::APIntOps::pdep);
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -12696,7 +14615,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       const APSInt &Hi = SourceHi.getVectorElt(EltNum).getInt();
       const APSInt &Lo = SourceLo.getVectorElt(EltNum).getInt();
       const APSInt &Shift = SourceShift.getVectorElt(EltNum).getInt();
-      switch (E->getBuiltinCallee()) {
+      switch (BuiltinOp) {
       case Builtin::BI__builtin_elementwise_fshl:
         ResultElements.push_back(APValue(
             APSInt(llvm::APIntOps::fshl(Hi, Lo, Shift), Hi.isUnsigned())));
@@ -12709,6 +14628,139 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_shuf_f32x4_256:
+  case X86::BI__builtin_ia32_shuf_i32x4_256:
+  case X86::BI__builtin_ia32_shuf_f64x2_256:
+  case X86::BI__builtin_ia32_shuf_i64x2_256:
+  case X86::BI__builtin_ia32_shuf_f32x4:
+  case X86::BI__builtin_ia32_shuf_i32x4:
+  case X86::BI__builtin_ia32_shuf_f64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    APValue SourceA, SourceB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    // Destination and sources A, B all have the same type.
+    unsigned NumElems = SourceA.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ElemBits = Info.Ctx.getTypeSize(ElemQT);
+    unsigned LaneBits = 128u;
+    unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
+    unsigned NumElemsPerLane = LaneBits / ElemBits;
+
+    unsigned DstLen = SourceA.getVectorLength();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [NumLanes, NumElemsPerLane](unsigned DstIdx, unsigned ShuffleMask)
+                -> std::pair<unsigned, int> {
+              // DstIdx determines source. ShuffleMask selects lane in source.
+              unsigned BitsPerElem = NumLanes / 2;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned Lane = DstIdx / NumElemsPerLane;
+              unsigned SrcIdx = (Lane < NumLanes / 2) ? 0 : 1;
+              unsigned BitIdx = BitsPerElem * Lane;
+              unsigned SrcLaneIdx = (ShuffleMask >> BitIdx) & IndexMask;
+              unsigned ElemInLane = DstIdx % NumElemsPerLane;
+              unsigned IdxToPick = SrcLaneIdx * NumElemsPerLane + ElemInLane;
+              return {SrcIdx, IdxToPick};
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v64qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v64qi: {
+
+    APValue X, A;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), X) ||
+        !EvaluateAsRValue(Info, E->getArg(1), A) ||
+        !EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    assert(X.isVector() && A.isVector());
+    assert(X.getVectorLength() == A.getVectorLength());
+
+    bool IsInverse = false;
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_vgf2p8affineinvqb_v16qi:
+    case X86::BI__builtin_ia32_vgf2p8affineinvqb_v32qi:
+    case X86::BI__builtin_ia32_vgf2p8affineinvqb_v64qi: {
+      IsInverse = true;
+    }
+    }
+
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInQWord = 64;
+    unsigned NumBytes = A.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    // computing A*X + Imm
+    for (unsigned QWordIdx = 0; QWordIdx != NumQWords; ++QWordIdx) {
+      // Extract the QWords from X, A
+      APInt XQWord(NumBitsInQWord, 0);
+      APInt AQWord(NumBitsInQWord, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordIdx * NumBytesInQWord + ByteIdx;
+        APInt XByte = X.getVectorElt(Idx).getInt();
+        APInt AByte = A.getVectorElt(Idx).getInt();
+        XQWord.insertBits(XByte, ByteIdx * NumBitsInByte);
+        AQWord.insertBits(AByte, ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        uint8_t XByte =
+            XQWord.lshr(ByteIdx * NumBitsInByte).getLoBits(8).getZExtValue();
+        Result.push_back(APValue(APSInt(
+            APInt(8, GFNIAffine(XByte, AQWord, Imm, IsInverse)), false)));
+      }
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_vgf2p8mulb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8mulb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8mulb_v64qi: {
+    APValue A, B;
+    if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+        !EvaluateAsRValue(Info, E->getArg(1), B))
+      return false;
+
+    assert(A.isVector() && B.isVector());
+    assert(A.getVectorLength() == B.getVectorLength());
+
+    unsigned NumBytes = A.getVectorLength();
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytes; ++ByteIdx) {
+      uint8_t AByte = A.getVectorElt(ByteIdx).getInt().getZExtValue();
+      uint8_t BByte = B.getVectorElt(ByteIdx).getInt().getZExtValue();
+      Result.push_back(APValue(
+          APSInt(APInt(8, GFNIMul(AByte, BByte)), /*IsUnsigned=*/false)));
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
   }
 
   case X86::BI__builtin_ia32_insertf32x4_256:
@@ -12790,6 +14842,419 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(Elems.data(), NumElems), E);
   }
+
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Shift) -> std::pair<unsigned, int> {
+              unsigned LaneBase = (DstIdx / 16) * 16;
+              unsigned LaneIdx = DstIdx % 16;
+              if (LaneIdx < Shift)
+                return std::make_pair(0, -1);
+
+              return std::make_pair(
+                  0, static_cast<int>(LaneBase + LaneIdx - Shift));
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Shift) -> std::pair<unsigned, int> {
+              unsigned LaneBase = (DstIdx / 16) * 16;
+              unsigned LaneIdx = DstIdx % 16;
+              if (LaneIdx + Shift < 16)
+                return std::make_pair(
+                    0, static_cast<int>(LaneBase + LaneIdx + Shift));
+
+              return std::make_pair(0, -1);
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_palignr128:
+  case X86::BI__builtin_ia32_palignr256:
+  case X86::BI__builtin_ia32_palignr512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Shift) {
+          // Default to -1 → zero-fill this destination element
+          unsigned VecIdx = 1;
+          int ElemIdx = -1;
+
+          int Lane = DstIdx / 16;
+          int Offset = DstIdx % 16;
+
+          // Elements come from VecB first, then VecA after the shift boundary
+          unsigned ShiftedIdx = Offset + (Shift & 0xFF);
+          if (ShiftedIdx < 16) { // from VecB
+            ElemIdx = ShiftedIdx + (Lane * 16);
+          } else if (ShiftedIdx < 32) { // from VecA
+            VecIdx = 0;
+            ElemIdx = (ShiftedIdx - 16) + (Lane * 16);
+          }
+
+          return std::pair<unsigned, int>{VecIdx, ElemIdx};
+        }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_alignd128:
+  case X86::BI__builtin_ia32_alignd256:
+  case X86::BI__builtin_ia32_alignd512:
+  case X86::BI__builtin_ia32_alignq128:
+  case X86::BI__builtin_ia32_alignq256:
+  case X86::BI__builtin_ia32_alignq512: {
+    APValue R;
+    unsigned NumElems = E->getType()->castAs<VectorType>()->getNumElements();
+    if (!evalShuffleGeneric(Info, E, R,
+                            [NumElems](unsigned DstIdx, unsigned Shift) {
+                              unsigned Imm = Shift & 0xFF;
+                              unsigned EffectiveShift = Imm & (NumElems - 1);
+                              unsigned SourcePos = DstIdx + EffectiveShift;
+                              unsigned VecIdx = SourcePos < NumElems ? 1 : 0;
+                              unsigned ElemIdx = SourcePos & (NumElems - 1);
+
+                              return std::pair<unsigned, int>{
+                                  VecIdx, static_cast<int>(ElemIdx)};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarsi256:
+  case X86::BI__builtin_ia32_permvarsf256:
+  case X86::BI__builtin_ia32_permvardf512:
+  case X86::BI__builtin_ia32_permvardi512:
+  case X86::BI__builtin_ia32_permvarhi128: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarqi128:
+  case X86::BI__builtin_ia32_permvarhi256:
+  case X86::BI__builtin_ia32_permvarsi512:
+  case X86::BI__builtin_ia32_permvarsf512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvardi256:
+  case X86::BI__builtin_ia32_permvardf256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarqi256:
+  case X86::BI__builtin_ia32_permvarhi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarqi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varq128:
+  case X86::BI__builtin_ia32_vpermi2varpd128: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1;
+                              unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2vard128:
+  case X86::BI__builtin_ia32_vpermi2varps128:
+  case X86::BI__builtin_ia32_vpermi2varq256:
+  case X86::BI__builtin_ia32_vpermi2varpd256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varhi128:
+  case X86::BI__builtin_ia32_vpermi2vard256:
+  case X86::BI__builtin_ia32_vpermi2varps256:
+  case X86::BI__builtin_ia32_vpermi2varq512:
+  case X86::BI__builtin_ia32_vpermi2varpd512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi128:
+  case X86::BI__builtin_ia32_vpermi2varhi256:
+  case X86::BI__builtin_ia32_vpermi2vard512:
+  case X86::BI__builtin_ia32_vpermi2varps512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi256:
+  case X86::BI__builtin_ia32_vpermi2varhi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpermi2varqi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
+                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/true);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsd_round_mask:
+  case clang::X86::BI__builtin_ia32_minss_round_mask:
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsd_round_mask:
+  case clang::X86::BI__builtin_ia32_maxss_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
+    bool IsMin = BuiltinOp == clang::X86::BI__builtin_ia32_minsd_round_mask ||
+                 BuiltinOp == clang::X86::BI__builtin_ia32_minss_round_mask ||
+                 BuiltinOp == clang::X86::BI__builtin_ia32_minsh_round_mask;
+    return EvaluateScalarFpRoundMaskBinOp(
+        [IsMin](const APFloat &A, const APFloat &B,
+                std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, IsMin);
+        });
+  }
+
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxss:
+  case clang::X86::BI__builtin_ia32_maxsd:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_vcvtps2ph:
+  case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
+    APValue SrcVec;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    const auto *SrcVTy = E->getArg(0)->getType()->castAs<VectorType>();
+    unsigned SrcNumElems = SrcVTy->getNumElements();
+    const auto *DstVTy = E->getType()->castAs<VectorType>();
+    unsigned DstNumElems = DstVTy->getNumElements();
+    QualType DstElemTy = DstVTy->getElementType();
+
+    const llvm::fltSemantics &HalfSem =
+        Info.Ctx.getFloatTypeSemantics(Info.Ctx.HalfTy);
+
+    int ImmVal = Imm.getZExtValue();
+    bool UseMXCSR = (ImmVal & 4) != 0;
+    bool IsFPConstrained =
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained();
+
+    llvm::RoundingMode RM;
+    if (!UseMXCSR) {
+      switch (ImmVal & 3) {
+      case 0:
+        RM = llvm::RoundingMode::NearestTiesToEven;
+        break;
+      case 1:
+        RM = llvm::RoundingMode::TowardNegative;
+        break;
+      case 2:
+        RM = llvm::RoundingMode::TowardPositive;
+        break;
+      case 3:
+        RM = llvm::RoundingMode::TowardZero;
+        break;
+      default:
+        llvm_unreachable("Invalid immediate rounding mode");
+      }
+    } else {
+      RM = llvm::RoundingMode::NearestTiesToEven;
+    }
+
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(DstNumElems);
+
+    for (unsigned I = 0; I < SrcNumElems; ++I) {
+      APFloat SrcVal = SrcVec.getVectorElt(I).getFloat();
+
+      bool LostInfo;
+      APFloat::opStatus St = SrcVal.convert(HalfSem, RM, &LostInfo);
+
+      if (UseMXCSR && IsFPConstrained && St != APFloat::opOK) {
+        Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+        return false;
+      }
+
+      APSInt DstInt(SrcVal.bitcastToAPInt(),
+                    DstElemTy->isUnsignedIntegerOrEnumerationType());
+      ResultElements.push_back(APValue(DstInt));
+    }
+
+    if (DstNumElems > SrcNumElems) {
+      APSInt Zero = Info.Ctx.MakeIntValue(0, DstElemTy);
+      for (unsigned I = SrcNumElems; I < DstNumElems; ++I) {
+        ResultElements.push_back(APValue(Zero));
+      }
+    }
+
+    return Success(ResultElements, E);
+  }
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+              unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+              unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+              if (ControlBits & 0b1000)
+                return std::make_pair(0u, -1);
+
+              unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+              unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+              int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                           (DstIdx & PreservedBitsMask);
+              return std::make_pair(SrcVecIdx, SrcIdx);
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_vpdpwssd128:
+  case X86::BI__builtin_ia32_vpdpwssd256:
+  case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512:
+    return EvalVectorDotProduct(false);
+  case X86::BI__builtin_ia32_vpdpwssds128:
+  case X86::BI__builtin_ia32_vpdpwssds256:
+  case X86::BI__builtin_ia32_vpdpwssds512:
+  case X86::BI__builtin_ia32_vpdpbusds128:
+  case X86::BI__builtin_ia32_vpdpbusds256:
+  case X86::BI__builtin_ia32_vpdpbusds512:
+    return EvalVectorDotProduct(true);
   }
 }
 
@@ -12880,6 +15345,117 @@ bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
 }
 
 //===----------------------------------------------------------------------===//
+// Matrix Evaluation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class MatrixExprEvaluator : public ExprEvaluatorBase<MatrixExprEvaluator> {
+  APValue &Result;
+
+public:
+  MatrixExprEvaluator(EvalInfo &Info, APValue &Result)
+      : ExprEvaluatorBaseTy(Info), Result(Result) {}
+
+  bool Success(ArrayRef<APValue> M, const Expr *E) {
+    auto *CMTy = E->getType()->castAs<ConstantMatrixType>();
+    assert(M.size() == CMTy->getNumElementsFlattened());
+    // FIXME: remove this APValue copy.
+    Result = APValue(M.data(), CMTy->getNumRows(), CMTy->getNumColumns());
+    return true;
+  }
+  bool Success(const APValue &M, const Expr *E) {
+    assert(M.isMatrix() && "expected matrix");
+    Result = M;
+    return true;
+  }
+
+  bool VisitCastExpr(const CastExpr *E);
+  bool VisitInitListExpr(const InitListExpr *E);
+};
+} // end anonymous namespace
+
+static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info) {
+  assert(E->isPRValue() && E->getType()->isConstantMatrixType() &&
+         "not a matrix prvalue");
+  return MatrixExprEvaluator(Info, Result).Visit(E);
+}
+
+bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MT->getNumRows();
+  unsigned NumCols = MT->getNumColumns();
+  unsigned NElts = NumRows * NumCols;
+  QualType EltTy = MT->getElementType();
+  const Expr *SE = E->getSubExpr();
+
+  switch (E->getCastKind()) {
+  case CK_HLSLAggregateSplatCast: {
+    APValue Val;
+    QualType ValTy;
+
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
+
+    APValue CastedVal;
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!handleScalarCast(Info, FPO, E, ValTy, EltTy, Val, CastedVal))
+      return false;
+
+    SmallVector<APValue, 16> SplatEls(NElts, CastedVal);
+    return Success(SplatEls, E);
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcVals, SrcTypes))
+      return false;
+
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    SmallVector<QualType, 16> DestTypes(NElts, EltTy);
+    SmallVector<APValue, 16> ResultEls(NElts);
+    if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
+                               ResultEls))
+      return false;
+    return Success(ResultEls, E);
+  }
+  default:
+    return ExprEvaluatorBaseTy::VisitCastExpr(E);
+  }
+}
+
+bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  QualType EltTy = MT->getElementType();
+
+  assert(E->getNumInits() == MT->getNumElementsFlattened() &&
+         "Expected number of elements in initializer list to match the number "
+         "of matrix elements");
+
+  SmallVector<APValue, 16> Elements;
+  Elements.reserve(MT->getNumElementsFlattened());
+
+  // The following loop assumes the elements of the matrix InitListExpr are in
+  // row-major order, which matches the row-major ordering assumption of the
+  // matrix APValue.
+  for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I) {
+    if (EltTy->isIntegerType()) {
+      llvm::APSInt IntVal;
+      if (!EvaluateInteger(E->getInit(I), IntVal, Info))
+        return false;
+      Elements.push_back(APValue(IntVal));
+    } else {
+      llvm::APFloat FloatVal(0.0);
+      if (!EvaluateFloat(E->getInit(I), FloatVal, Info))
+        return false;
+      Elements.push_back(APValue(FloatVal));
+    }
+  }
+
+  return Success(Elements, E);
+}
+
+//===----------------------------------------------------------------------===//
 // Array Evaluation
 //===----------------------------------------------------------------------===//
 
@@ -12928,6 +15504,7 @@ namespace {
     bool VisitCallExpr(const CallExpr *E) {
       return handleCallExpr(E, Result, &This);
     }
+    bool VisitCastExpr(const CastExpr *E);
     bool VisitInitListExpr(const InitListExpr *E,
                            QualType AllocType = QualType());
     bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
@@ -12945,6 +15522,7 @@ namespace {
                                          ArrayRef<Expr *> Args,
                                          const Expr *ArrayFiller,
                                          QualType AllocType = QualType());
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 } // end anonymous namespace
 
@@ -12998,6 +15576,49 @@ static bool MaybeElementDependentArrayFiller(const Expr *FillerExpr) {
   return true;
 }
 
+bool ArrayExprEvaluator::VisitCastExpr(const CastExpr *E) {
+  const Expr *SE = E->getSubExpr();
+
+  switch (E->getCastKind()) {
+  default:
+    return ExprEvaluatorBaseTy::VisitCastExpr(E);
+  case CK_HLSLAggregateSplatCast: {
+    APValue Val;
+    QualType ValTy;
+
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
+
+    unsigned NEls = elementwiseSize(Info, E->getType());
+
+    SmallVector<APValue> SplatEls(NEls, Val);
+    SmallVector<QualType> SplatType(NEls, ValTy);
+
+    // cast the elements
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!constructAggregate(Info, FPO, E, Result, E->getType(), SplatEls,
+                            SplatType))
+      return false;
+
+    return true;
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcEls;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcEls, SrcTypes))
+      return false;
+
+    // cast the elements
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!constructAggregate(Info, FPO, E, Result, E->getType(), SrcEls,
+                            SrcTypes))
+      return false;
+    return true;
+  }
+  }
+}
+
 bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E,
                                            QualType AllocType) {
   const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(
@@ -13032,12 +15653,6 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   bool Success = true;
 
-  assert((!Result.isArray() || Result.getArrayInitializedElts() == 0) &&
-         "zero-initialized array shouldn't have any initialized elts");
-  APValue Filler;
-  if (Result.isArray() && Result.hasArrayFiller())
-    Filler = Result.getArrayFiller();
-
   unsigned NumEltsToInit = Args.size();
   unsigned NumElts = CAT->getZExtSize();
 
@@ -13047,26 +15662,50 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
   } else {
+    // Add additional elements represented by EmbedExpr.
     for (auto *Init : Args) {
       if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts()))
         NumEltsToInit += EmbedS->getDataElementCount() - 1;
     }
+    // If we have extra elements in the list, they will be discarded.
     if (NumEltsToInit > NumElts)
       NumEltsToInit = NumElts;
+    // If we're overwriting memory which already has an object, make sure we
+    // don't reduce the number of non-filler elements.  (It's possible to
+    // optimize this in some cases, but the logic gets really complicated.)
+    if (Result.hasValue() && NumEltsToInit < Result.getArrayInitializedElts())
+      NumEltsToInit = Result.getArrayInitializedElts();
   }
 
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
 
-  Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
-
-  // If the array was previously zero-initialized, preserve the
-  // zero-initialized values.
-  if (Filler.hasValue()) {
-    for (unsigned I = 0, E = Result.getArrayInitializedElts(); I != E; ++I)
-      Result.getArrayInitializedElt(I) = Filler;
-    if (Result.hasArrayFiller())
-      Result.getArrayFiller() = Filler;
+  if (!Result.hasValue()) {
+    Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
+  } else if (Result.getArrayInitializedElts() != NumEltsToInit) {
+    // Number of inititalized elts changed. Recreate the APValue, and copy over
+    // the relevant elements.  (This is essentially just fixing the internal
+    // representation of the value, because it's tied to the number of
+    // non-filler elements.)
+    //
+    // This should be hit rarely, but there are some edge cases:
+    //
+    // - The array could be zero-initialized.
+    // - There could be a DesignatedInitListExpr.
+    // - operator new[] can be used to start the lifetime early.
+    APValue NewResult = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
+    // First copy existing elements.
+    unsigned NumOldElts = Result.getArrayInitializedElts();
+    for (unsigned I = 0; I < NumOldElts; ++I) {
+      NewResult.getArrayInitializedElt(I) =
+          std::move(Result.getArrayInitializedElt(I));
+    }
+    // Then copy the array filler over the remaining elements.
+    for (unsigned I = Result.getArrayInitializedElts(); I < NumEltsToInit; ++I)
+      NewResult.getArrayInitializedElt(I) = Result.getArrayFiller();
+    if (NewResult.hasArrayFiller() && Result.hasArrayFiller())
+      NewResult.getArrayFiller() = Result.getArrayFiller();
+    Result = std::move(NewResult);
   }
 
   LValue Subobject = This;
@@ -13074,6 +15713,11 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
     if (Init->isValueDependent())
       return EvaluateDependentExpr(Init, Info);
+
+    // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+    // aren't supposed to be modified.
+    if (isa<NoInitExpr>(Init))
+      return true;
 
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||
@@ -13264,6 +15908,13 @@ bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
                                          E->getArrayFiller());
+}
+
+bool ArrayExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 //===----------------------------------------------------------------------===//
@@ -13716,6 +16367,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::Pipe:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     // Classify all other types that don't fit into the regular
     // classification the same way.
     return GCCTypeClass::None;
@@ -14127,8 +16779,15 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 ///
 /// If @p WasError is non-null, this will report whether the failure to evaluate
 /// is to be treated as an Error in IntExprEvaluator.
-static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
-                                         EvalInfo &Info, uint64_t &Size) {
+///
+/// If @p IsDynamic is true (i.e. we're evaluating
+/// __builtin_dynamic_object_size) and the operand designates a flexible array
+/// member annotated with 'counted_by', we refuse to fold so that IR generation
+/// can emit the count-based runtime size computation.
+static std::optional<uint64_t>
+tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
+                             bool IsDynamic = false) {
+
   // Determine the denoted object.
   LValue LVal;
   {
@@ -14143,37 +16802,50 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
       // Expr::tryEvaluateObjectSize.
       APValue RVal;
       if (!EvaluateAsRValue(Info, E, RVal))
-        return false;
+        return std::nullopt;
       LVal.setFrom(Info.Ctx, RVal);
     } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), LVal, Info,
                                 /*InvalidBaseOK=*/true))
-      return false;
+      return std::nullopt;
   }
 
   // If we point to before the start of the object, there are no accessible
   // bytes.
-  if (LVal.getLValueOffset().isNegative()) {
-    Size = 0;
-    return true;
+  if (LVal.getLValueOffset().isNegative())
+    return 0;
+
+  // For __builtin_dynamic_object_size on a counted_by-annotated flexible
+  // array member, defer to IR generation (emitCountedBySize in CGBuiltin):
+  // its runtime computation uses the live 'count' field and is more accurate
+  // than the layout/initializer-derived size we'd produce here. Use the same
+  // findStructFieldAccess form-recognition CGBuiltin does, so we refuse to
+  // fold on exactly the shapes that path handles (and, importantly, *not*
+  // on '&af.fam' which designates the array-as-a-whole and stays on the
+  // layout-derived path to match GCC). Checked after the negative-offset
+  // early return above so that obviously out-of-bounds operands still fold
+  // to 0, preserving existing behavior.
+  if (IsDynamic) {
+    const auto *ME = dyn_cast_or_null<MemberExpr>(findStructFieldAccess(E));
+    const auto *FD = ME ? dyn_cast<FieldDecl>(ME->getMemberDecl()) : nullptr;
+    if (FD && FD->getType()->isCountAttributedType())
+      return std::nullopt;
   }
 
   CharUnits EndOffset;
   if (!determineEndOffset(Info, E->getExprLoc(), Type, LVal, EndOffset))
-    return false;
+    return std::nullopt;
 
   // If we've fallen outside of the end offset, just pretend there's nothing to
   // write to/read from.
   if (EndOffset <= LVal.getLValueOffset())
-    Size = 0;
-  else
-    Size = (EndOffset - LVal.getLValueOffset()).getQuantity();
-  return true;
+    return 0;
+  return (EndOffset - LVal.getLValueOffset()).getQuantity();
 }
 
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
-  return VisitBuiltinCallExpr(E, E->getBuiltinCallee());
+  return VisitBuiltinCallExpr(E, ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E));
 }
 
 static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
@@ -14253,9 +16925,43 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(APValue(ResultInt), E);
   };
 
+  auto HandleCRC32 = [&](unsigned DataBytes) -> bool {
+    APSInt CRC, Data;
+    if (!EvaluateInteger(E->getArg(0), CRC, Info) ||
+        !EvaluateInteger(E->getArg(1), Data, Info))
+      return false;
+
+    uint64_t CRCVal = CRC.getZExtValue();
+    uint64_t DataVal = Data.getZExtValue();
+
+    // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+    static const uint32_t CRC32C_POLY = 0x82F63B78;
+
+    // Process each byte
+    uint32_t Result = static_cast<uint32_t>(CRCVal);
+    for (unsigned I = 0; I != DataBytes; ++I) {
+      uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
+      Result ^= Byte;
+      for (int J = 0; J != 8; ++J) {
+        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
+      }
+    }
+
+    return Success(Result, E);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
+
+  case X86::BI__builtin_ia32_crc32qi:
+    return HandleCRC32(1);
+  case X86::BI__builtin_ia32_crc32hi:
+    return HandleCRC32(2);
+  case X86::BI__builtin_ia32_crc32si:
+    return HandleCRC32(4);
+  case X86::BI__builtin_ia32_crc32di:
+    return HandleCRC32(8);
 
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
@@ -14264,9 +16970,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     assert(Type <= 3 && "unexpected type");
 
-    uint64_t Size;
-    if (tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, Size))
-      return Success(Size, E);
+    bool IsDynamic = BuiltinOp == Builtin::BI__builtin_dynamic_object_size;
+    if (std::optional<uint64_t> Size =
+            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, IsDynamic))
+      return Success(*Size, E);
 
     if (E->getArg(0)->HasSideEffects(Info.Ctx))
       return Success((Type & 2) ? 0 : -1, E);
@@ -14353,6 +17060,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(AlignedVal, E);
   }
 
+  case Builtin::BI__builtin_bitreverseg:
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -14364,13 +17072,19 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return Success(Val.reverseBits(), E);
   }
-
+  case Builtin::BI__builtin_bswapg:
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
-  case Builtin::BI__builtin_bswap64: {
+  case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
+    if (Val.getBitWidth() == 8 || Val.getBitWidth() == 1)
+      return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
   }
@@ -14546,6 +17260,28 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
     uint64_t Result = getPointerAuthStableSipHash(Literal->getString());
     return Success(Result, E);
+  }
+
+  case Builtin::BI__builtin_infer_alloc_token: {
+    // If we fail to infer a type, this fails to be a constant expression; this
+    // can be checked with __builtin_constant_p(...).
+    QualType AllocType = infer_alloc::inferPossibleType(E, Info.Ctx, nullptr);
+    if (AllocType.isNull())
+      return Error(
+          E, diag::note_constexpr_infer_alloc_token_type_inference_failed);
+    auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, Info.Ctx);
+    if (!ATMD)
+      return Error(E, diag::note_constexpr_infer_alloc_token_no_metadata);
+    auto Mode =
+        Info.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+    uint64_t BitWidth = Info.Ctx.getTypeSize(Info.Ctx.getSizeType());
+    auto MaxTokensOpt = Info.getLangOpts().AllocTokenMax;
+    uint64_t MaxTokens =
+        MaxTokensOpt.value_or(0) ? *MaxTokensOpt : (~0ULL >> (64 - BitWidth));
+    auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
+    if (!MaybeToken)
+      return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    return Success(llvm::APInt(BitWidth, *MaybeToken), E);
   }
 
   case Builtin::BI__builtin_ffs:
@@ -14728,34 +17464,280 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
-  case Builtin::BI_rotl8: // Microsoft variants of rotate right
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
-      return false;
-
-    return Success(Val.rotl(Amt), E);
-  }
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
+    APSInt Value, Amount;
+    if (!EvaluateInteger(E->getArg(0), Value, Info) ||
+        !EvaluateInteger(E->getArg(1), Amount, Info))
       return false;
 
-    return Success(Val.rotr(Amt), E);
+    Amount = NormalizeRotateAmount(Value, Amount);
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BIstdc_rotate_right_uc:
+    case Builtin::BIstdc_rotate_right_us:
+    case Builtin::BIstdc_rotate_right_ui:
+    case Builtin::BIstdc_rotate_right_ul:
+    case Builtin::BIstdc_rotate_right_ull:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      return Success(
+          APSInt(Value.rotr(Amount.getZExtValue()), Value.isUnsigned()), E);
+    default:
+      return Success(
+          APSInt(Value.rotl(Amount.getZExtValue()), Value.isUnsigned()), E);
+    }
+  }
+
+  case Builtin::BIstdc_leading_zeros_uc:
+  case Builtin::BIstdc_leading_zeros_us:
+  case Builtin::BIstdc_leading_zeros_ui:
+  case Builtin::BIstdc_leading_zeros_ul:
+  case Builtin::BIstdc_leading_zeros_ull:
+  case Builtin::BIstdc_leading_ones_uc:
+  case Builtin::BIstdc_leading_ones_us:
+  case Builtin::BIstdc_leading_ones_ui:
+  case Builtin::BIstdc_leading_ones_ul:
+  case Builtin::BIstdc_leading_ones_ull:
+  case Builtin::BIstdc_trailing_zeros_uc:
+  case Builtin::BIstdc_trailing_zeros_us:
+  case Builtin::BIstdc_trailing_zeros_ui:
+  case Builtin::BIstdc_trailing_zeros_ul:
+  case Builtin::BIstdc_trailing_zeros_ull:
+  case Builtin::BIstdc_trailing_ones_uc:
+  case Builtin::BIstdc_trailing_ones_us:
+  case Builtin::BIstdc_trailing_ones_ui:
+  case Builtin::BIstdc_trailing_ones_ul:
+  case Builtin::BIstdc_trailing_ones_ull:
+  case Builtin::BIstdc_first_leading_zero_uc:
+  case Builtin::BIstdc_first_leading_zero_us:
+  case Builtin::BIstdc_first_leading_zero_ui:
+  case Builtin::BIstdc_first_leading_zero_ul:
+  case Builtin::BIstdc_first_leading_zero_ull:
+  case Builtin::BIstdc_first_leading_one_uc:
+  case Builtin::BIstdc_first_leading_one_us:
+  case Builtin::BIstdc_first_leading_one_ui:
+  case Builtin::BIstdc_first_leading_one_ul:
+  case Builtin::BIstdc_first_leading_one_ull:
+  case Builtin::BIstdc_first_trailing_zero_uc:
+  case Builtin::BIstdc_first_trailing_zero_us:
+  case Builtin::BIstdc_first_trailing_zero_ui:
+  case Builtin::BIstdc_first_trailing_zero_ul:
+  case Builtin::BIstdc_first_trailing_zero_ull:
+  case Builtin::BIstdc_first_trailing_one_uc:
+  case Builtin::BIstdc_first_trailing_one_us:
+  case Builtin::BIstdc_first_trailing_one_ui:
+  case Builtin::BIstdc_first_trailing_one_ul:
+  case Builtin::BIstdc_first_trailing_one_ull:
+  case Builtin::BIstdc_count_zeros_uc:
+  case Builtin::BIstdc_count_zeros_us:
+  case Builtin::BIstdc_count_zeros_ui:
+  case Builtin::BIstdc_count_zeros_ul:
+  case Builtin::BIstdc_count_zeros_ull:
+  case Builtin::BIstdc_count_ones_uc:
+  case Builtin::BIstdc_count_ones_us:
+  case Builtin::BIstdc_count_ones_ui:
+  case Builtin::BIstdc_count_ones_ul:
+  case Builtin::BIstdc_count_ones_ull:
+  case Builtin::BIstdc_has_single_bit_uc:
+  case Builtin::BIstdc_has_single_bit_us:
+  case Builtin::BIstdc_has_single_bit_ui:
+  case Builtin::BIstdc_has_single_bit_ul:
+  case Builtin::BIstdc_has_single_bit_ull:
+  case Builtin::BIstdc_bit_width_uc:
+  case Builtin::BIstdc_bit_width_us:
+  case Builtin::BIstdc_bit_width_ui:
+  case Builtin::BIstdc_bit_width_ul:
+  case Builtin::BIstdc_bit_width_ull:
+  case Builtin::BIstdc_bit_floor_uc:
+  case Builtin::BIstdc_bit_floor_us:
+  case Builtin::BIstdc_bit_floor_ui:
+  case Builtin::BIstdc_bit_floor_ul:
+  case Builtin::BIstdc_bit_floor_ull:
+  case Builtin::BIstdc_bit_ceil_uc:
+  case Builtin::BIstdc_bit_ceil_us:
+  case Builtin::BIstdc_bit_ceil_ui:
+  case Builtin::BIstdc_bit_ceil_ul:
+  case Builtin::BIstdc_bit_ceil_ull:
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    const unsigned ResBitWidth = Info.Ctx.getIntWidth(E->getType());
+
+    switch (BuiltinOp) {
+    case Builtin::BIstdc_leading_zeros_uc:
+    case Builtin::BIstdc_leading_zeros_us:
+    case Builtin::BIstdc_leading_zeros_ui:
+    case Builtin::BIstdc_leading_zeros_ul:
+    case Builtin::BIstdc_leading_zeros_ull:
+    case Builtin::BI__builtin_stdc_leading_zeros:
+      return Success(APInt(ResBitWidth, Val.countl_zero()), E);
+    case Builtin::BIstdc_leading_ones_uc:
+    case Builtin::BIstdc_leading_ones_us:
+    case Builtin::BIstdc_leading_ones_ui:
+    case Builtin::BIstdc_leading_ones_ul:
+    case Builtin::BIstdc_leading_ones_ull:
+    case Builtin::BI__builtin_stdc_leading_ones:
+      return Success(APInt(ResBitWidth, Val.countl_one()), E);
+    case Builtin::BIstdc_trailing_zeros_uc:
+    case Builtin::BIstdc_trailing_zeros_us:
+    case Builtin::BIstdc_trailing_zeros_ui:
+    case Builtin::BIstdc_trailing_zeros_ul:
+    case Builtin::BIstdc_trailing_zeros_ull:
+    case Builtin::BI__builtin_stdc_trailing_zeros:
+      return Success(APInt(ResBitWidth, Val.countr_zero()), E);
+    case Builtin::BIstdc_trailing_ones_uc:
+    case Builtin::BIstdc_trailing_ones_us:
+    case Builtin::BIstdc_trailing_ones_ui:
+    case Builtin::BIstdc_trailing_ones_ul:
+    case Builtin::BIstdc_trailing_ones_ull:
+    case Builtin::BI__builtin_stdc_trailing_ones:
+      return Success(APInt(ResBitWidth, Val.countr_one()), E);
+    case Builtin::BIstdc_first_leading_zero_uc:
+    case Builtin::BIstdc_first_leading_zero_us:
+    case Builtin::BIstdc_first_leading_zero_ui:
+    case Builtin::BIstdc_first_leading_zero_ul:
+    case Builtin::BIstdc_first_leading_zero_ull:
+    case Builtin::BI__builtin_stdc_first_leading_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countl_one() + 1), E);
+    case Builtin::BIstdc_first_leading_one_uc:
+    case Builtin::BIstdc_first_leading_one_us:
+    case Builtin::BIstdc_first_leading_one_ui:
+    case Builtin::BIstdc_first_leading_one_ul:
+    case Builtin::BIstdc_first_leading_one_ull:
+    case Builtin::BI__builtin_stdc_first_leading_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countl_zero() + 1), E);
+    case Builtin::BIstdc_first_trailing_zero_uc:
+    case Builtin::BIstdc_first_trailing_zero_us:
+    case Builtin::BIstdc_first_trailing_zero_ui:
+    case Builtin::BIstdc_first_trailing_zero_ul:
+    case Builtin::BIstdc_first_trailing_zero_ull:
+    case Builtin::BI__builtin_stdc_first_trailing_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countr_one() + 1), E);
+    case Builtin::BIstdc_first_trailing_one_uc:
+    case Builtin::BIstdc_first_trailing_one_us:
+    case Builtin::BIstdc_first_trailing_one_ui:
+    case Builtin::BIstdc_first_trailing_one_ul:
+    case Builtin::BIstdc_first_trailing_one_ull:
+    case Builtin::BI__builtin_stdc_first_trailing_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countr_zero() + 1), E);
+    case Builtin::BIstdc_count_zeros_uc:
+    case Builtin::BIstdc_count_zeros_us:
+    case Builtin::BIstdc_count_zeros_ui:
+    case Builtin::BIstdc_count_zeros_ul:
+    case Builtin::BIstdc_count_zeros_ull:
+    case Builtin::BI__builtin_stdc_count_zeros: {
+      APInt Cnt(ResBitWidth, BitWidth - Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_count_ones_uc:
+    case Builtin::BIstdc_count_ones_us:
+    case Builtin::BIstdc_count_ones_ui:
+    case Builtin::BIstdc_count_ones_ul:
+    case Builtin::BIstdc_count_ones_ull:
+    case Builtin::BI__builtin_stdc_count_ones: {
+      APInt Cnt(ResBitWidth, Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_has_single_bit_uc:
+    case Builtin::BIstdc_has_single_bit_us:
+    case Builtin::BIstdc_has_single_bit_ui:
+    case Builtin::BIstdc_has_single_bit_ul:
+    case Builtin::BIstdc_has_single_bit_ull:
+    case Builtin::BI__builtin_stdc_has_single_bit: {
+      APInt Res(ResBitWidth, Val.popcount() == 1 ? 1 : 0);
+      return Success(APSInt(Res, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_bit_width_uc:
+    case Builtin::BIstdc_bit_width_us:
+    case Builtin::BIstdc_bit_width_ui:
+    case Builtin::BIstdc_bit_width_ul:
+    case Builtin::BIstdc_bit_width_ull:
+    case Builtin::BI__builtin_stdc_bit_width:
+      return Success(APInt(ResBitWidth, BitWidth - Val.countl_zero()), E);
+    case Builtin::BIstdc_bit_floor_uc:
+    case Builtin::BIstdc_bit_floor_us:
+    case Builtin::BIstdc_bit_floor_ui:
+    case Builtin::BIstdc_bit_floor_ul:
+    case Builtin::BIstdc_bit_floor_ull:
+    case Builtin::BI__builtin_stdc_bit_floor: {
+      if (Val.isZero())
+        return Success(APInt(BitWidth, 0), E);
+      unsigned Exp = BitWidth - Val.countl_zero() - 1;
+      return Success(
+          APSInt(APInt::getOneBitSet(BitWidth, Exp), /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BIstdc_bit_ceil_uc:
+    case Builtin::BIstdc_bit_ceil_us:
+    case Builtin::BIstdc_bit_ceil_ui:
+    case Builtin::BIstdc_bit_ceil_ul:
+    case Builtin::BIstdc_bit_ceil_ull:
+    case Builtin::BI__builtin_stdc_bit_ceil: {
+      if (Val.ule(1))
+        return Success(APSInt(APInt(BitWidth, 1), /*IsUnsigned*/ true), E);
+      APInt ValMinusOne = Val - 1;
+      unsigned LZ = ValMinusOne.countl_zero();
+      if (LZ == 0)
+        return Success(APSInt(APInt(BitWidth, 0), /*IsUnsigned*/ true),
+                       E); // overflows; wrap to 0
+      APInt Result = APInt::getOneBitSet(BitWidth, BitWidth - LZ);
+      return Success(APSInt(Result, /*IsUnsigned*/ true), E);
+    }
+    default:
+      llvm_unreachable("Unknown stdc builtin");
+    }
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
@@ -14794,6 +17776,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APInt Result = std::min(LHS, RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
   }
+  case Builtin::BI__builtin_elementwise_clmul: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = llvm::APIntOps::clmul(LHS, RHS);
+    return Success(APSInt(Result, LHS.isUnsigned()), E);
+  }
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APSInt Hi, Lo, Shift;
@@ -14828,9 +17819,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
     // and support folding strlen() to a constant.
-    uint64_t StrLen;
-    if (EvaluateBuiltinStrLen(E->getArg(0), StrLen, Info))
-      return Success(StrLen, E);
+    if (std::optional<uint64_t> StrLen =
+            EvaluateBuiltinStrLen(E->getArg(0), Info))
+      return Success(*StrLen, E);
     return false;
   }
 
@@ -15104,7 +18095,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                       ResultType->isSignedIntegerOrEnumerationType();
       uint64_t LHSSize = LHS.getBitWidth();
       uint64_t RHSSize = RHS.getBitWidth();
-      uint64_t ResultSize = Info.Ctx.getTypeSize(ResultType);
+      uint64_t ResultSize = Info.Ctx.getIntWidth(ResultType);
       uint64_t MaxBits = std::max(std::max(LHSSize, RHSSize), ResultSize);
 
       // Add an additional bit if the signedness isn't uniformly agreed to. We
@@ -15155,23 +18146,23 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       break;
     }
 
+    // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
+    // since it will give us the behavior of a TruncOrSelf in the case where
+    // its parameter <= its size.  We previously set Result to be at least the
+    // integer width of the result, so getIntWidth(ResultType) <=
+    // Result.BitWidth will work exactly like TruncOrSelf.
+    APSInt Temp = Result.extOrTrunc(Info.Ctx.getIntWidth(ResultType));
+    Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
+
     // In the case where multiple sizes are allowed, truncate and see if
     // the values are the same.
     if (BuiltinOp == Builtin::BI__builtin_add_overflow ||
         BuiltinOp == Builtin::BI__builtin_sub_overflow ||
         BuiltinOp == Builtin::BI__builtin_mul_overflow) {
-      // APSInt doesn't have a TruncOrSelf, so we use extOrTrunc instead,
-      // since it will give us the behavior of a TruncOrSelf in the case where
-      // its parameter <= its size.  We previously set Result to be at least the
-      // type-size of the result, so getTypeSize(ResultType) <= Result.BitWidth
-      // will work exactly like TruncOrSelf.
-      APSInt Temp = Result.extOrTrunc(Info.Ctx.getTypeSize(ResultType));
-      Temp.setIsSigned(ResultType->isSignedIntegerOrEnumerationType());
-
       if (!APSInt::isSameValue(Temp, Result))
         DidOverflow = true;
-      Result = Temp;
     }
+    Result = Temp;
 
     APValue APV{Result};
     if (!handleAssignment(Info, E, ResultLValue, ResultType, APV))
@@ -15268,6 +18259,36 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(CarryOut, E);
   }
 
+  case clang::X86::BI__builtin_ia32_movmskps:
+  case clang::X86::BI__builtin_ia32_movmskpd:
+  case clang::X86::BI__builtin_ia32_pmovmskb128:
+  case clang::X86::BI__builtin_ia32_pmovmskb256:
+  case clang::X86::BI__builtin_ia32_movmskps256:
+  case clang::X86::BI__builtin_ia32_movmskpd256: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ResultLen = Info.Ctx.getTypeSize(
+        E->getCallReturnType(Info.Ctx)); // Always 32-bit integer.
+    APInt Result(ResultLen, 0);
+
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APInt Elem;
+      if (ElemQT->isIntegerType()) {
+        Elem = Source.getVectorElt(I).getInt();
+      } else if (ElemQT->isRealFloatingType()) {
+        Elem = Source.getVectorElt(I).getFloat().bitcastToAPInt();
+      } else {
+        return false;
+      }
+      Result.setBitVal(I, Elem.isNegative());
+    }
+    return Success(Result, E);
+  }
+
   case clang::X86::BI__builtin_ia32_bextr_u32:
   case clang::X86::BI__builtin_ia32_bextr_u64:
   case clang::X86::BI__builtin_ia32_bextri_u32:
@@ -15305,6 +18326,69 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val, E);
   }
 
+  case clang::X86::BI__builtin_ia32_ktestcqi:
+  case clang::X86::BI__builtin_ia32_ktestchi:
+  case clang::X86::BI__builtin_ia32_ktestcsi:
+  case clang::X86::BI__builtin_ia32_ktestcdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success((~A & B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_ktestzqi:
+  case clang::X86::BI__builtin_ia32_ktestzhi:
+  case clang::X86::BI__builtin_ia32_ktestzsi:
+  case clang::X86::BI__builtin_ia32_ktestzdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success((A & B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kortestcqi:
+  case clang::X86::BI__builtin_ia32_kortestchi:
+  case clang::X86::BI__builtin_ia32_kortestcsi:
+  case clang::X86::BI__builtin_ia32_kortestcdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success(~(A | B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kortestzqi:
+  case clang::X86::BI__builtin_ia32_kortestzhi:
+  case clang::X86::BI__builtin_ia32_kortestzsi:
+  case clang::X86::BI__builtin_ia32_kortestzdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success((A | B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kunpckhi:
+  case clang::X86::BI__builtin_ia32_kunpckdi:
+  case clang::X86::BI__builtin_ia32_kunpcksi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    // Generic kunpack: extract lower half of each operand and concatenate
+    // Result = A[HalfWidth-1:0] concat B[HalfWidth-1:0]
+    unsigned BW = A.getBitWidth();
+    APSInt Result(A.trunc(BW / 2).concat(B.trunc(BW / 2)), A.isUnsigned());
+    return Success(Result, E);
+  }
+
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64: {
@@ -15324,33 +18408,23 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di: {
+  case clang::X86::BI__builtin_ia32_pdep_di:
+  case Builtin::BI__builtin_elementwise_pdep: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
       return false;
-
-    unsigned BitWidth = Val.getBitWidth();
-    APInt Result = APInt::getZero(BitWidth);
-    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
-      if (Msk[I])
-        Result.setBitVal(I, Val[P++]);
-    return Success(Result, E);
+    return Success(llvm::APIntOps::pdep(Val, Msk), E);
   }
 
   case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di: {
+  case clang::X86::BI__builtin_ia32_pext_di:
+  case Builtin::BI__builtin_elementwise_pext: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
       return false;
-
-    unsigned BitWidth = Val.getBitWidth();
-    APInt Result = APInt::getZero(BitWidth);
-    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
-      if (Msk[I])
-        Result.setBitVal(P++, Val[I]);
-    return Success(Result, E);
+    return Success(llvm::APIntOps::pext(Val, Msk), E);
   }
   case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256:
@@ -15439,6 +18513,40 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
 
+  case X86::BI__builtin_ia32_kmovb:
+  case X86::BI__builtin_ia32_kmovw:
+  case X86::BI__builtin_ia32_kmovd:
+  case X86::BI__builtin_ia32_kmovq: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    return Success(Val, E);
+  }
+
+  case X86::BI__builtin_ia32_kshiftliqi:
+  case X86::BI__builtin_ia32_kshiftlihi:
+  case X86::BI__builtin_ia32_kshiftlisi:
+  case X86::BI__builtin_ia32_kshiftlidi: {
+    return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
+      unsigned Amt = RHS.getZExtValue() & 0xFF;
+      if (Amt >= LHS.getBitWidth())
+        return APSInt(APInt::getZero(LHS.getBitWidth()), LHS.isUnsigned());
+      return APSInt(LHS.shl(Amt), LHS.isUnsigned());
+    });
+  }
+
+  case X86::BI__builtin_ia32_kshiftriqi:
+  case X86::BI__builtin_ia32_kshiftrihi:
+  case X86::BI__builtin_ia32_kshiftrisi:
+  case X86::BI__builtin_ia32_kshiftridi: {
+    return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
+      unsigned Amt = RHS.getZExtValue() & 0xFF;
+      if (Amt >= LHS.getBitWidth())
+        return APSInt(APInt::getZero(LHS.getBitWidth()), LHS.isUnsigned());
+      return APSInt(LHS.lshr(Amt), LHS.isUnsigned());
+    });
+  }
+
   case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
   case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
   case clang::X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -15456,6 +18564,162 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     unsigned N = Vec.getVectorLength();
     unsigned Idx = static_cast<unsigned>(IdxAPS.getZExtValue() & (N - 1));
     return Success(Vec.getVectorElt(Idx).getInt(), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cvtb2mask128:
+  case clang::X86::BI__builtin_ia32_cvtb2mask256:
+  case clang::X86::BI__builtin_ia32_cvtb2mask512:
+  case clang::X86::BI__builtin_ia32_cvtw2mask128:
+  case clang::X86::BI__builtin_ia32_cvtw2mask256:
+  case clang::X86::BI__builtin_ia32_cvtw2mask512:
+  case clang::X86::BI__builtin_ia32_cvtd2mask128:
+  case clang::X86::BI__builtin_ia32_cvtd2mask256:
+  case clang::X86::BI__builtin_ia32_cvtd2mask512:
+  case clang::X86::BI__builtin_ia32_cvtq2mask128:
+  case clang::X86::BI__builtin_ia32_cvtq2mask256:
+  case clang::X86::BI__builtin_ia32_cvtq2mask512: {
+    assert(E->getNumArgs() == 1);
+    APValue Vec;
+    if (!EvaluateVector(E->getArg(0), Vec, Info))
+      return false;
+
+    unsigned VectorLen = Vec.getVectorLength();
+    unsigned RetWidth = Info.Ctx.getIntWidth(E->getType());
+    llvm::APInt Bits(RetWidth, 0);
+
+    for (unsigned ElemNum = 0; ElemNum != VectorLen; ++ElemNum) {
+      const APSInt &A = Vec.getVectorElt(ElemNum).getInt();
+      unsigned MSB = A[A.getBitWidth() - 1];
+      Bits.setBitVal(ElemNum, MSB);
+    }
+
+    APSInt RetMask(Bits, /*isUnsigned=*/true);
+    return Success(APValue(RetMask), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cmpb128_mask:
+  case clang::X86::BI__builtin_ia32_cmpw128_mask:
+  case clang::X86::BI__builtin_ia32_cmpd128_mask:
+  case clang::X86::BI__builtin_ia32_cmpq128_mask:
+  case clang::X86::BI__builtin_ia32_cmpb256_mask:
+  case clang::X86::BI__builtin_ia32_cmpw256_mask:
+  case clang::X86::BI__builtin_ia32_cmpd256_mask:
+  case clang::X86::BI__builtin_ia32_cmpq256_mask:
+  case clang::X86::BI__builtin_ia32_cmpb512_mask:
+  case clang::X86::BI__builtin_ia32_cmpw512_mask:
+  case clang::X86::BI__builtin_ia32_cmpd512_mask:
+  case clang::X86::BI__builtin_ia32_cmpq512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpb128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpw128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpd128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpq128_mask:
+  case clang::X86::BI__builtin_ia32_ucmpb256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpw256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpd256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpq256_mask:
+  case clang::X86::BI__builtin_ia32_ucmpb512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpw512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpd512_mask:
+  case clang::X86::BI__builtin_ia32_ucmpq512_mask: {
+    assert(E->getNumArgs() == 4);
+
+    bool IsUnsigned =
+        (BuiltinOp >= clang::X86::BI__builtin_ia32_ucmpb128_mask &&
+         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpw512_mask);
+
+    APValue LHS, RHS;
+    APSInt Mask, Opcode;
+    if (!EvaluateVector(E->getArg(0), LHS, Info) ||
+        !EvaluateVector(E->getArg(1), RHS, Info) ||
+        !EvaluateInteger(E->getArg(2), Opcode, Info) ||
+        !EvaluateInteger(E->getArg(3), Mask, Info))
+      return false;
+
+    assert(LHS.getVectorLength() == RHS.getVectorLength());
+
+    unsigned VectorLen = LHS.getVectorLength();
+    unsigned RetWidth = Mask.getBitWidth();
+
+    APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+
+    for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+      const APSInt &A = LHS.getVectorElt(ElemNum).getInt();
+      const APSInt &B = RHS.getVectorElt(ElemNum).getInt();
+      bool Result = false;
+
+      switch (Opcode.getExtValue() & 0x7) {
+      case 0: // _MM_CMPINT_EQ
+        Result = (A == B);
+        break;
+      case 1: // _MM_CMPINT_LT
+        Result = IsUnsigned ? A.ult(B) : A.slt(B);
+        break;
+      case 2: // _MM_CMPINT_LE
+        Result = IsUnsigned ? A.ule(B) : A.sle(B);
+        break;
+      case 3: // _MM_CMPINT_FALSE
+        Result = false;
+        break;
+      case 4: // _MM_CMPINT_NE
+        Result = (A != B);
+        break;
+      case 5: // _MM_CMPINT_NLT (>=)
+        Result = IsUnsigned ? A.uge(B) : A.sge(B);
+        break;
+      case 6: // _MM_CMPINT_NLE (>)
+        Result = IsUnsigned ? A.ugt(B) : A.sgt(B);
+        break;
+      case 7: // _MM_CMPINT_TRUE
+        Result = true;
+        break;
+      }
+
+      RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
+    }
+
+    return Success(APValue(RetMask), E);
+  }
+  case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb512_mask: {
+    assert(E->getNumArgs() == 3);
+
+    APValue Source, ShuffleMask;
+    APSInt ZeroMask;
+    if (!EvaluateVector(E->getArg(0), Source, Info) ||
+        !EvaluateVector(E->getArg(1), ShuffleMask, Info) ||
+        !EvaluateInteger(E->getArg(2), ZeroMask, Info))
+      return false;
+
+    assert(Source.getVectorLength() == ShuffleMask.getVectorLength());
+    assert(ZeroMask.getBitWidth() == Source.getVectorLength());
+
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytes = Source.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    unsigned RetWidth = ZeroMask.getBitWidth();
+    APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+
+    for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+      APInt SourceQWord(64, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        uint64_t Byte = Source.getVectorElt(QWordId * NumBytesInQWord + ByteIdx)
+                            .getInt()
+                            .getZExtValue();
+        SourceQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned SelIdx = QWordId * NumBytesInQWord + ByteIdx;
+        unsigned M =
+            ShuffleMask.getVectorElt(SelIdx).getInt().getZExtValue() & 0x3F;
+        if (ZeroMask[SelIdx]) {
+          RetMask.setBitVal(SelIdx, SourceQWord[M]);
+        }
+      }
+    }
+    return Success(APValue(RetMask), E);
   }
   }
 }
@@ -16491,6 +19755,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+  Info.Ctx.recordOffsetOfEvaluation(OOE);
   CharUnits Result;
   unsigned n = OOE->getNumComponents();
   if (n == 0)
@@ -16509,7 +19774,19 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
       CurrentType = AT->getElementType();
       CharUnits ElementSize = Info.Ctx.getTypeSizeInChars(CurrentType);
-      Result += IdxResult.getSExtValue() * ElementSize;
+      // Reject negative indices, indices too large to fit in int64_t,
+      // and overflow in the offset computation.
+      if (IdxResult.isNegative() || IdxResult.getActiveBits() > 63)
+        return Error(OOE);
+      int64_t IdxVal = IdxResult.getExtValue();
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (IdxVal != 0 &&
+          ElemSize > std::numeric_limits<int64_t>::max() / IdxVal)
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
+      int64_t Offset = IdxVal * ElemSize;
+      if (Result.getQuantity() > std::numeric_limits<int64_t>::max() - Offset)
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
+      Result += CharUnits::fromQuantity(Offset);
       break;
     }
 
@@ -16575,7 +19852,8 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
+    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow() &&
+        !E->getType().isWrapType()) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
@@ -16670,7 +19948,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
-  case CK_HLSLElementwiseCast:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_MemberPointerToBoolean:
@@ -16716,12 +19993,15 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     if (!Result.isInt()) {
       // Allow casts of address-of-label differences if they are no-ops
-      // or narrowing.  (The narrowing case isn't actually guaranteed to
+      // or narrowing, if the result is at least 32 bits wide.
+      // (The narrowing case isn't actually guaranteed to
       // be constant-evaluatable except in some narrow cases which are hard
       // to detect here.  We let it through on the assumption the user knows
       // what they are doing.)
-      if (Result.isAddrLabelDiff())
-        return Info.Ctx.getTypeSize(DestType) <= Info.Ctx.getTypeSize(SrcType);
+      if (Result.isAddrLabelDiff()) {
+        unsigned DestBits = Info.Ctx.getTypeSize(DestType);
+        return DestBits >= 32 && DestBits <= Info.Ctx.getTypeSize(SrcType);
+      }
       // Only allow casts of lvalues if they are lossless.
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }
@@ -16816,6 +20096,27 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!EvaluateVector(SubExpr, Val, Info))
       return Error(E);
     return Success(Val.getVectorElt(0), E);
+  }
+  case CK_HLSLMatrixTruncation: {
+    APValue Val;
+    if (!EvaluateMatrix(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getMatrixElt(0, 0), E);
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SubExpr, DestType, SrcVals, SrcTypes))
+      return false;
+
+    // cast our single element
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    APValue ResultVal;
+    if (!handleScalarCast(Info, FPO, E, SrcTypes[0], DestType, SrcVals[0],
+                          ResultVal))
+      return false;
+    return Success(ResultVal, E);
   }
   }
 
@@ -17093,7 +20394,8 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
                                   bool SNaN,
                                   llvm::APFloat &Result) {
   const StringLiteral *S = dyn_cast<StringLiteral>(Arg->IgnoreParenCasts());
-  if (!S) return false;
+  if (!S || !S->isOrdinary())
+    return false;
 
   const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(ResultTy);
 
@@ -17129,7 +20431,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
 
-  switch (E->getBuiltinCallee()) {
+  unsigned BuiltinOp = ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E);
+
+  switch (BuiltinOp) {
   default:
     return false;
 
@@ -17354,6 +20658,9 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
   default:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
+  case CK_HLSLAggregateSplatCast:
+    llvm_unreachable("invalid cast kind for floating value");
+
   case CK_IntegralToFloating: {
     APSInt IntResult;
     const FPOptions FPO = E->getFPFeaturesInEffect(
@@ -17391,6 +20698,29 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!EvaluateVector(SubExpr, Val, Info))
       return Error(E);
     return Success(Val.getVectorElt(0), E);
+  }
+  case CK_HLSLMatrixTruncation: {
+    APValue Val;
+    if (!EvaluateMatrix(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getMatrixElt(0, 0), E);
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SubExpr, E->getType(), SrcVals,
+                                   SrcTypes))
+      return false;
+    APValue Val;
+
+    // cast our single element
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    APValue ResultVal;
+    if (!handleScalarCast(Info, FPO, E, SrcTypes[0], E->getType(), SrcVals[0],
+                          ResultVal))
+      return false;
+    return Success(ResultVal, E);
   }
   }
 }
@@ -17532,6 +20862,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");
@@ -17625,6 +20956,88 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
 
   llvm_unreachable("unknown cast resulting in complex value");
+}
+
+uint8_t GFNIMultiplicativeInverse(uint8_t Byte) {
+  // Lookup Table for Multiplicative Inverse in GF(2^8)
+  const uint8_t GFInv[256] = {
+      0x00, 0x01, 0x8d, 0xf6, 0xcb, 0x52, 0x7b, 0xd1, 0xe8, 0x4f, 0x29, 0xc0,
+      0xb0, 0xe1, 0xe5, 0xc7, 0x74, 0xb4, 0xaa, 0x4b, 0x99, 0x2b, 0x60, 0x5f,
+      0x58, 0x3f, 0xfd, 0xcc, 0xff, 0x40, 0xee, 0xb2, 0x3a, 0x6e, 0x5a, 0xf1,
+      0x55, 0x4d, 0xa8, 0xc9, 0xc1, 0x0a, 0x98, 0x15, 0x30, 0x44, 0xa2, 0xc2,
+      0x2c, 0x45, 0x92, 0x6c, 0xf3, 0x39, 0x66, 0x42, 0xf2, 0x35, 0x20, 0x6f,
+      0x77, 0xbb, 0x59, 0x19, 0x1d, 0xfe, 0x37, 0x67, 0x2d, 0x31, 0xf5, 0x69,
+      0xa7, 0x64, 0xab, 0x13, 0x54, 0x25, 0xe9, 0x09, 0xed, 0x5c, 0x05, 0xca,
+      0x4c, 0x24, 0x87, 0xbf, 0x18, 0x3e, 0x22, 0xf0, 0x51, 0xec, 0x61, 0x17,
+      0x16, 0x5e, 0xaf, 0xd3, 0x49, 0xa6, 0x36, 0x43, 0xf4, 0x47, 0x91, 0xdf,
+      0x33, 0x93, 0x21, 0x3b, 0x79, 0xb7, 0x97, 0x85, 0x10, 0xb5, 0xba, 0x3c,
+      0xb6, 0x70, 0xd0, 0x06, 0xa1, 0xfa, 0x81, 0x82, 0x83, 0x7e, 0x7f, 0x80,
+      0x96, 0x73, 0xbe, 0x56, 0x9b, 0x9e, 0x95, 0xd9, 0xf7, 0x02, 0xb9, 0xa4,
+      0xde, 0x6a, 0x32, 0x6d, 0xd8, 0x8a, 0x84, 0x72, 0x2a, 0x14, 0x9f, 0x88,
+      0xf9, 0xdc, 0x89, 0x9a, 0xfb, 0x7c, 0x2e, 0xc3, 0x8f, 0xb8, 0x65, 0x48,
+      0x26, 0xc8, 0x12, 0x4a, 0xce, 0xe7, 0xd2, 0x62, 0x0c, 0xe0, 0x1f, 0xef,
+      0x11, 0x75, 0x78, 0x71, 0xa5, 0x8e, 0x76, 0x3d, 0xbd, 0xbc, 0x86, 0x57,
+      0x0b, 0x28, 0x2f, 0xa3, 0xda, 0xd4, 0xe4, 0x0f, 0xa9, 0x27, 0x53, 0x04,
+      0x1b, 0xfc, 0xac, 0xe6, 0x7a, 0x07, 0xae, 0x63, 0xc5, 0xdb, 0xe2, 0xea,
+      0x94, 0x8b, 0xc4, 0xd5, 0x9d, 0xf8, 0x90, 0x6b, 0xb1, 0x0d, 0xd6, 0xeb,
+      0xc6, 0x0e, 0xcf, 0xad, 0x08, 0x4e, 0xd7, 0xe3, 0x5d, 0x50, 0x1e, 0xb3,
+      0x5b, 0x23, 0x38, 0x34, 0x68, 0x46, 0x03, 0x8c, 0xdd, 0x9c, 0x7d, 0xa0,
+      0xcd, 0x1a, 0x41, 0x1c};
+
+  return GFInv[Byte];
+}
+
+uint8_t GFNIAffine(uint8_t XByte, const APInt &AQword, const APSInt &Imm,
+                   bool Inverse) {
+  unsigned NumBitsInByte = 8;
+  // Computing the affine transformation
+  uint8_t RetByte = 0;
+  for (uint32_t BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+    uint8_t AByte =
+        AQword.lshr((7 - static_cast<int32_t>(BitIdx)) * NumBitsInByte)
+            .getLoBits(8)
+            .getZExtValue();
+    uint8_t Product;
+    if (Inverse) {
+      Product = AByte & GFNIMultiplicativeInverse(XByte);
+    } else {
+      Product = AByte & XByte;
+    }
+    uint8_t Parity = 0;
+
+    // Dot product in GF(2) uses XOR instead of addition
+    for (unsigned PBitIdx = 0; PBitIdx != NumBitsInByte; ++PBitIdx) {
+      Parity = Parity ^ ((Product >> PBitIdx) & 0x1);
+    }
+
+    uint8_t Temp = Imm[BitIdx] ? 1 : 0;
+    RetByte |= (Temp ^ Parity) << BitIdx;
+  }
+  return RetByte;
+}
+
+uint8_t GFNIMul(uint8_t AByte, uint8_t BByte) {
+  // Multiplying two polynomials of degree 7
+  // Polynomial of degree 7
+  // x^7 + x^6 + x^5 + x^4 + x^3 + x^2 + x + 1
+  uint16_t TWord = 0;
+  unsigned NumBitsInByte = 8;
+  for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+    if ((BByte >> BitIdx) & 0x1) {
+      TWord = TWord ^ (AByte << BitIdx);
+    }
+  }
+
+  // When multiplying two polynomials of degree 7
+  // results in a polynomial of degree 14
+  // so the result has to be reduced to 7
+  // Reduction polynomial is x^8 + x^4 + x^3 + x + 1 i.e. 0x11B
+  for (int32_t BitIdx = 14; BitIdx > 7; --BitIdx) {
+    if ((TWord >> BitIdx) & 0x1) {
+      TWord = TWord ^ (0x11B << (BitIdx - 8));
+    }
+  }
+  return (TWord & 0xFF);
 }
 
 void HandleComplexComplexMul(APFloat A, APFloat B, APFloat C, APFloat D,
@@ -17723,6 +21136,46 @@ void HandleComplexComplexDiv(APFloat A, APFloat B, APFloat C, APFloat D,
       ResI = APFloat::getZero(ResI.getSemantics()) * (B * C - A * D);
     }
   }
+}
+
+APSInt NormalizeRotateAmount(const APSInt &Value, const APSInt &Amount) {
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior
+  APSInt NormAmt = Amount;
+  unsigned BitWidth = Value.getBitWidth();
+  unsigned AmtBitWidth = NormAmt.getBitWidth();
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    NormAmt = APSInt(APInt(AmtBitWidth, 0), NormAmt.isUnsigned());
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    NormAmt =
+        APSInt(APInt(AmtBitWidth, NormAmt[0] ? 1 : 0), NormAmt.isUnsigned());
+  } else {
+    APInt Divisor;
+    if (AmtBitWidth > BitWidth) {
+      Divisor = llvm::APInt(AmtBitWidth, BitWidth);
+    } else {
+      Divisor = llvm::APInt(BitWidth, BitWidth);
+      if (AmtBitWidth < BitWidth) {
+        NormAmt = NormAmt.extend(BitWidth);
+      }
+    }
+
+    // Normalize to [0, BitWidth)
+    if (NormAmt.isSigned()) {
+      NormAmt = APSInt(NormAmt.srem(Divisor), /*isUnsigned=*/false);
+      if (NormAmt.isNegative()) {
+        APSInt SignedDivisor(Divisor, /*isUnsigned=*/false);
+        NormAmt += SignedDivisor;
+      }
+    } else {
+      NormAmt = APSInt(NormAmt.urem(Divisor), /*isUnsigned=*/true);
+    }
+  }
+
+  return NormAmt;
 }
 
 bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
@@ -18148,6 +21601,9 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
     LV.moveInto(Result);
   } else if (T->isVectorType()) {
     if (!EvaluateVector(E, Result, Info))
+      return false;
+  } else if (T->isConstantMatrixType()) {
+    if (!EvaluateMatrix(E, Result, Info))
       return false;
   } else if (T->isIntegralOrEnumerationType()) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
@@ -18583,9 +22039,8 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   return true;
 }
 
-bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
-                                 const VarDecl *VD,
-                                 SmallVectorImpl<PartialDiagnosticAt> &Notes,
+bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
+                                 Expr::EvalResult &EStatus,
                                  bool IsConstantInitialization) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
@@ -18598,26 +22053,23 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
     return Name;
   });
 
-  Expr::EvalStatus EStatus;
-  EStatus.Diag = &Notes;
-
   EvalInfo Info(Ctx, EStatus,
                 (IsConstantInitialization &&
                  (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvaluationMode::ConstantExpression
                     : EvaluationMode::ConstantFold);
-  Info.setEvaluatingDecl(VD, Value);
+  Info.setEvaluatingDecl(VD, EStatus.Val);
   Info.InConstantContext = IsConstantInitialization;
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
 
   if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
-    if (!InterpCtx.evaluateAsInitializer(Info, VD, this, Value))
+    auto &InterpCtx = Ctx.getInterpContext();
+    if (!InterpCtx.evaluateAsInitializer(Info, VD, this, EStatus.Val))
       return false;
 
-    return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+    return CheckConstantExpression(Info, DeclLoc, DeclTy, EStatus.Val,
                                    ConstantExprKind::Normal);
   } else {
     LValue LVal;
@@ -18634,7 +22086,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       // serialization code calls ParmVarDecl::getDefaultArg() which strips the
       // outermost FullExpr, such as ExprWithCleanups.
       FullExpressionRAII Scope(Info);
-      if (!EvaluateInPlace(Value, Info, LVal, this,
+      if (!EvaluateInPlace(EStatus.Val, Info, LVal, this,
                            /*AllowNonLiteralTypes=*/true) ||
           EStatus.HasSideEffects)
         return false;
@@ -18648,32 +22100,57 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
 
-  return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+  return CheckConstantExpression(Info, DeclLoc, DeclTy, EStatus.Val,
                                  ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
 }
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+  // This function is only meaningful for records and arrays of records.
+  QualType VarTy = getType();
+  if (VarTy->isArrayType()) {
+    QualType ElemTy = getASTContext().getBaseElementType(VarTy);
+    if (!ElemTy->isRecordType()) {
+      ensureEvaluatedStmt()->HasConstantDestruction = true;
+      return true;
+    }
+  } else if (!VarTy->isRecordType()) {
+    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    return true;
+  }
+
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
   // Only treat the destruction as constant destruction if we formally have
   // constant initialization (or are usable in a constant expression).
   bool IsConstantDestruction = hasConstantInitialization();
+  ASTContext &Ctx = getASTContext();
 
   // Make a copy of the value for the destructor to mutate, if we know it.
   // Otherwise, treat the value as default-initialized; if the destructor works
   // anyway, then the destruction is constant (and must be essentially empty).
   APValue DestroyedValue;
-  if (getEvaluatedValue() && !getEvaluatedValue()->isAbsent())
+  if (getEvaluatedValue())
     DestroyedValue = *getEvaluatedValue();
-  else if (!handleDefaultInitValue(getType(), DestroyedValue))
+  else if (!handleDefaultInitValue(VarTy, DestroyedValue))
     return false;
 
-  if (!EvaluateDestruction(getASTContext(), this, std::move(DestroyedValue),
-                           getType(), getLocation(), EStatus,
-                           IsConstantDestruction) ||
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    EvalInfo Info(Ctx, EStatus,
+                  IsConstantDestruction ? EvaluationMode::ConstantExpression
+                                        : EvaluationMode::ConstantFold);
+    Info.InConstantContext = IsConstantDestruction;
+    if (!Ctx.getInterpContext().evaluateDestruction(Info, this,
+                                                    std::move(DestroyedValue)))
+      return false;
+    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    return true;
+  }
+
+  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), VarTy,
+                           getLocation(), EStatus, IsConstantDestruction) ||
       EStatus.HasSideEffects)
     return false;
 
@@ -18816,14 +22293,15 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ImaginaryLiteralClass:
   case Expr::StringLiteralClass:
   case Expr::ArraySubscriptExprClass:
+  case Expr::MatrixSingleSubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
-  case Expr::MemberExprClass:
   case Expr::CompoundAssignOperatorClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::DesignatedInitExprClass:
   case Expr::ArrayInitLoopExprClass:
   case Expr::ArrayInitIndexExprClass:
@@ -18895,7 +22373,26 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
+
+  case Expr::MemberExprClass: {
+    if (Ctx.getLangOpts().C23) {
+      const Expr *ME = E->IgnoreParenImpCasts();
+      while (const auto *M = dyn_cast<MemberExpr>(ME)) {
+        if (M->isArrow())
+          return ICEDiag(IK_NotICE, E->getBeginLoc());
+        ME = M->getBase()->IgnoreParenImpCasts();
+      }
+      const auto *DRE = dyn_cast<DeclRefExpr>(ME);
+      if (DRE) {
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+            VD && VD->isConstexpr())
+          return CheckEvalInICE(E, Ctx);
+      }
+    }
+    return ICEDiag(IK_NotICE, E->getBeginLoc());
+  }
 
   case Expr::InitListExprClass: {
     // C++03 [dcl.init]p13: If T is a scalar type, then a declaration of the
@@ -18941,6 +22438,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
   case Expr::CXXNoexceptExprClass:
+  case Expr::CXXReflectExprClass:
     return NoDiag();
   case Expr::CallExprClass:
   case Expr::CXXOperatorCallExprClass: {
@@ -19303,23 +22801,21 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   APValue Scratch;
   if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
     if (Result)
-      *Result = Scratch;
+      *Result = std::move(Scratch);
     return true;
   }
 
   // Build evaluation settings.
   Expr::EvalStatus Status;
-  SmallVector<PartialDiagnosticAt, 8> Diags;
-  Status.Diag = &Diags;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
 
   bool IsConstExpr =
       ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
-      // FIXME: We don't produce a diagnostic for this, but the callers that
+      // NOTE: We don't produce a diagnostic for this, but the callers that
       // call us on arbitrary full-expressions should generally not care.
       Info.discardCleanups() && !Status.HasSideEffects;
 
-  return IsConstExpr && Diags.empty();
+  return IsConstExpr && !Status.DiagEmitted;
 }
 
 bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
@@ -19340,6 +22836,16 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
+
+  if (Info.EnableNewConstInterp) {
+    if (std::optional<bool> BoolResult =
+            Info.Ctx.getInterpContext().evaluateWithSubstitution(
+                Info, Callee, Args, This, this)) {
+      Value = APValue(APSInt(APInt(1, static_cast<uint64_t>(*BoolResult))));
+      return true;
+    }
+    return false;
+  }
 
   LValue ThisVal;
   const LValue *ThisPtr = nullptr;
@@ -19483,25 +22989,28 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   return Diags.empty();
 }
 
-bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                                 unsigned Type) const {
+std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                    unsigned Type) const {
   if (!getType()->isPointerType())
-    return false;
+    return std::nullopt;
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
+  return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
-static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info, std::string *StringResult) {
+static std::optional<uint64_t>
+EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
+                      std::string *StringResult) {
   if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
-    return false;
+    return std::nullopt;
 
   LValue String;
 
   if (!EvaluatePointer(E, String, Info))
-    return false;
+    return std::nullopt;
 
   QualType CharTy = E->getType()->getPointeeType();
 
@@ -19520,10 +23029,9 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
       if (Pos != StringRef::npos)
         Str = Str.substr(0, Pos);
 
-      Result = Str.size();
       if (StringResult)
         *StringResult = Str;
-      return true;
+      return Str.size();
     }
 
     // Fall through to slow path.
@@ -19534,21 +23042,19 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
     APValue Char;
     if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
         !Char.isInt())
-      return false;
-    if (!Char.getInt()) {
-      Result = Strlen;
-      return true;
-    } else if (StringResult)
+      return std::nullopt;
+    if (!Char.getInt())
+      return Strlen;
+    else if (StringResult)
       StringResult->push_back(Char.getInt().getExtValue());
     if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
-      return false;
+      return std::nullopt;
   }
 }
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  uint64_t Result;
   std::string StringResult;
 
   if (Info.EnableNewConstInterp) {
@@ -19557,7 +23063,7 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
     return StringResult;
   }
 
-  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+  if (EvaluateBuiltinStrLen(this, Info, &StringResult))
     return StringResult;
   return std::nullopt;
 }
@@ -19634,14 +23140,13 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                        PtrExpression, Ctx, Status);
 }
 
-bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
+std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
   if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result);
-
-  return EvaluateBuiltinStrLen(this, Result, Info);
+    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this);
+  return EvaluateBuiltinStrLen(this, Info);
 }
 
 namespace {
@@ -19650,6 +23155,11 @@ struct IsWithinLifetimeHandler {
   static constexpr AccessKinds AccessKind = AccessKinds::AK_IsWithinLifetime;
   using result_type = std::optional<bool>;
   std::optional<bool> failed() { return std::nullopt; }
+  template <typename T>
+  std::optional<bool> found(T &Subobj, QualType SubobjType,
+                            APValue::LValueBase) {
+    return true;
+  }
   template <typename T>
   std::optional<bool> found(T &Subobj, QualType SubobjType) {
     return true;

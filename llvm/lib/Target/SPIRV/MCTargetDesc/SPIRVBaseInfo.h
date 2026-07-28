@@ -12,11 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVBASEINFO_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVBASEINFO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/VersionTuple.h"
 #include <string>
 
@@ -238,20 +240,25 @@ namespace FPEncoding {
 } // namespace FPEncoding
 
 struct ExtendedBuiltin {
-  StringRef Name;
+  StringTable::Offset Name;
   InstructionSet::InstructionSet Set;
   uint32_t Number;
 };
 
 enum InstFlags {
   // It is a half type
-  INST_PRINTER_WIDTH16 = 1
+  INST_PRINTER_WIDTH16 = 1,
+  // It is a 64-bit type
+  INST_PRINTER_WIDTH64 = INST_PRINTER_WIDTH16 << 1,
+
 };
 } // namespace SPIRV
 
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
 using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
 using EnvironmentList = SmallVector<SPIRV::Environment::Environment, 8>;
+
+using ExtensionSet = DenseSet<SPIRV::Extension::Extension>;
 
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
@@ -308,4 +315,4 @@ std::string getSPIRVStringOperand(const InstType &MI, unsigned StartIndex) {
   return s;
 }
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVBASEINFO_H

@@ -8,16 +8,16 @@ define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wi
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
-; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vmv.v.i v14, 0
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
+; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    vmv2r.v v16, v10
 ; CHECK-NEXT:    vle32.v v16, (a0), v0.t
 ; CHECK-NEXT:    vand.vi v16, v16, 1
 ; CHECK-NEXT:    vmsne.vi v9, v16, 0
@@ -57,16 +57,8 @@ middle.block:                                     ; preds = %vector.body
   ret i32 %13
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr captures(none), i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>) #2
-
 ; uselistorder directives
 uselistorder ptr @llvm.masked.load.nxv4i32.p0, { 1, 0 }
 uselistorder ptr @llvm.vector.reduce.add.nxv4i32, { 1, 0 }
 
 attributes #0 = { "target-features"="+v" }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

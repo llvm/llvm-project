@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
 
 ; Test that long branch reserved register is serialized through
 ; MIR.
@@ -12,7 +12,6 @@
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false
-; CHECK-NEXT: noSignedZerosFPMath: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
@@ -48,7 +47,9 @@
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
+; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) #0 {
 bb0:

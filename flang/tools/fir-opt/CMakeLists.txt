@@ -27,6 +27,8 @@ target_link_libraries(fir-opt PRIVATE
   FIROpenMPSupport
   FlangOpenMPTransforms
   FIRAnalysis
+  MIFDialect
+  flangPasses
   ${test_libs}
 )
 

@@ -101,17 +101,17 @@ extern "C" {
 typedef uint64_t ulong2 __attribute__((__vector_size__(16), __aligned__(16)));
 
 // CHECK-LABEL: define noundef i32 @first_i32_ulong2(
-// CHECK-SAME: i32 noundef returned [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef returned [[X:%.*]], ptr nofree noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 [[X]]
 //
 int first_i32_ulong2(int x, ulong2 *y) { return first<int, ulong2>(x, *y); }
 
 // CHECK-LABEL: define void @second_i32_ulong2(
-// CHECK-SAME: i32 noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 16)) [[R:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[X:%.*]], ptr nofree noundef readonly captures(none) [[Y:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 16)) [[R:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[Y]], align 16, !tbaa [[INT_TBAA2:![0-9]+]]
-// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[Y]], align 16, !tbaa [[DOUBLE_TBAA5:![0-9]+]]
+// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[DOUBLE_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void second_i32_ulong2(int x, ulong2 *y, ulong2 *r) {
@@ -119,10 +119,10 @@ void second_i32_ulong2(int x, ulong2 *y, ulong2 *r) {
 }
 
 // CHECK-LABEL: define void @first_ulong2_i32(
-// CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]], i32 noundef [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 16)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[X:%.*]], i32 noundef [[Y:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 16)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X]], align 16, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X]], align 16, !tbaa [[DOUBLE_TBAA5]]
+// CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[R]], align 16, !tbaa [[DOUBLE_TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void first_ulong2_i32(ulong2 *x, int y, ulong2 *r) {
@@ -130,7 +130,7 @@ void first_ulong2_i32(ulong2 *x, int y, ulong2 *r) {
 }
 
 // CHECK-LABEL: define noundef i32 @second_ulong2_i32(
-// CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]], i32 noundef returned [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[X:%.*]], i32 noundef returned [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 [[Y]]
 //
@@ -150,14 +150,14 @@ typedef struct {
 extern "C" {
 
 // CHECK-LABEL: define noundef i32 @first_i32_asc(
-// CHECK-SAME: i32 noundef returned [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef returned [[X:%.*]], ptr nofree noundef readonly captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 [[X]]
 //
 int first_i32_asc(int x, asc *y) { return first<int, asc>(x, *y); }
 
 // CHECK-LABEL: define void @second_i32_asc(
-// CHECK-SAME: i32 noundef [[X:%.*]], ptr noundef readonly captures(none) [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 24)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: i32 noundef [[X:%.*]], ptr nofree noundef readonly captures(none) [[Y:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 24)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i32(ptr noundef nonnull align 8 dereferenceable(24) [[R]], ptr noundef nonnull align 1 dereferenceable(24) [[Y]], i32 24, i1 false)
 // CHECK-NEXT:    ret void
@@ -165,7 +165,7 @@ int first_i32_asc(int x, asc *y) { return first<int, asc>(x, *y); }
 void second_i32_asc(int x, asc *y, asc *r) { *r = second<int, asc>(x, *y); }
 
 // CHECK-LABEL: define void @first_asc_i32(
-// CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]], i32 noundef [[Y:%.*]], ptr noundef writeonly captures(none) initializes((0, 24)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[X:%.*]], i32 noundef [[Y:%.*]], ptr nofree noundef writeonly captures(none) initializes((0, 24)) [[R:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i32(ptr noundef nonnull align 8 dereferenceable(24) [[R]], ptr noundef nonnull align 1 dereferenceable(24) [[X]], i32 24, i1 false)
 // CHECK-NEXT:    ret void
@@ -173,14 +173,14 @@ void second_i32_asc(int x, asc *y, asc *r) { *r = second<int, asc>(x, *y); }
 void first_asc_i32(asc *x, int y, asc *r) { *r = first<asc, int>(*x, y); }
 
 // CHECK-LABEL: define noundef i32 @second_asc_i32(
-// CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]], i32 noundef returned [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[X:%.*]], i32 noundef returned [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 [[Y]]
 //
 int second_asc_i32(asc *x, int y) { return second<asc, int>(*x, y); }
 }
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"Simple C++ TBAA"}
+// CHECK: [[DOUBLE_TBAA5]] = !{[[META3]], [[META3]], i64 0}
 //.

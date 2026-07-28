@@ -32,10 +32,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "time-passes"
 
-namespace llvm {
+using namespace llvm;
 
-bool TimePassesIsEnabled = false;
-bool TimePassesPerRun = false;
+bool llvm::TimePassesIsEnabled = false;
+bool llvm::TimePassesPerRun = false;
 
 static cl::opt<bool, true> EnableTiming(
     "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
@@ -139,7 +139,7 @@ PassTimingInfo *PassTimingInfo::TheTimeInfo;
 } // namespace legacy
 } // namespace
 
-Timer *getPassTimer(Pass *P) {
+Timer *llvm::getPassTimer(Pass *P) {
   legacy::PassTimingInfo::init();
   if (legacy::PassTimingInfo::TheTimeInfo)
     return legacy::PassTimingInfo::TheTimeInfo->getPassTimer(P, P);
@@ -148,7 +148,7 @@ Timer *getPassTimer(Pass *P) {
 
 /// If timing is enabled, report the times collected up to now and then reset
 /// them.
-void reportAndResetTimings(raw_ostream *OutStream) {
+void llvm::reportAndResetTimings(raw_ostream *OutStream) {
   if (legacy::PassTimingInfo::TheTimeInfo)
     legacy::PassTimingInfo::TheTimeInfo->print(OutStream);
 }
@@ -315,5 +315,3 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   PIC.registerAfterAnalysisCallback(
       [this](StringRef P, Any) { this->stopAnalysisTimer(P); });
 }
-
-} // namespace llvm

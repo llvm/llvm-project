@@ -47,16 +47,16 @@ class DAGDeltaAlgorithmImpl {
   friend class DeltaActiveSetHelper;
 
 public:
-  typedef DAGDeltaAlgorithm::change_ty change_ty;
-  typedef DAGDeltaAlgorithm::changeset_ty changeset_ty;
-  typedef DAGDeltaAlgorithm::changesetlist_ty changesetlist_ty;
-  typedef DAGDeltaAlgorithm::edge_ty edge_ty;
+  using change_ty = DAGDeltaAlgorithm::change_ty;
+  using changeset_ty = DAGDeltaAlgorithm::changeset_ty;
+  using changesetlist_ty = DAGDeltaAlgorithm::changesetlist_ty;
+  using edge_ty = DAGDeltaAlgorithm::edge_ty;
 
 private:
-  typedef std::vector<change_ty>::iterator pred_iterator_ty;
-  typedef std::vector<change_ty>::iterator succ_iterator_ty;
-  typedef std::set<change_ty>::iterator pred_closure_iterator_ty;
-  typedef std::set<change_ty>::iterator succ_closure_iterator_ty;
+  using pred_iterator_ty = std::vector<change_ty>::iterator;
+  using succ_iterator_ty = std::vector<change_ty>::iterator;
+  using pred_closure_iterator_ty = std::set<change_ty>::iterator;
+  using succ_closure_iterator_ty = std::set<change_ty>::iterator;
 
   DAGDeltaAlgorithm &DDA;
 

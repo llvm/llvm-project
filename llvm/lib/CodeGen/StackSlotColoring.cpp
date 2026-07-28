@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -161,12 +162,11 @@ class StackSlotColoringLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  StackSlotColoringLegacy() : MachineFunctionPass(ID) {
-    initializeStackSlotColoringLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  StackSlotColoringLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<SlotIndexesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addRequired<LiveStacksWrapperLegacy>();
@@ -497,6 +497,9 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     }
     if (NextMI == E) continue;
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
+      continue;
+    // Skip if the stack size is unknown.
+    if (!LoadSize || !StoreSize)
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
         LoadSize != StoreSize || !MFI->isSpillSlotObjectIndex(FirstSS))

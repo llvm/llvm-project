@@ -518,6 +518,20 @@ int FunctionComparator::cmpConstants(const Constant *L,
     const auto *REquiv = cast<DSOLocalEquivalent>(R);
     return cmpGlobalValues(LEquiv->getGlobalValue(), REquiv->getGlobalValue());
   }
+  case Value::ConstantPtrAuthVal: {
+    // Handle authenticated pointer constants produced by ConstantPtrAuth::get.
+    const ConstantPtrAuth *LPA = cast<ConstantPtrAuth>(L);
+    const ConstantPtrAuth *RPA = cast<ConstantPtrAuth>(R);
+    if (int Res = cmpConstants(LPA->getPointer(), RPA->getPointer()))
+      return Res;
+    if (int Res = cmpConstants(LPA->getKey(), RPA->getKey()))
+      return Res;
+    if (int Res =
+            cmpConstants(LPA->getDiscriminator(), RPA->getDiscriminator()))
+      return Res;
+    return cmpConstants(LPA->getAddrDiscriminator(),
+                        RPA->getAddrDiscriminator());
+  }
   default: // Unknown constant, abort.
     LLVM_DEBUG(dbgs() << "Looking at valueID " << L->getValueID() << "\n");
     llvm_unreachable("Constant ValueID not recognized.");
@@ -685,6 +699,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (const LoadInst *LI = dyn_cast<LoadInst>(L)) {
     if (int Res = cmpNumbers(LI->isVolatile(), cast<LoadInst>(R)->isVolatile()))
       return Res;
+    if (int Res =
+            cmpNumbers(LI->isElementwise(), cast<LoadInst>(R)->isElementwise()))
+      return Res;
     if (int Res = cmpAligns(LI->getAlign(), cast<LoadInst>(R)->getAlign()))
       return Res;
     if (int Res =
@@ -723,6 +740,12 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
                      R->getMetadata(LLVMContext::MD_range));
+  }
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
+    for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
+      if (int Res = cmpConstants(LCase.getCaseValue(), RCase.getCaseValue()))
+        return Res;
+    return 0;
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();
@@ -776,6 +799,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       return Res;
     if (int Res = cmpNumbers(RMWI->isVolatile(),
                              cast<AtomicRMWInst>(R)->isVolatile()))
+      return Res;
+    if (int Res = cmpNumbers(RMWI->isElementwise(),
+                             cast<AtomicRMWInst>(R)->isElementwise()))
       return Res;
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                                cast<AtomicRMWInst>(R)->getOrdering()))

@@ -20,10 +20,12 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -33,6 +35,19 @@ namespace llvm {
 class PassBuilder;
 }
 namespace clang {
+
+/// A target's ABI policy for whether a class's vtable can be assumed to have
+/// a unique address program-wide. This is the basis for the exact dynamic_cast
+/// optimization (and, where a vtable is not assumed unique, for whether it may
+/// be marked unnamed_addr so the platform can duplicate it).
+enum class VTableUniquenessKind {
+  /// Every vtable has a single address program-wide.
+  AlwaysUnique,
+  /// A vtable with strong linkage (e.g., a class with a key function) is
+  /// unique, but a vague-linkage (weak) vtable may be duplicated by the
+  /// platform and so has no unique address.
+  UniqueIfStrongLinkage,
+};
 
 /// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
@@ -64,13 +79,15 @@ public:
   using AsanDtorKind = llvm::AsanDtorKind;
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
-  using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+  using WinX64EHUnwindMode = llvm::WinX64EHUnwindMode;
+  using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
 
   using DebugCompressionType = llvm::DebugCompressionType;
   using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
   using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   using DebuggerKind = llvm::DebuggerKind;
+  using RelocSectionSymType = llvm::RelocSectionSymType;
 
 #define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
@@ -155,10 +172,13 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
-    None,     // Omit all frame pointers.
-    Reserved, // Maintain valid frame pointer chain.
-    NonLeaf,  // Keep non-leaf frame pointers.
-    All,      // Keep all frame pointers.
+    NonLeafNoReserve, // Keep non-leaf frame pointers, allow the FP to be used
+                      // as a GPR in leaf functions.
+    None,             // Omit all frame pointers.
+    Reserved,         // Maintain valid frame pointer chain.
+    NonLeaf, // Keep non-leaf frame pointers, don't allow the FP to be used as a
+             // GPR in leaf functions.
+    All,     // Keep all frame pointers.
   };
 
   static StringRef getFramePointerKindName(FramePointerKind Kind) {
@@ -167,6 +187,8 @@ public:
       return "none";
     case FramePointerKind::Reserved:
       return "reserved";
+    case FramePointerKind::NonLeafNoReserve:
+      return "non-leaf-no-reserve";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:
@@ -206,6 +228,16 @@ public:
     Detailed, ///< Trap Message includes more context (e.g. the expression being
               ///< overflowed). This is more helpful for debugging but produces
               ///< larger debug info than `Basic`.
+  };
+
+  enum class BoolFromMem {
+    Strict,   ///< In-memory bool values are assumed to be 0 or 1, and any other
+              ///< value is UB.
+    Truncate, ///< Convert in-memory bools to i1 by checking if the least
+              ///< significant bit is 1.
+    NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
+              ///< to 1.
+    NonStrictDefault = NonZero
   };
 
   /// The code model to use (-mcmodel).
@@ -248,6 +280,14 @@ public:
   /// The string containing the commandline for the llvm.commandline metadata,
   /// if non-empty.
   std::string RecordCommandLine;
+
+  /// The string containing the commandline for the dx.source.args metadata,
+  /// if non-empty.
+  std::string HLSLRecordCommandLine;
+
+  /// The vector contains parsed commandline for the dx.source.args metadata,
+  /// if parsing was successful.
+  llvm::SmallVector<llvm::SmallString<8>> HLSLParsedCommandLine;
 
   llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
@@ -447,10 +487,6 @@ public:
 
   std::optional<double> AllowRuntimeCheckSkipHotCutoff;
 
-  /// Maximum number of allocation tokens (0 = no max), nullopt if none set (use
-  /// pass default).
-  std::optional<uint64_t> AllocTokenMax;
-
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
@@ -513,10 +549,13 @@ public:
   /// binary metadata pass should not be instrumented.
   std::vector<std::string> SanitizeMetadataIgnorelistFiles;
 
+  /// Hash algorithm to use for KCFI type IDs.
+  llvm::KCFIHashAlgorithm SanitizeKcfiHash;
+
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
   /// passed on the command line.
-  std::string StackUsageOutput;
+  std::string StackUsageFile;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
@@ -654,6 +693,25 @@ public:
   // loader?
   bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
     return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
+  }
+
+  /// Are we building at -O1 or higher?
+  bool isOptimizedBuild() const { return OptimizationLevel > 0; }
+
+  /// When loading a bool from a storage unit larger than i1, should it
+  /// be converted to i1 by comparing to 0 or by truncating to i1?
+  bool isConvertingBoolWithCmp0() const {
+    switch (getLoadBoolFromMem()) {
+    case BoolFromMem::Strict:
+      return !isOptimizedBuild();
+
+    case BoolFromMem::Truncate:
+      return false;
+
+    case BoolFromMem::NonZero:
+      return true;
+    }
+    llvm_unreachable("Unknown BoolFromMem enum");
   }
 };
 

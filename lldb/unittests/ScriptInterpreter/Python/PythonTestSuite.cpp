@@ -90,7 +90,8 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(
   return nullptr;
 }
 
-int lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
+uint32_t
+lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject *implementor, const char *child_name) {
   return 0;
 }
@@ -136,6 +137,11 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data) {
 }
 
 void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBThread(PyObject *data) {
+  return nullptr;
+}
+
+void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data) {
   return nullptr;
 }
@@ -157,6 +163,16 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
     PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data) {
   return nullptr;
 }
 
@@ -244,18 +260,6 @@ lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
   return python::PythonObject();
 }
 
-python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecognizer(
-    const char *python_class_name, const char *session_dictionary_name) {
-  return python::PythonObject();
-}
-
-PyObject *
-lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  return nullptr;
-}
-
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordProcess(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process, std::string &output) {
@@ -325,6 +329,11 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP) {
 
 python::PythonObject
 lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::StackFrameListSP) {
   return python::PythonObject();
 }
 

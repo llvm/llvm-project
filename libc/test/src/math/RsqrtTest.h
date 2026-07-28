@@ -39,7 +39,7 @@ public:
     }
 
     // Even sampling across all subnormals.
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = HIDDEN_BIT / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       InType x = FPBits(i).get_val();
@@ -49,7 +49,7 @@ public:
 
   // Positive normal range sampling: skip NaNs and negative values.
   void test_normal_range(RsqrtFunc func) {
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits(v);

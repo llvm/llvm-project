@@ -10,7 +10,7 @@ subroutine test_simd()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp simd
   do i = 1, 100
   end do
@@ -22,7 +22,7 @@ subroutine test_do_simd()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = do simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp do simd
   do i = 1, 100
   end do
@@ -35,7 +35,7 @@ subroutine test_parallel_do_simd()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = parallel do simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do simd
   do i = 1, 100
   end do
@@ -65,7 +65,7 @@ subroutine test_simd_atomic()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp simd
   do i = 1, 100
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
@@ -235,9 +235,9 @@ end subroutine
 subroutine test_sections()
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
   !$omp sections
-  ! CHECK-NOT: OpenMPConstruct -> OpenMPSectionConstruct
+  ! CHECK-NOT: OpenMPConstruct -> OmpSectionDirective
   !$omp section
-  ! CHECK-NOT: OpenMPConstruct -> OpenMPSectionConstruct
+  ! CHECK-NOT: OpenMPConstruct -> OmpSectionDirective
   !$omp section
   !$omp end sections
 end subroutine
@@ -253,7 +253,7 @@ module test_threadprivate_mod
   ! CHECK: Name = 'x'
   ! CHECK: Name = 'y'
   common /vars/ x, y
-  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPThreadprivate
+  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpThreadprivateDirective
   !$omp threadprivate(/vars/)
 end module
 
@@ -411,6 +411,6 @@ module test_declare_mapper
     real, allocatable     :: data(:)
   end type myvec_t
 
-  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct
+  ! CHECK-NOT: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareMapperDirective
   !$omp declare mapper(myvec_t :: v) map(v, v%data(1:v%len))
 end module

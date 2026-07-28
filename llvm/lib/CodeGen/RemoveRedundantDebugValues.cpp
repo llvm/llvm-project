@@ -13,6 +13,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -48,6 +49,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -67,10 +69,7 @@ INITIALIZE_PASS(RemoveRedundantDebugValuesLegacy, DEBUG_TYPE,
 
 /// Default construct and initialize the pass.
 RemoveRedundantDebugValuesLegacy::RemoveRedundantDebugValuesLegacy()
-    : MachineFunctionPass(ID) {
-  initializeRemoveRedundantDebugValuesLegacyPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 // This analysis aims to remove redundant DBG_VALUEs by going forward
 // in the basic block by considering the first DBG_VALUE as a valid
@@ -131,11 +130,9 @@ static bool reduceDbgValsForwardScan(MachineBasicBlock &MBB) {
       continue;
 
     // Stop tracking any location that is clobbered by this instruction.
-    for (auto &Var : VariableMap) {
-      auto &LocOp = Var.second.first;
-      if (MI.modifiesRegister(LocOp->getReg(), TRI))
-        VariableMap.erase(Var.first);
-    }
+    VariableMap.remove_if([&](const auto &Var) {
+      return MI.modifiesRegister(Var.second.first->getReg(), TRI);
+    });
   }
 
   for (auto &Instr : DbgValsToBeRemoved) {

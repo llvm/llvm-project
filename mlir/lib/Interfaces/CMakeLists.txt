@@ -1,4 +1,5 @@
 set(LLVM_OPTIONAL_SOURCES
+  AlignmentAttrInterface.cpp
   CallInterfaces.cpp
   CastInterfaces.cpp
   ControlFlowInterfaces.cpp
@@ -8,6 +9,7 @@ set(LLVM_OPTIONAL_SOURCES
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
   IndexingMapOpInterface.cpp
+  InferIntDivisibilityOpInterface.cpp
   InferIntRangeInterface.cpp
   InferStridedMetadataInterface.cpp
   InferTypeOpInterface.cpp
@@ -41,6 +43,7 @@ function(add_mlir_interface_library name)
 endfunction(add_mlir_interface_library)
 
 
+add_mlir_interface_library(AlignmentAttrInterface)
 add_mlir_interface_library(CallInterfaces)
 add_mlir_interface_library(CastInterfaces)
 add_mlir_interface_library(ControlFlowInterfaces)
@@ -64,6 +67,7 @@ add_mlir_library(MLIRFunctionInterfaces
 )
 
 add_mlir_interface_library(IndexingMapOpInterface)
+add_mlir_interface_library(InferIntDivisibilityOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 
 add_mlir_library(MLIRInferStridedMetadataInterface
@@ -93,6 +97,7 @@ add_mlir_library(MLIRLoopLikeInterface
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
 )
 

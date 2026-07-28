@@ -80,6 +80,10 @@ public:
   /// name of the analysis that was computed, its TypeID, as well as the
   /// current operation being analyzed.
   virtual void runAfterAnalysis(StringRef name, TypeID id, Operation *op) {}
+
+  /// Helper method to enable analysis to signal pass failure. Used, for
+  /// example, when pre- or post-conditions fail.
+  void signalPassFailure(Pass *pass);
 };
 
 /// This class holds a collection of PassInstrumentation objects, and invokes
@@ -131,14 +135,6 @@ struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
   using T = mlir::PassInstrumentation::PipelineParentInfo;
   using PairInfo = DenseMapInfo<std::pair<uint64_t, void *>>;
 
-  static T getEmptyKey() {
-    auto pair = PairInfo::getEmptyKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
-  static T getTombstoneKey() {
-    auto pair = PairInfo::getTombstoneKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
   static unsigned getHashValue(T val) {
     return PairInfo::getHashValue({val.parentThreadID, val.parentPass});
   }

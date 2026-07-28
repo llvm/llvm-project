@@ -206,9 +206,9 @@ end subroutine
 ! CHECK-SAME:                           %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "s"},
 ! CHECK-SAME:                           %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "d"}) {
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFcshift11Ea"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] {uniq_name = "_QFcshift11Ed"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] {uniq_name = "_QFcshift11Es"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFcshift11Ea"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFcshift11Ed"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] arg {{[0-9]+}} {uniq_name = "_QFcshift11Es"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = hlfir.cshift %[[VAL_4]]#0 %[[VAL_7]] dim %[[VAL_8]] : (!fir.box<!fir.array<?xi32>>, i32, i32) -> !hlfir.expr<?xi32>

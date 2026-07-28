@@ -63,11 +63,8 @@ class StdUnorderedMapSynthProvider:
         self.count = None
 
     def extract_type(self):
-        type = self.valobj.GetType()
-        # The last template argument is the allocator type.
-        template_arg_num = type.GetNumberOfTemplateArguments() - 1
-        allocator_type = type.GetTemplateArgumentType(template_arg_num)
-        data_type = allocator_type.GetTemplateArgumentType(0)
+        head_type = self.head.GetType().GetCanonicalType()
+        data_type = head_type.GetTemplateArgumentType(1)
         return data_type
 
     def update(self):

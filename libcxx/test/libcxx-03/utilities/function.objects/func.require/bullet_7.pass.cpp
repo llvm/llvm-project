@@ -115,49 +115,6 @@ private:
 };
 
 
-#if TEST_STD_VER >= 11
-
-//==============================================================================
-// freeFunction11 - A C++11 free function.
-template <class ...Args>
-void*& freeFunction11(Args&&...) {
-    return FunctionPtrID<void*&(Args&&...), freeFunction11>::setUncheckedCall();
-}
-
-template <class ...Args>
-void*& freeFunction11(Args&&...,...) {
-    return FunctionPtrID<void*&(Args&&...,...), freeFunction11>::setUncheckedCall();
-}
-
-//==============================================================================
-// Functor11 - C++11 reference qualified test member functions.
-struct Functor11 {
-    typedef void*& R;
-    typedef Functor11 C;
-
-#define F(CV) \
-    template <class ...Args> \
-    R operator()(Args&&...) CV { return MethodID<R(C::*)(Args&&...) CV>::setUncheckedCall(); }
-#
-    F(&)
-    F(const &)
-    F(volatile &)
-    F(const volatile &)
-    F(&&)
-    F(const &&)
-    F(volatile &&)
-    F(const volatile &&)
-#undef F
-public:
-    Functor11() {}
-private:
-    Functor11(Functor11 const&);
-    Functor11& operator=(Functor11 const&);
-};
-
-#endif // TEST_STD_VER >= 11
-
-
 //==============================================================================
 // TestCaseFunctorImp - A test case for an operator() class method.
 //   ClassType - The type of the call object.
@@ -207,19 +164,9 @@ public:
 //==============================================================================
 //                          runTest Helpers
 //==============================================================================
-#if TEST_STD_VER >= 11
-template <class Sig, int Arity, class ArgCaster>
-void runFunctionTestCase11() {
-    TestCaseFreeFunction<Sig, freeFunction11, Arity, ArgCaster>();
-}
-#endif
-
 template <class Sig, int Arity, class ArgCaster>
 void runFunctionTestCase() {
     TestCaseFreeFunction<Sig, freeFunction03, Arity, ArgCaster>();
-#if TEST_STD_VER >= 11
-    runFunctionTestCase11<Sig, Arity, ArgCaster>();
-#endif
 }
 
 template <class Sig, int Arity, class ObjCaster, class ArgCaster>
@@ -231,14 +178,6 @@ template <class Sig, int Arity, class ObjCaster>
 void runFunctorTestCase() {
     TestCaseFunctorImp<Functor03, Sig, Arity, ObjCaster>::run();
 }
-
-#if TEST_STD_VER >= 11
-// runTestCase - Run a test case for C++11 class functor types
-template <class Sig, int Arity, class ObjCaster, class ArgCaster = LValueCaster>
-void runFunctorTestCase11() {
-    TestCaseFunctorImp<Functor11, Sig, Arity, ObjCaster, ArgCaster>::run();
-}
-#endif
 
 // runTestCase - Run a test case for both function and functor types.
 template <class Sig, int Arity, class ArgCaster>
@@ -264,11 +203,6 @@ int main(int, char**) {
     runFunctionTestCase<R(A&, ...),                     1, LValueCaster      >();
     runFunctionTestCase<R(A&, A&, ...),                 2, LValueCaster      >();
     runFunctionTestCase<R(A&, A&, A&, ...),             3, LValueCaster      >();
-
-#if TEST_STD_VER >= 11
-    runFunctionTestCase11<R(A&&),                       1, MoveCaster        >();
-    runFunctionTestCase11<R(A&&, ...),                  1, MoveCaster        >();
-#endif
 
     runFunctorTestCase<R(),                             0, LValueCaster      >();
     runFunctorTestCase<R() const,                       0, ConstCaster       >();
@@ -301,28 +235,6 @@ int main(int, char**) {
     runFunctorTestCase<R(CA&, CA&, CA&) volatile,       3, VolatileCaster, CC>();
     runFunctorTestCase<R(CA&, CA&, CA&) const volatile, 3, CVCaster,       CC>();
     }
-
-#if TEST_STD_VER >= 11
-    runFunctorTestCase11<R() &,                    0, LValueCaster          >();
-    runFunctorTestCase11<R() const &,              0, ConstCaster           >();
-    runFunctorTestCase11<R() volatile &,           0, VolatileCaster        >();
-    runFunctorTestCase11<R() const volatile &,     0, CVCaster              >();
-    runFunctorTestCase11<R() &&,                   0, MoveCaster            >();
-    runFunctorTestCase11<R() const &&,             0, MoveConstCaster       >();
-    runFunctorTestCase11<R() volatile &&,          0, MoveVolatileCaster    >();
-    runFunctorTestCase11<R() const volatile &&,    0, MoveCVCaster          >();
-    {
-    typedef MoveCaster MC;
-    runFunctorTestCase11<R(A&&) &,                 1, LValueCaster,       MC>();
-    runFunctorTestCase11<R(A&&) const &,           1, ConstCaster,        MC>();
-    runFunctorTestCase11<R(A&&) volatile &,        1, VolatileCaster,     MC>();
-    runFunctorTestCase11<R(A&&) const volatile &,  1, CVCaster,           MC>();
-    runFunctorTestCase11<R(A&&) &&,                1, MoveCaster,         MC>();
-    runFunctorTestCase11<R(A&&) const &&,          1, MoveConstCaster,    MC>();
-    runFunctorTestCase11<R(A&&) volatile &&,       1, MoveVolatileCaster, MC>();
-    runFunctorTestCase11<R(A&&) const volatile &&, 1, MoveCVCaster,       MC>();
-    }
-#endif
 
   return 0;
 }

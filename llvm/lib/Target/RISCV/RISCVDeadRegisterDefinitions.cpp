@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "riscv-dead-defs"
@@ -33,9 +34,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
     AU.addPreserved<LiveStacksWrapperLegacy>();
@@ -59,7 +60,6 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LLVM_DEBUG(dbgs() << "***** RISCVDeadRegisterDefinitions *****\n");
 
@@ -89,7 +89,7 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
         Register X0Reg;
-        const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI);
+        const TargetRegisterClass *RC = TII->getRegClass(Desc, I);
         if (RC && RC->contains(RISCV::X0)) {
           X0Reg = RISCV::X0;
         } else if (RC && RC->contains(RISCV::X0_W)) {

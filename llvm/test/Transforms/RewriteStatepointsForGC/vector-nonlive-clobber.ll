@@ -16,7 +16,7 @@ define void @test_vector_clobber(ptr addrspace(1) %ptr) gc "statepoint-example" 
 ; CHECK-NEXT:    [[GEP_RELOCATED:%.*]] = call coldcc <8 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v8p1(token [[STATEPOINT_TOKEN1]], i32 2, i32 0)
 ; CHECK-NEXT:    [[PTR_RELOCATED2:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN1]], i32 1, i32 1)
 ; CHECK-NEXT:    [[DOTSPLAT_BASE_RELOCATED:%.*]] = call coldcc <8 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v8p1(token [[STATEPOINT_TOKEN1]], i32 2, i32 2)
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p1(<8 x ptr addrspace(1)> [[GEP_RELOCATED]], i32 4, <8 x i1> splat (i1 true), <8 x float> poison)
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p1(<8 x ptr addrspace(1)> align 4 [[GEP_RELOCATED]], <8 x i1> splat (i1 true), <8 x float> poison)
 ; CHECK-NEXT:    unreachable
 ;
 entry:

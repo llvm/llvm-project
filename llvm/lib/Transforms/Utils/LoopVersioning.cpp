@@ -23,6 +23,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -51,6 +52,10 @@ void LoopVersioning::versionLoop(
   assert(VersionedLoop->getUniqueExitBlock() && "No single exit block");
   assert(VersionedLoop->isLoopSimplifyForm() &&
          "Loop is not in loop-simplify form");
+  // Assert that the loop is in LCSSA form. This is a precondition of
+  // versioning.
+  assert(VersionedLoop->isRecursivelyLCSSAForm(*DT, *LI) &&
+         "Loop is not in LCSSA form");
 
   Value *MemRuntimeCheck;
   Value *SCEVRuntimeCheck;
@@ -60,14 +65,11 @@ void LoopVersioning::versionLoop(
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
   const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
-  SCEVExpander Exp2(*RtPtrChecking.getSE(),
-                    VersionedLoop->getHeader()->getDataLayout(),
-                    "induction");
+  SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
   MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
                                      VersionedLoop, AliasChecks, Exp2);
 
-  SCEVExpander Exp(*SE, RuntimeCheckBB->getDataLayout(),
-                   "scev.check");
+  SCEVExpander Exp(*SE, "scev.check");
   SCEVRuntimeCheck =
       Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
 
@@ -109,8 +111,12 @@ void LoopVersioning::versionLoop(
   // Insert the conditional branch based on the result of the memchecks.
   Instruction *OrigTerm = RuntimeCheckBB->getTerminator();
   Builder.SetInsertPoint(OrigTerm);
-  Builder.CreateCondBr(RuntimeCheck, NonVersionedLoop->getLoopPreheader(),
-                       VersionedLoop->getLoopPreheader());
+  auto *BI =
+      Builder.CreateCondBr(RuntimeCheck, NonVersionedLoop->getLoopPreheader(),
+                           VersionedLoop->getLoopPreheader());
+  // We don't know what the probability of executing the versioned vs the
+  // unversioned variants is.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*BI, DEBUG_TYPE);
   OrigTerm->eraseFromParent();
 
   // The loops merge in the original exit block.  This is now dominated by the
@@ -290,8 +296,9 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
-      if (!L->isLCSSAForm(*DT))
-       formLCSSARecursively(*L, *DT, LI, SE);
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, SE);
 
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE);

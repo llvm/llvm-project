@@ -144,6 +144,20 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
   EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
 }
 
+TEST_F(HeaderIncludesTest, InsertAfterMainHeaderWithSpecialChars) {
+  std::string Code = "#include \"fix+bar.h\"\n"
+                     "\n"
+                     "int main() {}";
+  std::string Expected = "#include \"fix+bar.h\"\n"
+                         "#include <a>\n"
+                         "\n"
+                         "int main() {}";
+  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
+              .IncludeStyle;
+  FileName = "fix+bar.cpp";
+  EXPECT_EQ(Expected, insert(Code, "<a>"));
+}
+
 TEST_F(HeaderIncludesTest, InsertMainHeader) {
   Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
               .IncludeStyle;
@@ -594,6 +608,66 @@ TEST_F(HeaderIncludesTest, CanDeleteAfterCode) {
   EXPECT_EQ(Expected, remove(Code, "\"b.h\""));
 }
 
+TEST_F(HeaderIncludesTest, InsertGlobalModuleFragmentDeclInterfaceUnit) {
+  // Ensure the header insertion comes with a global module fragment decl (i.e.
+  // a 'module;' line) when:
+  //     - the input file is an module interface unit, and
+  //     - no tokens excluding comments and whitespaces exist before the module
+  //       declaration.
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+export module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+module;
+#include <vector>
+export module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, InsertGlobalModuleFragmentDeclImplUnit) {
+  // Ensure the header insertion comes with a global module fragment decl (i.e.
+  // a 'module;' line) when:
+  //     - the input file is an module implementation unit, and
+  //     - no tokens excluding comments and whitespaces exist before the module
+  //       declaration.
+  std::string Code = R"cpp(// comments
+
+// more comments
+
+module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+  std::string Expected = R"cpp(// comments
+
+// more comments
+
+module;
+#include <vector>
+module foo;
+
+void test() {
+    std::vector<int> ints {};
+})cpp";
+
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
 TEST_F(HeaderIncludesTest, InsertInGlobalModuleFragment) {
   // Ensure header insertions go only in the global module fragment
   std::string Code = R"cpp(// comments
@@ -618,7 +692,6 @@ int main() {
     std::vector<int> ints {};
 })cpp";
 
-  auto InsertedCode = insert(Code, "<vector>");
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 

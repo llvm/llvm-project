@@ -13,6 +13,7 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
@@ -25,11 +26,13 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "R600GenCallingConv.inc"
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
                                        const R600Subtarget &STI)
-    : AMDGPUTargetLowering(TM, STI), Subtarget(&STI), Gen(STI.getGeneration()) {
+    : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI),
+      Gen(STI.getGeneration()) {
   addRegisterClass(MVT::f32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::i32, &R600::R600_Reg32RegClass);
   addRegisterClass(MVT::v2f32, &R600::R600_Reg64RegClass);
@@ -44,9 +47,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   // Legalize loads and stores to the private address space.
   setOperationAction(ISD::LOAD, {MVT::i32, MVT::v2i32, MVT::v4i32}, Custom);
-
-  // 32-bit ABS is legal for AMDGPU except for R600
-  setOperationAction(ISD::ABS, MVT::i32, Expand);
 
   // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
   // spaces, so it is custom lowered to handle those where it isn't.
@@ -178,10 +178,10 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
 
   if (Subtarget->hasFFBH())
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Custom);
 
   if (Subtarget->hasFFBL())
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Custom);
 
   // FIXME: This was moved from AMDGPUTargetLowering, I'm not sure if we
   // need it for R600.
@@ -190,11 +190,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
-
-  const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
-  for (MVT VT : ScalarIntVTs)
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
-                       Expand);
 
   // LLVM will expand these to atomic_cmp_swap(0)
   // and atomic_swap, respectively.
@@ -673,7 +668,7 @@ SDValue R600TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return vectorToVerticalVector(DAG, Insert);
 }
 
-SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
@@ -792,7 +787,7 @@ bool R600TargetLowering::isZero(SDValue Op) const {
 
 bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
   if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
-    return CFP->isExactlyValue(1.0);
+    return CFP->isOne();
   }
   return isAllOnesConstant(Op);
 }
@@ -950,15 +945,12 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
 
-  const R600TargetMachine &TM =
-      static_cast<const R600TargetMachine &>(getTargetMachine());
-
   const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
   unsigned SrcAS = ASC->getSrcAddressSpace();
   unsigned DestAS = ASC->getDestAddressSpace();
 
   if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
-    return DAG.getSignedConstant(TM.getNullPointerValue(DestAS), SL, VT);
+    return DAG.getSignedConstant(AMDGPU::getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }
@@ -1132,12 +1124,9 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && TruncatingStore) {
       // Add an extra level of chain to isolate this vector
       SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
-      // TODO: can the chain be replaced without creating a new store?
-      SDValue NewStore = DAG.getTruncStore(
-          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(), MemVT,
-          StoreNode->getAlign(), StoreNode->getMemOperand()->getFlags(),
-          StoreNode->getAAInfo());
-      StoreNode = cast<StoreSDNode>(NewStore);
+      SmallVector<SDValue, 4> NewOps(StoreNode->ops());
+      NewOps[0] = NewChain;
+      StoreNode = cast<StoreSDNode>(DAG.UpdateNodeOperands(StoreNode, NewOps));
     }
 
     return scalarizeVectorStore(StoreNode, DAG);
@@ -1484,6 +1473,9 @@ SDValue R600TargetLowering::LowerFormalArguments(
       MemVT = MemVT.getVectorElementType();
     }
 
+    if (VT.isInteger() && !MemVT.isInteger())
+      MemVT = MemVT.changeTypeToInteger();
+
     if (AMDGPU::isShader(CallConv)) {
       Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
@@ -1500,11 +1492,15 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // thread group and global sizes.
     ISD::LoadExtType Ext = ISD::NON_EXTLOAD;
     if (MemVT.getScalarSizeInBits() != VT.getScalarSizeInBits()) {
-      // FIXME: This should really check the extload type, but the handling of
-      // extload vector parameters seems to be broken.
+      if (VT.isFloatingPoint()) {
+        Ext = ISD::EXTLOAD;
+      } else {
+        // FIXME: This should really check the extload type, but the handling of
+        // extload vector parameters seems to be broken.
 
-      // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      Ext = ISD::SEXTLOAD;
+        // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+        Ext = ISD::SEXTLOAD;
+      }
     }
 
     // Compute the offset from the value.
@@ -1586,7 +1582,7 @@ static SDValue CompactSwizzlableVector(
       if (C->isZero()) {
         RemapSwizzle[i] = 4; // SEL_0
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
-      } else if (C->isExactlyValue(1.0)) {
+      } else if (C->isOne()) {
         RemapSwizzle[i] = 5; // SEL_1
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
       }
@@ -2182,18 +2178,20 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 }
 
 TargetLowering::AtomicExpansionKind
-R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+R600TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
-    // instruction defintions appear to be missing.
+    // instruction definitions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getDataLayout();

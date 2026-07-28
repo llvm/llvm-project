@@ -10,8 +10,8 @@ define <8 x i16> @test0(ptr noalias %p, ptr noalias %q, <8 x i16> %y, <8 x i1> %
 ; CHECK-LABEL: define <8 x i16> @test0(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], <8 x i16> [[Y:%.*]], <8 x i1> [[M:%.*]], <8 x i16> [[PT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[P]], i32 16, <8 x i1> [[M]], <8 x i16> [[PT]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[Y]], ptr [[Q]], i32 16, <8 x i1> [[M]])
+; CHECK-NEXT:    [[A:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[P]], <8 x i1> [[M]], <8 x i16> [[PT]])
+; CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[Y]], ptr align 16 [[Q]], <8 x i1> [[M]])
 ; CHECK-NEXT:    [[C:%.*]] = add <8 x i16> [[A]], [[A]]
 ; CHECK-NEXT:    ret <8 x i16> [[C]]
 ;

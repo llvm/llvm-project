@@ -22,8 +22,8 @@ define void @load_store(ptr %ptrs) {
 
 define void @masked_load_store(ptr %ptrs, ptr %val, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru) {
 ; CHECK-LABEL: 'masked_load_store'
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mload = call <vscale x 1 x i128> @llvm.masked.load.nxv1i128.p0(ptr %val, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.store.nxv1i128.p0(<vscale x 1 x i128> %mload, ptr %ptrs, i32 8, <vscale x 1 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mload = call <vscale x 1 x i128> @llvm.masked.load.nxv1i128.p0(ptr align 8 %val, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.store.nxv1i128.p0(<vscale x 1 x i128> %mload, ptr align 8 %ptrs, <vscale x 1 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %mload = call <vscale x 1 x i128> @llvm.masked.load.nxv1i128(ptr %val, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru)
@@ -33,8 +33,8 @@ define void @masked_load_store(ptr %ptrs, ptr %val, <vscale x 1 x i1> %mask, <vs
 
 define void @masked_gather_scatter(<vscale x 1 x ptr> %ptrs, <vscale x 1 x ptr> %val, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru) {
 ; CHECK-LABEL: 'masked_gather_scatter'
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mgather = call <vscale x 1 x i128> @llvm.masked.gather.nxv1i128.nxv1p0(<vscale x 1 x ptr> %val, i32 0, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i128.nxv1p0(<vscale x 1 x i128> %mgather, <vscale x 1 x ptr> %ptrs, i32 0, <vscale x 1 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %mgather = call <vscale x 1 x i128> @llvm.masked.gather.nxv1i128.nxv1p0(<vscale x 1 x ptr> align 16 %val, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i128.nxv1p0(<vscale x 1 x i128> %mgather, <vscale x 1 x ptr> align 16 %ptrs, <vscale x 1 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %mgather = call <vscale x 1 x i128> @llvm.masked.gather.nxv1i128(<vscale x 1 x ptr> %val, i32 0, <vscale x 1 x i1> %mask, <vscale x 1 x i128> %passthru)

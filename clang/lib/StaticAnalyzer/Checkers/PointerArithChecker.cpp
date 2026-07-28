@@ -168,7 +168,6 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
   if (SR.isInvalid())
     return;
 
-  ProgramStateRef State = C.getState();
   const MemRegion *Region = C.getSVal(E).getAsRegion();
   if (!Region)
     return;

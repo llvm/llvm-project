@@ -106,6 +106,11 @@ r3:
 r4:
   .quad s2
 
+# cstrings are ignored by runBalancedPartitioning()
+.cstring
+cstr:
+  .asciz "this is cstr"
+
 .bss
 bss0:
   .zero 10

@@ -23,6 +23,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/AlignmentAttrInterface.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/IndexingMapOpInterface.h"
@@ -66,7 +67,7 @@ enum class ConstantMaskKind { AllFalse = 0, AllTrue };
 /// arguments.
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 
-/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// Models whether `srcType` can be broadcast to `dstVectorType` under the
 /// semantics of the `vector.broadcast` op.
 enum class BroadcastableToResult {
   Success = 0,

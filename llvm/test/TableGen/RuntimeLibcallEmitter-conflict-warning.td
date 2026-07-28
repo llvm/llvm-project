@@ -10,9 +10,13 @@ def SOME_FUNC : RuntimeLibcall;
 def OTHER_FUNC : RuntimeLibcall;
 def ANOTHER_DUP : RuntimeLibcall;
 
-def isTargetArchA : RuntimeLibcallPredicate<[{isTargetArchA()}]>;
-def isTargetArchB : RuntimeLibcallPredicate<[{isTargetArchB()}]>;
-def isTargetArchC : RuntimeLibcallPredicate<[{isTargetArchC()}]>;
+def IsTargetArchA : LibcallPredicate<[{isTargetArchA()}]>;
+def IsTargetArchB : LibcallPredicate<[{isTargetArchB()}]>;
+def IsTargetArchC : LibcallPredicate<[{isTargetArchC()}]>;
+
+def isTargetArchA : RuntimeLibcallAvailability<(all_of IsTargetArchA)>;
+def isTargetArchB : RuntimeLibcallAvailability<(all_of IsTargetArchB)>;
+def isTargetArchC : RuntimeLibcallAvailability<(all_of IsTargetArchC)>;
 
 def func_a : RuntimeLibcallImpl<SOME_FUNC>;
 def func_b : RuntimeLibcallImpl<SOME_FUNC>;
@@ -31,12 +35,12 @@ def dup1 : RuntimeLibcallImpl<ANOTHER_DUP>;
 // CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
 
-// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:        {RTLIB::SOME_FUNC, RTLIB::impl_func_b}, // func_b
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_func_b, // func_b
 // CHECK-NEXT:    };
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
-// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
@@ -53,13 +57,13 @@ def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA,
 // CHECK-NEXT: });
 // CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
-// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:        {RTLIB::OTHER_FUNC, RTLIB::impl_other_func}, // other_func
-// CHECK-NEXT:        {RTLIB::SOME_FUNC, RTLIB::impl_func_a}, // func_a
+// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:        RTLIB::impl_other_func, // other_func
+// CHECK-NEXT:        RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:    };
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
-// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:      setAvailable(Impl);
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
@@ -76,14 +80,14 @@ def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB,
 // CHECK-NEXT: });
 // CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
-// CHECK-NEXT:     static const LibcallImplPair LibraryCalls[] = {
-// CHECK-NEXT:         {RTLIB::ANOTHER_DUP, RTLIB::impl_dup1}, // dup1
-// CHECK-NEXT:         {RTLIB::OTHER_FUNC, RTLIB::impl_other_func}, // other_func
-// CHECK-NEXT:         {RTLIB::SOME_FUNC, RTLIB::impl_func_a}, // func_a
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl_dup1, // dup1
+// CHECK-NEXT:         RTLIB::impl_other_func, // other_func
+// CHECK-NEXT:         RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
-// CHECK-NEXT:     for (const auto [Func, Impl] : LibraryCalls) {
-// CHECK-NEXT:       setLibcallImpl(Func, Impl);
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
 // CHECK-NEXT:     }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;

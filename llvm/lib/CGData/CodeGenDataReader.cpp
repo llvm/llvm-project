@@ -125,7 +125,7 @@ Error IndexedCodeGenDataReader::read() {
     FunctionMapRecord.setReadStableFunctionMapNames(
         IndexedCodeGenDataReadFunctionMapNames);
     if (IndexedCodeGenDataLazyLoading)
-      FunctionMapRecord.lazyDeserialize(SharedDataBuffer,
+      FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
                                         Header.StableFunctionMapOffset);
     else
       FunctionMapRecord.deserialize(Ptr);

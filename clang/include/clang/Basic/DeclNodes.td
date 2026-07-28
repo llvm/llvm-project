@@ -101,6 +101,8 @@ def AccessSpec : DeclNode<Decl>;
 def Friend : DeclNode<Decl>;
 def FriendTemplate : DeclNode<Decl>;
 def StaticAssert : DeclNode<Decl>;
+def ExplicitInstantiation : DeclNode<Decl>;
+def CXXExpansionStmt : DeclNode<Decl>, DeclContext;
 def Block : DeclNode<Decl, "blocks">, DeclContext;
 def OutlinedFunction : DeclNode<Decl>, DeclContext;
 def Captured : DeclNode<Decl>, DeclContext;

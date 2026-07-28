@@ -126,7 +126,7 @@ void annotateIndirectCalls(Module &M, const CtxProfAnalysis::Result &CtxProf) {
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto FlatProfIter = FlatIndCalls.find(AssignGUIDPass::getGUID(F));
+    auto FlatProfIter = FlatIndCalls.find(F.getGUID());
     if (FlatProfIter == FlatIndCalls.end())
       continue;
     const auto &FlatProf = FlatProfIter->second;
@@ -152,7 +152,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
   // Note: in such cases we leave as-is any other profile info (if present -
   // e.g. synthetic weights, etc) because it wouldn't interfere with the
   // contextual - based one (which would be in other modules)
-  auto OnExit = llvm::make_scope_exit([&]() {
+  llvm::scope_exit OnExit([&]() {
     if (IsPreThinlink)
       return;
     for (auto &F : M)
@@ -176,10 +176,10 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
     assert(areAllBBsReachable(
                F, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
                       .getManager()) &&
-           "Function has unreacheable basic blocks. The expectation was that "
+           "Function has unreachable basic blocks. The expectation was that "
            "DCE was run before.");
 
-    auto It = FlattenedProfile.find(AssignGUIDPass::getGUID(F));
+    auto It = FlattenedProfile.find(F.getGUID());
     // If this function didn't appear in the contextual profile, it's cold.
     if (It == FlattenedProfile.end())
       clearColdFunctionProfile(F);

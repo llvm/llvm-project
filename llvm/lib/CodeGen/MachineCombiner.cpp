@@ -73,15 +73,13 @@ class MachineCombiner : public MachineFunctionPass {
   MachineTraceMetrics::Ensemble *TraceEnsemble = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   TargetSchedModel TSchedModel;
 
 public:
   static char ID;
-  MachineCombiner() : MachineFunctionPass(ID) {
-    initializeMachineCombinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachineCombiner() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override { return "Machine InstCombiner"; }
@@ -118,8 +116,6 @@ private:
                                 SmallVectorImpl<MachineInstr *> &DelInstrs,
                                 MachineTraceMetrics::Trace BlockTrace);
 
-  void verifyPatternOrder(MachineBasicBlock *MBB, MachineInstr &Root,
-                          SmallVector<unsigned, 16> &Patterns);
   CombinerObjective getCombinerObjective(unsigned Pattern);
 };
 }
@@ -130,6 +126,7 @@ char &llvm::MachineCombinerID = MachineCombiner::ID;
 INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
                       "Machine InstCombiner", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
 INITIALIZE_PASS_END(MachineCombiner, DEBUG_TYPE, "Machine InstCombiner",
                     false, false)
@@ -139,6 +136,8 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<MachineTraceMetricsWrapperPass>();
   AU.addPreserved<MachineTraceMetricsWrapperPass>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
@@ -217,8 +216,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         continue;
       unsigned DepthOp = 0;
       unsigned LatencyOp = 0;
-      DenseMap<Register, unsigned>::iterator II =
-          InstrIdxForVirtReg.find(MO.getReg());
+      auto II = InstrIdxForVirtReg.find(MO.getReg());
       if (II != InstrIdxForVirtReg.end()) {
         // Operand is new virtual register not in trace
         assert(II->second < InstrDepth.size() && "Bad Index");
@@ -482,9 +480,8 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                          SmallVectorImpl<MachineInstr *> &InsInstrs,
                          SmallVectorImpl<MachineInstr *> &DelInstrs,
                          MachineTraceMetrics::Ensemble *TraceEnsemble,
-                         SparseSet<LiveRegUnit> &RegUnits,
-                         const TargetInstrInfo *TII, unsigned Pattern,
-                         bool IncrementalUpdate) {
+                         LiveRegUnitSet &RegUnits, const TargetInstrInfo *TII,
+                         unsigned Pattern, bool IncrementalUpdate) {
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
   // better pattern InsInstrs or DelInstrs, so we don't want generate some
@@ -517,35 +514,6 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   NumInstCombined++;
 }
 
-// Check that the difference between original and new latency is decreasing for
-// later patterns. This helps to discover sub-optimal pattern orderings.
-void MachineCombiner::verifyPatternOrder(MachineBasicBlock *MBB,
-                                         MachineInstr &Root,
-                                         SmallVector<unsigned, 16> &Patterns) {
-  long PrevLatencyDiff = std::numeric_limits<long>::max();
-  (void)PrevLatencyDiff; // Variable is used in assert only.
-  for (auto P : Patterns) {
-    SmallVector<MachineInstr *, 16> InsInstrs;
-    SmallVector<MachineInstr *, 16> DelInstrs;
-    DenseMap<Register, unsigned> InstrIdxForVirtReg;
-    TII->genAlternativeCodeSequence(Root, P, InsInstrs, DelInstrs,
-                                    InstrIdxForVirtReg);
-    // Found pattern, but did not generate alternative sequence.
-    // This can happen e.g. when an immediate could not be materialized
-    // in a single instruction.
-    if (InsInstrs.empty() || !TSchedModel.hasInstrSchedModelOrItineraries())
-      continue;
-
-    unsigned NewRootLatency, RootLatency;
-    std::tie(NewRootLatency, RootLatency) = getLatenciesForInstrSequences(
-        Root, InsInstrs, DelInstrs, TraceEnsemble->getTrace(MBB));
-    long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
-    assert(CurrentLatencyDiff <= PrevLatencyDiff &&
-           "Current pattern is better than previous pattern.");
-    PrevLatencyDiff = CurrentLatencyDiff;
-  }
-}
-
 /// Substitute a slow code sequence with a faster one by
 /// evaluating instruction combining pattern.
 /// The prototype of such a pattern is MUl + ADD -> MADD. Performs instruction
@@ -565,13 +533,13 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   if (!TraceEnsemble)
     TraceEnsemble = Traces->getEnsemble(TII->getMachineCombinerTraceStrategy());
 
-  SparseSet<LiveRegUnit> RegUnits;
+  LiveRegUnitSet RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
 
   bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
 
   bool DoRegPressureReduce =
-      TII->shouldReduceRegisterPressure(MBB, &RegClassInfo);
+      TII->shouldReduceRegisterPressure(MBB, RegClassInfo);
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
@@ -606,8 +574,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
     if (!TII->getMachineCombinerPatterns(MI, Patterns, DoRegPressureReduce))
       continue;
 
-    if (VerifyPatternOrder)
-      verifyPatternOrder(MBB, MI, Patterns);
+    // Only used when VerifyPatternOrder is enabled.
+    [[maybe_unused]] long PrevLatencyDiff = std::numeric_limits<long>::max();
 
     for (const auto P : Patterns) {
       SmallVector<MachineInstr *, 16> InsInstrs;
@@ -632,6 +600,19 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
           InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
                           /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
       });
+
+      // Check that the difference between original and new latency is
+      // decreasing for later patterns. This helps to discover sub-optimal
+      // pattern orderings.
+      if (VerifyPatternOrder && TSchedModel.hasInstrSchedModelOrItineraries()) {
+        auto [NewRootLatency, RootLatency] = getLatenciesForInstrSequences(
+            MI, InsInstrs, DelInstrs, TraceEnsemble->getTrace(MBB));
+        long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
+        assert(CurrentLatencyDiff <= PrevLatencyDiff &&
+               "Current pattern is expected to be better than the previous "
+               "pattern.");
+        PrevLatencyDiff = CurrentLatencyDiff;
+      }
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {
         // Update depths since the last incremental update.
@@ -730,7 +711,7 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
          nullptr;
   TraceEnsemble = nullptr;
-  RegClassInfo.runOnMachineFunction(MF);
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
   LLVM_DEBUG(dbgs() << getPassName() << ": " << MF.getName() << '\n');
   if (!TII->useMachineCombiner()) {

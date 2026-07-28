@@ -57,6 +57,8 @@ public:
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
@@ -77,13 +79,9 @@ public:
   }
 
   bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
+    // -target-abi=aapcs16 overrides the triple default.
+    return TargetABI == ARM::ARM_ABI_AAPCS16 ||
+           TargetTriple.getDefaultFloatABI() == FloatABI::Hard;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };
@@ -96,6 +94,20 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
+  }
+
+  bool isGVIndirectSymbol(const GlobalValue *GV) const {
+    if (!shouldAssumeDSOLocal(GV))
+      return true;
+
+    // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+    // the section that is being relocated. This means we have to use o load
+    // even for GVs that are known to be local to the dso.
+    if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
+        (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+      return true;
+
+    return false;
   }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;

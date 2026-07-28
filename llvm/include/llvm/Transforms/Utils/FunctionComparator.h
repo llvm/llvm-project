@@ -263,7 +263,7 @@ protected:
   /// 6.1.Load: volatile (as boolean flag)
   /// 6.2.Load: alignment (as integer numbers)
   /// 6.3.Load: ordering (as underlying enum class value)
-  /// 6.4.Load: synch-scope (as integer numbers)
+  /// 6.4.Load: sync-scope (as integer numbers)
   /// 6.5.Load: range metadata (as integer ranges)
   /// On this stage its better to see the code, since its not more than 10-15
   /// strings for particular instruction, and could change sometimes.

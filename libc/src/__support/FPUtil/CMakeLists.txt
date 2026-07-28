@@ -7,6 +7,7 @@ add_header_library(
     libc.hdr.fenv_macros
     libc.hdr.math_macros
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.errno.errno
@@ -291,6 +292,24 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  float128
+  HDRS
+    float128.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
 )
 
 add_subdirectory(generic)

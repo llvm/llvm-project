@@ -6,19 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/HostInfo.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
+#include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symtab.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #ifdef __APPLE__
 #include <dlfcn.h>
 #endif
 
+using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
@@ -30,12 +39,17 @@ class ObjectFileMachOTest : public ::testing::Test {
 
 #if defined(__APPLE__)
 TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
-  SharedCacheImageInfo image_info =
-      HostInfo::GetSharedCacheImageInfo("/usr/lib/libobjc.A.dylib");
-  EXPECT_TRUE(image_info.uuid);
-  EXPECT_TRUE(image_info.data_sp);
+  ArchSpec arch("arm64-apple-macosx-");
 
-  ModuleSpec spec(FileSpec(), UUID(), image_info.data_sp);
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+      ConstString("/usr/lib/libobjc.A.dylib"),
+      lldb::eSymbolSharedCacheUseHostSharedCache);
+  EXPECT_TRUE(image_info.GetUUID());
+  EXPECT_TRUE(image_info.GetExtractor());
+
+  ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
   ObjectFile *OF = module->GetObjectFile();
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
@@ -56,7 +70,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
                                           lldb::eSymbolTypeAny, symbol_indices);
     EXPECT_EQ(symbol_indices.size(), 1u);
 
-    Symbol *sym = symtab->SymbolAtIndex(symbol_indices[0]);
+    const Symbol *sym = symtab->SymbolAtIndex(symbol_indices[0]);
     ASSERT_NE(sym, nullptr);
     Address base = sym->GetAddress();
     size_t size = sym->GetByteSize();
@@ -72,15 +86,17 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   };
 
   // Read a symbol from the __TEXT segment...
-  check_symbol("objc_msgSend");
+  check_symbol("objc_begin_catch");
   // ... and one from the __DATA segment
-  check_symbol("OBJC_CLASS_$_NSObject");
+  check_symbol("OBJC_IVAR_$_NSObject.isa");
 }
 
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-      "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
-  ModuleSpec spec(FileSpec(), UUID(), image_info.data_sp);
+      ConstString(
+          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit"),
+      lldb::eSymbolSharedCacheUseHostSharedCache);
+  ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
 
   ObjectFile *OF = module->GetObjectFile();
@@ -95,3 +111,49 @@ TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
     OF->ParseSymtab(symtab);
 }
 #endif
+
+// A Mach-O whose MH_DYLIB_IN_CACHE flag is set but which has no __LINKEDIT
+// segment.
+TEST_F(ObjectFileMachOTest, ParseSymtabSharedCacheMissingLinkedit) {
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000006
+  ncmds:           2
+  sizeofcmds:      96
+  flags:           0x80000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          0
+    strsize:         0
+...
+)";
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  lldb::ModuleSP module = std::make_shared<Module>(file->moduleSpec());
+  ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
+
+  // Simply no crashing is the regression check.
+  Symtab symtab(OF);
+  OF->ParseSymtab(symtab);
+}

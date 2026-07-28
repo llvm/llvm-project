@@ -23,13 +23,16 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Debug.h"
 
 namespace clang::lifetimes::internal {
+
+using CausingFactType =
+    ::llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>;
 
 enum class LivenessKind : uint8_t {
   Dead,  // Not alive
@@ -43,7 +46,7 @@ struct LivenessInfo {
   /// multiple uses along different paths, this will point to the use appearing
   /// earlier in the translation unit.
   /// This is 'null' when the origin is not live.
-  const UseFact *CausingUseFact;
+  CausingFactType CausingFact;
 
   /// The kind of liveness of the origin.
   /// `Must`: The origin is live on all control-flow paths from the current
@@ -56,22 +59,21 @@ struct LivenessInfo {
   /// while `Maybe`-be-alive suggests a potential one on some paths.
   LivenessKind Kind;
 
-  LivenessInfo() : CausingUseFact(nullptr), Kind(LivenessKind::Dead) {}
-  LivenessInfo(const UseFact *UF, LivenessKind K)
-      : CausingUseFact(UF), Kind(K) {}
+  LivenessInfo() : CausingFact(nullptr), Kind(LivenessKind::Dead) {}
+  LivenessInfo(CausingFactType CF, LivenessKind K) : CausingFact(CF), Kind(K) {}
 
   bool operator==(const LivenessInfo &Other) const {
-    return CausingUseFact == Other.CausingUseFact && Kind == Other.Kind;
+    return CausingFact == Other.CausingFact && Kind == Other.Kind;
   }
   bool operator!=(const LivenessInfo &Other) const { return !(*this == Other); }
 
   void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
-    IDBuilder.AddPointer(CausingUseFact);
+    IDBuilder.AddPointer(CausingFact.getOpaqueValue());
     IDBuilder.Add(Kind);
   }
 };
 
-using LivenessMap = llvm::ImmutableMap<OriginID, LivenessInfo>;
+using LivenessMap = utils::MapTy<OriginID, LivenessInfo>;
 
 class LiveOriginsAnalysis {
 public:
@@ -85,7 +87,7 @@ public:
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const;
+            const llvm::StringMap<ProgramPoint> &TestPoints) const;
 
 private:
   class Impl;

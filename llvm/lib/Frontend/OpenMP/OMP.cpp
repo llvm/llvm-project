@@ -53,7 +53,7 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
   auto firstLoopAssociated =
       [](iterator_range<ArrayRef<Directive>::iterator> List) {
         for (auto It = List.begin(), End = List.end(); It != End; ++It) {
-          if (getDirectiveAssociation(*It) == Association::Loop)
+          if (getDirectiveAssociation(*It) == Association::LoopNest)
             return It;
         }
         return List.end();
@@ -71,7 +71,7 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
     return Empty;
 
   for (; End != Leafs.end(); ++End) {
-    if (getDirectiveAssociation(*End) != Association::Loop)
+    if (getDirectiveAssociation(*End) != Association::LoopNest)
       break;
   }
   return llvm::make_range(Begin, End);
@@ -81,14 +81,12 @@ static void
 collectPrivatizingConstructs(llvm::SmallSet<Directive, 16> &Constructs,
                              unsigned Version) {
   llvm::SmallSet<Clause, 16> Privatizing;
-  for (auto C :
-       llvm::enum_seq_inclusive<Clause>(Clause::First_, Clause::Last_)) {
-    if (isPrivatizingClause(C))
+  for (auto C : clauses()) {
+    if (isPrivatizingClause(C, Version))
       Privatizing.insert(C);
   }
 
-  for (auto D : llvm::enum_seq_inclusive<Directive>(Directive::First_,
-                                                    Directive::Last_)) {
+  for (auto D : directives()) {
     bool AllowsPrivatizing = llvm::any_of(Privatizing, [&](Clause C) {
       return isAllowedClauseForDirective(D, C, Version);
     });
@@ -226,6 +224,12 @@ bool isPrivatizingConstruct(Directive D, unsigned Version) {
   // parallel, scope, sections, simd, single, target, target_data, task,
   // taskgroup, taskloop, and teams.
   return llvm::is_contained(Privatizing, D);
+}
+
+ArrayRef<StringRef> getReservedLocatorNames() {
+  // All names must be lowercase.
+  static StringRef names[]{"omp_all_memory"};
+  return names;
 }
 
 std::string prettifyFunctionName(StringRef FunctionName) {

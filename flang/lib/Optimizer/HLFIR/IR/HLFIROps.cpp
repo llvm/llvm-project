@@ -25,7 +25,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include <iterator>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <optional>
 #include <tuple>
@@ -261,14 +260,12 @@ updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
   return std::make_pair(inputType, memref);
 }
 
-void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &result, mlir::Value memref,
-                             llvm::StringRef uniq_name, mlir::Value shape,
-                             mlir::ValueRange typeparams,
-                             mlir::Value dummy_scope, mlir::Value storage,
-                             std::uint64_t storage_offset,
-                             fir::FortranVariableFlagsAttr fortran_attrs,
-                             cuf::DataAttributeAttr data_attr) {
+void hlfir::DeclareOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Value memref,
+    llvm::StringRef uniq_name, mlir::Value shape, mlir::ValueRange typeparams,
+    mlir::Value dummy_scope, mlir::Value storage, std::uint64_t storage_offset,
+    fir::FortranVariableFlagsAttr fortran_attrs,
+    cuf::DataAttributeAttr data_attr, unsigned dummy_arg_no) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
@@ -279,9 +276,12 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   }
   auto [hlfirVariableType, firVarType] =
       getDeclareOutputTypes(inputType, hasExplicitLbs);
+  mlir::IntegerAttr argNoAttr;
+  if (dummy_arg_no > 0)
+    argNoAttr = builder.getUI32IntegerAttr(dummy_arg_no);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
         typeparams, dummy_scope, storage, storage_offset, nameAttr,
-        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{});
+        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{}, argNoAttr);
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
@@ -589,6 +589,12 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
       return res;
   }
   return mlir::success();
+}
+
+std::optional<std::int64_t> hlfir::DesignateOp::getViewOffset(mlir::OpResult) {
+  // TODO: we can compute the constant offset
+  // based on the component/indices/etc.
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1191,7 +1197,8 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
                                mlir::Value len) {
   fir::CharacterType::LenType resultTypeLen = fir::CharacterType::unknownLen();
   if (auto cstLen = fir::getIntIfConstant(len))
-    resultTypeLen = *cstLen;
+    if (std::optional<std::int64_t> cstLen64 = cstLen->trySExtValue())
+      resultTypeLen = *cstLen64;
   unsigned kind = getCharacterKind(string.getType());
   auto resultType = hlfir::ExprType::get(
       builder.getContext(), hlfir::ExprType::Shape{},
@@ -1562,8 +1569,15 @@ static llvm::LogicalResult verifyArrayShift(Op op) {
   int64_t dimVal = -1;
   if (!op.getDim())
     dimVal = 1;
-  else if (auto dim = fir::getIntIfConstant(op.getDim()))
-    dimVal = *dim;
+  else if (std::optional<llvm::APInt> dim =
+               fir::getIntIfConstant(op.getDim())) {
+    if (std::optional<std::int64_t> dim64 = dim->trySExtValue())
+      dimVal = *dim64;
+    else if (useStrictIntrinsicVerifier)
+      return op.emitOpError(dim->isNegative()
+                                ? "DIM must be >= 1"
+                                : "DIM must be <= input array's rank");
+  }
 
   // The DIM argument may be statically invalid (e.g. exceed the
   // input array rank) in dead code after constant propagation,
@@ -2450,6 +2464,37 @@ llvm::LogicalResult hlfir::EvaluateInMemoryOp::verify() {
   mlir::Type elementType = exprType.getElementType();
   if (auto res = verifyTypeparams(*this, elementType, getTypeparams().size());
       failed(res))
+    return res;
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ConditionalOp::build(mlir::OpBuilder &builder,
+                                 mlir::OperationState &odsState,
+                                 mlir::Type resultType, mlir::Value condition) {
+  odsState.addTypes(resultType);
+  odsState.addOperands(condition);
+  // Create the then and else regions, each with one empty block.
+  odsState.addRegion()->emplaceBlock();
+  odsState.addRegion()->emplaceBlock();
+}
+
+llvm::LogicalResult hlfir::ConditionalOp::verify() {
+  if (!mlir::isa<hlfir::ExprType>(getResult().getType()))
+    return emitOpError("result must be an hlfir.expr type");
+  const auto checkRegion = [&](mlir::Region &region,
+                               llvm::StringRef name) -> llvm::LogicalResult {
+    if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(region)))
+      return emitOpError(name)
+             << " region must be terminated by an hlfir.yield";
+    return mlir::success();
+  };
+  if (const auto res = checkRegion(getThenRegion(), "then"); failed(res))
+    return res;
+  if (const auto res = checkRegion(getElseRegion(), "else"); failed(res))
     return res;
   return mlir::success();
 }

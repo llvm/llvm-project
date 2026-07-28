@@ -247,7 +247,7 @@ public:
         StandardSegments(std::move(StandardSegments)),
         FinalizationSegments(std::move(FinalizationSegments)) {}
 
-  ~IPInFlightAlloc() {
+  ~IPInFlightAlloc() override {
     assert(!G && "InFlight alloc neither abandoned nor finalized");
   }
 

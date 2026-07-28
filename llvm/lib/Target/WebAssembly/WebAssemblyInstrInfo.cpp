@@ -34,7 +34,7 @@ using namespace llvm;
 #include "WebAssemblyGenInstrInfo.inc"
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
-    : WebAssemblyGenInstrInfo(STI, WebAssembly::ADJCALLSTACKDOWN,
+    : WebAssemblyGenInstrInfo(STI, RI, WebAssembly::ADJCALLSTACKDOWN,
                               WebAssembly::ADJCALLSTACKUP,
                               WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}
@@ -71,7 +71,7 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned CopyOpcode = WebAssembly::getCopyOpcodeForRegClass(RC);
 
   BuildMI(MBB, I, DL, get(CopyOpcode), DestReg)
-      .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 MachineInstr *WebAssemblyInstrInfo::commuteInstructionImpl(

@@ -1,8 +1,8 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga 2>&1 %s | FileCheck -check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 2>&1 %s | FileCheck -check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 2>&1 %s | FileCheck --check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 2>&1 %s | FileCheck --check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 2>&1 %s | FileCheck --check-prefix=GFX11-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -filetype=null 2>&1 %s | FileCheck -check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -filetype=null 2>&1 %s | FileCheck -check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu10.10 -filetype=null 2>&1 %s | FileCheck --check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu10.30 -filetype=null 2>&1 %s | FileCheck --check-prefix=VI-GFX9_10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.00 -filetype=null 2>&1 %s | FileCheck --check-prefix=GFX11-ERR --implicit-check-not=error: %s
 
 // FLAT
 

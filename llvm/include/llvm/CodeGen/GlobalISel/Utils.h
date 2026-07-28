@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <cstdint>
+#include <vector>
 
 namespace llvm {
 
@@ -48,7 +49,8 @@ class TargetInstrInfo;
 class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ConstantFP;
 class APFloat;
 
@@ -132,12 +134,10 @@ LLVM_ABI Register constrainOperandRegClass(
 /// generic) virtual register operands to the instruction's register class.
 /// This could involve inserting COPYs before (for uses) or after (for defs).
 /// This requires the number of operands to match the instruction description.
-/// \returns whether operand regclass constraining succeeded.
-///
 // FIXME: Not all instructions have the same number of operands. We should
 // probably expose a constrain helper per operand and let the target selector
 // constrain individual registers, like fast-isel.
-LLVM_ABI bool constrainSelectedInstRegOperands(MachineInstr &I,
+LLVM_ABI void constrainSelectedInstRegOperands(MachineInstr &I,
                                                const TargetInstrInfo &TII,
                                                const TargetRegisterInfo &TRI,
                                                const RegisterBankInfo &RBI);
@@ -155,12 +155,10 @@ LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
 LLVM_ABI void reportGISelFailure(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  const char *PassName, StringRef Msg,
                                  const MachineInstr &MI);
@@ -168,7 +166,6 @@ LLVM_ABI void reportGISelFailure(MachineFunction &MF,
 /// Report an ISel warning as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.
 LLVM_ABI void reportGISelWarning(MachineFunction &MF,
-                                 const TargetPassConfig &TPC,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
@@ -207,6 +204,18 @@ getIConstantVRegValWithLookThrough(Register VReg,
 LLVM_ABI std::optional<ValueAndVReg> getAnyConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI,
     bool LookThroughInstrs = true, bool LookThroughAnyExt = false);
+
+using MemCpyFamilyLoweringInfo =
+    std::tuple<Register, Register, uint64_t, Align, bool, std::vector<LLT>>;
+
+/// Matcher for memcpy-like instructions. For non-zero lengths, \p MemOps
+/// contains the load/store types to emit.
+LLVM_ABI bool canLowerMemCpyFamily(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI,
+                                   unsigned MaxLen, Register &Dst,
+                                   Register &Src, uint64_t &KnownLen,
+                                   Align &Alignment, bool &DstAlignCanChange,
+                                   std::vector<LLT> &MemOps);
 
 struct FPValueAndVReg {
   APFloat Value;
@@ -290,9 +299,6 @@ T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
   return dyn_cast_or_null<T>(DefMI);
 }
 
-/// Returns an APFloat from Val converted to the appropriate size.
-LLVM_ABI APFloat getAPFloatFromSize(double Val, unsigned Size);
-
 /// Modify analysis usage so it preserves passes required for the SelectionDAG
 /// fallback.
 LLVM_ABI void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
@@ -324,12 +330,12 @@ LLVM_ABI std::optional<APFloat>
 ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
-/// Tries to constant fold a counting-zero operation (G_CTLZ or G_CTTZ) on \p
-/// Src. If \p Src is a vector then it tries to do an element-wise constant
-/// fold.
-LLVM_ABI std::optional<SmallVector<unsigned>>
-ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
-                       std::function<unsigned(APInt)> CB);
+/// Tries to constant fold a unary integer operation (G_CTLZ, G_CTTZ, G_CTPOP
+/// and their _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) on \p Src.
+/// If \p Src is a vector then it tries to do an element-wise constant fold.
+LLVM_ABI SmallVector<APInt>
+ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
+                       const MachineRegisterInfo &MRI);
 
 LLVM_ABI std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
@@ -338,20 +344,13 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
-/// set.
+/// set. When \p OrNegative is true, the value is also considered a power of two
+/// if its negation is a power of two (i.e. its absolute value is a power of
+/// two).
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
-                       GISelValueTracking *ValueTracking = nullptr);
-
-/// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
-/// this returns if \p Val can be assumed to never be a signaling NaN.
-LLVM_ABI bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
-                              bool SNaN = false);
-
-/// Returns true if \p Val can be assumed to never be a signaling NaN.
-inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
-  return isKnownNeverNaN(Val, MRI, true);
-}
+                       GISelValueTracking *ValueTracking = nullptr,
+                       bool OrNegative = false);
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);
@@ -543,19 +542,17 @@ getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 LLVM_ABI bool isConstantOrConstantVector(MachineInstr &MI,
                                          const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a constant integer or a splat vector of
+/// Determines if \p Def defines a constant integer or a splat vector of
 /// constant integers.
 /// \returns the scalar constant or std::nullopt.
 LLVM_ABI std::optional<APInt>
-isConstantOrConstantSplatVector(MachineInstr &MI,
-                                const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVector(Register Def, const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a float constant integer or a splat vector of
+/// Determines if \p Def defines a float constant integer or a splat vector of
 /// float constant integers.
 /// \returns the float constant or std::nullopt.
 LLVM_ABI std::optional<APFloat>
-isConstantOrConstantSplatVectorFP(MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source

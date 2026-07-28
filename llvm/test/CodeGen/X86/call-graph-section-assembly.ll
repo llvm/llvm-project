@@ -6,12 +6,11 @@
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
-declare !type !0 void @direct_foo()
-declare !type !1 i32 @direct_bar(i8)
-declare !type !2 ptr @direct_baz(ptr)
+declare !callgraph !0 void @direct_foo()
+declare !callgraph !1 i32 @direct_bar(i8)
+declare !callgraph !2 ptr @direct_baz(ptr)
 
 ; CHECK: ball:
-; CHECK-NEXT: [[LABEL_FUNC:\.Lfunc_begin[0-9]+]]:
 define ptr @ball() {
 entry:
   call void @direct_foo()
@@ -30,19 +29,19 @@ entry:
 }
 
 !0 = !{!1}
-!1 = !{i64 0, !"_ZTSFvE.generalized"}
+!1 = !{!"_ZTSFvE"}
 !2 = !{!3}
-!3 = !{i64 0, !"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFicE"}
 !4 = !{!5}
-!5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
+!5 = !{!"_ZTSFPvS_E"}
 
-; CHECK: .section .llvm.callgraph,"o",@progbits,.text
+; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
 ; CHECK-NEXT: .byte   7
 ;; Function Entry PC
-; CHECK-NEXT: .quad   [[LABEL_FUNC]]
+; CHECK-NEXT: .quad ball
 ;; Function type ID -- set to 0 as no type metadata attached to function.
 ; CHECK-NEXT: .quad   0
 ;; Number of unique direct callees.
@@ -54,6 +53,6 @@ entry:
 ;; Number of unique indirect target type IDs.
 ; CHECK-NEXT: .byte   3
 ;; Indirect type IDs.
-; CHECK-NEXT: .quad   4524972987496481828
-; CHECK-NEXT: .quad   3498816979441845844
-; CHECK-NEXT: .quad   8646233951371320954
+; CHECK-NEXT: .quad   6588678392271548388
+; CHECK-NEXT: .quad   142272631118516422
+; CHECK-NEXT: .quad   -8308188386355579584

@@ -65,7 +65,6 @@
 #include <cassert>
 #include <list>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 
@@ -219,7 +218,7 @@ public:
           if (!VMap.empty())
             NewInst = cast<Instruction>(VMap[NewInst]);
 
-          assert(!isa<BranchInst>(NewInst) &&
+          assert((!isa<UncondBrInst, CondBrInst>(NewInst)) &&
                  "Branches are marked used early on");
           Unused.push_back(NewInst);
         }
@@ -521,7 +520,7 @@ public:
         // -1 means belonging to multiple partitions.
         else if (Partition == -1)
           break;
-        else if (Partition != (int)ThisPartition)
+        else if (Partition != ThisPartition)
           Partition = -1;
       }
       assert(Partition != -2 && "Pointer not belonging to any partition");
@@ -816,6 +815,9 @@ public:
 
       LLVM_DEBUG(dbgs() << "LDist: Pointers:\n");
       LLVM_DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, SE);
       LoopVersioning LVer(*LAI, Checks, L, LI, DT, SE);
       LVer.versionLoop(DefsUsedOutside);
       LVer.annotateLoopWithNoAlias();
@@ -843,7 +845,7 @@ public:
     LLVM_DEBUG(Partitions.printBlocks(dbgs()));
 
     if (LDistVerify) {
-      LI->verify(*DT);
+      LI->verify();
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
 
@@ -939,14 +941,10 @@ private:
   /// Check whether the loop metadata is forcing distribution to be
   /// enabled/disabled.
   void setForced() {
-    std::optional<const MDOperand *> Value =
-        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
-    if (!Value)
-      return;
-
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+    if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
+      IsForced = true;
+    else if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+      IsForced = false;
   }
 
   Loop *L;

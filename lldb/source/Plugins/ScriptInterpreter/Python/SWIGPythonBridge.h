@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 
 #include <optional>
 #include <string>
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
@@ -93,6 +88,7 @@ public:
   static PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl);
   static PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp);
   static PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp);
+  static PythonObject ToSWIGWrapper(lldb::StackFrameListSP frames_sp);
   static PythonObject ToSWIGWrapper(lldb::DebuggerSP debugger_sp);
   static PythonObject ToSWIGWrapper(lldb::WatchpointSP watchpoint_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointLocationSP bp_loc_sp);
@@ -158,8 +154,9 @@ public:
   static PyObject *LLDBSwigPython_GetChildAtIndex(PyObject *implementor,
                                                   uint32_t idx);
 
-  static int LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
-                                                    const char *child_name);
+  static uint32_t
+  LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
+                                         const char *child_name);
 
   static lldb::ValueObjectSP
   LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
@@ -217,17 +214,6 @@ public:
                                const char *session_dictionary_name,
                                const lldb::ProcessSP &process_sp);
 
-  static python::PythonObject
-  LLDBSWIGPython_CreateFrameRecognizer(const char *python_class_name,
-                                       const char *session_dictionary_name);
-
-  static PyObject *
-  LLDBSwigPython_GetRecognizedArguments(PyObject *implementor,
-                                        const lldb::StackFrameSP &frame_sp);
-
-  static bool LLDBSwigPython_ShouldHide(PyObject *implementor,
-                                        const lldb::StackFrameSP &frame_sp);
-
   static bool LLDBSWIGPythonRunScriptKeywordProcess(
       const char *python_function_name, const char *session_dictionary_name,
       const lldb::ProcessSP &process, std::string &output);
@@ -263,14 +249,17 @@ void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBThread(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H

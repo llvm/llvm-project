@@ -1,8 +1,8 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=ASM,W32 %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdhsa --amdhsa-code-object-version=4 < %s | FileCheck --check-prefixes=ASM,W32 %s
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdhsa --amdhsa-code-object-version=4 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s 2>&1 | FileCheck --check-prefix=W64-ERR %s
+// RUN: not llvm-mc -triple=amdgpu12.50-amd-amdhsa -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s -filetype=null 2>&1 | FileCheck --check-prefix=W64-ERR %s
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
@@ -52,7 +52,7 @@
 // OBJDUMP-NEXT: 00e0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00f0 00000cc0 80000000 00040000 00000000
 // max_lds_size
-// OBJDUMP-NEXT: 0100 00000600 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0100 00000500 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0110 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0120 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0130 00000cc0 80000000 00040000 00000000
@@ -64,37 +64,49 @@
 
 .text
 
-.amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
+.amdgcn_target "amdgpu12.50-amd-amdhsa--gfx1250"
+// ASM: .amdgcn_target "amdgpu12.50-amd-amdhsa-unknown-gfx1250"
 
 .p2align 8
 .type minimal,@function
 minimal:
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  v_nop
   s_endpgm
 
 .p2align 8
 .type complete,@function
 complete:
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  v_nop
   s_endpgm
 
 .p2align 8
 .type special_sgpr,@function
 special_sgpr:
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  v_nop
   s_endpgm
 
 .p2align 8
 .type disabled_user_sgpr,@function
 disabled_user_sgpr:
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  v_nop
   s_endpgm
 
 .p2align 8
 .type max_lds_size,@function
 max_lds_size:
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  v_nop
   s_endpgm
 
 .p2align 8
 .type max_vgprs,@function
 max_vgprs:
+  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  v_nop
   s_endpgm
 
 .rodata
@@ -231,13 +243,13 @@ max_vgprs:
 
 .p2align 6
 .amdhsa_kernel max_lds_size
- .amdhsa_group_segment_fixed_size 393216
+ .amdhsa_group_segment_fixed_size 327680
  .amdhsa_next_free_vgpr 1
  .amdhsa_next_free_sgpr 1
 .end_amdhsa_kernel
 
 // ASM: .amdhsa_kernel max_lds_size
-// ASM: .amdhsa_group_segment_fixed_size 393216
+// ASM: .amdhsa_group_segment_fixed_size 327680
 // ASM: .end_amdhsa_kernel
 
 // Test maximum VGPR allocation
@@ -264,9 +276,9 @@ max_vgprs:
 // ASM: .byte 0
 
 .byte .amdgcn.next_free_vgpr
-// ASM: .byte 0
+// ASM: .byte 1
 .byte .amdgcn.next_free_sgpr
-// ASM: .byte 0
+// ASM: .byte 2
 
 v_mov_b32_e32 v16, s3
 

@@ -67,7 +67,7 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   bool Changed = false;
 
-  for (const WeakVH &Elem : AC.assumptions()) {
+  for (WeakVH &Elem : AC.assumptions()) {
     auto *Assume = cast_or_null<AssumeInst>(Elem);
     if (!Assume)
       continue;
@@ -78,10 +78,15 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       SmallVector<OperandBundleDef> KeptBundles;
       unsigned NumBundles = Assume->getNumOperandBundles();
       for (unsigned I = 0; I != NumBundles; ++I) {
-        auto IsDead = [](OperandBundleUse Bundle) {
+        auto IsDead = [&](OperandBundleUse Bundle) {
           // "ignore" operand bundles are always dead.
           if (Bundle.getTagName() == "ignore")
             return true;
+
+          // "dereferenceable" operand bundles are only dropped if requested
+          // (e.g., after loop vectorization has run).
+          if (Bundle.getTagName() == "dereferenceable")
+            return DropDereferenceable;
 
           // Bundles without arguments do not affect any specific values.
           // Always keep them for now.
@@ -107,10 +112,12 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
           // All operand bundles are dead, remove the whole assume.
           Assume->eraseFromParent();
         } else {
-          // Otherwise only drop the dead operand bundles.
+          // Otherwise only drop the dead operand bundles. Replace the existing
+          // assumption in place so the cache's assumption vector is not grown
+          // while we iterate over it.
           CallBase *NewAssume =
               CallBase::Create(Assume, KeptBundles, Assume->getIterator());
-          AC.registerAssumption(cast<AssumeInst>(NewAssume));
+          AC.replaceAssumption(Elem, cast<AssumeInst>(NewAssume));
           Assume->eraseFromParent();
         }
 
@@ -122,7 +129,8 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
 
     Value *Cond = Assume->getArgOperand(0);
     // Don't drop type tests, which have special semantics.
-    if (match(Cond, m_Intrinsic<Intrinsic::type_test>()))
+    if (match(Cond, m_Intrinsic<Intrinsic::type_test>()) ||
+        match(Cond, m_Intrinsic<Intrinsic::public_type_test>()))
       continue;
 
     SmallVector<Value *> Affected;

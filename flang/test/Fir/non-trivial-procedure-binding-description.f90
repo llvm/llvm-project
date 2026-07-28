@@ -25,6 +25,6 @@ end module a
 program main
   use a
 
-  type(f) :: obj 
+  type(f) :: obj
   print *, obj%foo(obj)
 end program

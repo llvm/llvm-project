@@ -31,6 +31,14 @@ enum class ResourceClass : uint8_t {
   LastEntry = Sampler,
 };
 
+enum class ResourceDimension : uint8_t {
+  Unknown = 0,
+  Dim1D,
+  Dim2D,
+  Dim3D,
+  Cube,
+};
+
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
 /// "Shape" in the DXIL docs.
 enum class ResourceKind : uint32_t {
@@ -96,6 +104,20 @@ enum class SamplerType : uint32_t {
 enum class SamplerFeedbackType : uint32_t {
   MinMip = 0,
   MipRegionUsed = 1,
+};
+
+/// Opcodes for the DXIL `AtomicBinOp` op (78). Values must match the DXIL
+/// specification.
+enum class AtomicBinOpCode : uint32_t {
+  Add = 0,
+  And = 1,
+  Or = 2,
+  Xor = 3,
+  IMin = 4,
+  IMax = 5,
+  UMin = 6,
+  UMax = 7,
+  Exchange = 8,
 };
 
 const unsigned MinWaveSize = 4;

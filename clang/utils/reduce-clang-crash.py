@@ -38,7 +38,7 @@ def check_file(fname):
     return fname
 
 
-def check_cmd(cmd_name, cmd_dir, cmd_path=None):
+def check_cmd(cmd_name, cmd_dir, cmd_path=None, return_none_if_not_found=False):
     """
     Returns absolute path to cmd_path if it is given,
     or absolute path to cmd_dir/cmd_name.
@@ -54,6 +54,9 @@ def check_cmd(cmd_name, cmd_dir, cmd_path=None):
     cmd = shutil.which(cmd_name, path=cmd_dir)
     if cmd:
         return cmd
+
+    if return_none_if_not_found:
+        return None
 
     if not cmd_dir:
         cmd_dir = "$PATH"
@@ -461,8 +464,9 @@ def main():
     args, creduce_flags = parser.parse_known_args()
     verbose = args.verbose
     llvm_bin = os.path.abspath(args.llvm_bin) if args.llvm_bin else None
-    creduce_cmd = check_cmd("creduce", None, args.creduce)
-    creduce_cmd = check_cmd("cvise", None, args.creduce)
+    creduce_cmd = check_cmd("cvise", None, args.creduce, return_none_if_not_found=True)
+    if not creduce_cmd:
+        creduce_cmd = check_cmd("creduce", None, args.creduce)
     clang_cmd = check_cmd("clang", llvm_bin, args.clang)
 
     crash_script = check_file(args.crash_script[0])

@@ -11,12 +11,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 %"union.llvm::SmallVectorBase::U" = type { x86_fp80 }
 
 ; Function Attrs: ssp uwtable
-define void @_Z4testv() #0 personality ptr @__gxx_personality_v0 {
+define void @_Z4testv() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @_Z4testv(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; CHECK-SAME: ) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SV:%.*]] = alloca %"class.llvm::SmallVector", align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[SV]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[SV]])
 ; CHECK-NEXT:    [[FIRSTEL_I_I_I_I_I_I:%.*]] = getelementptr inbounds %"class.llvm::SmallVector", ptr [[SV]], i64 0, i32 0, i32 0, i32 0, i32 0, i32 3
 ; CHECK-NEXT:    store ptr [[FIRSTEL_I_I_I_I_I_I]], ptr [[SV]], align 16, !tbaa [[ANYPTR_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[ENDX_I_I_I_I_I_I:%.*]] = getelementptr inbounds %"class.llvm::SmallVector", ptr [[SV]], i64 0, i32 0, i32 0, i32 0, i32 0, i32 1
@@ -66,10 +66,10 @@ define void @_Z4testv() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[CMP_I_I_I_I19:%.*]] = icmp eq ptr [[TMP0]], [[FIRSTEL_I_I_I_I_I_I]]
 ; CHECK-NEXT:    br i1 [[CMP_I_I_I_I19]], label %[[_ZN4LLVM11SMALLVECTORIILJ8EED1EV_EXIT21:.*]], label %[[IF_THEN_I_I_I20:.*]]
 ; CHECK:       [[IF_THEN_I_I_I20]]:
-; CHECK-NEXT:    call void @free(ptr [[TMP0]]) #[[ATTR4]]
+; CHECK-NEXT:    call void @free(ptr [[TMP0]])
 ; CHECK-NEXT:    br label %[[_ZN4LLVM11SMALLVECTORIILJ8EED1EV_EXIT21]]
 ; CHECK:       [[_ZN4LLVM11SMALLVECTORIILJ8EED1EV_EXIT21]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[SV]]) #[[ATTR4]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[SV]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[LPAD]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
@@ -78,7 +78,7 @@ define void @_Z4testv() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[CMP_I_I_I_I:%.*]] = icmp eq ptr [[TMP2]], [[FIRSTEL_I_I_I_I_I_I]]
 ; CHECK-NEXT:    br i1 [[CMP_I_I_I_I]], label %[[EH_RESUME:.*]], label %[[IF_THEN_I_I_I:.*]]
 ; CHECK:       [[IF_THEN_I_I_I]]:
-; CHECK-NEXT:    call void @free(ptr [[TMP2]]) #[[ATTR4]]
+; CHECK-NEXT:    call void @free(ptr [[TMP2]])
 ; CHECK-NEXT:    br label %[[EH_RESUME]]
 ; CHECK:       [[EH_RESUME]]:
 ; CHECK-NEXT:    resume { ptr, i32 } [[TMP1]]
@@ -86,7 +86,7 @@ define void @_Z4testv() #0 personality ptr @__gxx_personality_v0 {
 
 entry:
   %sv = alloca %"class.llvm::SmallVector", align 16
-  call void @llvm.lifetime.start.p0(ptr %sv) #1
+  call void @llvm.lifetime.start.p0(ptr %sv)
   %FirstEl.i.i.i.i.i.i = getelementptr inbounds %"class.llvm::SmallVector", ptr %sv, i64 0, i32 0, i32 0, i32 0, i32 0, i32 3
   store ptr %FirstEl.i.i.i.i.i.i, ptr %sv, align 16, !tbaa !4
   %EndX.i.i.i.i.i.i = getelementptr inbounds %"class.llvm::SmallVector", ptr %sv, i64 0, i32 0, i32 0, i32 0, i32 0, i32 1
@@ -151,11 +151,11 @@ invoke.cont3:                                     ; preds = %invoke.cont2
   br i1 %cmp.i.i.i.i19, label %_ZN4llvm11SmallVectorIiLj8EED1Ev.exit21, label %if.then.i.i.i20
 
 if.then.i.i.i20:                                  ; preds = %invoke.cont3
-  call void @free(ptr %5) #1
+  call void @free(ptr %5)
   br label %_ZN4llvm11SmallVectorIiLj8EED1Ev.exit21
 
 _ZN4llvm11SmallVectorIiLj8EED1Ev.exit21:          ; preds = %invoke.cont3, %if.then.i.i.i20
-  call void @llvm.lifetime.end.p0(ptr %sv) #1
+  call void @llvm.lifetime.end.p0(ptr %sv)
   ret void
 
 lpad:                                             ; preds = %if.end.i14, %if.end.i, %invoke.cont2
@@ -166,7 +166,7 @@ lpad:                                             ; preds = %if.end.i14, %if.end
   br i1 %cmp.i.i.i.i, label %eh.resume, label %if.then.i.i.i
 
 if.then.i.i.i:                                    ; preds = %lpad
-  call void @free(ptr %7) #1
+  call void @free(ptr %7)
   br label %eh.resume
 
 eh.resume:                                        ; preds = %if.then.i.i.i, %lpad
@@ -174,24 +174,19 @@ eh.resume:                                        ; preds = %if.then.i.i.i, %lpa
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start.p0(ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare i32 @__gxx_personality_v0(...)
 
-declare void @_Z1gRN4llvm11SmallVectorIiLj8EEE(ptr) #2
+declare void @_Z1gRN4llvm11SmallVectorIiLj8EEE(ptr)
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end.p0(ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
-declare void @_ZN4llvm15SmallVectorBase8grow_podEmm(ptr, i64, i64) #2
+declare void @_ZN4llvm15SmallVectorBase8grow_podEmm(ptr, i64, i64)
 
 ; Function Attrs: nounwind
-declare void @free(ptr nocapture) #3
-
-attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @free(ptr nocapture)
 
 !0 = !{!"any pointer", !1}
 !1 = !{!"omnipotent char", !2}

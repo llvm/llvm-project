@@ -11,14 +11,15 @@
 
 #include "ScriptedInterface.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
 class ScriptedBreakpointInterface : public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, lldb::BreakpointSP break_sp,
-                     const StructuredDataImpl &args_sp) = 0;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::BreakpointSP break_sp) = 0;
 
   /// "ResolverCallback" will get called when a new module is loaded.  The
   /// new module information is passed in sym_ctx.  The Resolver will add
@@ -36,7 +37,14 @@ public:
                          lldb::DescriptionLevel level) {
     return {};
   }
+
+  virtual void SetBreakpoint(lldb::BreakpointSP break_sp) {}
+
+  virtual bool OverridesResolver(Target &target,
+                                 StructuredDataImpl &original_resolver) {
+    return false;
+  }
 };
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDSTOPHOOKINTERFACE_H
+#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDBREAKPOINTINTERFACE_H

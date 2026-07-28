@@ -153,11 +153,11 @@ target.markOpRecursivelyLegal<MyOp>([](MyOp op) { ... });
 
 After the conversion target has been defined, a set of legalization patterns
 must be provided to transform illegal operations into legal ones. The patterns
-supplied here have the same structure and restrictions as those described in the
-main [Pattern](PatternRewriter.md) documentation. The patterns provided do not
-need to generate operations that are directly legal on the target. The framework
-will automatically build a graph of conversions to convert non-legal operations
-into a set of legal ones.
+supplied here have the same structure and similar restrictions as those
+described in the main [Pattern](PatternRewriter.md) documentation. The patterns
+provided do not need to generate operations that are directly legal on the
+target. The framework will automatically build a graph of conversions to convert
+non-legal operations into a set of legal ones.
 
 As an example, say you define a target that supports one operation: `foo.add`.
 When providing the following patterns: [`bar.add` -> `baz.add`, `baz.add` ->
@@ -171,23 +171,12 @@ means that you don’t have to define a direct legalization pattern for `bar.add
 Along with the general `RewritePattern` classes, the conversion framework
 provides a special type of rewrite pattern that can be used when a pattern
 relies on interacting with constructs specific to the conversion process, the
-`ConversionPattern`. For example, the conversion process does not necessarily
-update operations in-place and instead creates a mapping of events such as
-replacements and erasures, and only applies them when the entire conversion
-process is successful. Certain classes of patterns rely on using the
-updated/remapped operands of an operation, such as when the types of results
-defined by an operation have changed. The general Rewrite Patterns can no longer
-be used in these situations, as the types of the operands of the operation being
-matched will not correspond with those expected by the user. This pattern
-provides, as an additional argument to the `matchAndRewrite` method, the list
-of operands that the operation should use after conversion. If an operand was
-the result of a non-converted operation, for example if it was already legal,
-the original operand is used. This means that the operands provided always have
-a 1-1 non-null correspondence with the operands on the operation. The original
-operands of the operation are still intact and may be inspected as normal.
-These patterns also utilize a special `PatternRewriter`,
-`ConversionPatternRewriter`, that provides special hooks for use with the
-conversion infrastructure.
+`ConversionPattern`.
+
+#### Remapped Operands / Adaptor
+Conversion patterns have an additional `operands` / `adaptor` argument for the
+`matchAndRewrite` method. These operands correspond to the most recent
+replacement values of the respective operands of the matched operation.
 
 ```c++
 struct MyConversionPattern : public ConversionPattern {
@@ -199,6 +188,128 @@ struct MyConversionPattern : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const;
 };
 ```
+
+Example:
+
+```mlir
+%0 = "test.foo"() : () -> i1  // matched by pattern A
+"test.bar"(%0) : (i1) -> ()   // matched by pattern B
+```
+
+Let's assume that the two patterns are applied back-to-back: first, pattern A
+replaces `"test.foo"` with `"test.qux"`, an op that has a different result
+type. The dialect conversion infrastructure has special support for such
+type-changing IR modifications.
+
+```mlir
+%0 = "test.qux"() : () -> i2
+%r = builtin.unrealized_conversion_cast %0 : i2 to i1
+"test.bar"(%r) : (i1) -> ()
+```
+
+Simply swapping out the operand of `"test.bar"` during the `replaceOp` call
+would be unsafe, because that would change the type of operand and, therefore,
+potentially the semantics of the operation. Instead, the dialect conversion
+driver (conceptually) inserts a `builtin.unrealized_conversion_cast` op that
+connects the newly created `"test.qux"` op with the `"test.bar"` op, without
+changing the types of the latter one.
+
+Now, the second pattern B is applied. The `operands` argument contains an SSA
+value with the most recent replacement type (`%0` with type `i2`), whereas
+querying the operand from the matched op still returns an SSA value with the
+original operand type `i1`.
+
+Note: If the conversion pattern is instantiated with a type converter, the
+`operands` argument contains SSA values whose types match the legalized operand
+types as per the type converter. See [Type Safety](#type-safety) for more
+details.
+
+Note: The dialect conversion framework does not guarantee the presence of any
+particular value in the `operands` argument. The only thing that's guaranteed
+is the type of the `operands` SSA values. E.g., instead of the actual
+replacement values supplied to a `replaceOp` API call, `operands` may contain
+results of transitory `builtin.unrealized_conversion_cast` ops that were
+inserted by the conversion driver but typically fold away again throughout the
+conversion process.
+
+#### Immediate vs. Delayed IR Modification
+
+The dialect conversion driver can operate in two modes: (a) rollback mode
+(default) and (b) no-rollback mode. This can be controlled by
+`ConversionConfig::allowPatternRollback`. When running in rollback mode, the
+driver is able backtrack and roll back already applied patterns when the
+current legalization path (sequence of pattern applications) gets stuck with
+unlegalizable operations.
+
+When running in no-rollback mode, all IR modifications such as op replacement,
+op erasure, op insertion or in-place op modification are applied immediately.
+
+When running in rollback mode, certain IR modifications are delayed to the end
+of the conversion process. For example, a `ConversionPatternRewriter::eraseOp`
+API call does not immediately erase the op, but just marks it for erasure. The
+op will stay visible to patterns and IR traversals throughout the conversion
+process. As another example, `replaceOp` and `replaceAllUsesWith` does not
+immediately update users of the original SSA values. This step is also delayed
+to the end of the conversion process.
+
+Delaying certain IR modifications has two benefits: (1) pattern rollback is
+simpler because fewer IR modifications must be rolled back, (2) pointers of
+erased operations / blocks are preserved upon rollback, and (3) patterns can
+still access/traverse the original IR to some degree. However, additional
+bookkeeping in the form of complex internal C++ data structures is required to
+support pattern rollback. Running in rollback mode has a significant toll on
+compilation time, is error-prone and makes debugging conversion passes more
+complicated. Therefore, programmers are encouraged to run in no-rollback mode
+when possible.
+
+The following table gives an overview of which IR changes are applied in a
+delayed fasion in rollback mode.
+
+| Type                                                    | Rollback Mode     | No-rollback Mode |
+| ------------------------------------------------------- | ----------------- | ---------------- |
+| Op Insertion / Movement (`create`/`insert`)             | Immediate         | Immediate        |
+| Op Replacement (`replaceOp`)                            | Delayed           | Immediate        |
+| Op Erasure (`eraseOp`)                                  | Delayed           | Immediate        |
+| Op Modification (`modifyOpInPlace`)                     | Immediate         | Immediate        |
+| Value Replacement (`replaceAllUsesWith`)                | Delayed           | Immediate        |
+| Block Insertion (`createBlock`)                         | Immediate         | Immediate        |
+| Block Replacement                                       | Not supported     | Not supported    |
+| Block Erasure                                           | Partly delayed    | Immediate        |
+| Block Signature Conversion (`applySignatureConversion`) | Partially delayed | Immediate        |
+| Region / Block Inlining  (`inlineBlockBefore`, etc.)    | Partially delayed | Immediate        |
+
+Value replacement is delayed and has different semantics in rollback mode:
+Since the actual replacement is delayed to the end of the conversion process,
+additional uses of the replaced value can be created after the
+`replaceAllUsesWith` call. Those uses will also be replaced at the end of the
+conversion process.
+
+Block replacement is not supported in either mode, because the rewriter
+infrastructure currently has no API for replacing blocks: there is no overload
+of `replaceAllUsesWith` that accepts `Block *`.
+
+Block erasure is partly delayed in rollback mode: the block is detached from
+the IR graph, but not memory for the block is not released until the end of the
+conversion process. This mechanism ensures that block pointers do not change
+when a block erasure is rolled back.
+
+Block signature conversion is a combination of block insertion, op insertion,
+value replacement and block erasure. In rollback mode, the first two steps are
+immediate, but the last two steps are delayed.
+
+Region / block inlining is a combination of block / op insertion and
+(optionally) value replacement. In rollback mode, the insertion steps are
+immediate, but the replacement step is delayed.
+
+Note: When running in rollback mode, the conversion driver inserts fewer
+transitory `builtin.unrealized_conversion_cast` ops. Such ops are needed less
+frequently because certain IR modifications are delayed, making it unnecessary
+to connect old (not yet rewritten) and new (already rewritten) IR in a
+type-safe way. This has a negative effect on the debugging experience: when
+dumping IR throughout the conversion process, users see a mixture of old and
+new IR, but the way they are connected is not always visibile in the IR. Some
+of that information is stored in internal C++ data structures that is not
+visibile during an IR dump.
 
 #### Type Safety
 

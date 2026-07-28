@@ -8,5 +8,6 @@
 // RUN:   -fimplicit-module-maps -fmodules-cache-path=%t.mcp \
 // RUN:   -fbuiltin-headers-in-system-modules \
 // RUN:   -resource-dir resource-dir \
+// RUN:   -internal-isystem resource-dir/include \
 // RUN:   -emit-module %S/Inputs/builtin-headers/module.modulemap \
 // RUN:   -fmodule-name=ModuleWithBuiltinHeader -o %t.pcm

@@ -36,7 +36,7 @@ public:
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
   SeedBundle &operator=(const SeedBundle &) = delete;
-  virtual ~SeedBundle() {}
+  virtual ~SeedBundle() = default;
 
   using iterator = SmallVector<Instruction *>::iterator;
   using const_iterator = SmallVector<Instruction *>::const_iterator;
@@ -314,12 +314,8 @@ public:
                          bool AllowDiffTypes = false);
   LLVM_ABI ~SeedCollector();
 
-  iterator_range<SeedContainer::iterator> getStoreSeeds() {
-    return {StoreSeeds.begin(), StoreSeeds.end()};
-  }
-  iterator_range<SeedContainer::iterator> getLoadSeeds() {
-    return {LoadSeeds.begin(), LoadSeeds.end()};
-  }
+  iterator_range<SeedContainer::iterator> getStoreSeeds() { return StoreSeeds; }
+  iterator_range<SeedContainer::iterator> getLoadSeeds() { return LoadSeeds; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

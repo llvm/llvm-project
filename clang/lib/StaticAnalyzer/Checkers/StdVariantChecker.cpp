@@ -90,6 +90,9 @@ bool isStdVariant(const Type *Type) {
 static std::optional<ArrayRef<TemplateArgument>>
 getTemplateArgsFromVariant(const Type *VariantType) {
   const auto *TempSpecType = VariantType->getAs<TemplateSpecializationType>();
+  while (TempSpecType && TempSpecType->isTypeAlias())
+    TempSpecType =
+        TempSpecType->getAliasedType()->getAs<TemplateSpecializationType>();
   if (!TempSpecType)
     return {};
 
@@ -140,7 +143,7 @@ public:
                                      const InvalidatedSymbols *,
                                      ArrayRef<const MemRegion *>,
                                      ArrayRef<const MemRegion *> Regions,
-                                     const LocationContext *,
+                                     const StackFrame *,
                                      const CallEvent *Call) const {
     if (!Call)
       return State;
@@ -219,10 +222,7 @@ private:
   bool handleStdGetCall(const CallEvent &Call, CheckerContext &C) const {
     ProgramStateRef State = C.getState();
 
-    const auto &ArgType = Call.getArgSVal(0)
-                              .getType(C.getASTContext())
-                              ->getPointeeType()
-                              .getTypePtr();
+    const auto *ArgType = Call.getArgExpr(0)->getType().getTypePtr();
     // We have to make sure that the argument is an std::variant.
     // There is another std::get with std::pair argument
     if (!isStdVariant(ArgType))

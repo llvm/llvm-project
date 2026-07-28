@@ -50,14 +50,14 @@ AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,
 
 AST_MATCHER(Expr, offsetOfExpr) { return isa<OffsetOfExpr>(Node); }
 
-CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
+} // namespace
+
+static CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
   if (!Ty || Ty->isIncompleteType() || Ty->isDependentType() ||
       isa<DependentSizedArrayType>(Ty) || !Ty->isConstantSizeType())
     return CharUnits::Zero();
   return Ctx.getTypeSizeInChars(Ty);
 }
-
-} // namespace
 
 SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
                                              ClangTidyContext *Context)
@@ -407,9 +407,9 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *ElementTy = Result.Nodes.getNodeAs<Type>("elem-type");
     const auto *PointedTy = Result.Nodes.getNodeAs<Type>("elem-ptr-type");
 
-    CharUnits NumeratorSize = getSizeOfType(Ctx, NumTy);
-    CharUnits DenominatorSize = getSizeOfType(Ctx, DenomTy);
-    CharUnits ElementSize = getSizeOfType(Ctx, ElementTy);
+    const CharUnits NumeratorSize = getSizeOfType(Ctx, NumTy);
+    const CharUnits DenominatorSize = getSizeOfType(Ctx, DenomTy);
+    const CharUnits ElementSize = getSizeOfType(Ctx, ElementTy);
 
     if (DenominatorSize > CharUnits::Zero() &&
         !NumeratorSize.isMultipleOf(DenominatorSize)) {

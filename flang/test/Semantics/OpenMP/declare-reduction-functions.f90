@@ -23,7 +23,7 @@ contains
     x%a=n
     x%b=n
   end subroutine inittwo
-  
+
   subroutine initthree(x,n)
     integer :: n
     type(three) :: x
@@ -45,7 +45,7 @@ contains
     res%c = x%c + y%c
     add_three = res
   end function add_three
-  
+
 !CHECK-LABEL: Subprogram scope: functwo
   function functwo(x, n)
     type(two) functwo
@@ -57,11 +57,12 @@ contains
 !CHECK: adder: UserReductionDetails TYPE(two)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=8 offset=0: ObjectEntity type: TYPE(two)
-!CHECK: omp_orig size=8 offset=8: ObjectEntity type: TYPE(two)
-!CHECK: omp_out size=8 offset=16: ObjectEntity type: TYPE(two)
-!CHECK: omp_priv size=8 offset=24: ObjectEntity type: TYPE(two)
-    
-  
+!CHECK: omp_out size=8 offset=8: ObjectEntity type: TYPE(two)
+!CHECK OtherConstruct scope
+!CHECK: omp_orig size=8 offset=0: ObjectEntity type: TYPE(two)
+!CHECK: omp_priv size=8 offset=8: ObjectEntity type: TYPE(two)
+
+
     !$omp simd reduction(adder:res)
     do i=1,n
        res=add_two(res,x(i))
@@ -77,14 +78,14 @@ contains
     integer :: i
     integer :: n
     !$omp declare reduction(adder:three:omp_out=add_three(omp_out,omp_in)) initializer(initthree(omp_priv,1))
-    
+
     !$omp simd reduction(adder:res)
     do i=1,n
        res=add_three(res,x(i))
     enddo
     functhree=res
   end function functhree
-  
+
   function functwothree(x, n)
     type(twothree) :: functwothree
     type(twothree) :: x(n)
@@ -95,20 +96,22 @@ contains
     integer :: i
 
     !$omp declare reduction(adder:two:omp_out=add_two(omp_out,omp_in)) initializer(inittwo(omp_priv,0))
-    
+
     !$omp declare reduction(adder:three:omp_out=add_three(omp_out,omp_in)) initializer(initthree(omp_priv,1))
-    
+
 !CHECK: adder: UserReductionDetails TYPE(two) TYPE(three)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=8 offset=0: ObjectEntity type: TYPE(two)
-!CHECK: omp_orig size=8 offset=8: ObjectEntity type: TYPE(two)
-!CHECK: omp_out size=8 offset=16: ObjectEntity type: TYPE(two)
-!CHECK: omp_priv size=8 offset=24: ObjectEntity type: TYPE(two)
+!CHECK: omp_out size=8 offset=8: ObjectEntity type: TYPE(two)
+!CHECK OtherConstruct scope
+!CHECK: omp_orig size=8 offset=0: ObjectEntity type: TYPE(two)
+!CHECK: omp_priv size=8 offset=8: ObjectEntity type: TYPE(two)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=24 offset=0: ObjectEntity type: TYPE(three)
-!CHECK: omp_orig size=24 offset=24: ObjectEntity type: TYPE(three)
-!CHECK: omp_out size=24 offset=48: ObjectEntity type: TYPE(three)
-!CHECK: omp_priv size=24 offset=72: ObjectEntity type: TYPE(three)
+!CHECK: omp_out size=24 offset=24: ObjectEntity type: TYPE(three)
+!CHECK OtherConstruct scope
+!CHECK: omp_orig size=24 offset=0: ObjectEntity type: TYPE(three)
+!CHECK: omp_priv size=24 offset=24: ObjectEntity type: TYPE(three)
 
     !$omp simd reduction(adder:res3)
     do i=1,n
@@ -135,11 +138,12 @@ contains
 !CHECK: op.+: UserReductionDetails TYPE(two)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=8 offset=0: ObjectEntity type: TYPE(two)
-!CHECK: omp_orig size=8 offset=8: ObjectEntity type: TYPE(two)
-!CHECK: omp_out size=8 offset=16: ObjectEntity type: TYPE(two)
-!CHECK: omp_priv size=8 offset=24: ObjectEntity type: TYPE(two)
-    
-  
+!CHECK: omp_out size=8 offset=8: ObjectEntity type: TYPE(two)
+!CHECK OtherConstruct scope
+!CHECK: omp_orig size=8 offset=0: ObjectEntity type: TYPE(two)
+!CHECK: omp_priv size=8 offset=8: ObjectEntity type: TYPE(two)
+
+
     !$omp simd reduction(+:res)
     do i=1,n
        res=add_two(res,x(i))
@@ -157,20 +161,22 @@ contains
     integer :: i
 
     !$omp declare reduction(+:two:omp_out=add_two(omp_out,omp_in)) initializer(inittwo(omp_priv,0))
-    
+
     !$omp declare reduction(+:three:omp_out=add_three(omp_out,omp_in)) initializer(initthree(omp_priv,1))
-    
+
 !CHECK: op.+: UserReductionDetails TYPE(two) TYPE(three)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=8 offset=0: ObjectEntity type: TYPE(two)
-!CHECK: omp_orig size=8 offset=8: ObjectEntity type: TYPE(two)
-!CHECK: omp_out size=8 offset=16: ObjectEntity type: TYPE(two)
-!CHECK: omp_priv size=8 offset=24: ObjectEntity type: TYPE(two)
+!CHECK: omp_out size=8 offset=8: ObjectEntity type: TYPE(two)
+!CHECK OtherConstruct scope
+!CHECK: omp_orig size=8 offset=0: ObjectEntity type: TYPE(two)
+!CHECK: omp_priv size=8 offset=8: ObjectEntity type: TYPE(two)
 !CHECK: OtherConstruct scope
 !CHECK: omp_in size=24 offset=0: ObjectEntity type: TYPE(three)
-!CHECK: omp_orig size=24 offset=24: ObjectEntity type: TYPE(three)
-!CHECK: omp_out size=24 offset=48: ObjectEntity type: TYPE(three)
-!CHECK: omp_priv size=24 offset=72: ObjectEntity type: TYPE(three)
+!CHECK: omp_out size=24 offset=24: ObjectEntity type: TYPE(three)
+!CHECK OtherConstruct scope
+!CHECK: omp_orig size=24 offset=0: ObjectEntity type: TYPE(three)
+!CHECK: omp_priv size=24 offset=24: ObjectEntity type: TYPE(three)
 
     !$omp simd reduction(+:res3)
     do i=1,n
@@ -183,6 +189,7 @@ contains
     enddo
     res%t2 = res2
     res%t3 = res3
+    funcBtwothree = res
   end function funcBtwothree
 
   !! This is checking a special case, where a reduction is declared inside a
@@ -191,13 +198,14 @@ contains
   pure logical function reduction()
 !CHECK: reduction size=4 offset=0: ObjectEntity funcResult type: LOGICAL(4)
 !CHECK: rr: UserReductionDetails INTEGER(4)
-!CHECK: OtherConstruct scope: size=16 alignment=4 sourceRange=0 bytes
+!CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
 !CHECK: omp_in size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_orig size=4 offset=4: ObjectEntity type: INTEGER(4)
-!CHECK: omp_out size=4 offset=8: ObjectEntity type: INTEGER(4)
-!CHECK: omp_priv size=4 offset=12: ObjectEntity type: INTEGER(4)
+!CHECK: omp_out size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
+!CHECK: omp_orig size=4 offset=0: ObjectEntity type: INTEGER(4)
+!CHECK: omp_priv size=4 offset=4: ObjectEntity type: INTEGER(4)
     !$omp declare reduction (rr : integer : omp_out = omp_out + omp_in) initializer (omp_priv = 0)
     reduction = .false.
   end function reduction
-  
+
 end module mm

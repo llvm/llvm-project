@@ -507,6 +507,8 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
       return "Fortran 2008";
     if (Version <= 2018)
       return "Fortran 2018";
+    if (Version <= 2023)
+      return "Fortran 2023";
   } break;
 
   // YYYYMM
@@ -521,6 +523,8 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
       return "C11";
     if (Version <= 201710)
       return "C17";
+    if (Version <= 202311)
+      return "C23";
   } break;
 
   case DW_LNAME_C_plus_plus: {
@@ -538,6 +542,8 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
       return "C++17";
     if (Version <= 202002)
       return "C++20";
+    if (Version <= 202302)
+      return "C++23";
   } break;
 
   case DW_LNAME_ObjC_plus_plus:
@@ -550,6 +556,7 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   case DW_LNAME_Dylan:
   case DW_LNAME_Go:
   case DW_LNAME_Haskell:
+  case DW_LNAME_HIP:
   case DW_LNAME_HLSL:
   case DW_LNAME_Java:
   case DW_LNAME_Julia:
@@ -576,6 +583,14 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   case DW_LNAME_Ruby:
   case DW_LNAME_Hylo:
   case DW_LNAME_Metal:
+  case DW_LNAME_Odin:
+  case DW_LNAME_P4:
+  case DW_LNAME_V:
+  case DW_LNAME_Algol68:
+  case DW_LNAME_Nim:
+  case DW_LNAME_Erlang:
+  case DW_LNAME_Elixir:
+  case DW_LNAME_Gleam:
     break;
   }
 
@@ -601,6 +616,28 @@ llvm::dwarf::getSourceLanguageName(StringRef SourceLanguageNameString) {
   .Case("DW_LNAME_" #NAME, DW_LNAME_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
       .Default(0);
+}
+
+StringRef llvm::dwarf::LanguageDialectString(unsigned LanguageDialect) {
+  switch (LanguageDialect) {
+  default:
+    return StringRef();
+#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)                                  \
+  case DW_LLVM_LANG_DIALECT_##NAME:                                            \
+    return "DW_LLVM_LANG_DIALECT_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::getLanguageDialect(StringRef LanguageDialectString) {
+  // Return ~0U for unrecognized spellings. The "no dialect" state is
+  // represented by numeric 0 (i.e. omitting the field); there is no
+  // corresponding symbolic enumerator for it.
+  return StringSwitch<unsigned>(LanguageDialectString)
+#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME)                                  \
+  .Case("DW_LLVM_LANG_DIALECT_" #NAME, DW_LLVM_LANG_DIALECT_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(~0U);
 }
 
 StringRef llvm::dwarf::CaseString(unsigned Case) {
@@ -871,6 +908,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return VirtualityString(Val);
   case DW_AT_language:
     return LanguageString(Val);
+  case DW_AT_LLVM_language_dialect:
+    return LanguageDialectString(Val);
   case DW_AT_encoding:
     return AttributeEncodingString(Val);
   case DW_AT_decimal_sign:
@@ -1076,10 +1115,3 @@ StringRef (*const llvm::dwarf::EnumTraits<LineNumberOps>::StringFn)(unsigned) =
     LNStandardString;
 StringRef (*const llvm::dwarf::EnumTraits<Index>::StringFn)(unsigned) =
     IndexString;
-
-constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Index>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Tag>::Type[];
-constexpr char llvm::dwarf::EnumTraits<LineNumberOps>::Type[];
-constexpr char llvm::dwarf::EnumTraits<LocationAtom>::Type[];

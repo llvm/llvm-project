@@ -50,6 +50,24 @@ func.func @canonicalize_buffer_cast_of_tensor_load_different_address_space(%arg0
 
 // -----
 
+// If unranked memrefs are not cast-compatible, don't fold them.
+// CHECK-LABEL: func @canonicalize_unranked_buffer_cast_of_tensor_load_different_address_space(
+//  CHECK-SAME:   %[[MEMREF:.*]]: memref<*xi64>)
+//  CHECK-SAME:     -> memref<*xi64, 1> {
+//  CHECK-NOT: memref.cast
+//      CHECK: %[[TENSOR:.*]] = bufferization.to_tensor %[[MEMREF]] : memref<*xi64> to tensor<*xi64>
+//      CHECK: %[[BUFFER:.*]] = bufferization.to_buffer %[[TENSOR]] : tensor<*xi64> to memref<*xi64, 1>
+//  CHECK-NOT: memref.cast
+//      CHECK: return %[[BUFFER]] : memref<*xi64, 1>
+func.func @canonicalize_unranked_buffer_cast_of_tensor_load_different_address_space(%arg0: memref<*xi64>)
+    -> memref<*xi64, 1> {
+  %0 = bufferization.to_tensor %arg0 : memref<*xi64> to tensor<*xi64>
+  %1 = bufferization.to_buffer %0 : tensor<*xi64> to memref<*xi64, 1>
+  return %1 : memref<*xi64, 1>
+}
+
+// -----
+
 // If the memrefs are definitely cast-compatible, canonicalize to
 //            cast.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load(
@@ -294,11 +312,29 @@ func.func @tensor_cast_to_buffer_layout_and_memspace(%arg0 : tensor<4x6x16x32xi8
 
 // -----
 
+// Verify LoadOfToBuffer skips writable buffers
+// CHECK-LABEL: func @load_after_write_from_buffer_cast(
+func.func @load_after_write_from_buffer_cast(%arg0: index, %arg1: index,
+                            %arg2: tensor<?x?xf32>) -> f32 {
+  %0 = bufferization.to_buffer %arg2 : tensor<?x?xf32> to memref<?x?xf32>
+  linalg.ceil ins(%0 : memref<?x?xf32>) outs(%0 : memref<?x?xf32>)
+  %1 = memref.load %0[%arg0, %arg1] : memref<?x?xf32>
+  return %1 : f32
+}
+// CHECK-SAME: %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
+// CHECK-SAME: %[[TENSOR:[0-9a-z]+]]: tensor<?x?xf32>
+//      CHECK: %[[M:.+]] = bufferization.to_buffer %[[TENSOR]] : tensor<?x?xf32> to memref<?x?xf32>
+//      CHECK: linalg.ceil ins(%[[M]] : memref<?x?xf32>) outs(%[[M]] : memref<?x?xf32>)
+//      CHECK: %[[RES:.*]] = memref.load %[[M]][%[[IDX0]], %[[IDX1]]] : memref<?x?xf32>
+//      CHECK: return %[[RES]] : f32
+
+// -----
+
 // Folding of memref.load(to_buffer(%v, %idxs)) -> tensor.extract(%v, %idx)
 // CHECK-LABEL: func @load_from_buffer_cast(
 func.func @load_from_buffer_cast(%arg0: index, %arg1: index,
                             %arg2: tensor<?x?xf32>) -> f32 {
-  %0 = bufferization.to_buffer %arg2 : tensor<?x?xf32> to memref<?x?xf32>
+  %0 = bufferization.to_buffer %arg2 read_only : tensor<?x?xf32> to memref<?x?xf32>
   %1 = memref.load %0[%arg0, %arg1] : memref<?x?xf32>
   return %1 : f32
 }

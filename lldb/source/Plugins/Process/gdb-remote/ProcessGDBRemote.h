@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ThreadSafeValue.h"
@@ -66,6 +67,8 @@ public:
   static llvm::StringRef GetPluginDescriptionStatic();
 
   static std::chrono::seconds GetPacketTimeout();
+
+  static std::chrono::milliseconds GetPacketTestDelay();
 
   ArchSpec GetSystemArchitecture() override;
 
@@ -137,6 +140,22 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  /// Override of DoReadMemoryRanges that uses MultiMemRead to perform this
+  /// operation in a single packet.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buf) override;
+
+private:
+  llvm::Expected<StringExtractorGDBRemote>
+  SendMultiMemReadPacket(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges);
+
+  llvm::Error ParseMultiMemReadPacket(
+      llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+      unsigned expected_num_ranges,
+      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions);
+
+public:
   Status
   WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) override;
 
@@ -153,6 +172,9 @@ public:
 
   // Process Breakpoints
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
+
+  llvm::Error UpdateBreakpointSites(
+      const BreakpointSiteToActionMap &site_to_action) override;
 
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
@@ -217,9 +239,11 @@ public:
   ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
-  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) override;
 
   StructuredData::ObjectSP
@@ -232,8 +256,10 @@ public:
   std::string HarmonizeThreadIdsForProfileData(
       StringExtractorGDBRemote &inputStringExtractor);
 
-  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
-  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+               bool is_expression_fork = false) override;
+  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                bool is_expression_fork = false) override;
   void DidVForkDone() override;
   void DidExec() override;
 
@@ -260,10 +286,13 @@ protected:
   GDBRemoteCommunicationClient m_gdb_comm;
   std::atomic<lldb::pid_t> m_debugserver_pid;
 
+  /// Registration for the packet-history diagnostics provider, if enabled.
+  std::optional<Diagnostics::ArtifactProviderID> m_diagnostics_artifact_id;
+
   std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
 
-  GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
+  lldb::DynamicRegisterInfoSP m_register_info_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
   HostThread m_async_thread;
@@ -281,6 +310,8 @@ protected:
                                               // registers and memory for all
                                               // threads if "jThreadsInfo"
                                               // packet is supported
+  StructuredData::ObjectSP m_shared_cache_info_sp;
+  std::mutex m_shared_cache_info_mutex;
   tid_collection m_continue_c_tids;           // 'c' for continue
   tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
   tid_collection m_continue_s_tids;           // 's' for step
@@ -295,6 +326,9 @@ protected:
   lldb::CommandObjectSP m_command_sp;
   int64_t m_breakpoint_pc_offset;
   lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+  lldb::tid_t m_last_stop_primary_tid =
+      LLDB_INVALID_THREAD_ID; // Thread ID from the most recent
+                              // T-packet's "thread:<tid>" key.
   bool m_use_g_packet_for_reading;
 
   bool m_allow_flash_writes;
@@ -374,7 +408,9 @@ protected:
                     lldb::addr_t thread_dispatch_qaddr, bool queue_vars_valid,
                     lldb_private::LazyBool associated_with_libdispatch_queue,
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
-                    lldb::QueueKind queue_kind, uint64_t queue_serial);
+                    lldb::QueueKind queue_kind, uint64_t queue_serial,
+                    std::vector<lldb::addr_t> &added_binaries,
+                    StructuredData::ObjectSP &detailed_binaries_info);
 
   void ClearThreadIDList();
 
@@ -400,7 +436,7 @@ protected:
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
-  bool GetGDBServerRegisterInfo(ArchSpec &arch);
+  llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,
@@ -430,6 +466,17 @@ private:
   std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
   uint64_t m_last_signals_version = 0;
 
+  /// Enable a single breakpoint site by trying Z0 (software), then Z1
+  /// (hardware), then manual memory write as a last resort.
+  llvm::Error DoEnableBreakpointSite(BreakpointSite &bp_site);
+
+  /// Disable a single breakpoint site directly by sending the appropriate
+  /// z packet or restoring the original instruction.
+  llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
+
+  llvm::Error UpdateBreakpointSitesNotBatched(
+      const BreakpointSiteToActionMap &site_to_action);
+
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,
                                            lldb::user_id_t break_id,
@@ -437,6 +484,39 @@ private:
 
   /// Remove the breakpoints associated with thread creation from the Target.
   void RemoveNewThreadBreakpoints();
+
+  /// Handle a set of actions requested by an accelerator plugin. Currently this
+  /// only sets the breakpoints requested in \a actions.
+  llvm::Error HandleAcceleratorActions(const AcceleratorActions &actions);
+
+  /// Set the breakpoints requested by an accelerator plugin as internal
+  /// breakpoints with a callback that notifies the plugin when they are hit.
+  /// Returns an error if any breakpoint could not be set; the remaining
+  /// breakpoints are still set.
+  llvm::Error HandleAcceleratorBreakpoints(const AcceleratorActions &actions);
+
+  /// Create a new target for an accelerator and connect it to the GDB server
+  /// described by the action's connection info.
+  llvm::Error HandleAcceleratorConnection(const AcceleratorActions &actions);
+
+  /// Breakpoint callback invoked when an accelerator-plugin-requested
+  /// breakpoint is hit. Resolves any requested symbol values, notifies the
+  /// plugin via the "jAcceleratorPluginBreakpointHit" packet, and handles the
+  /// response.
+  static bool AcceleratorBreakpointHitCallback(
+      void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+      lldb::user_id_t break_loc_id);
+
+  bool AcceleratorBreakpointHit(void *baton, StoppointCallbackContext *context,
+                                lldb::user_id_t break_id,
+                                lldb::user_id_t break_loc_id);
+
+  /// Tracks the last action identifier handled per accelerator plugin so the
+  /// same actions are not processed more than once. Accelerator actions can
+  /// arrive in a stop reply packet, and if the debugger re-requests the stop
+  /// reply with a '?' packet we can be handed the same actions again; this
+  /// guards against handling them (e.g. setting the same breakpoints) twice.
+  std::map<std::string, int64_t> m_processed_accelerator_actions;
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
@@ -453,15 +533,9 @@ private:
   // KeyInfo for the cached module spec DenseMap.
   // The invariant is that all real keys will have the file and architecture
   // set.
-  // The empty key has an empty file and an empty arch.
-  // The tombstone key has an invalid arch and an empty file.
   // The comparison and hash functions take the file name and architecture
   // triple into account.
   struct ModuleCacheInfo {
-    static ModuleCacheKey getEmptyKey() { return ModuleCacheKey(); }
-
-    static ModuleCacheKey getTombstoneKey() { return ModuleCacheKey("", "T"); }
-
     static unsigned getHashValue(const ModuleCacheKey &key) {
       return llvm::hash_combine(key.first, key.second);
     }
@@ -478,7 +552,8 @@ private:
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
 
   // fork helpers
-  void DidForkSwitchSoftwareBreakpoints(bool enable);
+  void DidForkSwitchSoftwareBreakpoints(bool enable,
+                                        bool is_expression_fork = false);
   void DidForkSwitchHardwareTraps(bool enable);
 
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,

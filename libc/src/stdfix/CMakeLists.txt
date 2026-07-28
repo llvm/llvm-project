@@ -58,7 +58,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       ${libc_opt_high_flag}
     DEPENDS
       libc.src.__support.fixed_point.fx_bits
-      libc.include.llvm-libc-types.stdfix-types
       libc.include.llvm-libc-macros.stdfix_macros
   )
 
@@ -96,6 +95,20 @@ foreach(suffix IN ITEMS r)
       ${suffix}divi.h
     SRCS
       ${suffix}divi.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_entrypoint_object(
+    divi${suffix}
+    HDRS
+      divi${suffix}.h
+    SRCS
+      divi${suffix}.cpp
     COMPILE_OPTIONS
       ${libc_opt_high_flag}
     DEPENDS

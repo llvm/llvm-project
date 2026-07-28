@@ -12,7 +12,7 @@ end module
 !module m
 !type::t(k)
 !integer(4),kind::k
-!real(int(int(k,kind=4),kind=8))::x=real(0., kind=k)
+!real(__builtin_int(__builtin_int(k,kind=4),kind=8))::x=real(0., kind=k)
 !end type
 !intrinsic::real
 !end

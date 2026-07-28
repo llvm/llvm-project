@@ -24,6 +24,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 struct is_error_code_enum : public false_type {};
@@ -71,20 +72,20 @@ public:
     __cat_ = &system_category();
   }
 
-  _LIBCPP_HIDE_FROM_ABI int value() const _NOEXCEPT { return __val_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int value() const _NOEXCEPT { return __val_; }
 
-  _LIBCPP_HIDE_FROM_ABI const error_category& category() const _NOEXCEPT { return *__cat_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const error_category& category() const _NOEXCEPT { return *__cat_; }
 
-  _LIBCPP_HIDE_FROM_ABI error_condition default_error_condition() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI error_condition default_error_condition() const _NOEXCEPT {
     return __cat_->default_error_condition(__val_);
   }
 
-  string message() const;
+  [[__nodiscard__]] string message() const;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __val_ != 0; }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(errc __e) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(errc __e) _NOEXCEPT {
   return error_code(static_cast<int>(__e), generic_category());
 }
 
@@ -137,6 +138,7 @@ struct hash<error_code> : public __unary_function<error_code, size_t> {
   }
 };
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___SYSTEM_ERROR_ERROR_CODE_H

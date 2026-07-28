@@ -31,10 +31,7 @@ INITIALIZE_PASS_END(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
 char LazyMachineBlockFrequencyInfoPass::ID = 0;
 
 LazyMachineBlockFrequencyInfoPass::LazyMachineBlockFrequencyInfoPass()
-    : MachineFunctionPass(ID) {
-  initializeLazyMachineBlockFrequencyInfoPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
@@ -68,19 +65,19 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
 
   if (!MLI) {
     LLVM_DEBUG(dbgs() << "Building LoopInfo on the fly\n");
-    // First create a dominator tree.
     LLVM_DEBUG(if (MDT) dbgs() << "DominatorTree is available\n");
 
-    if (!MDT) {
-      LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
-      OwnedMDT = std::make_unique<MachineDominatorTree>();
-      OwnedMDT->recalculate(*MF);
-      MDT = OwnedMDT.get();
-    }
-
-    // Generate LoopInfo from it.
+    // A dominator tree is needed only for an irreducible CFG.
     OwnedMLI = std::make_unique<MachineLoopInfo>();
-    OwnedMLI->analyze(*MDT);
+    OwnedMLI->calculate(*MF, [&]() -> const MachineDominatorTree & {
+      if (!MDT) {
+        LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
+        OwnedMDT = std::make_unique<MachineDominatorTree>();
+        OwnedMDT->recalculate(*MF);
+        MDT = OwnedMDT.get();
+      }
+      return *MDT;
+    });
     MLI = OwnedMLI.get();
   }
 
