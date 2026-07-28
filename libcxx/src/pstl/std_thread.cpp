@@ -11,6 +11,7 @@
 // c++/v1/__atomic/support/c11.h:83:10: error: large atomic operation may incur significant performance penalty;
 // the access size (8 bytes) exceeds the max lock-free size (4 bytes) [-Werror,-Watomic-alignment]
 // ignore for now.
+_LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Watomic-alignment")
 #endif
 
