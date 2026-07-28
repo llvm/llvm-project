@@ -448,7 +448,7 @@ class Session:
 
     def verify_reverse_process_exited(self, exit_code: Optional[int] = None):
         if process := self._reverse_process:
-            proc_exit_code = process.poll()
+            proc_exit_code = process.wait(timeout=1.0)
             if proc_exit_code is None:
                 raise DAPError(
                     f"process is still running, "
