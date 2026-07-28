@@ -17,21 +17,21 @@ using namespace llvm::object;
 using namespace llvm::GOFF;
 
 namespace {
-size_t newRecord(std::vector<char> &Data) {
+size_t addNewRecord(std::vector<char> &Data) {
   size_t Pos = Data.size();
   Data.resize(Pos + GOFF::RecordLength);
   return Pos;
 }
 
 void addEndRecord(std::vector<char> &GOFFData, uint8_t RecordCount = 0) {
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 1] = (char)0x40;
   GOFFData[Pos + 11] = (char)RecordCount;
 }
 
 void addHdrRecord(std::vector<char> &GOFFData, uint8_t ArchLevel = 0) {
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 1] = (char)0xF0;
   GOFFData[Pos + 50] = (char)ArchLevel;
@@ -157,7 +157,7 @@ TEST(GOFFObjectFileTest, MissingHDR) {
   std::vector<char> GOFFData;
 
   // ESD record.
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
 
   // END record.
@@ -181,7 +181,7 @@ TEST(GOFFObjectFileTest, MissingEND) {
   addHdrRecord(GOFFData);
 
   // ESD record.
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
 
   StringRef Data(GOFFData.data(), GOFFData.size());
@@ -238,14 +238,14 @@ TEST(GOFFObjectFileTest, ConcatenatedGOFFFile) {
   // HDR record.
   addHdrRecord(GOFFData);
   // ESD record.
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
   // END record.
   addEndRecord(GOFFData);
   // HDR record.
   addHdrRecord(GOFFData);
   // ESD record.
-  Pos = newRecord(GOFFData);
+  Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
   // END record.
   addEndRecord(GOFFData);
@@ -308,7 +308,7 @@ TEST(GOFFObjectFileTest, ContinuationBitNotSet) {
   addHdrRecord(GOFFContData);
 
   // ESD record.
-  size_t Pos = newRecord(GOFFContData);
+  size_t Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x01;
   GOFFContData[Pos + 3] = (char)0x02;
@@ -325,7 +325,7 @@ TEST(GOFFObjectFileTest, ContinuationBitNotSet) {
   GOFFContData[Pos + 79] = (char)0x99;
 
   // ESD continuation record.
-  Pos = newRecord(GOFFContData);
+  Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x00;
   GOFFContData[Pos + 3] = (char)0x93;
@@ -352,7 +352,7 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
   addHdrRecord(GOFFContData);
 
   // ESD record.
-  size_t Pos = newRecord(GOFFContData);
+  size_t Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x01;
   GOFFContData[Pos + 3] = (char)0x02;
@@ -369,7 +369,7 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
   GOFFContData[Pos + 79] = (char)0x99;
 
   // ESD continuation record.
-  Pos = newRecord(GOFFContData);
+  Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x03; // Continued bit set.
   GOFFContData[Pos + 3] = (char)0x93;
@@ -402,11 +402,11 @@ TEST(GOFFObjectFileTest, PrevNotContinued) {
   addHdrRecord(GOFFContData);
 
   // ESD record, with continued bit not set.
-  size_t Pos = newRecord(GOFFContData);
+  size_t Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
 
   // ESD continuation record.
-  Pos = newRecord(GOFFContData);
+  Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x02;
 
@@ -432,12 +432,12 @@ TEST(GOFFObjectFileTest, ContinuationTypeMismatch) {
   addHdrRecord(GOFFContData);
 
   // ESD record.
-  size_t Pos = newRecord(GOFFContData);
+  size_t Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x01; // Continued to next record.
 
   // END continuation record.
-  Pos = newRecord(GOFFContData);
+  Pos = addNewRecord(GOFFContData);
   GOFFContData[Pos] = (char)0x03;
   GOFFContData[Pos + 1] = (char)0x42;
 
@@ -541,7 +541,7 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
   addHdrRecord(GOFFData);
 
   // ESD record.
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 3] = (char)0x04;
   GOFFData[Pos + 7] = (char)0x01;
@@ -610,7 +610,7 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
                0x02);
 
   // TXT record.
-  size_t Pos = newRecord(GOFFData);
+  size_t Pos = addNewRecord(GOFFData);
   GOFFData[Pos] = (char)0x03;
   GOFFData[Pos + 1] = (char)0x10;
   GOFFData[Pos + 7] = (char)0x02;
