@@ -45,9 +45,9 @@ enum GPUKind : uint32_t {
 
 /// Instruction set architecture version.
 struct IsaVersion {
-  unsigned Major;
-  unsigned Minor;
-  unsigned Stepping;
+  uint8_t Major;
+  uint8_t Minor;
+  uint8_t Stepping;
 
   bool operator==(const IsaVersion &Other) const {
     return Major == Other.Major && Minor == Other.Minor &&
@@ -61,29 +61,30 @@ struct IsaVersion {
 enum ArchFeatureKind : uint32_t {
   FEATURE_NONE = 0,
 
-  // These features only exist for r600, and are implied true for amdgcn.
-  FEATURE_FMA = 1 << 1,
-  FEATURE_LDEXP = 1 << 2,
-  FEATURE_FP64 = 1 << 3,
+  // This feature only exists for r600, and is implied true for amdgcn.
+  FEATURE_FMA = 1 << 0,
 
   // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 4,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 5,
+  FEATURE_FAST_FMA_F32 = 1 << 1,
+  FEATURE_FAST_DENORMAL_F32 = 1 << 2,
 
   // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 6,
+  FEATURE_WAVE32 = 1 << 3,
 
   // Xnack is available.
-  FEATURE_XNACK = 1 << 7,
+  FEATURE_XNACK = 1 << 4,
 
   // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 8,
+  FEATURE_SRAMECC = 1 << 5,
 
   // WGP mode is supported.
-  FEATURE_WGP = 1 << 9,
+  FEATURE_WGP = 1 << 6,
 
   // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 10
+  FEATURE_XNACK_ON_OFF_MODES = 1 << 7,
+
+  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
+  FEATURE_SGPR_INIT_BUG = 1 << 8
 };
 
 enum FeatureError : uint32_t {
@@ -146,6 +147,17 @@ LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 LLVM_ABI IsaVersion getIsaVersion(Triple::SubArchType SubArch);
+
+enum { FIXED_NUM_SGPRS_FOR_INIT_BUG = 96 };
+
+LLVM_ABI unsigned getTotalNumSGPRs(GPUKind AK);
+LLVM_ABI unsigned getTotalNumSGPRs(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getAddressableNumSGPRs(GPUKind AK);
+LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns

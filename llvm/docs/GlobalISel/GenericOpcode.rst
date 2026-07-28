@@ -4,8 +4,6 @@
 Generic Opcodes
 ===============
 
-.. contents::
-   :local:
 
 .. note::
 

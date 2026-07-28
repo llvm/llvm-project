@@ -293,5 +293,164 @@ return:
   ret i32 %retval
 }
 
+; Make sure to properly update PHINode block entries if the default branch
+; happens to have them.
+declare i1 @some_use(i8)
+define i32 @default_branch_has_phi_and_will_be_moved(i8 %x, i1 %y) {
+; CHECK-LABEL: @default_branch_has_phi_and_will_be_moved(
+; CHECK-NEXT:  pre-entry:
+; CHECK-NEXT:    br i1 [[Y:%.*]], label [[ENTRY:%.*]], label [[DEFAULT:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[ENTRY_UNREACHABLEDEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE_ZERO:%.*]]
+; CHECK-NEXT:      i8 1, label [[DEFAULT]]
+; CHECK-NEXT:    ]
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
+; CHECK:       default:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ 2, [[PRE_ENTRY:%.*]] ], [ 3, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @some_use(i8 [[Z]])
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       case_zero:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[DEFAULT]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+pre-entry:
+  br i1 %y, label %entry, label %default
+
+entry:
+  switch i8 %x, label %default [
+  i8 -1, label %case_neg_one
+  i8 0, label %case_zero
+  ]
+default:
+  %z = phi i8 [ 2, %pre-entry], [ 3, %entry]
+  %cmp = icmp eq i8 %x, 1
+  call void @llvm.assume(i1 %cmp)
+  call void @some_use(i8 %z)
+  br label %return
+
+case_neg_one:
+  br label %return
+
+case_zero:
+  br label %return
+
+return:
+  %retval = phi i32 [ 1, %default ], [ -1, %case_neg_one ], [ 0, %case_zero ]
+  ret i32 %retval
+}
+
+define i32 @default_branch_has_phi_and_will_be_removed(i8 %x, i1 %y) {
+; CHECK-LABEL: @default_branch_has_phi_and_will_be_removed(
+; CHECK-NEXT:  pre-entry:
+; CHECK-NEXT:    br i1 [[Y:%.*]], label [[ENTRY:%.*]], label [[DEFAULT:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[ENTRY_UNREACHABLEDEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE_ZERO:%.*]]
+; CHECK-NEXT:      i8 1, label [[CASE_ONE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
+; CHECK:       default:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @some_use(i8 2)
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       case_zero:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       case_one:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[DEFAULT]] ], [ 1, [[CASE_ONE]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+pre-entry:
+  br i1 %y, label %entry, label %default
+
+entry:
+  switch i8 %x, label %default [
+  i8 -1, label %case_neg_one
+  i8 0, label %case_zero
+  i8 1, label %case_one
+  ]
+default:
+  %z = phi i8 [ 2, %pre-entry], [ 3, %entry]
+  %cmp = icmp eq i8 %x, 1
+  call void @llvm.assume(i1 %cmp)
+  call void @some_use(i8 %z)
+  br label %return
+
+case_neg_one:
+  br label %return
+
+case_zero:
+  br label %return
+
+case_one:
+  br label %return
+
+return:
+  %retval = phi i32 [ 1, %default ], [ -1, %case_neg_one ], [ 0, %case_zero ], [ 1, %case_one ]
+  ret i32 %retval
+}
+
+define i32 @default_branch_has_phi_and_will_be_removed_duplicate_phi_entries(i8 %x, i1 %y) {
+; CHECK-LABEL: @default_branch_has_phi_and_will_be_removed_duplicate_phi_entries(
+; CHECK-NEXT:  pre-entry:
+; CHECK-NEXT:    br i1 [[Y:%.*]], label [[ENTRY:%.*]], label [[DEFAULT:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[ENTRY_UNREACHABLEDEFAULT:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i8 0, label [[CASE_ZERO:%.*]]
+; CHECK-NEXT:      i8 1, label [[DEFAULT]]
+; CHECK-NEXT:    ]
+; CHECK:       entry.unreachabledefault:
+; CHECK-NEXT:    unreachable
+; CHECK:       default:
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ 2, [[PRE_ENTRY:%.*]] ], [ 3, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @some_use(i8 [[Z]])
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       case_zero:
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 1, [[DEFAULT]] ], [ 0, [[CASE_ZERO]] ], [ -1, [[ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL]]
+;
+pre-entry:
+  br i1 %y, label %entry, label %default
+
+entry:
+  switch i8 %x, label %default [
+  i8 -1, label %case_neg_one
+  i8 0, label %case_zero
+  i8 1, label %default
+  ]
+default:
+  %z = phi i8 [ 2, %pre-entry], [ 3, %entry], [ 3, %entry ]
+  %cmp = icmp eq i8 %x, 1
+  call void @llvm.assume(i1 %cmp)
+  call void @some_use(i8 %z)
+  br label %return
+
+case_neg_one:
+  br label %return
+
+case_zero:
+  br label %return
+
+return:
+  %retval = phi i32 [ 1, %default ], [ -1, %case_neg_one ], [ 0, %case_zero ]
+  ret i32 %retval
+}
+
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 0, i32 4, i32 2, i32 8}
 !0 = !{!"branch_weights", i32 8, i32 4, i32 2}

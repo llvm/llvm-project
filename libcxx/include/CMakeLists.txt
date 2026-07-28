@@ -219,6 +219,7 @@ set(files
   __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
+  __atomic/clear_padding.h
   __atomic/contention_t.h
   __atomic/fence.h
   __atomic/floating_point_helper.h
@@ -438,6 +439,9 @@ set(files
   __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
+  __functional/function_ref.h
+  __functional/function_ref_common.h
+  __functional/function_ref_impl.h
   __functional/hash.h
   __functional/identity.h
   __functional/invoke.h
@@ -677,7 +681,7 @@ set(files
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h
-  __pstl/cpu_algos/mismatch.h  
+  __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
@@ -912,6 +916,7 @@ set(files
   __type_traits/rank.h
   __type_traits/reference_constructs_from_temporary.h
   __type_traits/reference_converts_from_temporary.h
+  __type_traits/register_passable.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_const_ref.h

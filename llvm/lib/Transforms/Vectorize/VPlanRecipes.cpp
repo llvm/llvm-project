@@ -331,7 +331,12 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    dump();
+    if (VPSlotTracker *SlotTracker = Ctx.getSlotTracker()) {
+      print(dbgs(), "", *SlotTracker);
+      dbgs() << "\n";
+    } else {
+      dump();
+    }
   });
   return RecipeCost;
 }
@@ -3008,7 +3013,7 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     unsigned IndexTySize = IndexTy->getScalarSizeInBits();
     if ((NeedsAdd || NeedsMul || NeedsShl) && StepTySize != IndexTySize) {
       unsigned CastOpc =
-          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::SExt;
+          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::ZExt;
       Cost += Ctx.TTI.getCastInstrCost(
           CastOpc, StepTy, IndexTy, TTI::CastContextHint::None, Ctx.CostKind);
     }
@@ -3037,7 +3042,8 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = DERIVED-IV ";
+  O << " = DERIVED-IV";
+  printFlags(O);
   getStartValue()->printAsOperand(O, SlotTracker);
   O << " + ";
   getOperand(1)->printAsOperand(O, SlotTracker);
@@ -3226,6 +3232,8 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-end-pointer";
   printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -3255,6 +3263,8 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer";
   printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
   printOperands(O, SlotTracker);
 }
 #endif

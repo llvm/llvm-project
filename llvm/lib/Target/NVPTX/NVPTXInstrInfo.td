@@ -106,6 +106,21 @@ def PrmtMode : Operand<i32> {
 }
 
 
+class NVPTXAddressSpace<string enum, string name, string suffix = "." # name> {
+  string Suffix = suffix;
+  string Enum = enum;
+  string Name = name;
+}
+
+def AddrSpaceGeneric : NVPTXAddressSpace<"ADDRESS_SPACE_GENERIC", "generic", "">;
+def AddrSpaceLocal   : NVPTXAddressSpace<"ADDRESS_SPACE_LOCAL", "local">;
+def AddrSpaceShared  : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED", "shared">;
+def AddrSpaceGlobal  : NVPTXAddressSpace<"ADDRESS_SPACE_GLOBAL", "global">;
+def AddrSpaceConst   : NVPTXAddressSpace<"ADDRESS_SPACE_CONST", "const">;
+def AddrSpaceParam   : NVPTXAddressSpace<"ADDRESS_SPACE_ENTRY_PARAM", "param">;
+def AddrSpaceSharedCluster : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED_CLUSTER",
+                                               "shared_cluster", ".shared::cluster">;
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instruction Predicate Definitions
 //===----------------------------------------------------------------------===//

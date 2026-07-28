@@ -4861,7 +4861,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FPTOSI_SAT:
     return lowerFPTOINT_SAT(MI);
   case G_FPEXT:
-    return lowerFPExtAndTruncMem(MI);
+    return lowerFPEXT(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI);
   case G_FPOWI:
@@ -7711,7 +7711,7 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // cttz(Hi:Lo) -> Lo == 0 ? (cttz(Hi) + NarrowSize) : cttz(Lo)
     auto C_0 = B.buildConstant(NarrowTy, 0);
-    auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
+    auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1),
                                 UnmergeSrc.getReg(0), C_0);
     auto HiCTTZ = IsUndef ? B.buildCTTZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(1))
                           : B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
@@ -8793,6 +8793,41 @@ LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
 
   MI.eraseFromParent();
   return Legalized;
+}
+
+// Expand a bf16 -> f32/f64 fpext with a shift and bitcast. This is based on the
+// SDAG ISD::BF16_TO_FP lowering.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPEXT_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(SrcTy.getScalarType().isBFloat16() &&
+         "expected a bf16 source for bf16 fpext lowering");
+
+  LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+  LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+  LLT F32Ty = SrcTy.changeElementType(LLT::float32());
+
+  auto SrcI =
+      MIRBuilder.buildAnyExt(I32Ty, MIRBuilder.buildBitcast(I16Ty, SrcReg));
+  auto Shl =
+      MIRBuilder.buildShl(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+
+  if (DstTy.getScalarType().isFloat32())
+    MIRBuilder.buildBitcast(DstReg, Shl);
+  else
+    MIRBuilder.buildFPExt(DstReg, MIRBuilder.buildBitcast(F32Ty, Shl));
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPEXT(MachineInstr &MI) {
+  auto [DstTy, SrcTy] = MI.getFirst2LLTs();
+  if (SrcTy.getScalarType().isBFloat16() &&
+      (DstTy.getScalarType().isFloat32() || DstTy.getScalarType().isFloat64()))
+    return lowerFPEXT_BF16(MI);
+
+  return lowerFPExtAndTruncMem(MI);
 }
 
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
@@ -10876,9 +10911,10 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
   for (unsigned I = 0; I < MemOps.size(); I++) {
     LLT Ty = MemOps[I];
     unsigned TySize = Ty.getSizeInBytes();
+
     if (TySize > Size) {
-      // Issuing an unaligned load / store pair that overlaps with the previous
-      // pair. Adjust the offset accordingly.
+      // Issuing a load / store pair that overlaps with the previous pair.
+      // Adjust the offset accordingly.
       assert(I == MemOps.size() - 1 && I != 0);
       DstOff -= TySize - Size;
     }
@@ -10969,16 +11005,20 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
-    // Issuing an unaligned load / store pair  that overlaps with the previous
-    // pair. Adjust the offset accordingly.
-    if (CopyTy.getSizeInBytes() > Size)
-      CurrOffset -= CopyTy.getSizeInBytes() - Size;
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a load / store pair that overlaps with the previous pair. Adjust
+    // the offset accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memcpy load/store spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
 
     // Construct MMOs for the accesses.
-    auto *LoadMMO =
-        MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
-    auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *LoadMMO = MF.getMachineMemOperand(&SrcMMO, CurrOffset, TySize);
+    auto *StoreMMO = MF.getMachineMemOperand(&DstMMO, CurrOffset, TySize);
 
     // Create the load.
     Register LoadPtr = Src;
@@ -10999,8 +11039,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
-    CurrOffset += CopyTy.getSizeInBytes();
-    Size -= CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
 
   MI.eraseFromParent();
@@ -11051,11 +11091,22 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   // Apart from that, this loop is pretty much doing the same thing as the
   // memcpy codegen function.
   unsigned CurrOffset = 0;
+  unsigned Size = KnownLen;
   SmallVector<Register, 16> LoadVals;
   for (auto CopyTy : MemOps) {
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a load that overlaps with the previous load. Adjust the offset
+    // accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memmove load spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
+
     // Construct MMO for the load.
-    auto *LoadMMO =
-        MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *LoadMMO = MF.getMachineMemOperand(&SrcMMO, CurrOffset, TySize);
 
     // Create the load.
     Register LoadPtr = Src;
@@ -11066,15 +11117,27 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
-    CurrOffset += CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
 
   CurrOffset = 0;
+  Size = KnownLen;
   for (unsigned I = 0; I < MemOps.size(); ++I) {
     LLT CopyTy = MemOps[I];
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a store that overlaps with the previous store. Adjust the offset
+    // accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memmove store spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
+
     // Now store the values loaded.
-    auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *StoreMMO = MF.getMachineMemOperand(&DstMMO, CurrOffset, TySize);
 
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
@@ -11084,7 +11147,8 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
-    CurrOffset += CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
   MI.eraseFromParent();
   return Legalized;

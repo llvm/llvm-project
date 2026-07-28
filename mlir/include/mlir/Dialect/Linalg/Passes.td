@@ -215,10 +215,12 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
       %res = unpack %res_packed : 4D <MBxNBxmbxnb> -> 2D <MxN>
     ```
   }];
-  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect",
+                           "arith::ArithDialect",
+                           "vector::VectorDialect"];
   let options = [
-    ListOption<"blockFactors", "block-factors", "int64_t",
-               "Block factors (mb, nb, kb) for relayout">,
+    ListOption<"blockFactors", "block-factors", "std::string",
+               "Block factors (mb, nb, kb) for relayout; use [N] for scalable">,
     Option<"allowPadding", "allow-padding", "bool",
            /*default=*/"true",
            "Allow packing padding">,

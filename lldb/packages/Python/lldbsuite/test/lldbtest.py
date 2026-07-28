@@ -453,6 +453,11 @@ class _LocalProcess(_BaseProcess):
         self._delayafterterminate = 0.1
 
     @property
+    def args(self):
+        assert self._proc is not None, "No process"
+        return self._proc.args
+
+    @property
     def pid(self):
         assert self._proc is not None, "No process"
         return self._proc.pid
@@ -534,7 +539,12 @@ class _LocalProcess(_BaseProcess):
 class _RemoteProcess(_BaseProcess):
     def __init__(self, install_remote):
         self._pid = None
+        self._args = None
         self._install_remote = install_remote
+
+    @property
+    def args(self):
+        assert self._args
 
     @property
     def pid(self):
@@ -577,6 +587,7 @@ class _RemoteProcess(_BaseProcess):
                 "remote_platform.Launch('%s', '%s') failed: %s" % (dst_path, args, err)
             )
         self._pid = launch_info.GetProcessID()
+        self._args = args
 
     def terminate(self):
         lldb.remote_platform.Kill(self._pid)
@@ -2967,6 +2978,7 @@ FileCheck output:
         )
 
         frame = self.frame()
+
         if not options:
             options = lldb.SBExpressionOptions()
 
