@@ -118,7 +118,10 @@ public:
 
   // Returns the absolute path of `relative_path` in this test directory.
   cpp::string absolute_path(cpp::string_view relative_path) const {
-    return path + "/" + relative_path;
+    cpp::string res = path;
+    res += "/";
+    res += relative_path;
+    return res;
   }
 
   // Returns this test directory path as a C string.
@@ -371,6 +374,55 @@ TEST_F(LlvmLibcRealpathTest, AllocatesResultWhenBufferIsNull) {
   char *result = LIBC_NAMESPACE::realpath("/", nullptr);
   ASSERT_STREQ(result, "/");
   ::free(result);
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNotDirWhenFileIsInPath) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("ErrorsWithNotDirWhenFileIsInPath", test_dir));
+
+  ASSERT_THAT(test_dir.touch("file"), Succeeds());
+
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("file/.")), nullptr);
+  ASSERT_ERRNO_EQ(ENOTDIR);
+
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("file/")), nullptr);
+  ASSERT_ERRNO_EQ(ENOTDIR);
+}
+
+TEST_F(LlvmLibcRealpathTest, FileAtEndOfPathIsOk) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("FileAtEndOfPathIsOk", test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a"), Succeeds());
+  ASSERT_THAT(test_dir.touch("a/file"), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("a/file")),
+               test_dir.absolute_path("a/file").c_str());
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNoEntWhenComponentDoesNotExist) {
+  TestDir test_dir;
+  ASSERT_TRUE(
+      create_test_dir("ErrorsWithNoEntWhenComponentDoesNotExist", test_dir));
+
+  // A missing directory should give ENOENT.
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("a/b")), nullptr);
+  ASSERT_ERRNO_EQ(ENOENT);
+
+  // Should fail if the final component doesn't exist.
+  ASSERT_EQ(realpath_buffered(test_dir.absolute_path("a")), nullptr);
+  ASSERT_ERRNO_EQ(ENOENT);
+}
+
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNoAccessWhenDirectoryNotSearchable) {
+  TestDir test_dir;
+  ASSERT_TRUE(create_test_dir("ErrorsWithNoAccessWhenDirectoryNotSearchable",
+                              test_dir));
+
+  ASSERT_THAT(test_dir.mkdir("a", /* mode= */ 0644), Succeeds());
+
+  ASSERT_STREQ(realpath_buffered(test_dir.absolute_path("a/b")), nullptr);
+  ASSERT_ERRNO_EQ(EACCES);
 }
 
 TEST_F(LlvmLibcRealpathTest, RelativePathResolvesToCurrentWorkingDir) {

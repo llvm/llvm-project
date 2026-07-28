@@ -5,9 +5,6 @@ you should look into [Clang](https://clang.llvm.org) instead. The
 documentation here is intended for users who have a need to work with the
 intermediate LLVM representation.
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
