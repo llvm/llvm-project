@@ -191,12 +191,16 @@ template <typename ArrayRefT> class BytesView {
   bool IsLittleEndian;
 
 public:
+  explicit BytesView(ArrayRefT Ref, bool IsLittleEndian)
+      : Bytes(Ref), IsLittleEndian(IsLittleEndian) {}
   explicit BytesView(ArrayRefT Ref, const DataLayout &DL)
-      : Bytes(Ref), IsLittleEndian(DL.isLittleEndian()) {}
+      : BytesView(Ref, DL.isLittleEndian()) {}
 
   auto &operator[](uint32_t Index) {
     return Bytes[IsLittleEndian ? Index : Bytes.size() - 1 - Index];
   }
+
+  size_t size() const { return Bytes.size(); }
 };
 
 using ConstBytesView = BytesView<ArrayRef<Byte>>;
@@ -306,6 +310,7 @@ class Context {
   // Temporary buffer for non-cacheable constants (e.g.,
   // undef/ptrtoint/inttoptr).
   SpecificBumpPtrAllocator<MaterializedConstant> NoncacheableConstBuffer;
+  size_t NoncacheableConstCount = 0;
   DenseMap<Function *, Pointer> FuncAddrMap;
   DenseMap<BasicBlock *, Pointer> BlockAddrMap;
   DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>

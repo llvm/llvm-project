@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -35,13 +36,15 @@ static bool parseEnv(const json::Value &Params,
     return true;
 
   if (const json::Object *env_obj = value->getAsObject()) {
-    for (const auto &kv : *env_obj) {
-      const std::optional<StringRef> value = kv.second.getAsString();
-      if (!value) {
-        P.field("env").field(kv.first).report("expected string value");
+    for (const auto &[key, val] : *env_obj) {
+      if (const std::optional<StringRef> val_str = val.getAsString()) {
+        env.insert({key.str(), val_str->str()});
+      } else if (val.getAsNull()) {
+        env.insert({key.str(), ""});
+      } else {
+        P.field("env").field(key).report("expected string value");
         return false;
       }
-      env.insert({kv.first.str(), value->str()});
     }
     return true;
   }

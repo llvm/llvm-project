@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1459,6 +1460,58 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
   return nullptr;
 }
 
+/// Return true if the top-level all-lanes demanded-elements query can be
+/// skipped for an intermediate insertelement chain node. This is limited to a
+/// bounded one-use chain with distinct in-range constant indices, where SDVE
+/// cannot remove a dead insert before hitting its depth limit.
+static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
+                                             unsigned VWidth,
+                                             unsigned DepthLimit) {
+  // Only skip chain nodes that feed another insertelement; the final chain root
+  // still runs the full query.
+  if (!IE.hasOneUse())
+    return false;
+  auto *UserIE = dyn_cast<InsertElementInst>(IE.user_back());
+  if (!UserIE || UserIE->getOperand(0) != &IE)
+    return false;
+
+  SmallBitVector SeenIndices(VWidth);
+  auto HasNewIndexInRange = [&](InsertElementInst &Insert) {
+    auto *Idx = dyn_cast<ConstantInt>(Insert.getOperand(2));
+    // Let the normal SDVE path handle variable or out-of-range indices. The
+    // latter may simplify the chain and must not be passed to getZExtValue().
+    if (!Idx || Idx->getValue().uge(VWidth))
+      return false;
+
+    unsigned Index = Idx->getZExtValue();
+    if (SeenIndices.test(Index))
+      return false;
+
+    SeenIndices.set(Index);
+    return true;
+  };
+
+  auto *Cur = &IE;
+  for (unsigned I = 0; I != DepthLimit; ++I) {
+    // This loop scans the same base-chain window that the SDVE query would
+    // inspect before hitting its depth limit. With distinct insert indices in
+    // that window, the all-lanes query cannot remove a dead insert; with
+    // VWidth > DepthLimit, it also cannot narrow demand to a single lane.
+    if (!HasNewIndexInRange(*Cur))
+      return false;
+
+    Value *Base = Cur->getOperand(0);
+    if (match(Base, m_Poison()))
+      return true;
+
+    Cur = dyn_cast<InsertElementInst>(Base);
+    if (!Cur || !Cur->hasOneUse())
+      return false;
+  }
+
+  return true;
+}
+
 /// The specified value produces a vector with any number of elements.
 /// This method analyzes which elements of the operand are poison and
 /// returns that information in PoisonElts.
@@ -1607,6 +1660,13 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
+    unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
+    auto *IE = cast<InsertElementInst>(I);
+    // Skip only when SDVE cannot simplify this insert chain before the limit.
+    if (Depth == 0 && DemandedElts.isAllOnes() && VWidth > DepthLimit &&
+        canSkipDemandedEltsInInsertChain(*IE, VWidth, DepthLimit))
+      return nullptr;
+
     // If this is a variable index, we don't know which element it overwrites.
     // demand exactly the same input as we produce.
     ConstantInt *Idx = dyn_cast<ConstantInt>(I->getOperand(2));
@@ -2736,12 +2796,22 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         SimplifyDemandedFPClass(I, 1, RHSDemandedMask, KnownRHS, SQ, Depth + 1))
       return I;
 
+    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
+    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
+
+    // Replacing 0/x with a zero is only valid when the divisor can't be
+    // (logical) zero, since 0/0 is NaN -- unless NaN results aren't demanded. A
+    // subnormal divisor can flush to zero under a flushing denormal mode.
+    bool CanIgnoreZeroByZeroNan =
+        ResultNotNan || KnownRHS.isKnownNeverLogicalZero(Mode);
+
     // nsz [+-]0 / x -> 0
     if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero) &&
-        KnownRHS.isKnownNeverNaN())
+        KnownRHS.isKnownNeverNaN() && CanIgnoreZeroByZeroNan)
       return ConstantFP::getZero(VTy);
 
-    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
+    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN() &&
+        CanIgnoreZeroByZeroNan) {
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
 
@@ -2751,9 +2821,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Copysign->takeName(I);
       return Copysign;
     }
-
-    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
-    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
 
     if (!ResultNotInf &&
         ((ResultNotNan || (KnownLHS.isKnownNeverNaN() &&

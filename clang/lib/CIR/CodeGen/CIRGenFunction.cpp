@@ -813,7 +813,7 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
           ctorType == Ctor_Complete) &&
          "can only generate complete ctor for this ABI");
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), ctor);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), ctor);
 
   if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
@@ -870,7 +870,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
   CXXDtorType dtorType = curGD.getDtorType();
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), dtor);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), dtor);
 
   // For an abstract class, non-base destructors are never used (and can't
   // be emitted in general, because vbase dtors may not have been validated
@@ -1644,6 +1644,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
+    case Type::LateParsedAttr:
       cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
       break;
 

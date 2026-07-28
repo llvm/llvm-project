@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
+@skipIfNoSignals  # no signal support
 class TestCase(PExpectTest):
     SHARED_BUILD_TESTCASE = False
 

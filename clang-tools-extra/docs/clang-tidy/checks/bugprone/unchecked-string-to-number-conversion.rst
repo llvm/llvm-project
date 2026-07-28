@@ -28,4 +28,4 @@ References
 
 This check corresponds to the CERT C Coding Standard rule
 `ERR34-C. Detect errors when converting a string to a number
-<https://www.securecoding.cert.org/confluence/display/c/ERR34-C.+Detect+errors+when+converting+a+string+to+a+number>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/error-handling-err/err34-c/>`_.
