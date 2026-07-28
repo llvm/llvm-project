@@ -80,24 +80,50 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   ASSERT_EQ(static_cast<int>(Float128(-1.9)), -1);
   ASSERT_EQ(static_cast<int>(Float128(1.9f)), 1);
 
-  // Extreme values
+  // Border values
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   ASSERT_EQ(static_cast<int>(Float128(INT_MAX)), INT_MAX);
   ASSERT_EQ(static_cast<int>(Float128(INT_MIN)), INT_MIN);
   ASSERT_EQ(static_cast<long long>(Float128(LLONG_MAX)), LLONG_MAX);
   ASSERT_EQ(static_cast<long long>(Float128(LLONG_MIN)), LLONG_MIN);
   ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
   ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
-  volatile int a = static_cast<int>(Float128(
-      1e300)); // This might not give any error but gives a wrong value for now
+  EXPECT_FP_EXCEPTION(0);
 
   // FP exceptions
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-  ASSERT_EQ(static_cast<int>(FPBits::quiet_nan().get_val()), 0);
+  ASSERT_EQ(static_cast<int>(FPBits::quiet_nan().get_val()), INT_MAX);
   EXPECT_FP_EXCEPTION(FE_INVALID);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-  ASSERT_EQ(static_cast<int>(FPBits::inf().get_val()), 0);
+  ASSERT_EQ(static_cast<int>(FPBits::inf().get_val()), INT_MAX);
   EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  // Extreme values
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(1e300)), INT_MAX);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(-1e300)), INT_MIN);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(FPBits::inf(Sign::NEG).get_val()), INT_MIN);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(FPBits::inf(Sign::POS).get_val()), INT_MAX);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  // Small values
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(1e-300)), 0);
+  ASSERT_EQ(static_cast<int>(Float128(-1e-300)), 0);
+  ASSERT_EQ(static_cast<long long>(Float128(1e-300)), 0LL);
+  ASSERT_EQ(static_cast<int>(Float128(0.5)), 0);
+  ASSERT_EQ(static_cast<int>(Float128(-0.5)), 0);
+  EXPECT_FP_EXCEPTION(0);
 }
 
 TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
@@ -108,4 +134,13 @@ TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
   ASSERT_TRUE(Float128(7U) == Float128(7.0f));
   ASSERT_TRUE(Float128(-7LL) == Float128(-7.0));
   ASSERT_TRUE(Float128(123456789LL) == Float128(123456789.0));
+
+  // 2147483648.0 or 2^31 is out of bound in signed and not in unsigned
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(2147483648.0)), INT_MAX);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<unsigned>(Float128(2147483648.0)), 2147483648U);
+  EXPECT_FP_EXCEPTION(0);
 }
