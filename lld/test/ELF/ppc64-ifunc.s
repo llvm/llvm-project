@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: ld.lld -z nosort-thunks %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
@@ -9,7 +9,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 ## IRELATIVE relocs relocating NOBITS .plt do not cause --check-dynamic-relocations errors.
-# RUN: ld.lld %t.o -o %t --apply-dynamic-relocs --check-dynamic-relocations
+# RUN: ld.lld -z nosort-thunks %t.o -o %t --apply-dynamic-relocs --check-dynamic-relocations
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
