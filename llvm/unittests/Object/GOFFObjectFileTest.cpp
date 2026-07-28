@@ -70,7 +70,7 @@ void addEsdRecord(std::vector<char> &GOFFData, uint8_t Type, uint8_t ESDID,
 
     if (StringOffset == Pos + GOFF::RecordLength) {
       // If we reach the end of the current record, we need to start a new one.
-      GOFFData[Pos + 1] |= 0x01; // set continuation bit in the current record.
+      GOFFData[Pos + 1] |= 0x01; // Set continuation bit in the current record.
 
       // start a new continuation record
       Pos = GOFFData.size();
