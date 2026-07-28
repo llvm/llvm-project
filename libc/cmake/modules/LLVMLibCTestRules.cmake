@@ -105,8 +105,8 @@ function(_get_common_test_compile_options output_var c_test flags)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
-function(_get_hermetic_test_compile_options output_var)
-  _get_common_test_compile_options(compile_options "" "")
+function(_get_hermetic_test_compile_options output_var c_test flags)
+  _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
   libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
@@ -626,7 +626,7 @@ function(add_integration_test test_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "" "")
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
@@ -761,9 +761,9 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -784,7 +784,6 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.__support.StringUtil.error_to_string
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
@@ -792,26 +791,6 @@ function(add_libc_hermetic test_name)
       libc.src.strings.bcmp
       libc.src.strings.bzero
   )
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
-    list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
-  endif()
-
-  # Syscalls used by death tests.
-  if(LIBC_TEST_SUBPROCESS_TESTS)
-    list(APPEND fq_deps_list
-        libc.src.poll.poll
-        libc.src.signal.kill
-        libc.src.stdio.fflush
-        libc.src.stdio.stderr
-        libc.src.stdio.stdout
-        libc.src.stdlib.exit
-        libc.src.string.strsignal
-        libc.src.sys.wait.waitpid
-        libc.src.unistd.close
-        libc.src.unistd.fork
-        libc.src.unistd.pipe
-    )
-  endif()
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building
@@ -819,9 +798,36 @@ function(add_libc_hermetic test_name)
     list(APPEND fq_deps_list libc.src.compiler.__stack_chk_fail)
   endif()
 
-  if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
-    # We will link in the 'clock' implementation if it exists for test timing.
-    list(APPEND fq_deps_list libc.src.time.clock)
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
+    list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
+  endif()
+
+  if (NOT HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list
+        libc.src.__support.StringUtil.error_to_string
+    )
+
+    # Syscalls used by death tests.
+    if(LIBC_TEST_SUBPROCESS_TESTS)
+      list(APPEND fq_deps_list
+          libc.src.poll.poll
+          libc.src.signal.kill
+          libc.src.stdio.fflush
+          libc.src.stdio.stderr
+          libc.src.stdio.stdout
+          libc.src.stdlib.exit
+          libc.src.string.strsignal
+          libc.src.sys.wait.waitpid
+          libc.src.unistd.close
+          libc.src.unistd.fork
+          libc.src.unistd.pipe
+      )
+    endif()
+
+    if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+      # We will link in the 'clock' implementation if it exists for test timing.
+      list(APPEND fq_deps_list libc.src.time.clock)
+    endif()
   endif()
 
   list(REMOVE_DUPLICATES fq_deps_list)
@@ -876,7 +882,8 @@ function(add_libc_hermetic test_name)
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_C_TEST}"
+			             "${HERMETIC_TEST_FLAGS}")
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options}
                          ${HERMETIC_TEST_COMPILE_OPTIONS})

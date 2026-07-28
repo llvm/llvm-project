@@ -75,7 +75,6 @@ add_libc_test(
 add_libc_test(
   stdbit_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   HDRS
@@ -108,7 +107,6 @@ add_libc_test(
 
 add_libc_test(
   sched_test
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -370,7 +368,6 @@ add_libc_test(
 add_libc_test(
   signbit_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -385,7 +382,6 @@ add_libc_test(
 add_libc_test(
   isnan_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -400,7 +396,6 @@ add_libc_test(
 add_libc_test(
   isnormal_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -416,7 +411,6 @@ add_libc_test(
 # add_libc_test(
 #   issignaling_c_test
 #   C_TEST
-#   UNIT_TEST_ONLY
 #   SUITE
 #     libc_include_tests
 #   SRCS
@@ -434,7 +428,6 @@ add_libc_test(
 # add_libc_test(
 #   iscanonical_c_test
 #   C_TEST
-#   UNIT_TEST_ONLY
 #   SUITE
 #     libc_include_tests
 #   SRCS
@@ -452,7 +445,6 @@ add_libc_test(
 add_libc_test(
   isinf_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -467,7 +459,6 @@ add_libc_test(
 add_libc_test(
   isfinite_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -482,7 +473,6 @@ add_libc_test(
 add_libc_test(
   issubnormal_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -497,7 +487,6 @@ add_libc_test(
 add_libc_test(
   fpclassify_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -512,7 +501,6 @@ add_libc_test(
 add_libc_test(
   iszero_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -527,7 +515,6 @@ add_libc_test(
 add_libc_test(
   math_constants_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
