@@ -354,16 +354,8 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   // Pseudocode: __wasm_lpad_context.lsda = wasm.lsda();
   IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
-  CallInst *PersCI;
-
   // Pseudocode: personality_fn(exn);
-  if (Function *F = dyn_cast<Function>(PersonalityF.getCallee()))
-    // Grab direct function when possible to use `call` instead of `call_indirect`
-    PersCI = IRB.CreateCall(F, CatchCI, OperandBundleDef("funclet", CPI));
-  else
-    PersCI =
-        IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", CPI));
-
+  CallInst *PersCI = IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", CPI));
   PersCI->setDoesNotThrow();
 
   // Pseudocode: int selector = __wasm_lpad_context.selector;
