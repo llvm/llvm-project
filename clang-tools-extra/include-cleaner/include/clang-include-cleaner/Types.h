@@ -24,6 +24,7 @@
 
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -32,9 +33,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include <memory>
 #include <string>
-#include <utility>
 #include <variant>
 #include <vector>
 
@@ -151,6 +150,8 @@ struct Include {
   SourceLocation HashLocation;         // of hash in #include <vector>
   unsigned Line = 0;                   // 1-based line number for #include
   bool Angled = false;                 // True if spelled with <angle> quotes.
+  tooling::IncludeDirective Directive =
+      tooling::IncludeDirective::Include; // Directive type
   std::string quote() const;           // e.g. <vector>
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Include &);
