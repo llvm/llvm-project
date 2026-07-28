@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -292,8 +293,6 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases)
     RuntimeAliases = standardPlatformAliases(ES);
@@ -302,15 +301,17 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(
-          absoluteSymbols({{ES.intern("___orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("___orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    if (auto Err = PlatformJD.define(reexports(
+            ES.getBootstrapJITDylib(),
+            {{ES.intern("___orc_rt_jit_dispatch"),
+              {ES.intern(rt::DispatchName),
+               JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
+             {ES.intern("___orc_rt_jit_dispatch_ctx"),
+              {ES.intern(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();

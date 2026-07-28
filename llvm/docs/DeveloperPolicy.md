@@ -1,9 +1,6 @@
 (developer_policy)=
 # LLVM Developer Policy
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

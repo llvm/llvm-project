@@ -5,12 +5,12 @@
 # RUN:       }' > %t.lds
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
-# RUN: ld.lld -T %t.lds %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -T %t.lds %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
-# RUN: ld.lld -pie -T %t.lds %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -pie -T %t.lds %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
