@@ -320,6 +320,43 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
                 [](const SCEV *Op) { return isa<SCEVUDivExpr>(Op); }))
       return false;
 
+    // Try to match URem directly. With a constant divisor, the multiply is `-B
+    // * (A /u B)`.
+    const SCEV *B;
+    const APInt *NegB, *BC;
+    if (SCEVPatternMatch::match(
+            Mul, m_scev_c_Mul(
+                     m_scev_APInt(NegB),
+                     m_scev_UDiv(m_scev_Specific(A),
+                                 m_CombineAnd(m_SCEV(B), m_scev_APInt(BC))))))
+      // A power-of-2 divisor is canonicalized to zext(trunc(A)), matched above.
+      return !BC->isPowerOf2() && *NegB == -*BC && Op0.match(A) && Op1.match(B);
+
+    // With a non-constant divisor, the multiply is `-1 * (A /u B) * B`.
+    if (Mul->getNumOperands() == 3 && Mul->getOperand(0)->isAllOnesValue()) {
+      for (unsigned Idx : {1, 2}) {
+        B = Mul->getOperand(3 - Idx);
+        if (SCEVPatternMatch::match(
+                Mul->getOperand(Idx),
+                m_scev_UDiv(m_scev_Specific(A), m_scev_Specific(B))))
+          return Op0.match(A) && Op1.match(B);
+      }
+    }
+
+    // Otherwise the operands have been folded, which requires a UDiv or AddRec.
+    if (!isa<SCEVAddRecExpr>(A) && !isa<SCEVUDivExpr>(A) &&
+        none_of(Mul->operands(),
+                [](const SCEV *Op) { return isa<SCEVAddRecExpr>(Op); })) {
+#ifndef NDEBUG
+      for (const SCEV *Op : Mul->operands())
+        assert(Expr != SE.getURemExpr(A, Op) &&
+               Expr != SE.getURemExpr(A, SE.getNegativeSCEV(Op)) &&
+               "missed a URem pattern");
+#endif
+      return false;
+    }
+
+    // Fall back to constructing the URem expression for the folded forms.
     const auto MatchURemWithDivisor = [&](const SCEV *B) {
       // (SomeExpr + (-(SomeExpr / B) * B)).
       if (Expr == SE.getURemExpr(A, B))
