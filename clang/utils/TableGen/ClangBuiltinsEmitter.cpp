@@ -376,6 +376,7 @@ private:
                                .Case("short", "s")
                                .Case("sigjmp_buf", "SJ")
                                .Case("size_t", "z")
+                               .Case("std::meta::info", "r")
                                .Case("ucontext_t", "K")
                                .Case("uint8_t", "UBi")
                                .Case("uint16_t", "UTi")

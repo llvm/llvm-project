@@ -17252,6 +17252,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(*result, E);
     return false;
 
+  case Builtin::BI__builtin_meta_is_type: {
+    APValue Reflection;
+    if (!EvaluateReflection(E->getArg(0), Reflection, Info))
+      return false;
+    return Success(Reflection.getReflectionOperandKind() == ReflectionKind::Type, E);
+  }
+
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:

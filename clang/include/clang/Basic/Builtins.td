@@ -1207,6 +1207,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool(void*)";
 }
 
+def MetaIsType : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_meta_is_type"];
+  let Attributes = [NoThrow, Consteval];
+  let Prototype = "bool(std::meta::info)";
+}
+
 def ClearPadding : Builtin {
   let Spellings = ["__builtin_clear_padding"];
   let Attributes = [NoThrow, CustomTypeChecking];

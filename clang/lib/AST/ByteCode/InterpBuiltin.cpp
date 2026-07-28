@@ -2535,6 +2535,13 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *) {
+  const Reflect &R = S.Stk.pop<Reflect>();
+  S.Stk.push<Boolean>(Boolean::from(R.getKind() == ReflectionKind::Type));
+  return true;
+}
+
 static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
                                                const CallExpr *Call) {
 
@@ -5453,6 +5460,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_is_within_lifetime:
     return interp__builtin_is_within_lifetime(S, OpPC, Call);
+
+  case Builtin::BI__builtin_meta_is_type:
+    return interp__builtin_meta_is_type(S, OpPC, Call);
 
   case Builtin::BI__builtin_elementwise_add_sat:
     return interp__builtin_elementwise_int_binop(

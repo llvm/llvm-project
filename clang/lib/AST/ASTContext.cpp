@@ -12835,6 +12835,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'M':
     Type = Context.getObjCSuperType();
     break;
+  case 'r':
+    Type = Context.MetaInfoTy;
+    break;
   case 'a':
     Type = Context.getBuiltinVaListType();
     assert(!Type.isNull() && "builtin va list type not initialized!");
