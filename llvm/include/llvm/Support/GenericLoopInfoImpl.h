@@ -889,8 +889,7 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
 #endif
 
 template <class BlockT, class LoopT>
-void LoopInfoBase<BlockT, LoopT>::verify(
-    const DomTreeBase<BlockT> &DomTree) const {
+void LoopInfoBase<BlockT, LoopT>::verify() const {
   DenseSet<const LoopT *> Loops;
   for (iterator I = begin(), E = end(); I != E; ++I) {
     assert((*I)->isOutermost() && "Top-level loop has a parent!");
@@ -928,7 +927,7 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
   // Recompute LoopInfo to verify loops structure.
   LoopInfoBase<BlockT, LoopT> OtherLI;
-  OtherLI.analyze(DomTree);
+  OtherLI.analyze(ParentPtr);
 
   // Build a map we can use to move from our LI to the computed one. This
   // allows us to ignore the particular order in any layer of the loop forest

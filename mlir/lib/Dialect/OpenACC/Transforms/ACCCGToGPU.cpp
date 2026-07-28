@@ -3512,9 +3512,13 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     return;
   }
 
-  // A thread-level reduction with no block owner for its elements cannot merge
-  // the cross-thread partials, so report NYI.
-  if (!reductionHasBlockContext(op)) {
+  // A thread-only accumulate merges with a within-block all_reduce, which is
+  // complete only in one block: block context, or a launch with no block dim.
+  // Multi-block thread-only still grid-strides across blocks, so stays NYI.
+  bool regionLaunchesBlocks = llvm::any_of(
+      computeRegion.getLaunchParDims(),
+      [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyBlock(); });
+  if (!reductionHasBlockContext(op) && regionLaunchesBlocks) {
     (void)accSupport.emitNYI(
         loc, "reduction: thread-only array reduction accumulate");
     return;

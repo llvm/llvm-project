@@ -6322,8 +6322,17 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     }
   }
 
-  // Helper to get the address of an interop variable from an Object.
+  // Helper to get the address of an interop variable from an Object. A
+  // designator such as arr(1) or rec%obj must lower through genExprAddr so we
+  // obtain the address of the actual scalar element/component with the correct
+  // type, rather than the base symbol address (which would be the whole array,
+  // or null for a component defined inside a derived type).
   auto getInteropVarAddr = [&](const Object &object) -> mlir::Value {
+    if (const auto &designator = object.ref()) {
+      fir::ExtendedValue exv =
+          converter.genExprAddr(*designator, stmtCtx, &loc);
+      return fir::getBase(exv);
+    }
     const semantics::Symbol *sym = object.sym();
     assert(sym && "interop variable must have a symbol");
     mlir::Value addr = converter.getSymbolAddress(*sym);
@@ -6382,7 +6391,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                             .Case("sycl", 4)
                             .Case("hip", 5)
                             .Case("level_zero", 6)
-                            .Case("hsa", 7)
                             .Default(std::nullopt);
             if (frId)
               prefValues.push_back(*frId);

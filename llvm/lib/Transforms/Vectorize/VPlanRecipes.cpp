@@ -3232,6 +3232,8 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-end-pointer";
   printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -3261,6 +3263,8 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer";
   printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
   printOperands(O, SlotTracker);
 }
 #endif

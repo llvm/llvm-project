@@ -24,6 +24,10 @@
 #define __has_attribute(x) 0
 #endif
 
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
 #define LIBC_INLINE inline
 #define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
@@ -146,6 +150,18 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
 #else
 #define LIBC_PREFERED_TYPE(TYPE)
+#endif
+
+#if __has_cpp_attribute(no_unique_address)
+#define LIBC_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define LIBC_NO_UNIQUE_ADDRESS
+#endif
+
+#if __has_attribute(trivial_abi)
+#define LIBC_TRIVIAL_ABI [[clang::trivial_abi]]
+#else
+#define LIBC_TRIVIAL_ABI
 #endif
 
 #if __has_attribute(ext_vector_type) &&                                        \
