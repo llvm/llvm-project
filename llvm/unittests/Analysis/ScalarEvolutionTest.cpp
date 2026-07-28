@@ -2103,4 +2103,40 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
   });
 }
 
+// Counterexample for isKnownPredicateViaMaxValue. Multi-exit loop with an
+// uncomputable early exit: IR `add nuw` gives {0,+,100}<nuw>, but the symbolic
+// max BTC (7, from the constant latch) overshoots where nuw actually holds
+// (i<=2). evaluateAtIteration(7) = 100*7 mod 256 = 188 wraps and
+// under-estimates the true max (k = 200 at reachable i=2), so k u<= 190 must
+// NOT be true.
+TEST_F(ScalarEvolutionsTest, MaxValueMultiExitMustNotWrap) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @cex(ptr %flag) {\n"
+                          "entry:\n"
+                          "  br label %loop\n"
+                          "loop:\n"
+                          "  %j = phi i64 [ 0, %entry ], [ %jinc, %latch ]\n"
+                          "  %k = phi i8  [ 0, %entry ], [ %kinc, %latch ]\n"
+                          "  %f = load i8, ptr %flag\n"
+                          "  %fz = icmp eq i8 %f, 0\n"
+                          "  br i1 %fz, label %latch, label %exit\n"
+                          "latch:\n"
+                          "  %jinc = add nuw i64 %j, 1\n"
+                          "  %kinc = add nuw i8 %k, 100\n"
+                          "  %c = icmp ult i64 %jinc, 8\n"
+                          "  br i1 %c, label %loop, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n",
+                          Err, C);
+  ASSERT_TRUE(M) << "parse failed";
+  runWithSE(*M, "cex", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *K = SE.getSCEV(getInstructionByName(F, "k"));
+    const SCEV *RHS = SE.getConstant(APInt(8, 190));
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, K, RHS));
+  });
+}
+
 }  // end namespace llvm

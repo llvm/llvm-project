@@ -13271,20 +13271,35 @@ bool ScalarEvolution::isKnownPredicateViaMaxValue(CmpPredicate Pred,
   if (Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_ULT)
     return false;
   const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!AR || !AR->isAffine() || !AR->hasNoUnsignedWrap())
+  if (!AR || !AR->isAffine() || !AR->hasNoUnsignedWrap() ||
+      !AR->getType()->isIntegerTy())
     return false;
   const Loop *L = AR->getLoop();
   if (!isLoopInvariant(RHS, L))
     return false;
 
+  // The symbolic max BTC is only an upper bound on the trip count, so a nuw
+  // AddRec evaluated there can still unsigned-wrap. Widen and require
+  // start + BTC*step to provably not overflow.
   const SCEV *BTC = getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BTC))
     return false;
+  BTC = applyLoopGuards(BTC, L);
 
-  const SCEV *MaxVal = AR->evaluateAtIteration(BTC, *this);
-
-  // MaxVal is loop-invariant for L, so this does not recurse.
-  return isKnownViaNonRecursiveReasoning(Pred, MaxVal, RHS);
+  const SCEV *Start = AR->getStart();
+  const SCEV *Step = AR->getStepRecurrence(*this);
+  Type *WideTy = getWiderType(BTC->getType(), AR->getType());
+  const SCEV *WStart = getNoopOrZeroExtend(Start, WideTy);
+  const SCEV *WStep = getNoopOrZeroExtend(Step, WideTy);
+  const SCEV *WBTC = getNoopOrZeroExtend(BTC, WideTy);
+  if (!willNotOverflow(Instruction::Mul, /*Signed=*/false, WBTC, WStep))
+    return false;
+  const SCEV *Prod = getMulExpr(WBTC, WStep);
+  if (!willNotOverflow(Instruction::Add, /*Signed=*/false, WStart, Prod))
+    return false;
+  const SCEV *MaxVal = applyLoopGuards(getAddExpr(WStart, Prod), L);
+  const SCEV *WRHS = applyLoopGuards(getNoopOrZeroExtend(RHS, WideTy), L);
+  return isKnownViaNonRecursiveReasoning(Pred, MaxVal, WRHS);
 }
 
 bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
