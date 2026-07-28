@@ -1002,17 +1002,6 @@ xegpu::DistributeLayoutAttr xegpu::inferResultLayoutFromSourceForNonAnchorOp(
   return nullptr;
 }
 
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
-xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
-    xegpu::DistributeLayoutAttr payloadLayout, int chunkSize) {
-  auto rank = payloadLayout.getRank();
-  if (chunkSize > 1)
-    return payloadLayout.dropDims(
-        llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
-  return payloadLayout;
-}
-
 //===----------------------------------------------------------------------===//
 // Layout derivation helpers: factorize sgCount into
 // sg_layout candidates, then
@@ -1849,13 +1838,19 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 ///
 /// For Subgroup layout, uses the consumer layout directly.
 ///
-/// For InstData layout, takes consumer's inst_data as-is. lane_layout and
-/// lane_data are taken from the consumer when present; otherwise the helper
-/// derives the standard scatter-style default (subgroupSize lanes on the
-/// innermost dim, per-lane vector capped by maxChunkSize).
+/// For InstData layout, takes consumer's inst_data as-is; lane_layout and
+/// lane_data are taken from the consumer.
 ///
-/// For Lane layout, lane_layout/lane_data are taken from the consumer when
-/// present; otherwise derived from the same default.
+/// For Lane layout, lane_layout/lane_data are taken from the consumer.
+///
+/// A consumer layout that carries lane_layout and lane_data is required.
+/// `maxChunkSize` is not read yet: the consumer's lane_data already fixes the
+/// per-lane chunk.
+///
+/// TODO: derive lane_layout/lane_data here when the consumer has none, capped by
+/// `maxChunkSize`, the way `setupGenericStoreAnchorLayout` does via
+/// `computeScatterIOLaneLayoutAndData`. That path is missing today, so the
+/// assert below stands in for it.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
@@ -1899,6 +1894,8 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
 
+  // The per-lane chunk is bounded by what the offsets prove contiguous
+  // (`contigChunkSize`) and by what one lane can access in one instruction.
   const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
       uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize =
@@ -1979,6 +1976,8 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   auto context = srcVecTy.getContext();
 
+  // The per-lane chunk is bounded by what the offsets prove contiguous
+  // (`contigChunkSize`) and by what one lane can access in one instruction.
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));

@@ -563,11 +563,6 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    int64_t chunkSize = 1;
-    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
-      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
-        chunkSize = intAttr.getInt();
-    }
 
     // Unroll mask and offsets with correct shape
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
@@ -575,50 +570,15 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     Type elemTy = valueTy.getElementType();
     VectorType newValueTy = VectorType::get(*targetShape, elemTy);
 
-    SmallVector<Type> convertedMaskTypes;
-    SmallVector<Value> convertedMasks;
-    SmallVector<Type> convertedOffsetTypes;
-    SmallVector<Value> convertedOffsets;
+    SmallVector<Type> convertedMaskTypes =
+        getUnrolledTypes(maskTy, targetMaskShape);
+    SmallVector<Value> convertedMasks =
+        pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
 
-    if (chunkSize > 1) {
-      // For chunked loads, mask and offsets have one less dimension
-      targetMaskShape.pop_back();
-      int64_t blockedChunkSize = targetShape->back();
-      int64_t numNewChunks = chunkSize / blockedChunkSize;
-      chunkSize = blockedChunkSize;
-
-      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
-      convertedOffsetTypes = getUnrolledTypes(offsetsTy, targetMaskShape);
-
-      SmallVector<Value> convertedMasksBase =
-          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
-      SmallVector<Value> convertedOffsetsBase =
-          pack(offsets, convertedOffsetTypes, targetMaskShape, loc, rewriter);
-
-      for (auto maskVal : convertedMasksBase)
-        convertedMasks.append(numNewChunks, maskVal);
-
-      for (auto [baseOffset, offsetType] :
-           llvm::zip(convertedOffsetsBase, convertedOffsetTypes)) {
-        for (int64_t i = 0; i < numNewChunks; ++i) {
-          Value inc = arith::ConstantIndexOp::create(rewriter, loc,
-                                                     i * blockedChunkSize);
-          Value incVec =
-              vector::BroadcastOp::create(rewriter, loc, offsetType, inc);
-          Value offsetVal =
-              arith::AddIOp::create(rewriter, loc, baseOffset, incVec);
-          convertedOffsets.push_back(offsetVal);
-        }
-      }
-    } else {
-      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
-      convertedMasks =
-          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
-
-      convertedOffsetTypes = getUnrolledTypes(offsetsTy, *targetShape);
-      convertedOffsets =
-          pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
-    }
+    SmallVector<Type> convertedOffsetTypes =
+        getUnrolledTypes(offsetsTy, *targetShape);
+    SmallVector<Value> convertedOffsets =
+        pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
 
     auto layout = op.getLayoutAttr();
     if (layout)
@@ -627,8 +587,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     SmallVector<Value> newOps;
     for (auto [o, m] : llvm::zip(convertedOffsets, convertedMasks)) {
       auto newOp = xegpu::LoadGatherOp::create(
-          rewriter, loc, newValueTy, op.getSource(), o, m,
-          rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
+          rewriter, loc, newValueTy, op.getSource(), o, m, op.getL1HintAttr(),
           op.getL2HintAttr(), op.getL3HintAttr(), layout,
           /*contiguity=*/nullptr);
       newOps.push_back(newOp);
@@ -657,59 +616,19 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     if (!targetShape)
       return failure();
 
-    int64_t chunkSize = 1;
-    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
-      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
-        chunkSize = intAttr.getInt();
-    }
-
     SmallVector<int64_t> targetMaskShape(*targetShape);
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
     VectorType offsetsTy = llvm::dyn_cast<VectorType>(offsets.getType());
 
-    SmallVector<Type> convertedMaskTypes;
-    SmallVector<Value> convertedMasks;
-    SmallVector<Type> convertedOffsetTypes;
-    SmallVector<Value> convertedOffsets;
+    SmallVector<Type> convertedMaskTypes =
+        getUnrolledTypes(maskTy, targetMaskShape);
+    SmallVector<Value> convertedMasks =
+        pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
 
-    if (chunkSize > 1) {
-      targetMaskShape.pop_back();
-      int64_t blockedChunkSize = targetShape->back();
-      int64_t numNewChunks = chunkSize / blockedChunkSize;
-      chunkSize = blockedChunkSize;
-
-      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
-      convertedOffsetTypes = getUnrolledTypes(offsetsTy, targetMaskShape);
-
-      SmallVector<Value> convertedMasksBase =
-          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
-      SmallVector<Value> convertedOffsetsBase =
-          pack(offsets, convertedOffsetTypes, targetMaskShape, loc, rewriter);
-
-      for (auto maskVal : convertedMasksBase)
-        convertedMasks.append(numNewChunks, maskVal);
-
-      for (auto [baseOffset, offsetType] :
-           llvm::zip(convertedOffsetsBase, convertedOffsetTypes)) {
-        for (int64_t i = 0; i < numNewChunks; ++i) {
-          Value inc = arith::ConstantIndexOp::create(rewriter, loc,
-                                                     i * blockedChunkSize);
-          Value incVec =
-              vector::BroadcastOp::create(rewriter, loc, offsetType, inc);
-          Value offsetVal =
-              arith::AddIOp::create(rewriter, loc, baseOffset, incVec);
-          convertedOffsets.push_back(offsetVal);
-        }
-      }
-    } else {
-      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
-      convertedMasks =
-          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
-
-      convertedOffsetTypes = getUnrolledTypes(offsetsTy, *targetShape);
-      convertedOffsets =
-          pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
-    }
+    SmallVector<Type> convertedOffsetTypes =
+        getUnrolledTypes(offsetsTy, *targetShape);
+    SmallVector<Value> convertedOffsets =
+        pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
@@ -723,7 +642,6 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     for (auto [v, o, m] :
          llvm::zip(convertedValues, convertedOffsets, convertedMasks)) {
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
-                                    rewriter.getI64IntegerAttr(chunkSize),
                                     op.getL1HintAttr(), op.getL2HintAttr(),
                                     op.getL3HintAttr(), layout,
                                     /*contiguity=*/nullptr);

@@ -235,22 +235,9 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
 
-    if (isa<xegpu::StoreScatterOp>(op)) {
-      xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
-      if (layout && idx >= 2 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+    // For gather/scatter ops the mask and offsets share the value's layout.
+    if (isa<xegpu::StoreScatterOp, xegpu::LoadGatherOp>(op))
       return layout;
-    }
-    if (isa<xegpu::LoadGatherOp>(op)) {
-      xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
-      if (layout && idx >= 1 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
-      return layout;
-    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);

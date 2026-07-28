@@ -596,9 +596,9 @@ gpu.module @test {
     %val = arith.constant dense<25.5> : vector<256xf16>
     %offset = arith.constant dense<0> : vector<256xindex>
     %mask = arith.constant dense<1> : vector<256xi1>
-    // CHECK: xegpu.store %{{.*}}, %{{.*}}[%{{.*}}], %{{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>, layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}>
+    // CHECK: xegpu.store %{{.*}}, %{{.*}}[%{{.*}}], %{{.*}} <{l1_hint = #xegpu.cache_hint<cached>, layout = #xegpu.layout<sg_layout = [16], sg_data = [16]>}>
     // CHECK-SAME: : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
-    xegpu.store %val, %dest[%offset], %mask {chunk_size = 1, l1_hint = #xegpu.cache_hint<cached>}
+    xegpu.store %val, %dest[%offset], %mask {l1_hint = #xegpu.cache_hint<cached>}
       : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
     gpu.return
   }
