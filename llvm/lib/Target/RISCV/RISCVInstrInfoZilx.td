@@ -31,6 +31,7 @@ class ZilxLoad<bits<5> funct5, bits<3> funct3, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZilx] in {
+let IsSignExtendingOpW = 1 in {
 // Unscaled indexed loads: address = base + index. Byte loads are not provided
 // in the unscaled mode.
 def LXH  : ZilxLoad<0b10010, 0b001, "lxh">,
@@ -52,6 +53,7 @@ def LXSBU : ZilxLoad<0b11010, 0b100, "lxsbu">,
             Sched<[WriteLDB, ReadMemBase, ReadMemBase]>;
 def LXSHU : ZilxLoad<0b11010, 0b101, "lxshu">,
             Sched<[WriteLDH, ReadMemBase, ReadMemBase]>;
+} // IsSignExtendingOpW = 1
 
 let append Predicates = [IsRV64] in {
 // Unscaled indexed loads (RV64-only widths).
@@ -68,18 +70,25 @@ def LXSWU : ZilxLoad<0b11010, 0b110, "lxswu">,
 
 // Scaled indexed loads with a zero-extended 32-bit index (RV64-only):
 // address = base + (zext32(index) << log2(access-size)).
+let IsSignExtendingOpW = 1 in {
 def LXSUWB  : ZilxLoad<0b11110, 0b000, "lxsuwb">,
               Sched<[WriteLDB, ReadMemBase, ReadMemBase]>;
 def LXSUWH  : ZilxLoad<0b11110, 0b001, "lxsuwh">,
               Sched<[WriteLDH, ReadMemBase, ReadMemBase]>;
 def LXSUWW  : ZilxLoad<0b11110, 0b010, "lxsuww">,
               Sched<[WriteLDW, ReadMemBase, ReadMemBase]>;
+} // IsSignExtendingOpW = 1
+
 def LXSUWD  : ZilxLoad<0b11110, 0b011, "lxsuwd">,
               Sched<[WriteLDD, ReadMemBase, ReadMemBase]>;
+
+let IsSignExtendingOpW = 1 in {
 def LXSUWBU : ZilxLoad<0b11110, 0b100, "lxsuwbu">,
               Sched<[WriteLDB, ReadMemBase, ReadMemBase]>;
 def LXSUWHU : ZilxLoad<0b11110, 0b101, "lxsuwhu">,
               Sched<[WriteLDH, ReadMemBase, ReadMemBase]>;
+} // IsSignExtendingOpW = 1
+
 def LXSUWWU : ZilxLoad<0b11110, 0b110, "lxsuwwu">,
               Sched<[WriteLDW, ReadMemBase, ReadMemBase]>;
 } // append Predicates = [IsRV64]
