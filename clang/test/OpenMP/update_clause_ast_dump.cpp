@@ -17,7 +17,7 @@ int check_atomic(int x) {
 using omp_depend_t = void *;
 
 // Check that the "update" clause is represented in AST by
-// OMPUpdateDependObjectsClause when used on "depobj" consturct.
+// OMPUpdateDependObjectsClause when used on "depobj" construct.
 void check_depobj(omp_depend_t x) {
   #pragma omp depobj(x) update(in)
   {}
