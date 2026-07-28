@@ -75,14 +75,14 @@ define void @load_feeding_only_mask_not_scalarized(ptr noalias %A, ptr noalias %
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.C> = getelementptr ir<%C>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep.C>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i32, ir<%gep.C>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%c> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%cmp> = icmp sgt ir<%c>, ir<0>
 ; CHECK-NEXT:    Successor(s): then
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%gep.B> = getelementptr ir<%B>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep.B>, ptr x ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ptr, ir<%gep.B>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.p> = load vp<[[VP5]]>, ir<%cmp>
 ; CHECK-NEXT:      EMIT store ir<42>, ir<%l.p>, ir<%cmp>
 ; CHECK-NEXT:    Successor(s): latch
@@ -198,11 +198,11 @@ define void @consecutive_load_store(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%gep.a>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.b>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%add>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1024>
@@ -318,7 +318,7 @@ define void @consecutive_load_with_first_order_recurrence_address(ptr noalias %a
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.a>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.b>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%lv>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -371,18 +371,18 @@ define void @cond_load_store(ptr noalias %a, ptr noalias %b, ptr noalias %cond, 
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.cond> = getelementptr inbounds ir<%cond>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%gep.cond>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.cond>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%c> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%cmp> = icmp sgt ir<%c>, ir<0>
 ; CHECK-NEXT:    Successor(s): then
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.a>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>, ir<%cmp>
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>, ir<%cmp>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%gep.b>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%add>, ir<%cmp>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:

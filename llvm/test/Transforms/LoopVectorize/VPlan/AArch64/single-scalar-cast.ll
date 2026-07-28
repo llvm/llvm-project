@@ -78,7 +78,7 @@ define void @sink_replicate_region_with_cast(ptr %dst, i64 %n) {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%conv> = zext vp<[[VP5]]> to i64
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%dst>, ir<%conv>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%gep>, double x ir<1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer double, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%c> = fcmp olt ir<%l>, ir<0.000000e+00>
 ; CHECK-NEXT:    Successor(s): pred.store

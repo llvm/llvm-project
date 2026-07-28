@@ -37,7 +37,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP8:%[0-9]+]]>, vector.body ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%ld.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, ir<%ld>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = any-of ir<%select.cmp>
@@ -99,7 +99,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
 ; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<[[VP9]]>
-; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%ld.addr>, i32 x ir<1>
+; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds i32, ir<%ld.addr>, ir<1>
 ; CHECK-TF-NEXT:      WIDEN ir<%ld> = load vp<[[VP10]]>, vp<[[VP8]]>
 ; CHECK-TF-NEXT:      WIDEN ir<%select.cmp> = icmp slt ir<%a>, ir<%ld>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%select.cmp>
@@ -183,7 +183,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<false>, vector.ph ], [ vp<[[VP10:%[0-9]+]]>, if.then.0 ]
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw ir<%a.addr>, i32 x ir<1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw i32, ir<%a.addr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%if.cond> = icmp sgt ir<%ld.a>, ir<%threshold>
 ; CHECK-NEXT:    Successor(s): pred.load
@@ -262,12 +262,12 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
 ; CHECK-TF-NEXT:      vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-TF-NEXT:      CLONE ir<%a.addr> = getelementptr inbounds nuw ir<%a>, vp<[[VP9]]>
-; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds nuw ir<%a.addr>, i32 x ir<1>
+; CHECK-TF-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds nuw i32, ir<%a.addr>, ir<1>
 ; CHECK-TF-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP10]]>, vp<[[VP8]]>
 ; CHECK-TF-NEXT:      WIDEN ir<%if.cond> = icmp sgt ir<%ld.a>, ir<%threshold>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%if.cond>
 ; CHECK-TF-NEXT:      CLONE ir<%b.addr> = getelementptr ir<%b>, vp<[[VP9]]>
-; CHECK-TF-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer ir<%b.addr>, i32 x ir<1>
+; CHECK-TF-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer i32, ir<%b.addr>, ir<1>
 ; CHECK-TF-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = any-of vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP13]]>, vp<[[VP11]]>, vp<[[VP6]]>

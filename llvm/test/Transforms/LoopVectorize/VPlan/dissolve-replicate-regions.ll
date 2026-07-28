@@ -161,8 +161,8 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%24>/vp<[[VP5]]>
 ; VECTOR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP7]]>
 ; VECTOR-NEXT:      EMIT vp<[[VP25:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
-; VECTOR-NEXT:      vp<[[VP26:%[0-9]+]]> = vector-pointer ir<%gep.dst>, i8 x ir<1>
-; VECTOR-NEXT:      vp<[[VP27:%[0-9]+]]> = vector-pointer ir<%gep.dst>, i8 x ir<1>, vp<[[VP25]]>
+; VECTOR-NEXT:      vp<[[VP26:%[0-9]+]]> = vector-pointer i8, ir<%gep.dst>, ir<1>
+; VECTOR-NEXT:      vp<[[VP27:%[0-9]+]]> = vector-pointer i8, ir<%gep.dst>, ir<1>, vp<[[VP25]]>
 ; VECTOR-NEXT:      WIDEN store vp<[[VP26]]>, ir<%pred.val>
 ; VECTOR-NEXT:      WIDEN store vp<[[VP27]]>, ir<%pred.val>.1
 ; VECTOR-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
