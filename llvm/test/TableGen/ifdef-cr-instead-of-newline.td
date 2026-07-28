@@ -4,4 +4,4 @@
 // part of the #ifdef body.
 // RUN: echo -e "#ifdef FOO\rhello\r#endif\r#endif\r" | not llvm-tblgen 2>&1 | FileCheck %s
 // CHECK: :1:26: error: #endif without #ifdef
-// CHECK: :1:26: error: Unexpected token at top level
+// CHECK-NOT: error:
