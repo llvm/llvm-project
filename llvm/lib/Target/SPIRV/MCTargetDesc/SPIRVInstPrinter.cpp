@@ -103,7 +103,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
         unsigned MantissaBits =
             APFloat::semanticsPrecision(FP.getSemantics()) - 1;
         uint64_t Mantissa = Imm & (maskTrailingOnes<uint64_t>(MantissaBits));
-        unsigned Pad = (4 - MantissaBits % 4) % 4;
+        unsigned Pad = alignTo(MantissaBits, 4) - MantissaBits;
         std::string Hex = utohexstr(Mantissa << Pad, /*LowerCase=*/true,
                                     (MantissaBits + Pad) / 4);
         while (Hex.size() > 1 && Hex.back() == '0')
