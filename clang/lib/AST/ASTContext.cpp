@@ -12368,6 +12368,8 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
     Qualifiers::GC GC_L = LQuals.getObjCGCAttr();
     Qualifiers::GC GC_R = RQuals.getObjCGCAttr();
 
+    assert((GC_L != GC_R) && "unequal qualifier sets had only equal elements");
+
     if (GC_L == Qualifiers::Weak || GC_R == Qualifiers::Weak)
       return {};
 
