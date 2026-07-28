@@ -542,3 +542,33 @@ add_header_library(
     libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  letf2
+  HDRS
+    letf2.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getf2
+  HDRS
+    getf2.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  unordtf2
+  HDRS
+    unordtf2.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
