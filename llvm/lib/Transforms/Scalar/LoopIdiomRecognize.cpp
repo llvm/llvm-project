@@ -1607,34 +1607,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
-  // The Sarwate lookup table optimization requires a byte-multiple trip count,
-  // and should not be applied under any circumstances if optimizing for size.
-  bool TableStrategyPossible =
-      Info.TripCount % 8 == 0 && !ApplyCodeSizeHeuristics;
-
-  switch (CRCStrategy) {
-  default:
-    break;
-  case CRCStrategyKind::Table: {
-    if (TableStrategyPossible) {
-      optimizeCRCLoopUsingTableLookup(Info);
-      return true;
-    }
-    return false;
-  }
-  case CRCStrategyKind::Clmul:
-    optimizeCRCLoopUsingClmul(Info);
-    return true;
-  }
-
-  // When using the auto strategy, bail if we are optimizing for size since
-  // there's usually not a clear size benefit.
-  // TODO: The clmul optimization is around the same size in many cases, so it
-  // could be worth it to take advantage of that fact, especially if it would be
-  // much faster than the original loop.
-  if (ApplyCodeSizeHeuristics)
-    return false;
-
   LLVMContext &Ctx = Info.LHS->getContext();
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
@@ -1642,9 +1614,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   // CRC computation is mostly serial, so latency works best for comparison.
   TargetTransformInfo::TargetCostKind CostKind =
       TargetTransformInfo::TCK_Latency;
-
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRC: BW=" << CRCBW
-                    << " TC=" << Info.TripCount);
 
   InstructionCost XorCost =
       TTI->getArithmeticInstrCost(Instruction::Xor, CRCTy, CostKind);
@@ -1655,54 +1624,106 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   InstructionCost SelectCost =
       TTI->getCmpSelInstrCost(Instruction::Select, CRCTy, Type::getInt1Ty(Ctx),
                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost LoadCost =
+      TTI->getMemoryOpCost(Instruction::Load, CRCTy, DL->getABITypeAlign(CRCTy),
+                           DL->getDefaultGlobalsAddressSpace(), CostKind);
   auto ClmulCost = [&](unsigned BW) {
     auto *Ty = IntegerType::get(Ctx, BW);
     IntrinsicCostAttributes Attrs(Intrinsic::clmul, Ty, {Ty, Ty});
     return TTI->getIntrinsicInstrCost(Attrs, CostKind);
   };
 
-  // Determine the cost of the alternative approach to clmul.
-  InstructionCost OldCost;
-  if (TableStrategyPossible) {
-    // If the lookup table strategy is possible, it will be faster than the
-    // original loop, so compute the cost of that strategy.
-    InstructionCost CostPerTrip =
-        TTI->getMemoryOpCost(Instruction::Load, CRCTy,
-                             DL->getABITypeAlign(CRCTy),
-                             DL->getDefaultGlobalsAddressSpace(), CostKind) +
-        XorCost + 2 * ShiftCost;
+  // Estimate the cost of the original, unoptimized loop.
+  InstructionCost OrigLoopCost =
+      (2 * ShiftCost + 2 * XorCost + AndCost + SelectCost) * Info.TripCount;
 
-    // The trip count will be reduced by a factor of 8.
-    OldCost = CostPerTrip * (Info.TripCount / 8);
-    LLVM_DEBUG(dbgs() << " OldCost(table)=" << OldCost);
-  } else {
-    // Estimate the cost of the original loop.
-    InstructionCost CostPerTrip =
-        2 * ShiftCost + 2 * XorCost + AndCost + SelectCost;
+  // Estimate the cost of the Sarwate lookup table optimization strategy.
+  // As mentioned previously, a byte-multiple trip count is required.
+  InstructionCost TableStrategyCost =
+      Info.TripCount % 8 != 0
+          ? InstructionCost::getInvalid()
+          : (LoadCost + XorCost + 2 * ShiftCost) * (Info.TripCount / 8);
 
-    OldCost = CostPerTrip * Info.TripCount;
-    LLVM_DEBUG(dbgs() << " OldCost(original)=" << OldCost);
+  // Estimate the cost of the carry-less multiplication optimization strategy.
+  InstructionCost ClmulStrategyCost = ClmulCost(2 * Info.TripCount) +
+                                      ClmulCost(CRCBW + Info.TripCount) +
+                                      2 * XorCost + 2 * ShiftCost + AndCost;
+
+  ORE.emit([&]() {
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "CRCLoopCosts",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+           << "CRC loop costs: original="
+           << ore::NV("OrigLoopCost", OrigLoopCost)
+           << ", table=" << ore::NV("TableStrategyCost", TableStrategyCost)
+           << ", clmul=" << ore::NV("ClmulStrategyCost", ClmulStrategyCost);
+  });
+
+  auto ReportMissed = [&](StringRef Reason) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "CRCLoopMissed",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+             << "CRC loop not optimized: " << Reason;
+    });
+  };
+  auto ReportOptimized = [&](StringRef Strategy, StringRef Reason) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "CRCLoopOptimized",
+                                CurLoop->getStartLoc(), CurLoop->getHeader())
+             << "CRC loop optimized using " << ore::NV("Strategy", Strategy)
+             << ": " << Reason;
+    });
+  };
+
+  switch (CRCStrategy) {
+  default: {
+    ReportMissed("disabled by user");
+    return false;
   }
-
-  // Approximate the cost of the clmul optimization as two clmuls plus a decent
-  // conservative estimate of the other operations used.
-  InstructionCost NewCost = ClmulCost(2 * Info.TripCount) +
-                            ClmulCost(CRCBW + Info.TripCount) + 2 * XorCost +
-                            2 * ShiftCost + AndCost;
-  LLVM_DEBUG(dbgs() << " NewCost(clmul)=" << NewCost);
-
-  if (NewCost.isValid() && OldCost.isValid() && NewCost < OldCost) {
-    LLVM_DEBUG(dbgs() << " => clmul\n");
+  case CRCStrategyKind::Table: {
+    // The table strategy is not possible in its current form without a byte-
+    // multiple trip count.
+    if (Info.TripCount % 8 == 0) {
+      ReportOptimized("table", "forced by user");
+      optimizeCRCLoopUsingTableLookup(Info);
+      return true;
+    }
+    ReportMissed("table strategy forced, but not possible");
+    return false;
+  }
+  case CRCStrategyKind::Clmul: {
+    ReportOptimized("clmul", "forced by user");
     optimizeCRCLoopUsingClmul(Info);
     return true;
   }
-  if (TableStrategyPossible) {
-    LLVM_DEBUG(dbgs() << " => table\n");
-    optimizeCRCLoopUsingTableLookup(Info);
+  case CRCStrategyKind::Auto: {
+    // When using the auto strategy, bail if we are optimizing for size since
+    // there's usually not a clear size benefit.
+    // TODO: The clmul optimization is around the same size in many cases, so it
+    // could be worth it to take advantage of that fact, especially if it would
+    // be much faster than the original loop.
+    if (ApplyCodeSizeHeuristics) {
+      ReportMissed("optimizing for size");
+      return false;
+    }
+
+    // Only apply an optimization if there's a clear benefit to doing so.
+    if (std::min(TableStrategyCost, ClmulStrategyCost) >= OrigLoopCost) {
+      ReportMissed("no profitable strategy");
+      return false;
+    }
+
+    if (TableStrategyCost <= ClmulStrategyCost) {
+      ReportOptimized("table", "most profitable strategy");
+      optimizeCRCLoopUsingTableLookup(Info);
+    } else {
+      ReportOptimized("clmul", "most profitable strategy");
+      optimizeCRCLoopUsingClmul(Info);
+    }
     return true;
   }
-  LLVM_DEBUG(dbgs() << " => original\n");
-  return false;
+  }
 }
 
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
