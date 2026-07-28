@@ -10695,7 +10695,7 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
   // entity to which this scoping unit makes no other reference is not
   // accessible in it either.
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
-    if (const Symbol * local{FindInScope(currScope(), dummyName.source)}) {
+    if (const Symbol *local{FindInScope(currScope(), dummyName.source)}) {
       const Symbol &ultimate{local->GetUltimate()};
       const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
                                       ultimate.has<EntityDetails>()) &&
