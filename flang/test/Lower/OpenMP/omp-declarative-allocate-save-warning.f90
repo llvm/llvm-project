@@ -2,23 +2,21 @@
 ! emits a lowering warning and does not generate omp.allocate_dir /
 ! omp.allocate_free for those variables.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - 2>&1 | FileCheck %s
 
 subroutine save_allocate_warning
-  use omp_lib
   implicit none
   integer, save :: counter = 100
 
-  !$omp allocate(counter) allocator(omp_default_mem_alloc)
+  !$omp allocate(counter) allocator(1)
 end subroutine save_allocate_warning
 
 subroutine common_allocate_warning
-  use omp_lib
   implicit none
   real :: cb_a, cb_b
   common /myblock/ cb_a, cb_b
 
-  !$omp allocate(/myblock/) allocator(omp_default_mem_alloc)
+  !$omp allocate(/myblock/) allocator(1)
 end subroutine common_allocate_warning
 
 ! Warnings are emitted during lowering before HLFIR is printed.
