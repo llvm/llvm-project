@@ -2661,6 +2661,70 @@ TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
   EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, ""));
 }
 
+TEST(TargetParserTest, testAMDGPUparseArchR600) {
+  // Canonical R600 GPU names map to their own GPUKind and round-trip through
+  // getArchNameR600.
+  struct CanonicalGPU {
+    StringRef Name;
+    AMDGPU::GPUKind Kind;
+    unsigned Features;
+  };
+  static const CanonicalGPU Canonicals[] = {
+      {"r600", AMDGPU::GK_R600, AMDGPU::FEATURE_NONE},
+      {"r630", AMDGPU::GK_R630, AMDGPU::FEATURE_NONE},
+      {"rs880", AMDGPU::GK_RS880, AMDGPU::FEATURE_NONE},
+      {"rv670", AMDGPU::GK_RV670, AMDGPU::FEATURE_NONE},
+      {"rv710", AMDGPU::GK_RV710, AMDGPU::FEATURE_NONE},
+      {"rv730", AMDGPU::GK_RV730, AMDGPU::FEATURE_NONE},
+      {"rv770", AMDGPU::GK_RV770, AMDGPU::FEATURE_NONE},
+      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::FEATURE_NONE},
+      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::FEATURE_FMA},
+      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::FEATURE_NONE},
+      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::FEATURE_NONE},
+      {"sumo", AMDGPU::GK_SUMO, AMDGPU::FEATURE_NONE},
+      {"barts", AMDGPU::GK_BARTS, AMDGPU::FEATURE_NONE},
+      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::FEATURE_NONE},
+      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::FEATURE_FMA},
+      {"turks", AMDGPU::GK_TURKS, AMDGPU::FEATURE_NONE},
+  };
+  for (const CanonicalGPU &G : Canonicals) {
+    EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
+    EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
+    EXPECT_EQ(AMDGPU::getArchAttrR600(G.Kind), G.Features) << G.Name;
+  }
+
+  // Aliases resolve to the canonical GPUKind but are not returned by
+  // getArchNameR600.
+  struct AliasGPU {
+    StringRef Alias;
+    AMDGPU::GPUKind Kind;
+  };
+  static const AliasGPU Aliases[] = {
+      {"rv630", AMDGPU::GK_R600},  {"rv635", AMDGPU::GK_R600},
+      {"rs780", AMDGPU::GK_RS880}, {"rv610", AMDGPU::GK_RS880},
+      {"rv620", AMDGPU::GK_RS880}, {"rv740", AMDGPU::GK_RV770},
+      {"palm", AMDGPU::GK_CEDAR},  {"hemlock", AMDGPU::GK_CYPRESS},
+      {"sumo2", AMDGPU::GK_SUMO},  {"aruba", AMDGPU::GK_CAYMAN},
+  };
+  for (const AliasGPU &A : Aliases) {
+    EXPECT_EQ(AMDGPU::parseArchR600(A.Alias), A.Kind) << A.Alias;
+    EXPECT_NE(AMDGPU::getArchNameR600(A.Kind), A.Alias) << A.Alias;
+  }
+
+  // Unknown and AMDGCN names do not parse as R600 GPUs.
+  EXPECT_EQ(AMDGPU::parseArchR600(""), AMDGPU::GK_NONE);
+  EXPECT_EQ(AMDGPU::parseArchR600("not-a-cpu"), AMDGPU::GK_NONE);
+  EXPECT_EQ(AMDGPU::parseArchR600("gfx900"), AMDGPU::GK_NONE);
+
+  // All canonical and alias names appear in the valid-arch list.
+  SmallVector<StringRef, 0> Values;
+  AMDGPU::fillValidArchListR600(Values);
+  for (const CanonicalGPU &G : Canonicals)
+    EXPECT_TRUE(llvm::is_contained(Values, G.Name)) << G.Name;
+  for (const AliasGPU &A : Aliases)
+    EXPECT_TRUE(llvm::is_contained(Values, A.Alias)) << A.Alias;
+}
+
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
   SmallVector<StringRef, 0> All;
   AMDGPU::fillValidArchListAMDGCN(All, Triple::NoSubArch);

@@ -12,7 +12,6 @@
 
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
 #include "NVVMProperties.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -102,23 +101,4 @@ Align llvm::getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
     DirectCallee = getMaybeBitcastedCallee(CB);
 
   return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
-}
-
-bool llvm::shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
-  const auto &ST =
-      *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
-  if (!ST.hasNoReturn())
-    return false;
-
-  assert((isa<Function>(V) || isa<CallInst>(V)) &&
-         "Expect either a call instruction or a function");
-
-  if (const CallInst *CallI = dyn_cast<CallInst>(V))
-    return CallI->doesNotReturn() &&
-           CallI->getFunctionType()->getReturnType()->isVoidTy();
-
-  const Function *F = cast<Function>(V);
-  return F->doesNotReturn() &&
-         F->getFunctionType()->getReturnType()->isVoidTy() &&
-         !isKernelFunction(*F);
 }
