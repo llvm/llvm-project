@@ -263,7 +263,18 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
   } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-              (!HasCloseModifier || LR.TPR.getEntry() != nullptr)) ||
+              (!HasCloseModifier ||
+               // A close mapping should not incur a new
+               // allocation under USM when it is already
+               // "present" on the device. That can either
+               // be due to an overlap with a previously
+               // encountered map (with/without the close
+               // modifier), or it being declare_target
+               // (infinite ref-count).
+               (LR.TPR.getEntry() != nullptr &&
+                (LR.Flags.IsContained || LR.Flags.ExtendsBefore ||
+                 LR.Flags.ExtendsAfter ||
+                 LR.TPR.getEntry()->isDynRefCountInf())))) ||
              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
 
     // If unified shared memory is active, implicitly mapped variables that are
@@ -286,10 +297,15 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // subsection of previously mapped allocation. The mapping would prevent
       // map(close, alloc:...) from creating a new allocation as it would reuse
       // the mapped allocation instead.
-      HDTTMap->emplace(new HostDataToTargetTy(
-          (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-          (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
-          (uintptr_t)HstPtrBegin, true, HstPtrName));
+      LR.TPR.setEntry(
+          HDTTMap
+              ->emplace(new HostDataToTargetTy(
+                  (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                  (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                  (uintptr_t)HstPtrBegin, HasHoldModifier, HstPtrName))
+              .first->HDTT);
+      if (Device.notifyDataMapped(HstPtrBegin, Size))
+        return TargetPointerResultTy{};
     }
   } else if (HasPresentModifier) {
     ODBG(ODT_Mapping) << "Mapping required by 'present' map type modifier does "
@@ -444,6 +460,14 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
       assert(LR.TPR.Flags.IsLast ==
                  LR.TPR.getEntry()->decShouldRemove(UseHoldRefCount) &&
              "expected correct IsLast prediction for reset");
+    }
+
+    if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+        PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
+      LR.TPR.Flags.IsHostPointer = true;
+      if (!LR.TPR.getEntry()->getTotalRefCount()) {
+        LR.TPR.Flags.IsPresent = false;
+      }
     }
 
     // Increment the number of threads that is using the entry on a
