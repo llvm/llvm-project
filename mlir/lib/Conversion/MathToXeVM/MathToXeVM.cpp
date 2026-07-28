@@ -29,6 +29,35 @@ using namespace mlir;
 
 #define DEBUG_TYPE "math-to-xevm"
 
+static bool isSizeOneVector(Type type) {
+  auto vecType = dyn_cast<VectorType>(type);
+  return vecType && vecType.getShape().size() == 1 &&
+         vecType.getShape()[0] == 1 && vecType.getElementType().isFloat();
+}
+
+static bool isSPIRVCompatibleFloatOrVec(Type type) {
+  if (type.isFloat())
+    return true;
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    if (!vecType.getElementType().isFloat())
+      return false;
+    // SPIRV distinguishes between vectors and matrices: OpenCL native math
+    // intrsinics are not compatible with matrices.
+    ArrayRef<int64_t> shape = vecType.getShape();
+    if (shape.size() != 1)
+      return false;
+    // SPIRV has no size-1 vector type; such degenerate vectors are handled
+    // by unwrapping to the scalar intrinsic (see matchAndRewrite).
+    if (shape[0] == 1)
+      return true;
+    // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
+    if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
+        shape[0] == 16)
+      return true;
+  }
+  return false;
+}
+
 /// Convert math ops marked with `fast` (`afn`) to native OpenCL intrinsics.
 template <typename Op>
 struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
@@ -36,6 +65,31 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   ConvertNativeFuncPattern(MLIRContext *context, StringRef nativeFunc,
                            PatternBenefit benefit = 1)
       : OpConversionPattern<Op>(context, benefit), nativeFunc(nativeFunc) {}
+
+  inline std::string
+  getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
+    std::string mangledFuncName =
+        "_Z" + std::to_string(nativeFunc.size()) + nativeFunc.str();
+
+    auto appendFloatToMangledFunc = [&mangledFuncName](Type type) {
+      if (type.isF32())
+        mangledFuncName += "f";
+      else if (type.isF16())
+        mangledFuncName += "Dh";
+      else if (type.isF64())
+        mangledFuncName += "d";
+    };
+
+    for (auto type : operandTypes) {
+      if (auto vecType = dyn_cast<VectorType>(type)) {
+        mangledFuncName += "Dv" + std::to_string(vecType.getShape()[0]) + "_";
+        appendFloatToMangledFunc(vecType.getElementType());
+      } else
+        appendFloatToMangledFunc(type);
+    }
+
+    return mangledFuncName;
+  }
 
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
@@ -101,60 +155,6 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       rewriter.replaceOp(op, callOp);
     }
     return success();
-  }
-
-  inline bool isSizeOneVector(Type type) const {
-    auto vecType = dyn_cast<VectorType>(type);
-    return vecType && vecType.getShape().size() == 1 &&
-           vecType.getShape()[0] == 1 && vecType.getElementType().isFloat();
-  }
-
-  inline bool isSPIRVCompatibleFloatOrVec(Type type) const {
-    if (type.isFloat())
-      return true;
-    if (auto vecType = dyn_cast<VectorType>(type)) {
-      if (!vecType.getElementType().isFloat())
-        return false;
-      // SPIRV distinguishes between vectors and matrices: OpenCL native math
-      // intrsinics are not compatible with matrices.
-      ArrayRef<int64_t> shape = vecType.getShape();
-      if (shape.size() != 1)
-        return false;
-      // SPIRV has no size-1 vector type; such degenerate vectors are handled
-      // by unwrapping to the scalar intrinsic (see matchAndRewrite).
-      if (shape[0] == 1)
-        return true;
-      // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
-      if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
-          shape[0] == 16)
-        return true;
-    }
-    return false;
-  }
-
-  inline std::string
-  getMangledNativeFuncName(const ArrayRef<Type> operandTypes) const {
-    std::string mangledFuncName =
-        "_Z" + std::to_string(nativeFunc.size()) + nativeFunc.str();
-
-    auto appendFloatToMangledFunc = [&mangledFuncName](Type type) {
-      if (type.isF32())
-        mangledFuncName += "f";
-      else if (type.isF16())
-        mangledFuncName += "Dh";
-      else if (type.isF64())
-        mangledFuncName += "d";
-    };
-
-    for (auto type : operandTypes) {
-      if (auto vecType = dyn_cast<VectorType>(type)) {
-        mangledFuncName += "Dv" + std::to_string(vecType.getShape()[0]) + "_";
-        appendFloatToMangledFunc(vecType.getElementType());
-      } else
-        appendFloatToMangledFunc(type);
-    }
-
-    return mangledFuncName;
   }
 
   const StringRef nativeFunc;
