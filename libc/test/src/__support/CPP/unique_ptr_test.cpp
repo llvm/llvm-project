@@ -145,6 +145,27 @@ TEST(LlvmLibcUniquePtrTest, CustomDeleter) {
   ASSERT_EQ(deleter_count, 1);
 }
 
+struct CustomArrayDeleter {
+  int *count;
+  void operator()(int *p) const {
+    if (count)
+      (*count)++;
+    delete[] p;
+  }
+};
+
+// Test support for custom deleters on array unique_ptr.
+TEST(LlvmLibcUniquePtrTest, CustomArrayDeleter) {
+  int deleter_count = 0;
+  {
+    CustomArrayDeleter d{&deleter_count};
+    unique_ptr<int[], CustomArrayDeleter> ptr(new int[3], d);
+    ASSERT_EQ(deleter_count, 0);
+    ASSERT_EQ(ptr.get_deleter().count, d.count);
+  }
+  ASSERT_EQ(deleter_count, 1);
+}
+
 struct ReentrancyTracker {
   unique_ptr<ReentrancyTracker> *owner;
   bool *checked;
