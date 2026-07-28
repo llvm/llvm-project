@@ -74,9 +74,11 @@ public:
 #define INTERNAL_R_RISCV_REGREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
-#define INTERNAL_R_RISCV_REGREL_ADD 260
-#define INTERNAL_R_RISCV_REGREL_ADD_I 261
-#define INTERNAL_R_RISCV_REGREL_ADD_S 262
+#define INTERNAL_R_RISCV_BASE_IDX_X0REL_I 260
+#define INTERNAL_R_RISCV_BASE_IDX_X0REL_S 261
+#define INTERNAL_R_RISCV_REGREL_ADD 262
+#define INTERNAL_R_RISCV_REGREL_ADD_I 263
+#define INTERNAL_R_RISCV_REGREL_ADD_S 264
 
 const uint64_t dtpOffset = 0x800;
 
@@ -614,6 +616,18 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   }
 
+  case INTERNAL_R_RISCV_BASE_IDX_X0REL_I:
+  case INTERNAL_R_RISCV_BASE_IDX_X0REL_S: {
+    checkInt(ctx, loc, val, 12, rel);
+    uint32_t insn = read32le(loc);
+    if (rel.type == INTERNAL_R_RISCV_BASE_IDX_X0REL_I)
+      insn = setLO12_I(insn, val);
+    else
+      insn = setLO12_S(insn, val);
+    write32le(loc, insn);
+    return;
+  }
+
   case INTERNAL_R_RISCV_REGREL_ADD: {
     uint32_t insn = (read32le(loc) & ~(31 << 20)) | (X_GP << 20);
     write32le(loc, insn);
@@ -996,6 +1010,17 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     case R_RISCV_LO12_S:
       sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
       break;
+    case R_RISCV_REGREL_ADD:
+     // Remove add a0, a0, zero
+      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+      remove = 4;
+      break;
+    case R_RISCV_REGREL_LO12_I:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_X0REL_I;
+      break;
+    case R_RISCV_REGREL_LO12_S:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_BASE_IDX_X0REL_S;
+      break;
     }
     return;
   }
@@ -1019,7 +1044,6 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   case R_RISCV_LO12_S:
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_REGREL_S;
     break;
-
   case R_RISCV_REGREL_ADD:
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_REGREL_ADD;
     break;
@@ -1031,6 +1055,33 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     break;
   }
 }
+
+// static void relaxBaseIdx(Ctx &ctx, const InputSection &sec, size_t i,
+//                          uint64_t loc, Relocation &r, uint32_t &remove) {
+//   const Defined *gp = ctx.sym.riscvGlobalPointer;
+//   if (!gp)
+//     return;
+
+//   if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
+//     return;
+
+//   switch (r.type) {
+//   case R_RISCV_HI20:
+//     // Remove lui rd, %hi20(x).
+//     sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+//     remove = 4;
+//     break;
+//   case R_RISCV_REGREL_ADD:
+//     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_REGREL_ADD;
+//     break;
+//   case R_RISCV_REGREL_LO12_I:
+//     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_REGREL_ADD_I;
+//     break;
+//   case R_RISCV_REGREL_LO12_S:
+//     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_REGREL_ADD_S;
+//     break;
+//   }
+// }
 
 static bool relax(Ctx &ctx, int pass, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
@@ -1090,6 +1141,12 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
       if (relaxable(relocs, i))
         relaxHi20Lo12(ctx, sec, i, loc, r, remove);
       break;
+    // case R_RISCV_REGREL_ADD:
+    // case R_RISCV_REGREL_LO12_I:
+    // case R_RISCV_REGREL_LO12_S:
+    //   if (relaxable(relocs, i))
+    //     relaxBaseIdx(ctx, sec, i, loc, r, remove);
+    //   break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
       tlsdescRelax = relaxable(relocs, i);
@@ -1330,6 +1387,8 @@ void RISCV::finalizeRelax(int passes) const {
           case INTERNAL_R_RISCV_REGREL_S:
           case INTERNAL_R_RISCV_X0REL_I:
           case INTERNAL_R_RISCV_X0REL_S:
+          case INTERNAL_R_RISCV_BASE_IDX_X0REL_I:
+          case INTERNAL_R_RISCV_BASE_IDX_X0REL_S:
           case INTERNAL_R_RISCV_REGREL_ADD:
           case INTERNAL_R_RISCV_REGREL_ADD_I:
           case INTERNAL_R_RISCV_REGREL_ADD_S:
