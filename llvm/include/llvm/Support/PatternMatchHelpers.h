@@ -100,6 +100,18 @@ template <typename Ty> struct match_bind { // NOLINT
     return false;
   }
 };
+
+/// Inverting matcher that matches a non-null value not matching P.
+template <typename Ty> struct match_unless { // NOLINT
+  Ty P;
+  match_unless(const Ty &P) : P(P) {}
+  template <typename ITy> bool match(ITy *V) const { return V && !P.match(V); }
+};
+
+template <typename Pattern>
+inline match_unless<Pattern> m_Unless(const Pattern &P) { // NOLINT
+  return P;
+}
 } // namespace llvm::PatternMatchHelpers
 
 #endif // LLVM_SUPPORT_PATTERNMATCHHELPERS_H
