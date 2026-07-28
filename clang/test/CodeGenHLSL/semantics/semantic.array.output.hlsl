@@ -19,10 +19,7 @@ S0 main1(float4 input : A) : B {
   // CHECK:        %[[#ST:]] = load %struct.S0, ptr %[[#ARG]]
   // CHECK:       %[[#TMP:]] = extractvalue %struct.S0 %[[#ST]], 0
   // CHECK-SPIRV:              store [2 x <4 x float>] %[[#TMP]], ptr addrspace(8) @B0, align 4
-  // CHECK-DXIL:  %[[#POS0:]] = extractvalue [2 x <4 x float>] %[[#TMP]], 0
-  // CHECK-DXIL:               call void @llvm.dx.store.output.v4f32(i32 0, i32 0, i8 0, <4 x float> %[[#POS0]])
-  // CHECK-DXIL:  %[[#POS1:]] = extractvalue [2 x <4 x float>] %[[#TMP]], 1
-  // CHECK-DXIL:               call void @llvm.dx.store.output.v4f32(i32 0, i32 1, i8 0, <4 x float> %[[#POS1]])
+  // CHECK-DXIL:               call void @llvm.dx.store.output.a2v4f32(i32 0, i32 0, i8 0, [2 x <4 x float>] %[[#TMP]])
   // CHECK:       %[[#TMP:]] = extractvalue %struct.S0 %[[#ST]], 1
   // CHECK-SPIRV:              store <4 x float> %[[#TMP]], ptr addrspace(8) @B2, align 4
   // CHECK-DXIL:               call void @llvm.dx.store.output.v4f32(i32 1, i32 0, i8 0, <4 x float> %[[#TMP]])

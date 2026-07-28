@@ -1194,9 +1194,10 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
   // DXIL packing rules etc shall be handled here.
-  // FIXME: generate proper index, col, row values.
-  // FIXME: also DXIL loads vectors element by element.
-  SmallVector<Value *> Args{B.getInt32(0), B.getInt32(0), B.getInt8(0),
+  // FIXME: generate proper col, row values, also DXIL loads vectors element by
+  // element.
+  SmallVector<Value *> Args{B.getInt32(DXILInputSemanticIndex++), B.getInt32(0),
+                            B.getInt8(0),
                             llvm::PoisonValue::get(B.getInt32Ty())};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_load_input;
@@ -1219,10 +1220,8 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                               std::optional<unsigned> Index) {
   // DXIL packing rules etc shall be handled here.
   // FIXME: generate proper sigid, index, col, row values.
-  SmallVector<Value *> Args{B.getInt32(0),
-                            B.getInt32(0),
-                            B.getInt8(0),
-                            Source};
+  SmallVector<Value *> Args{B.getInt32(DXILOutputSemanticIndex++),
+                            B.getInt32(0), B.getInt8(0), Source};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
 

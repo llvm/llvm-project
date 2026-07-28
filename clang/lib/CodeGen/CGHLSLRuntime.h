@@ -369,6 +369,11 @@ private:
   llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
   unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
+  // DXIL assigns each leaf semantic an index in parse order. Inputs and outputs
+  // are counted independently. Reset in emitEntryFunction before lowering the
+  // semantics of an entry point.
+  unsigned DXILInputSemanticIndex = 0;
+  unsigned DXILOutputSemanticIndex = 0;
 };
 
 } // namespace CodeGen
