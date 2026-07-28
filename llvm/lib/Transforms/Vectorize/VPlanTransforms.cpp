@@ -7781,7 +7781,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarSExtOrTrunc(
+      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
           VectorLoop->getCanonicalIV(), IndexTy,
           VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
