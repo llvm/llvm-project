@@ -97,7 +97,7 @@
 # SPARCEL-NEXT: Arch: sparcel
 # S390X-NEXT:   Arch: s390x
 # X86-64-NEXT:  Arch: x86_64
-# AMDGPU-NEXT:  Arch: amdgpu
+# AMDGPU-NEXT:  Arch: unknown
 
 # 32-NEXT:      AddressSize: 32bit
 # 64-NEXT:      AddressSize: 64bit
