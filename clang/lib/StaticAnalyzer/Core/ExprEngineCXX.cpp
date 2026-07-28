@@ -255,8 +255,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
       // also sets the CallOpts flags for us.
       // If the elided copy/move constructor is not supported, there's still
       // benefit in trying to model the non-elided constructor.
-      // Stash our state before trying to elide, as it'll get overwritten.
-      ProgramStateRef PreElideState = State;
+      // Stash the call options before trying to elide, as they'll get
+      // overwritten.
       EvalCallOptions PreElideCallOpts = CallOpts;
 
       SVal V = computeObjectUnderConstruction(

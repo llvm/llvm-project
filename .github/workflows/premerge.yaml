@@ -218,6 +218,8 @@ jobs:
     outputs:
       macos-projects: ${{ steps.vars.outputs.macos-projects }}
       macos-check-targets: ${{ steps.vars.outputs.macos-check-targets }}
+      macos-runtimes: ${{ steps.vars.outputs.macos-runtimes }}
+      macos-runtimes-check-targets: ${{ steps.vars.outputs.macos-runtimes-check-targets }}
     steps:
       # For pull requests we get the changed files from the GitHub API, so we
       # only need a sparse checkout of .ci/ to run compute_projects.py. For
@@ -261,6 +263,8 @@ jobs:
 
           echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+          echo "macos-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
+          echo "macos-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
 
   premerge-check-macos:
     name: Build and Test macOS arm64
@@ -294,6 +298,8 @@ jobs:
           SCCACHE_REGION: us-west-2
           PROJECTS: ${{ needs.premerge-compute-macos.outputs.macos-projects }}
           CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-check-targets }}
+          RUNTIMES: ${{ needs.premerge-compute-macos.outputs.macos-runtimes }}
+          RUNTIMES_CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-runtimes-check-targets }}
           CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -302,7 +308,7 @@ jobs:
           mkdir -p artifacts
           SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
 
-          ./.ci/monolithic-macos.sh "${PROJECTS}" "${CHECK_TARGETS}"
+          ./.ci/monolithic-macos.sh "${PROJECTS}" "${CHECK_TARGETS}" "${RUNTIMES}" "${RUNTIMES_CHECK_TARGETS}"
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not

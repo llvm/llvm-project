@@ -1182,7 +1182,7 @@ bool PerfScriptReader::isLBRSample(StringRef Line, bool CheckLineStart) {
   // Line might start with IP or only contain brstack. Check first two records
   // and fail if no record exists.
   Line.split(Records, " ", 2, CheckLineStart);
-  for (const StringRef &Record : Records)
+  for (StringRef Record : Records)
     if (Record.starts_with("0x") && Record.contains('/'))
       return true;
   return false;

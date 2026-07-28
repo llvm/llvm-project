@@ -4601,6 +4601,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     }
 
+    // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
+    // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared
+    // on SM 6.6+, so this defensive check only fires for direct builtin
+    // calls; skip synthetic invocations (invalid source location).
+    const TargetInfo &TI = SemaRef.Context.getTargetInfo();
+    if (TheCall->getBeginLoc().isValid() &&
+        TI.getTriple().getArch() == llvm::Triple::dxil &&
+        SemaRef.Context.getTypeSize(DestTy) == 64 &&
+        TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
+          << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
+      return true;
+    }
+
     if (CheckModifiableLValue(&SemaRef, TheCall, 0))
       return true;
 

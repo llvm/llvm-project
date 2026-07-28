@@ -862,7 +862,7 @@ const Dependences &DependenceAnalysis::Result::recomputeDependences(
 
 void DependenceAnalysis::Result::abandonDependences() {
   for (std::unique_ptr<Dependences> &Deps : D)
-    Deps.release();
+    Deps.reset();
 }
 
 DependenceAnalysis::Result polly::runDependenceAnalysis(Scop &S) {

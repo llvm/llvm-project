@@ -15,7 +15,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   GLOBAL_WB 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   $vgpr10_vgpr11_vgpr12_vgpr13 = DS_READ_B128 $vgpr0, 0, 0, implicit $m0, implicit $exec
   ; CHECK-NEXT:   $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128 $vgpr0, 16, 0, implicit $m0, implicit $exec
@@ -83,7 +83,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   GLOBAL_WB 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   $vgpr70_vgpr71_vgpr72_vgpr73 = DS_READ_B128 $vgpr0, 240, 0, implicit $m0, implicit $exec
   ; CHECK-NEXT:   $vgpr66_vgpr67_vgpr68_vgpr69 = DS_READ_B128 $vgpr0, 224, 0, implicit $m0, implicit $exec

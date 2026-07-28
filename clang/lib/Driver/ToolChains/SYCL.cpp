@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "clang/Driver/CommonArgs.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
@@ -21,7 +23,6 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     : D(D) {
   // When -fsycl is active, locate the SYCL runtime library and record its
   // directory in SYCLRTLibPath for use by the linker.
-  StringRef SysRoot = D.SysRoot;
   SmallString<128> DriverDir(D.Dir);
 
   if (HostTriple.isWindowsMSVCEnvironment() ||
@@ -30,8 +31,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     // NOTE: Only checks for LLVMSYCL.lib existence (release variant).
     // Debug vs release library selection happens at link time based on CRT
     // flags.
-    if (DriverDir.starts_with(SysRoot) &&
-        Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
       SmallString<128> LibDir(DriverDir);
       llvm::sys::path::append(LibDir, "..", "lib");
 
@@ -52,8 +52,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     SmallString<128> FlatLibPath(DriverDir);
     llvm::sys::path::append(FlatLibPath, "..", "lib", "libLLVMSYCL.so");
 
-    if (DriverDir.starts_with(SysRoot) &&
-        Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
       // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: library is in lib/<triple>/
       if (D.getVFS().exists(LibPath))
         llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());
@@ -130,6 +129,13 @@ void SYCLToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
+
+  for (const auto &BCFile :
+       getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
+    CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                               : "-mlink-bitcode-file");
+    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
+  }
 }
 
 llvm::opt::DerivedArgList *
@@ -202,4 +208,25 @@ void SYCLToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                                  ArgStringList &CC1Args) const {
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+}
+
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+SYCLToolChain::getDeviceLibs(
+    const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
+    const Action::OffloadKind /*DeviceOffloadingKind*/) const {
+  if (!getTriple().isSPIROrSPIRV())
+    return {};
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
+    return {};
+  // compiler-rt always installs the spirv64 .bc file under lib/<triple>/
+  // regardless of LLVM_ENABLE_PER_TARGET_RUNTIME_DIR, so only check that path.
+  SmallString<128> BCPath(getDriver().ResourceDir);
+  llvm::sys::path::append(BCPath, "lib", getTriple().str(),
+                          "libclang_rt.builtins.bc");
+  if (!llvm::sys::fs::exists(BCPath)) {
+    getDriver().Diag(clang::diag::err_drv_no_compiler_rt_builtins_bc) << BCPath;
+    return {};
+  }
+  return {{std::string(BCPath), /*ShouldInternalize=*/true}};
 }

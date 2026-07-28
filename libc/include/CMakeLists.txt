@@ -65,6 +65,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_fcntl
+  ../libc/include/sys/fcntl.yaml
+  sys/fcntl.h
+  DEPENDS
+    .fcntl
+)
+
+add_header_macro(
   dlfcn
   ../libc/include/dlfcn.yaml
   dlfcn.h
@@ -283,6 +291,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  memory
+  ../libc/include/memory.yaml
+  memory.h
+  DEPENDS
+    .string
+)
+
+add_header_macro(
   strings
   ../libc/include/strings.yaml
   strings.h
@@ -385,6 +401,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_signal
+  ../libc/include/sys/signal.yaml
+  sys/signal.h
+  DEPENDS
+    .signal
+)
+
+add_header_macro(
   stdbit
   ../libc/include/stdbit.yaml
   stdbit.h
@@ -459,6 +483,14 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.uid_t
     .llvm-libc-types.__getoptargv_t
+)
+
+add_header_macro(
+  sys_unistd
+  ../libc/include/sys/unistd.yaml
+  sys/unistd.h
+  DEPENDS
+    .unistd
 )
 
 add_header_macro(
@@ -1061,6 +1093,14 @@ add_header_macro(
     .llvm-libc-types.nfds_t
     .llvm-libc-macros.poll-macros
   )
+
+add_header_macro(
+  sys_poll
+  ../libc/include/sys/poll.yaml
+  sys/poll.h
+  DEPENDS
+    .poll
+)
 
 add_header_macro(
   nl_types

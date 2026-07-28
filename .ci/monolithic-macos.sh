@@ -16,6 +16,8 @@ source .ci/utils.sh
 
 projects="${1}"
 targets="${2}"
+runtimes="${3}"
+runtime_targets="${4}"
 
 start-group "CMake"
 
@@ -23,6 +25,7 @@ xcrun cmake -G Ninja \
       -B "${BUILD_DIR}" \
       -S "${MONOREPO_ROOT}"/llvm \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LLVM_DISABLE_ASSEMBLY_FILES=ON \
       -D CMAKE_BUILD_TYPE=Release \
       -D LLDB_INCLUDE_TESTS=OFF \
@@ -37,4 +40,11 @@ start-group "ninja"
 if [[ -n "${targets}" ]]; then
   ninja -C "${BUILD_DIR}" ${targets} 2>&1 | tee ninja.log
   cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
+
+if [[ -n "${runtime_targets}" ]]; then
+  start-group "ninja Runtimes"
+
+  ninja -C "${BUILD_DIR}" ${runtime_targets} 2>&1 | tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
 fi
