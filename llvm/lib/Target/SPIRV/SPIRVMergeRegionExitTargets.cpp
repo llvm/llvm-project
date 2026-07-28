@@ -199,7 +199,6 @@ INITIALIZE_PASS_BEGIN(SPIRVMergeRegionExitTargetsLegacy,
                       "split-region-exit-blocks",
                       "SPIRV split region exit blocks", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 

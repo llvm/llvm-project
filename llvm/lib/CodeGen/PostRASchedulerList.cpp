@@ -394,8 +394,6 @@ PostRASchedulerPass::run(MachineFunction &MF,
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
 
