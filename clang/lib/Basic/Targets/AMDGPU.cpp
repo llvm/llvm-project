@@ -234,13 +234,17 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   HalfArgsAndReturns = true;
 
   if (Opts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
-    OffloadArchFeatures["xnack"] =
-        Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled;
+    XnackSetting =
+        Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled
+            ? llvm::AMDGPU::TargetIDSetting::On
+            : llvm::AMDGPU::TargetIDSetting::Off;
   }
 
   if (Opts.AMDGPUSramEccState != TargetOptions::AMDGPUFeatureState::Any) {
-    OffloadArchFeatures["sramecc"] =
-        Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled;
+    SramEccSetting =
+        Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled
+            ? llvm::AMDGPU::TargetIDSetting::On
+            : llvm::AMDGPU::TargetIDSetting::Off;
   }
 }
 

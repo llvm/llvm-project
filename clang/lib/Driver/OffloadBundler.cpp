@@ -1527,11 +1527,12 @@ CheckHeterogeneousArchive(StringRef ArchiveName,
     // A single bundle may contain several triples. Pair each target ID with its
     // own triple; the conflict check groups by resolved processor, which is
     // spelling-independent.
+    llvm::SmallVector<OffloadTargetInfo> Infos;
+    for (StringRef BundleId : BundleIds)
+      Infos.emplace_back(BundleId, BundlerConfig);
     llvm::SmallVector<clang::TargetIDEntry> Entries;
-    for (StringRef BundleId : BundleIds) {
-      OffloadTargetInfo Info(BundleId, BundlerConfig);
+    for (const OffloadTargetInfo &Info : Infos)
       Entries.emplace_back(Info.Triple, Info.TargetID);
-    }
 
     if (auto &&ConflictingArchs =
             clang::getConflictTargetIDCombination(Entries)) {
