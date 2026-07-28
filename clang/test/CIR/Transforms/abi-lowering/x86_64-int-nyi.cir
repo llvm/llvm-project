@@ -1,0 +1,39 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 2>&1 | FileCheck %s
+
+!b17i = !cir.int<s, 17, bitint>
+!b128i = !cir.int<s, 128, bitint>
+!i96 = !cir.int<s, 96>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
+} {
+
+  // A _BitInt is rejected pending its register-pair coercion handling, even at
+  // a sub-register width.
+  cir.func @take_b17(%arg0: !b17i) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.int<s, 17, bitint>
+
+  // A _BitInt(128) shares __int128's width but stays rejected: the accept check
+  // excludes bitint widths regardless of size.
+  cir.func @take_b128(%arg0: !b128i) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.int<s, 128, bitint>
+
+  // A non-bitint integer with an intermediate width (65..127) is also rejected:
+  // it does not arise from C and would need a register-pair coercion the scalar
+  // Direct branch does not apply, so only widths up to 64 and exactly 128 are
+  // accepted.
+  cir.func @take_i96(%arg0: !i96) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.int<s, 96>
+}

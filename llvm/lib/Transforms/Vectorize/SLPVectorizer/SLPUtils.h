@@ -49,7 +49,7 @@ bool isConstant(Value *V);
 /// (e.g. 0 for add, 1 for mul, all-ones for and). Floating-point identities are
 /// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
 /// returns for FAdd/FMul, whose identity fast-math may break anyway.
-bool isReassocIdentityConstant(const Value *V, unsigned Opcode);
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
 
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type

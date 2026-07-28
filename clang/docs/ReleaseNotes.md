@@ -73,11 +73,19 @@ features cannot lower the translation-unit ABI level;
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
   The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- Remove the deprecated `SPELLING_CACHE` alias.
+  All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
+  Note that this uses `CompletionChunkKind` enumeration as keys, instead of integer values.
+
 - Remove the deprecated `CompletionChunk.isKind...` methods.
   Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
 
   Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
   `isKindInformative` and `isKindResultType`.
+
+- `CompletionString.availability` now returns instances of `AvailabilityKind`.
+  As a result, the `__str__` representation of its return values changed.
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
 
 ### OpenCL Potentially Breaking Changes
 
@@ -86,6 +94,10 @@ features cannot lower the translation-unit ABI level;
 ### C++ Language Changes
 
 #### C++2d Feature Support
+
+- Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
+  following new Unicode recommendations), applied as a DR to all C++ language
+  modes.
 
 #### C++2c Feature Support
 
@@ -139,9 +151,15 @@ features cannot lower the translation-unit ABI level;
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
+  the C++ standard library selected by the driver and the include directories
+  added for it.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
+
+- All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
 ### Removed Compiler Flags
 
@@ -328,8 +346,12 @@ features cannot lower the translation-unit ABI level;
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
+- Fixed USR generation for declarations whose signature mentions a class-type
+  non-type template parameter. (#GH212351)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -346,6 +368,10 @@ features cannot lower the translation-unit ABI level;
   they are now correctly accepted on such pointers.
 
 #### Bug Fixes to C++ Support
+
+- Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
+
+- Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
@@ -364,6 +390,10 @@ features cannot lower the translation-unit ABI level;
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
+  parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
+  Clang now diagnoses the error instead of asserting. (#GH211207)
+
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
@@ -377,6 +407,9 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+- Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
+- Fixed an assertion failure in `-extract-api` when a documentation comment
+  contains invalid UTF-8. (#GH212393)
 
 ### OpenACC Specific Changes
 
@@ -406,12 +439,15 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
-- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
-  now uses the B-key by default.
-
 #### Android Support
 
 #### Windows Support
+
+- Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
+  over-aligned base class is followed by another base class. MSVC on Arm64 (but
+  not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
+  subsequent base; Clang now does the same.
+  ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
 
@@ -442,6 +478,8 @@ features cannot lower the translation-unit ABI level;
 ### clang-format
 
 ### libclang
+
+- visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
 

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <fstream>
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
@@ -63,9 +62,9 @@ Error L0ProgramTy::deinit() {
 Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
                                     const std::string_view CommonBuildOptions,
                                     ze_module_format_t Format) {
-  auto &l0Device = getL0Device();
+  auto &L0Device = getL0Device();
   const ze_module_constants_t SpecConstants =
-      l0Device.getPlugin()
+      L0Device.getPlugin()
           .getOptions()
           .CommonSpecConstants.getModuleConstants();
 
@@ -87,7 +86,7 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
   ze_result_t RC;
-  CALL_ZE(RC, zeModuleCreate, l0Device.getZeContext(), l0Device.getZeDevice(),
+  CALL_ZE(RC, zeModuleCreate, L0Device.getZeContext(), L0Device.getZeDevice(),
           &ModuleDesc, &Module, &BuildLog);
   if (BuildLog)
     zeModuleBuildLogDestroy(BuildLog);
@@ -119,12 +118,12 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   if (Modules.empty())
     GlobalModule = Module;
   Modules.push_back(Module);
-  l0Device.addGlobalModule(Module);
+  L0Device.addGlobalModule(Module);
   return Plugin::success();
 }
 
 Error L0ProgramBuilderTy::linkModules() {
-  auto &l0Device = getL0Device();
+  auto &L0Device = getL0Device();
   if (!RequiresModuleLink) {
     ODBG(OLDT_Module) << "Module link is not required";
     return Plugin::success();
@@ -136,8 +135,8 @@ Error L0ProgramBuilderTy::linkModules() {
 
   ze_module_build_log_handle_t LinkLog = nullptr;
   CALL_ZE_RET_ERROR(zeModuleDynamicLink,
-                    static_cast<uint32_t>(l0Device.getNumGlobalModules()),
-                    l0Device.getGlobalModulesArray(), &LinkLog);
+                    static_cast<uint32_t>(L0Device.getNumGlobalModules()),
+                    L0Device.getGlobalModulesArray(), &LinkLog);
   return Plugin::success();
 }
 
@@ -174,11 +173,12 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   auto ExpectedNewE =
       ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
   if (!ExpectedNewE) {
-    ODBG(OLDT_Module) << "Warning: unable to get ELF handle!";
+    std::string ErrMsg = toString(ExpectedNewE.takeError());
+    ODBG(OLDT_Module) << "Warning: unable to get ELF handle: " << ErrMsg;
     return false;
   }
   bool Res = false;
-  auto processObjF = [&](const auto ELFObjF) {
+  auto ProcessObjF = [&](const auto ELFObjF) {
     if (!ELFObjF) {
       ODBG(OLDT_Module) << "Warning: Unexpected ELF type!";
       return false;
@@ -186,7 +186,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     const auto &ELFF = ELFObjF->getELFFile();
     auto Sections = ELFF.sections();
     if (!Sections) {
-      ODBG(OLDT_Module) << "Warning: unable to get ELF sections!";
+      std::string ErrMsg = toString(Sections.takeError());
+      ODBG(OLDT_Module) << "Warning: unable to get ELF sections: " << ErrMsg;
       return false;
     }
     bool SeenOffloadSection = false;
@@ -196,7 +197,9 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       Error Err = Plugin::success();
       for (auto Note : ELFF.notes(Sec, Err)) {
         if (Err) {
-          ODBG(OLDT_Module) << "Warning: unable to get ELF notes handle!";
+          std::string ErrMsg = toString(std::move(Err));
+          ODBG(OLDT_Module)
+              << "Warning: unable to get ELF notes handle: " << ErrMsg;
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
@@ -223,10 +226,10 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     return SeenOffloadSection;
   };
   if (const auto *O = dyn_cast<ELF64LEObjectFile>((*ExpectedNewE).get())) {
-    Res = processObjF(O);
+    Res = ProcessObjF(O);
   } else if (const auto *O =
                  dyn_cast<ELF32LEObjectFile>((*ExpectedNewE).get())) {
-    Res = processObjF(O);
+    Res = ProcessObjF(O);
   } else {
     assert(false && "Unexpected ELF format");
   }
@@ -234,7 +237,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
 }
 
 Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
-  auto &l0Device = getL0Device();
+  auto &L0Device = getL0Device();
   auto Image = getMemoryBuffer();
 
   // Check if image is an inner OffloadBinary (nested format)
@@ -279,7 +282,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
         Options += " " + CompileOpts.str();
       if (!LinkOpts.empty())
         Options += " " + LinkOpts.str();
-      replaceDriverOptsWithBackendOpts(l0Device, Options);
+      replaceDriverOptsWithBackendOpts(L0Device, Options);
       ODBG(OLDT_Module) << "Using compile options: " << CompileOpts
                         << ", link options: " << LinkOpts;
     }
@@ -340,7 +343,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   auto ExpectedNewE = ELFObjectFileBase::createELFObjectFile(Image);
   assert(ExpectedNewE &&
          "isValidOneOmpImage() returns true for invalid ELF image");
-  auto processELF = [&](auto *EObj) {
+  auto ProcessELF = [&](auto *EObj) {
     assert(EObj && "isValidOneOmpImage() returns true for invalid ELF image.");
     const auto &E = EObj->getELFFile();
     // Collect auxiliary information.
@@ -468,9 +471,9 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   };
 
   if (auto *O = dyn_cast<ELF64LEObjectFile>((*ExpectedNewE).get())) {
-    processELF(O);
+    ProcessELF(O);
   } else if (auto *O = dyn_cast<ELF32LEObjectFile>((*ExpectedNewE).get())) {
-    processELF(O);
+    ProcessELF(O);
   } else {
     assert(false && "Unexpected ELF format");
   }
@@ -504,7 +507,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     std::string Options(BuildOptions);
     {
       Options += " " + It->second.CompileOpts + " " + It->second.LinkOpts;
-      replaceDriverOptsWithBackendOpts(l0Device, Options);
+      replaceDriverOptsWithBackendOpts(L0Device, Options);
     }
 
     for (size_t I = 0; I < NumParts; I++) {

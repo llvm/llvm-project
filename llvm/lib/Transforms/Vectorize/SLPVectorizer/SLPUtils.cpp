@@ -35,7 +35,7 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
-bool isReassocIdentityConstant(const Value *V, unsigned Opcode) {
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   const auto *CI = dyn_cast<ConstantInt>(V);
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
 }

@@ -173,12 +173,12 @@ TEST(LlvmLibcStringTest, ResizeCapacityAndNullTermination) {
   // One char
   a.resize(1);
   ASSERT_EQ(a.size(), size_t(1));
-  ASSERT_GE(a.capacity(), size_t(2));
+  ASSERT_GE(a.capacity(), size_t(1));
   ASSERT_EQ(a.data()[1], '\0');
   // Clear
   a.resize(0);
   ASSERT_EQ(a.size(), size_t(0));
-  ASSERT_GE(a.capacity(), size_t(2));
+  ASSERT_GE(a.capacity(), size_t(1));
   ASSERT_EQ(a.data()[0], '\0');
   // Resize and check zero initialized
   a.resize(10);
@@ -193,8 +193,26 @@ TEST(LlvmLibcStringTest, ResizeWithCapacityPlus1) {
   a.resize(32);
 
   size_t previous_capacity = a.capacity();
-  a.resize(previous_capacity);
+  a.resize(previous_capacity + 1);
   ASSERT_GT(a.capacity(), previous_capacity);
+}
+
+TEST(LlvmLibcStringTest, ReserveWithSameCapacityIsNop) {
+  string a;
+  a.resize(32);
+
+  size_t previous_capacity = a.capacity();
+  // Since C++20, calling reserve with capacity less than or equal
+  // to the current capacity should have no effect.
+  a.reserve(previous_capacity);
+  ASSERT_EQ(a.capacity(), previous_capacity);
+}
+
+TEST(LlvmLibcStringTest, ReserveOnEmptyStringKeepsNullTerminator) {
+  string s;
+  s.reserve(10);
+  ASSERT_EQ(s.size(), size_t(0));
+  ASSERT_EQ(s[0], '\0');
 }
 
 TEST(LlvmLibcStringTest, ConcatWithCString) {
@@ -258,4 +276,66 @@ TEST(LlvmLibcStringTest, ToString) {
       ASSERT_EQ(to_string((unsigned long long)(value)), str);
     }
   }
+}
+
+TEST(LlvmLibcStringTest, SelfAssignTest) {
+  string_view alphabet("abcdefghijklmnopqrstuvwxyz");
+
+  // Test with a string long enough to where memcpy'ing bytes internal
+  // to the string may fail.
+  string complicated_string;
+  for (size_t i = 0; i < 100; i++)
+    complicated_string += alphabet[i % alphabet.size()];
+
+  string s(complicated_string);
+
+  s = string_view(s).substr(1);
+  ASSERT_EQ(string_view(s), string_view(complicated_string).substr(1));
+}
+
+TEST(LlvmLibcStringTest, SelfAssignAtCapacityTest) {
+  string s("aaa");
+
+  // Append until the string is at its capacity
+  // to exercise assigning past capacity.
+  while (s.size() < s.capacity())
+    s += 'a';
+  ASSERT_EQ(s.capacity(), s.size());
+  size_t cap_before_append = s.capacity();
+
+  // Force a resize by assigning to a longer string.
+  string longer_string(s.size() + 1, 'b');
+  s = string_view(longer_string);
+
+  size_t cap_after_append = s.capacity();
+  ASSERT_EQ(s, longer_string);
+  ASSERT_GT(cap_after_append, cap_before_append);
+}
+
+TEST(LlvmLibcStringTest, SelfMoveAssign) {
+  string s("aaa");
+  s = move(s);
+
+  ASSERT_STREQ(s.c_str(), "aaa");
+}
+
+TEST(LlvmLibcStringTest, SelfAppendAtCapacityTest) {
+  string s("aaa");
+
+  // Append until the string is at its capacity
+  // to exercise self-appending past capacity.
+  while (s.size() < s.capacity())
+    s += 'a';
+  ASSERT_EQ(s.capacity(), s.size());
+
+  string_view view = string_view(s).substr(0, 3);
+  size_t expected_size = s.size() + view.size();
+  size_t cap_before_append = s.capacity();
+
+  s += view;
+
+  size_t cap_after_append = s.capacity();
+  string expected(expected_size, 'a');
+  ASSERT_EQ(s, expected);
+  ASSERT_GT(cap_after_append, cap_before_append);
 }
