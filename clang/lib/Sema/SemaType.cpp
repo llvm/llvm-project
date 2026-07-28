@@ -5600,7 +5600,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
          (D.getContext() == clang::DeclaratorContext::Member &&
           D.isStaticMember())) &&
         !IsTypedefName && D.getContext() != DeclaratorContext::TemplateArg &&
-        D.getContext() != DeclaratorContext::TemplateTypeArg) {
+        D.getContext() != DeclaratorContext::TemplateTypeArg &&
+        D.getContext() != DeclaratorContext::TypeName) {
       SourceLocation Loc = D.getBeginLoc();
       SourceRange RemovalRange;
       unsigned I;

@@ -147,9 +147,13 @@ void HostInfoLinux::ComputeHostArchitectureSupport(ArchSpec &arch_32,
   if (arch_32.IsValid()) {
     if (arch_32.GetTriple().getVendor() == llvm::Triple::UnknownVendor)
       arch_32.GetTriple().setVendorName(llvm::StringRef());
-    // For Linux/AArch64, the environment components of triples for 64- and
-    // 32-bit targets do not match, for example, "aarch64--linux-gnu" and
-    // "arm--linux-eabihf". Clear the borrowed environment.
+    // For AArch64 and Arm (32-bit) Linux, the environment components will not
+    // match. For example "aarch64-unkown-linux-gnu" vs.
+    // "arm-unknown-linux-gnueabi". We can safely ignore the environment
+    // component because any of the Arm environments can run on an Armv8.0+
+    // machine that has AArch32 mode, because they all have hardware floating
+    // point support (and whether the machine has the right C library and 32-bit
+    // libraries installed is not lldb's concern).
     if (arch_64.IsValid() && arch_64.GetTriple().isAArch64() &&
         arch_64.GetTriple().getEnvironment() == llvm::Triple::GNU)
       arch_32.GetTriple().setEnvironment(llvm::Triple::UnknownEnvironment);

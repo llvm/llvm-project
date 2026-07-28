@@ -245,7 +245,7 @@ StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {
 #define R600_GPU(NAME, ENUM, FEATURES)                                         \
   case ENUM:                                                                   \
     return NAME;
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
   default:
     return "";
   }
@@ -265,7 +265,7 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
   return StringSwitch<AMDGPU::GPUKind>(CPU)
 #define R600_GPU(NAME, ENUM, FEATURES) .Case(NAME, ENUM)
 #define R600_GPU_ALIAS(NAME, ENUM) .Case(NAME, ENUM)
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
       .Default(AMDGPU::GPUKind::GK_NONE);
 }
 
@@ -296,7 +296,7 @@ unsigned AMDGPU::getArchAttrR600(GPUKind AK) {
 #define R600_GPU(NAME, ENUM, FEATURES)                                         \
   case ENUM:                                                                   \
     return FEATURES;
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
   default:
     return FEATURE_NONE;
   }
@@ -319,7 +319,7 @@ void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
   Values.append({
 #define R600_GPU(NAME, ENUM, FEATURES) NAME,
 #define R600_GPU_ALIAS(NAME, ENUM) NAME,
-#include "llvm/TargetParser/AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
   });
 }
 
@@ -639,6 +639,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["wmma-128b-insts"] = true;
     Features["swmmac-gfx1200-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
+    Features["smem-prefetch-insts"] = true;
     break;
   case GK_GFX1170:
   case GK_GFX1171:
@@ -1100,11 +1101,16 @@ std::optional<TargetID> TargetID::parse(const Triple &TT,
   if (!TT.isAMDGCN())
     return std::nullopt;
 
+  // Filter out unrecognized subarch suffixes.
+  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn")
+    return std::nullopt;
+
   // A named processor (i.e. not the empty/generic wildcard, which is resolved
-  // from the triple's subarch) must be a recognized GPU.
+  // from the triple's subarch) must be a recognized GPU that is consistent with
+  // the triple's subarch.
   StringRef CPUName = ProcAndFeatures.split(':').first;
   if (!CPUName.empty() && CPUName != "generic" &&
-      parseArchAMDGCN(CPUName) == GK_NONE)
+      !isCPUValidForSubArch(TT.getSubArch(), CPUName))
     return std::nullopt;
 
   // Parse the processor and its feature modifiers, then construct directly from
