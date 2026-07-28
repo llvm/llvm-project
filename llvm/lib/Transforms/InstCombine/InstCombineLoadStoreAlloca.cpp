@@ -425,15 +425,30 @@ void PointerReplacer::replace(Instruction *I) {
     // replacement (new value).
     WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
-    // Create a new PHI by replacing any incoming value that is a user of the
-    // root pointer and has a replacement.
-    Value *V = WorkMap.lookup(PHI->getIncomingValue(0));
-    PHI->mutateType(V ? V->getType() : PHI->getIncomingValue(0)->getType());
-    for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I) {
-      Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
-      PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+    Value *FirstIncoming = PHI->getIncomingValue(0);
+    Value *V = WorkMap.lookup(FirstIncoming);
+    Type *NewType = V ? V->getType() : FirstIncoming->getType();
+    if (PHI->getType() == NewType) {
+      for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
+        Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
+        PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+      }
+      WorkMap[PHI] = PHI;
+      return;
     }
-    WorkMap[PHI] = PHI;
+
+    auto *NewPHI = PHINode::Create(NewType, PHI->getNumIncomingValues(), "");
+    IC.InsertNewInstWith(NewPHI, PHI->getIterator());
+    NewPHI->takeName(PHI);
+    NewPHI->copyMetadata(*PHI);
+    WorkMap[PHI] = NewPHI;
+    for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
+      Value *IncomingValue = PHI->getIncomingValue(I);
+      Value *V = WorkMap.lookup(IncomingValue);
+      assert(V && V->getType() == NewType &&
+             "Type-changing PHI incoming value was not replaced");
+      NewPHI->addIncoming(V, PHI->getIncomingBlock(I));
+    }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
