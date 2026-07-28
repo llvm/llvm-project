@@ -677,9 +677,7 @@ public:
       tuple(const tuple<_Up...>& __t) noexcept(_And<is_nothrow_constructible<_Tp, const _Up&>...>::value)
       : __base_(__from_tuple(), __t) {}
 
-  template <class... _Up,
-            class _Alloc,
-            __enable_if_t< _And< _EnableCtorFromUTypesTuple<const tuple<_Up...>&> >::value, int> = 0>
+  template <class... _Up, class _Alloc, __enable_if_t<_EnableCtorFromUTypesTuple<const tuple<_Up...>&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!_And<is_convertible<const _Up&, _Tp>...>::value)
       tuple(allocator_arg_t, const _Alloc& __a, const tuple<_Up...>& __t)
       : __base_(allocator_arg_t(), __a, __from_tuple(), __t) {}
@@ -698,14 +696,12 @@ public:
 #    endif // _LIBCPP_STD_VER >= 23
 
   // tuple(tuple<U...>&&) constructors (including allocator_arg_t variants)
-  template <class... _Up, __enable_if_t< _And< _EnableCtorFromUTypesTuple<tuple<_Up...>&&> >::value, int> = 0>
+  template <class... _Up, __enable_if_t<_EnableCtorFromUTypesTuple<tuple<_Up...>&&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_And<is_convertible<_Up, _Tp>...>::value)
       tuple(tuple<_Up...>&& __t) noexcept(_And<is_nothrow_constructible<_Tp, _Up>...>::value)
       : __base_(__from_tuple(), std::move(__t)) {}
 
-  template <class _Alloc,
-            class... _Up,
-            __enable_if_t< _And< _EnableCtorFromUTypesTuple<tuple<_Up...>&&> >::value, int> = 0>
+  template <class _Alloc, class... _Up, __enable_if_t<_EnableCtorFromUTypesTuple<tuple<_Up...>&&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!_And<is_convertible<_Up, _Tp>...>::value)
       tuple(allocator_arg_t, const _Alloc& __a, tuple<_Up...>&& __t)
       : __base_(allocator_arg_t(), __a, __from_tuple(), std::move(__t)) {}
@@ -751,22 +747,18 @@ public:
   struct _BothImplicitlyConvertible<_Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> >
       : _And< is_convertible<__copy_cvref_t<_Pair, _Up1>, _Tp1>, is_convertible<__copy_cvref_t<_Pair, _Up2>, _Tp2> > {};
 
-  template <class _Up1,
-            class _Up2,
-            template <class...> class _And                                                   = _And,
-            __enable_if_t< _And< _EnableCtorFromPair<const pair<_Up1, _Up2>&> >::value, int> = 0>
+  template <class _Up1, class _Up2, __enable_if_t<_EnableCtorFromPair<const pair<_Up1, _Up2>&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_BothImplicitlyConvertible<const pair<_Up1, _Up2>&> >::value)
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_BothImplicitlyConvertible<const pair<_Up1, _Up2>&>::value)
       tuple(const pair<_Up1, _Up2>& __p) noexcept(_NothrowConstructibleFromPair<const pair<_Up1, _Up2>&>::value)
       : __base_(__from_tuple(), __p) {}
 
   template <class _Alloc,
             class _Up1,
             class _Up2,
-            template <class...> class _And                                                   = _And,
-            __enable_if_t< _And< _EnableCtorFromPair<const pair<_Up1, _Up2>&> >::value, int> = 0>
+            __enable_if_t<_EnableCtorFromPair<const pair<_Up1, _Up2>&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_BothImplicitlyConvertible<const pair<_Up1, _Up2>&> >::value)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!_BothImplicitlyConvertible<const pair<_Up1, _Up2>&>::value)
       tuple(allocator_arg_t, const _Alloc& __a, const pair<_Up1, _Up2>& __p)
       : __base_(allocator_arg_t(), __a, __from_tuple(), __p) {}
 
@@ -789,22 +781,16 @@ public:
 
   // tuple(pair<U1, U2>&&) constructors (including allocator_arg_t variants)
 
-  template <class _Up1,
-            class _Up2,
-            template <class...> class _And                                              = _And,
-            __enable_if_t< _And< _EnableCtorFromPair<pair<_Up1, _Up2>&&> >::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_BothImplicitlyConvertible<pair<_Up1, _Up2>&&> >::value)
+  template <class _Up1, class _Up2, __enable_if_t<_EnableCtorFromPair<pair<_Up1, _Up2>&&>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_BothImplicitlyConvertible<pair<_Up1, _Up2>&&>::value)
       tuple(pair<_Up1, _Up2>&& __p) noexcept(_NothrowConstructibleFromPair<pair<_Up1, _Up2>&&>::value)
       : __base_(__from_tuple(), std::move(__p)) {}
 
   template <class _Alloc,
             class _Up1,
             class _Up2,
-            template <class...> class _And                                              = _And,
-            __enable_if_t< _And< _EnableCtorFromPair<pair<_Up1, _Up2>&&> >::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_BothImplicitlyConvertible<pair<_Up1, _Up2>&&> >::value)
+            __enable_if_t<_EnableCtorFromPair<pair<_Up1, _Up2>&&>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!_BothImplicitlyConvertible<pair<_Up1, _Up2>&&>::value)
       tuple(allocator_arg_t, const _Alloc& __a, pair<_Up1, _Up2>&& __p)
       : __base_(allocator_arg_t(), __a, __from_tuple(), std::move(__p)) {}
 

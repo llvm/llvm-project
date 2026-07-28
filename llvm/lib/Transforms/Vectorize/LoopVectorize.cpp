@@ -3166,7 +3166,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(*TLI, *Plan, CM, Config);
+      VPCostContext CostCtx(*TLI, *Plan, CM, Config,
+                            /*ReusePrintingSlotTracker=*/true);
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -5601,10 +5602,16 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
 VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
                              LoopVectorizationCostModel &CM,
-                             VFSelectionContext &Config)
+                             VFSelectionContext &Config,
+                             bool ReusePrintingSlotTracker)
     : TTI(Config.getTTI()), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
       Config(Config), CostKind(Config.CostKind), PSE(Config.getPSE()),
-      L(Config.getLoop()) {}
+      L(Config.getLoop()) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (ReusePrintingSlotTracker)
+    PlanForSlotTracker = &Plan;
+#endif
+}
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
@@ -5764,7 +5771,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                                                VPRegisterUsage *RU) const {
-  VPCostContext CostCtx(*TLI, Plan, CM, Config);
+  VPCostContext CostCtx(*TLI, Plan, CM, Config,
+                        /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -8115,7 +8123,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
-    VPCostContext CostCtx(*TLI, *BestPlanPtr, CM, Config);
+    VPCostContext CostCtx(*TLI, *BestPlanPtr, CM, Config,
+                          /*ReusePrintingSlotTracker=*/true);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx, *BestPlanPtr,
                                      SEL, Config.getVScaleForTuning())) {

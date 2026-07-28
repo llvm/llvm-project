@@ -45,6 +45,35 @@ LLDB_PLUGIN_DEFINE(PlatformWindows)
 
 static uint32_t g_initialize_count = 0;
 
+namespace {
+
+#define LLDB_PROPERTIES_windows
+#include "PlatformWindowsProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_windows
+#include "PlatformWindowsPropertiesEnum.inc"
+};
+
+class PluginProperties : public Properties {
+public:
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>("windows");
+    m_collection_sp->Initialize(g_windows_properties_def);
+  }
+
+  bool DisableDebugHeap() const {
+    return GetPropertyAtIndexAs<bool>(ePropertyDisableDebugHeap, true);
+  }
+};
+
+static PluginProperties &GetGlobalProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
+} // end of anonymous namespace
+
 PlatformSP PlatformWindows::CreateInstance(bool force,
                                            const lldb_private::ArchSpec *arch) {
   // The only time we create an instance is when we are creating a remote
@@ -92,6 +121,15 @@ llvm::StringRef PlatformWindows::GetPluginDescriptionStatic(bool is_host) {
                  : "Remote Windows user platform plug-in.";
 }
 
+void PlatformWindows::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForPlatformPlugin(debugger, "windows")) {
+    PluginManager::CreateSettingForPlatformPlugin(
+        debugger, GetGlobalProperties().GetValueProperties(),
+        "Properties for the Windows platform plugin.",
+        /*is_global_property=*/true);
+  }
+}
+
 void PlatformWindows::Initialize() {
   Platform::Initialize();
 
@@ -105,7 +143,7 @@ void PlatformWindows::Initialize() {
     PluginManager::RegisterPlugin(
         PlatformWindows::GetPluginNameStatic(false),
         PlatformWindows::GetPluginDescriptionStatic(false),
-        PlatformWindows::CreateInstance);
+        PlatformWindows::CreateInstance, PlatformWindows::DebuggerInitialize);
   }
 }
 
@@ -557,6 +595,12 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     // This is a process attach.  Don't need to launch anything.
     ProcessAttachInfo attach_info(launch_info);
     return Attach(attach_info, debugger, &target, error);
+  }
+
+  Environment &env = launch_info.GetEnvironment();
+  if (GetGlobalProperties().DisableDebugHeap() &&
+      !env.contains("_NO_DEBUG_HEAP")) {
+    env.try_emplace("_NO_DEBUG_HEAP", "1");
   }
 
   ProcessSP process_sp =
