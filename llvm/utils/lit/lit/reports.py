@@ -318,7 +318,6 @@ def _wtt_attr(text):
 
 
 class WttReport(Report):
-
     def write_results(self, tests, elapsed):
         with open(self.output_file, "w", encoding="utf-16") as f:
             self._write_results_to_file(tests, elapsed, f)
@@ -331,8 +330,12 @@ class WttReport(Report):
         base = min(starts) if starts else 0.0
         base_dt = datetime.datetime.fromtimestamp(base)
         base_time = "%d:%d:%d %d:%d:%d:%d" % (
-            base_dt.year, base_dt.month, base_dt.day,
-            base_dt.hour, base_dt.minute, base_dt.second,
+            base_dt.year,
+            base_dt.month,
+            base_dt.day,
+            base_dt.hour,
+            base_dt.minute,
+            base_dt.second,
             base_dt.microsecond // 1000,
         )
 
@@ -374,10 +377,18 @@ class WttReport(Report):
             # UNSUPPORTED: report as Pass (feature not applicable on this device).
             if code == lit.Test.UNSUPPORTED:
                 file.write(f'<CTX ID="" Current={_wtt_attr(name)} Parent="WTTLOG" />\n')
-                file.write(f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n')
-                unsupported_msg = _wtt_attr("UNSUPPORTED on this device; reported as Pass (not applicable).")
-                file.write(f'<Msg UserText={unsupported_msg} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Msg>\n')
-                file.write(f'<EndTest Title={_wtt_attr(name)} TUID="" Result="Pass" Repro="" CA="{logged_at}" LA="{logged_at}">\n{rc("")}</EndTest>\n')
+                file.write(
+                    f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n'
+                )
+                unsupported_msg = _wtt_attr(
+                    "UNSUPPORTED on this device; reported as Pass (not applicable)."
+                )
+                file.write(
+                    f'<Msg UserText={unsupported_msg} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Msg>\n'
+                )
+                file.write(
+                    f'<EndTest Title={_wtt_attr(name)} TUID="" Result="Pass" Repro="" CA="{logged_at}" LA="{logged_at}">\n{rc("")}</EndTest>\n'
+                )
                 unsupported += 1
                 continue
 
@@ -397,25 +408,36 @@ class WttReport(Report):
                 failed += 1
 
             file.write(f'<CTX ID="" Current={_wtt_attr(name)} Parent="WTTLOG" />\n')
-            file.write(f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n')
+            file.write(
+                f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n'
+            )
 
             # Write error output for failures (WTT uses <Error>, not <Err>).
             if result == "Fail" and test.result.output:
                 error_text = _wtt_attr(test.result.output[:4096])
-                file.write(f'<Error UserText={error_text} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Error>\n')
+                file.write(
+                    f'<Error UserText={error_text} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Error>\n'
+                )
 
             if result == "Pass" and test.result.output:
                 pass_text = _wtt_attr(test.result.output[:1024])
-                file.write(f'<Msg UserText={pass_text} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Msg>\n')
+                file.write(
+                    f'<Msg UserText={pass_text} CA="{logged_at}" LA="{logged_at}">\n{rc("")}</Msg>\n'
+                )
 
-            file.write(f'<EndTest Title={_wtt_attr(name)} TUID="" Result="{result}" Repro="" CA="{logged_at}" LA="{logged_at}">\n{rc("")}</EndTest>\n')
+            file.write(
+                f'<EndTest Title={_wtt_attr(name)} TUID="" Result="{result}" Repro="" CA="{logged_at}" LA="{logged_at}">\n{rc("")}</EndTest>\n'
+            )
 
         # Tally of UNSUPPORTED tests reported as Pass.
         if unsupported > 0:
             tally = _wtt_attr(
                 f"{unsupported} test(s) were UNSUPPORTED on this device and "
-                f"reported as Pass (not applicable).")
-            file.write(f'<Msg UserText={tally} CA="{end_ticks}" LA="{end_ticks}">\n{rc(root_ctx)}</Msg>\n')
+                f"reported as Pass (not applicable)."
+            )
+            file.write(
+                f'<Msg UserText={tally} CA="{end_ticks}" LA="{end_ticks}">\n{rc(root_ctx)}</Msg>\n'
+            )
 
         # Tally of tests omitted from results.
         not_run = excluded + skipped
@@ -427,12 +449,16 @@ class WttReport(Report):
                 parts.append(f"{skipped} skipped")
             tally = _wtt_attr(
                 f"{not_run} test(s) were not run ({', '.join(parts)}) and are "
-                f"omitted from the pass/fail results.")
-            file.write(f'<Msg UserText={tally} CA="{end_ticks}" LA="{end_ticks}">\n{rc(root_ctx)}</Msg>\n')
+                f"omitted from the pass/fail results."
+            )
+            file.write(
+                f'<Msg UserText={tally} CA="{end_ticks}" LA="{end_ticks}">\n{rc(root_ctx)}</Msg>\n'
+            )
 
         total = passed + failed + unsupported
         file.write(
             f'<PFRollup Total="{total}" Passed="{passed + unsupported}" Failed="{failed}" '
             f'Blocked="0" Warned="0" Skipped="0" CA="{end_ticks}" LA="{end_ticks}">\n'
-            f'{rc(root_ctx)}</PFRollup>\n')
+            f"{rc(root_ctx)}</PFRollup>\n"
+        )
         file.write("</WTT-Logger>\n")
