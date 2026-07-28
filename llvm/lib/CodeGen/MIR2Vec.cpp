@@ -382,6 +382,13 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   // GlobalISel's register bank selection, and thus carry an LLT or a
   // RegisterBank instead of a TargetRegisterClass, for which
   // getRegClassOrNull() returns nullptr.
+  // TODO: Avoid special-casing these registers at every use site. Classless
+  // registers currently fall back to a zero embedding in operator[] and to
+  // VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc handling
+  // the invalid/stack-slot cases already get. Give them a real vocabulary
+  // representation instead -- e.g. an explicit "no register class" entry, or
+  // keying generic vregs on their LLT/RegisterBank -- so that the lookup is
+  // total and the callers need no fallbacks.
   if (!RegClass) {
     LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
                       << "; using zero vector.\n");
