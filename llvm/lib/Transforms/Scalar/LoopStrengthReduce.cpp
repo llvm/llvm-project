@@ -6641,8 +6641,7 @@ struct SCEVDbgValueBuilder {
     } else if (const SCEVCastExpr *Cast = dyn_cast<SCEVCastExpr>(S)) {
       // Assert if a new and unknown SCEVCastEXpr type is encountered.
       assert((isa<SCEVZeroExtendExpr>(Cast) || isa<SCEVTruncateExpr>(Cast) ||
-              isa<SCEVPtrToIntExpr>(Cast) || isa<SCEVPtrToAddrExpr>(Cast) ||
-              isa<SCEVSignExtendExpr>(Cast)) &&
+              isa<SCEVPtrToAddrExpr>(Cast) || isa<SCEVSignExtendExpr>(Cast)) &&
              "Unexpected cast type in SCEV.");
       Success &= pushCast(Cast, (isa<SCEVSignExtendExpr>(Cast)));
 
@@ -6857,7 +6856,6 @@ static void updateDVIWithLocation(T &DbgVal, Value *Location,
   assert(numLLVMArgOps(Ops) == 0 && "Expected expression that does not "
                                     "contain any DW_OP_llvm_arg operands.");
   DbgVal.setRawLocation(ValueAsMetadata::get(Location));
-  DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
   DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
 }
 

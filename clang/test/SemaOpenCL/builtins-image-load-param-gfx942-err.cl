@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx942 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.42-- -verify -S -o - %s
 // REQUIRES: amdgpu-registered-target
 
 typedef int int4 __attribute__((ext_vector_type(4)));

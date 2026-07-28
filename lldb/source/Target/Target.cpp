@@ -40,7 +40,6 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -2075,9 +2074,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
         if (bytes_read > 0)
           return bytes_read;
         else
-          error = Status::FromErrorStringWithFormat(
-              "error reading data from section %s",
-              section_sp->GetName().GetCString());
+          error = Status::FromErrorStringWithFormatv(
+              "error reading data from section {0}", section_sp->GetName());
       } else
         error = Status::FromErrorString("address isn't from a object file");
     } else
@@ -4149,8 +4147,8 @@ void Target::ClearDummySignals(Args &signal_names) {
 }
 
 void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
-  strm.Printf("NAME         PASS     STOP     NOTIFY\n");
-  strm.Printf("===========  =======  =======  =======\n");
+  strm.PutCString("NAME         PASS     STOP     NOTIFY\n");
+  strm.PutCString("===========  =======  =======  =======\n");
 
   auto str_for_lazy = [] (LazyBool lazy) -> const char * {
     switch (lazy) {
@@ -4292,6 +4290,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4327,7 +4326,7 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
-  m_interface_sp = script_interp->CreateScriptedStopHookInterface();
+  m_interface_sp = script_interp->CreateScriptedHookInterface();
   if (!m_interface_sp) {
     error = Status::FromErrorStringWithFormat(
         "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
@@ -4606,6 +4605,7 @@ Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;

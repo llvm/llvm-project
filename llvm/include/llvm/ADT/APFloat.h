@@ -414,6 +414,12 @@ public:
   /// llvm.convert.from.arbitrary.fp intrinsics.
   LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
 
+  /// Returns the size in bits of a valid arbitrary floating-point format
+  /// string, or 0 if the string is not a valid format. Covers every format
+  /// accepted by isValidArbitraryFPFormat, not only those
+  /// getArbitraryFPSemantics can currently lower.
+  LLVM_ABI static unsigned getArbitraryFPFormatSizeInBits(StringRef Format);
+
   /// Returns the fltSemantics for a given arbitrary FP format string,
   /// or nullptr if invalid.
   LLVM_ABI static const fltSemantics *getArbitraryFPSemantics(StringRef Format);
