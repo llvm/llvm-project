@@ -12,9 +12,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 [[gnu::returns_twice]] int sigsetjmp_epilogue(sigjmp_buf buffer, int retval) {
-  sigprocmask(SIG_SETMASK,
-              /* set= */ retval ? &buffer->sigmask : nullptr,
-              /* old_set= */ retval ? nullptr : &buffer->sigmask);
+  sigprocmask_impl(SIG_SETMASK,
+                   /* set= */ retval ? &buffer->sigmask : nullptr,
+                   /* old_set= */ retval ? nullptr : &buffer->sigmask);
   return retval;
 }
 } // namespace LIBC_NAMESPACE_DECL

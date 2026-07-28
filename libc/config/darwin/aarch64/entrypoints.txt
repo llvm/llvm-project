@@ -118,6 +118,13 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # signal.h entrypoints
+    libc.src.signal.sigaddset
+    libc.src.signal.sigdelset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigfillset
+    libc.src.signal.sigprocmask
+
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp

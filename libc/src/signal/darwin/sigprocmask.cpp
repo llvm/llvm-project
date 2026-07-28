@@ -19,9 +19,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, sigprocmask,
-                   (int how, const sigset_t *__restrict set,
-                    sigset_t *__restrict oldset)) {
+int sigprocmask_impl(int how, const sigset_t *__restrict set,
+                     sigset_t *__restrict oldset) {
   uint32_t kernel_set = 0;
   uint32_t kernel_oldset = 0;
 
@@ -40,6 +39,12 @@ LLVM_LIBC_FUNCTION(int, sigprocmask,
 
   libc_errno = ret;
   return -1;
+}
+
+LLVM_LIBC_FUNCTION(int, sigprocmask,
+                   (int how, const sigset_t *__restrict set,
+                    sigset_t *__restrict oldset)) {
+  return sigprocmask_impl(how, set, oldset);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

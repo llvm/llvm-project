@@ -53,8 +53,10 @@ void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
   const FPState &before_state = reinterpret_cast<const FPState &>(before_fenv);
   const FPState &after_state = reinterpret_cast<const FPState &>(after_fenv);
 
-  EXPECT_EQ(before_state.ControlWord, after_state.ControlWord);
-  EXPECT_EQ(before_state.StatusWord, after_state.StatusWord);
+  EXPECT_EQ(static_cast<uint32_t>(before_state.ControlWord),
+            static_cast<uint32_t>(after_state.ControlWord));
+  EXPECT_EQ(static_cast<uint32_t>(before_state.StatusWord),
+            static_cast<uint32_t>(after_state.StatusWord));
 
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
   using LIBC_NAMESPACE::cpp::inline_copy;

@@ -14,6 +14,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+int sigprocmask_impl(int how, const sigset_t *__restrict set,
+                     sigset_t *__restrict oldset);
+
 int sigprocmask(int how, const sigset_t *__restrict set,
                 sigset_t *__restrict oldset);
 

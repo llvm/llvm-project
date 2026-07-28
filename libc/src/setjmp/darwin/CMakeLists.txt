@@ -9,4 +9,5 @@ add_object_library(
     libc.src.__support.OSUtil.osutil
     libc.hdr.types.sigjmp_buf
     libc.hdr.types.sigset_t
+    libc.src.signal.sigprocmask
 )

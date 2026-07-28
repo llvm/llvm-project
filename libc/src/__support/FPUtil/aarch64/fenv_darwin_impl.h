@@ -23,29 +23,31 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 struct FEnv {
   struct FPState {
-    struct Word {
-      unsigned char Bytes[sizeof(uint32_t)];
+    struct alignas(uint64_t) Word {
+      unsigned char Bytes[sizeof(uint64_t)];
 
       LIBC_INLINE operator uint32_t() const {
-        uint32_t value;
-        __builtin_memcpy(&value, Bytes, sizeof(value));
-        return value;
+        uint64_t value;
+        inline_memcpy(&value, Bytes, sizeof(value));
+        return static_cast<uint32_t>(value);
       }
 
       LIBC_INLINE Word &operator=(uint32_t value) {
-        __builtin_memcpy(Bytes, &value, sizeof(value));
+        uint64_t storage = value;
+        inline_memcpy(Bytes, &storage, sizeof(storage));
         return *this;
       }
     };
 
-    Word ControlWord;
     Word StatusWord;
+    Word ControlWord;
   };
 
   static_assert(
@@ -74,6 +76,13 @@ struct FEnv {
   static constexpr uint32_t FPCR_TRAP_DENORMAL = 0x8000;
   static constexpr uint32_t FPCR_FLUSH_TO_ZERO = 0x1000000;
 
+  static constexpr uint32_t FPSR_INVALID = 0x1;
+  static constexpr uint32_t FPSR_DIVBYZERO = 0x2;
+  static constexpr uint32_t FPSR_OVERFLOW = 0x4;
+  static constexpr uint32_t FPSR_UNDERFLOW = 0x8;
+  static constexpr uint32_t FPSR_INEXACT = 0x10;
+  static constexpr uint32_t FPSR_DENORMAL = 0x80;
+
   static constexpr uint32_t TONEAREST = 0x0;
   static constexpr uint32_t UPWARD = 0x1;
   static constexpr uint32_t DOWNWARD = 0x2;
@@ -99,13 +108,22 @@ struct FEnv {
   // another floating point exception: FE_FLUSHTOZERO, also called the input
   // denormal exception. Its trap-enable bit is FPCR_TRAP_DENORMAL, while
   // FPCR_FLUSH_TO_ZERO is a separate FPCR mode control.
+  LIBC_INLINE static uint32_t exception_value_from_macro(uint32_t excepts) {
+    return ((excepts & FE_INVALID) ? EX_INVALID : 0) |
+           ((excepts & FE_DIVBYZERO) ? EX_DIVBYZERO : 0) |
+           ((excepts & FE_OVERFLOW) ? EX_OVERFLOW : 0) |
+           ((excepts & FE_UNDERFLOW) ? EX_UNDERFLOW : 0) |
+           ((excepts & FE_INEXACT) ? EX_INEXACT : 0) |
+           ((excepts & FE_FLUSHTOZERO) ? EX_FLUSHTOZERO : 0);
+  }
+
   LIBC_INLINE static uint32_t exception_value_from_status(uint32_t status) {
-    return ((status & FE_INVALID) ? EX_INVALID : 0) |
-           ((status & FE_DIVBYZERO) ? EX_DIVBYZERO : 0) |
-           ((status & FE_OVERFLOW) ? EX_OVERFLOW : 0) |
-           ((status & FE_UNDERFLOW) ? EX_UNDERFLOW : 0) |
-           ((status & FE_INEXACT) ? EX_INEXACT : 0) |
-           ((status & FE_FLUSHTOZERO) ? EX_FLUSHTOZERO : 0);
+    return ((status & FPSR_INVALID) ? EX_INVALID : 0) |
+           ((status & FPSR_DIVBYZERO) ? EX_DIVBYZERO : 0) |
+           ((status & FPSR_OVERFLOW) ? EX_OVERFLOW : 0) |
+           ((status & FPSR_UNDERFLOW) ? EX_UNDERFLOW : 0) |
+           ((status & FPSR_INEXACT) ? EX_INEXACT : 0) |
+           ((status & FPSR_DENORMAL) ? EX_FLUSHTOZERO : 0);
   }
 
   LIBC_INLINE static uint32_t exception_value_from_control(uint32_t control) {
@@ -117,13 +135,22 @@ struct FEnv {
            ((control & FPCR_TRAP_DENORMAL) ? EX_FLUSHTOZERO : 0);
   }
 
-  LIBC_INLINE static uint32_t exception_value_to_status(uint32_t excepts) {
+  LIBC_INLINE static uint32_t exception_value_to_macro(uint32_t excepts) {
     return ((excepts & EX_INVALID) ? FE_INVALID : 0) |
            ((excepts & EX_DIVBYZERO) ? FE_DIVBYZERO : 0) |
            ((excepts & EX_OVERFLOW) ? FE_OVERFLOW : 0) |
            ((excepts & EX_UNDERFLOW) ? FE_UNDERFLOW : 0) |
            ((excepts & EX_INEXACT) ? FE_INEXACT : 0) |
            ((excepts & EX_FLUSHTOZERO) ? FE_FLUSHTOZERO : 0);
+  }
+
+  LIBC_INLINE static uint32_t exception_value_to_status(uint32_t excepts) {
+    return ((excepts & EX_INVALID) ? FPSR_INVALID : 0) |
+           ((excepts & EX_DIVBYZERO) ? FPSR_DIVBYZERO : 0) |
+           ((excepts & EX_OVERFLOW) ? FPSR_OVERFLOW : 0) |
+           ((excepts & EX_UNDERFLOW) ? FPSR_UNDERFLOW : 0) |
+           ((excepts & EX_INEXACT) ? FPSR_INEXACT : 0) |
+           ((excepts & EX_FLUSHTOZERO) ? FPSR_DENORMAL : 0);
   }
 
   LIBC_INLINE static uint32_t exception_value_to_control(uint32_t excepts) {
@@ -150,36 +177,36 @@ struct FEnv {
 
 LIBC_INLINE int enable_except(int excepts) {
   uint32_t new_excepts =
-      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+      FEnv::exception_value_from_macro(static_cast<uint32_t>(excepts));
   uint32_t control_word = FEnv::get_control_word();
   uint32_t old_excepts = FEnv::exception_value_from_control(control_word);
   if (new_excepts != old_excepts) {
     control_word |= FEnv::exception_value_to_control(new_excepts);
     FEnv::set_control_word(control_word);
   }
-  return static_cast<int>(FEnv::exception_value_to_status(old_excepts));
+  return static_cast<int>(FEnv::exception_value_to_macro(old_excepts));
 }
 
 LIBC_INLINE int disable_except(int excepts) {
   uint32_t disabled_excepts =
-      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+      FEnv::exception_value_from_macro(static_cast<uint32_t>(excepts));
   uint32_t control_word = FEnv::get_control_word();
   uint32_t old_excepts = FEnv::exception_value_from_control(control_word);
   control_word &= ~FEnv::exception_value_to_control(disabled_excepts);
   FEnv::set_control_word(control_word);
-  return static_cast<int>(FEnv::exception_value_to_status(old_excepts));
+  return static_cast<int>(FEnv::exception_value_to_macro(old_excepts));
 }
 
 LIBC_INLINE int get_except() {
   uint32_t control_word = FEnv::get_control_word();
   uint32_t enabled_excepts = FEnv::exception_value_from_control(control_word);
-  return static_cast<int>(FEnv::exception_value_to_status(enabled_excepts));
+  return static_cast<int>(FEnv::exception_value_to_macro(enabled_excepts));
 }
 
 LIBC_INLINE int clear_except(int excepts) {
   uint32_t status_word = FEnv::get_status_word();
   uint32_t except_value =
-      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+      FEnv::exception_value_from_macro(static_cast<uint32_t>(excepts));
   status_word &= ~FEnv::exception_value_to_status(except_value);
   FEnv::set_status_word(status_word);
   return 0;
@@ -188,15 +215,16 @@ LIBC_INLINE int clear_except(int excepts) {
 LIBC_INLINE int test_except(int excepts) {
   uint32_t statusWord = FEnv::get_status_word();
   uint32_t ex_value =
-      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
-  return static_cast<int>(statusWord &
-                          FEnv::exception_value_to_status(ex_value));
+      FEnv::exception_value_from_macro(static_cast<uint32_t>(excepts));
+  uint32_t raised_excepts = FEnv::exception_value_from_status(statusWord);
+  return static_cast<int>(
+      FEnv::exception_value_to_macro(raised_excepts & ex_value));
 }
 
 LIBC_INLINE int set_except(int excepts) {
   uint32_t status_word = FEnv::get_status_word();
   uint32_t new_exceptions =
-      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+      FEnv::exception_value_from_macro(static_cast<uint32_t>(excepts));
   status_word |= FEnv::exception_value_to_status(new_exceptions);
   FEnv::set_status_word(status_word);
   return 0;
@@ -217,7 +245,7 @@ LIBC_INLINE int raise_except(int excepts) {
   };
 
   uint32_t to_raise =
-      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+      FEnv::exception_value_from_macro(static_cast<uint32_t>(excepts));
   int result = 0;
 
   if (to_raise & FEnv::EX_INVALID) {
