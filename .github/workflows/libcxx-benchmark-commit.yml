@@ -2,7 +2,7 @@
 # This workflow is intended to be triggered manually or via the Github API. As such,
 # it requires several inputs that allow customizing its behavior.
 
-name: Benchmark libc++ commit
+name: "[libc++] Run benchmark suite against commit"
 
 permissions:
   contents: read
@@ -77,7 +77,7 @@ jobs:
         run: |
           brew update
           brew install ninja cmake python@3.14
-          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use
         run: |
@@ -114,5 +114,5 @@ jobs:
         run: |
           libcxx/utils/ci/lnt/submit-benchmarks             \
             --lnt-url "${LNT_URL}"                          \
-            --test-suite libcxx2                            \
+            --test-suite libcxx                             \
             "${COMMIT}.json"

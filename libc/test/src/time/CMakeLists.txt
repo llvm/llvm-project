@@ -226,6 +226,17 @@ add_libc_test(
     libc.src.time.strftime
 )
 
+add_libc_test(
+  strptime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    strptime_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.time.strptime
+)
+
 add_libc_unittest(
   time_test
   SUITE
