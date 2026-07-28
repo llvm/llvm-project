@@ -262,7 +262,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // dependency vector with '*'.
         if (D->isConfused()) {
           assert(Dep.empty() && "Expected empty dependency vector");
-          Dep.assign(Level, '*');
+          Dep.assign(L->getLoopDepth() + Level - 1, '*');
         }
 
         while (Dep.size() < L->getLoopDepth() + Level - 1) {
