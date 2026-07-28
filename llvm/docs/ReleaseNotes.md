@@ -116,6 +116,8 @@ Makes programs 10x faster by doing Special New Thing.
 #### Windows
 
 * Python 3.11 or later is now required for building LLDB 24 on Windows.
+* For better performance, LLDB now turns off the Windows debug heap by default when debugging.
+  If you need the debug heap enabled, set `platform.plugin.windows.disable-debug-heap` to `false`.
 
 ### Changes to BOLT
 
