@@ -6360,9 +6360,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // Set type identifier metadata of indirect calls for call graph section.
       if (!CST.isNull()) {
-        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
-        if (!CST->isFunctionProtoType() &&
-            CGM.getCodeGenOpts().CallGraphSection) {
+        if (!CST->isFunctionProtoType()) {
+          if (const auto *FNPT = CST->getAs<FunctionNoProtoType>()) {
+            SmallVector<QualType, 8> ParamTypes;
+            for (const CallArg &Arg : CallArgs)
+              ParamTypes.push_back(Arg.getType());
+            FunctionProtoType::ExtProtoInfo EPI;
+            CST = getContext().getFunctionType(FNPT->getReturnType(),
+                                               ParamTypes, EPI);
+          }
+
           llvm::Metadata *MD =
               CGM.CreateMetadataIdentifierForCallGraphType(CST);
           StringRef TypeStr;
@@ -6371,6 +6378,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
           CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
         }
+        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
       }
     }
   }
