@@ -91,8 +91,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
-* Adds experimental assembler support for the `Zilx` (Indexed Integer Load) extension.
-* Adds experimental CodeGen support for the `Zilx` (Indexed Integer Load) extension.
+* Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
+  Load) extension.
 
 ### Changes to the WebAssembly Backend
 
