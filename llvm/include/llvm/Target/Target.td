@@ -1898,10 +1898,9 @@ class AsmParser {
   //    Number of required features (least first)
   bit PreferSmallerInstructions = false;
 
-  // ErrorOnAmbiguousMatchables - Set to true to make the assembler matcher
-  // emitter produce a fatal error for any pair of matchables that are
-  // indistinguishable to the asm parser. The check relies on mutually
-  // exclusive assembler predicates declared using
+  // Set to true to make the assembler matcher emitter produce a fatal error
+  // for any pair of matchables that are indistinguishable to the asm parser.
+  // The check relies on mutually exclusive assembler predicates declared using
   // MutuallyExclusiveAssemblerPredicates.
   bit ErrorOnAmbiguousMatchables = false;
 }
