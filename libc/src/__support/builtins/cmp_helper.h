@@ -36,7 +36,7 @@ template <typename T> LIBC_INLINE int cmp_le(T a, T b) {
   if (FPBits(a).is_nan() || FPBits(b).is_nan())
     return 1; // LE_UNORDERED
   if (fputil::equals(a, b))
-    return 0; // LE_EQUAL
+    return 0;                              // LE_EQUAL
   return fputil::less_than(a, b) ? -1 : 1; // LE_LESS : LE_GREATER
 }
 
@@ -47,7 +47,7 @@ template <typename T> LIBC_INLINE int cmp_ge(T a, T b) {
   if (FPBits(a).is_nan() || FPBits(b).is_nan())
     return -1; // GE_UNORDERED
   if (fputil::equals(a, b))
-    return 0; // GE_EQUAL
+    return 0;                                 // GE_EQUAL
   return fputil::greater_than(a, b) ? 1 : -1; // GE_GREATER : GE_LESS
 }
 
