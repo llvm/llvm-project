@@ -362,8 +362,8 @@ func.func @generic_broadcast_multiple_uses(%A: tensor<8xf32>, %B: tensor<8x16xf3
 
 // -----
 
-// This pass currently folds only elementwise-like, all-parallel generic ops.
-// Keep a reduction generic unchanged, even though its input map is foldable.
+// This pass currently folds only elementwise-like generic ops. Keep a
+// reduction generic unchanged, even though its input map is foldable.
 // CHECK-LABEL: func.func @generic_reduction_not_folded
 // CHECK:       linalg.broadcast
 // CHECK:       linalg.generic

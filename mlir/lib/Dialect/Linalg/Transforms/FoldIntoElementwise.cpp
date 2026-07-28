@@ -14,8 +14,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
@@ -47,8 +49,8 @@ struct ElementwiseOpFolder {
   }
 };
 
-template <typename ConsumerOpTy, typename... ProducerOps>
-static bool foldInputOperands(ConsumerOpTy op, SmallVector<Value> &newIns,
+template <typename... ProducerOps>
+static bool foldInputOperands(LinalgOp op, SmallVector<Value> &newIns,
                               SmallVector<AffineMap> &newMaps) {
   bool changed = false;
   for (OpOperand *operand : op.getDpsInputOperands()) {
@@ -67,46 +69,23 @@ static bool foldInputOperands(ConsumerOpTy op, SmallVector<Value> &newIns,
 }
 
 template <typename... ProducerOps>
-struct FoldIntoElementwisePattern : public OpRewritePattern<ElementwiseOp> {
-  using OpRewritePattern<ElementwiseOp>::OpRewritePattern;
+struct FoldIntoElementwisePattern : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(ElementwiseOp op,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value> newIns;
-    SmallVector<AffineMap> newMaps;
-    if (!foldInputOperands<ElementwiseOp, ProducerOps...>(op, newIns, newMaps))
-      return failure();
-    newMaps.push_back(op.getIndexingMapsArray().back());
-
-    rewriter.replaceOpWithNewOp<ElementwiseOp>(
-        op, newIns, op.getDpsInits()[0], op.getKindAttr(),
-        rewriter.getAffineMapArrayAttr(newMaps));
-    return success();
-  }
-};
-
-template <typename... ProducerOps>
-struct FoldIntoGenericPattern : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(GenericOp op,
-                                PatternRewriter &rewriter) const override {
-    // Restrict this pattern to elementwise-like generic ops.
-    // It may be safe to do so reduction dimensions in some cases. But we try
-    // to focus on simple cases here.
-    if (!op.isAllParallelLoops())
+    if (!isa<GenericOp, ElementwiseOp>(op.getOperation()) || !isElementwise(op))
       return failure();
 
     SmallVector<Value> newIns;
     SmallVector<AffineMap> newMaps;
-    if (!foldInputOperands<GenericOp, ProducerOps...>(op, newIns, newMaps))
+    if (!foldInputOperands<ProducerOps...>(op, newIns, newMaps))
       return failure();
 
-    // Keep all output operands and their maps unchanged. The body is cloned
-    // so that the block arguments continue to correspond to the new operand
-    // list.
-    SmallVector<AffineMap> allMaps = op.getIndexingMapsArray();
-    newMaps.append(allMaps.begin() + op.getNumDpsInputs(), allMaps.end());
+    // Keep all output operands and their maps unchanged.
+    SmallVector<AffineMap> originalMaps = op.getIndexingMapsArray();
+    newMaps.append(originalMaps.begin() + op.getNumDpsInputs(),
+                   originalMaps.end());
     // The maps of the rewritten op must still determine bounds for every loop
     // dimension. Folding a broadcast can otherwise drop the only map result
     // that covers a dimension.
@@ -114,13 +93,12 @@ struct FoldIntoGenericPattern : public OpRewritePattern<GenericOp> {
     // mlir/test/Dialect/Linalg/elementwise/fold.mlir for an example.
     if (!inversePermutation(concatAffineMaps(newMaps, op.getContext())))
       return failure();
-    auto newOp =
-        GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), newIns,
-                          op.getDpsInits(), newMaps, op.getIteratorTypesArray(),
-                          /*bodyBuild=*/nullptr, getPrunedAttributeList(op));
-    rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
-                               newOp.getRegion().begin());
-    rewriter.replaceOp(op, newOp->getResults());
+
+    rewriter.modifyOpInPlace(op, [&] {
+      for (auto [index, operand] : llvm::enumerate(op.getDpsInputOperands()))
+        op->setOperand(operand->getOperandNumber(), newIns[index]);
+      op->setAttr("indexing_maps", rewriter.getAffineMapArrayAttr(newMaps));
+    });
     return success();
   }
 };
@@ -144,7 +122,6 @@ struct LinalgFoldIntoElementwisePass
 
 void mlir::linalg::populateLinalgFoldIntoElementwisePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldIntoElementwisePattern<TransposeOp, BroadcastOp>,
-               FoldIntoGenericPattern<TransposeOp, BroadcastOp>>(
+  patterns.add<FoldIntoElementwisePattern<TransposeOp, BroadcastOp>>(
       patterns.getContext());
 }
