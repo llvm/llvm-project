@@ -6146,7 +6146,7 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
           enumerator.t)}) {
     std::optional<std::int64_t> value;
-    const parser::Expr &expr{init->thing.thing.thing.value()};
+    const parser::Expr &expr{parser::UnwrapRef<parser::Expr>(*init)};
     if (parser::IsBOZLiteral(*init)) {
       // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
       // has the value specified by INT(boz-literal-constant, C_INT).

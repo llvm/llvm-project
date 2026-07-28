@@ -137,7 +137,7 @@ const Name &GetFirstName(const AccObject &x) {
 }
 
 bool IsBOZLiteral(const ScalarIntConstantExpr &x) {
-  const Expr &expr{x.thing.thing.thing.value()};
+  const Expr &expr{UnwrapRef<Expr>(x)};
   const auto *literal{std::get_if<LiteralConstant>(&expr.u)};
   return literal && std::holds_alternative<BOZLiteralConstant>(literal->u);
 }
