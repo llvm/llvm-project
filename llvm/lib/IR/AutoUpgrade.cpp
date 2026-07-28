@@ -1288,6 +1288,45 @@ static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
          Name.consume_front("param");
 }
 
+static bool shouldUpgradeVPIntrinsic(StringRef Name) {
+  // Avoid cttz.elts clashing with cttz.
+  if (Name.starts_with("vp.cttz.elts"))
+    return false;
+  return Name.starts_with("vp.select") || Name.starts_with("vp.add") ||
+         Name.starts_with("vp.sub") || Name.starts_with("vp.mul") ||
+         Name.starts_with("vp.ashr") || Name.starts_with("vp.lshr") ||
+         Name.starts_with("vp.shl") || Name.starts_with("vp.or") ||
+         Name.starts_with("vp.and") || Name.starts_with("vp.xor") ||
+         Name.starts_with("vp.abs") || Name.starts_with("vp.smax") ||
+         Name.starts_with("vp.smin") || Name.starts_with("vp.umax") ||
+         Name.starts_with("vp.umin") || Name.starts_with("vp.copysign") ||
+         Name.starts_with("vp.minnum") || Name.starts_with("vp.maxnum") ||
+         Name.starts_with("vp.minimum") || Name.starts_with("vp.maximum") ||
+         Name.starts_with("vp.fadd") || Name.starts_with("vp.fsub") ||
+         Name.starts_with("vp.fmul") || Name.starts_with("vp.fdiv") ||
+         Name.starts_with("vp.frem") || Name.starts_with("vp.fneg") ||
+         Name.starts_with("vp.fabs") || Name.starts_with("vp.sqrt") ||
+         Name.starts_with("vp.fma") || Name.starts_with("vp.fmuladd") ||
+         Name.starts_with("vp.trunc") || Name.starts_with("vp.zext") ||
+         Name.starts_with("vp.sext") || Name.starts_with("vp.fptrunc") ||
+         Name.starts_with("vp.fpext") || Name.starts_with("vp.fptoui") ||
+         Name.starts_with("vp.fptosi") || Name.starts_with("vp.uitofp") ||
+         Name.starts_with("vp.sitofp") || Name.starts_with("vp.ptrtoint") ||
+         Name.starts_with("vp.inttoptr") || Name.starts_with("vp.fcmp") ||
+         Name.starts_with("vp.icmp") || Name.starts_with("vp.ceil") ||
+         Name.starts_with("vp.floor") || Name.starts_with("vp.rint") ||
+         Name.starts_with("vp.nearbyint") || Name.starts_with("vp.round") ||
+         Name.starts_with("vp.roundeven") ||
+         Name.starts_with("vp.roundtozero") || Name.starts_with("vp.lrint") ||
+         Name.starts_with("vp.llrint") || Name.starts_with("vp.bitreverse") ||
+         Name.starts_with("vp.bswap") || Name.starts_with("vp.ctpop") ||
+         Name.starts_with("vp.ctlz") || Name.starts_with("vp.cttz") ||
+         Name.starts_with("vp.sadd.sat") || Name.starts_with("vp.uadd.sat") ||
+         Name.starts_with("vp.ssub.sat") || Name.starts_with("vp.usub.sat") ||
+         Name.starts_with("vp.fshl") || Name.starts_with("vp.fshr") ||
+         Name.starts_with("vp.is.fpclass");
+}
+
 static bool convertIntrinsicValidType(StringRef Name,
                                       const FunctionType *FuncTy) {
   Type *HalfTy = Type::getHalfTy(FuncTy->getContext());
@@ -1918,6 +1957,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break;
       return true;
     }
+    if (shouldUpgradeVPIntrinsic(Name))
+      return true;
     break;
   }
 
@@ -5125,6 +5166,34 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static Value *upgradeVPIntrinsicCall(CallBase *CI, IRBuilder<> &Builder) {
+  Value *Rep;
+  auto Opcode = cast<VPIntrinsic>(CI)->getFunctionalOpcode();
+  if (Opcode && Instruction::isUnaryOp(*Opcode))
+    Rep = Builder.CreateUnOp((Instruction::UnaryOps)*Opcode,
+                             CI->getArgOperand(0));
+  else if (Opcode && Instruction::isBinaryOp(*Opcode))
+    Rep = Builder.CreateBinOp((Instruction::BinaryOps)*Opcode,
+                              CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode && Instruction::isCast(*Opcode))
+    Rep = Builder.CreateCast((Instruction::CastOps)*Opcode,
+                             CI->getArgOperand(0), CI->getType());
+  else if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp)
+    Rep = Builder.CreateCmp(cast<VPCmpIntrinsic>(CI)->getPredicate(),
+                            CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::Select)
+    Rep = Builder.CreateSelect(CI->getArgOperand(0), CI->getArgOperand(1),
+                               CI->getArgOperand(2));
+  else if (auto IntrinsicID =
+               cast<VPIntrinsic>(CI)->getFunctionalIntrinsicID()) {
+    SmallVector<Value *, 2> Args(drop_end(CI->args(), 2));
+    Rep = Builder.CreateIntrinsic(CI->getType(), *IntrinsicID, Args, {});
+  } else
+    llvm_unreachable("Unexpected vp intrinsic");
+  Rep->takeName(CI);
+  return Rep;
+}
+
 static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
                                                 IRBuilder<> &Builder) {
   Intrinsic::ID IID = NewFn->getIntrinsicID();
@@ -5233,6 +5302,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
       // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
       Rep = nullptr;
+    } else if (shouldUpgradeVPIntrinsic(Name)) {
+      Rep = upgradeVPIntrinsicCall(CI, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
