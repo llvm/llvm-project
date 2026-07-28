@@ -65,7 +65,6 @@ add_offload_testsuite(check-offload
   "Running offload tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
   ${CMAKE_CURRENT_BINARY_DIR}/unit
-  EXCLUDE_FROM_CHECK_ALL
   DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
           LLVMOffload OffloadUnitTests
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
