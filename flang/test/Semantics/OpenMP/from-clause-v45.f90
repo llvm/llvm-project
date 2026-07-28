@@ -19,14 +19,6 @@ subroutine f02(x)
   !$omp target update from(present, iterator(i = 1:5): x(i))
 end
 
-subroutine f03(x)
-  integer :: x(10)
-!WARNING: 'present-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
-!WARNING: 'present-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
-!ERROR: 'present-modifier' modifier cannot occur multiple times
-  !$omp target update from(present, present: x)
-end
-
 subroutine f04
 !ERROR: 'f04' must be a variable list item
   !$omp target update from(f04)

@@ -1,0 +1,125 @@
+//===-- OMPDescriptors.h - OpenMP descriptors --------------------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains definitions and declarations of OpenMP elements.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_FRONTEND_OPENMP_OMPDESCRIPTORS_H
+#define LLVM_FRONTEND_OPENMP_OMPDESCRIPTORS_H
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
+
+namespace llvm::omp {
+enum class Property {
+#define GEN_OMP_PROPERTY_ENUMS
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h.inc"
+#undef GEN_OMP_PROPERTY_ENUMS
+};
+
+static constexpr size_t Property_enumSize =
+    llvm::to_underlying(Property::Last_) -
+    llvm::to_underlying(Property::First_) + 1;
+
+enum class Modifier {
+#define GEN_OMP_MODIFIER_ENUMS
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h.inc"
+#undef GEN_OMP_MODIFIER_ENUMS
+};
+
+static constexpr size_t Modifier_enumSize =
+    llvm::to_underlying(Modifier::Last_) -
+    llvm::to_underlying(Modifier::First_) + 1;
+
+using Properties = EnumSet<Property, Property_enumSize>;
+using Modifiers = EnumSet<Modifier, Modifier_enumSize>;
+
+using Clauses = llvm::omp::ClauseSet;
+using Directives = llvm::omp::DirectiveSet;
+
+namespace descriptor {
+namespace details {
+struct Base {
+  Properties Props;
+};
+
+// struct Directive : public Base {
+//   StringRef Spelling;
+//   Association Assoc;
+//   Category Cat;
+//   Clauses Cls;
+//   SourceLanguage Langs;
+// };
+
+struct Clause : public Base {
+  StringRef Spelling;
+  Directives Dirs;
+  SourceLanguage Langs;
+  Modifiers Mods;
+};
+
+struct Modifier : public Base {
+  Clauses Cls;
+};
+} // namespace details
+
+template <typename DetailsTy> using DetailsMap = DenseMap<unsigned, DetailsTy>;
+
+template <typename DetailsTy> struct Descriptor {
+  Descriptor(const Descriptor &) = default;
+  Descriptor(Descriptor &&) = default;
+  Descriptor(StringRef N, DetailsMap<DetailsTy> &&D)
+      : Name(N), Details(std::move(D)) {}
+
+  StringRef getName() const { return Name; }
+  const DetailsMap<DetailsTy> getDetails() const { return Details; }
+
+  SmallVector<unsigned> getVersions() const {
+    SmallVector<unsigned> Vs;
+    for (unsigned V : llvm::omp::getOpenMPVersions()) {
+      if (auto F = Details.find(V); F != Details.end())
+        Vs.push_back(V);
+    }
+    return Vs;
+  }
+
+private:
+  StringRef Name;
+
+protected:
+  DetailsMap<DetailsTy> Details;
+};
+
+struct Clause : public Descriptor<details::Clause> {
+  using Base = Descriptor<details::Clause>;
+  using Base::Base;
+  Properties getProperties(unsigned V) const;
+  Directives getDirectives(unsigned V) const;
+  Modifiers getModifiers(unsigned V) const;
+};
+
+struct Modifier : public Descriptor<details::Modifier> {
+  using Base = Descriptor<details::Modifier>;
+  using Base::Base;
+  Properties getProperties(unsigned V) const;
+  Clauses getClauses(unsigned V) const;
+};
+} // namespace descriptor
+
+template <typename Enum, typename DescriptorTy>
+using DescriptorMap = DenseMap<Enum, DescriptorTy>;
+
+const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
+const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
+
+Properties getProperties(Clause C, unsigned Version);
+} // namespace llvm::omp
+
+#endif // LLVM_FRONTEND_OPENMP_OMPDESCRIPTORS_H

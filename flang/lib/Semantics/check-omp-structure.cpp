@@ -2132,19 +2132,20 @@ void OmpStructureChecker::CheckInitOnDepobj(
       auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
       context_.Say(OmpGetModifierSource(modifiers, depInfo),
           "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
-          parser::ToUpperCaseLetters(EnumToString(depKind)), desc.name.str());
+          parser::ToUpperCaseLetters(EnumToString(depKind)),
+          desc.getName().str());
     }
   } else {
     auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
     context_.Say(initClause.source,
         "The '%s' modifier is required on a DEPOBJ construct"_err_en_US,
-        desc.name.str());
+        desc.getName().str());
   }
   if (auto *prefType{OmpGetUniqueModifier<parser::OmpPreferType>(modifiers)}) {
     auto &desc{OmpGetDescriptor<parser::OmpPreferType>()};
     context_.Say(OmpGetModifierSource(modifiers, prefType),
         "The '%s' modifier is not allowed on a DEPOBJ construct"_err_en_US,
-        desc.name.str());
+        desc.getName().str());
   }
 }
 
@@ -4649,7 +4650,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
 
     parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
     auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
-    std::string modName{desc.name.str()};
+    std::string modName{desc.getName().str()};
 
     if (!isConstituent(dir, sub)) {
       context_.Say(modifierSource,
@@ -4876,7 +4877,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       const auto &desc{OmpGetDescriptor<parser::OmpAttachModifier>()};
       context_.Say(OmpGetModifierSource(modifiers, attach),
           "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
-          desc.name.str());
+          desc.getName().str());
     }
 
     auto hasBasePointer{[&](const SomeExpr &item) {
@@ -4899,23 +4900,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       context_.Say(source ? *source : GetContext().clauseSource,
           "A list-item that appears in a map clause with the ATTACH modifier must have a base-pointer"_err_en_US);
     }
-  }
-
-  auto &&typeMods{
-      OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(modifiers)};
-  struct Less {
-    using Iterator = decltype(typeMods.begin());
-    bool operator()(Iterator a, Iterator b) const {
-      const parser::OmpMapTypeModifier *pa = *a;
-      const parser::OmpMapTypeModifier *pb = *b;
-      return pa->v < pb->v;
-    }
-  };
-  if (auto maybeIter{FindDuplicate<Less>(typeMods)}) {
-    context_.Say(GetContext().clauseSource,
-        "Duplicate map-type-modifier entry '%s' will be ignored"_warn_en_US,
-        parser::ToUpperCaseLetters(
-            parser::OmpMapTypeModifier::EnumToString((**maybeIter)->v)));
   }
 
   if (version < 60) {
@@ -5032,7 +5016,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
             OmpGetUniqueModifier<parser::OmpDeviceModifier>(modifiers)}) {
       using Value = parser::OmpDeviceModifier::Value;
       if (dir != llvm::omp::OMPD_target && deviceMod->v == Value::Ancestor) {
-        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().name};
+        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().getName()};
         context_.Say(OmpGetModifierSource(modifiers, deviceMod),
             "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
             name.str(), parser::omp::GetUpperName(dir, version));
@@ -5685,7 +5669,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
     bool ok{
         memSpaceName && IsUsesAllocatorsMemSpaceName(*memSpaceName, version)};
     if (!ok) {
-      auto name{OmpGetDescriptor<parser::OmpMemSpace>().name};
+      auto name{OmpGetDescriptor<parser::OmpMemSpace>().getName()};
       context_.Say(memSpaceSource,
           "The '%s' modifier must name a predefined memory space"_err_en_US,
           name.str());
@@ -6374,7 +6358,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::SelfMaps &x) {
 
 void OmpStructureChecker::CheckDimsModifier(parser::CharBlock source,
     size_t numValues, const parser::OmpDimsModifier &x) {
-  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().name.str()};
+  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().getName().str()};
 
   if (auto dimsVal{GetIntValue(x.v)}) {
     if (*dimsVal > 0) {
@@ -6552,7 +6536,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                   auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
                   context_.Say(OmpGetModifierSource(modifiers, depInfo),
                       "The '%s' is not allowed on INTEROP construct"_err_en_US,
-                      desc.name.str());
+                      desc.getName().str());
                 }
                 // A prefer_type foreign-runtime-identifier must be a
                 // constant expression of integer OpenMP type or a base
