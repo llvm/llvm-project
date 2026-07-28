@@ -45,6 +45,7 @@ class ExprWithForkTestCase(TestBase):
         )
 
     @skipIfWindows
+    @expectedFailureAll(bugnumber="github.com/llvm/llvm-project/issues/212556")
     @add_test_categories(["fork"])
     def test_expr_with_fork_trap(self):
         """Test that expression evaluation handles a child process that triggers a SIGTRAP."""
