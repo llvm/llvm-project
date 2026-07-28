@@ -17,3 +17,12 @@ kernel void global_device_host_kernel_args(
 
 // CIR-LABEL: cir.func{{.*}} @global_device_host_kernel_args
 // CIR-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global_device)>, #cir<lang_address_space(offload_global_host)>]
+
+// Target-specific address spaces stay on pointer types but do not represent an
+// OpenCL language address-space qualifier.
+kernel void target_address_space_kernel_arg(
+    __attribute__((address_space(5))) int *T) {}
+
+// CIR-LABEL: cir.func{{.*}} @target_address_space_kernel_arg
+// CIR-SAME: !cir.ptr<!s32i, target_address_space(5)>
+// CIR-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(default)>]

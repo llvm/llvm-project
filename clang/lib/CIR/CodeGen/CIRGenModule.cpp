@@ -3266,6 +3266,26 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
+static cir::LangAddressSpace
+getOpenCLKernelArgAddressSpace(LangAS addressSpace) {
+  switch (addressSpace) {
+  case LangAS::opencl_global:
+    return cir::LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_constant:
+    return cir::LangAddressSpace::OffloadConstant;
+  case LangAS::opencl_local:
+    return cir::LangAddressSpace::OffloadLocal;
+  case LangAS::opencl_generic:
+    return cir::LangAddressSpace::OffloadGeneric;
+  case LangAS::opencl_global_device:
+    return cir::LangAddressSpace::OffloadGlobalDevice;
+  case LangAS::opencl_global_host:
+    return cir::LangAddressSpace::OffloadGlobalHost;
+  default:
+    return cir::LangAddressSpace::Default;
+  }
+}
+
 void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
                                                const clang::FunctionDecl *fd) {
   assert(fd && "expected a kernel function declaration");
@@ -3308,17 +3328,9 @@ void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
 
     if (type->isPointerType()) {
       QualType pointeeType = type->getPointeeType();
-      if (clang::isTargetAddressSpace(pointeeType.getAddressSpace())) {
-        errorNYI(param->getSourceRange(),
-                 "OpenCL kernel argument metadata for target-specific "
-                 "address_space(N) kernel parameters; classic CodeGen "
-                 "currently accepts this case");
-        return;
-      }
-
       addressQuals.push_back(cir::LangAddressSpaceAttr::get(
           &getMLIRContext(),
-          cir::toCIRLangAddressSpace(pointeeType.getAddressSpace())));
+          getOpenCLKernelArgAddressSpace(pointeeType.getAddressSpace())));
 
       argTypeNames.push_back(
           builder.getStringAttr(getTypeSpelling(pointeeType) + "*"));
