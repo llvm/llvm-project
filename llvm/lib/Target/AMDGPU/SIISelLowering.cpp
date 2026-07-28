@@ -7942,15 +7942,6 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   SDValue Src = N->getOperand(1);
   SDLoc SL(N);
 
-  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
-  if (VT.getScalarSizeInBits() < WavefrontSize) {
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        DAG.getMachineFunction().getFunction(),
-        "ballot return type is narrower than the wavefront size",
-        SL.getDebugLoc()));
-    return DAG.getPOISON(VT);
-  }
-
   if (Src.getOpcode() == ISD::SETCC) {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
