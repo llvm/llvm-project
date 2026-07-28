@@ -77,6 +77,7 @@ def ol_symbol_handle_t : Handle {
 
 def ol_errc_t : Enum {
   let desc = "Defines Return/Error codes";
+  let nodiscard = 1;
   let etors =[
     Etor<"SUCCESS", "success">,
 
@@ -163,7 +164,6 @@ def OL_INIT_ARGS_INIT : Macro {
 
 def olInit : Function {
   let desc = "Perform initialization of the Offload library";
-  let nodiscard = 1;
   let details = [
     "This must be the first API call made by a user of the Offload library",
     "Each call will increment an internal reference count that is decremented by `olShutDown`",

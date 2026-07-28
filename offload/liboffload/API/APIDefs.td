@@ -183,6 +183,10 @@ class Enum : APIObject {
   // where consecutive values are bit-shifted rather than incremented.
   bit is_bit_field = 0;
 
+  // When set, the generated enum typedef is marked with OL_NODISCARD
+  // so the compiler warns if the returned value is ignored.
+  bit nodiscard = 0;
+
   list<Etor> etors = [];
 }
 
@@ -204,6 +208,11 @@ class StructHasInheritedMembers<string BaseClass> {
 
 class Struct : APIObject {
   string base_class = "";
+
+  // When set, the generated struct typedef is marked with OL_NODISCARD
+  // so the compiler warns if the returned value is ignored.
+  bit nodiscard = 0;
+
   list<StructMember> members;
   list<StructMember> all_members =
       !if(StructHasInheritedMembers<base_class>.ret,

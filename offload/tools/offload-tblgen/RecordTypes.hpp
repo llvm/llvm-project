@@ -93,6 +93,8 @@ public:
 
   bool isBitField() const { return rec->getValueAsBit("is_bit_field"); }
 
+  bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
+
 private:
   std::vector<EnumValueRec> vals;
 };
@@ -121,6 +123,8 @@ public:
     return rec->getValueAsOptionalString("base_class");
   }
   const std::vector<StructMemberRec> &getMembers() const { return members; }
+
+  bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
 
 private:
   std::vector<StructMemberRec> members;

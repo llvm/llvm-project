@@ -131,7 +131,8 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", Enum.getDesc());
-  OS << formatv("typedef enum {0} {{\n", Enum.getName());
+  OS << formatv("typedef enum {0}{1} {{\n",
+                Enum.isNodiscard() ? "OL_NODISCARD " : "", Enum.getName());
 
   // Bitfields start from 1, other enums from 0
   uint32_t EtorVal = Enum.isBitField();
@@ -164,7 +165,8 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", Struct.getDesc());
-  OS << formatv("typedef struct {0} {{\n", Struct.getName());
+  OS << formatv("typedef struct {0}{1} {{\n",
+                Struct.isNodiscard() ? "OL_NODISCARD " : "", Struct.getName());
 
   for (const auto &Member : Struct.getMembers()) {
     OS << formatv(TAB_1 "{0} {1}; {2}", Member.getType(), Member.getName(),
