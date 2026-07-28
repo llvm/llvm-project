@@ -78,6 +78,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
       },
       const_cast<bool *>(&Block)));
 
+  SKIP_KNOWN_FAILURE(LevelZero{"driver issue"});
   void *ArgPtrs[] = {&Mem};
   size_t ArgSizes[] = {sizeof(Mem)};
   ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr, 1,
