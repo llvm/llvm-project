@@ -94,13 +94,15 @@ private:
         TSK_ExplicitSpecialization)
       return nullptr;
 
+    // FIXME: Remove this source-location heuristic once
+    // https://github.com/llvm/llvm-project/issues/206790 is fixed.
     auto IsImplicitTemplateSpecialization = [](const FunctionDecl *Redecl,
                                                const FunctionDecl *Pattern) {
       return Pattern && Redecl->getBeginLoc() == Pattern->getBeginLoc();
     };
 
-    auto redecls = llvm::to_vector(FDef->redecls());
-    for (const FunctionDecl *Redecl : llvm::reverse(redecls)) {
+    auto Redecls = llvm::to_vector(FDef->redecls());
+    for (const FunctionDecl *Redecl : llvm::reverse(Redecls)) {
       if (Redecl == FDef)
         continue;
       if (auto *MSI = Redecl->getMemberSpecializationInfo();
