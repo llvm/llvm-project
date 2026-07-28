@@ -28,11 +28,17 @@ let people know you are working on it.
 
 Then try to reproduce and fix the bug with upstream LLVM. Start by building
 LLVM from source as described in {doc}`GettingStarted` and
-use the built binaries to reproduce the failure described in the bug. Use
-a build with assertions (`-DLLVM_ENABLE_ASSERTIONS=On`). If you want to build
-LLVM in Debug mode, consider using `LLVM_PARALLEL_LINK_JOBS` and set the linker
-to anything other than GNU `ld` (e.g. `lld` or `mold`); otherwise, you'll likely
-run out of memory unless you have a lot of RAM.
+use the built binaries to reproduce the failure described in the bug.
+
+Use a Release build (`-DCMAKE_BUILD_TYPE=Release` with assertions (`-DLLVM_ENABLE_ASSERTIONS=On`).
+If you want to build LLVM in Debug mode (`-DCMAKE_BUILD_TYPE=Debug`), consider using
+`LLVM_PARALLEL_LINK_JOBS` and set the linker to anything other than GNU `ld`
+(e.g. `lld` or `mold`, by passing `-DLLVM_USE_LINKER=lld` or `-DLLVM_USE_LINKER=mold`);
+otherwise, you'll likely run out of memory unless you have a lot of RAM.
+
+Irrespective of build type (Release or Debug), you may also want to pass
+`-DLLVM_UNREACHABLE_OPTIMIZE=OFF` to get crash messages from `llvm_unreachable()`.
+See also {doc}`CMake` for more information about how to build LLVM.
 
 ### Reporting a Security Issue
 
