@@ -42,15 +42,13 @@ struct L0LaunchEnvTy {
   ze_group_size_t GroupSizes = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
   bool IsCooperative = false;
-  bool IsPtrArg = false;
   void **ArgPtrs = nullptr;
   std::unique_lock<std::mutex> Lock;
 
   L0LaunchEnvTy(KernelPropertiesTy &KernelPR, KernelArgsTy &KernelArgs,
                 KernelLaunchParamsTy LaunchParams)
       : KernelPR(KernelPR), IsCooperative(KernelArgs.Flags.Cooperative),
-        IsPtrArg(LaunchParams.Args != nullptr), ArgPtrs(LaunchParams.Args),
-        Lock(KernelPR.Mtx, std::defer_lock) {}
+        ArgPtrs(LaunchParams.Args), Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
 class L0KernelTy : public GenericKernelTy {

@@ -1,23 +1,23 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv4t-none-linux-gnueabi %t/a.s -o %t/a.o
-// RUN: ld.lld %t/a.o --script %t/far.lds -o %t/a-far
+// RUN: ld.lld -z nosort-thunks %t/a.o --script %t/far.lds -o %t/a-far
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-far | FileCheck %s --check-prefixes=FAR
-// RUN: ld.lld %t/a.o --script %t/near.lds -o %t/a-near
+// RUN: ld.lld -z nosort-thunks %t/a.o --script %t/near.lds -o %t/a-near
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-near | FileCheck %s --check-prefixes=NEAR
-// RUN: ld.lld %t/a.o -pie --script %t/far.lds -o %t/a-far-pie
+// RUN: ld.lld -z nosort-thunks %t/a.o -pie --script %t/far.lds -o %t/a-far-pie
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-far-pie | FileCheck %s --check-prefixes=FAR-PIE
-// RUN: ld.lld %t/a.o -pie --script %t/near.lds -o %t/a-near-pie
+// RUN: ld.lld -z nosort-thunks %t/a.o -pie --script %t/near.lds -o %t/a-near-pie
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-near-pie | FileCheck %s --check-prefixes=NEAR
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv4teb-none-linux-gnueabi %t/a.s -o %t/a.o
-// RUN: ld.lld %t/a.o --script %t/far.lds -o %t/a-far
+// RUN: ld.lld -z nosort-thunks %t/a.o --script %t/far.lds -o %t/a-far
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4teb-none-linux-gnueabi %t/a-far | FileCheck %s --check-prefixes=FAR-EB
-// RUN: ld.lld %t/a.o --script %t/near.lds -o %t/a-near
+// RUN: ld.lld -z nosort-thunks %t/a.o --script %t/near.lds -o %t/a-near
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4teb-none-linux-gnueabi %t/a-near | FileCheck %s --check-prefixes=NEAR
-// RUN: ld.lld %t/a.o -pie --script %t/far.lds -o %t/a-far-pie
+// RUN: ld.lld -z nosort-thunks %t/a.o -pie --script %t/far.lds -o %t/a-far-pie
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4teb-none-linux-gnueabi %t/a-far-pie | FileCheck %s --check-prefixes=FAR-EB-PIE
-// RUN: ld.lld %t/a.o -pie --script %t/near.lds -o %t/a-near-pie
+// RUN: ld.lld -z nosort-thunks %t/a.o -pie --script %t/near.lds -o %t/a-near-pie
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4teb-none-linux-gnueabi %t/a-near-pie | FileCheck %s --check-prefixes=NEAR
 
 /// On Armv4T there is no blx instruction so long branch/exchange looks slightly

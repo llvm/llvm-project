@@ -35,12 +35,12 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -54,7 +54,6 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -3580,7 +3579,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>

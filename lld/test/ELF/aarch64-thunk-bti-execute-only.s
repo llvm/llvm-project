@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld --script=lds a.o -o exe --defsym absolute=0xf0000000
+// RUN: ld.lld -z nosort-thunks --script=lds a.o -o exe --defsym absolute=0xf0000000
 // RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s
 
 //--- asm

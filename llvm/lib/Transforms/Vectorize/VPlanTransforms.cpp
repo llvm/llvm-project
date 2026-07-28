@@ -885,10 +885,6 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
   if (!WideIV)
     return nullptr;
 
-  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
-    return nullptr;
-
   // Calculate the final index.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *CanonicalIV = LoopRegion->getCanonicalIV();
@@ -3248,39 +3244,35 @@ bool VPlanTransforms::handleUncountableEarlyExits(
 #endif
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
-  for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-      // Collect condition for this early exit.
-      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
-      VPValue *CondOfEarlyExitingVPBB;
-      [[maybe_unused]] bool Matched =
-          match(EarlyExitingVPBB->getTerminator(),
-                m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
-      assert(Matched && "Terminator must be BranchOnCond");
+  for (auto [EarlyExitingVPBB, ExitBlock] :
+       vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // Collect condition for this early exit.
+    VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
+    VPValue *CondOfEarlyExitingVPBB;
+    [[maybe_unused]] bool Matched =
+        match(EarlyExitingVPBB->getTerminator(),
+              m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
+    assert(Matched && "Terminator must be BranchOnCond");
 
-      // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
-      // the correct block mask.
-      VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
-      auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
-          VPInstruction::MaskedCond,
-          TrueSucc == ExitBlock
-              ? CondOfEarlyExitingVPBB
-              : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
-      assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
-              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
-              VPDT.properlyDominates(
-                  CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
-                  LatchVPBB)) &&
-             "exit condition must dominate the latch");
-      Exits.push_back({
-          EarlyExitingVPBB,
-          ExitBlock,
-          CondToEarlyExit,
-      });
-    }
+    // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
+    // the correct block mask.
+    VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
+    auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
+        VPInstruction::MaskedCond,
+        TrueSucc == ExitBlock
+            ? CondOfEarlyExitingVPBB
+            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
+    assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+            !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
+            VPDT.properlyDominates(
+                CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
+                LatchVPBB)) &&
+           "exit condition must dominate the latch");
+    Exits.push_back({
+        EarlyExitingVPBB,
+        ExitBlock,
+        CondToEarlyExit,
+    });
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
@@ -5815,7 +5807,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIV = Builder.createScalarSExtOrTrunc(
+      VPValue *CanIV = Builder.createScalarZExtOrTrunc(
           VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(

@@ -5,12 +5,12 @@
 # RUN:       }' > %t.script
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
-# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -T %t.script %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PD %s
 # RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s
 
-# RUN: ld.lld -T %t.script -pie %t.o -o %t
+# RUN: ld.lld -z nosort-thunks -T %t.script -pie %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PI %s
 # RUN: llvm-nm --no-sort %t | FileCheck --check-prefix=NM %s

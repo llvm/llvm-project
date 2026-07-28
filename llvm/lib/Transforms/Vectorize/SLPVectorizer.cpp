@@ -5519,25 +5519,28 @@ private:
           if (!AreAllBundlesScheduled(SD, SDBundles))
             continue;
           SD->setScheduled(/*Scheduled=*/true);
+          Instruction *In = SD->getInst();
+          // The instruction may also belong to tree entries that do not need
+          // scheduling (e.g. all their values are used outside the block), so
+          // no schedule bundle is registered for them. Such an entry can still
+          // model one of this instruction's operands as a copyable element, or
+          // model the instruction itself as an expanded binop, registered on
+          // that non-scheduled parent edge. That dependency would never be
+          // decremented when the instruction is scheduled through a different
+          // bundle, leaving the operand's bundle permanently unscheduled and
+          // tripping the unscheduled-deps assertion. Add pseudo-bundles for
+          // these missing tree entries, so their operand dependencies are
+          // decremented here as well. Real operand dependencies are protected
+          // against double counting by the per-operand use counter.
           if (isa<ScheduleCopyableData>(SD) ||
-              ScheduleCopyableDataMap.empty()) {
+              (ScheduleCopyableDataMap.empty() &&
+               none_of(R.getTreeEntries(In), [&](const TreeEntry *TE) {
+                 return TE->isExpandedBinOp(In);
+               }))) {
             ProcessBundleMember(SD, isa<ScheduleCopyableData>(SD) ? &Bundle
                                                                   : SDBundles);
             continue;
           }
-          // The instruction may also belong to tree entries that do not need
-          // scheduling (e.g. all their values are used outside the block), so
-          // no schedule bundle is registered for them. Such an entry can still
-          // model one of this instruction's operands as a copyable element,
-          // registered on that non-scheduled parent edge. That copyable would
-          // never be decremented when the instruction is scheduled through a
-          // different bundle, leaving the copyable's bundle permanently
-          // unscheduled and tripping the unscheduled-deps assertion. Add
-          // pseudo-bundles for these missing tree entries, so their copyable
-          // operand dependencies are decremented here as well. Real operand
-          // dependencies are protected against double counting by the
-          // per-operand use counter in ProcessBundleMember.
-          Instruction *In = SD->getInst();
           SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
           SmallVector<ScheduleBundle *> AllBundles(SDBundles.begin(),
                                                    SDBundles.end());

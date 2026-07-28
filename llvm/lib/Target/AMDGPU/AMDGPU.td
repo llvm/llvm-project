@@ -703,10 +703,9 @@ defm SDWAOutModsVOPC : AMDGPUSubtargetFeature<"sdwa-out-mods-vopc",
   /*GenPredicate=*/0
 >;
 
-def FeatureDPP : SubtargetFeature<"dpp",
-  "HasDPP",
-  "true",
-  "Support DPP (Data Parallel Primitives) extension"
+defm DPP : AMDGPUSubtargetFeature<"dpp",
+  "Support DPP (Data Parallel Primitives) extension",
+  /*GenPredicate=*/0
 >;
 
 // DPP8 allows arbitrary cross-lane swizzling within groups of 8 lanes.

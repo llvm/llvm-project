@@ -14,8 +14,6 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXREGISTERINFO_H
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/StringSaver.h"
-#include <sstream>
 
 #define GET_REGINFO_HEADER
 #include "NVPTXGenRegisterInfo.inc"
@@ -23,9 +21,6 @@
 namespace llvm {
 class NVPTXRegisterInfo : public NVPTXGenRegisterInfo {
 private:
-  // Hold Strings that can be free'd all together with NVPTXRegisterInfo
-  BumpPtrAllocator StrAlloc;
-  UniqueStringSaver StrPool;
   // State for debug register mapping that can be mutated even through a const
   // pointer so that we can get the proper dwarf register encoding during ASM
   // emission.
@@ -50,16 +45,6 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameLocalRegister(const MachineFunction &MF) const;
 
-  UniqueStringSaver &getStrPool() const {
-    return const_cast<UniqueStringSaver &>(StrPool);
-  }
-
-  const char *getName(unsigned RegNo) const {
-    std::stringstream O;
-    O << "reg" << RegNo;
-    return getStrPool().save(O.str()).data();
-  }
-
   // Manage the debugRegisterMap.  PTX virtual registers for DebugInfo are
   // encoded using the names used in the emitted text of the PTX assembly. This
   // mapping must be managed during assembly emission.
@@ -75,7 +60,6 @@ public:
   int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const override;
 };
 
-StringRef getNVPTXRegClassName(const TargetRegisterClass *RC);
 StringRef getNVPTXRegClassStr(const TargetRegisterClass *RC);
 
 } // end namespace llvm

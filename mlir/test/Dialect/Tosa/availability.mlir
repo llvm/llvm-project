@@ -631,7 +631,7 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
   %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [int16, bf16] ]
+  // CHECK: extensions: [ [int16, fp8e4m3, fp8e5m2, bf16, mx_common, mx_fp4e2m1, mx_fp6e2m3, mx_fp6e3m2, mx_fp8e4m3, mx_fp8e5m2, mx_int8] ]
   %1 = tosa.resize %arg0, %scale, %offset, %border {mode = BILINEAR} : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }

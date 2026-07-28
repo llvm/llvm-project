@@ -70,13 +70,16 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
-void *malloc(size_t s) {
-  // Keep the bump pointer aligned on an eight byte boundary.
-  s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+void *aligned_alloc(size_t align, size_t s) {
+  if (align & (align - 1)) // Must be power of 2
+    return nullptr;
+  s = ((s + align - 1) / align) * align;
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
+
+void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
 
 void free(void *) {}
 
@@ -125,6 +128,8 @@ void *operator new(size_t size) { return malloc(size); }
 void *operator new[](size_t size) { return malloc(size); }
 
 void operator delete(void *ptr) { free(ptr); }
+
+void operator delete[](void *ptr) { free(ptr); }
 
 void operator delete(void *ptr, size_t) { free(ptr); }
 

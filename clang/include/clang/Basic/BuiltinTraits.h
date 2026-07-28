@@ -1,4 +1,4 @@
-//===--- TypeTraits.h - C++ Type Traits Support Enumerations ----*- C++ -*-===//
+//===--- BuiltinTraits.h - C++ Traits Support Enumerations ----*- C++ -*-=====//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines enumerations for the type traits support.
+/// Defines enumerations for traits support.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -38,18 +38,26 @@ namespace clang {
 //   UETT_ ...
 //   UETT_Last == last UETT_XX in the enum.
 // };
+
+/// Names for the expression traits.
+// enum ExpressionTrait {
+//   ET_ ...
+//   ET_Last == last ET_XX in the enum.
+// };
 #define EMIT_ENUMS
 #include "clang/Basic/Traits.inc"
 
-/// Return the internal name of type trait \p T. Never null.
+/// Return the internal name of the trait \p T. Never null.
 const char *getTraitName(TypeTrait T) LLVM_READONLY;
 const char *getTraitName(ArrayTypeTrait T) LLVM_READONLY;
 const char *getTraitName(UnaryExprOrTypeTrait T) LLVM_READONLY;
+const char *getTraitName(ExpressionTrait T) LLVM_READONLY;
 
-/// Return the spelling of the type trait \p TT. Never null.
+/// Return the spelling of the trait \p T. Never null.
 const char *getTraitSpelling(TypeTrait T) LLVM_READONLY;
 const char *getTraitSpelling(ArrayTypeTrait T) LLVM_READONLY;
 const char *getTraitSpelling(UnaryExprOrTypeTrait T) LLVM_READONLY;
+const char *getTraitSpelling(ExpressionTrait T) LLVM_READONLY;
 
 /// Return the arity of the type trait \p T.
 unsigned getTypeTraitArity(TypeTrait T) LLVM_READONLY;

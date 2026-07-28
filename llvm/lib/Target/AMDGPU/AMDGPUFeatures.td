@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "AMDGPUTargetParser.td"
+
 def FeatureFP64 : SubtargetFeature<"fp64",
   "HasFP64",
   "true",

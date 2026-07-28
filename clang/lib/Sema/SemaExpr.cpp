@@ -33,13 +33,13 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
@@ -2116,9 +2116,29 @@ static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
 /// getPredefinedExprDecl - Returns Decl of a given DeclContext that can be used
 /// to determine the value of a PredefinedExpr. This can be either a
 /// block, lambda, captured statement, function, otherwise a nullptr.
-static Decl *getPredefinedExprDecl(DeclContext *DC) {
-  while (DC && !isa<BlockDecl, CapturedDecl, FunctionDecl, ObjCMethodDecl>(DC))
+static Decl *getPredefinedExprDecl(Sema &S, DeclContext *DC) {
+  auto LSI = S.FunctionScopes.rbegin();
+
+  auto tryAdjustLambdaContext = [&S, &LSI](DeclContext *&DC) {
+    if (isLambdaCallOperator(DC)) {
+      auto E = S.FunctionScopes.rend();
+      while (LSI != E && isa<CapturingScopeInfo>(*LSI) &&
+             !isa<LambdaScopeInfo>(*LSI))
+        ++LSI;
+      assert(LSI != E && "Should be in a lambda scope info");
+      if (dyn_cast<LambdaScopeInfo>(*LSI)->BeforeCompoundStatement)
+        DC = DC->getParent();
+      ++LSI;
+    }
+  };
+
+  tryAdjustLambdaContext(DC);
+  while (DC &&
+         !isa<BlockDecl, CapturedDecl, FunctionDecl, ObjCMethodDecl>(DC)) {
     DC = DC->getParent();
+    tryAdjustLambdaContext(DC);
+  }
+
   return cast_or_null<Decl>(DC);
 }
 
@@ -2202,7 +2222,7 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
   // Note: Although function local macros are defined only inside functions,
   // we ensure a valid `CurrentDecl` even outside of a function. This allows
   // expansion of macros into empty string literals without additional checks.
-  Decl *CurrentDecl = getPredefinedExprDecl(CurContext);
+  Decl *CurrentDecl = getPredefinedExprDecl(*this, CurContext);
   if (!CurrentDecl)
     CurrentDecl = Context.getTranslationUnitDecl();
 
@@ -3629,7 +3649,7 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
 
 ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
                                      PredefinedIdentKind IK) {
-  Decl *currentDecl = getPredefinedExprDecl(CurContext);
+  Decl *currentDecl = getPredefinedExprDecl(*this, CurContext);
   if (!currentDecl) {
     Diag(Loc, diag::ext_predef_outside_function);
     currentDecl = Context.getTranslationUnitDecl();

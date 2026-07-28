@@ -52,7 +52,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   chown_test
   SUITE
     libc_unistd_unittests
@@ -188,7 +188,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   ftruncate_test
   SUITE
     libc_unistd_unittests
@@ -596,7 +596,7 @@ add_libc_unittest(
     libc.src.unistd.geteuid
 )
 
-add_libc_unittest(
+add_libc_test(
   syscall_test
   SUITE
     libc_unistd_unittests

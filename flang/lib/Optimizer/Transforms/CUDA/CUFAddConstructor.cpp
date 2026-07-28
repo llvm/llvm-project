@@ -383,7 +383,9 @@ struct CUFAddConstructor
               // Under -gpu=mem:unified, also register the global as
               // device-resident so a matching host symbol from another
               // translation unit is not treated as host memory.
-              if (cudaUnified) {
+              if (cudaUnified &&
+                  attr.getValue() != cuf::DataAttribute::Constant &&
+                  attr.getValue() != cuf::DataAttribute::Device) {
                 uint64_t szBytes = getGlobalSizeInBytes(
                     loc, *dl, kindMap, typeConverter, globalOp);
                 cuf::RegisterVariableStaticOp::create(
@@ -443,7 +445,7 @@ struct CUFAddConstructor
         mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
-    priorities.push_back(0);
+    priorities.push_back(priority);
     data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),

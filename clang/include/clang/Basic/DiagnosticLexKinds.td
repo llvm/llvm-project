@@ -145,6 +145,8 @@ def warn_utf8_symbol_homoglyph : Warning<
 def warn_utf8_symbol_zero_width : Warning<
   "identifier contains character %0 that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
+defm mathematical_notation : CXX29Compat<
+  "mathematical notation character %0 in an identifier is">;
 def ext_mathematical_notation : ExtWarn<
   "mathematical notation character %0 in an identifier is a Clang extension">,
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;

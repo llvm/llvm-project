@@ -81,7 +81,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();

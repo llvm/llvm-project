@@ -1,11 +1,11 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: echo '.globl f, g, h; f: g: h:' | llvm-mc -filetype=obj -triple=powerpc - -o %t1.o
-# RUN: ld.lld -shared %t1.o -soname t1.so -o %t1.so
+# RUN: ld.lld -z nosort-thunks -shared %t1.o -soname t1.so -o %t1.so
 # RUN: echo 'bl f+0x8000@plt' | llvm-mc -filetype=obj -triple=powerpc - -o %t2.o
 
 ## Check we can create PLT entries for -fPIE or -fpie executable.
-# RUN: ld.lld -pie %t.o %t1.so %t2.o -o %t
+# RUN: ld.lld -z nosort-thunks -pie %t.o %t1.so %t2.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readobj -d %t | FileCheck --check-prefix=DYN %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC %s
@@ -13,7 +13,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PIE %s
 
 ## Check we can create PLT entries for -fPIC or -fpic DSO.
-# RUN: ld.lld -shared %t.o %t1.so %t2.o -o %t
+# RUN: ld.lld -z nosort-thunks -shared %t.o %t1.so %t2.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,SHARED %s
 

@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld --script=lds a.o -o out
+// RUN: ld.lld -z nosort-thunks --script=lds a.o -o out
 // RUN: llvm-objdump -d --no-show-raw-insn out | FileCheck %s
 
 /// Test that a thunk that at creation time does not need to use a BTI

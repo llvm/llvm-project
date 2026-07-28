@@ -50,14 +50,12 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   llvm::StringMap<bool> OffloadArchFeatures;
   std::string TargetID;
 
-  bool hasFP64() const {
-    return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FP64);
-  }
+  bool hasFP64() const { return getTriple().isAMDGCN(); }
 
   /// Has fast fma f32
   bool hasFastFMAF() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
   }
 
   /// Has fast fma f64
@@ -65,17 +63,15 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FMA);
+           !!(GPUFeatures & llvm::AMDGPU::R600_FEATURE_FMA);
   }
 
   bool hasFullRateDenormalsF32() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
   }
 
-  bool hasLDEXPF() const {
-    return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_LDEXP);
-  }
+  bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
 
   static bool isR600(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::r600;

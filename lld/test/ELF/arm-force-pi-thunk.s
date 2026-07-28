@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi a.s -o a.o
-// RUN: ld.lld --pic-veneer --no-rosegment --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --pic-veneer --no-rosegment --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
 
 // Test that we can force generation of position independent thunks even when

@@ -334,8 +334,10 @@ public:
         setValue(i, *valArgs[i]);
   }
 
-  /// Creates an affine constraint system from an IntegerSet.
-  explicit FlatLinearValueConstraints(IntegerSet set, ValueRange operands = {});
+  /// Creates an affine constraint system from an IntegerSet. Returns failure
+  /// if `set` is semi-affine, as flattening is not implemented for those.
+  static FailureOr<FlatLinearValueConstraints>
+  create(IntegerSet set, ValueRange operands = {});
 
   /// Return the kind of this object.
   Kind getKind() const override { return Kind::FlatLinearValueConstraints; }
@@ -517,6 +519,12 @@ public:
   ///    output = {0 <= d0 <= 6, 1 <= d1 <= 15}
   LogicalResult unionBoundingBox(const FlatLinearValueConstraints &other);
   using IntegerPolyhedron::unionBoundingBox;
+
+protected:
+  /// Creates an affine constraint system from an IntegerSet. `error` is set to
+  /// true if `set` could not be flattened, in which case the constraint system
+  /// is left without the constraints of `set`. Use `create` instead.
+  FlatLinearValueConstraints(IntegerSet set, ValueRange operands, bool *error);
 };
 
 /// Flattens 'expr' into 'flattenedExpr', which contains the coefficients of the

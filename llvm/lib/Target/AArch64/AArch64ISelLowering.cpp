@@ -217,6 +217,13 @@ static cl::opt<bool> UseConditionalFPMRWrite(
              "current value"),
     cl::init(false));
 
+// Development flag to allow incremental bring up. Will be removed once the
+// implementation is complete.
+static cl::opt<bool> EnableSVEFixedLengthBfloatSupport(
+    "aarch64-sve-vls-bfloat-support", cl::Hidden,
+    cl::desc("Use SVE for fixed-length vector bfloat operations"),
+    cl::init(false));
+
 /// Value type used for condition codes.
 constexpr MVT CondCodeVT = MVT::i32;
 
@@ -7566,8 +7573,7 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   assert(LoadNode && "Expected custom lowering of a masked load node");
   EVT VT = Op->getValueType(0);
 
-  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true,
-                                   /*AllowBF16=*/true))
+  if (VT.isFixedLengthVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return LowerFixedLengthVectorMLoadToSVE(Op, DAG);
 
   SDValue PassThru = LoadNode->getPassThru();
@@ -8989,9 +8995,8 @@ bool AArch64TargetLowering::mergeStoresAfterLegalization(EVT VT) const {
   return !Subtarget->useSVEForFixedLengthVectors();
 }
 
-bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(EVT VT,
-                                                         bool OverrideNEON,
-                                                         bool AllowBF16) const {
+bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
+    EVT VT, bool OverrideNEON) const {
   if (!VT.isFixedLengthVector() || !VT.isSimple())
     return false;
 
@@ -9003,7 +9008,7 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(EVT VT,
   default:
     return false;
   case MVT::bf16:
-    if (!AllowBF16)
+    if (!EnableSVEFixedLengthBfloatSupport)
       return false;
     break;
   case MVT::i8:
@@ -12218,8 +12223,7 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     return SDValue();
 
   EVT VT = Op.getValueType();
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+  if (VT.isVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   bool IsParity = Op.getOpcode() == ISD::PARITY;
@@ -12373,8 +12377,7 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
 
   // Note: This lowering only overrides NEON for v1i64 and v2i64, where we
   // prefer using SVE if available.
-  if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true)) {
+  if (VT.isVector() && Subtarget->isSVEorStreamingSVEAvailable()) {
     switch (Opcode) {
     default:
       llvm_unreachable("Wrong instruction");
@@ -17757,7 +17760,7 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
 
-  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+  if (VT.isFixedLengthVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return LowerFixedLengthVectorIntDivideToSVE(Op, DAG);
 
   unsigned Opc = Op.getOpcode();
@@ -34730,9 +34733,8 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
 
-  bool ConvertToScalable =
-      ResultVT.isFixedLengthVector() &&
-      useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true);
+  bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
+                           Subtarget->isSVEorStreamingSVEAvailable();
 
   if (ConvertToScalable) {
     ResultVT = getContainerForFixedLengthVector(DAG, ResultVT);
@@ -34868,9 +34870,9 @@ SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
                        Op->getFlags());
   }
 
-  bool UseSVE = !Subtarget->isNeonAvailable();
-  if (useSVEForFixedLengthVectorVT(VT, UseSVE) ||
-      useSVEForFixedLengthVectorVT(InVT, UseSVE))
+  bool OverrideNEON = !Subtarget->isNeonAvailable();
+  if (useSVEForFixedLengthVectorVT(VT, OverrideNEON) ||
+      useSVEForFixedLengthVectorVT(InVT, OverrideNEON))
     return LowerFixedLengthFPToIntToSVE(Op, DAG);
 
   return SDValue();

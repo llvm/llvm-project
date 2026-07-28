@@ -1,7 +1,4 @@
-// RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s \
-// RUN:   --implicit-check-not=cir.alloca \
-// RUN:   --implicit-check-not=cir.load \
-// RUN:   --implicit-check-not=cir.store
+// RUN: cir-opt %s -cir-flatten-cfg -mem2reg -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 
@@ -19,5 +16,55 @@ module {
     cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
     %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.return %4 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_volatile
+  cir.func @do_not_promote_volatile_load() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load volatile %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load volatile %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_volatile_store
+  cir.func @do_not_promote_volatile_store() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: cir.store volatile %{{.+}}, %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store volatile %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_atomic_load
+  cir.func @do_not_promote_atomic_load() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load atomic(acquire) %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load atomic(acquire) %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @do_not_promote_atomic_store
+  cir.func @do_not_promote_atomic_store() -> !s32i {
+    // CHECK: %[[ALLOCA:.*]] = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    // CHECK: cir.store atomic(release) %{{.+}}, %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
+    // CHECK: %[[RET:.+]] = cir.load %[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
+    // CHECK: cir.return %[[RET]] : !s32i
+    %0 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<42> : !s32i
+    cir.store atomic(release) %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
   }
 }

@@ -20,7 +20,6 @@ define <2 x float> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0f3F800000, 0f40000000};
 ; CHECK-NEXT:    ret;

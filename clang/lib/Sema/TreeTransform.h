@@ -16338,6 +16338,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     TRC.ConstraintExpr = E.get();
   }
 
+  LSI->BeforeCompoundStatement = false;
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,

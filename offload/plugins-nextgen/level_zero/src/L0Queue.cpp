@@ -52,14 +52,9 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
                                       ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
-  if (KEnv.IsPtrArg)
-    return CmdList->appendLaunchKernelWithArgs(
-        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
-        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
-
-  return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
-                                     NumWaitEvents, WaitEvents,
-                                     KEnv.IsCooperative);
+  return CmdList->appendLaunchKernelWithArgs(
+      Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+      NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 }
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,

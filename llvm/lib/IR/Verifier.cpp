@@ -2000,6 +2000,17 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Check(Value, "wchar_size metadata requires constant integer argument");
   }
 
+  if (ID->getString() == "long-double-type") {
+    Check(MFB == Module::Error,
+          "long-double-type module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "long-double-type metadata requires a string argument");
+    if (Value)
+      Check(Value->getString() == "ppc_fp128" ||
+                Value->getString() == "fp128" || Value->getString() == "double",
+            "invalid long-double-type metadata value", Op);
+  }
+
   if (ID->getString() == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might

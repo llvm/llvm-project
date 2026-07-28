@@ -379,12 +379,10 @@ static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
                                                  llvm::Triple T,
                                                  StringRef Processor) {
   // Warn no-cumode for AMDGCN processors not supporing WGP mode.
-  if (!T.isAMDGPU())
+  if (!T.isAMDGCN())
     return false;
-  auto GPUKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Processor)
-                              : llvm::AMDGPU::parseArchR600(Processor);
-  auto GPUFeatures = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
-                                  : llvm::AMDGPU::getArchAttrR600(GPUKind);
+  llvm::AMDGPU::GPUKind GPUKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
+  unsigned GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
   if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
     return false;
   return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);

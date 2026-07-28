@@ -10,9 +10,13 @@ def SOME_FUNC : RuntimeLibcall;
 def OTHER_FUNC : RuntimeLibcall;
 def ANOTHER_DUP : RuntimeLibcall;
 
-def isTargetArchA : RuntimeLibcallAvailability<[{isTargetArchA()}]>;
-def isTargetArchB : RuntimeLibcallAvailability<[{isTargetArchB()}]>;
-def isTargetArchC : RuntimeLibcallAvailability<[{isTargetArchC()}]>;
+def IsTargetArchA : LibcallPredicate<[{isTargetArchA()}]>;
+def IsTargetArchB : LibcallPredicate<[{isTargetArchB()}]>;
+def IsTargetArchC : LibcallPredicate<[{isTargetArchC()}]>;
+
+def isTargetArchA : RuntimeLibcallAvailability<(all_of IsTargetArchA)>;
+def isTargetArchB : RuntimeLibcallAvailability<(all_of IsTargetArchB)>;
+def isTargetArchC : RuntimeLibcallAvailability<(all_of IsTargetArchC)>;
 
 def func_a : RuntimeLibcallImpl<SOME_FUNC>;
 def func_b : RuntimeLibcallImpl<SOME_FUNC>;

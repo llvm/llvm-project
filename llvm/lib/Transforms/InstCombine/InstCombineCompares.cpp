@@ -6537,6 +6537,7 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
                         SimplifiedOp1 ? SimplifiedOp1 : ICmp.getOperand(1));
 
   auto *CastOp0 = dyn_cast<CastInst>(ICmp.getOperand(0));
+  Value *Op1 = ICmp.getOperand(1);
   if (!CastOp0)
     return nullptr;
   if (!isa<Constant>(ICmp.getOperand(1)) && !isa<CastInst>(ICmp.getOperand(1)))
@@ -6548,32 +6549,30 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
 
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
-  // TODO: for icmp (ptrtoaddr), (ptrtoaddr), we don't need this check;
-  // currently it is always false if the pointer has non-address bits.
   auto CompatibleSizes = [&](Type *PtrTy, Type *IntTy) {
-    if (isa<VectorType>(PtrTy)) {
-      PtrTy = cast<VectorType>(PtrTy)->getElementType();
-      IntTy = cast<VectorType>(IntTy)->getElementType();
-    }
-    return DL.getPointerTypeSizeInBits(PtrTy) == IntTy->getIntegerBitWidth();
+    unsigned IntWidth = IntTy->getScalarType()->getIntegerBitWidth();
+    unsigned IndexWidth = DL.getAddressSizeInBits(PtrTy);
+    unsigned PtrWidth = DL.getPointerTypeSizeInBits(PtrTy);
+    // For ptrtoint/inttoptr, we must check that IntWidth == IndexWidth and also
+    // IndexWidth == PtrWidth to (not) handle non-integral pointers.
+    return IntWidth == IndexWidth && IndexWidth == PtrWidth;
   };
-  if (isa<PtrToIntInst, PtrToAddrInst>(CastOp0) &&
-      CompatibleSizes(SrcTy, DestTy)) {
+  if (isa<PtrToIntInst, PtrToAddrInst>(CastOp0)) {
+    bool HasPtrToInt = isa<PtrToIntInst>(CastOp0);
     Value *NewOp1 = nullptr;
-    if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
-      Value *PtrSrc = PtrToIntOp1->getOperand(0);
-      if (PtrSrc->getType() == Op0Src->getType())
-        NewOp1 = PtrToIntOp1->getOperand(0);
-    } else if (auto *PtrToAddrOp1 =
-                   dyn_cast<PtrToAddrOperator>(ICmp.getOperand(1))) {
-      Value *PtrSrc = PtrToAddrOp1->getOperand(0);
-      if (PtrSrc->getType() == Op0Src->getType())
-        NewOp1 = PtrToAddrOp1->getOperand(0);
-    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
+    if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(Op1)) {
+      NewOp1 = PtrToIntOp1->getOperand(0);
+      HasPtrToInt = true;
+    } else if (auto *PtrToAddrOp1 = dyn_cast<PtrToAddrOperator>(Op1)) {
+      NewOp1 = PtrToAddrOp1->getOperand(0);
+    } else if (auto *RHSC = dyn_cast<Constant>(Op1)) {
       NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
 
-    if (NewOp1)
+    // For ptrtoaddr, IntWidth == IndexWidth is implied and we don't need to
+    // check PtrWidth.
+    if ((!HasPtrToInt || CompatibleSizes(SrcTy, DestTy)) &&
+        (NewOp1 && NewOp1->getType() == Op0Src->getType()))
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
@@ -6581,11 +6580,11 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   if (CastOp0->getOpcode() == Instruction::IntToPtr &&
       CompatibleSizes(DestTy, SrcTy)) {
     Value *NewOp1 = nullptr;
-    if (auto *IntToPtrOp1 = dyn_cast<IntToPtrInst>(ICmp.getOperand(1))) {
+    if (auto *IntToPtrOp1 = dyn_cast<IntToPtrInst>(Op1)) {
       Value *IntSrc = IntToPtrOp1->getOperand(0);
       if (IntSrc->getType() == Op0Src->getType())
         NewOp1 = IntToPtrOp1->getOperand(0);
-    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
+    } else if (auto *RHSC = dyn_cast<Constant>(Op1)) {
       NewOp1 = ConstantFoldConstant(ConstantExpr::getPtrToInt(RHSC, SrcTy), DL);
     }
 

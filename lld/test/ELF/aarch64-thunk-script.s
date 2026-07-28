@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: split-file %s %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %t/asm -o %t.o
-// RUN: ld.lld --script %t/lds %t.o -o %t/out
+// RUN: ld.lld -z nosort-thunks --script %t/lds %t.o -o %t/out
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t/out | FileCheck %s
 // RUN: llvm-nm --no-sort --special-syms %t/out | FileCheck --check-prefix=NM %s
 

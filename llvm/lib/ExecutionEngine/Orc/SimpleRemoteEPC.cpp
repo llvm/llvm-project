@@ -339,10 +339,12 @@ Error SimpleRemoteEPC::setup() {
   BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
+  BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
+  BootstrapSymbols[rt::DispatchCtxName] =
+      BootstrapSymbols[ExecutorSessionObjectName];
+
   if (auto Err = getBootstrapSymbols(
-          {{JDI.JITDispatchContext, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunction, DispatchFnName},
-           {RunAsMainAddr, rt::RunAsMainWrapperName},
+          {{RunAsMainAddr, rt::RunAsMainWrapperName},
            {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
            {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;

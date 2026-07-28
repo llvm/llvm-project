@@ -1,7 +1,7 @@
 # REQUIRES: hexagon
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf main.s -o main.o
-# RUN: ld.lld main.o -o test
+# RUN: ld.lld -z nosort-thunks main.o -o test
 # RUN: llvm-objdump -d --no-show-raw-insn test | FileCheck %s
 
 ## Test thunk range scenarios for Hexagon R_HEX_B22_PCREL relocations.

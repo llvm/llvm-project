@@ -226,6 +226,31 @@ define spir_kernel void @trunc_i24_icmp_slt(i64 %a, ptr addrspace(1) %out) {
 }
 
 ; ----------------------------------------------------------------------------
+; trunc i8 to i4 feeding icmp slt: source and destination widen to the same
+; legal width (i8), so the G_TRUNC handler replaces the destination with the
+; masking G_AND. The sign-sensitive width record must survive that replacement
+; so the widened i8 compare still gets its shl/ashr sign extension.
+; CHECK: OpFunction
+; CHECK: %[[#XT8:]] = OpFunctionParameter
+; CHECK: %[[#YT8:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK-DAG: %[[#ANDA_T8:]] = OpBitwiseAnd %[[#I8]] %[[#XT8]] {{%[0-9]+}}
+; CHECK-DAG: %[[#ANDB_T8:]] = OpBitwiseAnd %[[#I8]] %[[#YT8]] {{%[0-9]+}}
+; CHECK: %[[#SHLA_T8:]] = OpShiftLeftLogical %[[#I8]] %[[#ANDA_T8]] %[[#K4]]
+; CHECK: %[[#SXA_T8:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLA_T8]] %[[#K4]]
+; CHECK: %[[#SHLB_T8:]] = OpShiftLeftLogical %[[#I8]] %[[#ANDB_T8]] %[[#K4]]
+; CHECK: %[[#SXB_T8:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLB_T8]] %[[#K4]]
+; CHECK: OpSLessThan {{%[0-9]+}} %[[#SXA_T8]] %[[#SXB_T8]]
+define spir_kernel void @trunc_i8_to_i4_icmp_slt(i8 %a, i8 %b, ptr addrspace(1) %out) {
+  %at = trunc i8 %a to i4
+  %bt = trunc i8 %b to i4
+  %c = icmp slt i4 %at, %bt
+  %r = sext i1 %c to i8
+  store i8 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
 ; Negative test: unsigned compare must NOT emit sign-extension shifts.
 ; CHECK: OpFunction
 ; CHECK: %[[#X7:]] = OpFunctionParameter

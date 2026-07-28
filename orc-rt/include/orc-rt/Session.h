@@ -217,8 +217,8 @@ public:
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
     /// Send the result of the given wrapper function call to the controller.
-    virtual void sendWrapperResult(uint64_t CallId,
-                                   WrapperFunctionBuffer ResultBytes) = 0;
+    virtual void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                                   uint64_t CallId) = 0;
 
     /// Notify the Session that the controller has disconnected.
     ///
@@ -237,9 +237,9 @@ public:
     /// Ask the Session to run the given wrapper function.
     ///
     /// Subclasses must not call this method after notifyDisconnected is called.
-    void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
-                           WrapperFunctionBuffer ArgBytes) {
-      S.handleWrapperCall(CallId, Fn, std::move(ArgBytes));
+    void handleWrapperCall(orc_rt_WrapperFunction Fn,
+                           WrapperFunctionBuffer ArgBytes, uint64_t CallId) {
+      S.handleWrapperCall(Fn, std::move(ArgBytes), CallId);
     }
 
     /// Complete a controller call with a result the controller returned, by
@@ -559,8 +559,8 @@ private:
   void shutdownServices(std::vector<Service *> ToNotify);
   void completeShutdown();
 
-  void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
-                         WrapperFunctionBuffer ArgBytes) {
+  void handleWrapperCall(orc_rt_WrapperFunction Fn,
+                         WrapperFunctionBuffer ArgBytes, uint64_t CallId) {
     TaskGroup::Token T(ManagedCodeTaskGroup);
     if (!T) {
       // The ManagedCodeTaskGroup is only closed after detach, so if token
@@ -572,7 +572,7 @@ private:
 
     Dispatch([this, CallId, Fn, ArgBytes = std::move(ArgBytes),
               T = std::move(T)]() mutable {
-      Fn(wrap(this), CallId, &wrapperReturn, ArgBytes.release());
+      Fn(wrap(this), ArgBytes.release(), &wrapperReturn, CallId);
     });
   }
 
@@ -618,9 +618,10 @@ private:
     OnComplete.Wrapped(disconnectError());
   }
 
-  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
-  static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
-                            orc_rt_WrapperFunctionBuffer ResultBytes);
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes, uint64_t CallId);
+  static void wrapperReturn(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ResultBytes,
+                            uint64_t CallId);
 
   ExecutorProcessInfo EPI;
   DispatchFn Dispatch;

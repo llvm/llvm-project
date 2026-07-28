@@ -25311,7 +25311,12 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         return CanonicalizeBuildVector(Ops, /*FreezeUndef=*/true);
 
       // BUILD_VECTOR - insert unused operands and build new BUILD_VECTOR.
-      if (CurVec.getOpcode() == ISD::BUILD_VECTOR && CurVec.hasOneUse()) {
+      // A multi-use base is allowed when the target prefers build_vector
+      // sources: rebuilding only re-references the base's scalar operands, and
+      // it un-shares the base so each vector is built independently.
+      if (CurVec.getOpcode() == ISD::BUILD_VECTOR &&
+          (CurVec.hasOneUse() ||
+           TLI.aggressivelyPreferBuildVectorSources(VT))) {
         for (unsigned I = 0; I != NumElts; ++I)
           AddBuildVectorOp(Ops, CurVec.getOperand(I), I);
         return CanonicalizeBuildVector(Ops);

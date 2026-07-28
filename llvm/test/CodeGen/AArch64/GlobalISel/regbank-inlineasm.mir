@@ -40,12 +40,12 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: inlineasm_phys_reg_output
     ; CHECK: INLINEASM &"mov ${0:w}, 7", attdialect, regdef, implicit-def $w0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     INLINEASM &"mov ${0:w}, 7", attdialect, regdef, implicit-def $w0
-    %0:_(s32) = COPY $w0
-    $w0 = COPY %0(s32)
+    %0:_(i32) = COPY $w0
+    $w0 = COPY %0(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -58,12 +58,12 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: inlineasm_virt_reg_output
     ; CHECK: INLINEASM &"mov ${0:w}, 7", attdialect, regdef:GPR32common, def %0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY %0
-    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY %0
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     INLINEASM &"mov ${0:w}, 7", attdialect, regdef:GPR32common, def %0:gpr32common
-    %1:_(s32) = COPY %0
-    $w0 = COPY %1(s32)
+    %1:_(i32) = COPY %0
+    $w0 = COPY %1(i32)
     RET_ReallyLR implicit $w0
 ...
 
@@ -76,13 +76,13 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: inlineasm_virt_mixed_types
     ; CHECK: INLINEASM &"mov $0, #0; mov $1, #0", attdialect, regdef:GPR32common, def %0, regdef:FPR64, def %1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY %0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY %1
-    ; CHECK-NEXT: $d0 = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(i32) = COPY %0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i64) = COPY %1
+    ; CHECK-NEXT: $d0 = COPY [[COPY1]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     INLINEASM &"mov $0, #0; mov $1, #0", attdialect, regdef:GPR32common, def %0:gpr32common, regdef:FPR64, def %1:fpr64
-    %3:_(s32) = COPY %0
-    %4:_(s64) = COPY %1
-    $d0 = COPY %4(s64)
+    %3:_(i32) = COPY %0
+    %4:_(i64) = COPY %1
+    $d0 = COPY %4(i64)
     RET_ReallyLR implicit $d0
 ...

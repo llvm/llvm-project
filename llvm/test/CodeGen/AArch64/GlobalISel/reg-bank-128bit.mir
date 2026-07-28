@@ -13,10 +13,10 @@ body: |
     ; CHECK:       - { id: 1, class: gpr
     ; CHECK:       - { id: 2, class: gpr
     ; CHECK:       - { id: 3, class: fpr
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = COPY $x1
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = COPY $x1
     %2:_(p0) = COPY $x2
-    %3:_(s128) = G_MERGE_VALUES %0, %1
-    %4:_(s64) = G_TRUNC %3
+    %3:_(i128) = G_MERGE_VALUES %0, %1
+    %4:_(i64) = G_TRUNC %3
     $d0 = COPY %4
 ...

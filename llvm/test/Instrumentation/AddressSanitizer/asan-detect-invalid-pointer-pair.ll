@@ -28,3 +28,16 @@ define i32 @mysub(ptr %p, ptr %q) sanitize_address {
   %w = trunc i64 %z to i32
   ret i32 %w
 }
+
+define i32 @mysub_ptrtoaddr(ptr %p, ptr %q) sanitize_address {
+; ALL-LABEL: @mysub_ptrtoaddr
+; NOSUB-NOT: call void @__sanitizer_ptr_sub
+; SUB: [[P:%[0-9A-Za-z]+]] = ptrtoaddr ptr %p to i64
+; SUB: [[Q:%[0-9A-Za-z]+]] = ptrtoaddr ptr %q to i64
+  %x = ptrtoaddr ptr %p to i64
+  %y = ptrtoaddr ptr %q to i64
+  %z = sub i64 %x, %y
+; SUB: call void @__sanitizer_ptr_sub(i64 [[P]], i64 [[Q]])
+  %w = trunc i64 %z to i32
+  ret i32 %w
+}

@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
-// RUN: ld.lld a.o --shared --icf=all -o a.so --script=a.lds --print-map --print-icf-sections
+// RUN: ld.lld -z nosort-thunks a.o --shared --icf=all -o a.so --script=a.lds --print-map --print-icf-sections
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex -d a.so | FileCheck %s
 // RUN: rm a.so
 

@@ -32,6 +32,20 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 
   add_integration_test(
+    putenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      putenv_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.stdlib.getenv
+      libc.src.stdlib.putenv
+      libc.src.string.strcmp
+      libc.src.unistd.environ
+  )
+
+  add_integration_test(
     unsetenv_test
     SUITE
       stdlib-integration-tests

@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
-// RUN: ld.lld --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
 
 //--- a.lds

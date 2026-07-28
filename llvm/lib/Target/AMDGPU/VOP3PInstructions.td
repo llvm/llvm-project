@@ -151,9 +151,9 @@ def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
 }
 
 def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
-  let HasModifiers = 0;
   let HasOpSel = 0;
   let HasClamp = 0;
+  let HasNeg = 0;
   let Src0RC64 = VSrc_v2b64;
   let Src1RC64 = VSrc_v2b32;
   let Src2RC64 = VSrc_v2b64;
@@ -574,12 +574,13 @@ def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 let SubtargetPredicate = HasPackedU64Ops in {
 let AddedComplexity = 5 in
 def : GCNPat<
-  (v2i64 (DivergentBinFrag<shl_0_to_4> v2i64:$src0, v2i64:$src1)),
-  (v2i64 (V_PK_LSHL_ADD_U64 $src0,
-    (v2i32 (REG_SEQUENCE VReg_64,
-      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
-      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
-    (v2i64 (as_i64imm (i32 0)))))
+  (v2i64 (DivergentBinFrag<shl_0_to_4> (v2i64 (VOP3PMods v2i64:$src0, i32:$src0_mods)),
+                                       (v2i64 (VOP3PMods v2i64:$src1, i32:$src1_mods)))),
+  (v2i64 (V_PK_LSHL_ADD_U64 $src0_mods, $src0,
+    $src1_mods, (v2i32 (REG_SEQUENCE VReg_64,
+                  (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+                  (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    0, (v2i64 (as_i64imm (i32 0)))))
 >;
 
 def : GCNPat<
@@ -594,12 +595,14 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (ThreeOpFrag<shl_0_to_4, add> v2i64:$src0, v2i64:$src1, v2i64:$src2),
-  (V_PK_LSHL_ADD_U64 VSrc_v2b64:$src0,
-    (v2i32 (REG_SEQUENCE VReg_64,
-      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
-      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
-    VSrc_v2b64:$src2)
+  (ThreeOpFrag<shl_0_to_4, add> (v2i64 (VOP3PMods v2i64:$src0, i32:$src0_mods)),
+                                (v2i64 (VOP3PMods v2i64:$src1, i32:$src1_mods)),
+                                (v2i64 (VOP3PMods v2i64:$src2, i32:$src2_mods))),
+  (V_PK_LSHL_ADD_U64 $src0_mods, VSrc_v2b64:$src0,
+    $src1_mods, (v2i32 (REG_SEQUENCE VReg_64,
+                  (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+                  (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    $src2_mods, VSrc_v2b64:$src2)
 >;
 } // End SubtargetPredicate = HasPackedU64Ops
 

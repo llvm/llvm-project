@@ -852,6 +852,7 @@ cc_binary(
 cc_binary(
     name = "llvm-min-tblgen",
     srcs = glob(["utils/TableGen/Basic/*.h"]) + [
+        "utils/TableGen/Basic/AMDGPUTargetDefEmitter.cpp",
         "utils/TableGen/Basic/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
@@ -1613,6 +1614,17 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "R600TargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/R600.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
@@ -1658,6 +1670,7 @@ cc_library(
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
         "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
+        "include/llvm/TargetParser/R600TargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
     ]),
