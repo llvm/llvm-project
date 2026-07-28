@@ -47,7 +47,6 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintBeforePasses;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintVectorRegionScope;
-LLVM_ABI_FOR_TEST extern cl::opt<unsigned> VPlanPrintInstance;
 #endif
 
 struct VPlanTransforms {
@@ -63,12 +62,13 @@ struct VPlanTransforms {
     Function *Fn = Plan.getScalarHeader()->getIRBasicBlock()->getParent();
     unsigned Instance = ++PassCounter[{Fn, PassName}];
 
-    auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
-      if (VPlanPrintInstance != 0 && VPlanPrintInstance != Instance)
-        return;
+    std::string NumberedPassName =
+        Instance == 1 ? PassName.str()
+                      : (PassName + "@" + Twine(Instance)).str();
 
+    auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
       dbgs() << "VPlan for loop in '" << Fn->getName() << "' "
-             << BeforeOrAfterStr << " " << PassName << '\n';
+             << BeforeOrAfterStr << " " << NumberedPassName << '\n';
       if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
         Plan.getVectorLoopRegion()->print(dbgs());
       else
@@ -77,8 +77,8 @@ struct VPlanTransforms {
 
     auto MatchesPassListOption = [&](const cl::list<std::string> &ListOpt) {
       return (ListOpt.getNumOccurrences() > 0 &&
-              any_of(ListOpt, [PassName](StringRef Entry) {
-                return Regex(Entry).match(PassName);
+              any_of(ListOpt, [&](StringRef Entry) {
+                return Regex(Entry).match(NumberedPassName);
               }));
     };
 

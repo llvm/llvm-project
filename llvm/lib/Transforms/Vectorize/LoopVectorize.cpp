@@ -382,11 +382,6 @@ cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
     "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
     cl::desc("Limit VPlan printing to vector loop region in "
              "`-vplan-print-after*` if the plan has one."));
-
-cl::opt<unsigned> llvm::VPlanPrintInstance(
-    "vplan-print-instance", cl::init(0), cl::Hidden,
-    cl::desc("Only print Nth instance of the specified VPlan "
-             "transformation(s), zero - print all instances."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
