@@ -11,7 +11,7 @@ define i8 @ssub_no_overflow_due_to_or_conds(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i8 [[B]], [[A]]
 ; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
 ; CHECK-NEXT:    ret i8 [[TMP0]]
@@ -47,7 +47,7 @@ define i8 @ssub_no_overflow_due_to_or_conds_result_used(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    call void @use_res({ i8, i1 } [[OP]])
 ; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
@@ -84,7 +84,7 @@ define i8 @ssub_no_overflow_due_to_and_conds(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[MATH:%.*]], label [[EXIT_FAIL:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i8 [[B]], [[A]]
 ; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
 ; CHECK-NEXT:    ret i8 [[TMP0]]
