@@ -2323,9 +2323,11 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
           CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
           {VTable, llvm::ConstantInt::get(CGM.Int32Ty, ByteOffset)});
     } else {
+      // The slot holds a pointer in the vtable component address space, which
+      // is not necessarily the address space the vtable itself lives in.
       VTableSlotPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
-          PtrTy, VTable, VTableIndex, "vfn");
-      VFuncLoad = CGF.Builder.CreateAlignedLoad(PtrTy, VTableSlotPtr,
+          ComponentTy, VTable, VTableIndex, "vfn");
+      VFuncLoad = CGF.Builder.CreateAlignedLoad(ComponentTy, VTableSlotPtr,
                                                 CGF.getPointerAlign());
     }
 
