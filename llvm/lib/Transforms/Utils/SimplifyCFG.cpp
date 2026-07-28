@@ -2004,6 +2004,18 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
           });
     }
 
+    // A musttail call must be immediately followed by a ret, so hoisting is
+    // only legal if its ret is hoisted with it on the next iteration. That is,
+    // no instruction has been skipped (the entire successor can be hoisted into
+    // the predecessor) and the call is directly followed by a ret.
+    if (auto *CI = dyn_cast<CallInst>(I1);
+        AllInstsAreIdentical && CI && CI->isMustTailCall()) {
+      AllInstsAreIdentical =
+          NumSkipped == 0 && all_of(SuccIterPairs, [](const SuccIterPair &P) {
+            return isa<ReturnInst>(*std::next(P.first));
+          });
+    }
+
     if (AllInstsAreIdentical) {
       BB1ItrPair.first++;
       // For a normal instruction, we just move one to right before the
@@ -2166,9 +2178,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   SmallVector<DominatorTree::UpdateType, 4> Updates;
 
   // Update any PHI nodes in our new successors.
+  SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
   for (BasicBlock *Succ : successors(BB1)) {
     addPredecessorToBlock(Succ, TIParent, BB1);
-    if (DTU)
+
+    if (DTU && VisitedSuccs.insert(Succ).second)
       Updates.push_back({DominatorTree::Insert, TIParent, Succ});
   }
 
@@ -6125,19 +6139,22 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
       PHI.removeIncomingValue(SI->getParent());
   }
 
-  // Clean up the default block - it may have phis or other instructions before
-  // the unreachable terminator.
-  if (!HasDefault)
-    createUnreachableSwitchDefault(SI, DTU);
-
-  auto *UnreachableDefault = SI->getDefaultDest();
+  // Clean up the default block.
+  SmallVector<DominatorTree::UpdateType, 2> Updates;
+  if (!HasDefault) {
+    BasicBlock *OrigDefaultBlock = SI->getDefaultDest();
+    OrigDefaultBlock->removePredecessor(BB);
+    Updates.push_back({DominatorTree::Delete, BB, OrigDefaultBlock});
+  }
 
   // Drop the switch.
   SI->eraseFromParent();
 
-  if (!HasDefault && DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, UnreachableDefault}});
+  if (isa<UncondBrInst>(NewBI))
+    Updates.push_back({DominatorTree::Delete, BB, OtherDest});
 
+  if (DTU)
+    DTU->applyUpdates(Updates);
   return true;
 }
 
@@ -7159,6 +7176,41 @@ static bool isSwitchDense(ArrayRef<int64_t> Values, bool OptSize) {
   return isSwitchDense(Values.size(), Range, OptSize);
 }
 
+static std::optional<unsigned>
+getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base,
+                                  bool OptSize) {
+  assert(Values.size() > 1 && "expected multiple switch cases");
+  if (!llvm::all_of(Values, [Base](int64_t V) { return V >= Base; }))
+    return std::nullopt;
+
+  // First, transform the values by subtracting Base.
+  SmallVector<int64_t, 4> ReducedValues(Values);
+  uint64_t ReducedValuesOr = 0;
+  for (auto &V : ReducedValues) {
+    uint64_t Reduced = (uint64_t)V - (uint64_t)Base;
+    ReducedValuesOr |= Reduced;
+    V = (int64_t)Reduced;
+  }
+
+  // Conceptually, the reduced values are non-negative distances from Base.
+  // Since the rest of the transform is bitwise only, treat them as unsigned
+  // bit patterns from here.
+
+  // countr_zero(0) returns 64. As Values is guaranteed to have more than
+  // one element and LLVM disallows duplicate cases, ReducedValuesOr will
+  // have at least one bit set, so Shift will be less than 64.
+  unsigned Shift = llvm::countr_zero(ReducedValuesOr);
+  assert(Shift < 64);
+  if (Shift > 0)
+    for (auto &V : ReducedValues)
+      V = (int64_t)((uint64_t)V >> Shift);
+
+  if (!isSwitchDense(ReducedValues, OptSize))
+    return std::nullopt;
+
+  return Shift;
+}
+
 /// Determine whether a lookup table should be built for this switch, based on
 /// the number of cases, size of the table, and the types of the results.
 // TODO: We could support larger than legal types by limiting based on the
@@ -7681,34 +7733,27 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   llvm::sort(Values);
 
   // If the switch is already dense, there's nothing useful to do here.
-  if (isSwitchDense(Values, SI->getFunction()->hasOptSize()))
+  bool OptSize = SI->getFunction()->hasOptSize();
+  if (isSwitchDense(Values, OptSize))
     return false;
 
-  // First, transform the values such that they start at zero and ascend.
+  // Find a Base and corresponding Shift that results in a dense switch range.
+  // Values[0] is the local minimum.
   int64_t Base = Values[0];
-  for (auto &V : Values)
-    V -= (uint64_t)(Base);
+  std::optional<unsigned> Shift;
+  // Prefer Base=0 when shifting out common low zero bits still produces a dense
+  // range, as this avoids an unnecessary `(condition - local_min)` expression.
+  // However, avoiding the subtract can leave a wider reduced range than using
+  // the local minimum, so require Base=0 to satisfy the stricter optsize
+  // density threshold before falling back to the normal density policy for
+  // local-min.
+  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0,
+                                                 /*OptSize=*/true)))
+    Base = 0;
+  else if (Base != 0)
+    Shift = getDenseSwitchRangeReductionShift(Values, Base, OptSize);
 
-  // Now we have signed numbers that have been shifted so that, given enough
-  // precision, there are no negative values. Since the rest of the transform
-  // is bitwise only, we switch now to an unsigned representation.
-
-  // This transform can be done speculatively because it is so cheap - it
-  // results in a single rotate operation being inserted.
-
-  // countTrailingZeros(0) returns 64. As Values is guaranteed to have more than
-  // one element and LLVM disallows duplicate cases, Shift is guaranteed to be
-  // less than 64.
-  unsigned Shift = 64;
-  for (auto &V : Values)
-    Shift = std::min(Shift, (unsigned)llvm::countr_zero((uint64_t)V));
-  assert(Shift < 64);
-  if (Shift > 0)
-    for (auto &V : Values)
-      V = (int64_t)((uint64_t)V >> Shift);
-
-  if (!isSwitchDense(Values, SI->getFunction()->hasOptSize()))
-    // Transform didn't create a dense switch.
+  if (!Shift)
     return false;
 
   // The obvious transform is to shift the switch condition right and emit a
@@ -7720,20 +7765,24 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // shift and puts the shifted-off bits in the uppermost bits. If any of these
   // are nonzero then the switch condition will be very large and will hit the
   // default case.
+  //
+  // This transform can be done speculatively because it is so cheap - it
+  // results in a single rotate operation being inserted.
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  Value *Sub =
-      Builder.CreateSub(SI->getCondition(), ConstantInt::getSigned(Ty, Base));
+  Value *Sub = SI->getCondition();
+  if (Base != 0)
+    Sub = Builder.CreateSub(Sub, ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
-      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - *Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
     auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base, true);
-    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(*Shift))));
   }
   return true;
 }
@@ -7784,9 +7833,10 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     }
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
-    Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
     I = SIW.removeCase(I);
     E = SIW->case_end();
+    if (!is_contained(successors(BB), DeadCaseBB))
+      Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
   }
 
   auto Case = SI->findCaseValue(Constant);
@@ -7810,6 +7860,48 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   if (DTU)
     DTU->applyUpdates(Updates);
 
+  return true;
+}
+
+static bool simplifySwitchDefaultBranch(SwitchInst *SI, DomTreeUpdater *DTU,
+                                        const DataLayout &DL,
+                                        AssumptionCache *AC) {
+  assert(SI);
+  if (SI->defaultDestUnreachable())
+    return false;
+
+  // If it can be proved that the switch condition takes some concrete value
+  // in the default block, we can make some nice simplifications to the
+  // switch.
+  BasicBlock *Default = SI->getDefaultDest();
+  const Instruction *CxtI = &*Default->getFirstNonPHIIt();
+  const KnownBits Known = computeKnownBits(
+      SI->getCondition(),
+      SimplifyQuery(DL, /*DT=*/nullptr, AC, CxtI).allowEphemerals(true));
+  if (!Known.isConstant())
+    return false;
+
+  // At this point, we know that only one value can be mapped to the
+  // default block. So, if a case doesn't exist for it already, we
+  // can create one pointing to the default block.
+  ConstantInt *CaseVal =
+      ConstantInt::get(SI->getContext(), Known.getConstant());
+  const llvm::SwitchInst::CaseIt CaseIt = SI->findCaseValue(CaseVal);
+  if (CaseIt == SI->case_default()) {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    SIW.addCase(CaseVal, Default, SIW.getSuccessorWeight(0));
+    SIW.setSuccessorWeight(0, 0);
+  }
+  // If there is a pre-existing case for the constant, the default branch
+  // will be removed rather than being moved. Thus, we are removing an edge
+  // in the CFG, and need to update any PHIs in the default block.
+  createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock=*/CaseIt !=
+                                              SI->case_default());
+
+  assert(SI->getNumCases() > 0 && "Switch should have at least one case");
+  assert(SI->findCaseValue(CaseVal) != SI->case_default() &&
+         "Proven value should have a dedicated case");
+  assert(SI->defaultDestUnreachable());
   return true;
 }
 
@@ -8353,6 +8445,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifySwitchWhenUMin(SI, DTU))
     return requestResimplify();
 
+  if (simplifySwitchDefaultBranch(SI, DTU, DL, Options.AC))
+    return requestResimplify();
+
   return false;
 }
 
@@ -8599,6 +8694,10 @@ static bool mergeNestedCondBranch(CondBrInst *BI, DomTreeUpdater *DTU) {
 
   BasicBlock *BB3 = BB1BI->getSuccessor(0);
   BasicBlock *BB4 = BB1BI->getSuccessor(1);
+  // Bail out on trivial cases to avoid bothering to handle the special case in
+  // the code below.
+  if (BB3 == BB4)
+    return false;
   IRBuilder<> Builder(BI);
   BI->setCondition(
       Builder.CreateXor(BI->getCondition(), BB1BI->getCondition()));
@@ -8902,7 +9001,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (isa<ConstantPointerNull>(C) &&
+        if (isa<ConstantPointerNull>(C) && C->getType()->isPointerTy() &&
             CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.

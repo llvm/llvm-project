@@ -3254,7 +3254,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 // precision registers F0-F31. As an example, all of the following hold true:
 // D0 + 1 == F1, F1 + 1 == D1, F1 + 1 == F2, depending on the context.
 static MCRegister nextReg(MCRegister Reg) {
-  if (MipsMCRegisterClasses[Mips::FGR32RegClassID].contains(Reg))
+  if (getMipsMCRegisterClass(Mips::FGR32RegClassID).contains(Reg))
     return Reg == (unsigned)Mips::F31 ? (unsigned)Mips::F0 : Reg + 1;
   switch (Reg.id()) {
   default: llvm_unreachable("Unknown register in assembly macro expansion!");

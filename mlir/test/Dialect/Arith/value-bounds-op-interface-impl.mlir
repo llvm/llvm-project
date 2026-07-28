@@ -136,6 +136,83 @@ func.func @arith_ceildivsi_non_pure(%a: index, %b: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_divui_constant()
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   return %[[c1]]
+func.func @arith_divui_constant() -> index {
+  %c7 = arith.constant 7 : index
+  %c5 = arith.constant 5 : index
+  %0 = arith.divui %c7, %c5 : index
+  %1 = "test.reify_bound"(%0) : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+
+// CHECK-LABEL: func @arith_divui_positive_lhs()
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   return %[[c1]]
+
+func.func @arith_divui_positive_lhs() -> index {
+  %c7 = arith.constant 7 : index
+  %c5 = arith.constant 5 : index
+  %c1 = arith.constant 1 : index
+  %lhs = arith.maxsi %c7, %c1 : index
+  %0 = arith.divui %lhs, %c5 : index
+  %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
+  return %1 : index
+}
+
+
+// -----
+
+// CHECK-LABEL: func @arith_divsi_negative_positive()
+//       CHECK:   %[[cm1:.*]] = arith.constant -1 : index
+//       CHECK:   return %[[cm1]]
+func.func @arith_divsi_negative_positive() -> index {
+  %cm7 = arith.constant -7 : index
+  %c5 = arith.constant 5 : index
+  %0 = arith.divsi %cm7, %c5 : index
+  %1 = "test.reify_bound"(%0) : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_divsi_negative_lhs()
+//       CHECK:   %[[cm2:.*]] = arith.constant -2 : index
+//       CHECK:   return %[[cm2]]
+func.func @arith_divsi_negative_lhs() -> index {
+  %c2 = arith.constant 2 : index
+  %cm7 = arith.constant -7 : index
+  %cm5 = arith.constant -5 : index
+  %lhs = arith.minsi %cm5, %cm7 : index
+  %0 = arith.divsi %lhs, %c2 : index
+  %1 = "test.reify_bound"(%0) {type = "UB", constant}: (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_divsi_unknown_lhs_constant_rhs(%a: index) {
+  %c5 = arith.constant 5 : index
+  %0 = arith.divsi %a, %c5 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a) {
+      cmp = "GE",
+      rhs_map = affine_map<()[s0] -> (s0 floordiv 5)>
+  } : (index, index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a) {
+      cmp = "LE",
+      rhs_map = affine_map<()[s0] -> (s0 ceildiv 5)>
+  } : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @arith_remsi_positive_positive()
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[c5:.*]] = arith.constant 5 : index
@@ -371,6 +448,18 @@ func.func @arith_maxsi_ub(%a: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_extsi_const(
+//       CHECK:   %[[c:.*]] = arith.constant -5 : index
+//       CHECK:   return %[[c]]
+func.func @arith_extsi_const() -> index {
+  %c_5 = arith.constant -5 : i32
+  %ext = arith.extsi %c_5 : i32 to i64
+  %0 = "test.reify_bound"(%ext) {constant, allow_integer_type} : (i64) -> (index)
+  return %0 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @arith_minui(
 //       CHECK:   %[[ub:.*]] = arith.constant 5 : index
 //       CHECK:   return %[[ub]]
@@ -397,32 +486,38 @@ func.func @arith_maxui() -> index {
 
 // -----
 
-func.func @arith_maxui_unknown_sign(%a: index) -> index {
+// CHECK-LABEL: func @arith_maxui_unknown_operand(
+//       CHECK:   %[[lb:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[lb]]
+func.func @arith_maxui_unknown_operand(%a: index) -> index {
   %c4 = arith.constant 4 : index
   %0 = arith.maxui %a, %c4 : index
-  // expected-error @below{{could not reify bound}}
-  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
   return %1 : index
 }
 
 // -----
 
+// CHECK-LABEL: func @arith_minui_wraparound(
+//       CHECK:   %[[ub:.*]] = arith.constant 11 : index
+//       CHECK:   return %[[ub]]
 func.func @arith_minui_wraparound() -> index {
   %c255 = arith.constant 0xFF : i8
   %c10 = arith.constant 10 : i8
   %0 = arith.minui %c255, %c10 : i8
-  // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "UB", allow_integer_type} : (i8) -> (index)
   return %1 : index
 }
 
 // -----
 
+// CHECK-LABEL: func @arith_maxui_wraparound(
+//       CHECK:   %[[lb:.*]] = arith.constant 10 : index
+//       CHECK:   return %[[lb]]
 func.func @arith_maxui_wraparound() -> index {
   %c255 = arith.constant 0xFF : i8
   %c10 = arith.constant 10 : i8
   %0 = arith.maxui %c255, %c10 : i8
-  // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "LB", allow_integer_type} : (i8) -> (index)
   return %1 : index
 }
@@ -458,12 +553,15 @@ func.func @arith_minui_nonneg_symbolic(%a: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_minui_negative_symbolic(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[ub]]
 func.func @arith_minui_negative_symbolic(%a: index) -> index {
   %cm1 = arith.constant -1 : index
   %c4 = arith.constant 4 : index
   %neg = arith.minsi %a, %cm1 : index
   %0 = arith.minui %neg, %c4 : index
-  // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "UB", constant} : (index) -> (index)
   return %1 : index
 }
@@ -485,12 +583,15 @@ func.func @arith_maxui_nonneg_symbolic(%a: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_maxui_negative_symbolic(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[lb:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[lb]]
 func.func @arith_maxui_negative_symbolic(%a: index) -> index {
   %cm1 = arith.constant -1 : index
   %c4 = arith.constant 4 : index
   %neg = arith.minsi %a, %cm1 : index
   %0 = arith.maxui %neg, %c4 : index
-  // expected-error @below{{could not reify bound}}
   %1 = "test.reify_bound"(%0) {type = "LB", constant} : (index) -> (index)
   return %1 : index
 }

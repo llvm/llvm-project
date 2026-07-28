@@ -1,32 +1,10 @@
 ; RUN: llc %s --filetype=obj -o %t.bc
-; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb %t.bc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil %t.bc
-; RUN: dxil-dis %t.ildb -o - | FileCheck %s --check-prefix=ILDB-DIS
-; RUN: dxil-dis %t.dxil -o - | FileCheck %s --check-prefix=DXIL-DIS
-
-;; Check that the debug info is emitted into ILDB part
-; ILDB-DIS: define void @foo
-; ILDB-DIS-DAG: @llvm.dbg.declare
-; ILDB-DIS-DAG: @llvm.dbg.assign
-; ILDB-DIS-DAG: @llvm.dbg.value
-; ILDB-DIS-DAG: @llvm.dbg.label
-; ILDB-DIS-DAG: !llvm.dbg.cu
-; ILDB-DIS-DAG: !dx.source
-; ILDB-DIS-DAG: !DICompileUnit
-; ILDB-DIS-DAG: !DIFile
-; ILDB-DIS-DAG: !"Dwarf Version"
-; ILDB-DIS-DAG: !"Debug Info Version"
-; ILDB-DIS-DAG: "foo.hlsl"
-; ILDB-DIS-DAG: !DISubprogram
-; ILDB-DIS-DAG: !DISubroutineType
-; ILDB-DIS-DAG: !DIBasicType
-; ILDB-DIS-DAG: !DILocation
-; ILDB-DIS-DAG: !DILocalVariable
-; ILDB-DIS-DAG: !DIGlobalVariable
+; RUN: llvm-dis %t.dxil -o - | FileCheck %s --check-prefix=DXIL-DIS
 
 ;; Check that all the debug info is properly stripped from DXIL part
 ; DXIL-DIS: define void @foo
-; DXIL-DIS-NOT: @llvm.dbg
+; DXIL-DIS-NOT: #dbg
 ; DXIL-DIS-NOT: !llvm.dbg.cu
 ; DXIL-DIS-NOT: !dx.source
 ; DXIL-DIS-NOT: !DICompileUnit

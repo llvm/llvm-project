@@ -33,6 +33,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -1084,7 +1085,9 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
       BFI = GetBFICallback(F);
     else if (F.hasProfileData()) {
       LoopInfo LI{DT};
-      BranchProbabilityInfo BPI{F, LI};
+      CycleInfo CI;
+      CI.compute(const_cast<Function &>(F));
+      BranchProbabilityInfo BPI{F, CI};
       BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, LI);
       BFI = BFIPtr.get();
     }
@@ -1175,6 +1178,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 }
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
+AnalysisKey ImmutableModuleSummaryIndexAnalysis::Key;
 
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {

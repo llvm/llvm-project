@@ -227,8 +227,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
+  // If the deref size is only known when the pointer is non-null, ignore it
+  // here and fall back to a dereferenceable assumption below.
   if (DerefBytes && CheckForNonNull)
-    return false;
+    DerefBytes = 0;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
@@ -969,11 +971,10 @@ private:
 
 } // end anonymous namespace
 
-/// Try to compute a constant stride for \p AR. Used by getPtrStride and
-/// isNoWrap.
-static std::optional<int64_t>
-getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    Value *Ptr, PredicatedScalarEvolution &PSE) {
+std::optional<int64_t>
+llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
+                          Type *AccessTy, Value *Ptr,
+                          PredicatedScalarEvolution &PSE) {
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
@@ -1319,8 +1320,9 @@ bool AccessAnalysis::createCheckForAccess(
     if (RTCheckPtrs.size() == 1) {
       PSE.addPredicates(Predicates);
       Predicates.clear();
-      AR =
-          cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
+      if (auto *StrideAR = dyn_cast<SCEVAddRecExpr>(
+              replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr)))
+        AR = StrideAR;
       P.setPointer(AR);
     }
 
@@ -2263,11 +2265,16 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
 
-  // The rest of this function relies on ConstDist being at most 64-bits, which
-  // is checked earlier. Will assert if the calling code changes.
   const APInt *APDist = nullptr;
-  uint64_t ConstDist =
-      match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
+  uint64_t ConstDist = 0;
+  if (match(Dist, m_scev_APInt(APDist))) {
+    std::optional<uint64_t> Val = APDist->abs().tryZExtValue();
+    if (!Val) {
+      LLVM_DEBUG(dbgs() << "LAA: Constant distance does not fit in 64 bits.\n");
+      return Dependence::Unknown;
+    }
+    ConstDist = *Val;
+  }
 
   // Attempt to prove strided accesses independent.
   if (APDist) {
@@ -2323,7 +2330,13 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Forward;
   }
 
-  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
+  std::optional<int64_t> MinDistanceOpt =
+      SE.getSignedRangeMin(Dist).trySExtValue();
+  if (!MinDistanceOpt) {
+    LLVM_DEBUG(dbgs() << "LAA: Minimum distance does not fit in 64 bits.\n");
+    return Dependence::Unknown;
+  }
+  int64_t MinDistance = *MinDistanceOpt;
   // Below we only handle strictly positive distances.
   if (MinDistance <= 0) {
     return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep
@@ -2931,14 +2944,8 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
-  bool HasForcedDistribution = false;
-  std::optional<const MDOperand *> Value =
-      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
-  if (Value) {
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
-  }
+  bool HasForcedDistribution =
+      getBooleanLoopAttribute(TheLoop, "llvm.loop.distribute.enable");
 
   const std::string Info =
       HasForcedDistribution

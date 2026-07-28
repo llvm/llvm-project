@@ -49,12 +49,12 @@ public:
   // Following 2 enums are documented at:
   //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
   enum class TrapHandlerAbi {
-    NONE   = 0x00,
+    NONE = 0x00,
     AMDHSA = 0x01,
   };
 
   enum class TrapID {
-    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSATrap = 0x02,
     LLVMAMDHSADebugTrap = 0x03,
   };
 
@@ -79,6 +79,9 @@ protected:
 
   // Instruction cache line size in bytes; set from TableGen subtarget features.
   unsigned InstCacheLineSize = 0;
+
+  // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
+  unsigned DataCacheLineSize = 0;
 
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
@@ -111,9 +114,11 @@ private:
                                   const MachineInstr &UseI, int UseOpIdx) const;
 
 public:
-  GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM, bool BufferOOBRelaxed = false,
-               bool TBufferOOBRelaxed = false);
+  GCNSubtarget(
+      const Triple &TT, StringRef GPU, StringRef FS, const GCNTargetMachine &TM,
+      bool BufferOOBRelaxed = false, bool TBufferOOBRelaxed = false,
+      AMDGPU::TargetIDSetting XnackSetting = AMDGPU::TargetIDSetting::Any,
+      AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -196,6 +201,10 @@ public:
 
   /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
   unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
+
+  /// Data (VMEM) cache line size in bytes (128 for gfx12), has no use before
+  /// GFX12.
+  unsigned getDataCacheLineSize() const { return DataCacheLineSize; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
@@ -343,9 +352,9 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
-
-  bool isTgSplitEnabled() const { return EnableTgSplit; }
+  bool isXNACKEnabled() const {
+    return enableXNACK() || TargetID.isXnackOnOrAny();
+  }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
@@ -380,11 +389,6 @@ public:
 
   bool hasVINTERPEncoding() const {
     return HasGFX11Insts && !hasGFX1250Insts();
-  }
-
-  // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX1250Insts();
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
@@ -642,10 +646,6 @@ public:
   /// instructions.
   bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
-  /// Return true if the target's EXP instruction has the COMPR flag, which
-  /// affects the meaning of the EN (enable) bits.
-  bool hasCompressedExport() const { return !HasGFX11Insts; }
-
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
   bool hasNullExportTarget() const { return !HasGFX11Insts; }
@@ -755,11 +755,9 @@ public:
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
-  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
-
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getSGPRAllocGranule(*this);
+    return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());
   }
 
   /// \returns SGPR encoding granularity supported by the subtarget.
@@ -769,12 +767,12 @@ public:
 
   /// \returns Total number of SGPRs supported by the subtarget.
   unsigned getTotalNumSGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumSGPRs(*this);
+    return AMDGPU::getTotalNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Addressable number of SGPRs supported by the subtarget.
   unsigned getAddressableNumSGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumSGPRs(*this);
+    return AMDGPU::getAddressableNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Minimum number of SGPRs that meets the given number of waves per
@@ -1039,8 +1037,8 @@ public:
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 
-  bool requiresWaitOnWorkgroupReleaseFence() const {
-    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
+    return getGeneration() >= GFX10 || TgSplit;
   }
 };
 

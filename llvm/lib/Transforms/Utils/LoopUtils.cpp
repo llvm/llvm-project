@@ -441,6 +441,9 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+    return TM_SuppressedByUser;
+
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 
@@ -598,7 +601,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
   } else {
-    assert(L->hasNoExitBlocks() &&
+    assert((!LI || LI->hasNoExitBlocks(*L)) &&
            "Loop should have either zero or one exit blocks.");
 
     Builder.SetInsertPoint(OldTerm);
@@ -1180,6 +1183,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
     return Instruction::ICmp;
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1275,6 +1280,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMax;
   case Intrinsic::vector_reduce_fmin:
     return RecurKind::FMin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return RecurKind::FMaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return RecurKind::FMinimum;
   default:
     return RecurKind::None;
   }
@@ -1530,7 +1539,7 @@ Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
   case Intrinsic::vector_reduce_fminimum: {
     bool PropagatesNaN = RdxID == Intrinsic::vector_reduce_fminimum ||
                          RdxID == Intrinsic::vector_reduce_fmaximum;
-    const fltSemantics &Semantics = Ty->getFltSemantics();
+    const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
     return (!Flags.noNaNs() && !PropagatesNaN)
                ? ConstantFP::getQNaN(Ty, Negative)
            : !Flags.noInfs()
@@ -2250,24 +2259,6 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-namespace {
-/// Rewriter to replace SCEVPtrToIntExpr with SCEVPtrToAddrExpr when the result
-/// type matches the pointer address type. This allows expressions mixing
-/// ptrtoint and ptrtoaddr to simplify properly.
-struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
-  const DataLayout &DL;
-  SCEVPtrToAddrRewriter(ScalarEvolution &SE, const DataLayout &DL)
-      : SCEVRewriteVisitor(SE), DL(DL) {}
-
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    const SCEV *Op = visit(E->getOperand());
-    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
-      return SE.getPtrToAddrExpr(Op);
-    return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
-  }
-};
-} // namespace
-
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
@@ -2279,13 +2270,19 @@ Value *llvm::addDiffRuntimeChecks(
   Value *MemoryRuntimeCheck = nullptr;
 
   auto &SE = *Expander.getSE();
-  const DataLayout &DL = Loc->getDataLayout();
-  SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+  // Cache of (VF*IC*Stride-(Stride-AccessSize)) - 1, shared across checks with
+  // matching type/IC/Stride to avoid emitting duplicate runtime computations.
+  DenseMap<
+      std::tuple<Type *, unsigned /*IC*/, unsigned /*AbsCommonStrideInBytes*/>,
+      Value *>
+      ThresholdCache;
   for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
                     NeedsFreeze] : Checks) {
+    assert(IC * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
     // Compute the distance between first/last bytes of the accessed memory
     // during one vector loop iteration. This is equal to
@@ -2296,28 +2293,35 @@ Value *llvm::addDiffRuntimeChecks(
       Ty = Ty->getWithNewBitWidth(Ty->getScalarSizeInBits() * 2);
       assert(isUIntN(Ty->getScalarSizeInBits(), ICTimesStride));
     }
-    auto *VectorIterAccessSpan =
-        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, ICTimesStride));
-    VectorIterAccessSpan = ChkBuilder.CreateSub(
-        VectorIterAccessSpan,
-        ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize));
-    const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
-    const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
+
+    Value *One = ConstantInt::get(Ty, 1);
+    Value *&ThresholdMinusOne =
+        ThresholdCache[{Ty, IC, AbsCommonStrideInBytes}];
+    if (!ThresholdMinusOne) {
+      auto *VectorIterAccessSpan =
+          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                               ConstantInt::get(Ty, ICTimesStride));
+      VectorIterAccessSpan = ChkBuilder.CreateSub(
+          VectorIterAccessSpan,
+          ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize));
+      ThresholdMinusOne = ChkBuilder.CreateSub(VectorIterAccessSpan, One);
+    }
     Value *Diff = Expander.expandCodeFor(
-        SE.getNoopOrSignExtend(
-            SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty),
-        Ty, Loc);
+        SE.getNoopOrSignExtend(SE.getMinusSCEV(SinkStart, SrcStart), Ty), Ty,
+        Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VectorIterAccessSpan});
+    Value *IsConflict = SeenCompares.lookup({Diff, ThresholdMinusOne});
     if (IsConflict)
       continue;
 
-    IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VectorIterAccessSpan, "diff.check");
-    SeenCompares.insert({{Diff, VectorIterAccessSpan}, IsConflict});
+    // Use (Diff - 1) <u (VectorIterAccessSpanMinusOne - 1), equivalent to
+    // 0 < Diff <u VectorIterAccessSpanMinusOne, to exclude Diff == 0 (equal
+    // pointers are safe).
+    IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
+                                          ThresholdMinusOne, "diff.check");
+    SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
