@@ -16,17 +16,14 @@
 
 template <class T> struct AlignedMemory {
   T *data;
-  size_t offset;
   std::align_val_t alignment;
-  AlignedMemory(size_t size, size_t alignment, size_t offset)
-      : offset(offset), alignment{alignment} {
+  AlignedMemory(size_t size, size_t alignment) : alignment{alignment} {
     size_t sz = size * sizeof(T);
     size_t aligned = sz + ((-sz) & (alignment - 1)) + alignment;
     LIBC_NAMESPACE::AllocChecker ac;
     data = static_cast<T *>(operator new(aligned, this->alignment, ac));
-    data += offset % alignment;
   }
-  ~AlignedMemory() { operator delete(data - offset, alignment); }
+  ~AlignedMemory() { operator delete(data, alignment); }
 };
 
 size_t sizes[] = {0, 1, 23, 59, 1024, 5261};
@@ -35,20 +32,20 @@ uint8_t values[] = {0, 1, 23, 59, 102, 255};
 // Hash value should not change with different alignments.
 TEST(LlvmLibcHashTest, SanityCheck) {
   for (size_t sz : sizes) {
+    // Allocate a bit more memory in order to test different alignments.
+    size_t alloc_sz = sz + 64;
+    AlignedMemory<char> mem(alloc_sz, 64);
     for (uint8_t val : values) {
+      LIBC_NAMESPACE::memset(mem.data, val, alloc_sz);
       uint64_t hash;
       {
-        AlignedMemory<char> mem(sz, 64, 0);
-        LIBC_NAMESPACE::memset(mem.data, val, sz);
         LIBC_NAMESPACE::internal::HashState state{0x1234567890abcdef};
         state.update(mem.data, sz);
         hash = state.finish();
       }
       for (size_t offset = 1; offset < 64; ++offset) {
-        AlignedMemory<char> mem(sz, 64, offset);
-        LIBC_NAMESPACE::memset(mem.data, val, sz);
         LIBC_NAMESPACE::internal::HashState state{0x1234567890abcdef};
-        state.update(mem.data, sz);
+        state.update(mem.data + offset, sz);
         ASSERT_EQ(hash, state.finish());
       }
     }
@@ -70,7 +67,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
   for (size_t sz : sizes) {
     for (uint8_t val : values) {
       uint64_t hash;
-      AlignedMemory<char> mem(sz, 64, 0);
+      AlignedMemory<char> mem(sz, 64);
       LIBC_NAMESPACE::memset(mem.data, val, sz);
       {
         LIBC_NAMESPACE::internal::HashState state{0xabcdef1234567890};
@@ -99,7 +96,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
 TEST(LlvmLibcHashTest, UniformLSB) {
   LIBC_NAMESPACE::srand(0xffffffff);
   for (size_t sz : sizes) {
-    AlignedMemory<size_t> counters(sz, sizeof(size_t), 0);
+    AlignedMemory<size_t> counters(sz, sizeof(size_t));
     LIBC_NAMESPACE::memset(counters.data, 0, sz * sizeof(size_t));
     for (size_t i = 0; i < 200 * sz; ++i) {
       int randomness[8] = {LIBC_NAMESPACE::rand(), LIBC_NAMESPACE::rand(),
@@ -126,7 +123,7 @@ TEST(LlvmLibcHashTest, UniformLSB) {
 // the hash table.
 TEST(LlvmLibcHashTest, UniformMSB) {
   size_t sz = 1 << 7;
-  AlignedMemory<size_t> counters(sz, sizeof(size_t), 0);
+  AlignedMemory<size_t> counters(sz, sizeof(size_t));
   LIBC_NAMESPACE::memset(counters.data, 0, sz * sizeof(size_t));
   for (size_t i = 0; i < 200 * sz; ++i) {
     LIBC_NAMESPACE::internal::HashState state{0xa1b2c3d4e5f6a7b8};

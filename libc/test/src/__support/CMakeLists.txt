@@ -246,8 +246,6 @@ add_libc_test(
     libc.src.string.memset
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
-  UNIT_TEST_ONLY
-    # Aligned Allocation is not supported in hermetic builds.
 )
 
 add_libc_test(
