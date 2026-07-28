@@ -16893,10 +16893,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                                       SourceLocation(), SourceLocation());
   }
 
-  return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                  NumGeneratedTopLevelLoops, AStmt, FusionStmt,
-                                  buildPreInits(Context, PreInits),
-                                  buildLoopFinalization(Context, FusedLoopHelpers));
+  return OMPFuseDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumGeneratedTopLevelLoops, AStmt,
+      FusionStmt, buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, FusedLoopHelpers));
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
