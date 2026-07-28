@@ -13835,29 +13835,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
 
-  // Convert to scalable vectors first.
-  if (VecVT.isFixedLengthVector()) {
-    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
-    SmallVector<SDValue, 8> Ops(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Ops[i] = convertToScalableVector(ContainerVT, Op.getOperand(i), DAG,
-                                       Subtarget);
-
-    SmallVector<EVT, 8> VTs(Factor, ContainerVT);
-    SDValue NewInterleave = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs, Ops);
-
-    SmallVector<SDValue, 8> Res(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Res[i] = convertFromScalableVector(VecVT, NewInterleave.getValue(i), DAG,
-                                         Subtarget);
-    return DAG.getMergeValues(Res, DL);
-  }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  MVT ContainerVecVT = VecVT;
+  if (VecVT.isFixedLengthVector())
+    ContainerVecVT = getContainerForFixedLengthVector(VecVT);
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
-  if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
+  if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
       (8 * RISCV::RVVBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
@@ -13885,6 +13868,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     return DAG.getMergeValues(Concats, DL);
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVecVT, DL, DAG, Subtarget);
+
   SDValue Interleaved;
 
   // Spill to the stack using a segment store for simplicity.
@@ -13908,25 +13894,45 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
         Intrinsic::riscv_vsseg8_mask,
     };
+    static const Intrinsic::ID FixedIntrIds[] = {
+        Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
+        Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
+        Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
+        Intrinsic::riscv_seg8_store_mask,
+    };
 
-    unsigned Sz =
-        Factor * VecVT.getVectorMinNumElements() * VecVT.getScalarSizeInBits();
-    EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
+    SmallVector<SDValue> Ops;
+    if (VecVT.isFixedLengthVector()) {
+      Ops = {DAG.getEntryNode(),
+             DAG.getTargetConstant(FixedIntrIds[Factor - 2], DL, XLenVT)};
+      for (unsigned i = 0U; i < Factor; ++i)
+        Ops.push_back(Op.getOperand(i));
 
-    SDValue StoredVal = DAG.getUNDEF(VecTupTy);
-    for (unsigned i = 0; i < Factor; i++)
-      StoredVal =
-          DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
-                      Op.getOperand(i), DAG.getTargetConstant(i, DL, MVT::i32));
+      // We cannot use Mask (or getAllOnesMask) here as it is a scalable vector
+      // mask.
+      SDValue FixedAllOnesMask = DAG.getSplat(getMaskTypeFor(VecVT), DL,
+                                              DAG.getConstant(1, DL, XLenVT));
+      Ops.append({StackPtr, FixedAllOnesMask, VL});
+    } else {
+      unsigned Sz = Factor * VecVT.getVectorMinNumElements() *
+                    VecVT.getScalarSizeInBits();
+      EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
 
-    SDValue Ops[] = {DAG.getEntryNode(),
-                     DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
-                     StoredVal,
-                     StackPtr,
-                     Mask,
-                     VL,
-                     DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()),
-                                           DL, XLenVT)};
+      SDValue StoredVal = DAG.getUNDEF(VecTupTy);
+      for (unsigned i = 0; i < Factor; i++)
+        StoredVal = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
+                                Op.getOperand(i),
+                                DAG.getTargetConstant(i, DL, MVT::i32));
+
+      Ops = {DAG.getEntryNode(),
+             DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
+             StoredVal,
+             StackPtr,
+             Mask,
+             VL,
+             DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL,
+                                   XLenVT)};
+    }
 
     SDValue Chain = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
@@ -13945,6 +13951,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     return DAG.getMergeValues(Loads, DL);
   }
+
+  assert(!VecVT.isFixedLengthVector() &&
+         "Fixed factor=2 vector interleave should already lower to "
+         "SHUFFLE_VECTOR");
 
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
