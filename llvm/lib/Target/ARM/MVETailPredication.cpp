@@ -94,7 +94,6 @@ public:
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 
