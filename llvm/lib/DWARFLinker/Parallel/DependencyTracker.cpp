@@ -409,19 +409,44 @@ void DependencyTracker::markParentsAsKeepingChildren(
   }
 }
 
-// This function tries to set specified \p Placement for the \p Entry.
-// Depending on the concrete entry, the placement could be:
-//  a) changed to another.
-//  b) joined with current entry placement.
-//  c) set as requested.
-static CompileUnit::DieOutputPlacement
+namespace {
+struct FinalPlacement {
+  CompileUnit::DieOutputPlacement Placement;
+
+  /// How Placement combines with the DIE's current placement when applied.
+  enum ApplyMode {
+    /// Overwrite the current placement. Used for entries whose placement is
+    /// fully determined regardless of how they were reached, so every mark
+    /// agrees on the value (ODR-unavailable entries and static data member
+    /// declarations).
+    Overwrite,
+    /// OR-join into the current placement (the common monotone-lattice case):
+    /// a DIE reached by both a live and a type mark ends up in Both.
+    Join,
+    /// Join for a DW_TAG_variable, which cannot occupy the type table and plain
+    /// DWARF at once: PlainDwarf is absorbing so the variable never lands in
+    /// Both.
+    JoinVariable,
+  } Mode;
+};
+} // namespace
+
+// Computes the placement to apply to \p Entry for a mark requesting \p
+// Placement (PlainDwarf for a live action, TypeTable for a type action), along
+// with how it combines with the DIE's current placement. Most entries join, so
+// a DIE reached by both actions ends up in Both. Entries whose placement is
+// fully determined regardless of how they were reached instead overwrite with
+// an exact placement: ODR-unavailable entries cannot be deduplicated into the
+// type table, and a DW_TAG_variable cannot occupy the type table and plain
+// DWARF at once.
+static FinalPlacement
 getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
                           CompileUnit::DieOutputPlacement Placement) {
   assert((Placement != CompileUnit::NotSet) && "Placement is not set");
   CompileUnit::DIEInfo &EntryInfo = Entry.CU->getDIEInfo(Entry.DieEntry);
 
   if (!EntryInfo.getODRAvailable())
-    return CompileUnit::PlainDwarf;
+    return {CompileUnit::PlainDwarf, FinalPlacement::Overwrite};
 
   if (Entry.DieEntry->getTag() == dwarf::DW_TAG_variable) {
     // In-class static member declarations (e.g. "static constexpr int x = 1;")
@@ -447,35 +472,19 @@ getFinalPlacementForEntry(const UnitEntryPairTy &Entry,
     if (IsDeclaration && ParentIsType) {
       // Pure declarations have no runtime address; they belong with the class
       // type. Always place in TypeTable regardless of how they were reached.
-      return CompileUnit::TypeTable;
+      return {CompileUnit::TypeTable, FinalPlacement::Overwrite};
     }
 
-    // Do not put variable into the "TypeTable" and "PlainDwarf" at the same
-    // time.
-    if (EntryInfo.getPlacement() == CompileUnit::PlainDwarf ||
-        EntryInfo.getPlacement() == CompileUnit::Both)
-      return CompileUnit::PlainDwarf;
-
+    // A live (PlainDwarf) mark pins the variable to plain DWARF.
     if (Placement == CompileUnit::PlainDwarf || Placement == CompileUnit::Both)
-      return CompileUnit::PlainDwarf;
+      return {CompileUnit::PlainDwarf, FinalPlacement::Overwrite};
+
+    // Only a type-table mark reaches here. The variable join keeps a PlainDwarf
+    // mark racing this one from turning the variable into Both.
+    return {Placement, FinalPlacement::JoinVariable};
   }
 
-  switch (EntryInfo.getPlacement()) {
-  case CompileUnit::NotSet:
-    return Placement;
-
-  case CompileUnit::TypeTable:
-    return Placement == CompileUnit::PlainDwarf ? CompileUnit::Both : Placement;
-
-  case CompileUnit::PlainDwarf:
-    return Placement == CompileUnit::TypeTable ? CompileUnit::Both : Placement;
-
-  case CompileUnit::Both:
-    return CompileUnit::Both;
-  };
-
-  llvm_unreachable("Unknown placement type.");
-  return Placement;
+  return {Placement, FinalPlacement::Join};
 }
 
 bool DependencyTracker::markDIEEntryAsKeptRec(
@@ -487,10 +496,11 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
 
   CompileUnit::DIEInfo &Info = Entry.CU->getDIEInfo(Entry.DieEntry);
 
-  // Calculate final placement placement.
-  CompileUnit::DieOutputPlacement Placement = getFinalPlacementForEntry(
+  // Calculate final placement.
+  FinalPlacement Final = getFinalPlacementForEntry(
       Entry,
       isLiveAction(Action) ? CompileUnit::PlainDwarf : CompileUnit::TypeTable);
+  CompileUnit::DieOutputPlacement Placement = Final.Placement;
   assert((Info.getODRAvailable() || isLiveAction(Action) ||
           Placement == CompileUnit::PlainDwarf) &&
          "Wrong kind of placement for ODR unavailable entry");
@@ -515,7 +525,20 @@ bool DependencyTracker::markDIEEntryAsKeptRec(
   if (!RecordDepsOnly) {
     // Mark current DIE as kept.
     Info.setKeep();
-    Info.setPlacement(Placement);
+    // Marks compose monotonically so no interleaving loses an update: a general
+    // mark only raises the placement in the lattice, and a forced placement is
+    // a value every mark agrees on.
+    switch (Final.Mode) {
+    case FinalPlacement::Overwrite:
+      Info.setPlacement(Placement);
+      break;
+    case FinalPlacement::Join:
+      Info.joinPlacement(Placement);
+      break;
+    case FinalPlacement::JoinVariable:
+      Info.joinVariablePlacement(Placement);
+      break;
+    }
 
     // Set keep children property for parents.
     markParentsAsKeepingChildren(Entry);

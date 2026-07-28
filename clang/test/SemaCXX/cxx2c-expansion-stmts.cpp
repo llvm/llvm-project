@@ -1589,3 +1589,20 @@ void f() {
   Template<void>().instantiated<void>(); // expected-note {{in instantiation of function template specialization 'decl_context::Template<void>::instantiated<void>'}}
 }
 }
+
+namespace gh211917 {
+auto f() {
+  template for (constexpr auto x : {1,2,3}) {
+    return 3;
+  }
+}
+
+template<typename T>
+T tf() {
+  template for (constexpr auto x : {1,2,3}) {
+    return 3;
+  }
+}
+
+template long tf<long>();
+}

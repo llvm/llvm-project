@@ -21,13 +21,17 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
   std::vector<void *> Allocs;
   Allocs.reserve(1000);
 
-  constexpr ol_alloc_type_t TYPES[3] = {
-      OL_ALLOC_TYPE_DEVICE, OL_ALLOC_TYPE_MANAGED, OL_ALLOC_TYPE_HOST};
+  constexpr ol_alloc_type_t TYPES[2] = {OL_ALLOC_TYPE_DEVICE,
+                                        OL_ALLOC_TYPE_MANAGED};
 
   for (size_t I = 1; I < TestAllocsNum; I++) {
     void *Alloc = nullptr;
-    ASSERT_SUCCESS(olMemAllocAligned(Device, TYPES[I % 3], 1024 * I,
-                                     DefaultAlignment, &Alloc));
+    if (I % 3 == 2)
+      ASSERT_SUCCESS(
+          olMemAllocAlignedHost(Device, 1024 * I, DefaultAlignment, &Alloc));
+    else
+      ASSERT_SUCCESS(olMemAllocAligned(Device, TYPES[I % 2], 1024 * I,
+                                       DefaultAlignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
 
     Allocs.push_back(Alloc);
@@ -65,6 +69,13 @@ TEST_P(olMemAllocAlignedTest, InvalidAlignmentNotAPowerOfTwo) {
   ASSERT_ERROR(
       OL_ERRC_INVALID_ARGUMENT,
       olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024, 3, &Alloc));
+}
+
+TEST_P(olMemAllocAlignedTest, InvalidHostType) {
+  void *Alloc = nullptr;
+  ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
+               olMemAllocAligned(Device, OL_ALLOC_TYPE_HOST, 1024,
+                                 DefaultAlignment, &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
@@ -105,8 +116,7 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocHostDifferentAlignments) {
   for (size_t i = 0; i < NumAlignments; i++) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(
-        olMemAllocAligned(Device, OL_ALLOC_TYPE_HOST, 1024, Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedHost(Device, 1024, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
     olMemFree(Alloc);
   }
@@ -196,8 +206,7 @@ TEST_P(olMemAllocAlignedTest, SuccessMemcpyHostDiferentAlignments) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
 
-    ASSERT_SUCCESS(
-        olMemAllocAligned(Device, OL_ALLOC_TYPE_HOST, Size, Alignment, &Alloc));
+    ASSERT_SUCCESS(olMemAllocAlignedHost(Device, Size, Alignment, &Alloc));
     // memcpy is synchronous when queue is unspecified.
     ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
     ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));

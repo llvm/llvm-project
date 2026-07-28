@@ -13393,8 +13393,7 @@ def err_builtin_is_within_lifetime_invalid_arg : Error<
 def err_builtin_invalid_arg_type: Error<
   "%ordinal0 argument must be a "
   // First component: scalar or container types
-  "%select{|scalar|vector|matrix|vector of|scalar or vector of|"
-  "scalar, vector, or matrix of}1"
+  "%select{|scalar|vector|matrix|vector of|scalar or vector of}1"
   // A comma after generic vector/matrix types if there are non-empty second
   // and third components, to initiate a list.
   "%plural{[2,3]:%plural{0:|:%plural{0:|:,}2}3|:}1"
@@ -13797,6 +13796,9 @@ def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %sele
 def err_hlsl_atomic_arg_addr_space : Error<
   "%ordinal0 argument to atomic builtin must reference groupshared or device "
   "memory (was %1)">;
+
+def err_hlsl_builtin_requires_sm : Error<
+  "%0 requires shader model %1 or newer">;
 
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;

@@ -1309,9 +1309,10 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
     cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
   }
 
-  if (destType->isBitIntType()) {
-    cgm.errorNYI("emitForMemory: _BitInt type");
-  }
+  // CIR represents source types as literally as possible.  Some types, such as
+  // bool and _BitInt(N), are kept at their literal width here and expanded to
+  // their wider "in memory" types during lowering to the LLVM dialect, so the
+  // constant is already in the right form and needs no adjustment.
 
   return c;
 }

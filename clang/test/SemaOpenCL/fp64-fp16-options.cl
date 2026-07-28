@@ -49,7 +49,7 @@
 // particular OpenCL version must be re-enabled (for example, cl_khr_fp64 is
 // enabled by default with -cl-std=CL2.0).
 //
-// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL2.0 -finclude-default-header
+// RUN: %clang_cc1 %s -triple amdgpu-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL2.0 -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=clc++1.0
 
 #ifdef _OPENCL_H_

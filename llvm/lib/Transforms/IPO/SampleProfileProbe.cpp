@@ -393,6 +393,18 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
       J = J->getNextNode();
     }
 
+    // A pseudo probe must not be inserted between a `musttail` or
+    // `llvm.experimental.deoptimize` call and its following `ret`, as this
+    // produces invalid IR. Such a call is required to immediately precede the
+    // block's `ret`, so only that position needs to be checked. Insert the
+    // probe before the call instead.
+    if (auto *Ret = dyn_cast<ReturnInst>(BB->getTerminator()))
+      if (auto *CI = dyn_cast_or_null<CallInst>(Ret->getPrevNode()))
+        if ((CI->isMustTailCall() ||
+             CI->getIntrinsicID() == Intrinsic::experimental_deoptimize) &&
+            !J->comesBefore(CI))
+          J = CI;
+
     IRBuilder<> Builder(J);
     assert(Builder.GetInsertPoint() != BB->end() &&
            "Cannot get the probing point");
