@@ -139,3 +139,54 @@ contains
     print *, q
   end subroutine
 end module
+
+! F2023 C8106: an explicitly imported host name, or any host name made
+! accessible by IMPORT, ALL, may not be hidden, and a statement function
+! dummy argument of that name would hide it.  There is no scalar-variable
+! exception here.  A plain IMPORT does not protect names from being hidden
+! (8.8 p4).
+subroutine import_host
+  real :: val
+contains
+  subroutine only_import
+    import, only: val
+    !ERROR: 'val' from host may not be hidden by a statement function dummy argument
+    w1(val) = val + 1
+  end subroutine
+  subroutine named_import
+    import :: val
+    !ERROR: 'val' from host may not be hidden by a statement function dummy argument
+    w2(val) = val + 1
+  end subroutine
+  subroutine all_import
+    import, all
+    !ERROR: 'val' from host may not be hidden by a statement function dummy argument
+    w3(val) = val + 1
+  end subroutine
+  subroutine plain_import
+    import
+    w4(val) = val + 1 ! ok: plain IMPORT tolerates hiding (8.8 p4)
+  end subroutine
+end subroutine
+
+! Boundary cases that remain errors: the enclosing subprogram's own name and
+! an ENTRY name of the same subprogram are visible in the subprogram itself.
+subroutine self_clash
+  real :: f
+  !ERROR: The name 'self_clash' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  f(self_clash) = self_clash + 1
+end subroutine
+subroutine entry_clash
+  real :: g
+  !ERROR: The name 'ent' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  g(ent) = ent + 1
+  return
+entry ent
+end subroutine
+
+! A common block name is explicitly excepted by 19.4 p2.
+subroutine common_carveout
+  real :: y, f
+  common /cb/ y
+  f(cb) = cb + 1 ! ok: common block name carve-out
+end subroutine
