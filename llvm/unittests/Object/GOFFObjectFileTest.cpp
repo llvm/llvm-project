@@ -41,7 +41,7 @@ void addEsdRecord(std::vector<char> &GOFFData, uint8_t Type, uint8_t ESDID,
                   const std::vector<uint8_t> &Name, uint8_t ParentESDID = 0,
                   uint8_t BindingScope = 0, uint8_t NameSpaceID = 0,
                   uint8_t AdditionalFlags = 0,
-                  uint8_t BehavioralAttributes[10] = nullptr,
+                  std::array<uint8_t, 10> BehavioralAttributes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                   uint32_t Length = 0) {
   size_t Pos = GOFFData.size();
   GOFFData.resize(GOFFData.size() + GOFF::RecordLength);
@@ -57,10 +57,8 @@ void addEsdRecord(std::vector<char> &GOFFData, uint8_t Type, uint8_t ESDID,
   GOFFData[Pos + 40] = (char)NameSpaceID;     // Name Space ID
   GOFFData[Pos + 41] = (char)AdditionalFlags; // Additional Flags
 
-  if (BehavioralAttributes) {
-    for (size_t Offset = 0; Offset < 10; Offset++)
-      GOFFData[Pos + 60 + Offset] = (char)BehavioralAttributes[Offset];
-  }
+  for (size_t Offset = 0; Offset < 10; Offset++)
+    GOFFData[Pos + 60 + Offset] = (char)BehavioralAttributes[Offset];
 
   GOFFData[Pos + 71] = (char)(Name.size()); // Size of symbol name.
   size_t StringOffset = Pos + 72;           // Start of Symbol name
@@ -587,8 +585,8 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
                 0x83}); // c
 
   // ESD record. Symbol name is c_CoDE64.
-  uint8_t BehavioralAttributes[] = {0x04, 0x04, 0x00, 0x0a, 0x00,
-                                    0x00, 0x03, 0x00, 0x00, 0x00};
+  std::array<uint8_t, 10> BehavioralAttributes = {0x04, 0x04, 0x00, 0x0a, 0x00,
+                                                  0x00, 0x03, 0x00, 0x00, 0x00};
   addEsdRecord(GOFFData, 0x01, 0x02,
                {0xc3,  // c
                 0x6d,  // _
