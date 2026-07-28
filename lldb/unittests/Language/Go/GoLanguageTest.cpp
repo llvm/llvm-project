@@ -23,6 +23,7 @@ TEST(GoLanguage, LookupByLanguageType) {
   EXPECT_EQ(plugin->GetLanguageType(), lldb::eLanguageTypeGo);
   EXPECT_EQ(plugin->GetUserEntryPointName(), "main.main");
   EXPECT_EQ(plugin->GetHardcodedSummaries().size(), 1u);
+  EXPECT_EQ(Language::FindPlugin("main.go"), plugin);
 
   EXPECT_EQ(GoLanguage::CreateInstance(lldb::eLanguageTypeC), nullptr);
 }
