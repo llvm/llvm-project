@@ -5528,10 +5528,9 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    if (II->mayStore()) {
-      SawStore = true;
+    II->isSafeToMove(SawStore);
+    if (SawStore)
       break;
-    }
   }
   return From.isSafeToMove(SawStore);
 }
