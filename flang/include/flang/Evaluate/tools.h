@@ -1392,9 +1392,9 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
-// True for a whole array variable or a whole array component (a%b), false for an
-// array section, an array element or a computed value. Note that IsArraySection()
-// counts a%b as a section, so this is not its negation.
+// True for a whole array variable or a whole array component (a%b), false for
+// an array section, an array element or a computed value. Note that
+// IsArraySection() counts a%b as a section, so this is not its negation.
 template <typename A> inline bool IsWholeArrayDesignator(const A &expr) {
   return expr.Rank() > 0 &&
       UnwrapWholeSymbolOrComponentDataRef(expr) != nullptr;
