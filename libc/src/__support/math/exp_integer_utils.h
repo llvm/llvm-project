@@ -1,10 +1,19 @@
-//===-- e^x integer-only utility functions ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains utilities for implementing integer-only implementation
+/// of expf(x)
+///
+//===----------------------------------------------------------------------===//
+
+// TODO: this file is expected to be used for exp*(x) functions, not only
+// limited to expf(x)
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_UTILS_H

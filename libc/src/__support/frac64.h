@@ -1,9 +1,14 @@
-//===-- 64-bit unsigned fractional type -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of 64-bit unsigned fractional type
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FRAC64_H
@@ -14,7 +19,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Q0.64
 struct Frac64 : public UInt<64> {
   using UInt<64>::UInt;
 

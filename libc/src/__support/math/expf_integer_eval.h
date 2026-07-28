@@ -1,10 +1,16 @@
-//===-- Implementation header for expf using integer-only --------*- C++-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the integer-only implementation of expf(x)
+///
+//===----------------------------------------------------------------------===//
+
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_INTEGER_EVAL_H
