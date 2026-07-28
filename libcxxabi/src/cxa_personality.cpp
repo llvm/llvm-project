@@ -1122,7 +1122,7 @@ extern "C" _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code __gxx_wasm_personality_v0(voi
   // Call personality function. Wasm does not have two-phase unwinding, so we
   // only do the search phase.
   return __gxx_personality_imp(1, _UA_SEARCH_PHASE, exception_object->exception_class, exception_object,
-                        (struct _Unwind_Context*)&__wasm_lpad_context);
+                               (struct _Unwind_Context*)&__wasm_lpad_context);
 }
 #endif
 

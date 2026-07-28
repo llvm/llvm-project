@@ -355,7 +355,8 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
   // Pseudocode: personality_fn(exn);
-  CallInst *PersCI = IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", CPI));
+  CallInst *PersCI =
+      IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", CPI));
   PersCI->setDoesNotThrow();
 
   // Pseudocode: int selector = __wasm_lpad_context.selector;
