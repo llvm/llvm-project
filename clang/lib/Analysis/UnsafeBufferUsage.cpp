@@ -867,8 +867,7 @@ static bool isSafePointerArithmetic(const Expr *Ptr, const Expr *OffsetExpr,
   }
 
   llvm::APSInt OffsetVal = EVResult.Val.getInt();
-  bool IsSub = (Opcode == BO_Sub || Opcode == BO_SubAssign);
-  if (IsSub)
+  if (Opcode == BO_Sub)
     OffsetVal = -OffsetVal;
 
   // If the offset is a constant, and it is within the bounds of the
