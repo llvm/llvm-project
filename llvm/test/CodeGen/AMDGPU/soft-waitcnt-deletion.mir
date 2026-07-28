@@ -399,6 +399,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAIT_DSCNT 0
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_0
   ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
