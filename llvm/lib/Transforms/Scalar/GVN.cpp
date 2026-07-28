@@ -3545,7 +3545,8 @@ bool GVNPass::processInstruction(Instruction *I) {
       if (SwitchEdges.lookup(Dst) == 1) {
         BasicBlockEdge E(Parent, Dst);
         Changed |= propagateEquality(SwitchCond, Case.getCaseValue(), E);
-        Changed |= propagateConstExpressions(SwitchCond, Case.getCaseValue(), E);
+        Changed |=
+            propagateConstExpressions(SwitchCond, Case.getCaseValue(), E);
       }
     }
     return Changed;
