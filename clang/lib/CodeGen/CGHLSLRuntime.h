@@ -340,6 +340,7 @@ private:
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
   llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
@@ -353,6 +354,7 @@ private:
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                 const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
                                  std::optional<unsigned> Index);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
@@ -369,6 +371,7 @@ private:
   llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
   unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
+
   // DXIL assigns each leaf semantic an index in parse order. Inputs and outputs
   // are counted independently. Reset in emitEntryFunction before lowering the
   // semantics of an entry point.
