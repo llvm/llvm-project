@@ -1411,23 +1411,25 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
-      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+  if (lhsNbManagedSymbols >= 1 && IsWholeArrayDesignator(lhs) &&
+      rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
     return true; // Managed arrays initialization is performed on the device.
   }
 
-  // A whole-array assignment whose right-hand side is a managed/unified
-  // variable is a synchronous data transfer that waits for previously launched
-  // kernels. Subsections are excluded: a loop assigning one section at a time
-  // would otherwise become a sequence of blocking copies.
-  bool wholeArrayTransfer{
-      IsWholeArrayDesignator(lhs) && IsWholeArrayDesignator(rhs)};
+  // Per CUDA Fortran Programming Guide 3.4.1, an assignment involving
+  // managed/unified data is a synchronous copy when the managed operand is a
+  // whole variable or array, and is performed by host code when it is an array
+  // section: managed data is host-addressable, and a loop assigning one section
+  // at a time would otherwise become a sequence of blocking copies. Sections
+  // are still copied when the other side is device data.
+  bool wholeLhs{IsWholeArrayDesignator(lhs)};
+  bool wholeRhs{IsWholeArrayDesignator(rhs)};
 
-  // Managed/unified data is host-addressable, so several assignments are
-  // performed on the host and need no explicit data transfer:
+  // Assignments that are performed on the host and need no data transfer:
   // - A whole-allocatable left-hand side involving managed/unified data: the
   //   assignment has reallocation semantics and is performed on the host.
-  // - Element-wise (scalar) accesses and array-section assignments.
+  // - A managed/unified operand that is an array section or an element.
   // - A right-hand side expression involving managed/unified data assigned into
   //   a host-addressable (managed/unified or host) left-hand side: evaluating
   //   it on the host avoids materializing a temporary.
@@ -1435,10 +1437,10 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if ((IsAllocatableDesignator(lhs) &&
           (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
       (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          !wholeArrayTransfer) ||
+          !(wholeLhs && wholeRhs)) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
           rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          !wholeArrayTransfer) ||
+          !wholeRhs) ||
       (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) &&
           (lhsNbManagedSymbols >= 1 || !HasCUDADeviceAttrs(lhs))) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {

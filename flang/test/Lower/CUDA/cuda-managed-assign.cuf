@@ -1,11 +1,11 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
-! An assignment between whole managed arrays, or from a managed function result,
-! is a synchronous data transfer (matching CUDA Fortran assignment-statement
-! semantics). Managed data is host-addressable, so element-wise accesses,
-! array-section assignments, and right-hand side expressions involving managed
-! data are performed on the host: a loop assigning one section at a time would
-! otherwise become a sequence of blocking copies.
+! CUDA Fortran Programming Guide 3.4.1: an assignment involving managed data is a
+! synchronous copy when the managed operand is a whole variable or array, and is
+! performed by host code when it is an array section. Sections are still copied
+! when the other side is device data, which is not host-addressable. A managed
+! function result may be produced by an asynchronous kernel, so consuming it is
+! also a synchronizing copy.
 
 module mfr
 contains
@@ -17,13 +17,13 @@ contains
   end function
 end module
 
-! Whole-array assignments are data transfers.
+! Assignments that are data transfers.
 
 subroutine managed_array_assign()
   integer(4), managed :: ma(16), mb(16)
   integer(4) :: ha(16)
   ma = mb    ! managed = managed
-  ma = ha    ! managed = host
+  ma = ha    ! managed = host array
   ha = ma    ! host = managed
 end subroutine
 
@@ -58,10 +58,86 @@ end subroutine
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
 
+! A whole managed array is copied from a conforming constant, host scalar, host
+! array or host array section.
+subroutine managed_whole_from_host(hs)
+  integer(4) :: hs
+  integer(4), managed :: ma(4)
+  integer(4) :: hb(4,16)
+  ma = 0
+  ma = hs
+  ma = hb(:,1)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_whole_from_host
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+
+! Device memory is not host-addressable, so an assignment between managed and
+! device data is a copy in both directions, including for sections.
+subroutine managed_device_transfer(n)
+  integer :: n, i
+  integer(4), managed :: ma(4,16)
+  integer(4), device :: da(4,16)
+  integer(4) :: ha(4,16)
+  ma = da                ! whole managed = whole device
+  da = ma                ! whole device = whole managed
+  do i = 1, n
+    ma(:,i) = da(:,i)    ! managed section = device section
+    da(:,i) = ma(:,i)    ! device section = managed section
+    ha(:,i) = da(:,i)    ! host section = device section
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_device_transfer
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+
+! The rule keys on the managed operand: a host section may be the target of a
+! whole managed array copy.
+subroutine host_section_from_managed(n)
+  integer :: n, i
+  integer(4), managed :: mb(4)
+  integer(4) :: ha(4,16)
+  do i = 1, n
+    ha(:,i) = mb
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPhost_section_from_managed
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+
+! A managed function result is a synchronizing copy, independently of the shape of
+! the left-hand side.
+subroutine managed_func_result()
+  use mfr
+  integer(4), managed :: b(4)
+  integer(4) :: hb(4)
+  b = fr(4)
+  hb = fr(4)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_func_result()
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+
+subroutine managed_func_result_section()
+  use mfr
+  integer(4), managed :: b(4)
+  b(1:2) = fr(2)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_func_result_section()
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
 ! Assignments performed on the host.
 
-! A right-hand side expression involving managed data is evaluated on the host
-! to avoid materializing a temporary, so no data transfer is generated.
+! A right-hand side expression involving managed data is evaluated on the host to
+! avoid materializing a temporary.
 subroutine managed_expr_assign()
   integer(4), managed :: ma(16), mb(16)
   integer(4) :: ha(16)
@@ -72,12 +148,24 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPmanaged_expr_assign()
 ! CHECK-NOT: cuf.data_transfer
 
+! Scalar and element-wise accesses of managed data are performed on the host.
+subroutine managed_scalar_assign()
+  integer(4), managed :: ms, mt
+  integer(4) :: hs
+  ms = mt
+  hs = ms
+  ms = hs
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_scalar_assign()
+! CHECK-NOT: cuf.data_transfer
+
 subroutine managed_scalar_access(n)
   integer :: n, i
   integer(4), managed :: ma(16)
   integer(4) :: ha(16)
   do i = 1, n
-    ha(i) = ma(i) + 1   ! element-wise access is performed on the host
+    ha(i) = ma(i) + 1
   end do
 end subroutine
 
@@ -97,6 +185,26 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPmanaged_element_assign
 ! CHECK-NOT: cuf.data_transfer
 
+! A managed array section is assigned on the host, whatever the host right-hand
+! side is.
+subroutine managed_section_from_host(n, hs)
+  integer :: n, i
+  integer(4) :: hs
+  integer(4), managed :: mb(4,16)
+  integer(4) :: ha(4), hb(4,16)
+  do i = 1, n
+    mb(:,i) = 0
+    mb(:,i) = hs
+    mb(:,i) = ha
+    mb(:,i) = hb(:,i)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_section_from_host
+! CHECK-NOT: cuf.data_transfer
+
+! A managed array section on either side is assigned on the host: a loop assigning
+! one section at a time would otherwise become a sequence of blocking copies.
 subroutine managed_section_assign(n)
   integer :: n, i
   integer(4), managed :: ma(4,16), mb(4,16)
@@ -110,8 +218,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPmanaged_section_assign
 ! CHECK-NOT: cuf.data_transfer
 
-subroutine managed_section_assign_1d(n)
-  integer :: n
+subroutine managed_section_assign_1d()
   integer(4), managed :: ma(16), mb(16)
   integer(4) :: ha(16)
   ma(1:8) = mb(1:8)         ! contiguous section
@@ -145,13 +252,12 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPmanaged_component_section_assign()
 ! CHECK-NOT: cuf.data_transfer
 
-! Both sides must be whole arrays for the assignment to be a transfer.
 subroutine managed_mixed_whole_section()
   integer(4), managed :: ma(4), mb(4,16)
   integer(4) :: ha(4)
-  ma = mb(:,1)        ! whole = section
-  mb(:,1) = ma        ! section = whole
-  ha = mb(:,1)
+  ma = mb(:,1)        ! whole managed = managed section
+  mb(:,1) = ma        ! managed section = whole managed
+  ha = mb(:,1)        ! whole host = managed section
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_mixed_whole_section()
@@ -184,62 +290,3 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPunified_section_assign
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
 ! CHECK-NOT: cuf.data_transfer
-
-! Cases that remain data transfers.
-
-! Device memory is not host-addressable, so sections and elements involving it
-! are still transferred.
-subroutine managed_device_section(n)
-  integer :: n, i
-  integer(4), managed :: ma(4,16)
-  integer(4), device :: da(4,16)
-  integer(4) :: ha(4,16)
-  do i = 1, n
-    ma(:,i) = da(:,i)   ! managed section = device section
-    ha(:,i) = da(:,i)   ! host section = device section
-  end do
-end subroutine
-
-! CHECK-LABEL: func.func @_QPmanaged_device_section
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
-
-! Initialization of managed data from a host-only right-hand side is performed
-! on the device, whether the left-hand side is a whole array or a section.
-subroutine managed_init(n)
-  integer :: n, i
-  integer(4), managed :: ma(4,16)
-  integer(4) :: ha(4,16)
-  ma = 0
-  do i = 1, n
-    ma(:,i) = ha(:,i)
-  end do
-end subroutine
-
-! CHECK-LABEL: func.func @_QPmanaged_init
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-
-! A managed function result may be produced by an asynchronous kernel, so
-! consuming it in an assignment is a synchronizing data transfer, independently
-! of the shape of the left-hand side.
-subroutine managed_func_result()
-  use mfr
-  integer(4), managed :: b(4)
-  integer(4) :: hb(4)
-  b = fr(4)
-  hb = fr(4)
-end subroutine
-
-! CHECK-LABEL: func.func @_QPmanaged_func_result()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
-
-subroutine managed_func_result_section()
-  use mfr
-  integer(4), managed :: b(4)
-  b(1:2) = fr(2)
-end subroutine
-
-! CHECK-LABEL: func.func @_QPmanaged_func_result_section()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
