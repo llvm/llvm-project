@@ -13045,6 +13045,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       VPtr = Extract;
     }
   };
+  // Normally we replace at the time of operand creation but if first
+  // Entry in tree these VL were never operands
+  if (Depth == 0)
+    ReplaceWithExtractCandidates(VL);
 
   // Tries to build split node.
   auto TrySplitNode = [&](const InstructionsState &LocalState) {
@@ -25036,7 +25040,8 @@ Value *BoUpSLP::vectorizeTree(
       return {dyn_cast<ExtractElementInst>(Extract),
               dyn_cast<Instruction>(Remat)};
     };
-    auto TrackDeferredExtract = [&](Instruction *Inst, Value *Replacement) {
+    auto TrackDeferredExtract = [&](Instruction *Inst, Value *Replacement,
+                                    llvm::User *User) {
       if (!Inst)
         return;
       if (ExternalUsesAsOriginalScalar.contains(Inst)) {
@@ -25070,6 +25075,10 @@ Value *BoUpSLP::vectorizeTree(
       }
       CouldBeExtract.try_emplace(RI, EI);
       CouldBeRemat.try_emplace(EI, RI);
+      if (User)
+        User->replaceUsesOfWith(EI, RI);
+      else
+        EI->replaceAllUsesWith(RI);
     };
     // If User == nullptr, the Scalar remains as scalar in vectorized
     // instructions or is used as extra arg. Generate ExtractElement instruction
@@ -25131,8 +25140,11 @@ Value *BoUpSLP::vectorizeTree(
                "Extractelements should not be replaced.");
         Scalar->replaceAllUsesWith(NewInst);
       }
+      if (ExternalUsesAsExtract.contains(Scalar))
+        DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst, User);
+
       if (IsDeferredScalar)
-        TrackDeferredExtract(dyn_cast<Instruction>(Scalar), NewInst);
+        TrackDeferredExtract(dyn_cast<Instruction>(Scalar), NewInst, User);
       continue;
     }
 
@@ -25235,7 +25247,7 @@ Value *BoUpSLP::vectorizeTree(
           User->replaceUsesOfWith(Scalar, NewInst);
         }
         if (IsDeferredScalar)
-          TrackDeferredExtract(dyn_cast<Instruction>(Scalar), NewInst);
+          TrackDeferredExtract(dyn_cast<Instruction>(Scalar), NewInst, User);
       }
     } else {
       Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
@@ -25558,11 +25570,15 @@ void BoUpSLP::emitDeferredExtracts() {
   for (const auto &Entry : DeferredScalarsToExtract)
     append_range(DeferredExtracts, Entry.second);
   for (const auto &DET : DeferredExtracts) {
-    auto *UI = cast<Instruction>(DET.User);
-    if (isDeleted(UI))
-      continue;
-    DET.User->replaceUsesOfWith(DET.Scalar, DET.NewInst);
-    LLVM_DEBUG(dbgs() << "SLP: Delayed replacement:" << *UI << ".\n");
+    auto *UI = cast_or_null<Instruction>(DET.User);
+    if (!DET.User) {
+      DET.Scalar->replaceAllUsesWith(DET.NewInst);
+    } else {
+      if (isDeleted(UI))
+        continue;
+      DET.User->replaceUsesOfWith(DET.Scalar, DET.NewInst);
+      LLVM_DEBUG(dbgs() << "SLP: Delayed replacement:" << *UI << ".\n");
+    }
   }
   DeferredScalarsToExtract.clear();
   for (const auto &DET : DeferredExtracts) {
