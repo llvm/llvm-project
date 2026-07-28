@@ -25,9 +25,12 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include <vector>
 
 namespace clang {
@@ -37,6 +40,14 @@ class HeaderSearch;
 class NamedDecl;
 class SourceLocation;
 namespace include_cleaner {
+
+using ObjCSelectorMap =
+    llvm::DenseMap<Selector, llvm::SmallVector<NamedDecl *, 2>>;
+
+/// Builds a map from Objective-C Selectors to their declarations in the given
+/// ASTContext.
+/// This is used to optimize selector lookups during AST walking.
+ObjCSelectorMap buildObjCSelectorMap(ASTContext &Ctx);
 
 /// Traverses part of the AST from \p Root, finding uses of symbols.
 ///
@@ -50,7 +61,7 @@ namespace include_cleaner {
 ///
 /// walkAST is typically called once per top-level declaration in the file
 /// being analyzed, in order to find all references within it.
-void walkAST(Decl &Root,
+void walkAST(Decl &Root, const ObjCSelectorMap &SelectorDecls,
              llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>);
 
 /// Finds the headers that provide the symbol location.

@@ -12,9 +12,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -24,10 +26,12 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <utility>
 
 namespace clang::include_cleaner {
 namespace {
@@ -39,8 +43,39 @@ bool isOperatorNewDelete(OverloadedOperatorKind OpKind) {
 using DeclCallback =
     llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>;
 
+class ObjCSelectorDeclMapBuilder
+    : public RecursiveASTVisitor<ObjCSelectorDeclMapBuilder> {
+public:
+  ObjCSelectorMap build() && { return std::move(Map); }
+
+  bool TraverseDecl(clang::Decl *D) {
+    if (!D)
+      return true;
+    if (auto *Container = llvm::dyn_cast<clang::ObjCContainerDecl>(D)) {
+      for (clang::ObjCMethodDecl *M : Container->methods()) {
+        if (M) {
+          Map[M->getSelector()].push_back(M);
+        }
+      }
+      for (clang::ObjCPropertyDecl *Prop : Container->properties()) {
+        if (Prop) {
+          if (auto Getter = Prop->getGetterName(); !Getter.isNull())
+            Map[Getter].push_back(Prop);
+          if (auto Setter = Prop->getSetterName(); !Setter.isNull())
+            Map[Setter].push_back(Prop);
+        }
+      }
+    }
+    return RecursiveASTVisitor::TraverseDecl(D);
+  }
+
+private:
+  ObjCSelectorMap Map;
+};
+
 class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   DeclCallback Callback;
+  const ObjCSelectorMap &SelectorDecls;
 
   void report(SourceLocation Loc, NamedDecl *ND,
               RefType RT = RefType::Explicit) {
@@ -102,7 +137,8 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   }
 
 public:
-  ASTWalker(DeclCallback Callback) : Callback(Callback) {}
+  ASTWalker(DeclCallback Callback, const ObjCSelectorMap &SelectorDecls)
+      : Callback(Callback), SelectorDecls(SelectorDecls) {}
 
   // Operators are almost always ADL extension points and by design references
   // to them doesn't count as uses (generally the type should provide them, so
@@ -479,6 +515,17 @@ public:
     return true;
   }
 
+  bool VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
+    auto Sel = E->getSelector();
+    auto It = SelectorDecls.find(Sel);
+    if (It != SelectorDecls.end()) {
+      for (NamedDecl *ND : It->second) {
+        report(E->getSelectorNameLoc(), ND, RefType::Ambiguous);
+      }
+    }
+    return true;
+  }
+
   bool VisitCastExpr(CastExpr *E) {
     // Handle implicit or explicit casts between Objective-C object pointers
     // aimed towards protocol-qualification (e.g., `ClassName *` to
@@ -572,8 +619,17 @@ public:
 
 } // namespace
 
-void walkAST(Decl &Root, DeclCallback Callback) {
-  ASTWalker(Callback).TraverseDecl(&Root);
+ObjCSelectorMap buildObjCSelectorMap(ASTContext &Ctx) {
+  ObjCSelectorDeclMapBuilder Builder;
+  if (Ctx.getLangOpts().ObjC) {
+    Builder.TraverseDecl(Ctx.getTranslationUnitDecl());
+  }
+  return std::move(Builder).build();
+}
+
+void walkAST(Decl &Root, const ObjCSelectorMap &SelectorDecls,
+             DeclCallback Callback) {
+  ASTWalker(Callback, SelectorDecls).TraverseDecl(&Root);
 }
 
 } // namespace clang::include_cleaner

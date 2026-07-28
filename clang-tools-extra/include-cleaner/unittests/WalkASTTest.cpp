@@ -67,18 +67,20 @@ testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode,
   std::vector<Decl::Kind> TargetDecls;
   // Perform the walk, and capture the offsets of the referenced targets.
   std::unordered_map<RefType, std::vector<size_t>> ReferencedOffsets;
+  ObjCSelectorMap SelectorDecls = buildObjCSelectorMap(AST.context());
   for (Decl *D : AST.context().getTranslationUnitDecl()->decls()) {
     if (ReferencingFile != SM.getDecomposedExpansionLoc(D->getLocation()).first)
       continue;
-    walkAST(*D, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      if (SM.getFileLoc(Loc) != ReferencingLoc)
-        return;
-      auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
-      if (NDLoc.first != TargetFile)
-        return;
-      ReferencedOffsets[RT].push_back(NDLoc.second);
-      TargetDecls.push_back(ND.getKind());
-    });
+    walkAST(*D, SelectorDecls,
+            [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+              if (SM.getFileLoc(Loc) != ReferencingLoc)
+                return;
+              auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
+              if (NDLoc.first != TargetFile)
+                return;
+              ReferencedOffsets[RT].push_back(NDLoc.second);
+              TargetDecls.push_back(ND.getKind());
+            });
   }
   for (auto &Entry : ReferencedOffsets)
     llvm::sort(Entry.second);
@@ -1160,6 +1162,94 @@ TEST(WalkAST, ObjCIvarRefExprFree) {
       int x = ^foo;
     }
     @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExpr) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^doSomething);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprPropertyGetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^foo);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprPropertySetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^setFoo:);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprMultipleMatches) {
+  testWalk(R"objc(
+    @interface MyClass1
+    $ambiguous^- (void)doSomething;
+    @end
+
+    @interface MyClass2
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^doSomething);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprInProtocol) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    $ambiguous^- (void)protocolMethod;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^protocolMethod);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprMultiColon) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doA:(int)a withB:(int)b;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^doA:withB:);
+    }
   )objc",
            {"-x", "objective-c"});
 }
