@@ -14,6 +14,7 @@ body:             |
   ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+  ; CHECK-NEXT:   renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
@@ -23,12 +24,12 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
   ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1
-  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   S_WAIT_LOADCNT 0
+  ; CHECK-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -36,6 +37,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
+    renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
     $vcc_lo = S_MOV_B32 $exec_lo
@@ -43,17 +45,76 @@ body:             |
 
   bb.1:
     successors: %bb.2, %bb.1
-    liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+    liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
 
     S_WAIT_DSCNT_soft 0
     S_BARRIER_SIGNAL_IMM -1
     $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc
 
   bb.2:
     S_ENDPGM 0
 ...
+
+---
+name:            soft_wait_before_s_barrier2
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; CHECK-LABEL: name: soft_wait_before_s_barrier2
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
+  ; CHECK-NEXT:   V_NOP_e32 implicit $exec
+  ; CHECK-NEXT:   S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+  ; CHECK-NEXT:   renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
+  ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_WAIT_DSCNT 0
+  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_2
+  ; CHECK-NEXT:   S_WAIT_LOADCNT 0
+  ; CHECK-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
+  ; CHECK-NEXT:   renamable $vgpr0 = DS_READ_B32_gfx9 renamable $vgpr17, 0, 0, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc_lo
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1
+
+    renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
+    $vcc_lo = S_MOV_B32 $exec_lo
+
+  bb.1:
+    successors: %bb.2, %bb.1
+    liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
+
+    S_WAIT_DSCNT_soft 0
+    S_BARRIER_SIGNAL_IMM -1
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
+    renamable $vgpr0 = DS_READ_B32_gfx9 renamable $vgpr17, 0, 0, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+
 
 ---
 name:            soft_wait_multipath_first_pred_needs_wait
@@ -191,14 +252,6 @@ body:             |
     S_ENDPGM 0
 ...
 
-# Test that soft wait in RequiredWait does not incorrectly simplify VM_VSRC.
-# When processing from the path without DS operations first:
-# - soft S_WAIT_DSCNT goes to RequiredWait (AllowWaitDeletion=false)
-# - hard S_WAITCNT_DEPCTR with VM_VSRC=0 goes to Wait
-# If we incorrectly used RequiredWait in simplifyVmVsrc's CheckWait,
-# the VM_VSRC would be simplified away because DS_CNT=0 is present.
-# Then when the soft wait is deleted (not needed from second path),
-# we'd lose the required VM_VSRC wait.
 ---
 name:            soft_wait_does_not_simplify_vm_vsrc
 tracksRegLiveness: true
@@ -279,6 +332,7 @@ body:             |
   ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+  ; CHECK-NEXT:   renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
@@ -288,10 +342,12 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_WAIT_LOADCNT 0
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
-  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
+  ; CHECK-NEXT:   S_WAIT_XCNT 0
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_0
   ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
@@ -302,6 +358,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
+    renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
     $vcc_lo = S_MOV_B32 $exec_lo
@@ -309,8 +366,8 @@ body:             |
 
   bb.1:
     successors: %bb.2, %bb.1
-    liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
     S_WAIT_DSCNT_soft 0
     $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
     S_BARRIER_SIGNAL_IMM -1
@@ -333,6 +390,7 @@ body:             |
   ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+  ; CHECK-NEXT:   renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
@@ -342,13 +400,14 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_0
   ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
-  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   S_WAIT_LOADCNT 0
+  ; CHECK-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -356,6 +415,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
+    renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
     $vcc_lo = S_MOV_B32 $exec_lo
@@ -363,11 +423,11 @@ body:             |
 
   bb.1:
     successors: %bb.2, %bb.1
-    liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+    liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
     S_WAIT_DSCNT_soft 0
     $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
     S_BARRIER_SIGNAL_IMM -1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc
 
   bb.2:
@@ -387,6 +447,7 @@ body:             |
   ; CHECK-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; CHECK-NEXT:   V_NOP_e32 implicit $exec
   ; CHECK-NEXT:   S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+  ; CHECK-NEXT:   renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
@@ -396,13 +457,15 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+  ; CHECK-NEXT:   liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAIT_DSCNT 0
+  ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_0
   ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
-  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   S_WAIT_LOADCNT 0
+  ; CHECK-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr0 = DS_READ_B32_gfx9 renamable $vgpr17, 0, 0, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
@@ -411,6 +474,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
+    renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr17 = V_MOV_B32_e32 0, implicit $exec
     renamable $vgpr32_vgpr33 = V_MOV_B64_e32 0, implicit $exec
     $vcc_lo = S_MOV_B32 $exec_lo
@@ -418,11 +482,11 @@ body:             |
 
   bb.1:
     successors: %bb.2, %bb.1
-    liveins: $vgpr32_vgpr33, $vgpr17, $vgpr0, $vcc_lo
+    liveins: $vgpr32_vgpr33, $vgpr16, $vgpr17, $vgpr0, $vcc_lo
     S_WAIT_DSCNT_soft 0
     $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
     S_BARRIER_SIGNAL_IMM -1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec
     renamable $vgpr0 = DS_READ_B32_gfx9 renamable $vgpr17, 0, 0, implicit $exec
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo, implicit $vcc
 

@@ -558,13 +558,11 @@ public:
   bool merge(const WaitcntBrackets &Other);
 
   bool counterOutOfOrder(AMDGPU::InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait,
-                       bool UseImpliedWait = true) const {
-    simplifyWaitcnt(Wait, Wait, UseImpliedWait);
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
+    simplifyWaitcnt(Wait, Wait);
   }
   void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
-                       AMDGPU::Waitcnt &UpdateWait,
-                       bool UseImpliedWait = true) const;
+                       AMDGPU::Waitcnt &UpdateWait) const;
   void simplifyWaitcnt(AMDGPU::InstCounterType T, unsigned &Count) const;
   void simplifyWaitcnt(AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T) const;
   void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
@@ -1275,8 +1273,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 /// Simplify \p UpdateWait by removing waits that are redundant based on the
 /// current WaitcntBrackets and any other waits specified in \p CheckWait.
 void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
-                                      AMDGPU::Waitcnt &UpdateWait,
-                                      bool UseImpliedWait) const {
+                                      AMDGPU::Waitcnt &UpdateWait) const {
   simplifyWaitcnt(UpdateWait, AMDGPU::LOAD_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::EXP_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::DS_CNT);
@@ -1284,12 +1281,10 @@ void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
   simplifyWaitcnt(UpdateWait, AMDGPU::SAMPLE_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::BVH_CNT);
   simplifyWaitcnt(UpdateWait, AMDGPU::KM_CNT);
-  if (UseImpliedWait)
-    simplifyXcnt(CheckWait, UpdateWait);
+  simplifyXcnt(CheckWait, UpdateWait);
   simplifyWaitcnt(UpdateWait, AMDGPU::VA_VDST_RD);
   simplifyWaitcnt(UpdateWait, AMDGPU::VA_VDST_WR);
-  if (UseImpliedWait)
-    simplifyVmVsrc(CheckWait, UpdateWait);
+  simplifyVmVsrc(CheckWait, UpdateWait);
   simplifyWaitcnt(UpdateWait, AMDGPU::ASYNC_CNT);
 }
 
@@ -2034,40 +2029,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     }
   }
 
-  // Simplify Wait based on the combined waits. Note that we need to take care
-  // when using soft waits in our simplifications. In cases with loops, we may
-  // not have visited all predecessor edges of the block. The three possible
-  // states for a soft wait are: 1. it is required based on events from already
-  // visited predeccesors, 2. it is not required based on events from already
-  // visited predecesors, but is required after adding events from non-visited
-  // predecessors, or 3. it is not required based on events from already visited
-  // predecessors, and will not be required after adding events from non-visited
-  // predecessors.
-
-  // In case 1, we simply promote the soft wait to a regular wait. It will not
-  // be simplified by either call to simplifyWaitcnt. Since it is not simplified
-  // by the first call, it will be used to do implied wait simplifications in
-  // the second call. Then, given it is not simplified out and there is a
-  // meaningful wait, we will promote it.
-
-  // In case 2, we must simplify the soft wait out before using `Wait` for
-  // implied simplifications. For example, a S_WAIT_DSCNT_soft 0 will manifest
-  // as a 0 wait DS_CNT in `Wait`. If we use this (combined with RequiredWait)
-  // as the CheckWait in simplifyWaitcnt, we may have a case where we infer that
-  // a wait vm_vsrc is not required since the dscnt wait will cover all the
-  // oustanding events. However, since it is not a provably required soft wait
-  // we may end up deleting it, resulting in an incorrect implied
-  // simplification. Thus, we first do non-implied wait simplifications, to
-  // simplify out irrelevant softwaits, then use the simplified output to do
-  // implied simplifications. After simplifying in this way, the non provably
-  // required soft wait will not have a meaningful wait in the `Wait` Waitcnt,
-  // thus it will not be promoted. However, since we have not visited all
-  // predecessors we also do not delete it as we may find it is required later.
-
-  // In case 3, we handle the simpifications in the same way as case 2. The only
-  // difference is that when we reach the promote/delete decision, we recognize
-  // we have visited all the predecessor, so it is okay to remove the soft wait.
-  ScoreBrackets.simplifyWaitcnt(Wait, false);
   ScoreBrackets.simplifyWaitcnt(Wait.combined(RequiredWait), Wait);
   Wait = Wait.combined(RequiredWait);
 
