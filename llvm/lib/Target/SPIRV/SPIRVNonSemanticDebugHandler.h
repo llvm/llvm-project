@@ -290,7 +290,7 @@ private:
   /// DISubroutineType type, the signature type was not emitted in \c
   /// DebugTypeRegs, no path
   /// \c OpString was recorded for \p SP in section 7, or
-  /// \c resolveDebugFunctionDeclarationParent returns no id for the \c Parent
+  /// \c resolveDebugFunctionParent returns no id for the \c Parent
   /// operand.
   std::optional<MCRegister>
   emitDebugFunctionDeclaration(const DISubprogram *SP, MCRegister VoidTypeReg,
@@ -436,15 +436,15 @@ private:
                                                MCRegister ExtInstSetReg,
                                                SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Resolve the \c Parent operand for \c DebugFunctionDeclaration: an emitted
-  /// debug type id when \c SP->getScope() is a \c DIType in \c DebugTypeRegs,
-  /// otherwise \c DebugCompilationUnit for \c SP->getUnit() (or the first
-  /// module CU when \c unit: is absent).
+  /// Resolve the \c Parent operand for \c DebugFunctionDeclaration and
+  /// \c DebugFunction: an emitted debug type id when \c SP->getScope() is a
+  /// \c DIType in \c DebugTypeRegs, otherwise \c DebugCompilationUnit for
+  /// \c SP->getUnit() (or the first module CU when \c unit: is absent).
   /// \returns \c std::nullopt when the scope requires a parent we cannot supply
   /// (non-file scope that is not a mapped \c DIType) or the CU has no emitted
   /// id.
   std::optional<MCRegister>
-  resolveDebugFunctionDeclarationParent(const DISubprogram *SP) const;
+  resolveDebugFunctionParent(const DISubprogram *SP) const;
 
   /// Resolve the \c Parent operand for a type instruction (\c
   /// DebugTypeComposite) from its \p Scope: an emitted debug type id when \p
