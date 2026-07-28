@@ -1131,8 +1131,7 @@ void vputils::detail::pullOutPermutationsImpl(
         continue;
 
       // At least one of the ops must be a permutation.
-      if (none_of(Def->operands(),
-                  [&MatchPerm](VPValue *Op) { return MatchPerm(Op); }))
+      if (none_of(Def->operands(), MatchPerm))
         continue;
 
       // All operands must be a single-use permutation or a live in (splat).
