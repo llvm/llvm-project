@@ -532,24 +532,11 @@ void test(Ops *ops) {
   ops->read();
   unlock_fn();
 }
-```
 
-On a parameter, the attributes describe the function reached through the
-parameter, not a capability that the argument stands for: they are checked
-where the parameter is called, and are neither requirements on nor effects for
-callers of the enclosing function. (Contrast this with a parameter of
-`scoped_lockable` reference type, where the attributes describe the locks that
-the passed scope object holds; see {ref}`scoped_capability`.)
-
-```c++
 void visit_all(void (*visit)(int) REQUIRES(mu), int n) {
-  visit(n); // warning: calling function 'visit' requires holding mutex 'mu'
-}
-
-void visit_cb(int) REQUIRES(mu);
-
-void test_param(int n) {
-  visit_all(visit_cb, n); // OK: passing a callee is not a use of 'mu'
+  lock_fn();
+  visit(n); // OK: 'mu' is held here
+  unlock_fn();
 }
 ```
 

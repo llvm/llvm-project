@@ -8226,18 +8226,11 @@ void testReferenceRequiresFail() {
   requires_ref(); // expected-warning {{calling function 'requires_ref' requires holding mutex 'mu' exclusively}}
 }
 
-} // namespace FunctionPointers
-
-namespace FunctionPointerParams {
-
 // Capability attributes on a parameter that names a function to call -- a
 // function pointer, a function reference, or a reference to either -- describe
 // the function reached through the parameter, not a capability that the bound
 // argument stands for. They are checked where the parameter is called, and are
 // neither requirements on nor effects for callers of the enclosing function.
-
-Mutex mu;
-int x GUARDED_BY(mu);
 
 void callback(int) EXCLUSIVE_LOCKS_REQUIRED(mu);
 
@@ -8275,7 +8268,6 @@ void testCallRefLocked(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n)
 // Acquire and release likewise describe the function called through the
 // parameter, so calling the enclosing function neither acquires nor releases.
 void takes_locker(void (&lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu));
-void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
 
 void testAcquireNotTransferred() {
   takes_locker(lock_impl);
@@ -8295,8 +8287,8 @@ void callDependent(F cb EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
 }
 
 void testDependent(int n) {
-  callDependent<void (*)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointerParams::callDependent<void (*)(int)>' requested here}}
-  callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointerParams::callDependent<void (&)(int)>' requested here}}
+  callDependent<void (*)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (*)(int)>' requested here}}
+  callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
 }
 
-} // namespace FunctionPointerParams
+} // namespace FunctionPointers
