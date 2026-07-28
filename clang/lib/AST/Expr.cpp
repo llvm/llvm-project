@@ -3416,8 +3416,13 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     // This handles gcc's extension that allows global initializers like
     // "struct x {int x;} x = (struct x) {};".
     // FIXME: This accepts other cases it shouldn't!
-    const Expr *Exp = cast<CompoundLiteralExpr>(this)->getInitializer();
-    return Exp->isConstantInitializer(Ctx, false, Culprit);
+    const auto *CLE = cast<CompoundLiteralExpr>(this);
+    if (CLE->hasThreadStorage()) {
+      if (Culprit)
+        *Culprit = this;
+      return false;
+    }
+    return CLE->getInitializer()->isConstantInitializer(Ctx, false, Culprit);
   }
   case DesignatedInitUpdateExprClass: {
     const DesignatedInitUpdateExpr *DIUE = cast<DesignatedInitUpdateExpr>(this);

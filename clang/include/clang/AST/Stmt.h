@@ -668,6 +668,22 @@ protected:
     SourceLocation OpLoc;
   };
 
+  class CompoundLiteralExprBitfields {
+    friend class CompoundLiteralExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(StorageClass)
+    unsigned SClass : 3;
+
+    LLVM_PREFERRED_TYPE(ThreadStorageClassSpecifier)
+    unsigned TSCSpec : 2;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsConstexpr : 1;
+  };
+
   class InitListExprBitfields {
     friend class ASTStmtReader;
     friend class InitListExpr;
@@ -1363,6 +1379,7 @@ protected:
     MemberExprBitfields MemberExprBits;
     CastExprBitfields CastExprBits;
     BinaryOperatorBitfields BinaryOperatorBits;
+    CompoundLiteralExprBitfields CompoundLiteralExprBits;
     InitListExprBitfields InitListExprBits;
     ParenListExprBitfields ParenListExprBits;
     GenericSelectionExprBitfields GenericSelectionExprBits;

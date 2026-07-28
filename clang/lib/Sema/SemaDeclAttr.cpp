@@ -9017,6 +9017,14 @@ void Sema::PopParsingDeclaration(ParsingDeclState state, Decl *decl) {
       case DelayedDiagnostic::ForbiddenType:
         handleDelayedForbiddenType(*this, diag, decl);
         break;
+
+      case DelayedDiagnostic::ForbiddenStatic:
+        if (const FunctionDecl *FD = decl->getAsFunction();
+            FD && FD->isThisDeclarationADefinition()) {
+          diag.Triggered = true;
+          DiagnoseStaticInInline(diag.Loc, FD);
+        }
+        break;
       }
     }
   } while ((pool = pool->getParent()));

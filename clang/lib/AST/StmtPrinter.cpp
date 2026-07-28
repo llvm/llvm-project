@@ -1909,7 +1909,29 @@ void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
 
 void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
   OS << '(';
-  Node->getType().print(OS, Policy);
+  if (Node->getStorageClass() == SC_Static)
+    OS << "static ";
+  else if (Node->getStorageClass() == SC_Register)
+    OS << "register ";
+  switch (Node->getTSCSpec()) {
+  case TSCS_thread_local:
+    OS << "thread_local ";
+    break;
+  case TSCS__Thread_local:
+    OS << "_Thread_local ";
+    break;
+  case TSCS___thread:
+    OS << "__thread ";
+    break;
+  case TSCS_unspecified:
+    break;
+  }
+  QualType T = Node->getType();
+  if (Node->isConstexpr()) {
+    T = Node->getTypeSourceInfo()->getType();
+    OS << "constexpr ";
+  }
+  T.print(OS, Policy);
   OS << ')';
   PrintExpr(Node->getInitializer());
 }

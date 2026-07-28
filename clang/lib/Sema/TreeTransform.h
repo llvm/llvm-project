@@ -3103,12 +3103,13 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildCompoundLiteralExpr(SourceLocation LParenLoc,
-                                              TypeSourceInfo *TInfo,
-                                              SourceLocation RParenLoc,
-                                              Expr *Init) {
-    return getSema().BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc,
-                                              Init);
+  ExprResult RebuildCompoundLiteralExpr(
+      SourceLocation LParenLoc, TypeSourceInfo *TInfo, SourceLocation RParenLoc,
+      Expr *Init, StorageClass SC = SC_None,
+      ThreadStorageClassSpecifier TSC = TSCS_unspecified,
+      ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified) {
+    return getSema().BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, Init,
+                                              SC, TSC, ConstexprKind);
   }
 
   /// Build a new extended vector or matrix element access expression.
@@ -14325,7 +14326,10 @@ TreeTransform<Derived>::TransformCompoundLiteralExpr(CompoundLiteralExpr *E) {
 
   return getDerived().RebuildCompoundLiteralExpr(
       E->getLParenLoc(), NewT,
-      /*FIXME:*/ E->getInitializer()->getEndLoc(), Init.get());
+      /*FIXME:*/ E->getInitializer()->getEndLoc(), Init.get(),
+      E->getStorageClass(), E->getTSCSpec(),
+      E->isConstexpr() ? ConstexprSpecKind::Constexpr
+                       : ConstexprSpecKind::Unspecified);
 }
 
 template<typename Derived>

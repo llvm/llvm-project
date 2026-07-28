@@ -5993,8 +5993,17 @@ CodeGenFunction::EmitLValueForFieldInitialization(LValue Base,
 }
 
 LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
-  if (E->isFileScope()) {
+  if (E->isFileScope() || E->hasGlobalStorage()) {
+    if (E->getType()->isVariablyModifiedType())
+      EmitVariablyModifiedType(E->getType());
+
     ConstantAddress GlobalPtr = CGM.GetAddrOfConstantCompoundLiteral(E);
+    if (E->hasThreadStorage()) {
+      llvm::Value *V = Builder.CreateThreadLocalAddress(GlobalPtr.getPointer());
+      return MakeAddrLValue(
+          Address(V, ConvertTypeForMem(E->getType()), GlobalPtr.getAlignment()),
+          E->getType(), AlignmentSource::Decl);
+    }
     return MakeAddrLValue(GlobalPtr, E->getType(), AlignmentSource::Decl);
   }
   if (E->getType()->isVariablyModifiedType())
@@ -6005,8 +6014,10 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
-  EmitAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
-                   /*Init*/ true);
+  if (E->getType()->isAtomicType())
+    EmitAtomicInit(const_cast<Expr *>(InitExpr), Result);
+  else
+    EmitInitializationToLValue(InitExpr, Result);
 
   // Block-scope compound literals are destroyed at the end of the enclosing
   // scope in C.

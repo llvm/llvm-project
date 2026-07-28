@@ -185,6 +185,10 @@ def warn_c11_compat_keyword : Warning<
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;
+def warn_c23_compat_compound_literal_storage_class : Warning<
+  "compound literal storage-class specifiers are incompatible with C "
+  "standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_c2y_compat_keyword : Warning<
   "'%0' is incompatible with C standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore;

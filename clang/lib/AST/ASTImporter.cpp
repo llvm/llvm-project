@@ -8100,8 +8100,10 @@ ExpectedStmt ASTNodeImporter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     return std::move(Err);
 
   return new (Importer.getToContext()) CompoundLiteralExpr(
-        ToLParenLoc, ToTypeSourceInfo, ToType, E->getValueKind(),
-        ToInitializer, E->isFileScope());
+      ToLParenLoc, ToTypeSourceInfo, ToType, E->getValueKind(), ToInitializer,
+      E->isFileScope(), E->getStorageClass(), E->getTSCSpec(),
+      E->isConstexpr() ? ConstexprSpecKind::Constexpr
+                       : ConstexprSpecKind::Unspecified);
 }
 
 ExpectedStmt ASTNodeImporter::VisitAtomicExpr(AtomicExpr *E) {

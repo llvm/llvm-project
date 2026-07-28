@@ -131,6 +131,9 @@ public:
     /// object initialized via parenthesized aggregate initialization.
     EK_ParenAggInitMember,
 
+    /// The entity initialized by a constexpr compound literal.
+    EK_ConstexprCompoundLiteralInit,
+
     // Note: err_init_conversion_failed in DiagnosticSemaKinds.td uses this
     // enum as an index for its first %select.  When modifying this list,
     // that diagnostic text needs to be updated as well.
@@ -216,8 +219,8 @@ private:
     /// integer indicating whether the parameter is "consumed".
     llvm::PointerIntPair<ParmVarDecl *, 1> Parameter;
 
-    /// When Kind == EK_Temporary or EK_CompoundLiteralInit, the type
-    /// source information for the temporary.
+    /// When Kind is EK_Temporary, EK_CompoundLiteralInit, or
+    /// EK_ConstexprCompoundLiteralInit, the type source information.
     TypeSourceInfo *TypeInfo;
 
     struct LN LocAndNRVO;
@@ -465,11 +468,19 @@ public:
   }
 
   /// Create the entity for a compound literal initializer.
-  static InitializedEntity InitializeCompoundLiteralInit(TypeSourceInfo *TSI) {
-    InitializedEntity Result(EK_CompoundLiteralInit, SourceLocation(),
-                             TSI->getType());
+  static InitializedEntity
+  InitializeCompoundLiteralInit(TypeSourceInfo *TSI, QualType Type,
+                                ConstexprSpecKind ConstexprKind) {
+    InitializedEntity Result(ConstexprKind == ConstexprSpecKind::Constexpr
+                                 ? EK_ConstexprCompoundLiteralInit
+                                 : EK_CompoundLiteralInit,
+                             SourceLocation(), Type);
     Result.TypeInfo = TSI;
     return Result;
+  }
+
+  bool isConstexprCompoundLiteral() const {
+    return Kind == EK_ConstexprCompoundLiteralInit;
   }
 
   /// Determine the kind of initialization.
@@ -486,7 +497,8 @@ public:
   /// Retrieve complete type-source information for the object being
   /// constructed, if known.
   TypeSourceInfo *getTypeSourceInfo() const {
-    if (Kind == EK_Temporary || Kind == EK_CompoundLiteralInit)
+    if (Kind == EK_Temporary || Kind == EK_CompoundLiteralInit ||
+        Kind == EK_ConstexprCompoundLiteralInit)
       return TypeInfo;
 
     return nullptr;

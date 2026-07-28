@@ -1600,6 +1600,9 @@ void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
 void StmtProfiler::VisitCompoundLiteralExpr(const CompoundLiteralExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->isFileScope());
+  ID.AddInteger(S->getStorageClass());
+  ID.AddInteger(S->getTSCSpec());
+  ID.AddBoolean(S->isConstexpr());
 }
 
 void StmtProfiler::VisitCastExpr(const CastExpr *S) {

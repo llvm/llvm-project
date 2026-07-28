@@ -765,6 +765,8 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of a compound literal constant.
+    CompoundLiteralInitializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does
@@ -3606,7 +3608,7 @@ public:
   }
 };
 
-/// CompoundLiteralExpr - [C99 6.5.2.5]
+/// CompoundLiteralExpr - [C99 6.5.2.5, C23 6.5.3.6]
 ///
 class CompoundLiteralExpr : public Expr {
   /// LParenLoc - If non-null, this is the location of the left paren in a
@@ -3624,11 +3626,20 @@ class CompoundLiteralExpr : public Expr {
   mutable APValue *StaticValue = nullptr;
 
 public:
-  CompoundLiteralExpr(SourceLocation lparenloc, TypeSourceInfo *tinfo,
-                      QualType T, ExprValueKind VK, Expr *init, bool fileScope)
+  CompoundLiteralExpr(
+      SourceLocation LParenLoc, TypeSourceInfo *TInfo, QualType T,
+      ExprValueKind VK, Expr *Init, bool FileScope, StorageClass SC = SC_None,
+      ThreadStorageClassSpecifier TSC = TSCS_unspecified,
+      ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
-        LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+        LParenLoc(LParenLoc), TInfoAndScope(TInfo, FileScope), Init(Init) {
     assert(Init && "Init is a nullptr");
+    assert((ConstexprKind == ConstexprSpecKind::Unspecified ||
+            ConstexprKind == ConstexprSpecKind::Constexpr) &&
+           "invalid compound literal constexpr specifier");
+    setStorageClass(SC);
+    setTSCSpec(TSC);
+    setConstexpr(ConstexprKind == ConstexprSpecKind::Constexpr);
     setDependence(computeDependence(this));
   }
 
@@ -3649,11 +3660,52 @@ public:
   TypeSourceInfo *getTypeSourceInfo() const {
     return TInfoAndScope.getPointer();
   }
-  void setTypeSourceInfo(TypeSourceInfo *tinfo) {
-    TInfoAndScope.setPointer(tinfo);
+
+  void setTypeSourceInfo(TypeSourceInfo *TInfo) {
+    TInfoAndScope.setPointer(TInfo);
   }
 
-  bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
+  bool hasStaticStorage() const {
+    return isGLValue() && !hasThreadStorage() &&
+           (isFileScope() || getStorageClass() == SC_Static);
+  }
+
+  bool hasThreadStorage() const { return getTSCSpec() != TSCS_unspecified; }
+
+  bool hasGlobalStorage() const {
+    return hasStaticStorage() || hasThreadStorage();
+  }
+
+  StorageClass getStorageClass() const {
+    return static_cast<StorageClass>(CompoundLiteralExprBits.SClass);
+  }
+
+  void setStorageClass(StorageClass SC) {
+    assert((SC == SC_None || SC == SC_Static || SC == SC_Register) &&
+           "invalid compound literal storage class");
+    CompoundLiteralExprBits.SClass = SC;
+    assert(getStorageClass() == SC && "truncation");
+  }
+
+  ThreadStorageClassSpecifier getTSCSpec() const {
+    return static_cast<ThreadStorageClassSpecifier>(
+        CompoundLiteralExprBits.TSCSpec);
+  }
+
+  void setTSCSpec(ThreadStorageClassSpecifier TSC) {
+    assert((TSC == TSCS_unspecified || TSC == TSCS_thread_local ||
+            TSC == TSCS__Thread_local) &&
+           "invalid compound literal thread storage class");
+    CompoundLiteralExprBits.TSCSpec = TSC;
+    assert(getTSCSpec() == TSC && "truncation");
+  }
+
+  bool isConstexpr() const { return CompoundLiteralExprBits.IsConstexpr; }
+
+  void setConstexpr(bool IsConstexpr) {
+    CompoundLiteralExprBits.IsConstexpr = IsConstexpr;
+  }
+
   APValue &getOrCreateStaticValue(ASTContext &Ctx) const;
   APValue &getStaticValue() const;
 

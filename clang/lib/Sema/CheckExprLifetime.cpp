@@ -131,6 +131,7 @@ getEntityLifetime(const InitializedEntity *Entity,
 
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_CompoundLiteralInit:
+  case InitializedEntity::EK_ConstexprCompoundLiteralInit:
   case InitializedEntity::EK_RelatedResult:
     // We don't yet know the storage duration of the surrounding temporary.
     // Assume it's got full-expression duration for now, it will patch up our
@@ -658,7 +659,7 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
 
   case Stmt::CompoundLiteralExprClass: {
     if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
-      if (!CLE->isFileScope())
+      if (!CLE->isFileScope() && !CLE->hasGlobalStorage())
         Visit(Path, Local(CLE), RK);
     }
     break;

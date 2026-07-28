@@ -194,18 +194,15 @@ static void updateGNUCompoundLiteralRValue(Expr *E) {
   }
 }
 
-static bool initializingConstexprVariable(const InitializedEntity &Entity) {
-  Decl *D = Entity.getDecl();
-  const InitializedEntity *Parent = &Entity;
-
-  while (Parent) {
-    D = Parent->getDecl();
-    Parent = Parent->getParent();
+static bool initializingConstexprObject(const InitializedEntity &Entity) {
+  for (const InitializedEntity *Parent = &Entity; Parent;
+       Parent = Parent->getParent()) {
+    if (Parent->isConstexprCompoundLiteral())
+      return true;
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(Parent->getDecl());
+        VD && VD->isConstexpr())
+      return true;
   }
-
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(D); VD && VD->isConstexpr())
-    return true;
-
   return false;
 }
 
@@ -1311,6 +1308,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_New:
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_CompoundLiteralInit:
+  case InitializedEntity::EK_ConstexprCompoundLiteralInit:
     // No warning, braces are part of the syntax of the underlying construct.
     break;
 
@@ -1436,7 +1434,8 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
     // parts.
     CheckComplexType(Entity, IList, DeclType, Index,
                      StructuredList, StructuredIndex);
-  } else if (DeclType->isScalarType()) {
+  } else if (DeclType->isScalarType() ||
+             (!SemaRef.getLangOpts().CPlusPlus && DeclType->isAtomicType())) {
     CheckScalarType(Entity, IList, DeclType, Index,
                     StructuredList, StructuredIndex);
   } else if (DeclType->isVectorType()) {
@@ -1626,7 +1625,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       if (!VerifyOnly)
         CheckStringInit(expr, ElemType, arrayType, SemaRef, Entity,
                         SemaRef.getLangOpts().C23 &&
-                            initializingConstexprVariable(Entity));
+                            initializingConstexprObject(Entity));
       if (StructuredList)
         UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
       ++Index;
@@ -2177,7 +2176,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       if (!VerifyOnly)
         CheckStringInit(
             IList->getInit(Index), DeclType, arrayType, SemaRef, Entity,
-            SemaRef.getLangOpts().C23 && initializingConstexprVariable(Entity));
+            SemaRef.getLangOpts().C23 && initializingConstexprObject(Entity));
       if (StructuredList) {
         UpdateStructuredListElement(StructuredList, StructuredIndex,
                                     IList->getInit(Index));
@@ -3809,6 +3808,7 @@ DeclarationName InitializedEntity::getName() const {
   case EK_BlockElement:
   case EK_LambdaToBlockConversionBlockElement:
   case EK_CompoundLiteralInit:
+  case EK_ConstexprCompoundLiteralInit:
   case EK_RelatedResult:
     return DeclarationName();
   }
@@ -3844,6 +3844,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   case EK_LambdaToBlockConversionBlockElement:
   case EK_LambdaCapture:
   case EK_CompoundLiteralInit:
+  case EK_ConstexprCompoundLiteralInit:
   case EK_RelatedResult:
     return nullptr;
   }
@@ -3868,6 +3869,7 @@ bool InitializedEntity::allowsNRVO() const {
   case EK_New:
   case EK_Temporary:
   case EK_CompoundLiteralInit:
+  case EK_ConstexprCompoundLiteralInit:
   case EK_Base:
   case EK_Delegating:
   case EK_ArrayElement:
@@ -3907,6 +3909,9 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   case EK_New: OS << "New"; break;
   case EK_Temporary: OS << "Temporary"; break;
   case EK_CompoundLiteralInit: OS << "CompoundLiteral";break;
+  case EK_ConstexprCompoundLiteralInit:
+    OS << "ConstexprCompoundLiteral";
+    break;
   case EK_RelatedResult: OS << "RelatedResult"; break;
   case EK_Base: OS << "Base"; break;
   case EK_Delegating: OS << "Delegating"; break;
@@ -4930,7 +4935,8 @@ static void TryReferenceListInitialization(Sema &S,
     return;
   }
   // Can't reference initialize a compound literal.
-  if (Entity.getKind() == InitializedEntity::EK_CompoundLiteralInit) {
+  if (Entity.getKind() == InitializedEntity::EK_CompoundLiteralInit ||
+      Entity.getKind() == InitializedEntity::EK_ConstexprCompoundLiteralInit) {
     Sequence.SetFailed(InitializationSequence::FK_ReferenceBindingToInitList);
     return;
   }
@@ -7196,6 +7202,7 @@ static AssignmentAction getAssignmentAction(const InitializedEntity &Entity,
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_CompoundLiteralInit:
+  case InitializedEntity::EK_ConstexprCompoundLiteralInit:
     return AssignmentAction::Initializing;
   }
 
@@ -7223,6 +7230,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_CompoundLiteralInit:
+  case InitializedEntity::EK_ConstexprCompoundLiteralInit:
   case InitializedEntity::EK_TemplateParameter:
     return false;
 
@@ -7265,6 +7273,7 @@ static bool shouldDestroyEntity(const InitializedEntity &Entity) {
     case InitializedEntity::EK_ArrayElement:
     case InitializedEntity::EK_Exception:
     case InitializedEntity::EK_CompoundLiteralInit:
+    case InitializedEntity::EK_ConstexprCompoundLiteralInit:
     case InitializedEntity::EK_RelatedResult:
       return true;
   }
@@ -7306,6 +7315,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
   case InitializedEntity::EK_BlockElement:
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_CompoundLiteralInit:
+  case InitializedEntity::EK_ConstexprCompoundLiteralInit:
   case InitializedEntity::EK_RelatedResult:
     return Initializer->getBeginLoc();
   }
@@ -7562,6 +7572,7 @@ static bool isExplicitTemporary(const InitializedEntity &Entity,
   switch (Entity.getKind()) {
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_CompoundLiteralInit:
+  case InitializedEntity::EK_ConstexprCompoundLiteralInit:
   case InitializedEntity::EK_RelatedResult:
     break;
   default:
@@ -8579,7 +8590,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
-      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+      if (S.getLangOpts().C23 && initializingConstexprObject(Entity)) {
         CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
                                         CurInit.get());
 
@@ -8623,7 +8634,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       CheckStringInit(CurInit.get(), UpdateType ? *ResultType : Ty,
                       S.Context.getAsArrayType(Ty), S, Entity,
                       S.getLangOpts().C23 &&
-                          initializingConstexprVariable(Entity));
+                          initializingConstexprObject(Entity));
       break;
     }
 
