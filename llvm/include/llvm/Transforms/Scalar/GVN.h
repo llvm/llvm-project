@@ -59,7 +59,6 @@ class MemorySSAUpdater;
 class NonLocalDepResult;
 class OptimizationRemarkEmitter;
 class PHINode;
-class PostDominatorTree;
 class TargetLibraryInfo;
 class Value;
 class IntrinsicInst;
@@ -248,7 +247,6 @@ private:
 
   MemoryDependenceResults *MD = nullptr;
   DominatorTree *DT = nullptr;
-  PostDominatorTree *PDT = nullptr;
   const TargetLibraryInfo *TLI = nullptr;
   AssumptionCache *AC = nullptr;
   SetVector<BasicBlock *> DeadBlocks;
@@ -354,8 +352,8 @@ private:
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
-               PostDominatorTree &RunPDT, const TargetLibraryInfo &RunTLI,
-               AAResults &RunAA, MemoryDependenceResults *RunMD, LoopInfo &LI,
+               const TargetLibraryInfo &RunTLI, AAResults &RunAA,
+               MemoryDependenceResults *RunMD, LoopInfo &LI,
                OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
 
   // List of critical edges to be split between iterations.

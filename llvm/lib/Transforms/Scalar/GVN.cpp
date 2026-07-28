@@ -41,7 +41,6 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PHITransAddr.h"
-#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
@@ -889,7 +888,6 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   // behavior, but until then don't change the order here.
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto *MemDep =
@@ -902,7 +900,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
     MSSA = &AM.getResult<MemorySSAAnalysis>(F);
   }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = runImpl(F, AC, DT, PDT, TLI, AA, MemDep, LI, &ORE,
+  bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
                          MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -3162,52 +3160,53 @@ Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
 /// exposing further constant folding. Returns whether a change was made.
 bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
                                         const BasicBlockEdge &Root) {
-  if (!GVNPropagateConstExp || !LHS->getType()->isIntegerTy() ||
-      !(isa<Constant>(LHS) || isa<Constant>(RHS)))
+  if (!GVNPropagateConstExp)
     return false;
+
+  // Restrict to integer type for now.
+  if (!LHS->getType()->isIntegerTy())
+    return false;
+
+  // Exactly one of the two should be a constant.
+  if (isa<Constant>(LHS) == isa<Constant>(RHS))
+    return false;
+
+  // Prefer RHS to be the constant.
   if (!isa<Constant>(RHS))
     std::swap(LHS, RHS);
-  if (!DT || !PDT)
-    return false;
+
   if (!isOnlyReachableViaThisEdge(Root, DT))
     return false;
 
   BasicBlock *RootBB = const_cast<BasicBlock *>(Root.getEnd());
-
-  if (PDT->dominates(Root.getEnd(), Root.getStart()))
-    return false;
-
-  for (const BasicBlock *BB : successors(Root.getStart())) {
-    if (BB != Root.getEnd() &&
-        (PDT->dominates(Root.getEnd(), BB) ||
-         isPotentiallyReachable(BB, Root.getEnd())))
-      return false;
-  }
-
   bool ChangedIR = false;
   for (BasicBlock *BB : depth_first(RootBB)) {
     if (!DT->dominates(Root.getEnd(), BB))
       continue;
-    if (PDT->dominates(BB, Root.getStart()))
-      break;
+
     for (Instruction &I : *BB) {
       if (isa<PHINode>(&I))
         continue;
+
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::fake_use)
           continue;
 
       for (unsigned OpNum = 0; OpNum < I.getNumOperands(); ++OpNum) {
-        Value *Op = I.getOperand(OpNum);
-        if (!isa<Instruction>(Op) || !isExprBuiltFromOnly(Op, LHS))
+        Instruction *OpExpr = dyn_cast<Instruction>(I.getOperand(OpNum));
+        if (!OpExpr)
           continue;
 
-        Instruction *OpInst = cast<Instruction>(Op);
-        if (DT->dominates(Root.getEnd(), OpInst->getParent()))
+        // Skip if OpExpr is not defined outside the dominated region.
+        if (DT->dominates(Root.getEnd(), OpExpr->getParent()))
           continue;
 
-        Value *ClonedExpr = cloneExprReplacingOperand(OpInst, LHS, RHS, &I);
-        if (!ClonedExpr || ClonedExpr == OpInst)
+        // Make sure the expression is built only from LHS.
+        if (!isExprBuiltFromOnly(OpExpr, LHS))
+          continue;
+
+        Value *ClonedExpr = cloneExprReplacingOperand(OpExpr, LHS, RHS, &I);
+        if (!ClonedExpr || ClonedExpr == OpExpr)
           continue;
 
         LLVM_DEBUG(dbgs() << "ConstPropExpr: From: " << I);
@@ -3617,13 +3616,11 @@ bool GVNPass::processInstruction(Instruction *I) {
 
 /// runOnFunction - This is the main transformation entry point for a function.
 bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
-                      PostDominatorTree &RunPDT, const TargetLibraryInfo &RunTLI,
-                      AAResults &RunAA, MemoryDependenceResults *RunMD,
-                      LoopInfo &LI, OptimizationRemarkEmitter *RunORE,
-                      MemorySSA *MSSA) {
+                      const TargetLibraryInfo &RunTLI, AAResults &RunAA,
+                      MemoryDependenceResults *RunMD, LoopInfo &LI,
+                      OptimizationRemarkEmitter *RunORE, MemorySSA *MSSA) {
   AC = &RunAC;
   DT = &RunDT;
-  PDT = &RunPDT;
   VN.setDomTree(DT);
   TLI = &RunTLI;
   AA = &RunAA;
@@ -4182,7 +4179,6 @@ public:
     return Impl.runImpl(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-        getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree(),
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
         getAnalysis<AAResultsWrapperPass>().getAAResults(),
         Impl.isMemDepEnabled()
@@ -4196,7 +4192,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     if (Impl.isMemDepEnabled())
@@ -4223,7 +4218,6 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)

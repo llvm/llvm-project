@@ -170,3 +170,29 @@ if.true:
 if.false:
   ret i64 0
 }
+
+; The dominated region (if.true) is nested inside a loop, and the other
+; successor of the branch (if.false) can loop back around and reach if.true
+; again on a later iteration. This should not prevent folding: whenever
+; if.true executes, %x == 5 was just established by the icmp on that same
+; iteration, regardless of how it was reached on prior iterations.
+define i32 @loop_other_successor_can_reach_root(i32 %x, i32 %n) {
+; CHECK-LABEL: @loop_other_successor_can_reach_root(
+; CHECK: if.true:
+; CHECK-NEXT: ret i32 6
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %if.false ]
+  %a = add i32 %x, 1
+  %c = icmp eq i32 %x, 5
+  br i1 %c, label %if.true, label %if.false
+if.true:
+  ret i32 %a
+if.false:
+  %i.next = add i32 %i, 1
+  %cmp = icmp slt i32 %i.next, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret i32 0
+}
