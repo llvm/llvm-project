@@ -6,15 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(_AIX) && !defined(__64BIT__)
-// on AIX (32-bit):
-// c++/v1/__atomic/support/c11.h:83:10: error: large atomic operation may incur significant performance penalty;
-// the access size (8 bytes) exceeds the max lock-free size (4 bytes) [-Werror,-Watomic-alignment]
-// ignore for now.
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Watomic-alignment")
-#endif
-
 #include <__algorithm/max.h>
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
@@ -39,18 +30,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl::__std_thread {
 
-#ifdef WITH_LOGGING
-[[clang::no_destroy]] static std::mutex LOG_MUTEX;
-#  define LOG(...)                                                                                                     \
-    do {                                                                                                               \
-      std::lock_guard lock{LOG_MUTEX};                                                                                 \
-      fprintf(stderr, __VA_ARGS__);                                                                                    \
-    } while (0)
+#if defined(_AIX) && !defined(__64BIT__)
+// on AIX (32-bit):
+// c++/v1/__atomic/support/c11.h:83:10: error: large atomic operation may incur significant performance penalty;
+// the access size (8 bytes) exceeds the max lock-free size (4 bytes) [-Werror,-Watomic-alignment]
+// Sequential dummy implementation for now.
+void __apply(size_t __iterations, void* __context, void (*__func)(void* __context, size_t __iteration)) noexcept {
+  for (std::size_t i = 0; i < __iterations; ++i) {
+    __func(__context, i);
+  }
+}
 #else
-#  define LOG(...)                                                                                                     \
-    do {                                                                                                               \
-    } while (0)
-#endif
+
+#  ifdef WITH_LOGGING
+[[clang::no_destroy]] static std::mutex LOG_MUTEX;
+#    define LOG(...)                                                                                                   \
+      do {                                                                                                             \
+        std::lock_guard lock{LOG_MUTEX};                                                                               \
+        fprintf(stderr, __VA_ARGS__);                                                                                  \
+      } while (0)
+#  else
+#    define LOG(...)                                                                                                   \
+      do {                                                                                                             \
+      } while (0)
+#  endif
 
 struct Task;
 
@@ -456,6 +459,8 @@ void __apply(size_t __iterations, void* __context, void (*__func)(void* __contex
   Sched* sched = get_sched();
   sched->apply(__iterations, __context, __func);
 }
+
+#endif
 
 // This actually doesn't strictly needs to be in the implementation file.
 __chunk_partitions __partition_chunks(ptrdiff_t element_count) noexcept {
