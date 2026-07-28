@@ -2765,16 +2765,14 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   // classification) once per queried diagnostic. Those inputs fully determine
   // the result, so cache the policy on them instead (PolicyOverrides are
   // transient per-function state and are applied after the cache lookup).
-  const bool Cacheable = !D.hasDiagSuppressionMapping();
+  const bool Cacheable = !D.hasDiagSuppressionMapping() && Loc.isValid();
   const void *StateKey = nullptr;
   unsigned SysIdx = 0;
   if (Cacheable) {
     StateKey = D.getDiagStateKeyForLoc(Loc);
-    if (Loc.isValid() && D.hasSourceManager()) {
-      const SourceManager &SM = D.getSourceManager();
-      SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
-               (SM.isInSystemMacro(Loc) ? 1u : 0u);
-    }
+    const SourceManager &SM = D.getSourceManager();
+    SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
+             (SM.isInSystemMacro(Loc) ? 1u : 0u);
     auto It = PolicyCache[SysIdx].find(StateKey);
     if (It != PolicyCache[SysIdx].end()) {
       Policy P = It->second;
