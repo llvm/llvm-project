@@ -429,13 +429,14 @@ bool InlineAsmLowering::lowerInlineAsm(
         // We need the tied input to live in the same register class as the def.
         //
         // - if Def is a vreg, we can just use its regclass.
-        // - if Def is a physreg, create a vreg in the regclass selected for its
-        //   constraint.
+        // - if Def is a physreg, create a vreg in an allocatable subclass of
+        //   the regclass selected for its constraint.
         //
         // Otherwise RegBankSelect may leave it in the wrong bank (e.g. GPR even
         // though it's tied to an FP physreg).
         const TargetRegisterClass *RC =
-            Def.isVirtual() ? MRI->getRegClass(Def) : OpInfo.RegClass;
+            Def.isVirtual() ? MRI->getRegClass(Def)
+                            : TRI->getAllocatableClass(OpInfo.RegClass);
         assert(RC && "Expected a register class for matching constraint");
 
         // Materialize `In` in a new vreg that has a register class that matches
