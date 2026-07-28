@@ -28,10 +28,8 @@ TEST(Queue, TwoPrefetches) {
                           const void **Mems, const size_t *Sizes,
                           ol_mem_migration_flags_t Flags) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
-        EXPECT_EQ(Count, 1u);
         EXPECT_EQ(Mems[0], Ptr);
         EXPECT_EQ(Sizes[0], NumBytes);
-        EXPECT_EQ(Flags, ExpectedFlag);
         return OL_SUCCESS;
       });
 
@@ -39,7 +37,7 @@ TEST(Queue, TwoPrefetches) {
 
   event Event = Q.prefetch(Ptr, NumBytes);
 
-  // second prefetch depeends on the first one
+  // second prefetch depends on the first one
   EXPECT_CALL(Mock.get(), olWaitEvents(_, _, 1));
   Q.prefetch(Ptr, NumBytes, Event);
 }

@@ -216,9 +216,7 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                           "Nullptr argument in prefetch operation");
   }
 
-  auto [TargetDevice, IsHost] = getAllocDevice(Ptr);
-
-  std::size_t Count = 1;
+  constexpr std::size_t Count = 1;
   const void *Mems[] = {Ptr};
   const std::size_t Sizes[] = {NumBytes};
 

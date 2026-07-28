@@ -309,7 +309,19 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(SrcDevice, nullptr);
         return OL_SUCCESS;
       });
-
+  ON_CALL(*this, olMemPrefetch)
+      .WillByDefault([this](ol_queue_handle_t Queue, size_t Count,
+                            const void **Mems, const size_t *Sizes,
+                            ol_mem_migration_flags_t Flags) -> ol_result_t {
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (Count > 0 && (Mems == nullptr || Sizes == nullptr))
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        if ((Flags & ~(OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE |
+                       OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0)
+          return makeEmptyStrError(OL_ERRC_INVALID_ENUMERATION);
+        return OL_SUCCESS;
+      });
   ON_CALL(*this, olGetMemInfo)
       .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
                             size_t PropSize, void *PropValue) -> ol_result_t {

@@ -413,7 +413,7 @@ public:
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                const std::vector<event> &depEvents);
 
-  /// Provides hints to the runtime library that data should be made available
+  /// Provides hints to the runtime library that data can be made available
   /// on a device earlier than Unified Shared Memory would normally require it
   /// to be available.
   ///
@@ -424,7 +424,7 @@ public:
     return prefetch(ptr, numBytes, std::vector<event>{});
   }
 
-  /// Provides hints to the runtime library that data should be made available
+  /// Provides hints to the runtime library that data can be made available
   /// on a device earlier than Unified Shared Memory would normally require it
   /// to be available.
   ///
@@ -436,7 +436,7 @@ public:
     return prefetch(ptr, numBytes, std::vector<event>{depEvent});
   }
 
-  /// Provides hints to the runtime library that data should be made available
+  /// Provides hints to the runtime library that data can be made available
   /// on a device earlier than Unified Shared Memory would normally require it
   /// to be available.
   ///
