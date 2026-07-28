@@ -114,7 +114,7 @@ static LLT getReadAnyLaneSplitTy(LLT Ty) {
   }
 
   // Large scalars and 64-bit pointers
-  return LLT::scalar(32);
+  return LLT::integer(32);
 }
 
 template <typename ReadLaneFnTy>

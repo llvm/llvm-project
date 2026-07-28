@@ -122,7 +122,14 @@ static size_t __ios_new_cap(size_t __req_size, size_t __current_cap) { // Precon
 }
 
 int ios_base::xalloc() {
+#if _LIBCPP_HAS_THREADS
   constinit static atomic<int> xindex = 0;
+#else
+  // If we don't have atomics, fall back to single-threaded implementation.
+  // FIXME: Should "single-threaded" be a separate option from
+  // _LIBCPP_HAS_THREADS?
+  static int xindex = 0;
+#endif // _LIBCPP_HAS_THREADS
   return xindex++;
 }
 
@@ -364,13 +371,6 @@ void ios_base::__set_failbit_and_consider_rethrow() {
   if (__exceptions_ & failbit)
     throw;
 #endif // _LIBCPP_HAS_EXCEPTIONS
-}
-
-bool ios_base::sync_with_stdio(bool sync) {
-  static bool previous_state = true;
-  bool r                     = previous_state;
-  previous_state             = sync;
-  return r;
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

@@ -213,8 +213,8 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL:       [[FOR_INC23]]:
 ; UNROLL-NEXT:    [[INEWCHUNKS_2]] = phi i32 [ [[INC21]], %[[IF_THEN18]] ], [ [[INEWCHUNKS_120]], %[[FOR_BODY14]] ]
 ; UNROLL-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], 1
-; UNROLL-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV3]] to i32
-; UNROLL-NEXT:    [[CMP13:%.*]] = icmp slt i32 [[TMP1]], 0
+; UNROLL-NEXT:    [[SMAX:%.*]] = trunc i64 [[INDVARS_IV3]] to i32
+; UNROLL-NEXT:    [[CMP13:%.*]] = icmp slt i32 [[SMAX]], 0
 ; UNROLL-NEXT:    br i1 [[CMP13]], label %[[FOR_BODY14]], label %[[FOR_INC26_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; UNROLL:       [[FOR_INC26_LOOPEXIT]]:
 ; UNROLL-NEXT:    [[INEWCHUNKS_2_LCSSA:%.*]] = phi i32 [ [[INEWCHUNKS_2]], %[[FOR_INC23]] ], [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ]

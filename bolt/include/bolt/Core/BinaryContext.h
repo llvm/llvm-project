@@ -427,6 +427,11 @@ public:
     PseudoProbeDecoder = Decoder;
   }
 
+  /// Release the pseudo probe decoder once probes have been updated, freeing
+  /// its (potentially large) address-to-probe maps before later, memory-heavy
+  /// phases such as debug info rewriting.
+  void resetPseudoProbeDecoder() { PseudoProbeDecoder.reset(); }
+
   /// Return BinaryFunction containing a given \p Address or nullptr if
   /// no registered function contains the \p Address.
   ///
@@ -1446,6 +1451,11 @@ public:
   /// Populate some internal data structures with debug info.
   void preprocessDebugInfo();
 
+  /// Record DWARF lexical-scope range boundaries into the containing functions'
+  /// BinaryFunction::DebugScopeBoundaryOffsets. Relies on preprocessDebugInfo's
+  /// actions: populated ProcessedCUs and pre-extracted DIEs for split dwarf.
+  void collectDebugScopeBoundaries();
+
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
@@ -1512,16 +1522,6 @@ public:
   /// the function is 'hot'. Consider it hot if count is above the average exec
   /// count of profiled functions.
   uint64_t getHotThreshold() const;
-
-  /// Return true if instruction \p Inst requires an offset for further
-  /// processing (e.g. assigning a profile).
-  bool keepOffsetForInstruction(const MCInst &Inst) const {
-    if (MIB->isCall(Inst) || MIB->isBranch(Inst) || MIB->isReturn(Inst) ||
-        MIB->isPrefix(Inst) || MIB->isIndirectBranch(Inst)) {
-      return true;
-    }
-    return false;
-  }
 
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;

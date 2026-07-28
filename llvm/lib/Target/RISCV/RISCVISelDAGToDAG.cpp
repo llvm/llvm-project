@@ -1892,6 +1892,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
   case RISCVISD::WMULSU:
+  case RISCVISD::WADD:
+  case RISCVISD::WSUB:
   case RISCVISD::WADDU:
   case RISCVISD::WSUBU: {
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
@@ -1909,6 +1911,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     case RISCVISD::WMULSU:
       Opc = RISCV::WMULSU;
+      break;
+    case RISCVISD::WADD:
+      Opc = RISCV::WADD;
+      break;
+    case RISCVISD::WSUB:
+      Opc = RISCV::WSUB;
       break;
     case RISCVISD::WADDU:
       Opc = RISCV::WADDU;
@@ -3236,12 +3244,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       LpadLabel = PreferredLandingPadLabel;
     }
 
-    SmallVector<SDValue, 4> Ops;
+    // Preserve the argument-register and register-mask operands, between
+    // Callee and the optional glue, so the pseudo call still reports its
+    // call-preserved mask to the register allocator.
+    SmallVector<SDValue, 8> Ops;
     Ops.push_back(Node->getOperand(1));
     Ops.push_back(CurDAG->getTargetConstant(LpadLabel, DL, XLenVT));
+
+    unsigned NumOps = Node->getNumOperands();
+    bool HasGlue = Node->getGluedNode() != nullptr;
+    unsigned RegOperandsEnd = HasGlue ? NumOps - 1 : NumOps;
+    for (unsigned I = 2; I != RegOperandsEnd; ++I)
+      Ops.push_back(Node->getOperand(I));
+
     Ops.push_back(Node->getOperand(0));
-    if (Node->getGluedNode())
-      Ops.push_back(Node->getOperand(Node->getNumOperands() - 1));
+    if (HasGlue)
+      Ops.push_back(Node->getOperand(NumOps - 1));
 
     ReplaceNode(Node,
                 CurDAG->getMachineNode(PseudoOpc, DL, Node->getVTList(), Ops));
@@ -3579,6 +3597,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// compressible) standard load/store instructions.
 bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
                                            SDValue &Offset) {
+
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 
@@ -3588,6 +3610,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
     // load/store.
     if (isInt<26>(CVal) && !isInt<12>(CVal)) {
       Base = Addr.getOperand(0);
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }

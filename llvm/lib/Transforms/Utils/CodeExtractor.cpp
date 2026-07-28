@@ -1312,9 +1312,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
                         &NewFunc.getEntryBlock());
       return;
     }
-    DIB.insertDbgValueIntrinsic(
-        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-        NewFunc.getEntryBlock().getTerminator()->getIterator());
+    DIB.insertDbgValue(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                       NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableRecord *, 1> DPUsers;

@@ -47,7 +47,7 @@ jobs:
               cpp_compiler: clang++
     
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
     
@@ -59,7 +59,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
         key: libc_overlay_build_v2_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
@@ -122,12 +122,21 @@ jobs:
     name: qemu - ${{ matrix.arch }} - ${{ matrix.c_compiler }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
+    container:
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:b9c8ea74685ea46c86594428c41a1ba95bc6d33b28183c0ddac64414344950fd'
+      # We need to enable privileged containers so that certain libc tests
+      # have the necessary permissions (like SYS_TIME). There are no security
+      # implications as we are already running in an isolated VM.
+      options: --privileged
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
         include:
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
           - arch: riscv64
             target_triple: riscv64-linux-gnu
             c_compiler: clang-23
@@ -136,12 +145,12 @@ jobs:
             mpc_path: riscv64-linux-gnu
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
         with:
           max-size: 1G
           key: libc_qemu_overlay_${{ matrix.arch }}_${{ matrix.c_compiler }}

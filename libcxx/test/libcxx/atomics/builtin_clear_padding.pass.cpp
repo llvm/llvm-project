@@ -7,7 +7,20 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
 // UNSUPPORTED: gcc
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, clang-23, apple-clang-17, apple-clang-21
+
+// Older versions of Clang don't support __builtin_clear_padding
+// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17, apple-clang-21
+
+// Older Clang doesn't handle __builtin_clear_padding correctly on Windows
+// (see https://github.com/llvm/llvm-project/issues/209787)
+// XFAIL: clang-23 && target={{.+}}-{{.+}}-windows-msvc
+// UNSUPPORTED: clang-24 && target={{.+}}-{{.+}}-windows-msvc
+
+// ASAN has a bug where it does not calculate the correct size
+// of ext_vector_type of fp80 long double
+// (see https://github.com/llvm/llvm-project/issues/212002)
+// XFAIL: clang-23 && asan
+// UNSUPPORTED: clang-24 && asan
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile -Wno-dynamic-class-memaccess
 
