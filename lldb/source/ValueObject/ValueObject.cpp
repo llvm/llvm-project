@@ -983,7 +983,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       if ((bytes_read = data.GetByteSize()) > 0) {
         total_bytes_read = bytes_read;
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
         if (capped_data)
           was_capped = true;
       }
@@ -1015,7 +1015,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           len = cstr_len;
 
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
 
         if (len < k_max_buf_size)
           break;
@@ -1259,18 +1259,27 @@ llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
   // Exclude size check when assigning an integer 1 or 0 to a boolean.
   if (!val_type.IsBoolean() || (!value.isOne() && !value.isZero())) {
     byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
-    if (value.getBitWidth() > byte_size * CHAR_BIT) {
-      // The type is too big, but maybe the value itself is small enough?
-      uint64_t u_max = (1 << (byte_size * CHAR_BIT)) - 1;
-      if (*(value.getRawData()) > u_max)
-        return llvm::createStringError(
-            "Illegal argument: new value is too big");
-    }
+    // Check that the value is representable in the destination type.
+    unsigned dest_bits = byte_size * CHAR_BIT;
+    unsigned needed_bits = val_type.IsSigned() ? value.getSignificantBits()
+                                               : value.getActiveBits();
+    if (needed_bits > dest_bits)
+      return llvm::createStringError("Illegal argument: new value is too big");
   }
+
+  // The DataExtractor below reads exactly byte_size bytes from the APInt's raw
+  // storage.  If the incoming value has fewer bits than the destination type,
+  // reading byte_size bytes could run past the APInt's backing store and pull
+  // in garbage (an out-of-bounds read). Extend the value so its storage always
+  // covers the full read, preserving the sign so that negative values keep
+  // their value in the wider destination.
+  llvm::APInt sized_value = value;
+  if (sized_value.getBitWidth() < byte_size * CHAR_BIT)
+    sized_value = sized_value.sext(byte_size * CHAR_BIT);
 
   Status error;
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
-      reinterpret_cast<const void *>(value.getRawData()), byte_size,
+      reinterpret_cast<const void *>(sized_value.getRawData()), byte_size,
       target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
@@ -2054,18 +2063,20 @@ void ValueObject::CalculateSyntheticValue() {
     return;
   }
 
-  lldb::SyntheticChildrenSP current_synth_sp(m_synthetic_children_sp);
+  lldb::SyntheticChildrenSP prev_synth_sp(GetSyntheticChildren());
 
   if (!UpdateFormatsIfNeeded() && m_synthetic_value)
     return;
 
-  if (m_synthetic_children_sp.get() == nullptr)
+  lldb::SyntheticChildrenSP curr_synth_sp(GetSyntheticChildren());
+
+  if (curr_synth_sp.get() == nullptr)
     return;
 
-  if (current_synth_sp == m_synthetic_children_sp && m_synthetic_value)
+  if (curr_synth_sp == prev_synth_sp && m_synthetic_value)
     return;
 
-  m_synthetic_value = new ValueObjectSynthetic(*this, m_synthetic_children_sp);
+  m_synthetic_value = new ValueObjectSynthetic(*this, curr_synth_sp);
 }
 
 void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {

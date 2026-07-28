@@ -341,10 +341,10 @@ exit:
 define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-LABEL: @load_factor_4_with_tail_gap(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr nuw i8, ptr [[A:%.*]], i64 8
-; IF-EVL-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[A]], i64 4
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[A:%.*]], i64 4
+; IF-EVL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr nuw i8, ptr [[A]], i64 8
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -552,19 +552,19 @@ exit:
 define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; IF-EVL-LABEL: @load_factor_4_reverse(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    [[TMP2:%.*]] = shl i64 [[N:%.*]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 12
-; IF-EVL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP3]]
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP2]], 8
-; IF-EVL-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP2]], 4
-; IF-EVL-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
-; IF-EVL-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
-; IF-EVL-NEXT:    [[TMP20:%.*]] = add nsw i64 [[N]], -1
+; IF-EVL-NEXT:    [[TMP20:%.*]] = add nsw i64 [[N:%.*]], -1
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP20]], i64 0)
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[TMP21]]
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[TMP3:%.*]] = shl i64 [[N]], 4
+; IF-EVL-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP3]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP3]], 4
+; IF-EVL-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
+; IF-EVL-NEXT:    [[TMP22:%.*]] = add nuw nsw i64 [[TMP3]], 8
+; IF-EVL-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP22]]
+; IF-EVL-NEXT:    [[TMP23:%.*]] = add nuw nsw i64 [[TMP3]], 12
+; IF-EVL-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP23]]
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -598,15 +598,7 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ;
 ; NO-VP-LABEL: @load_factor_4_reverse(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    [[TMP8:%.*]] = shl i64 [[N:%.*]], 4
-; NO-VP-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP8]], 12
-; NO-VP-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP10]]
-; NO-VP-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP8]], 8
-; NO-VP-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
-; NO-VP-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], 4
-; NO-VP-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
-; NO-VP-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP8]]
-; NO-VP-NEXT:    [[TMP27:%.*]] = add nsw i64 [[N]], -1
+; NO-VP-NEXT:    [[TMP27:%.*]] = add nsw i64 [[N:%.*]], -1
 ; NO-VP-NEXT:    [[TMP28:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP27]], i64 0)
 ; NO-VP-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[TMP28]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -620,6 +612,14 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP5]] to i32
+; NO-VP-NEXT:    [[TMP9:%.*]] = shl i64 [[N]], 4
+; NO-VP-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP9]]
+; NO-VP-NEXT:    [[TMP30:%.*]] = add nuw nsw i64 [[TMP9]], 4
+; NO-VP-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP30]]
+; NO-VP-NEXT:    [[TMP31:%.*]] = add nuw nsw i64 [[TMP9]], 8
+; NO-VP-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP31]]
+; NO-VP-NEXT:    [[TMP32:%.*]] = add nuw nsw i64 [[TMP9]], 12
+; NO-VP-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP32]]
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

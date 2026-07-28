@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -filetype=obj < %s > %t
 // RUN: llvm-objdump --syms %t | FileCheck --check-prefix=OBJDUMP %s
 
 // OBJDUMP: SYMBOL TABLE:

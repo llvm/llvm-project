@@ -87,7 +87,10 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
                         /*default=*/"false",
                         "Allow converting a fir.do_loop with the `unordered` "
-                        "attribute to scf.parallel (experimental).">];
+                        "attribute to scf.parallel (experimental).">,
+                 Option<"setNSW", "set-nsw", "bool",
+                        /*default=*/"true",
+                        "Add nsw flag to loop variable increments.">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -477,6 +480,9 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"setNoAlias", "set-noalias", "bool", /*default=*/"false",
               "Set LLVM noalias attribute on function arguments, "
               "if possible">,
+       Option<"setReadOnly", "set-readonly", "bool", /*default=*/"false",
+              "Set LLVM readonly attribute on INTENT(IN) by-reference "
+              "function arguments, if possible">,
   ];
 }
 
@@ -543,10 +549,14 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
     "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
   let options = [
+    Option<"allocatorRegistrationFunction",
+           "allocator-registration-function", "std::string", /*default=*/"",
+           "Name of the function to call to register CUDA Fortran allocators. "
+           "Defaults to CUFRegisterAllocator.">,
     Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
            "Treat host module globals as unified memory (-gpu=mem:unified): "
            "register every plain host module global that is mirrored in the "
-           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
            "time and HMM/ATS handles migration.">
   ];
@@ -581,8 +591,13 @@ def CUFDeviceFuncTransform
   let dependentDialects = ["mlir::gpu::GPUDialect",
                            "mlir::cf::ControlFlowDialect",
                            "mlir::NVVM::NVVMDialect"];
-  let options = [Option<"computeCap", "compute-capability", "int",
-                        /*default=*/"0", "CUDA compute capability version">];
+  let options =
+      [Option<"computeCap", "compute-capability", "int",
+              /*default=*/"0", "CUDA compute capability version">,
+       Option<"checkioOutputDescriptor", "check-io-output-descriptor", "bool",
+              /*default=*/"false",
+              "Report an error if device code contains a call to "
+              "descriptor I/O">];
 }
 
 def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {

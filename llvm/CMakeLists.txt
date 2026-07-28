@@ -246,12 +246,12 @@ endif()
 option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
 if(LIBC_GPU_BUILD)
   if(LLVM_RUNTIME_TARGETS)
-    list(APPEND LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" "amdgcn-amd-amdhsa")
+    list(APPEND LLVM_RUNTIME_TARGETS "nvptx64-nvidia-cuda" "amdgpu-amd-amdhsa")
   else()
-    set(LLVM_RUNTIME_TARGETS "default;nvptx64-nvidia-cuda;amdgcn-amd-amdhsa")
+    set(LLVM_RUNTIME_TARGETS "default;nvptx64-nvidia-cuda;amdgpu-amd-amdhsa")
   endif()
   list(APPEND RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES "libc")
-  list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
+  list(APPEND RUNTIMES_amdgpu-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
 endif()
 
 # Set up Arm64X build of the OpenMP runtime
@@ -268,19 +268,6 @@ if(LIBOMP_ENABLE_ARM64X)
     list(APPEND LLVM_RUNTIME_TARGETS "arm64ec-pc-windows-msvc")
   endif()
   set(RUNTIMES_arm64ec-pc-windows-msvc_LIBOMP_ENABLE_ARM64X ON)
-endif()
-
-foreach(_name ${LLVM_RUNTIME_TARGETS})
-  if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-    if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda" OR "${_name}" STREQUAL "spirv64-intel-unknown")
-      set(LLVM_LIBC_GPU_BUILD ON)
-    endif()
-  endif()
-endforeach()
-if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
-   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda" OR
-   "${LIBC_TARGET_TRIPLE}" STREQUAL "spirv64-intel-unknown")
-  set(LLVM_LIBC_GPU_BUILD ON)
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -1077,8 +1064,13 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
   "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
-# All LLVM Python files should be compatible down to this minimum version.
-set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
+if(LLVM_INCLUDE_TESTS OR LLVM_ENABLE_SPHINX)
+  # All LLVM Python files should be compatible down to this minimum version.
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
+else()
+  # FIXME: it is unknown if this is the actual minimum bound
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
+endif()
 
 # Find python before including config-ix, since it needs to be able to search
 # for python modules.

@@ -182,6 +182,7 @@ public:
   Result operator()(const CoarrayRef &) const;
   Result operator()(const Substring &) const;
   Result operator()(const ProcedureRef &) const;
+  Result operator()(const ActualArgument &) const;
 
   template <typename T>
   Result operator()(const ArrayConstructor<T> &aconst) const {

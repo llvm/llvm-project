@@ -1,0 +1,85 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+#sret_ret = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ ]
+}
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The byval argument attribute carries the record type.  cir-to-llvm must
+  // convert that type to the LLVM struct so translation emits byval(%struct).
+  cir.func @takes_big(%arg0: !rec_Big) attributes { test_classify = #byval_arg } {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_big(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}})
+  // LLVM: define void @takes_big(ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
+
+  // The sret return attribute is converted the same way.
+  cir.func @ret_big() -> !rec_Big attributes { test_classify = #sret_ret } {
+    %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // CHECK: cir.func{{.*}} @ret_big(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}})
+  // LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.+}})
+
+  // byref carries the type the same way and is converted identically.
+  cir.func @takes_byref(%arg0: !rec_Big) attributes { test_classify = #byref_arg } {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_byref(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.byref = !rec_Big{{.*}}})
+  // LLVM: define void @takes_byref(ptr byref(%struct.Big) align 8 %{{.+}})
+
+  // The call site's byval operand attribute is converted too.
+  cir.func @caller(%s: !rec_Big) attributes { test_classify = #passthrough } {
+    cir.call @takes_big(%s) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // LLVM: define void @caller(%struct.Big %{{.+}})
+  // LLVM:   call void @takes_big(ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
+
+  // A caller of an sret function carries the sret attribute on the call
+  // operand; its type payload is converted as well.
+  cir.func @caller_sret() attributes { test_classify = #passthrough } {
+    %r = cir.call @ret_big() : () -> !rec_Big
+    cir.return
+  }
+
+  // LLVM: define void @caller_sret()
+  // LLVM:   call void @ret_big(ptr {{.*}}sret(%struct.Big) align 8 %{{.+}})
+}

@@ -919,6 +919,31 @@ public:
   }
 };
 
+/// Converts `spirv.VectorTimesScalar` to a broadcast of the scalar followed by
+/// an `llvm.fmul`.
+class VectorTimesScalarPattern
+    : public SPIRVToLLVMConversion<spirv::VectorTimesScalarOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::VectorTimesScalarOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::VectorTimesScalarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    unsigned numElements = op.getVector().getType().getNumElements();
+    Value broadcasted = broadcast(op.getLoc(), adaptor.getScalar(), numElements,
+                                  *getTypeConverter(), rewriter);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getVector(),
+                                              broadcasted);
+    return success();
+  }
+};
+
 /// Converts `spirv.SNegate` to `0 - x`.
 class SNegatePattern : public SPIRVToLLVMConversion<spirv::SNegateOp> {
 public:
@@ -1547,6 +1572,14 @@ public:
     auto position = rewriter.getInsertionPoint();
     auto *continueBlock = rewriter.splitBlock(currentBlock, position);
 
+    // Add arguments to the continue block for selections that yield values.
+    for (auto ty : op.getResultTypes()) {
+      Type dstTy = getTypeConverter()->convertType(ty);
+      if (!dstTy)
+        return rewriter.notifyMatchFailure(op, "failed to convert type");
+      continueBlock->addArgument(dstTy, loc);
+    }
+
     // Extract conditional branch information from the header block. By SPIR-V
     // dialect spec, it should contain `spirv.BranchConditional` or
     // `spirv.Switch` op. Note that `spirv.Switch op` is not supported at the
@@ -1633,41 +1666,6 @@ public:
     Value result =
         LLVMOp::create(rewriter, loc, dstType, adaptor.getOperand1(), extended);
     rewriter.replaceOp(op, result);
-    return success();
-  }
-};
-
-class TanPattern : public SPIRVToLLVMConversion<spirv::GLTanOp> {
-public:
-  using SPIRVToLLVMConversion<spirv::GLTanOp>::SPIRVToLLVMConversion;
-
-  LogicalResult
-  matchAndRewrite(spirv::GLTanOp tanOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(tanOp.getType());
-    if (!dstType)
-      return rewriter.notifyMatchFailure(tanOp, "type conversion failed");
-
-    rewriter.replaceOpWithNewOp<LLVM::TanOp>(tanOp, dstType,
-                                             adaptor.getOperands());
-    return success();
-  }
-};
-
-class TanhPattern : public SPIRVToLLVMConversion<spirv::GLTanhOp> {
-public:
-  using SPIRVToLLVMConversion<spirv::GLTanhOp>::SPIRVToLLVMConversion;
-
-  LogicalResult
-  matchAndRewrite(spirv::GLTanhOp tanhOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto srcType = tanhOp.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
-    if (!dstType)
-      return rewriter.notifyMatchFailure(tanhOp, "type conversion failed");
-
-    rewriter.replaceOpWithNewOp<LLVM::TanhOp>(tanhOp, dstType,
-                                              adaptor.getOperands());
     return success();
   }
 };
@@ -2051,7 +2049,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, FModPattern,
-      SModPattern, SNegatePattern,
+      SModPattern, VectorTimesScalarPattern, SNegatePattern,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
@@ -2148,8 +2146,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
-      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, FractPattern,
-      GLFMixPattern,
+      DirectConversionPattern<spirv::GLTanOp, LLVM::TanOp>,
+      DirectConversionPattern<spirv::GLTanhOp, LLVM::TanhOp>,
+      InverseSqrtPattern, SAbsPattern, FractPattern, GLFMixPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
