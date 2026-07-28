@@ -60,3 +60,47 @@ define i64 @dont_scalarize_atomic_bitcast(ptr %p) {
   %bitcast = bitcast <2 x i32> %load to i64
   ret i64 %bitcast
 }
+
+define i8 @load_extract_narrow_unsigned_constant(ptr %p) {
+; CHECK-LABEL: @load_extract_narrow_unsigned_constant(
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i32 0, i4 -8
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P8]], align 1
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %v = load <16 x i8>, ptr %p, align 1
+  %x = extractelement <16 x i8> %v, i4 -8
+  ret i8 %x
+}
+
+define i8 @load_extract_narrow_unsigned_dynamic(ptr %p, i4 noundef %idx) {
+; CHECK-LABEL: @load_extract_narrow_unsigned_dynamic(
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX:%.*]], -1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P:%.*]], i32 0, i4 [[BOUNDED]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %bounded = urem i4 %idx, -1
+  %v = load <15 x i8>, ptr %p, align 1
+  %x = extractelement <15 x i8> %v, i4 %bounded
+  ret i8 %x
+}
+
+; Record the current profitability result before accounting for the dynamic
+; zext needed to preserve the unsigned lane number.
+define float @load_extract_narrow_unsigned_dynamic_unprofitable(
+    ptr %p, i2 noundef %idx) optsize {
+; CHECK-LABEL: @load_extract_narrow_unsigned_dynamic_unprofitable(
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i2 [[IDX:%.*]], -1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <3 x float>, ptr [[P:%.*]], i32 0, i2 [[BOUNDED]]
+; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[Y:%.*]] = load float, ptr [[P]], align 1
+; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %bounded = urem i2 %idx, -1
+  %v = load <3 x float>, ptr %p, align 1
+  %x = extractelement <3 x float> %v, i2 %bounded
+  %y = extractelement <3 x float> %v, i2 0
+  %sum = fadd float %x, %y
+  ret float %sum
+}
