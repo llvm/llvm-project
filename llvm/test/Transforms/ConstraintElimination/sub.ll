@@ -239,11 +239,12 @@ if.end:                                           ; preds = %entry
 
 
 declare void @use(i1)
+declare void @llvm.assume(i1)
 
 ; A `sub` without nsw/nuw is decomposed in the unsigned system under the
 ; recorded precondition (Op1 u<= Op0). Given `%b u<= %a`, `%a - %b u<= %a` is
-; therefore known and the check folds to true. Without the precondition (the
-; check before the branch) it must NOT fold.
+; therefore known and the check folds to true. Before the precondition is
+; assumed (the first check) it must NOT fold.
 define i1 @sub_no_wrap_flags_ule(i8 %a, i8 %b) {
 ; CHECK-LABEL: @sub_no_wrap_flags_ule(
 ; CHECK-NEXT:  entry:
@@ -251,25 +252,17 @@ define i1 @sub_no_wrap_flags_ule(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_NEG:%.*]] = icmp ule i8 [[SUB_NEG]], [[A]]
 ; CHECK-NEXT:    call void @use(i1 [[C_NEG]])
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ule i8 [[B]], [[A]]
-; CHECK-NEXT:    br i1 [[PRECOND]], label [[THEN:%.*]], label [[ELSE:%.*]]
-; CHECK:       then:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 true
-; CHECK:       else:
-; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %sub.neg = sub i8 %a, %b
   %c.neg = icmp ule i8 %sub.neg, %a
   call void @use(i1 %c.neg)
   %precond = icmp ule i8 %b, %a
-  br i1 %precond, label %then, label %else
-
-then:
+  call void @llvm.assume(i1 %precond)
   %sub = sub i8 %a, %b
   %c = icmp ule i8 %sub, %a
   ret i1 %c
-
-else:
-  ret i1 false
 }
