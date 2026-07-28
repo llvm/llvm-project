@@ -23,7 +23,7 @@ public:
     return lldb::eLanguageTypeGo;
   }
 
-  llvm::StringRef GetUserEntryPointName() const override { return "main"; }
+  llvm::StringRef GetUserEntryPointName() const override { return "main.main"; }
 
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
 
