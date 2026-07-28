@@ -2338,7 +2338,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   } else {
-    if (is_local_shared_cache_image) {
+    if (is_local_shared_cache_image && linkedit_section_sp) {
       // The load commands in shared cache images are relative to the
       // beginning of the shared cache, not the library image. The
       // data we get handed when creating the ObjectFileMachO starts

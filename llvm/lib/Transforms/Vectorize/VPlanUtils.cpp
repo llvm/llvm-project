@@ -583,6 +583,16 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
   return nullptr;
 }
 
+SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
+vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
+  SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>> Exits;
+  for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks())
+    for (VPBlockBase *Pred : ExitVPBB->getPredecessors())
+      if (Pred != MiddleVPBB)
+        Exits.emplace_back(cast<VPBasicBlock>(Pred), ExitVPBB);
+  return Exits;
+}
+
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,

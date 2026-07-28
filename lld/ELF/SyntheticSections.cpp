@@ -4546,7 +4546,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
   if (ctx.arg.zRelro &&
-      ((ctx.script->phdrsCommands.empty() && !ctx.script->hasSectionsCommand) ||
+      ((!ctx.script->hasPhdrsCommands() && !ctx.script->hasSectionsCommand) ||
        ctx.script->seenRelroEnd)) {
     ctx.in.relroPadding = std::make_unique<RelroPaddingSection>(ctx);
     add(*ctx.in.relroPadding);

@@ -345,6 +345,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed USR generation for declarations whose signature mentions a class-type
+  non-type template parameter. (#GH212351)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -361,6 +363,8 @@ features cannot lower the translation-unit ABI level;
   they are now correctly accepted on such pointers.
 
 #### Bug Fixes to C++ Support
+
+- Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
@@ -425,6 +429,12 @@ features cannot lower the translation-unit ABI level;
 #### Android Support
 
 #### Windows Support
+
+- Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
+  over-aligned base class is followed by another base class. MSVC on Arm64 (but
+  not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
+  subsequent base; Clang now does the same.
+  ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
 
