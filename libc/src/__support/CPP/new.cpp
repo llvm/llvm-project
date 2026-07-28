@@ -8,9 +8,6 @@
 
 #include "new.h"
 #include "hdr/func/free.h"
-#include "src/__support/macros/sanitizer.h"
-
-#ifndef LIBC_HAS_ADDRESS_SANITIZER
 
 void operator delete(void *mem) noexcept { ::free(mem); }
 
@@ -45,5 +42,3 @@ void operator delete[](void *mem, size_t, std::align_val_t) noexcept {
   ::free(mem);
 #endif
 }
-
-#endif // LIBC_HAS_ADDRESS_SANITIZER

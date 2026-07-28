@@ -108,6 +108,7 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
+
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
@@ -140,17 +141,6 @@ add_libc_test(
     optional_test.cpp
   DEPENDS
     libc.src.__support.CPP.optional
-)
-
-add_libc_test(
-  unique_ptr_test
-  SUITE
-    libc-cpp-utils-tests
-  SRCS
-    unique_ptr_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.unique_ptr
-    libc.src.__support.CPP.utility
 )
 
 add_libc_test(
@@ -190,9 +180,9 @@ add_libc_test(
   SRCS
     string_test.cpp
   DEPENDS
-    libc.hdr.func.free
-    libc.src.__support.CPP.string
-    libc.src.__support.CPP.string_view
+  libc.hdr.func.free
+  libc.src.__support.CPP.string
+  libc.src.__support.CPP.string_view
 )
 
 add_libc_test(
@@ -200,9 +190,9 @@ add_libc_test(
   SUITE
     libc-cpp-utils-tests
   SRCS
-    type_traits_test.cpp
+  type_traits_test.cpp
   DEPENDS
-    libc.src.__support.CPP.type_traits
+  libc.src.__support.CPP.type_traits
 )
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
