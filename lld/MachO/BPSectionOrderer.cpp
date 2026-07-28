@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPSectionOrderer.h"
+#include "ICF.h"
 #include "InputSection.h"
 #include "OutputSegment.h"
 #include "Relocations.h"
@@ -120,7 +121,14 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
+  DenseMap<const InputSection *, unsigned> sectionToIdx;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
+  auto addSectionForName = [&](StringRef name, unsigned idx) {
+    auto rootName = lld::utils::getRootSymbol(name);
+    rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
+    if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
+      rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
+  };
   auto addSection = [&](InputSection *isec) {
     if (!isec || isec->data.empty() || !isec->data.data())
       return;
@@ -132,14 +140,11 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     // irrelevant.
     if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
       return;
-    size_t idx = sections.size();
+    unsigned idx = sections.size();
     sections.emplace_back(isec);
-    for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-      auto rootName = lld::utils::getRootSymbol(sym->getName());
-      rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
-      if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
-        rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
-    }
+    sectionToIdx.try_emplace(isec, idx);
+    for (auto *sym : BPOrdererMachO::getSymbols(*isec))
+      addSectionForName(sym->getName(), idx);
   };
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
@@ -151,12 +156,23 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
   // ICF safe thunks are linker-created after the input-file section graph is
-  // built. Include them so profile names resolve to the emitted thunks.
+  // built. Include them so profile names resolve to the emitted thunks and the
+  // shared bodies they immediately branch to.
   for (auto *isec : inputSections) {
-    if (llvm::any_of(isec->symbols, [](Defined *sym) {
+    if (!llvm::any_of(isec->symbols, [](Defined *sym) {
           return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
         }))
-      addSection(isec);
+      continue;
+    addSection(isec);
+    for (auto *sym : isec->symbols) {
+      if (sym->identicalCodeFoldingKind != Symbol::ICFFoldKind::Thunk)
+        continue;
+      InputSection *bodyIsec = getBodyForThunkFoldedSym(sym)->isec();
+      auto bodyIdx = sectionToIdx.find(bodyIsec);
+      assert(bodyIdx != sectionToIdx.end() &&
+             "ICF thunk body must be a BP candidate");
+      addSectionForName(sym->getName(), bodyIdx->second);
+    }
   }
 
   auto result = BPOrdererMachO().computeOrder(
