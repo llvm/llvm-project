@@ -1147,38 +1147,6 @@ else ()
       get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
       set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
       file(WRITE "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" "${${arch}_SOURCES}")
-
-      # For spirv64, produce a combined bitcode file alongside the static archive.
-      # -mlink-builtin-bitcode expects raw LLVM IR and cannot unpack a static archive,
-      # so we use llvm-link to merge the archive members into a single .bc file.
-      if("${arch}" MATCHES "^spirv64")
-        find_program(LLVM_LINK llvm-link
-          PATHS ${LLVM_TOOLS_BINARY_DIR}
-          NO_DEFAULT_PATH)
-        if(LLVM_LINK)
-          set(SPIRV64_BC_OUTPUT "${BUILTIN_LIB_OUTPUT_DIR}/lib${BUILTIN_LIB_OUTPUT_NAME}.bc")
-          add_custom_command(
-            OUTPUT "${SPIRV64_BC_OUTPUT}"
-            COMMAND "${LLVM_LINK}"
-                    "$<TARGET_FILE:clang_rt.builtins-spirv64>"
-                    -o "${SPIRV64_BC_OUTPUT}"
-            DEPENDS clang_rt.builtins-${arch}
-            COMMENT "Linking lib${BUILTIN_LIB_OUTPUT_NAME}.bc"
-            VERBATIM)
-          add_custom_target(clang_rt.builtins-spirv64-bc ALL
-            DEPENDS "${SPIRV64_BC_OUTPUT}")
-          add_dependencies(builtins clang_rt.builtins-spirv64-bc)
-          get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
-          install(FILES "${SPIRV64_BC_OUTPUT}"
-                  DESTINATION "${BUILTIN_INSTALL_DIR}"
-                  COMPONENT builtins)
-        else()
-          message(WARNING
-            "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "
-            "skipping libclang_rt.builtins.bc for spirv64")
-        endif()
-      endif()
-
       cmake_pop_check_state()
     endif ()
   endforeach ()
