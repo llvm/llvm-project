@@ -176,7 +176,11 @@ private:
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
   MCOperand lowerOperand(const MachineOperand &MO);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
-  unsigned encodeVirtualRegister(unsigned Reg);
+  MCRegister encodeVirtualRegister(Register Reg);
+
+  /// The number \p Reg was assigned within its register class, as declared by
+  /// this function's .reg directives.
+  unsigned getVirtualRegisterNumber(Register Reg) const;
 
   void printMemOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O,
                        const char *Modifier = nullptr);
@@ -186,7 +190,6 @@ private:
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
   void emitHeader(Module &M, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
-  void emitVirtualRegister(unsigned int vr, raw_ostream &);
   void emitFunctionParamList(const Function *, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
@@ -242,11 +245,11 @@ private:
 
   // This is specific per MachineFunction.
   const MachineRegisterInfo *MRI;
-  // The contents are specific for each
-  // MachineFunction. But the size of the
-  // array is not.
-  typedef DenseMap<unsigned, unsigned> VRegMap;
-  typedef DenseMap<const TargetRegisterClass *, VRegMap> VRegRCMap;
+
+  // The number assigned to each virtual register within its class, populated
+  // by setAndEmitFunctionVirtualRegisters and cleared between functions.
+  using VRegMap = DenseMap<Register, unsigned>;
+  using VRegRCMap = DenseMap<const TargetRegisterClass *, VRegMap>;
   VRegRCMap VRegMapping;
 
   // List of variables demoted to a function scope.
@@ -301,7 +304,7 @@ public:
     AsmPrinter::getAnalysisUsage(AU);
   }
 
-  std::string getVirtualRegisterName(unsigned) const;
+  std::string getVirtualRegisterName(Register Reg) const;
 
   const MCSymbol *getFunctionFrameSymbol() const override;
 

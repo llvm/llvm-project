@@ -369,38 +369,47 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
   }
 }
 
-unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
-  if (Register::isVirtualRegister(Reg)) {
-    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+static NVPTX::VirtualRegisterKind
+getVirtualRegisterKind(const TargetRegisterClass *RC) {
+  if (RC == &NVPTX::B1RegClass)
+    return NVPTX::VirtualRegisterKind::B1;
+  if (RC == &NVPTX::B16RegClass)
+    return NVPTX::VirtualRegisterKind::B16;
+  if (RC == &NVPTX::B32RegClass)
+    return NVPTX::VirtualRegisterKind::B32;
+  if (RC == &NVPTX::B64RegClass)
+    return NVPTX::VirtualRegisterKind::B64;
+  if (RC == &NVPTX::B128RegClass)
+    return NVPTX::VirtualRegisterKind::B128;
+  llvm_unreachable("Bad register class");
+}
 
-    DenseMap<unsigned, unsigned> &RegMap = VRegMapping[RC];
-    unsigned RegNum = RegMap[Reg];
+unsigned NVPTXAsmPrinter::getVirtualRegisterNumber(Register Reg) const {
+  const auto It = VRegMapping.find(MRI->getRegClass(Reg));
+  assert(It != VRegMapping.end() && "Bad register class");
 
-    // Encode the register class in the upper 4 bits
-    // Must be kept in sync with NVPTXInstPrinter::printRegName
-    unsigned Ret = 0;
-    if (RC == &NVPTX::B1RegClass) {
-      Ret = (1 << 28);
-    } else if (RC == &NVPTX::B16RegClass) {
-      Ret = (2 << 28);
-    } else if (RC == &NVPTX::B32RegClass) {
-      Ret = (3 << 28);
-    } else if (RC == &NVPTX::B64RegClass) {
-      Ret = (4 << 28);
-    } else if (RC == &NVPTX::B128RegClass) {
-      Ret = (7 << 28);
-    } else {
-      report_fatal_error("Bad register class");
-    }
+  const unsigned Num = It->second.lookup(Reg);
+  assert(Num && "Bad virtual register");
+  return Num;
+}
 
-    // Insert the vreg number
-    Ret |= (RegNum & 0x0FFFFFFF);
-    return Ret;
-  } else {
-    // Some special-use registers are actually physical registers.
-    // Encode this as the register class ID of 0 and the real register ID.
-    return Reg & 0x0FFFFFFF;
+MCRegister NVPTXAsmPrinter::encodeVirtualRegister(Register Reg) {
+  if (Reg.isVirtual()) {
+    // Pack the register class into the upper bits so that
+    // NVPTXInstPrinter::printRegName can recover the declared name.
+    const auto Kind = getVirtualRegisterKind(MRI->getRegClass(Reg));
+    const unsigned Num = getVirtualRegisterNumber(Reg);
+    assert(Num <= NVPTX::VirtualRegisterNumMask &&
+           "Too many virtual registers");
+    return (static_cast<unsigned>(Kind) << NVPTX::VirtualRegisterKindShift) |
+           Num;
   }
+
+  // Some special-use registers are actually physical registers.
+  // Encode this as the register class ID of 0 and the real register ID.
+  assert(Reg.id() <= NVPTX::VirtualRegisterNumMask &&
+         "Physical register would decode as a virtual register");
+  return Reg.asMCReg();
 }
 
 MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
@@ -754,28 +763,13 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   }
 }
 
-std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
-  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+std::string NVPTXAsmPrinter::getVirtualRegisterName(Register Reg) const {
+  const auto Kind = getVirtualRegisterKind(MRI->getRegClass(Reg));
 
   std::string Name;
-  raw_string_ostream NameStr(Name);
-
-  VRegRCMap::const_iterator I = VRegMapping.find(RC);
-  assert(I != VRegMapping.end() && "Bad register class");
-  const DenseMap<unsigned, unsigned> &RegMap = I->second;
-
-  VRegMap::const_iterator VI = RegMap.find(Reg);
-  assert(VI != RegMap.end() && "Bad virtual register");
-  unsigned MappedVR = VI->second;
-
-  NameStr << getNVPTXRegClassStr(RC) << MappedVR;
-
+  raw_string_ostream(Name) << NVPTX::getVirtualRegisterPrefix(Kind)
+                           << getVirtualRegisterNumber(Reg);
   return Name;
-}
-
-void NVPTXAsmPrinter::emitVirtualRegister(unsigned int vr,
-                                          raw_ostream &O) {
-  O << getVirtualRegisterName(vr);
 }
 
 void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
@@ -1823,9 +1817,14 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (const TargetRegisterClass &RC : TRI->regclasses()) {
     // Only declare those registers that may be used.
-    if (const unsigned N = VRegMapping[&RC].size())
-      TS->emitRegDirective(TRI->getRegSizeInBits(RC).getFixedValue(),
-                           getNVPTXRegClassStr(&RC), N + 1);
+    const auto It = VRegMapping.find(&RC);
+    if (It == VRegMapping.end() || It->second.empty())
+      continue;
+
+    TS->emitRegDirective(
+        TRI->getRegSizeInBits(RC).getFixedValue(),
+        NVPTX::getVirtualRegisterPrefix(getVirtualRegisterKind(&RC)),
+        It->second.size() + 1);
   }
 }
 
@@ -1834,19 +1833,16 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 void NVPTXAsmPrinter::encodeDebugInfoRegisterNumbers(
     const MachineFunction &MF) {
   const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
-  const NVPTXRegisterInfo *registerInfo = STI.getRegisterInfo();
+  const NVPTXRegisterInfo *NRI = STI.getRegisterInfo();
 
   // Clear the old mapping, and add the new one.  This mapping is used after the
   // printing of the current function is complete, but before the next function
   // is printed.
-  registerInfo->clearDebugRegisterMap();
+  NRI->clearDebugRegisterMap();
 
-  for (auto &classMap : VRegMapping) {
-    for (auto &registerMapping : classMap.getSecond()) {
-      auto reg = registerMapping.getFirst();
-      registerInfo->addToDebugRegisterMap(reg, getVirtualRegisterName(reg));
-    }
-  }
+  for (const VRegMap &RegMap : make_second_range(VRegMapping))
+    for (const Register Reg : make_first_range(RegMap))
+      NRI->addToDebugRegisterMap(Reg, getVirtualRegisterName(Reg));
 }
 
 void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp,
@@ -2329,7 +2325,7 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
       else
         O << NVPTXInstPrinter::getRegisterName(MO.getReg());
     } else {
-      emitVirtualRegister(MO.getReg(), O);
+      O << getVirtualRegisterName(MO.getReg());
     }
     break;
 
