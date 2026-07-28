@@ -1392,9 +1392,9 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
-// Check if the expression designates an entire array variable or component, as
-// opposed to an array section, an array element, or a computed value. Unlike
-// !IsArraySection(), a whole array component of a scalar base (a%b) qualifies.
+// True for a whole array variable or a whole array component (a%b), false for an
+// array section, an array element or a computed value. Note that IsArraySection()
+// counts a%b as a section, so this is not its negation.
 template <typename A> inline bool IsWholeArrayDesignator(const A &expr) {
   return expr.Rank() > 0 &&
       UnwrapWholeSymbolOrComponentDataRef(expr) != nullptr;
@@ -1417,23 +1417,20 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
     return true; // Managed arrays initialization is performed on the device.
   }
 
-  // Per CUDA Fortran Programming Guide 3.4.1, an assignment involving
-  // managed/unified data is a synchronous copy when the managed operand is a
-  // whole variable or array, and is performed by host code when it is an array
-  // section: managed data is host-addressable, and a loop assigning one section
-  // at a time would otherwise become a sequence of blocking copies. Sections
-  // are still copied when the other side is device data.
+  // CUDA Fortran Programming Guide 3.4.1: an assignment involving managed or
+  // unified data is a copy when the managed side is a whole variable or array,
+  // and is done on the host when it is a section. The host can read and write
+  // managed data directly, and copying section by section in a loop is slow.
   bool wholeLhs{IsWholeArrayDesignator(lhs)};
   bool wholeRhs{IsWholeArrayDesignator(rhs)};
 
-  // Assignments that are performed on the host and need no data transfer:
-  // - A whole-allocatable left-hand side involving managed/unified data: the
-  //   assignment has reallocation semantics and is performed on the host.
-  // - A managed/unified operand that is an array section or an element.
-  // - A right-hand side expression involving managed/unified data assigned into
-  //   a host-addressable (managed/unified or host) left-hand side: evaluating
-  //   it on the host avoids materializing a temporary.
-  // - A managed/unified left-hand side assigned from host-only data.
+  // Assignments done on the host, with no copy:
+  // - A whole allocatable left-hand side: the assignment may reallocate it,
+  //   which is done on the host.
+  // - A managed operand that is an array section or an element.
+  // - An expression involving managed data assigned to a managed or host
+  //   left-hand side: evaluating it on the host avoids a temporary.
+  // - A managed left-hand side assigned from host-only data.
   if ((IsAllocatableDesignator(lhs) &&
           (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
       (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
