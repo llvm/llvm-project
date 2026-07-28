@@ -782,10 +782,24 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
       Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
 
+    // For a function pointer field or variable, the arguments may name a
+    // parameter of the pointee. Add them to the current scope rather than a
+    // nested one: while late parsing a record's attributes, a member of that
+    // record resolves only if the record's scope is innermost, and the
+    // attribute could name either a member or a parameter.
+    bool HasProtoParams = !HasFuncScope && !LPA.ProtoParams.empty();
+    if (HasProtoParams)
+      Actions.ActOnReenterFunctionPrototypeParams(Actions.getCurScope(),
+                                                  LPA.ProtoParams);
+
     ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
                           /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
                           SourceLocation(), ParsedAttr::Form::GNU(),
                           /*D=*/nullptr);
+
+    if (HasProtoParams)
+      Actions.ActOnExitFunctionPrototypeParams(Actions.getCurScope(),
+                                               LPA.ProtoParams);
 
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();

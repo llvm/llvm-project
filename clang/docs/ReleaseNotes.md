@@ -167,6 +167,24 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
+- Under `-fexperimental-late-parse-attributes`, the thread safety capability
+  attributes (`requires_capability`, `acquire_capability`,
+  `release_capability`, `assert_capability`, `try_acquire_capability`,
+  `locks_excluded` and `lock_returned`) are now late parsed, as `guarded_by`
+  and `pt_guarded_by` already were, so a requirement may name a member declared
+  later in the same record:
+
+  ```c++
+  struct Cache {
+    void (*read)(void) REQUIRES(mu);   // 'mu' declared below
+    Mutex mu;
+  };
+  ```
+
+  A requirement naming a parameter of the pointee, such as
+  `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
+  working. Without the flag the forward reference remains an error.
+
 ### Improvements to Clang's diagnostics
 
 - More consistent rendering of Unicode characters in diagnostic messages.

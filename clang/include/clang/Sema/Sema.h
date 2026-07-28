@@ -4503,6 +4503,15 @@ public:
 
   /// Push the parameters of D, which must be a function, into scope.
   void ActOnReenterFunctionContext(Scope *S, Decl *D);
+
+  /// Add \p Params to scope, so a late-parsed attribute can name them.
+  void ActOnReenterFunctionPrototypeParams(Scope *S,
+                                           ArrayRef<ParmVarDecl *> Params);
+  /// Undo the above. Needed because these go into a scope that outlives the
+  /// attribute, so unlike ActOnReenterFunctionContext no scope pop removes
+  /// them.
+  void ActOnExitFunctionPrototypeParams(Scope *S,
+                                        ArrayRef<ParmVarDecl *> Params);
   void ActOnExitFunctionContext();
 
   /// Add this decl to the scope shadowed decl chains.

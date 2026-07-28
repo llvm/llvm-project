@@ -195,6 +195,22 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
   // Handle attributes with arguments that require late parsing.
   LateParsedAttribute *LA =
       new LateParsedAttribute(this, *AttrName, AttrNameLoc);
+
+  // Keep the innermost prototype's parameters available in case they are needed
+  // by late-parsing attributes.
+  if (D && !D->isFunctionDeclarator()) {
+    for (unsigned I = 0, E = D->getNumTypeObjects(); I != E; ++I) {
+      const DeclaratorChunk &Chunk = D->getTypeObject(I);
+      if (Chunk.Kind != DeclaratorChunk::Function)
+        continue;
+      const DeclaratorChunk::FunctionTypeInfo &FTI = Chunk.Fun;
+      for (unsigned P = 0, NumParams = FTI.NumParams; P != NumParams; ++P)
+        if (auto *Param = dyn_cast_or_null<ParmVarDecl>(FTI.Params[P].Param))
+          LA->ProtoParams.push_back(Param);
+      break;
+    }
+  }
+
   LateAttrs->push_back(LA);
 
   // Attributes in a class are parsed at the end of the class, along
