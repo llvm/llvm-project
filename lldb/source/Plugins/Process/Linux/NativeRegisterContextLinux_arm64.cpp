@@ -775,7 +775,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
 uint8_t *NativeRegisterContextLinux_arm64::AddRegisterSetType(
     uint8_t *dst, RegisterSetType register_set_type) {
-  *(reinterpret_cast<RegisterSetType *>(dst)) = register_set_type;
+  std::memcpy(dst, &register_set_type, sizeof(register_set_type));
   return dst + sizeof(RegisterSetType);
 }
 
@@ -946,7 +946,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
       m_sve_state != SVEState::StreamingFPSIMD) {
     dst = AddRegisterSetType(dst, RegisterSetType::SVE);
-    *(reinterpret_cast<SVEState *>(dst)) = m_sve_state;
+    std::memcpy(dst, &m_sve_state, sizeof(m_sve_state));
     dst += sizeof(m_sve_state);
     dst = AddSavedRegistersData(dst, GetSVEBuffer(), GetSVEBufferSize());
   } else {
@@ -1050,8 +1050,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   const uint8_t *end = src + data_sp->GetByteSize();
   while (src < end) {
-    const RegisterSetType kind =
-        *reinterpret_cast<const RegisterSetType *>(src);
+    RegisterSetType kind;
+    std::memcpy(&kind, src, sizeof(kind));
     src += sizeof(RegisterSetType);
 
     switch (kind) {
@@ -1062,7 +1062,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       break;
     case RegisterSetType::SVE:
       // Restore to the correct mode, streaming or not.
-      m_sve_state = static_cast<SVEState>(*src);
+      std::memcpy(&m_sve_state, src, sizeof(m_sve_state));
       src += sizeof(m_sve_state);
 
       // First write SVE header. We do not use RestoreRegisters because we do
@@ -1221,7 +1221,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         return error;
 
       uint64_t enable_bit = m_gcs_regs.features_enabled & 1UL;
-      gcs_regs new_gcs_regs = *reinterpret_cast<const gcs_regs *>(src);
+      gcs_regs new_gcs_regs;
+      std::memcpy(&new_gcs_regs, src, sizeof(new_gcs_regs));
       new_gcs_regs.features_enabled =
           (new_gcs_regs.features_enabled & ~1UL) | enable_bit;
 

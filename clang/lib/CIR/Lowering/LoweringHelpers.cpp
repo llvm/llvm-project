@@ -238,9 +238,15 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
                                                 converter->convertType(type));
-  if (mlir::isa<cir::IntType>(type))
+  if (mlir::isa<cir::IntType>(type)) {
+    // A _BitInt array element is stored in a padded integer in memory; the
+    // dense-attribute path here cannot express that widening, so fall back to
+    // the insertvalue region, which widens each element via emitToMemory.
+    if (mlir::cast<cir::IntType>(type).isBitInt())
+      return std::nullopt;
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
         constArr, dims, type, converter->convertType(type));
+  }
 
   if (mlir::isa<cir::BoolType>(type))
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
@@ -299,9 +305,14 @@ lowerConstRecordMemberAttr(mlir::Attribute attr,
   if (mlir::isa<cir::UndefAttr>(attr))
     return mlir::LLVM::UndefAttr::get(ctx);
 
-  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr))
+  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
+    // A _BitInt member is stored in a padded integer in memory; defer to the
+    // insertvalue region (CIRAttrToValue), which performs the extension.
+    if (mlir::cast<cir::IntType>(intAttr.getType()).isBitInt())
+      return std::nullopt;
     return mlir::IntegerAttr::get(converter->convertType(intAttr.getType()),
                                   intAttr.getValue());
+  }
 
   if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
     return mlir::IntegerAttr::get(converter->convertType(boolAttr.getType()),
