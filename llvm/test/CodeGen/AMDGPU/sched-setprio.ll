@@ -10,7 +10,7 @@
 
 ; CHECK-ERR: S_SETPRIO mask contains invalid memory operation bits
 
-; Demonstrate that the maks bits that are compatible with s_set_prio
+; Demonstrate that the mask bits that are compatible with s_set_prio
 ; allow corresponding instruction types to be scheduled across the s_setprio
 ; instruction and that incompatible mask bits are rejected by the
 ; verifier.
