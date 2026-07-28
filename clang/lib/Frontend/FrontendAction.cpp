@@ -529,8 +529,7 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   Preprocessor &PP = CI.getPreprocessor();
   SmallString<128> HeaderNameBuffer;
   StringRef HeaderName = PP.getSpelling(T, HeaderNameBuffer);
-  if (PP.GetIncludeFilenameSpelling(T.getLocation(), HeaderName))
-    return SourceLocation();
+  PP.GetLineDirectiveFilenameSpelling(T.getLocation(), HeaderName);
 
   RawLexer->LexFromRawLexer(T);
   if (T.isNot(tok::eof) && !T.isAtStartOfLine())

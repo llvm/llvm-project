@@ -1599,21 +1599,6 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
   return false;
 }
 
-// Unlike header-names, line directive only support filenames in double quotes
-// but does support empty filenames.
-static void GetFilenameSpellingForLineDirective(const Preprocessor &PP,
-                                                SourceLocation Loc,
-                                                StringRef &Buffer) {
-  // Get the text form of the filename.
-  assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
-  if (Buffer.size() < 2 || Buffer.front() != '"' || Buffer.back() != '"') {
-    PP.Diag(Loc, diag::err_pp_line_invalid_filename);
-    Buffer = StringRef();
-    return;
-  }
-  Buffer = Buffer.substr(1, Buffer.size() - 2);
-}
-
 /// Handle a \#line directive: C99 6.10.4.
 ///
 /// The two acceptable forms are:
@@ -1660,7 +1645,7 @@ void Preprocessor::HandleLineDirective() {
   } else {
     SmallString<128> FilenameBuffer;
     StringRef Filename = getSpelling(StrTok, FilenameBuffer);
-    GetFilenameSpellingForLineDirective(*this, StrTok.getLocation(), Filename);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
     FilenameID = SourceMgr.getLineTableFilenameID(Filename);
 
     // Verify that there is nothing after the string, other than EOD.  Because
@@ -1798,7 +1783,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
   } else {
     SmallString<128> FilenameBuffer;
     StringRef Filename = getSpelling(StrTok, FilenameBuffer);
-    GetFilenameSpellingForLineDirective(*this, StrTok.getLocation(), Filename);
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
@@ -1996,6 +1981,18 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   // Skip the brackets.
   Buffer = Buffer.substr(1, Buffer.size()-2);
   return isAngled;
+}
+
+void Preprocessor::GetLineDirectiveFilenameSpelling(SourceLocation Loc,
+                                                    StringRef &Buffer) {
+  // Get the text form of the filename.
+  assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
+  if (Buffer.size() < 2 || Buffer.front() != '"' || Buffer.back() != '"') {
+    Diag(Loc, diag::err_pp_line_invalid_filename);
+    Buffer = StringRef();
+    return;
+  }
+  Buffer = Buffer.substr(1, Buffer.size() - 2);
 }
 
 /// Push a token onto the token stream containing an annotation.
