@@ -711,7 +711,7 @@ bool InstCombinerImpl::rightDistributesOverLeft(
   // If %v0 + %v1 never wraps.
   if ((ROpcode == Instruction::AShr || ROpcode == Instruction::LShr) &&
       match(&LOp,
-            m_BinOp(m_Exact(m_BinOp(ROpcode, m_Value(),
+            m_c_Add(m_Exact(m_BinOp(ROpcode, m_Value(),
                                     m_Value(Z, m_APInt(ShiftAmt)))),
                     m_Exact(m_BinOp(ROpcode, m_Value(), m_Deferred(Z)))))) {
     bool IsSigned = ROpcode == Instruction::AShr;
