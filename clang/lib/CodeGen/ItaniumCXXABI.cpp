@@ -1587,9 +1587,14 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
         CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
         {Value, llvm::ConstantInt::getSigned(CGM.Int32Ty, -4)});
   } else {
-    // Load the type info.
-    Value =
-        CGF.Builder.CreateConstInBoundsGEP1_64(StdTypeInfoPtrTy, Value, -1ULL);
+    // Load the type info, using the vtable component type where it differs.
+    llvm::Type *ComponentTy = CGM.VTableComponentPtrTy == CGM.GlobalsInt8PtrTy
+                                  ? StdTypeInfoPtrTy
+                                  : CGM.VTableComponentPtrTy;
+    Value = CGF.Builder.CreateConstInBoundsGEP1_64(ComponentTy, Value, -1ULL);
+    Value = CGF.Builder.CreateAlignedLoad(ComponentTy, Value,
+                                          CGF.getPointerAlign());
+    return CGF.Builder.CreateAddrSpaceCast(Value, StdTypeInfoPtrTy);
   }
   return CGF.Builder.CreateAlignedLoad(StdTypeInfoPtrTy, Value,
                                        CGF.getPointerAlign());
@@ -2275,8 +2280,8 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
           {VTable, llvm::ConstantInt::get(CGM.Int32Ty, ByteOffset)});
     } else {
       VTableSlotPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
-          PtrTy, VTable, VTableIndex, "vfn");
-      VFuncLoad = CGF.Builder.CreateAlignedLoad(PtrTy, VTableSlotPtr,
+          ComponentTy, VTable, VTableIndex, "vfn");
+      VFuncLoad = CGF.Builder.CreateAlignedLoad(ComponentTy, VTableSlotPtr,
                                                 CGF.getPointerAlign());
     }
 

@@ -72,6 +72,9 @@ struct CodeGenTypeCache {
     llvm::PointerType *GlobalsInt8PtrTy;
   };
 
+  /// Type of a pointer component of a C++ vtable.
+  llvm::PointerType *VTableComponentPtrTy;
+
   /// Pointer in program address space
   llvm::PointerType *ProgramPtrTy;
 
