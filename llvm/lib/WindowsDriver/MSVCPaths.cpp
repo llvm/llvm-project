@@ -675,6 +675,12 @@ bool llvm::findVCToolChainViaSetupConfig(
   ISetupInstancePtr NewestInstance;
   std::optional<uint64_t> NewestVersionNum;
   do {
+    bstr_t NameString;
+    HR = Instance->GetInstallationName(NameString.GetAddress());
+    if (FAILED(HR))
+      continue;
+    if (std::wstring_view(NameString).find(L"VisualStudio") != 0)
+      continue;
     bstr_t VersionString;
     uint64_t VersionNum;
     HR = Instance->GetInstallationVersion(VersionString.GetAddress());
