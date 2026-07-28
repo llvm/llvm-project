@@ -1392,12 +1392,13 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
-// True for a whole array variable or a whole array component (a%b), false for
-// an array section, an array element or a computed value. Note that
-// IsArraySection() counts a%b as a section, so this is not its negation.
-template <typename A> inline bool IsWholeArrayDesignator(const A &expr) {
-  return expr.Rank() > 0 &&
-      UnwrapWholeSymbolOrComponentDataRef(expr) != nullptr;
+// True for a whole reference to a managed or unified array: a whole array
+// variable, or a whole array component that itself has the attribute (a%b where
+// b is managed). An array section, an array element, a component of a managed
+// object and a computed value are all false.
+template <typename A> inline bool IsWholeManagedArray(const A &expr) {
+  const Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return expr.Rank() > 0 && sym && IsCUDAManagedOrUnifiedSymbol(*sym);
 }
 
 // Check if any of the symbols part of the lhs or rhs expression has a CUDA
@@ -1411,30 +1412,31 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && IsWholeArrayDesignator(lhs) &&
+  if (lhsNbManagedSymbols >= 1 && IsWholeManagedArray(lhs) &&
       rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
       (IsVariable(rhs) || IsConstantExpr(rhs))) {
-    return true; // Managed arrays initialization is performed on the device.
+    return true; // Initializing a whole managed array is done on the device.
   }
 
   // CUDA Fortran Programming Guide 3.4.1: an assignment involving managed or
   // unified data is a copy when the managed side is a whole variable or array,
   // and is done on the host when it is a section. The host can read and write
   // managed data directly, and copying section by section in a loop is slow.
-  bool wholeLhs{IsWholeArrayDesignator(lhs)};
-  bool wholeRhs{IsWholeArrayDesignator(rhs)};
+  bool wholeLhs{IsWholeManagedArray(lhs)};
+  bool wholeRhs{IsWholeManagedArray(rhs)};
 
   // Assignments done on the host, with no copy:
   // - A whole allocatable left-hand side: the assignment may reallocate it,
   //   which is done on the host.
-  // - A managed operand that is an array section or an element.
+  // - No managed operand is a whole array: they are all sections or elements,
+  //   which the host can read and write in place.
   // - An expression involving managed data assigned to a managed or host
   //   left-hand side: evaluating it on the host avoids a temporary.
   // - A managed left-hand side assigned from host-only data.
   if ((IsAllocatableDesignator(lhs) &&
           (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
       (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          !(wholeLhs && wholeRhs)) ||
+          !(wholeLhs || wholeRhs)) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
           rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
           !wholeRhs) ||
