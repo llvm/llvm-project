@@ -138,6 +138,61 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ReplaceInTie;
   };
 
+  // `movaps r1, r2` + `shufps r1, r2, i` -> `pshufd r1, r2, i`
+  // SHUFPS is destructive (2-address), so instruction selection may introduce
+  // a preceding copy to preserve the original source value. PSHUFD is
+  // non-destructive, making the copy unnecessary.
+  // We skip NewOpcPreferable here because we are explicitly replacing two
+  // instructions with one, which is universally profitable.
+  auto ProcessSHUFPS = [&]() -> bool {
+    if (!ST->hasSSE2() || !ST->hasNoDomainDelayShuffle())
+      return false;
+
+    if (I == MBB.begin())
+      return false;
+
+    MachineInstr &PrevMI = *std::prev(I);
+    unsigned PrevOpc = PrevMI.getOpcode();
+    if (PrevOpc != X86::MOVAPSrr && PrevOpc != X86::MOVAPDrr &&
+        PrevOpc != X86::MOVUPSrr && PrevOpc != X86::MOVUPDrr)
+      return false;
+
+    const MachineOperand &DstOp = MI.getOperand(0);
+    const MachineOperand &Src1Op = MI.getOperand(1);
+    const MachineOperand &Src2Op = MI.getOperand(2);
+
+    const MachineOperand &PrevDstOp = PrevMI.getOperand(0);
+    const MachineOperand &PrevSrcOp = PrevMI.getOperand(1);
+
+    const Register DstReg = DstOp.getReg();
+    const Register Src1Reg = Src1Op.getReg();
+    const Register Src2Reg = Src2Op.getReg();
+
+    if (DstReg != Src1Reg)
+      return false;
+
+    // Check that MOVAPS matches: `DstReg = MOVAPS Src2Reg`
+    if (PrevDstOp.getReg() != DstReg || PrevSrcOp.getReg() != Src2Reg)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "Replacing: " << PrevMI << " and " << MI);
+    unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
+    bool SrcIsKill = Src2Op.isKill();
+
+    MachineInstr *NewMI =
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::PSHUFDri))
+            .add(DstOp) // Preserves dead flags etc.
+            .addReg(Src2Reg, getKillRegState(SrcIsKill))
+            .addImm(MaskImm);
+
+    LLVM_DEBUG(dbgs() << " With: " << *NewMI);
+
+    PrevMI.eraseFromParent();
+    I = MBB.erase(MI);
+    --I;
+    return true;
+  };
+
   // `vpermilpd r, i` -> `vshufpd r, r, i`
   // `vpermilpd r, i, k` -> `vshufpd r, r, i, k`
   // `vshufpd` is always as fast or faster than `vpermilpd` and takes
@@ -697,6 +752,9 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessShiftLeftToAdd(X86::VPADDQZ256rr);
   case X86::VPSLLQZri:
     return ProcessShiftLeftToAdd(X86::VPADDQZrr);
+
+  case X86::SHUFPSrri:
+    return ProcessSHUFPS();
 
   default:
     return false;

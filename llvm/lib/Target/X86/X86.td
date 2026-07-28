@@ -681,11 +681,11 @@ def TuningNoDomainDelayBlend : SubtargetFeature<"no-bypass-delay-blend",
                                    "Has no bypass delay when using the 'wrong' blend type",
                                    [], InlineIgnore>;
 
-// Newer processors (Haswell+ on Intel) have no bypass delay when
-// using the wrong shuffle type.
+// Newer processors (Haswell+ on Intel, bdver/znver on AMD) have no bypass delay
+// when using the wrong shuffle type (excluding blends).
 def TuningNoDomainDelayShuffle : SubtargetFeature<"no-bypass-delay-shuffle",
                                    "NoDomainDelayShuffle","true",
-                                   "Has no bypass delay when using the 'wrong' shuffle type",
+                                   "Has no bypass delay when using the 'wrong' shuffle type (excluding blends)",
                                    [], InlineIgnore>;
 
 // Prefer lowering shuffles on AVX512 targets (e.g. Skylake Server) to
@@ -1622,7 +1622,8 @@ def ProcessorFeatures {
                                          TuningFastScalarShiftMasks,
                                          TuningBranchFusion,
                                          TuningSBBDepBreaking,
-                                         TuningInsertVZEROUPPER];
+                                         TuningInsertVZEROUPPER,
+                                         TuningNoDomainDelayShuffle];
 
   // PileDriver
   list<SubtargetFeature> BdVer2AdditionalFeatures = [FeatureF16C,
@@ -1702,7 +1703,8 @@ def ProcessorFeatures {
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
-                                     TuningAllowLight256Bit];
+                                     TuningAllowLight256Bit,
+                                     TuningNoDomainDelayShuffle];
   list<SubtargetFeature> ZN2AdditionalFeatures = [FeatureCLWB,
                                                   FeatureRDPID,
                                                   FeatureRDPRU,

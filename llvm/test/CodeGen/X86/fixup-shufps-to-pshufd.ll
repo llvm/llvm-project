@@ -103,12 +103,12 @@ define <4 x float> @shuffle_v4f32_1032(<4 x float> %a) {
 define <4 x float> @shuffle_v4f32_two_source(<4 x float> %a, <4 x float> %b) {
 ; SSE2-LABEL: shuffle_v4f32_two_source:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: shuffle_v4f32_two_source:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE4-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE4-NEXT:    retq
 ;
 ; NO-DELAY-LABEL: shuffle_v4f32_two_source:
@@ -151,8 +151,7 @@ define void @shuffle_v4f32_with_liveout(<4 x float> %a, ptr %out1, ptr %out2) {
 ; NO-DELAY-LABEL: shuffle_v4f32_with_liveout:
 ; NO-DELAY:       # %bb.0:
 ; NO-DELAY-NEXT:    addps %xmm0, %xmm0
-; NO-DELAY-NEXT:    movaps %xmm0, %xmm1
-; NO-DELAY-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm0[2,2]
+; NO-DELAY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,2,2]
 ; NO-DELAY-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; NO-DELAY-NEXT:    movaps %xmm1, (%rdi)
 ; NO-DELAY-NEXT:    movaps %xmm0, (%rsi)
@@ -161,8 +160,7 @@ define void @shuffle_v4f32_with_liveout(<4 x float> %a, ptr %out1, ptr %out2) {
 ; ZNVER2-LABEL: shuffle_v4f32_with_liveout:
 ; ZNVER2:       # %bb.0:
 ; ZNVER2-NEXT:    addps %xmm0, %xmm0
-; ZNVER2-NEXT:    movaps %xmm0, %xmm1
-; ZNVER2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm0[2,2]
+; ZNVER2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,2,2]
 ; ZNVER2-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; ZNVER2-NEXT:    movaps %xmm1, (%rdi)
 ; ZNVER2-NEXT:    movaps %xmm0, (%rsi)
