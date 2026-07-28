@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SelectionDAGTestBase.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 
 using namespace llvm;
 
@@ -356,4 +357,28 @@ TEST_F(SelectionDAGNodeConstructionTest, CTLS) {
                                      Register::index2VirtReg(1), MVT::i1);
   SDValue Ctlsi1 = DAG->getNode(ISD::CTLS, DL, MVT::i32, i1Op);
   EXPECT_TRUE(isNullConstant(Ctlsi1));
+}
+
+TEST_F(SelectionDAGNodeConstructionTest, FMAXIMUM_IDENTITY) {
+  SDLoc DL;
+  SDValue FMax =
+      DAG->getIdentityElement(ISD::FMAXIMUM, DL, MVT::f32, SDNodeFlags());
+  EXPECT_TRUE(DAG->isIdentityElement(ISD::FMAXIMUM, SDNodeFlags(), FMax, 0, 0));
+
+  SDValue FMaxNoInf = DAG->getIdentityElement(ISD::FMAXIMUM, DL, MVT::f32,
+                                              SDNodeFlags(SDNodeFlags::NoInfs));
+  EXPECT_TRUE(DAG->isIdentityElement(
+      ISD::FMAXIMUM, SDNodeFlags(SDNodeFlags::NoInfs), FMaxNoInf, 0, 0));
+}
+
+TEST_F(SelectionDAGNodeConstructionTest, FMINIMUM_IDENTITY) {
+  SDLoc DL;
+  SDValue FMin =
+      DAG->getIdentityElement(ISD::FMINIMUM, DL, MVT::f32, SDNodeFlags());
+  EXPECT_TRUE(DAG->isIdentityElement(ISD::FMINIMUM, SDNodeFlags(), FMin, 0, 0));
+
+  SDValue FMinNoInf = DAG->getIdentityElement(ISD::FMINIMUM, DL, MVT::f32,
+                                              SDNodeFlags(SDNodeFlags::NoInfs));
+  EXPECT_TRUE(DAG->isIdentityElement(
+      ISD::FMINIMUM, SDNodeFlags(SDNodeFlags::NoInfs), FMinNoInf, 0, 0));
 }
