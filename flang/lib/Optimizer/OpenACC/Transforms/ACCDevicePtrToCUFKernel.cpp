@@ -177,6 +177,7 @@ private:
     // Wrap the launch in an acc.host_data region.
     auto hostData =
         acc::HostDataOp::create(builder, loc, /*ifCond=*/Value{}, dataOperands);
+    hostData.setIfPresent(true);
     Block *body = builder.createBlock(&hostData.getRegion());
     builder.setInsertionPointToStart(body);
     Operation *terminator = acc::TerminatorOp::create(builder, loc);
