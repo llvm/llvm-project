@@ -13762,14 +13762,11 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM: {
       // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
-      EVT VT = V.getValueType();
-      const fltSemantics &Semantics = VT.getFltSemantics();
-      APFloat NeutralAF = !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
-                                             : APFloat::getLargest(Semantics);
-      if (Opcode == ISD::FMAXIMUM)
-        NeutralAF.changeSign();
-
-      return ConstFP->isExactlyValue(NeutralAF);
+      const APFloat VAPF = ConstFP->getValueAPF();
+      const bool NeutralNegative = (Opcode == ISD::FMAXIMUM);
+      if (Flags.hasNoInfs())
+        return VAPF.isLargest() && VAPF.isNegative() == NeutralNegative;
+      return VAPF.isInfinity() && VAPF.isNegative() == NeutralNegative;
     }
     }
   }
