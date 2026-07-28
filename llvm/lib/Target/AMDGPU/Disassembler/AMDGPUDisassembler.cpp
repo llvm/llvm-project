@@ -60,6 +60,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
       MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+      TargetID(AMDGPU::createAMDGPUTargetID(STI, "")),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -103,27 +104,40 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
       OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
       OS << ":sramecc+";
       break;
     }
 
+    // Targets that hardwire xnack on (e.g. gfx1250) don't expose it as a
+    // selectable modifier, so don't print it.
+    bool XnackHardwiredOn = TargetID.isXnackSupported() &&
+                            !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
     unsigned XnackSetting = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
     switch (XnackSetting) {
     case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
-      OS << ":xnack-";
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Off);
+      if (!XnackHardwiredOn)
+        OS << ":xnack-";
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
-      OS << ":xnack+";
-      XnackOnFromEFlags = true;
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::On);
+      if (!XnackHardwiredOn)
+        OS << ":xnack+";
       break;
     }
   }
@@ -2604,8 +2618,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Only print the directive on xnack-supporting targets (matching the
   // asmprinter), unless the binary erronously set xnack on an unsupported
   // target
-  bool ReservedXnackMask =
-      STI.hasFeature(AMDGPU::FeatureXNACK) || XnackOnFromEFlags;
+  bool ReservedXnackMask = TargetID.isXnackOnOrAny();
   if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK) || ReservedXnackMask) {
     KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
              << '\n';
