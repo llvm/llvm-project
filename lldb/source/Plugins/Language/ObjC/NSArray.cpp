@@ -421,7 +421,8 @@ bool lldb_private::formatters::NSArraySummaryProvider(
     value = 0;
   } else if (class_name_ref == g_NSArray1) {
     value = 1;
-  } else if (class_name_ref == g_NSArrayCF || class_name_ref == g_NSCallStackArray) {
+  } else if (class_name_ref == g_NSArrayCF ||
+             class_name_ref == g_NSCallStackArray) {
     // __NSCFArray and _NSCallStackArray store the number of elements as a
     // pointer-sized value at offset `2 * ptr_size`.
     Status error;
@@ -777,7 +778,8 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
 
   static constexpr llvm::StringLiteral g_NSArrayI("__NSArrayI");
   static constexpr llvm::StringLiteral g_NSConstantArray("NSConstantArray");
-  static constexpr llvm::StringLiteral g_NSArrayI_Transfer("__NSArrayI_Transfer");
+  static constexpr llvm::StringLiteral g_NSArrayI_Transfer(
+      "__NSArrayI_Transfer");
   static constexpr llvm::StringLiteral g_NSFrozenArrayM("__NSFrozenArrayM");
   static constexpr llvm::StringLiteral g_NSArrayM("__NSArrayM");
   static constexpr llvm::StringLiteral g_NSArray0("__NSArray0");
@@ -794,7 +796,7 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
       return (new Foundation1430::NSArrayISyntheticFrontEnd(valobj_sp));
     return (new Foundation1300::NSArrayISyntheticFrontEnd(valobj_sp));
   } else if (class_name_ref == g_NSArrayI_Transfer) {
-      return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
+    return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
   } else if (class_name_ref == g_NSConstantArray) {
     return new ConstantArray::NSConstantArraySyntheticFrontEnd(valobj_sp);
   } else if (class_name_ref == g_NSFrozenArrayM) {
