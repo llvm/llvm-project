@@ -1317,7 +1317,10 @@ if (!dict) {
   // not enumerated by `op.getProperties()`, so they need to be special-cased
   // here, mirroring `setPropertiesFromAttr` in OpDefinitionsGen.cpp. This is
   // only necessary when the format can't infer the sizes itself (bulk
-  // `operands`/`type(results)` directives); when the format spells out each
+  // `operands`/`type(results)` directives, or when there is no declarative
+  // assemblyFormat at all -- e.g. `hasCustomAssemblyFormat`, where this
+  // generated setter may still be reused by a hand-written parser that has
+  // no other way to recover the sizes); when the format spells out each
   // variadic group individually, `genParserVariadicSegmentResolution` always
   // overwrites the property from the parsed operand/result groups, so the key
   // is left completely untouched here (same as any other property not
@@ -1338,13 +1341,14 @@ if (::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
     })))
   return ::mlir::failure();
 )decl";
+  bool hasNoDeclarativeFormat = !op.hasAssemblyFormat();
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
-      fmt.allOperands) {
+      (hasNoDeclarativeFormat || fmt.allOperands)) {
     auto scope = body.scope("{\n", "}\n", /*indent=*/true);
     body << formatv(segmentSizesFromAttrFmt, "operandSegmentSizes");
   }
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
-      fmt.allResultTypes) {
+      (hasNoDeclarativeFormat || fmt.allResultTypes)) {
     auto scope = body.scope("{\n", "}\n", /*indent=*/true);
     body << formatv(segmentSizesFromAttrFmt, "resultSegmentSizes");
   }
