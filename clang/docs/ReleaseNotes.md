@@ -146,6 +146,12 @@ features cannot lower the translation-unit ABI level;
 
 ### Non-comprehensive list of changes in this release
 
+- Clang now passes `--build-id` to the linker by default on the Linux,
+  GNU/Hurd, Managarm, and OHOS toolchains, matching the configuration used by
+  most Linux distributions and by distribution GCC (`--enable-linker-build-id`).
+  The `ENABLE_LINKER_BUILD_ID` CMake option now defaults to `ON`; set it to
+  `OFF` to restore the previous behavior.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics

@@ -275,7 +275,7 @@ if(CLANG_USE_XCSELECT)
   endif()
 endif()
 
-set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
+set(ENABLE_LINKER_BUILD_ID ON CACHE BOOL "pass --build-id to ld")
 
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL
     "enable x86 relax relocations by default")
