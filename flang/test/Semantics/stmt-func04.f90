@@ -1,7 +1,11 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! F2023 19.4 p2: a statement function dummy argument name may be the same as an
 ! accessible global identifier or local identifier of class (1) only if that
-! name is a scalar variable.
+! name is a scalar variable.  Only names made visible by the scoping unit
+! itself can conflict: per 19.5.1.4 p2 item (11), the name's appearance as a
+! statement function dummy argument renders any host entity of that name
+! inaccessible by host association, and a global entity to which the scoping
+! unit makes no other reference is not accessible in it either.
 
 ! Clashes within the statement function's own scoping unit.
 subroutine local_clashes
@@ -22,29 +26,28 @@ subroutine local_clashes
   f5(scalarvar) = scalarvar + 1 ! ok: scalar variable shadowing is permitted
 end subroutine
 
-! Clashes with host-associated identifiers (module scope).
+! No clashes with host entities (module scope): the dummy argument's
+! appearance blocks host association (19.5.1.4 p2 item (11)), so the host
+! entities are inaccessible here and the dummies are implicitly typed.
 module m
   integer :: hostarr(10)
   integer :: hostscalar
   integer, parameter :: hostconst = 3
 contains
-  subroutine host_clashes
-    !ERROR: The name 'hostarr' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
-    g1(hostarr) = hostarr + 1
-    !ERROR: The name 'hostconst' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
-    g2(hostconst) = hostconst + 1
+  subroutine host_no_clashes
+    g1(hostarr) = hostarr + 1 ! ok: host's 'hostarr' is inaccessible here
+    g2(hostconst) = hostconst + 1 ! ok: host's 'hostconst' is inaccessible here
     g3(hostscalar) = hostscalar + 1 ! ok: host scalar variable
   end subroutine
 end module
 
-! Clashes with grandparent-associated identifiers (internal procedure).
+! Same for grandparent host entities (internal procedure).
 program p
   integer :: grandarr(5)
   integer :: grandscalar
 contains
-  subroutine grand_clashes
-    !ERROR: The name 'grandarr' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
-    h1(grandarr) = grandarr + 1
+  subroutine grand_no_clashes
+    h1(grandarr) = grandarr + 1 ! ok: host's 'grandarr' is inaccessible here
     h2(grandscalar) = grandscalar + 1 ! ok: grandparent scalar variable
   end subroutine
 end program
@@ -64,23 +67,22 @@ subroutine use_clashes
   k3(usescalar) = usescalar + 1 ! ok: USE-associated scalar variable
 end subroutine
 
-! Clashes with global-scope program units.
+! No clash with a global-scope program unit to which the scoping unit makes
+! no other reference: that global identifier is not accessible in it.
 real function global_func(x)
   real :: x
   global_func = x
 end function
-subroutine global_clashes
-  !ERROR: The name 'global_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
-  p1(global_func) = global_func + 1
+subroutine global_no_clashes
+  p1(global_func) = global_func + 1 ! ok: 'global_func' is not accessible here
 end subroutine
 
-! Clashes with bind(c) global subprogram (exercises global scope path).
+! Likewise for a bind(c) global subprogram.
 real function bindc_global_func() bind(c)
   bindc_global_func = 1.0
 end function
-subroutine bindc_global_clashes
-  !ERROR: The name 'bindc_global_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
-  r1(bindc_global_func) = bindc_global_func + 1
+subroutine bindc_global_no_clashes
+  r1(bindc_global_func) = bindc_global_func + 1 ! ok: not accessible here
 end subroutine
 
 ! Clashes with bind(c) external declared via local explicit interface block.
@@ -117,3 +119,23 @@ subroutine bindc_use_proc_clashes
   !ERROR: The name 'c_mod_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
   r5(c_mod_func) = c_mod_func + 1
 end subroutine
+
+! A host EXTERNAL declaration does not make the name accessible in an inner
+! subprogram that uses it as a statement function dummy argument; host
+! association of the name is blocked throughout that subprogram (19.5.1.4 p2
+! item (11)), so the dummy is implicitly typed there (default real).  If host
+! association leaked through, 'pred * pred' would be a type error.
+module m_host_external
+  logical, external :: pred
+contains
+  subroutine eval(arg)
+    real :: sq
+    sq(pred) = pred * pred ! ok: 'pred' is an implicitly typed real dummy here
+    print *, sq(arg)
+  end subroutine
+  subroutine other
+    logical :: q
+    q = pred() ! ok: host association of 'pred' is severed only in 'eval'
+    print *, q
+  end subroutine
+end module
