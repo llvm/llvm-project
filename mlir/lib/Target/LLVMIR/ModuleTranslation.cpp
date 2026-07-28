@@ -1572,10 +1572,10 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
   llvm::LLVMContext &llvmContext = getLLVMContext();
 
   return llvm::TypeSwitch<Attribute, FailureOr<llvm::Metadata *>>(attr)
-      .Case<MDStringAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
+      .Case([&](MDStringAttr a) -> FailureOr<llvm::Metadata *> {
         return llvm::MDString::get(llvmContext, a.getValue().getValue());
       })
-      .Case<MDConstantAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
+      .Case([&](MDConstantAttr a) -> FailureOr<llvm::Metadata *> {
         IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
         if (!intAttr) {
           return emitError()
@@ -1586,7 +1586,7 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
                                   intAttr.getType().getIntOrFloatBitWidth()),
             intAttr.getValue()));
       })
-      .Case<MDGlobalValueAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
+      .Case([&](MDGlobalValueAttr a) -> FailureOr<llvm::Metadata *> {
         if (llvm::Function *fn = lookupFunction(a.getName().getValue()))
           return llvm::ValueAsMetadata::get(fn);
         if (llvm::GlobalValue *global = lookupGlobal(a.getName().getValue()))
@@ -1604,7 +1604,7 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
         return emitError() << "could not resolve metadata reference '"
                            << a.getName() << "'";
       })
-      .Case<MDNodeAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
+      .Case([&](MDNodeAttr a) -> FailureOr<llvm::Metadata *> {
         SmallVector<llvm::Metadata *> operands;
         for (Attribute operand : a.getOperands()) {
           FailureOr<llvm::Metadata *> md =
