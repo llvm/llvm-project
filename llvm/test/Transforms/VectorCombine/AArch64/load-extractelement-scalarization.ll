@@ -123,7 +123,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_assume(ptr %x, i64 %idx) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -142,7 +142,7 @@ define i32 @vscale_load_extract_idx_var_i64_known_valid_by_assume(ptr %x, i64 %i
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -165,7 +165,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_assume_in_dominating_block(p
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT]]
@@ -310,7 +310,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_and(ptr %x, i64 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX_FROZEN]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -326,7 +326,7 @@ define i32 @vscale_load_extract_idx_var_i64_known_valid_by_and(ptr %x, i64 %idx)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX_FROZEN]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -341,7 +341,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_and_noundef(ptr %x, i64 noun
 ; CHECK-LABEL: @load_extract_idx_var_i64_known_valid_by_and_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX:%.*]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -387,7 +387,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_urem(ptr %x, i64 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i64 [[IDX_FROZEN]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -403,7 +403,7 @@ define i32 @vscale_load_extract_idx_var_i64_known_valid_by_urem(ptr %x, i64 %idx
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_FROZEN:%.*]] = freeze i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i64 [[IDX_FROZEN]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -418,7 +418,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_urem_noundef(ptr %x, i64 nou
 ; CHECK-LABEL: @load_extract_idx_var_i64_known_valid_by_urem_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_CLAMPED:%.*]] = urem i64 [[IDX:%.*]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -743,9 +743,9 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_only_all_v
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_IDX_0]])
 ; CHECK-NEXT:    [[CMP_IDX_1:%.*]] = icmp ult i64 [[IDX_1:%.*]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_IDX_1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_0]]
 ; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X]], i32 0, i64 [[IDX_1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X]], i64 0, i64 [[IDX_1]]
 ; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -786,9 +786,9 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_
 ; CHECK-NEXT:    [[IDX_0_CLAMPED:%.*]] = and i64 [[IDX_0_FROZEN]], 15
 ; CHECK-NEXT:    [[IDX_1_FROZEN:%.*]] = freeze i64 [[IDX_1:%.*]]
 ; CHECK-NEXT:    [[IDX_1_CLAMPED:%.*]] = and i64 [[IDX_1_FROZEN]], 15
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_0_CLAMPED]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_0_CLAMPED]]
 ; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X]], i32 0, i64 [[IDX_1_CLAMPED]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X]], i64 0, i64 [[IDX_1_CLAMPED]]
 ; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -807,9 +807,9 @@ define i32 @load_multiple_extracts_with_unique_variable_indices_large_vector_val
 ; LIMIT-DEFAULT-LABEL: @load_multiple_extracts_with_unique_variable_indices_large_vector_valid_by_and(
 ; LIMIT-DEFAULT-NEXT:    [[IDX_FROZEN:%.*]] = freeze i64 [[IDX:%.*]]
 ; LIMIT-DEFAULT-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX_FROZEN]], 15
-; LIMIT-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; LIMIT-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; LIMIT-DEFAULT-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1]], align 4
-; LIMIT-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[Y:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; LIMIT-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[Y:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; LIMIT-DEFAULT-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; LIMIT-DEFAULT-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; LIMIT-DEFAULT-NEXT:    ret i32 [[RES]]
@@ -818,7 +818,7 @@ define i32 @load_multiple_extracts_with_unique_variable_indices_large_vector_val
 ; LIMIT2-NEXT:    [[IDX_FROZEN:%.*]] = freeze i64 [[IDX:%.*]]
 ; LIMIT2-NEXT:    [[IDX_CLAMPED:%.*]] = and i64 [[IDX_FROZEN]], 15
 ; LIMIT2-NEXT:    [[LY:%.*]] = load <16 x i32>, ptr [[Y:%.*]], align 64
-; LIMIT2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_CLAMPED]]
+; LIMIT2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_CLAMPED]]
 ; LIMIT2-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1]], align 4
 ; LIMIT2-NEXT:    [[E_1:%.*]] = extractelement <16 x i32> [[LY]], i64 [[IDX_CLAMPED]]
 ; LIMIT2-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
@@ -839,9 +839,9 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_
 ; CHECK-NEXT:    [[IDX_0_FROZEN:%.*]] = freeze i64 [[IDX_0:%.*]]
 ; CHECK-NEXT:    [[IDX_0_CLAMPED:%.*]] = and i64 [[IDX_0_FROZEN]], 15
 ; CHECK-NEXT:    [[IDX_1_CLAMPED:%.*]] = and i64 [[IDX_1:%.*]], 15
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i32 0, i64 [[IDX_0_CLAMPED]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X:%.*]], i64 0, i64 [[IDX_0_CLAMPED]]
 ; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X]], i32 0, i64 [[IDX_1_CLAMPED]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, ptr [[X]], i64 0, i64 [[IDX_1_CLAMPED]]
 ; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]

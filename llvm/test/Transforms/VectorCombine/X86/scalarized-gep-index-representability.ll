@@ -12,12 +12,10 @@ target datalayout = "e-p:64:64:64:8"
 ; fit in the signed GEP index type. The transform must reject the candidate
 ; without leaving a freeze behind or asserting on the pending freeze state.
 define i16 @load_extract_unrepresentable_offset(ptr %p, i8 %idx) {
-; LOAD-LABEL: define i16 @load_extract_unrepresentable_offset(
-; LOAD-SAME: ptr [[P:%.*]], i8 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
-; LOAD-NEXT:    [[IDX_FROZEN:%.*]] = freeze i8 [[IDX]]
-; LOAD-NEXT:    [[BOUNDED:%.*]] = and i8 [[IDX_FROZEN]], 127
-; LOAD-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <128 x i16>, ptr [[P]], i32 0, i8 [[BOUNDED]]
-; LOAD-NEXT:    [[X:%.*]] = load i16, ptr [[TMP1]], align 2
+; LOAD-LABEL: @load_extract_unrepresentable_offset(
+; LOAD-NEXT:    [[BOUNDED:%.*]] = and i8 [[IDX:%.*]], 127
+; LOAD-NEXT:    [[V:%.*]] = load <128 x i16>, ptr [[P:%.*]], align 2
+; LOAD-NEXT:    [[X:%.*]] = extractelement <128 x i16> [[V]], i8 [[BOUNDED]]
 ; LOAD-NEXT:    ret i16 [[X]]
 ;
   %bounded = and i8 %idx, 127
@@ -30,12 +28,11 @@ define i16 @load_extract_unrepresentable_offset(ptr %p, i8 %idx) {
 target datalayout = "e-p:64:64:64:8"
 
 define void @insert_store_unrepresentable_offset(ptr %p, i16 %x, i8 %idx) {
-; STORE-LABEL: define void @insert_store_unrepresentable_offset(
-; STORE-SAME: ptr [[P:%.*]], i16 [[X:%.*]], i8 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
-; STORE-NEXT:    [[IDX_FROZEN:%.*]] = freeze i8 [[IDX]]
-; STORE-NEXT:    [[BOUNDED:%.*]] = and i8 [[IDX_FROZEN]], 127
-; STORE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <128 x i16>, ptr [[P]], i8 0, i8 [[BOUNDED]]
-; STORE-NEXT:    store i16 [[X]], ptr [[TMP1]], align 2
+; STORE-LABEL: @insert_store_unrepresentable_offset(
+; STORE-NEXT:    [[BOUNDED:%.*]] = and i8 [[IDX:%.*]], 127
+; STORE-NEXT:    [[V:%.*]] = load <128 x i16>, ptr [[P:%.*]], align 2
+; STORE-NEXT:    [[V1:%.*]] = insertelement <128 x i16> [[V]], i16 [[X:%.*]], i8 [[BOUNDED]]
+; STORE-NEXT:    store <128 x i16> [[V1]], ptr [[P]], align 2
 ; STORE-NEXT:    ret void
 ;
   %bounded = and i8 %idx, 127
@@ -56,7 +53,8 @@ define void @insert_store_packed_i24_stride(ptr %p, i24 %x, i6 %idx) {
 ; PACKED-SAME: ptr [[P:%.*]], i24 [[X:%.*]], i6 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PACKED-NEXT:    [[IDX_FROZEN:%.*]] = freeze i6 [[IDX]]
 ; PACKED-NEXT:    [[BOUNDED:%.*]] = urem i6 [[IDX_FROZEN]], -21
-; PACKED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <43 x i24>, ptr [[P]], i6 0, i6 [[BOUNDED]]
+; PACKED-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i6 [[BOUNDED]] to i8
+; PACKED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <43 x i24>, ptr [[P]], i8 0, i8 [[BOUNDED_GEPIDX]]
 ; PACKED-NEXT:    store i24 [[X]], ptr [[TMP1]], align 1
 ; PACKED-NEXT:    ret void
 ;
@@ -77,7 +75,8 @@ define void @insert_store_dynamic_p32_index(ptr %p, i8 %x, i4 %idx) {
 ; P32-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i4 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 ; P32-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
 ; P32-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
-; P32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i4 0, i4 [[BOUNDED]]
+; P32-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
+; P32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i32 0, i32 [[BOUNDED_GEPIDX]]
 ; P32-NEXT:    store i8 [[X]], ptr [[TMP1]], align 1
 ; P32-NEXT:    ret void
 ;
@@ -94,7 +93,7 @@ define void @insert_store_dynamic_p32_index(ptr %p, i8 %x, i4 %idx) {
 define void @insert_store_constant_high_bit_p32_index(ptr %p, i8 %x) {
 ; P32-LABEL: define void @insert_store_constant_high_bit_p32_index(
 ; P32-SAME: ptr [[P:%.*]], i8 [[X:%.*]]) #[[ATTR0]] {
-; P32-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i4 0, i4 -2
+; P32-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i32 0, i32 14
 ; P32-NEXT:    store i8 [[X]], ptr [[GEP]], align 1
 ; P32-NEXT:    ret void
 ;
@@ -114,7 +113,8 @@ define i8 @load_extract_dynamic_p32_index(ptr %p, i4 %idx) {
 ; P32LOAD-SAME: ptr [[P:%.*]], i4 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
 ; P32LOAD-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
 ; P32LOAD-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
-; P32LOAD-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i32 0, i4 [[BOUNDED]]
+; P32LOAD-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
+; P32LOAD-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i32 0, i32 [[BOUNDED_GEPIDX]]
 ; P32LOAD-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
 ; P32LOAD-NEXT:    ret i8 [[X]]
 ;
