@@ -11,7 +11,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
