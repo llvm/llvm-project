@@ -16260,6 +16260,7 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   // substituting into it. In this case the flag needs to be true such that
   // tryCaptureVariable can correctly handle potential captures thereof.
   LSI->AfterParameterList = CurContext == CallOperator;
+  LSI->BeforeCompoundStatement = false;
 
   // GLTemplateParameterList is necessary for getCurGenericLambda() which is
   // used at the point of dealing with potential captures.
