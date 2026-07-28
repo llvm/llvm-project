@@ -542,7 +542,7 @@ public:
 #ifndef NDEBUG
     assert(DT.verify());
     assert(PDT.verify());
-    LI.verify(DT);
+    LI.verify();
     SE.verify();
 #endif
 
@@ -1460,7 +1460,7 @@ private:
     assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
     assert(PDT.verify());
-    LI.verify(DT);
+    LI.verify();
     SE.verify();
 #endif
 
