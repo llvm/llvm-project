@@ -1,11 +1,17 @@
-//===-- Unittests for hash ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for hash.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
@@ -52,15 +58,6 @@ TEST(LlvmLibcHashTest, SanityCheck) {
   }
 }
 
-static inline size_t popcnt(uint64_t x) {
-  size_t count = 0;
-  while (x) {
-    count += x & 1;
-    x >>= 1;
-  }
-  return count;
-}
-
 // Mutate a single bit in a rather large input. The hash should change
 // significantly. At least one fifth of the bits should not match.
 TEST(LlvmLibcHashTest, Avalanche) {
@@ -82,7 +79,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
             LIBC_NAMESPACE::internal::HashState state{0xabcdef1234567890};
             state.update(mem.data, sz);
             uint64_t new_hash = state.finish();
-            ASSERT_GE(popcnt(hash ^ new_hash), size_t{13});
+            ASSERT_GE(LIBC_NAMESPACE::cpp::popcount(hash ^ new_hash), 13);
           }
           mem.data[i] ^= mask;
         }

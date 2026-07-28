@@ -240,6 +240,7 @@ add_libc_test(
     hash_test.cpp
   DEPENDS
     libc.src.__support.hash
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.stdlib.rand
     libc.src.stdlib.srand
