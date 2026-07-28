@@ -28,6 +28,8 @@
 
 namespace llvm {
 
+class TargetRevectorizeInfo;
+
 class AssumptionCache;
 class BasicBlock;
 class CallInst;
@@ -198,10 +200,13 @@ public:
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
                    LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
-                   IRBuilderBase &Builder, VPlan *Plan,
-                   Loop *CurrentParentLoop);
+                   IRBuilderBase &Builder, VPlan *Plan, Loop *CurrentParentLoop,
+                   const TargetRevectorizeInfo *TRVI = nullptr);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
+
+  /// Target Revectorization Info.
+  const TargetRevectorizeInfo *TRVI;
 
   /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
@@ -332,6 +337,7 @@ struct VPTransformState {
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
+  const TargetRevectorizeInfo &TRVI;
   const TargetLibraryInfo &TLI;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
@@ -343,11 +349,12 @@ struct VPCostContext {
   /// Number of predicated stores in the VPlan, computed on demand.
   std::optional<unsigned> NumPredStores;
 
-  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+  VPCostContext(const TargetTransformInfo &TTI,
+                const TargetRevectorizeInfo &TRVI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
                 PredicatedScalarEvolution &PSE, const Loop *L)
-      : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
+      : TTI(TTI), TRVI(TRVI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
         CostKind(CostKind), PSE(PSE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as

@@ -921,7 +921,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   //   * Have a vector version available.
   auto *CI = dyn_cast<CallInst>(&I);
 
-  if (CI && !getVectorIntrinsicIDForCall(CI, TLI, TTI) &&
+  if (CI && !getVectorIntrinsicIDForCall(CI, TLI, TRVI) &&
       !(CI->getCalledFunction() && TLI &&
         (!VFDatabase::getMappings(*CI).empty() || isTLIScalarize(*TLI, *CI)))) {
     // If the call is a recognized math libary call, it is likely that
@@ -955,7 +955,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   // them to be vectorized (i.e. loop invariant).
   if (CI) {
     auto *SE = PSE.getSE();
-    Intrinsic::ID IntrinID = getVectorIntrinsicIDForCall(CI, TLI, TTI);
+    Intrinsic::ID IntrinID = getVectorIntrinsicIDForCall(CI, TLI, TRVI);
     for (unsigned Idx = 0; Idx < CI->arg_size(); ++Idx)
       if (isVectorIntrinsicWithScalarOpAtArg(IntrinID, Idx, TTI)) {
         if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(Idx)), TheLoop)) {

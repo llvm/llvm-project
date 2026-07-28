@@ -491,20 +491,9 @@ public:
 
   virtual bool useFastCCForInternalCall(Function &F) const { return true; }
 
-  virtual bool isTargetIntrinsicVectorizable(Intrinsic::ID ID) const {
-    return false;
-  }
-
   virtual bool isSupportedTargetRecurrence(Intrinsic::ID ID,
                                            RecurKind RK) const {
     return false;
-  }
-
-  virtual Instruction *
-  vectorizeTargetIntrinsic(Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
-                           ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
-                           const Instruction &OrigInst) const {
-    llvm_unreachable("Not implemented");
   }
 
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,

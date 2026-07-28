@@ -89,6 +89,7 @@ add_llvm_target(AArch64CodeGen
   AArch64Subtarget.cpp
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
+  AArch64TargetRevectorizeInfo.cpp
   AArch64TargetTransformInfo.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp

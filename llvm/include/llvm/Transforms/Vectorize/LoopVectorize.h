@@ -77,6 +77,7 @@ class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class ScalarEvolution;
 class TargetLibraryInfo;
+class TargetRevectorizeInfo;
 class TargetTransformInfo;
 
 LLVM_ABI extern cl::opt<bool> EnableLoopInterleaving;
@@ -143,6 +144,7 @@ public:
 
   ScalarEvolution *SE;
   LoopInfo *LI;
+  TargetRevectorizeInfo *TRVI;
   TargetTransformInfo *TTI;
   DominatorTree *DT;
   std::function<BlockFrequencyInfo &()> GetBFI;

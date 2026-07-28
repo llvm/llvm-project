@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetRevectorizeInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -236,13 +237,15 @@ bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
 Intrinsic::ID
 llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
                                   const TargetLibraryInfo *TLI,
-                                  const TargetTransformInfo *TTI) {
+                                  const TargetRevectorizeInfo *TRVI) {
   Intrinsic::ID ID = getIntrinsicForCallSite(*CI, TLI);
   if (ID == Intrinsic::not_intrinsic)
     return Intrinsic::not_intrinsic;
 
-  if (TTI && Intrinsic::isTargetIntrinsic(ID) &&
-      TTI->isTargetIntrinsicVectorizable(ID))
+  // REVEC: Keep the original Intrinsic::ID so far and let TRVI handle
+  // the actual rewriting.
+  if (TRVI && Intrinsic::isTargetIntrinsic(ID) &&
+      TRVI->isTargetIntrinsicVectorizable(ID))
     return ID;
 
   if (isTriviallyVectorizable(ID) || ID == Intrinsic::lifetime_start ||

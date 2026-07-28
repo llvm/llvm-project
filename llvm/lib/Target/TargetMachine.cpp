@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Analysis/TargetRevectorizeInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -289,6 +290,12 @@ TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(F.getDataLayout());
 }
 
+TargetRevectorizeInfo
+TargetMachine::getTargetRevectorizeInfo(const Function &,
+                                        const TargetTransformInfo &TTI) const {
+  return TargetRevectorizeInfo(TTI);
+}
+
 void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
                                       const GlobalValue *GV, Mangler &Mang,
                                       bool MayAlwaysUsePrivate) const {
@@ -318,6 +325,13 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
   // dependency.
   return TargetIRAnalysis(
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
+}
+
+TargetRevectorizeWrapper TargetMachine::getTargetRevectorizeAnalysis() const {
+  return TargetRevectorizeWrapper(
+      [this](const Function &F, const TargetTransformInfo &TTI) {
+        return getTargetRevectorizeInfo(F, TTI);
+      });
 }
 
 std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {

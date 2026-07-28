@@ -274,9 +274,10 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
-                                   Loop *CurrentParentLoop)
-    : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
+                                   Loop *CurrentParentLoop,
+                                   const TargetRevectorizeInfo *TRVI)
+    : TTI(TTI), TRVI(TRVI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder),
+      Plan(Plan), CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (isa<VPIRValue, VPSymbolicValue>(Def))

@@ -49,7 +49,8 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-    VPlan &Plan, const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI) {
+    VPlan &Plan, const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
+    const TargetRevectorizeInfo *TRVI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
@@ -91,7 +92,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                            Ingredient.operands(), *VPI,
                                            Ingredient.getDebugLoc(), GEP);
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI, &TTI);
+          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI, TRVI);
           if (VectorID == Intrinsic::not_intrinsic)
             return false;
 
@@ -7047,7 +7048,7 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
       VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1)->getLiveInIRValue());
   Type *ResultTy = VPI.getScalarType();
   Intrinsic::ID ID =
-      getVectorIntrinsicIDForCall(CI, &CostCtx.TLI, &CostCtx.TTI);
+      getVectorIntrinsicIDForCall(CI, &CostCtx.TLI, &CostCtx.TRVI);
   bool MaskRequired = CostCtx.isMaskRequired(CI);
 
   // Pseudo intrinsics (assume, lifetime, ...) are always scalarized.
@@ -7108,7 +7109,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       switch (Decision.Kind) {
       case CallWideningDecision::KindTy::Intrinsic: {
         Intrinsic::ID ID =
-            getVectorIntrinsicIDForCall(CI, &CostCtx.TLI, &CostCtx.TTI);
+            getVectorIntrinsicIDForCall(CI, &CostCtx.TLI, &CostCtx.TRVI);
         Type *ResultTy = VPI->getScalarType();
         Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, *VPI,
                                                  *VPI, VPI->getDebugLoc());

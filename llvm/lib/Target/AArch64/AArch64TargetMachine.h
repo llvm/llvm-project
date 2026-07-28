@@ -49,6 +49,9 @@ public:
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+  TargetRevectorizeInfo
+  getTargetRevectorizeInfo(const Function &F,
+                           const TargetTransformInfo &TTI) const override;
 
   TargetLoweringObjectFile* getObjFileLowering() const override {
     return TLOF.get();

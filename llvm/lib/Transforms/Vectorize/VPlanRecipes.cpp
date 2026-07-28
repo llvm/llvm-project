@@ -24,6 +24,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetRevectorizeInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -2221,9 +2222,9 @@ Instruction *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   // Use vector version of the intrinsic.
   Instruction *V = nullptr;
   if (Intrinsic::isTargetIntrinsic(VectorIntrinsicID)) {
-    V = State.TTI->vectorizeTargetIntrinsic(VectorIntrinsicID, TysForDecl, Args,
-                                            State.Builder,
-                                            *getUnderlyingInstr());
+    assert(State.TRVI && "missing target revectorization information");
+    V = State.TRVI->vectorizeTargetIntrinsic(VectorIntrinsicID, TysForDecl,
+                                             Args, State.VF, State.Builder);
     assert(V && "Target did not vectorise intrinsic call.");
     // TODO-REVEC: Properly retain metadata and flags somehow.
   } else {
@@ -2287,6 +2288,11 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
       map_to_vector(Operands, [&](const VPValue *Op) {
         return toVectorTy(Op->getScalarType(), VF);
       });
+
+  // REVEC: Query TRVI for vectorized target intrinsics instead of TTI.
+  if (Intrinsic::isTargetIntrinsic(ID))
+    return Ctx.TRVI.getTargetIntrinsicVectorizationCost(ID, RetTy, ParamTys,
+                                                        VF);
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(

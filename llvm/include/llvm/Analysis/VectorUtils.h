@@ -26,6 +26,7 @@
 
 namespace llvm {
 class TargetLibraryInfo;
+class TargetRevectorizeInfo;
 class IntrinsicInst;
 
 /// The Vector Function Database.
@@ -177,7 +178,7 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
 LLVM_ABI Intrinsic::ID
 getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI,
-                            const TargetTransformInfo *TTI = nullptr);
+                            const TargetRevectorizeInfo *TRVI = nullptr);
 
 /// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
 LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);

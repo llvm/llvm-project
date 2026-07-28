@@ -1044,23 +1044,10 @@ public:
   /// convention.
   LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
 
-  /// Return true if the target intrinsic can be (re)vectorized.
-  /// The return type as well as all arguments are expected to be widened,
-  /// unless isTargetIntrinsicWithScalarOpAtArg() specifies otherwise.
-  LLVM_ABI bool isTargetIntrinsicVectorizable(Intrinsic::ID ID) const;
-
   /// Return true if the intrinsic \p ID is supported for a \p RK
   /// reduction pattern.
   LLVM_ABI bool isSupportedTargetRecurrence(Intrinsic::ID ID,
                                             RecurKind RK) const;
-
-  /// Return the (re)vectorized intrinsic call after the types and values have
-  /// been widened. This is only called for intrinsics that have passed
-  /// isTargetIntrinsicVectorizable() checks.
-  LLVM_ABI Instruction *
-  vectorizeTargetIntrinsic(Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
-                           ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
-                           const Instruction &OrigInst) const;
 
   /// Identifies if the vector form of the intrinsic has a scalar operand.
   LLVM_ABI bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,

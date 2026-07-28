@@ -639,22 +639,9 @@ bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
   return TTIImpl->useFastCCForInternalCall(F);
 }
 
-bool TargetTransformInfo::isTargetIntrinsicVectorizable(
-    Intrinsic::ID ID) const {
-  return TTIImpl->isTargetIntrinsicVectorizable(ID);
-}
-
 bool TargetTransformInfo::isSupportedTargetRecurrence(Intrinsic::ID ID,
                                                       RecurKind RK) const {
   return TTIImpl->isSupportedTargetRecurrence(ID, RK);
-}
-
-Instruction *TargetTransformInfo::vectorizeTargetIntrinsic(
-    Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
-    ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
-    const Instruction &OrigInst) const {
-  return TTIImpl->vectorizeTargetIntrinsic(VectorIID, TysForDecl, WideArgs,
-                                           Builder, OrigInst);
 }
 
 bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(

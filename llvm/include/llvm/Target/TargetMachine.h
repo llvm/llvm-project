@@ -58,6 +58,8 @@ class SMDiagnostic;
 class SMRange;
 class Target;
 class TargetIRAnalysis;
+class TargetRevectorizeWrapper;
+class TargetRevectorizeInfo;
 class TargetTransformInfo;
 class TargetLoweringObjectFile;
 class TargetPassConfig;
@@ -402,6 +404,15 @@ public:
   /// The returned TargetTransformInfo is specialized to the subtarget
   /// corresponding to \p F.
   virtual TargetTransformInfo getTargetTransformInfo(const Function &F) const;
+
+  /// Get a TargetRevectorizeWrapper appropriate for the target.
+  TargetRevectorizeWrapper getTargetRevectorizeAnalysis() const;
+
+  /// Return revectorization information specialized for the subtarget
+  /// corresponding to \p F.
+  virtual TargetRevectorizeInfo
+  getTargetRevectorizeInfo(const Function &F,
+                           const TargetTransformInfo &TTI) const;
 
   /// Allow the target to modify the pass pipeline.
   // TODO: Populate all pass names by using <Target>PassRegistry.def.

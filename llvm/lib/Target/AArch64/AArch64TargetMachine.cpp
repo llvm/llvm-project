@@ -16,10 +16,12 @@
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetObjectFile.h"
+#include "AArch64TargetRevectorizeInfo.h"
 #include "AArch64TargetTransformInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/TargetRevectorizeInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
@@ -618,6 +620,12 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 TargetTransformInfo
 AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(std::make_unique<AArch64TTIImpl>(this, F));
+}
+
+TargetRevectorizeInfo AArch64TargetMachine::getTargetRevectorizeInfo(
+    const Function &F, const TargetTransformInfo &TTI) const {
+  return TargetRevectorizeInfo(
+      std::make_unique<AArch64RevectorizeInfoImpl>(TTI, *getSubtargetImpl(F)));
 }
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {

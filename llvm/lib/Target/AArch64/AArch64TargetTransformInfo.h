@@ -307,18 +307,6 @@ public:
   bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
                                               int OpdIdx) const override;
 
-  /// Compute the list of Types required to get the right declaration of
-  /// the overloaded \p ID intrinsic.
-  SmallVector<Type *, 2> computeTysForDecl(Intrinsic::ID ID, Type *RetTy,
-                                           ArrayRef<Value *> Args) const;
-
-  bool isTargetIntrinsicVectorizable(Intrinsic::ID ID) const override;
-
-  Instruction *
-  vectorizeTargetIntrinsic(Intrinsic::ID VectorIID, ArrayRef<Type *> TysForDecl,
-                           ArrayRef<Value *> WideArgs, IRBuilderBase &Builder,
-                           const Instruction &OrigInst) const override;
-
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     if (Ty->isPointerTy())
       return true;

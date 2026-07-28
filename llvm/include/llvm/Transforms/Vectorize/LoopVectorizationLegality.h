@@ -45,6 +45,7 @@ class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
+class TargetRevectorizeInfo;
 class TargetTransformInfo;
 class Type;
 
@@ -278,14 +279,17 @@ enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(
-      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, Function *F,
-      LoopAccessInfoManager &LAIs, LoopInfo *LI, OptimizationRemarkEmitter *ORE,
-      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
-      AssumptionCache *AC, bool AllowRuntimeSCEVChecks, AAResults *AA)
-      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
-        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
+  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
+                            DominatorTree *DT, TargetTransformInfo *TTI,
+                            TargetRevectorizeInfo *TRVI, TargetLibraryInfo *TLI,
+                            Function *F, LoopAccessInfoManager &LAIs,
+                            LoopInfo *LI, OptimizationRemarkEmitter *ORE,
+                            LoopVectorizationRequirements *R,
+                            LoopVectorizeHints *H, DemandedBits *DB,
+                            AssumptionCache *AC, bool AllowRuntimeSCEVChecks,
+                            AAResults *AA)
+      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TRVI(TRVI), TLI(TLI), DT(DT),
+        LAIs(LAIs), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
         AllowRuntimeSCEVChecks(AllowRuntimeSCEVChecks), AA(AA) {}
 
   /// ReductionList contains the reduction descriptors for all
@@ -681,6 +685,9 @@ private:
 
   /// Target Transform Info.
   TargetTransformInfo *TTI;
+
+  /// Target Revectorization Info.
+  TargetRevectorizeInfo *TRVI;
 
   /// Target Library Info.
   TargetLibraryInfo *TLI;

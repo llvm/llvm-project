@@ -35,6 +35,8 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class TargetRevectorizeInfo;
+
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -801,6 +803,9 @@ class LoopVectorizationPlanner {
   /// Target Transform Info.
   const TargetTransformInfo &TTI;
 
+  /// Target Revectorization Info.
+  const TargetRevectorizeInfo &TRVI;
+
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
@@ -846,12 +851,14 @@ class LoopVectorizationPlanner {
 public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
-      const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+      const TargetTransformInfo &TTI, const TargetRevectorizeInfo &TRVI,
+      LoopVectorizationLegality *Legal, LoopVectorizationCostModel &CM,
+      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
+      PredicatedScalarEvolution &PSE, const LoopVectorizeHints &Hints,
+      OptimizationRemarkEmitter *ORE)
+      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), TRVI(TRVI),
+        Legal(Legal), CM(CM), Config(Config), IAI(IAI), PSE(PSE), Hints(Hints),
+        ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and

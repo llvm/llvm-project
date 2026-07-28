@@ -95,6 +95,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetRevectorizeInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -788,6 +789,7 @@ public:
                              PredicatedScalarEvolution &PSE, LoopInfo *LI,
                              LoopVectorizationLegality *Legal,
                              const TargetTransformInfo &TTI,
+                             const TargetRevectorizeInfo &TRVI,
                              const TargetLibraryInfo *TLI, AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE,
                              std::function<BlockFrequencyInfo &()> GetBFI,
@@ -795,7 +797,7 @@ public:
                              InterleavedAccessInfo &IAI,
                              VFSelectionContext &Config)
       : Config(Config), EpilogueLoweringStatus(SEL), TheLoop(L), PSE(PSE),
-        LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC), ORE(ORE),
+        LI(LI), Legal(Legal), TTI(TTI), TRVI(TRVI), TLI(TLI), AC(AC), ORE(ORE),
         GetBFI(GetBFI), TheFunction(F), Hints(Hints), InterleaveInfo(IAI) {}
 
   /// \return An upper bound for the vectorization factors (both fixed and
@@ -1504,6 +1506,9 @@ public:
   /// Vector target information.
   const TargetTransformInfo &TTI;
 
+  /// Target revectorization information.
+  const TargetRevectorizeInfo &TRVI;
+
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
 
@@ -2146,7 +2151,7 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                              : ScalarCallCost * VF.getKnownMinValue() +
                                    getScalarizationOverhead(CI, VF);
 
-  if (getVectorIntrinsicIDForCall(CI, TLI, &TTI)) {
+  if (getVectorIntrinsicIDForCall(CI, TLI, &TRVI)) {
     InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
     return std::min(Cost, IntrinsicCost);
   }
@@ -2162,7 +2167,7 @@ static Type *maybeVectorizeType(Type *Ty, ElementCount VF) {
 InstructionCost
 LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
                                                    ElementCount VF) const {
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI, &TTI);
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI, &TRVI);
   assert(ID && "Expected intrinsic call!");
   Type *RetTy = maybeVectorizeType(CI->getType(), VF);
   FastMathFlags FMF;
@@ -2419,7 +2424,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
       return true;
     auto *CI = cast<CallInst>(I);
     // A vector intrinsic or library variant lowering avoids scalarization.
-    return !getVectorIntrinsicIDForCall(CI, TLI, &TTI) &&
+    return !getVectorIntrinsicIDForCall(CI, TLI, &TRVI) &&
            !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI);
   }
   case Instruction::Load:
@@ -3161,8 +3166,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                            OrigLoop);
+      VPCostContext CostCtx(CM.TTI, CM.TRVI, *CM.TLI, *Plan, CM,
+                            Config.CostKind, CM.PSE, OrigLoop);
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -5823,8 +5828,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                                                VPRegisterUsage *RU) const {
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, Config.CostKind, PSE,
-                        OrigLoop);
+  VPCostContext CostCtx(CM.TTI, CM.TRVI, *CM.TLI, Plan, CM, Config.CostKind,
+                        PSE, OrigLoop);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -6063,7 +6068,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
-                         OrigLoop->getParentLoop());
+                         OrigLoop->getParentLoop(), &TRVI);
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -6737,7 +6742,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     for (ElementCount VF : Range)
       Plan->addVF(VF);
     if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI,
-                                                                TTI))
+                                                                TTI, &TRVI))
       return nullptr;
     VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
                                                    /*FoldTail=*/false);
@@ -6832,8 +6837,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
                  Range.Start);
 
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                        OrigLoop);
+  VPCostContext CostCtx(CM.TTI, CM.TRVI, *CM.TLI, *Plan, CM, Config.CostKind,
+                        CM.PSE, OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
                  RecipeBuilder);
@@ -7988,7 +7993,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
-  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
+  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TRVI, TLI, F, *LAIs, LI, ORE,
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
@@ -8121,11 +8126,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Use the cost model.
   VFSelectionContext Config(*TTI, &LVL, L, *F, PSE, DB, ORE, &Hints,
                             OptForSize);
-  LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE,
-                                GetBFI, F, &Hints, IAI, Config);
+  LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, *TRVI, TLI, AC,
+                                ORE, GetBFI, F, &Hints, IAI, Config);
   // Use the planner for vectorization.
-  LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,
-                               Hints, ORE);
+  LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, *TRVI, &LVL, CM, Config,
+                               IAI, PSE, Hints, ORE);
 
   EpilogueLowering EpilogueTailLoweringStatus =
       getEpilogueTailLowering(CM, L, ORE);
@@ -8192,8 +8197,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *BestPlanPtr, CM, Config.CostKind,
-                          CM.PSE, L);
+    VPCostContext CostCtx(CM.TTI, CM.TRVI, *CM.TLI, *BestPlanPtr, CM,
+                          Config.CostKind, CM.PSE, L);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx, *BestPlanPtr,
                                      SEL, Config.getVScaleForTuning())) {
@@ -8518,6 +8523,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     return PreservedAnalyses::all();
   SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   TTI = &AM.getResult<TargetIRAnalysis>(F);
+  TRVI = &AM.getResult<TargetRevectorizeWrapper>(F);
   DT = &AM.getResult<DominatorTreeAnalysis>(F);
   TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   AC = &AM.getResult<AssumptionAnalysis>(F);
