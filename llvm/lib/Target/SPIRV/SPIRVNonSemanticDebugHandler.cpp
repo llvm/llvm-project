@@ -1009,7 +1009,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DIBasicType *BT : BasicTypes)
     emitOpStringIfNew(BT->getName(), MAI);
 
-  for (const DISubprogram *SP : SubprogramDeclarations) {
+  for (const DISubprogram *SP : concat<const DISubprogram *>(
+           SubprogramDeclarations, SubprogramDefinitions)) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
     emitAndCacheScopePathOpStringReg(SP, MAI);
@@ -1035,12 +1036,6 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DIDerivedType *TD : TypedefTypes) {
     emitOpStringIfNew(TD->getName(), MAI);
     emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
-  }
-
-  for (const DISubprogram *SP : SubprogramDefinitions) {
-    emitOpStringIfNew(SP->getName(), MAI);
-    emitOpStringIfNew(SP->getLinkageName(), MAI);
-    emitAndCacheScopePathOpStringReg(SP, MAI);
   }
 
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
