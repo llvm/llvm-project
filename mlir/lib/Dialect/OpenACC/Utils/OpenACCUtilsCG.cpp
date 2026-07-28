@@ -16,6 +16,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 namespace acc {
@@ -126,6 +128,82 @@ ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
   }
 
   return computeRegion;
+}
+
+static SmallVector<GPUParallelDimAttr>::iterator
+findParDim(SmallVector<GPUParallelDimAttr> &parDims,
+           GPUParallelDimAttr parDim) {
+  return llvm::lower_bound(
+      parDims, parDim,
+      [](const GPUParallelDimAttr &lhs, const GPUParallelDimAttr &rhs) {
+        return lhs.getOrder() > rhs.getOrder();
+      });
+}
+
+void insertParDim(SmallVector<GPUParallelDimAttr> &parDims,
+                  GPUParallelDimAttr parDim) {
+  SmallVector<GPUParallelDimAttr>::iterator lb = findParDim(parDims, parDim);
+  if (lb == parDims.end() || *lb != parDim)
+    parDims.insert(lb, parDim);
+}
+
+void removeParDim(SmallVector<GPUParallelDimAttr> &parDims,
+                  GPUParallelDimAttr parDim) {
+  SmallVector<GPUParallelDimAttr>::iterator lb = findParDim(parDims, parDim);
+  if (lb != parDims.end() && *lb == parDim)
+    parDims.erase(lb);
+}
+
+#define ACC_OP_WITH_PAR_DIMS_LIST                                              \
+  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp
+
+GPUParallelDimsAttr getParDimsAttr(Operation *op) {
+  return llvm::TypeSwitch<Operation *, GPUParallelDimsAttr>(op)
+      .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
+          [](auto parOp) { return parOp.getParDimsAttr(); })
+      .Default([](Operation *op) -> GPUParallelDimsAttr {
+        if (Attribute attr = op->getAttr(GPUParallelDimsAttr::name)) {
+          GPUParallelDimsAttr parDimsAttr = dyn_cast<GPUParallelDimsAttr>(attr);
+          assert(parDimsAttr && "acc.par_dims must be a GPUParallelDimsAttr");
+          return parDimsAttr;
+        }
+        return nullptr;
+      });
+}
+
+bool hasParDimsAttr(Operation *op) { return getParDimsAttr(op) != nullptr; }
+
+bool hasSeqParDims(Operation *op) {
+  if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(op))
+    return parDimsAttr.isSeq();
+  return false;
+}
+
+void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
+  assert(!hasParDimsAttr(op) && "parallel dimensions attribute is already set");
+  llvm::TypeSwitch<Operation *>(op)
+      .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
+          [&](auto parOp) { parOp.setParDimsAttr(attr); })
+      .Default(
+          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+}
+
+void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
+  assert(hasParDimsAttr(op) &&
+         "expected parallel dimensions attribute to already be set");
+  llvm::TypeSwitch<Operation *>(op)
+      .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
+          [&](auto parOp) { parOp.setParDimsAttr(attr); })
+      .Default(
+          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+}
+
+#undef ACC_OP_WITH_PAR_DIMS_LIST
+
+void copyParDimsAttr(Operation *from, Operation *to) {
+  assert(hasParDimsAttr(from) &&
+         "expected parallel dimensions attribute to already be set");
+  setParDimsAttr(to, getParDimsAttr(from));
 }
 
 } // namespace acc

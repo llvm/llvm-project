@@ -10,14 +10,10 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
-#include <tuple>
 
 template <class T>
 static llvm::LogicalResult checkCorank(T op) {

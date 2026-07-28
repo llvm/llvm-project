@@ -1666,13 +1666,13 @@ define amdgpu_kernel void @notdot4_mixedtypes(ptr addrspace(1) %src1,
 ; GFX11-DL-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v2.l
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v7.l
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v0.h, v1.l, v0.l
-; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-DL-TRUE16-NEXT:    v_perm_b32 v1, v5, v5, 0xc0c0302
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v2.l, v3.l, v0.l
 ; GFX11-DL-TRUE16-NEXT:    v_perm_b32 v2, v4, v4, 0xc0c0302
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-DL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
 ; GFX11-DL-TRUE16-NEXT:    v_dot4_u32_u8 v0, v2, v1, v0
 ; GFX11-DL-TRUE16-NEXT:    global_store_b16 v6, v0, s[4:5]
 ; GFX11-DL-TRUE16-NEXT:    s_endpgm

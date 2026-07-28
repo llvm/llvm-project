@@ -57,43 +57,6 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
-  if (isa<VPActiveLaneMaskPHIRecipe>(V))
-    return true;
-
-  VPValue *A, *B;
-
-  auto m_CanonicalScalarIVSteps = m_ScalarIVSteps(
-      m_CombineOr(m_CanonicalIV(),
-                  m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
-      m_One(), m_Specific(&Plan.getVF()));
-
-  // A wide canonical IV is either an explicit VPWidenCanonicalIVRecipe or a
-  // canonical VPWidenIntOrFpInductionRecipe.
-  auto m_WideCanonicalIV =
-      m_CombineOr(m_Isa<VPWidenCanonicalIVRecipe>(), m_CanonicalWidenIV());
-
-  if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
-    return B == Plan.getTripCount() &&
-           (match(A, m_CanonicalScalarIVSteps) || match(A, m_WideCanonicalIV));
-
-  // For scalar plans, the header mask uses the scalar steps.
-  if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
-                      m_Specific(Plan.getBackedgeTakenCount())))) {
-    assert(Plan.hasScalarVFOnly() &&
-           "Non-scalar VF using scalar IV steps for header mask?");
-    return true;
-  }
-
-  auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
-  if (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch))))
-    return match(A, m_WideCanonicalIV) && B == Plan.getBackedgeTakenCount();
-
-  return match(
-      V, m_c_BinaryAnd(m_VPValue(),
-                       m_VPInstruction<VPInstruction::IncomingAliasMask>()));
-}
-
 /// Returns true if \p R propagates poison from any operand to its result.
 static bool propagatesPoisonFromRecipeOp(const VPRecipeBase *R) {
   return TypeSwitch<const VPRecipeBase *, bool>(R)
@@ -419,8 +382,19 @@ static bool preservesUniformity(unsigned Opcode) {
   }
 }
 
+bool vputils::isElementwise(const VPValue *V) {
+  unsigned Opcode = TypeSwitch<const VPValue *, unsigned>(V)
+                        .Case<VPInstruction, VPWidenRecipe>(
+                            [](auto *R) { return R->getOpcode(); })
+                        .Default([](auto *) { return 0; });
+  // TODO: Handle more opcodes and recipes.
+  return Instruction::isBinaryOp(Opcode);
+}
+
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // Live-in, symbolic and region-values represent single-scalar values.
+  // Live-in, symbolic and canonical-IV region values are single-scalar.
+  if (auto *RV = dyn_cast<VPRegionValue>(VPV))
+    return RV == RV->getDefiningRegion()->getCanonicalIV();
   if (isa<VPIRValue, VPSymbolicValue>(VPV))
     return true;
 
@@ -457,7 +431,9 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
-  // Live-ins and region values are uniform.
+  // Live-ins, symbolic and canonical-IV region values are uniform.
+  if (auto *RV = dyn_cast<VPRegionValue>(V))
+    return RV == RV->getDefiningRegion()->getCanonicalIV();
   if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
 
@@ -542,60 +518,6 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
   // Allocas cannot be hoisted.
   auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
   return RepR && RepR->getOpcode() == Instruction::Alloca;
-}
-
-VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
-  if (VPValue *AliasMask = findIncomingAliasMask(Plan)) {
-    assert(match(AliasMask->getSingleUser(),
-                 m_c_BinaryAnd(m_VPValue(), m_Specific(AliasMask))) &&
-           "AliasMask must only be used with the original header mask");
-    return cast<VPSingleDefRecipe>(AliasMask->getSingleUser());
-  }
-
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  SmallVector<VPValue *> WideCanonicalIVs;
-  auto *WideCanonicalIV =
-      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
-  assert(count_if(LoopRegion->getCanonicalIV()->users(),
-                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
-         "Must have at most one VPWideCanonicalIVRecipe");
-  if (WideCanonicalIV)
-    WideCanonicalIVs.push_back(WideCanonicalIV);
-
-  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
-  // version of the canonical induction.
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    VPWidenIntOrFpInductionRecipe *WidenIV;
-    if (match(&Phi, m_CanonicalWidenIV(WidenIV)))
-      WideCanonicalIVs.push_back(WidenIV);
-  }
-
-  // Walk users of wide canonical IVs and find the single compare of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
-  VPSingleDefRecipe *HeaderMask = nullptr;
-  for (auto *Wide : WideCanonicalIVs) {
-    for (VPUser *U : Wide->users()) {
-      auto *VPI = dyn_cast<VPInstruction>(U);
-      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
-        continue;
-
-      assert(VPI->getOperand(0) == Wide &&
-             "WidenCanonicalIV must be the first operand of the compare");
-      assert(!HeaderMask && "Multiple header masks found?");
-      HeaderMask = VPI;
-    }
-  }
-
-  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    auto *Def = cast<VPSingleDefRecipe>(&R);
-    if (vputils::isHeaderMask(Def, Plan)) {
-      assert(!HeaderMask && "Multiple header masks found?");
-      HeaderMask = Def;
-    }
-  }
-
-  return HeaderMask;
 }
 
 SmallVector<VPBasicBlock *>

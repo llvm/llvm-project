@@ -537,9 +537,19 @@ Changes in existing checks
   detail.
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
-  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
-  by fixing a false positive on implicitly generated functions such as
-  inherited constructors.
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check:
+
+  - Fixed a false positive on implicitly generated functions such as
+    inherited constructors.
+
+  - Added `AllowImplicitMove` option to not warn when an rvalue reference
+    parameter is returned without an explicit ``std::move``.
+
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  fixing a false positive with the `AllowImplicitlyDeletedCopyOrMove` option
+  for classes whose copy operations are implicitly deleted by a non-copyable
+  base class.
 
 - Improved :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by adding the
@@ -899,6 +909,11 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
+
+- Improved :doc:`readability-trivial-switch
+  <clang-tidy/checks/readability/trivial-switch>` check by adding an
+  `IgnoreMacros` option. When enabled, the check will ignore switch
+  statements originating from macros.
 
 - Improved :doc:`readability-use-anyofallof
   <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic

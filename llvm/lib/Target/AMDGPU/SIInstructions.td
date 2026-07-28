@@ -3544,17 +3544,19 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
   (i32 (DivergentUnaryFrag<zext> i16:$src)),
-  (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+  (i32 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src))
 >;
 
 def : GCNPat<
   (i64 (DivergentUnaryFrag<zext> i16:$src)),
-  (REG_SEQUENCE VReg_64, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16, (V_MOV_B32_e32 (i32 0)), sub1)
+  (REG_SEQUENCE VReg_64,
+    (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src), sub0,
+    (S_MOV_B32 (i32 0)), sub1)
 >;
 
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
-  (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+  (i32 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src))
 >;
 
 def : GCNPat <

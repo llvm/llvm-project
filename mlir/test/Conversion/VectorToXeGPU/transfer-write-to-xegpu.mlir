@@ -412,3 +412,20 @@ gpu.func @store_1D_vector_addrspace3_unsupported(%vec: vector<8xf32>,
 // STORE-SCATTER: vector.transfer_write
 
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_0D_vector_unsupported(%vec: vector<f32>,
+    %source: memref<3xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset]
+    : vector<f32>, memref<3xf32>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_0D_vector_unsupported
+// STORE-ND: vector.transfer_write
+
+// STORE-SCATTER-LABEL: @store_0D_vector_unsupported
+// STORE-SCATTER: vector.transfer_write
+
+}

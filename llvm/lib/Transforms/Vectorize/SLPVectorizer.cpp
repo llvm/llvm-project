@@ -629,7 +629,7 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// \param I The instruction to check for commutativity
 /// \param ValWithUses The value whose uses are analyzed for special
 /// patterns
-static bool isCommutative(Instruction *I, Value *ValWithUses,
+static bool isCommutative(const Instruction *I, const Value *ValWithUses,
                           bool IsCopyable = false) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
@@ -669,8 +669,8 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
 /// Checks if the operand is commutative. In commutative operations, not all
 /// operands might commutable, e.g. for fmuladd only 2 first operands are
 /// commutable.
-static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
-                                bool IsCopyable = false) {
+static bool isCommutableOperand(const Instruction *I, Value *ValWithUses,
+                                unsigned Op, bool IsCopyable = false) {
   assert(::isCommutative(I, ValWithUses, IsCopyable) &&
          "The instruction is not commutative.");
   if (isa<CmpInst>(I))
@@ -695,7 +695,7 @@ static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
 /// patterns (see the two-parameter version above for details).
 /// \param I The instruction to check for commutativity
 /// \returns true if the instruction is commutative, false otherwise
-static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
+static bool isCommutative(const Instruction *I) { return isCommutative(I, I); }
 
 /// \returns number of operands of \p I, considering commutativity. Returns 2
 /// for commutative intrinsics.
@@ -716,21 +716,25 @@ static std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
   static_assert(std::is_same_v<T, InsertElementInst> ||
                     std::is_same_v<T, ExtractElementInst>,
                 "unsupported T");
-  int Index = Offset;
-  if (const auto *IE = dyn_cast<T>(Inst)) {
-    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
-    if (!VT)
-      return std::nullopt;
-    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!CI)
-      return std::nullopt;
-    if (CI->getValue().uge(VT->getNumElements()))
-      return std::nullopt;
-    Index *= VT->getNumElements();
-    Index += CI->getZExtValue();
-    return Index;
-  }
-  return std::nullopt;
+  const auto *IE = dyn_cast<T>(Inst);
+  if (!IE)
+    return std::nullopt;
+  // InsertElement: result is the vector, index is op 2.
+  // ExtractElement: result is scalar, vector is op 0, index is op 1.
+  constexpr bool IsInsert = std::is_same_v<T, InsertElementInst>;
+  Type *VecTy = IsInsert ? IE->getType() : IE->getOperand(0)->getType();
+  const auto *VT = dyn_cast<FixedVectorType>(VecTy);
+  if (!VT)
+    return std::nullopt;
+  const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(IsInsert ? 2 : 1));
+  if (!CI)
+    return std::nullopt;
+  if (CI->getValue().uge(VT->getNumElements()))
+    return std::nullopt;
+  unsigned Index = Offset;
+  Index *= VT->getNumElements();
+  Index += CI->getZExtValue();
+  return Index;
 }
 
 /// \returns inserting or extracting index of InsertElement, ExtractElement or
@@ -743,7 +747,7 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
   if (auto Index = getInsertExtractIndex<ExtractElementInst>(Inst, Offset))
     return Index;
 
-  int Index = Offset;
+  unsigned Index = Offset;
 
   const auto *IV = dyn_cast<InsertValueInst>(Inst);
   if (!IV)
@@ -1042,8 +1046,9 @@ class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static unsigned SupportedOp[] = {
-      Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
-      Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
+      Instruction::Add, Instruction::FAdd, Instruction::Sub,  Instruction::FSub,
+      Instruction::Mul, Instruction::Shl,  Instruction::AShr, Instruction::And,
+      Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
@@ -1055,34 +1060,41 @@ class BinOpSameOpcodeHelper {
     AndBIT = 1 << 5,
     OrBIT = 1 << 6,
     XorBIT = 1 << 7,
-    MainOpBIT = 1 << 8,
+    FAddBIT = 1 << 8,
+    FSubBIT = 1 << 9,
+    MainOpBIT = 1 << 10,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
-  /// Return a non-nullptr if either operand of I is a ConstantInt.
+  /// Return a non-nullptr if either operand of I is a ConstantInt (for the
+  /// integer opcodes) or a ConstantFP (for FAdd/FSub).
   /// The second return value represents the operand position. We check the
-  /// right-hand side first (1). If the right hand side is not a ConstantInt and
-  /// the instruction is neither Sub, Shl, nor AShr, we then check the left hand
-  /// side (0).
-  static std::pair<ConstantInt *, unsigned>
-  isBinOpWithConstantInt(const Instruction *I) {
-    unsigned Opcode = I->getOpcode();
+  /// right-hand side first (1). If the right hand side is not a constant and
+  /// the instruction is neither Sub, FSub, Shl, nor AShr, we then check the
+  /// left hand side (0).
+  static std::pair<Constant *, unsigned>
+  isBinOpWithConstant(const Instruction *I) {
+    [[maybe_unused]] unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
     (void)SupportedOp;
     auto *BinOp = cast<BinaryOperator>(I);
-    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
-      return {CI, 1};
-    if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
-        Opcode == Instruction::AShr)
+    auto GetConstant = [](Value *V) -> Constant * {
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        return CI;
+      return dyn_cast<ConstantFP>(V);
+    };
+    if (Constant *C = GetConstant(BinOp->getOperand(1)))
+      return {C, 1};
+    if (!isCommutative(I))
       return {nullptr, 0};
-    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(0)))
-      return {CI, 0};
+    if (Constant *C = GetConstant(BinOp->getOperand(0)))
+      return {C, 0};
     return {nullptr, 0};
   }
   struct InterchangeableInfo {
     const Instruction *I = nullptr;
     /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                    MulBIT | AShrBIT | ShlBIT;
+                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT;
     /// We cannot create an interchangeable instruction that does not exist in
     /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
     /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
@@ -1117,6 +1129,10 @@ class BinOpSameOpcodeHelper {
         return Instruction::Add;
       if (Candidate & SubBIT)
         return Instruction::Sub;
+      if (Candidate & FAddBIT)
+        return Instruction::FAdd;
+      if (Candidate & FSubBIT)
+        return Instruction::FSub;
       if (Candidate & AndBIT)
         return Instruction::And;
       if (Candidate & OrBIT)
@@ -1148,9 +1164,11 @@ class BinOpSameOpcodeHelper {
         return Candidate & OrBIT;
       case Instruction::Xor:
         return Candidate & XorBIT;
-      case Instruction::LShr:
       case Instruction::FAdd:
+        return Candidate & FAddBIT;
       case Instruction::FSub:
+        return Candidate & FSubBIT;
+      case Instruction::LShr:
       case Instruction::FMul:
       case Instruction::SDiv:
       case Instruction::UDiv:
@@ -1171,59 +1189,69 @@ class BinOpSameOpcodeHelper {
       if (FromOpcode == ToOpcode)
         return SmallVector<Value *>(I->operands());
       assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
-      auto [CI, Pos] = isBinOpWithConstantInt(I);
-      const APInt &FromCIValue = CI->getValue();
-      unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+      auto [C, Pos] = isBinOpWithConstant(I);
       Type *RHSType = I->getOperand(Pos)->getType();
       Constant *RHS;
-      switch (FromOpcode) {
-      case Instruction::Shl:
-        if (ToOpcode == Instruction::Add && FromCIValue.isOne())
-          return {I->getOperand(0), I->getOperand(0)};
-        if (ToOpcode == Instruction::Mul) {
-          RHS = ConstantInt::get(
-              RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
-                                           FromCIValue.getZExtValue()));
-        } else {
+      if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+        // fsub(x, c) == fadd(x, -c) for every FP constant c, since IEEE 754
+        // defines subtraction as addition of the negated operand.
+        assert(is_contained({Instruction::FAdd, Instruction::FSub}, ToOpcode) &&
+               "Cannot convert the instruction.");
+        RHS = ConstantFP::get(RHSType, -CFP->getValueAPF());
+      } else {
+        auto *CI = cast<ConstantInt>(C);
+        const APInt &FromCIValue = CI->getValue();
+        unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+        switch (FromOpcode) {
+        case Instruction::Shl:
+          if (ToOpcode == Instruction::Add && FromCIValue.isOne())
+            return {I->getOperand(0), I->getOperand(0)};
+          if (ToOpcode == Instruction::Mul) {
+            RHS = ConstantInt::get(
+                RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
+                                             FromCIValue.getZExtValue()));
+          } else {
+            assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                                 /*AllowRHSConstant=*/true);
+          }
+          break;
+        case Instruction::Mul:
+          assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+          if (ToOpcode == Instruction::Shl) {
+            RHS = ConstantInt::get(
+                RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
+          } else {
+            assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                                 /*AllowRHSConstant=*/true);
+          }
+          break;
+        case Instruction::Add:
+        case Instruction::Sub:
+          if (FromCIValue.isZero()) {
+            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                                 /*AllowRHSConstant=*/true);
+          } else {
+            assert(
+                is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
+                "Cannot convert the instruction.");
+            APInt NegatedVal = APInt(FromCIValue);
+            NegatedVal.negate();
+            RHS = ConstantInt::get(RHSType, NegatedVal);
+          }
+          break;
+        case Instruction::And:
+          assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
+          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                               /*AllowRHSConstant=*/true);
+          break;
+        default:
           assert(FromCIValue.isZero() && "Cannot convert the instruction.");
           RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
                                                /*AllowRHSConstant=*/true);
+          break;
         }
-        break;
-      case Instruction::Mul:
-        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-        if (ToOpcode == Instruction::Shl) {
-          RHS = ConstantInt::get(
-              RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
-        } else {
-          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
-          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                               /*AllowRHSConstant=*/true);
-        }
-        break;
-      case Instruction::Add:
-      case Instruction::Sub:
-        if (FromCIValue.isZero()) {
-          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                               /*AllowRHSConstant=*/true);
-        } else {
-          assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
-                 "Cannot convert the instruction.");
-          APInt NegatedVal = APInt(FromCIValue);
-          NegatedVal.negate();
-          RHS = ConstantInt::get(RHSType, NegatedVal);
-        }
-        break;
-      case Instruction::And:
-        assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
-        RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                             /*AllowRHSConstant=*/true);
-        break;
-      default:
-        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-        RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                             /*AllowRHSConstant=*/true);
-        break;
       }
       Value *LHS = I->getOperand(1 - Pos);
       // If the target opcode is non-commutative (e.g., shl, sub),
@@ -1258,7 +1286,8 @@ public:
            "BinOpSameOpcodeHelper only accepts BinaryOperator.");
     unsigned Opcode = I->getOpcode();
     MaskType OpcodeInMaskForm;
-    // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
+    // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd and FSub over
+    // MainOp.
     switch (Opcode) {
     case Instruction::Shl:
       OpcodeInMaskForm = ShlBIT;
@@ -1284,13 +1313,19 @@ public:
     case Instruction::Xor:
       OpcodeInMaskForm = XorBIT;
       break;
+    case Instruction::FAdd:
+      OpcodeInMaskForm = FAddBIT;
+      break;
+    case Instruction::FSub:
+      OpcodeInMaskForm = FSubBIT;
+      break;
     default:
       return MainOp.equal(Opcode) ||
              (initializeAltOp(I) && AltOp.equal(Opcode));
     }
     MaskType InterchangeableMask = OpcodeInMaskForm;
-    ConstantInt *CI = isBinOpWithConstantInt(I).first;
-    if (CI) {
+    auto [C, Pos] = isBinOpWithConstant(I);
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
       constexpr MaskType CanBeAll =
           XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
       const APInt &CIValue = CI->getValue();
@@ -1326,6 +1361,15 @@ public:
           InterchangeableMask = CanBeAll;
         break;
       }
+    } else if (C && Pos == 1) {
+      // FAdd/FSub with a constant RHS: negating the constant always
+      // converts one into the other, so no value check is needed. A
+      // constant LHS (Pos == 0, e.g. "0.0 - x") is excluded: unlike a
+      // constant RHS, it cannot be moved to the other opcode without also
+      // swapping the variable operand, which would misalign it against
+      // lanes that keep their native opcode (their variable operand stays
+      // on the other side).
+      InterchangeableMask = FSubBIT | FAddBIT;
     }
     return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
            (initializeAltOp(I) &&
@@ -12028,12 +12072,13 @@ class InstructionsCompatibilityAnalysis {
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul || Opcode == Instruction::LShr ||
-           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
-           Opcode == Instruction::Or || Opcode == Instruction::Xor ||
-           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
-           Opcode == Instruction::FMul || Opcode == Instruction::FDiv;
+           Opcode == Instruction::Mul || Opcode == Instruction::AShr ||
+           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::And || Opcode == Instruction::Or ||
+           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
+           Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -12656,6 +12701,7 @@ public:
       case Instruction::Add:
       case Instruction::Sub:
       case Instruction::Mul:
+      case Instruction::AShr:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
@@ -27371,9 +27417,11 @@ bool BoUpSLP::collectValuesToDemote(
       return all_of(E.Scalars, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
+        unsigned ShiftedBits = OrigBitWidth - BitWidth;
+        if (E.isCopyableElement(V))
+          return ShiftedBits < ComputeNumSignBits(V, *DL, AC, nullptr, DT);
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-        unsigned ShiftedBits = OrigBitWidth - BitWidth;
         return AmtKnownBits.getMaxValue().ult(BitWidth) &&
                ShiftedBits <
                    ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);

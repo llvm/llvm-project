@@ -228,11 +228,11 @@ define float @test_pow_afn_f32__half(float %x) #0 {
 ; CHECK-LABEL: define float @test_pow_afn_f32__half(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call afn float @_Z4sqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call ninf nsz afn float @_Z4sqrtf(float [[X]])
 ; CHECK-NEXT:    ret float [[__POW2SQRT]]
 ;
 entry:
-  %call = tail call afn float @_Z3powff(float %x, float 0.5)
+  %call = tail call nsz ninf afn float @_Z3powff(float %x, float 0.5)
   ret float %call
 }
 
@@ -240,11 +240,37 @@ define float @test_pow_afn_f32__neghalf(float %x) #0 {
 ; CHECK-LABEL: define float @test_pow_afn_f32__neghalf(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call afn float @_Z5rsqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call ninf nsz afn float @_Z5rsqrtf(float [[X]])
 ; CHECK-NEXT:    ret float [[__POW2RSQRT]]
 ;
 entry:
+  %call = tail call nsz ninf afn float @_Z3powff(float %x, float -0.5)
+  ret float %call
+}
+
+; pow(x, -0.5) with afn only must NOT fold to rsqrt: nsz and ninf are required.
+define float @test_pow_afn_only_f32__neghalf(float %x) #0 {
+; CHECK-LABEL: define float @test_pow_afn_only_f32__neghalf(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn float @_Z10__pow_fastff(float [[X]], float -5.000000e-01)
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
   %call = tail call afn float @_Z3powff(float %x, float -0.5)
+  ret float %call
+}
+
+; pow(x, 0.5) with afn only must NOT fold to sqrt: nsz and ninf are required.
+define float @test_pow_afn_only_f32__half(float %x) #0 {
+; CHECK-LABEL: define float @test_pow_afn_only_f32__half(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn float @_Z10__pow_fastff(float [[X]], float 5.000000e-01)
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
+  %call = tail call afn float @_Z3powff(float %x, float 0.5)
   ret float %call
 }
 
@@ -322,11 +348,11 @@ define <2 x float> @test_pow_afn_v2f32__half(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32__half(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call afn <2 x float> @_Z4sqrtDv2_f(<2 x float> [[X]])
+; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call ninf nsz afn <2 x float> @_Z4sqrtDv2_f(<2 x float> [[X]])
 ; CHECK-NEXT:    ret <2 x float> [[__POW2SQRT]]
 ;
 entry:
-  %call = tail call afn <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> splat (float 0.5))
+  %call = tail call nsz ninf afn <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> splat (float 0.5))
   ret <2 x float> %call
 }
 
@@ -334,11 +360,11 @@ define <2 x float> @test_pow_afn_v2f32__neghalf(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_pow_afn_v2f32__neghalf(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call afn <2 x float> @_Z5rsqrtDv2_f(<2 x float> [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call ninf nsz afn <2 x float> @_Z5rsqrtDv2_f(<2 x float> [[X]])
 ; CHECK-NEXT:    ret <2 x float> [[__POW2RSQRT]]
 ;
 entry:
-  %call = tail call afn <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> splat (float -0.5))
+  %call = tail call nsz ninf afn <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> splat (float -0.5))
   ret <2 x float> %call
 }
 
@@ -527,7 +553,7 @@ define float @test__pow_fast_f32__half(float %x) #0 {
 ; CHECK-LABEL: define float @test__pow_fast_f32__half(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call float @_Z4sqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2SQRT:%.*]] = tail call float @_Z10__pow_fastff(float [[X]], float 5.000000e-01)
 ; CHECK-NEXT:    ret float [[__POW2SQRT]]
 ;
 entry:
@@ -539,11 +565,11 @@ define float @test__pow_fast_afn_f32__half(float %x) #0 {
 ; CHECK-LABEL: define float @test__pow_fast_afn_f32__half(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call afn float @_Z4sqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call ninf nsz afn float @_Z4sqrtf(float [[X]])
 ; CHECK-NEXT:    ret float [[__POW2SQRT]]
 ;
 entry:
-  %call = tail call afn float @_Z10__pow_fastff(float %x, float 0.5)
+  %call = tail call nsz ninf afn float @_Z10__pow_fastff(float %x, float 0.5)
   ret float %call
 }
 
@@ -551,7 +577,7 @@ define float @test__pow_fast_f32__neghalf(float %x) #0 {
 ; CHECK-LABEL: define float @test__pow_fast_f32__neghalf(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call float @_Z5rsqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = tail call float @_Z10__pow_fastff(float [[X]], float -5.000000e-01)
 ; CHECK-NEXT:    ret float [[__POW2RSQRT]]
 ;
 entry:
@@ -563,11 +589,11 @@ define float @test__pow_fast_afn_f32__neghalf(float %x) #0 {
 ; CHECK-LABEL: define float @test__pow_fast_afn_f32__neghalf(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call afn float @_Z5rsqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call ninf nsz afn float @_Z5rsqrtf(float [[X]])
 ; CHECK-NEXT:    ret float [[__POW2RSQRT]]
 ;
 entry:
-  %call = tail call afn float @_Z10__pow_fastff(float %x, float -0.5)
+  %call = tail call nsz ninf afn float @_Z10__pow_fastff(float %x, float -0.5)
   ret float %call
 }
 
@@ -575,7 +601,7 @@ define <2 x float> @test__pow_fast_v2f32__neghalf(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test__pow_fast_v2f32__neghalf(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call <2 x float> @_Z5rsqrtDv2_f(<2 x float> [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = tail call <2 x float> @_Z10__pow_fastDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -5.000000e-01))
 ; CHECK-NEXT:    ret <2 x float> [[__POW2RSQRT]]
 ;
 entry:
@@ -587,11 +613,11 @@ define <2 x float> @test__pow_fast_afn_v2f32__neghalf(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test__pow_fast_afn_v2f32__neghalf(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call afn <2 x float> @_Z5rsqrtDv2_f(<2 x float> [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call ninf nsz afn <2 x float> @_Z5rsqrtDv2_f(<2 x float> [[X]])
 ; CHECK-NEXT:    ret <2 x float> [[__POW2RSQRT]]
 ;
 entry:
-  %call = tail call afn <2 x float> @_Z10__pow_fastDv2_fS_(<2 x float> %x, <2 x float> splat (float -0.5))
+  %call = tail call nsz ninf afn <2 x float> @_Z10__pow_fastDv2_fS_(<2 x float> %x, <2 x float> splat (float -0.5))
   ret <2 x float> %call
 }
 

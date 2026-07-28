@@ -4942,7 +4942,7 @@ bool AMDGPULegalizerInfo::loadInputValue(
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg = nullptr;
-  const TargetRegisterClass *ArgRC;
+  const TargetRegisterClass *ArgRC = nullptr;
   LLT ArgTy;
 
   CallingConv::ID CC = B.getMF().getFunction().getCallingConv();

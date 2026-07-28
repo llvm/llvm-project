@@ -4246,13 +4246,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // decl and its redeclarations may be required.
   }
 
-  StringLiteral *Msg = D->getDeletedMessage();
-  if (Msg) {
-    auto Imported = import(Msg);
-    if (!Imported)
-      return Imported.takeError();
-    Msg = *Imported;
-  }
+  // We will import DefaultedOrDeletedInfo later.
 
   ToFunction->setQualifierInfo(ToQualifierLoc);
   ToFunction->setAccess(D->getAccess());
@@ -4271,10 +4265,28 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setRangeEnd(ToEndLoc);
   ToFunction->setDefaultLoc(ToDefaultLoc);
 
-  if (Msg)
+  if (auto *Info = D->getDefaultedOrDeletedInfo()) {
+    StringLiteral *Msg = nullptr;
+    if (StringLiteral *M = Info->getDeletedMessage()) {
+      auto Imported = import(M);
+      if (!Imported)
+        return Imported.takeError();
+      Msg = *Imported;
+    }
+
+    SmallVector<DeclAccessPair, 4> Lookups;
+    for (DeclAccessPair P : Info->getUnqualifiedLookups()) {
+      auto Imported = import(P.getDecl());
+      if (!Imported)
+        return Imported.takeError();
+      Lookups.push_back(
+          DeclAccessPair::make(cast<NamedDecl>(*Imported), P.getAccess()));
+    }
+
     ToFunction->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-            Importer.getToContext(), {}, Msg));
+            Importer.getToContext(), Lookups, Info->getFPFeatures(), Msg));
+  }
 
   // Set the parameters.
   for (auto *Param : Parameters) {
@@ -7650,9 +7662,9 @@ ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) VAArgExpr(
-      ToBuiltinLoc, ToSubExpr, ToWrittenTypeInfo, ToRParenLoc, ToType,
-      E->isMicrosoftABI());
+  return new (Importer.getToContext())
+      VAArgExpr(ToBuiltinLoc, ToSubExpr, ToWrittenTypeInfo, ToRParenLoc, ToType,
+                E->getVarargABI());
 }
 
 ExpectedStmt ASTNodeImporter::VisitChooseExpr(ChooseExpr *E) {
