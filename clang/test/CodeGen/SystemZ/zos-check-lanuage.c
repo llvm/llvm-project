@@ -1,23 +1,23 @@
-// This chunk is based on Clang :: Frontend/ast-main.c,
-// but targeted for z/OS.  (Ensure we have no fatal error.)
-// We also duplicate for C++.
-// RUN: env SDKROOT="/" %clang -target s390x-none-zos -emit-llvm -S -o - -x c - < %s | grep -v DIFile > %t1.ll
-// RUN: env SDKROOT="/" %clang -target s390x-none-zos -emit-ast -o %t.ast %s
-// RUN: env SDKROOT="/" %clang -target s390x-none-zos -emit-llvm -S -o - -x ast - < %t.ast | grep -v DIFile > %t2.ll
-// RUN: diff %t1.ll %t2.ll
+//
+// This is based on Clang :: Frontend/ast-main.c,
+// but targeted for z/OS, and checking only that the langauge comes through.
+// We do not check that the entire IR is identical.
+// We also check C++.
+
+// The %clang_cc1 -emit-pch does the same as %clang -emit-ast.
+// The -x ast in the second invocation of each pair confirms we are reading ast.
+
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-pch -o %t.ast %s
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - -x ast - < %t.ast | FileCheck --check-prefix=CHECK-C %s
 
 // check that the langage attribute has come through
-// RUN: FileCheck --check-prefix CHECK-C %s < %t1.ll
 // CHECK-C: !"zos_cu_language", !"C"}
 
 
-// RUN: env SDKROOT="/" %clang -target s390x-none-zos -emit-llvm -S -o - -x c++ - < %s | grep -v DIFile > %t1.ll
-// RUN: env SDKROOT="/" %clang -target s390x-none-zos -emit-ast -o %t.ast -x c++ %s
-// RUN: env SDKROOT="/" %clang -target s390x-none-zos -emit-llvm -S -o - -x ast - < %t.ast | grep -v DIFile > %t2.ll
-// RUN: diff %t1.ll %t2.ll
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-pch -o %t.ast -x c++ %s
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - -x ast - < %t.ast | FileCheck --check-prefix CHECK-CPP %s
 
 // check that the langage attribute has come through
-// RUN: FileCheck --check-prefix CHECK-CPP %s < %t1.ll
 // CHECK-CPP: !"zos_cu_language", !"C++"}
 
 

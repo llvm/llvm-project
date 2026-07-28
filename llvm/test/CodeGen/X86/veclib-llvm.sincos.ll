@@ -13,10 +13,8 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; AMD:    callq amd_vrs4_sincosf@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v4f32:
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq _ZGVbN4v_sinf@PLT
+; GLIBC:    callq _ZGVbN4v_cosf@PLT
   %result = call { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float> %x)
   %result.0 = extractvalue { <4 x float>, <4 x float> } %result, 0
   %result.1 = extractvalue { <4 x float>, <4 x float> } %result, 1
@@ -41,14 +39,8 @@ define void @test_sincos_v8f32(<8 x float> %x, ptr noalias %out_sin, ptr noalias
 ; AMD-AVX512:    callq amd_vrs8_sincosf@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v8f32:
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
-; GLIBC:    callq sincosf@PLT
+; GLIBC:    callq _ZGVdN8v_sinf@PLT
+; GLIBC:    callq _ZGVdN8v_cosf@PLT
   %result = call { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float> %x)
   %result.0 = extractvalue { <8 x float>, <8 x float> } %result, 0
   %result.1 = extractvalue { <8 x float>, <8 x float> } %result, 1
@@ -107,8 +99,8 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; AMD:    callq amd_vrd2_sincos@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v2f64:
-; GLIBC:    callq sincos@PLT
-; GLIBC:    callq sincos@PLT
+; GLIBC:    callq _ZGVbN2v_sin@PLT
+; GLIBC:    callq _ZGVbN2v_cos@PLT
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %x)
   %result.0 = extractvalue { <2 x double>, <2 x double> } %result, 0
   %result.1 = extractvalue { <2 x double>, <2 x double> } %result, 1
@@ -133,10 +125,8 @@ define void @test_sincos_v4f64(<4 x double> %x, ptr noalias %out_sin, ptr noalia
 ; AMD-AVX512:    callq amd_vrd4_sincos@PLT
 ;
 ; GLIBC-LABEL: test_sincos_v4f64:
-; GLIBC:    callq sincos@PLT
-; GLIBC:    callq sincos@PLT
-; GLIBC:    callq sincos@PLT
-; GLIBC:    callq sincos@PLT
+; GLIBC:    callq _ZGVdN4v_sin@PLT
+; GLIBC:    callq _ZGVdN4v_cos@PLT
   %result = call { <4 x double>, <4 x double> } @llvm.sincos.v4f64(<4 x double> %x)
   %result.0 = extractvalue { <4 x double>, <4 x double> } %result, 0
   %result.1 = extractvalue { <4 x double>, <4 x double> } %result, 1

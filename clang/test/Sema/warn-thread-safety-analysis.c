@@ -61,6 +61,7 @@ struct A {
 };
 
 // Declare mutex lock/unlock functions.
+int mutex_exclusive_trylock(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu);
 void mutex_exclusive_lock(struct Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
 void mutex_shared_lock(struct Mutex *mu) SHARED_LOCK_FUNCTION(mu);
 void mutex_unlock(struct Mutex *mu) UNLOCK_FUNCTION(mu);
@@ -337,6 +338,39 @@ void test_bdev_ops(struct BDevOps *ops, struct BDev *bdev) {
 
 void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+}
+
+// Test unusual trylock patterns
+void do_some_work(void);
+int work_data GUARDED_BY(mu1);
+
+void test_trylock_conditional(void) {
+  if (({ int do_work = !!(!mutex_exclusive_trylock(&mu1));
+         if (__builtin_expect(do_work, 0))
+           do_some_work();
+         __builtin_expect(do_work, 0); }))
+    return;
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
+// How glibc before 2.32 spells assert(): a void conditional operator whose
+// false arm does not return. There is no result to branch on later, so the
+// try-lock is acquired on the branch itself.
+void assert_fail(void) __attribute__((noreturn));
+#define assert_trylock(e) ((e) ? (void)0 : assert_fail())
+
+void test_trylock_void_conditional(void) {
+  assert_trylock(mutex_exclusive_trylock(&mu1));
+  work_data = 1;
+  mutex_unlock(&mu1);
+}
+
+void test_trylock_void_conditional_via_var(void) {
+  int got = mutex_exclusive_trylock(&mu1);
+  assert_trylock(got);
+  work_data = 1;
+  mutex_unlock(&mu1);
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed

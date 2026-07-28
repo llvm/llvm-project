@@ -136,6 +136,26 @@ template <typename F> static bool usesInput(const ArgList &Args, F &&Fn) {
   });
 }
 
+static bool isIncludeDirArg(StringRef Arg) {
+  return Arg == "-internal-isystem" || Arg == "-internal-externc-isystem" ||
+         Arg == "-isystem" || Arg == "-cxx-isystem" || Arg == "-idirafter";
+}
+
+static void printCXXStdlibIncludeDirs(const ToolChain &TC,
+                                      const ArgList &Args) {
+  ArgStringList CC1Args;
+  if (Args.hasArg(options::OPT_stdlibxx_isystem))
+    TC.AddClangCXXStdlibIsystemArgs(Args, CC1Args);
+  else
+    TC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+
+  for (size_t I = 0; I < CC1Args.size(); ++I) {
+    StringRef Arg(CC1Args[I]);
+    if (isIncludeDirArg(Arg) && I + 1 < CC1Args.size())
+      llvm::outs() << CC1Args[++I] << '\n';
+  }
+}
+
 CUIDOptions::CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D)
     : UseCUID(Kind::Hash) {
   if (Arg *A = Args.getLastArg(options::OPT_fuse_cuid_EQ)) {
@@ -2674,6 +2694,16 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_cxx_stdlib)) {
+    llvm::outs() << TC.GetCXXStdlibName(C.getArgs()) << '\n';
+    return false;
+  }
+
+  if (C.getArgs().hasArg(options::OPT_print_cxx_stdlib_include_dirs)) {
+    printCXXStdlibIncludeDirs(TC, C.getArgs());
+    return false;
+  }
+
   if (C.getArgs().hasArg(options::OPT_print_std_module_manifest_path)) {
     llvm::outs() << GetStdModuleManifestPath(C, C.getDefaultToolChain())
                  << '\n';
@@ -3559,9 +3589,6 @@ class OffloadingActionBuilder final {
       CudaDeviceActions.clear();
     }
 
-    virtual std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
-    getConflictOffloadArchCombination(const std::set<StringRef> &GpuArchs) = 0;
-
     bool initialize() override {
       assert(AssociatedOffloadKind == Action::OFK_Cuda ||
              AssociatedOffloadKind == Action::OFK_HIP);
@@ -3618,12 +3645,6 @@ class OffloadingActionBuilder final {
                       const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
       DefaultOffloadArch = OffloadArch::CudaDefault;
-    }
-
-    std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
-    getConflictOffloadArchCombination(
-        const std::set<StringRef> &GpuArchs) override {
-      return std::nullopt;
     }
 
     ActionBuilderReturnCode
@@ -3778,12 +3799,6 @@ class OffloadingActionBuilder final {
     }
 
     bool canUseBundlerUnbundler() const override { return true; }
-
-    std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
-    getConflictOffloadArchCombination(
-        const std::set<StringRef> &GpuArchs) override {
-      return getConflictTargetIDCombination(GpuArchs);
-    }
 
     ActionBuilderReturnCode
     getDeviceDependences(OffloadAction::DeviceDependences &DA,
@@ -4527,6 +4542,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   bool UseNewOffloadingDriver = Args.hasFlag(
       options::OPT_offload_new_driver, options::OPT_no_offload_new_driver,
       C.getActiveOffloadKinds() != Action::OFK_None);
+  bool HIPRDCDeviceOnlyFatBin =
+      UseNewOffloadingDriver && C.isOffloadingHostKind(Action::OFK_HIP) &&
+      offloadDeviceOnly() && Args.hasArg(options::OPT_hip_link) &&
+      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+      getFinalPhase(Args) == phases::Link &&
+      !Args.hasArg(options::OPT_emit_llvm) &&
+      Args.hasFlag(options::OPT_gpu_bundle_output,
+                   options::OPT_no_gpu_bundle_output, true);
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -4551,6 +4574,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     // Build the pipeline for this file.
     Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
+
+    // Device-only HIP links consume packaged offload bitcode directly.
+    if (HIPRDCDeviceOnlyFatBin && InputType == types::TY_LLVM_BC) {
+      LinkerInputs.push_back(Current);
+      continue;
+    }
 
     std::string CUID;
     if (CUIDOpts.isEnabled() && types::isSrcFile(InputType)) {
@@ -4678,7 +4707,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
     } else if (UseNewOffloadingDriver ||
                Args.hasArg(options::OPT_offload_link)) {
-      LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
+      LA = C.MakeAction<LinkerWrapperJobAction>(
+          LinkerInputs,
+          HIPRDCDeviceOnlyFatBin ? types::TY_HIP_FATBIN : types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                    /*BA=*/{});
     } else {

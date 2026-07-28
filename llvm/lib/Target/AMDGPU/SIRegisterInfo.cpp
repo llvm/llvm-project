@@ -40,6 +40,18 @@ static cl::opt<bool> EnableSpillCFISavedRegs(
     cl::desc("Enable spilling the registers required for CFI emission"),
     cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
 
+static cl::opt<unsigned> StressVGPRLimit(
+    "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
+    cl::desc("Limit VGPRs to N registers by reserving the rest"));
+
+static cl::opt<unsigned> StressAGPRLimit(
+    "amdgpu-stress-agpr", cl::Hidden, cl::init(0),
+    cl::desc("Limit AGPRs to N registers by reserving the rest"));
+
+static cl::opt<unsigned> StressSGPRLimit(
+    "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
+    cl::desc("Limit SGPRs to N registers by reserving the rest"));
+
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
@@ -644,6 +656,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve SGPRs.
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
+  if (StressSGPRLimit.getNumOccurrences() && StressSGPRLimit < MaxNumSGPRs)
+    MaxNumSGPRs = StressSGPRLimit;
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isSGPRClass(&RC)) {
@@ -700,6 +714,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve VGPRs/AGPRs.
   //
   auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
+
+  // Stress test: override VGPR/AGPR limits.
+  if (StressVGPRLimit.getNumOccurrences() && StressVGPRLimit < MaxNumVGPRs)
+    MaxNumVGPRs = StressVGPRLimit;
+  if (StressAGPRLimit.getNumOccurrences() && StressAGPRLimit < MaxNumAGPRs)
+    MaxNumAGPRs = StressAGPRLimit;
 
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isVGPRClass(&RC)) {
@@ -3245,12 +3265,23 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
           Register TmpVGPR = RS->scavengeRegisterBackwards(
               AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
+
+          // Fold as much of the constant offset as possible into the SV form
+          // instruction's immediate offset field, and materialize the
+          // remainder (plus the frame register, if any) into the scavenged
+          // VGPR used as the vaddr.
+          int64_t FullOffset =
+              Offset +
+              TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm();
+          auto [ImmOffset, RemainderOffset] =
+              TII->splitFlatOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                                   AMDGPU::FlatAddrSpace::FlatScratch);
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
-              .addImm(Offset);
+              .addImm(RemainderOffset);
           BuildMI(*MBB, MI, DL, TII->get(SVOpcode))
               .add(MI->getOperand(0)) // $vdata
               .addReg(TmpVGPR)        // $vaddr
-              .addImm(0)              // Offset
+              .addImm(ImmOffset)      // $offset
               .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::cpol));
           MI->eraseFromParent();
           return true;
