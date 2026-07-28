@@ -589,6 +589,11 @@ void Preprocessor::EnterMainSourceFile() {
   assert(NumEnteredSourceFiles == 0 && "Cannot reenter the main file!");
   FileID MainFileID = SourceMgr.getMainFileID();
 
+  // Whether and how the main file starts a C++20 module unit. Implicit inputs
+  // are placed in its existing global module fragment, or in a synthesized one
+  // for a named module without a GMF.
+  ModuleUnitKind MainFileModuleUnitKind = ModuleUnitKind::NotModuleUnit;
+
   // If MainFileID is loaded it means we loaded an AST file, no need to enter
   // a main file.
   if (!SourceMgr.isLoadedFileID(MainFileID)) {
@@ -621,12 +626,44 @@ void Preprocessor::EnterMainSourceFile() {
       if (!isPreprocessedModuleFile() && Input)
         MainFileIsPreprocessedModuleFile =
             clang::isPreprocessedModuleFile(*Input);
+      if (Input && !MainFileIsPreprocessedModuleFile &&
+          hasDeferredGMFInputs())
+        MainFileModuleUnitKind = scanInputForCXX20ModuleUnit(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
       addPPCallbacks(std::move(Tracer));
       std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
       if (FirstPPTok)
         FirstPPTokenLoc = FirstPPTok->getLocation();
+    }
+  }
+
+  // Preserve the historical placement in the predefines buffer for ordinary
+  // translation units. A module unit opening with `module;` leaves the inputs
+  // deferred until the introducer has been lexed. For a named module without a
+  // GMF, synthesize the introducer before the main file and use the same
+  // deferred-input path.
+  if (hasDeferredGMFInputs()) {
+    if (PredefinesWereReplaced) {
+      // Loading an implicit PCH replaces Predefines with the directives
+      // suggested by ASTReader. For a module unit, those are the only implicit
+      // inputs that still need to be processed in the GMF.
+      if (MainFileModuleUnitKind != ModuleUnitKind::NotModuleUnit) {
+        DeferredGMFInputs = std::move(Predefines);
+        Predefines.clear();
+      }
+    } else if (MainFileModuleUnitKind == ModuleUnitKind::NotModuleUnit) {
+      // Preserve the historical predefines ordering for an ordinary
+      // translation unit.
+      Predefines += DeferredGMFInputs;
+    }
+    if (MainFileModuleUnitKind ==
+        ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment) {
+      Predefines +=
+          "# 1 \"<implicit-global-module-fragment>\" 1\nmodule;\n";
+      HasSynthesizedGMF = true;
+    } else if (MainFileModuleUnitKind == ModuleUnitKind::NotModuleUnit) {
+      DeferredGMFInputs.clear();
     }
   }
 
@@ -663,6 +700,21 @@ void Preprocessor::EnterMainSourceFile() {
   if ((usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) ||
       (usingPCHWithPragmaHdrStop() && SkippingUntilPragmaHdrStop))
     SkipTokensWhileUsingPCH();
+}
+
+void Preprocessor::EnterDeferredGMFInputs(SourceLocation IncludeLoc) {
+  if (!hasDeferredGMFInputs())
+    return;
+  // Synthesize the implicit input directives and enter them inside the global
+  // module fragment. Attribute the buffer to IncludeLoc so it is ordered within
+  // the translation unit.
+  std::unique_ptr<llvm::MemoryBuffer> MB =
+      llvm::MemoryBuffer::getMemBufferCopy(DeferredGMFInputs,
+                                           "<gmf-command-line-inputs>");
+  DeferredGMFInputs.clear();
+  DeferredGMFInputsFileID =
+      SourceMgr.createFileID(std::move(MB), SrcMgr::C_User, 0, 0, IncludeLoc);
+  EnterSourceFile(DeferredGMFInputsFileID, nullptr, IncludeLoc);
 }
 
 void Preprocessor::setPCHThroughHeaderFileID(FileID FID) {

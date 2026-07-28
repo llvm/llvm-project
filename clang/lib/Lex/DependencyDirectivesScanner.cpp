@@ -85,6 +85,7 @@ struct Scanner {
   bool scan(SmallVectorImpl<Directive> &Directives);
 
   friend bool clang::scanInputForCXX20ModulesUsage(StringRef Source);
+  friend ModuleUnitKind clang::scanInputForCXX20ModuleUnit(StringRef Source);
   friend bool clang::isPreprocessedModuleFile(StringRef Source);
 
 private:
@@ -1163,6 +1164,33 @@ bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
     }
   };
   return llvm::any_of(S.DirsWithToks, IsCXXNamedModuleDirective);
+}
+
+ModuleUnitKind clang::scanInputForCXX20ModuleUnit(StringRef Source) {
+  const char *First = Source.begin();
+  const char *const End = Source.end();
+  skipUntilMaybeCXX20ModuleDirective(First, End);
+  if (First == End || !(*First == 'e' || *First == 'm'))
+    return ModuleUnitKind::NotModuleUnit;
+
+  llvm::SmallVector<dependency_directives_scan::Token> Tokens;
+  Scanner S(StringRef(First, End - First), Tokens, nullptr, SourceLocation());
+  S.TheLexer.setParsingPreprocessorDirective(true);
+  if (S.lexModule(First, End) || S.DirsWithToks.size() != 1)
+    return ModuleUnitKind::NotModuleUnit;
+
+  const DirectiveWithTokens &Directive = S.DirsWithToks.front();
+  switch (Directive.Kind) {
+  case dependency_directives_scan::cxx_module_decl:
+    assert(Directive.NumTokens >= 2);
+    return Tokens[1].is(tok::semi)
+               ? ModuleUnitKind::HasGlobalModuleFragment
+               : ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment;
+  case dependency_directives_scan::cxx_export_module_decl:
+    return ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment;
+  default:
+    return ModuleUnitKind::NotModuleUnit;
+  }
 }
 
 bool clang::isPreprocessedModuleFile(StringRef Source) {

@@ -1270,4 +1270,44 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ScanningPreprocessedModuleFile) {
   ASSERT_TRUE(clang::isPreprocessedModuleFile(Source));
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, CXX20ModuleUnitKind) {
+  EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
+            scanInputForCXX20ModuleUnit("int x;"));
+  EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
+            scanInputForCXX20ModuleUnit("import M;"));
+  EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
+            scanInputForCXX20ModuleUnit("export import M;"));
+  EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
+            scanInputForCXX20ModuleUnit("module"));
+  EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
+            scanInputForCXX20ModuleUnit("export module"));
+
+  EXPECT_EQ(ModuleUnitKind::HasGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("module;"));
+  EXPECT_EQ(ModuleUnitKind::HasGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit(R"(
+              // Leading comments and line splices are ignored.
+              module \
+              ;
+              export module M;
+            )"));
+
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("export module M;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("module M;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("export module M:Part;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("module M:Part;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("module \"M\";"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("export module 42;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("export module M any pp tokens;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("#line 7\nexport module M;"));
+}
+
 } // end anonymous namespace
