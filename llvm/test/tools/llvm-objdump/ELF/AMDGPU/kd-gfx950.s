@@ -3,9 +3,10 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
 ;--- 1.s
-; RUN: llvm-mc --triple=amdgpu9.50-amd-amdhsa -mattr=-xnack -filetype=obj < 1.s > 1.o
-; RUN: llvm-objdump --disassemble-symbols=kernel.kd 1.o | tail -n +8 | tee 1-disasm.s | FileCheck 1.s
-; RUN: llvm-mc --triple=amdgpu9.50-amd-amdhsa -mattr=-xnack -filetype=obj < 1-disasm.s > 1-disasm.o
+; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -filetype=obj -mcpu=gfx950 < 1.s > 1.o
+; RUN: printf '.amdgcn_target "amdgcn-amd-amdhsa--gfx950:xnack-"\n' > 1-disasm.s
+; RUN: llvm-objdump --disassemble-symbols=kernel.kd 1.o | tail -n +8 | tee -a 1-disasm.s | FileCheck 1.s
+; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -filetype=obj -mcpu=gfx950 < 1-disasm.s > 1-disasm.o
 ; FIxMe: cmp 1.o 1-disasm.o
 ; CHECK: .amdhsa_kernel kernel
 ; CHECK-NEXT:	.amdhsa_group_segment_fixed_size 163840
@@ -44,6 +45,7 @@
 ; CHECK-NEXT:	.amdhsa_user_sgpr_private_segment_size 0
 ; CHECK-NEXT:	.amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT:.end_amdhsa_kernel
+.amdgcn_target "amdgcn-amd-amdhsa--gfx950:xnack-"
 .amdhsa_kernel kernel
   .amdhsa_group_segment_fixed_size 163840
   .amdhsa_next_free_vgpr 0

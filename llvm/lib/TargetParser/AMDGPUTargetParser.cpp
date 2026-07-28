@@ -635,9 +635,14 @@ static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
                                     TargetIDSetting &XnackSetting,
                                     TargetIDSetting &SramEccSetting) {
   const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
-  XnackSetting = Features.test(FEAT_XNACK_ON_OFF_MODES)
-                     ? TargetIDSetting::Any
-                     : TargetIDSetting::Unsupported;
+  // xnack with on/off modes defaults to Any; supported without on/off modes is
+  // hardwired On (e.g. gfx1250); unsupported is Unsupported.
+  if (!Features.test(FEAT_XNACK_SUPPORT))
+    XnackSetting = TargetIDSetting::Unsupported;
+  else if (Features.test(FEAT_XNACK_ON_OFF_MODES))
+    XnackSetting = TargetIDSetting::Any;
+  else
+    XnackSetting = TargetIDSetting::On;
   SramEccSetting = Features.test(FEAT_SRAMECC_SUPPORT)
                        ? TargetIDSetting::Any
                        : TargetIDSetting::Unsupported;
@@ -653,7 +658,9 @@ static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
     StringRef FeatureString = Split[I];
     if (FeatureString.consume_front("xnack")) {
       TargetIDSetting Sign = getTargetIDSettingFromFeatureString(FeatureString);
-      if (SeenXnack || XnackSetting == TargetIDSetting::Unsupported ||
+      // An xnack modifier is only valid with on/off modes: rejected when xnack
+      // is unsupported or hardwired on (e.g. gfx1250).
+      if (SeenXnack || !Features.test(FEAT_XNACK_ON_OFF_MODES) ||
           Sign == TargetIDSetting::Unsupported)
         Valid = false;
       else
@@ -724,14 +731,27 @@ TargetID::parseTargetIDString(StringRef TargetIDDirective) {
   return parse(Triple(Parts[0], Parts[1], Parts[2], Parts[3]), Parts[4]);
 }
 
+// Returns true if \p Arch hardwires xnack on (supports xnack but has no on/off
+// modes, e.g. gfx1250), so xnack is not a selectable target-id modifier.
+static bool isXnackHardwiredOn(GPUKind Arch) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
+  return Features.test(FEAT_XNACK_SUPPORT) &&
+         !Features.test(FEAT_XNACK_ON_OFF_MODES);
+}
+
 // Append the explicit (On/Off) sramecc/xnack feature modifiers in canonical
-// order, e.g. ":sramecc-:xnack+".
+// order, e.g. ":sramecc-:xnack+". Xnack is never emitted for hardwired-on
+// targets.
 static void printFeatureModifiers(raw_ostream &OS, TargetIDSetting SramEcc,
-                                  TargetIDSetting Xnack) {
+                                  TargetIDSetting Xnack,
+                                  bool XnackHardwiredOn) {
   if (SramEcc == TargetIDSetting::Off)
     OS << ":sramecc-";
   else if (SramEcc == TargetIDSetting::On)
     OS << ":sramecc+";
+
+  if (XnackHardwiredOn)
+    return;
 
   if (Xnack == TargetIDSetting::Off)
     OS << ":xnack-";
@@ -743,7 +763,8 @@ void TargetID::print(raw_ostream &StreamRep) const {
   StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
 
   if (IsAMDHSA)
-    printFeatureModifiers(StreamRep, getSramEccSetting(), getXnackSetting());
+    printFeatureModifiers(StreamRep, getSramEccSetting(), getXnackSetting(),
+                          isXnackHardwiredOn(Arch));
 }
 
 std::string TargetID::toString() const {
@@ -755,7 +776,8 @@ std::string TargetID::toString() const {
 
 void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
   OS << getArchNameAMDGCN(Arch);
-  printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting());
+  printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting(),
+                        isXnackHardwiredOn(Arch));
 }
 
 std::string TargetID::getCanonicalFeatureString() const {
