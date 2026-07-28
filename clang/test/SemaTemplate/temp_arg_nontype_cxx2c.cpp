@@ -124,6 +124,27 @@ Set<float> sf;
 
 } // namespace GH84052
 
+namespace GH84052_variant {
+
+struct A {
+  A() = default;
+  constexpr A(const A&) {}
+};
+
+template <class T, GH84052::C<T> auto = A{}> struct Set {}; // #Set1
+
+template <class T> void foo() {
+  Set<T> unrelated;
+}
+
+Set<bool> sb;
+Set<float> sf;
+// expected-error@-1 {{constraints not satisfied for class template 'Set'}}
+// expected-note@#Set1 {{because 'GH84052::C<decltype(GH84052_variant::A{}), float>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+
+} // namespace GH84052_variant
+
 namespace error_on_type_instantiation {
   int f(int) = delete;
   // expected-note@-1 {{candidate function has been explicitly deleted}}
