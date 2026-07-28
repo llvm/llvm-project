@@ -1,9 +1,7 @@
 // LineEnd ::=  newline | return | EOF
-// Preprocessor must treat the \r after `hello` as a line end so that it
-// doesn't skip the first #endif thinking that it's part of the #ifdef body.
-// RUN: not llvm-tblgen %s 2>&1 | FileCheck %s
-// CHECK: :[[@LINE+4]]:2: error: #endif without #ifdef
-// CHECK: :[[@LINE+3]]:2: error: Unexpected token at top level
-#ifdef FOO
-hello#endif
-#endif
+// Preprocessor must treat all the \r's as line ends.
+// This means, for example, not skipping the first #endif thinking that it's
+// part of the #ifdef body.
+// RUN: echo -e "#ifdef FOO\rhello\r#endif\r#endif\r" | not llvm-tblgen 2>&1 | FileCheck %s
+// CHECK: :1:26: error: #endif without #ifdef
+// CHECK: :1:26: error: Unexpected token at top level
