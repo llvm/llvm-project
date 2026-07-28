@@ -386,12 +386,11 @@ public:
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
 
-    // We need to first create an iterator range over (const) BlocktTy & instead
-    // of (const) BlockTy * for filter_range to work properly.
-    auto Mapped =
-        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
-    auto Filter = make_filter_range(
-        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
+    // We need the pointee range over (const) BlocktTy & instead of (const)
+    // BlockTy * for filter_range to work properly.
+    auto Filter =
+        make_filter_range(make_pointee_range(Range),
+                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
     return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
       return cast<BlockTy>(&Block);
     });
