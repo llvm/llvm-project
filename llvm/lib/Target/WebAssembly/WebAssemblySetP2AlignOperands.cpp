@@ -15,8 +15,11 @@
 #include "WebAssembly.h"
 #include "WebAssemblyInstrInfo.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -24,10 +27,10 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-set-p2align-operands"
 
 namespace {
-class WebAssemblySetP2AlignOperands final : public MachineFunctionPass {
+class WebAssemblySetP2AlignOperandsLegacy final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblySetP2AlignOperands() : MachineFunctionPass(ID) {}
+  WebAssemblySetP2AlignOperandsLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Set p2align Operands";
@@ -44,13 +47,13 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblySetP2AlignOperands::ID = 0;
-INITIALIZE_PASS(WebAssemblySetP2AlignOperands, DEBUG_TYPE,
+char WebAssemblySetP2AlignOperandsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblySetP2AlignOperandsLegacy, DEBUG_TYPE,
                 "Set the p2align operands for WebAssembly loads and stores",
                 false, false)
 
-FunctionPass *llvm::createWebAssemblySetP2AlignOperands() {
-  return new WebAssemblySetP2AlignOperands();
+FunctionPass *llvm::createWebAssemblySetP2AlignOperandsLegacyPass() {
+  return new WebAssemblySetP2AlignOperandsLegacy();
 }
 
 static void rewriteP2Align(MachineInstr &MI, unsigned OperandNo) {
@@ -73,7 +76,7 @@ static void rewriteP2Align(MachineInstr &MI, unsigned OperandNo) {
   MI.getOperand(OperandNo).setImm(P2Align);
 }
 
-bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
+static bool setP2AlignOperands(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Set p2align Operands **********\n"
            << "********** Function: " << MF.getName() << '\n';
@@ -93,4 +96,17 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool WebAssemblySetP2AlignOperandsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return setP2AlignOperands(MF);
+}
+
+PreservedAnalyses
+WebAssemblySetP2AlignOperandsPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  return setP2AlignOperands(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
 }

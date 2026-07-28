@@ -66,6 +66,7 @@ namespace plugin {
 struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
+struct PluginContextTy;
 template <typename ResourceRef> class GenericDeviceResourceManagerTy;
 
 namespace Plugin {
@@ -98,7 +99,8 @@ inline Error error(error::ErrorCode Code, Error &&OtherError,
 /// the plugin-specific code.
 /// TODO: Refactor this, must be defined individually by each plugin.
 template <typename... ArgsTy>
-static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+[[maybe_unused]] static Error check(int32_t ErrorCode, const char *ErrFmt,
+                                    ArgsTy... Args);
 } // namespace Plugin
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
@@ -856,6 +858,30 @@ public:
   }
 };
 
+/// A plugin-side context grouping a set of devices. Plugins that need to hold
+/// native context state (e.g. Level Zero's ze_context_handle_t) override this
+/// through GenericPluginTy::createPluginContext. The base class is a plain
+/// device set used by plugins that do not need native context state.
+struct PluginContextTy {
+  PluginContextTy(GenericPluginTy &Plugin,
+                  llvm::ArrayRef<GenericDeviceTy *> Devices)
+      : Plugin(Plugin), Devices(Devices.begin(), Devices.end()) {}
+
+  PluginContextTy(const PluginContextTy &) = delete;
+  PluginContextTy &operator=(const PluginContextTy &) = delete;
+  PluginContextTy(PluginContextTy &&) = delete;
+  PluginContextTy &operator=(PluginContextTy &&) = delete;
+
+  virtual ~PluginContextTy() = default;
+
+  llvm::ArrayRef<GenericDeviceTy *> getDevices() const { return Devices; }
+  GenericPluginTy &getPlugin() const { return Plugin; }
+
+protected:
+  GenericPluginTy &Plugin;
+  llvm::SmallVector<GenericDeviceTy *> Devices;
+};
+
 /// Class implementing common functionalities of offload devices. Each plugin
 /// should define the specific device class, derive from this generic one, and
 /// implement the necessary virtual function members.
@@ -1586,6 +1612,15 @@ struct GenericPluginTy {
   virtual Error asyncBarrierImpl(omp_interop_val_t *Interop) {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
                          "async_barrier not supported");
+  }
+
+  /// Create a plugin-side context grouping the given devices. The default
+  /// implementation returns a plain PluginContextTy that only tracks the
+  /// device set. Plugins that own native context state (e.g. Level Zero)
+  /// override this to instantiate a plugin-specific subclass.
+  virtual Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) {
+    return std::make_unique<PluginContextTy>(*this, Devices);
   }
 
 protected:

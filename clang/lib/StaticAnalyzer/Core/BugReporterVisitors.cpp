@@ -3292,8 +3292,8 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
-      for (const auto *SF = N->getStackFrame(); SF; SF = SF->getParent()) {
-        const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
+      for (const StackFrame &SF : N->stackframes()) {
+        const auto *MD = dyn_cast<CXXMethodDecl>(SF.getDecl());
         if (!MD)
           continue;
 

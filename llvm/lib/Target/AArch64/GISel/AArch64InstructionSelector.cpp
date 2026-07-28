@@ -4016,7 +4016,6 @@ bool AArch64InstructionSelector::selectExtractElt(
   const LLT NarrowTy = MRI.getType(DstReg);
   const Register SrcReg = I.getOperand(1).getReg();
   const LLT WideTy = MRI.getType(SrcReg);
-  (void)WideTy;
   assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
          "source register size too small!");
   assert(!NarrowTy.isVector() && "cannot extract vector into vector!");
@@ -4025,19 +4024,42 @@ bool AArch64InstructionSelector::selectExtractElt(
   MachineOperand &LaneIdxOp = I.getOperand(2);
   assert(LaneIdxOp.isReg() && "Lane index operand was not a register?");
 
-  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Cannot extract into GPR.\n");
-    return false;
-  }
-
   // Find the index to extract from.
   auto VRegAndVal = getIConstantVRegValWithLookThrough(LaneIdxOp.getReg(), MRI);
   if (!VRegAndVal)
     return false;
   unsigned LaneIdx = VRegAndVal->Value.getSExtValue();
 
-
   const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  if (DstRB.getID() == AArch64::GPRRegBankID) {
+    unsigned Opcode;
+    switch (WideTy.getScalarSizeInBits()) {
+    case 8:
+      Opcode = AArch64::UMOVvi8;
+      break;
+    case 16:
+      Opcode = AArch64::UMOVvi16;
+      break;
+    case 32:
+      Opcode = AArch64::UMOVvi32;
+      break;
+    default:
+      return false;
+    }
+
+    if (WideTy.getSizeInBits() != 128) {
+      MachineInstr *ScalarToVector = emitScalarToVector(
+          WideTy.getSizeInBits(), &AArch64::FPR128RegClass, SrcReg, MIB);
+      assert(ScalarToVector && "Didn't expect emitScalarToVector to fail!");
+      I.getOperand(1).setReg(ScalarToVector->getOperand(0).getReg());
+    }
+
+    I.setDesc(TII.get(Opcode));
+    I.getOperand(2).ChangeToImmediate(LaneIdx);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
+  }
+
   MachineInstr *Extract = emitExtractVectorElt(DstReg, DstRB, NarrowTy, SrcReg,
                                                LaneIdx, MIB);
   if (!Extract)
@@ -5149,25 +5171,55 @@ bool AArch64InstructionSelector::selectShuffleVector(
   Register Src1Reg = I.getOperand(1).getReg();
   Register Src2Reg = I.getOperand(2).getReg();
   ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
+  assert(DstTy == MRI.getType(Src1Reg) &&
+         "Expected equal shuffle types during selection");
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
 
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
+  int NumElts = DstTy.getNumElements();
 
-  SmallVector<Constant *, 64> CstIdxs;
-  for (int Val : Mask) {
-    // For now, any undef indexes we'll just assume to be 0. This should be
-    // optimized in future, e.g. to select DUP etc.
-    Val = Val < 0 ? 0 : Val;
+  SmallVector<int> NewMask;
+  bool FirstUsed = false;
+  bool SecondUsed = false;
+  for (int M : Mask) {
+    // Map any undef or zero lanes to 255.
+    if (M < 0 || VT->getKnownBits(M < NumElts ? Src1Reg : Src2Reg,
+                                  APInt::getOneBitSet(NumElts, M % NumElts))
+                     .isZero()) {
+      for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte)
+        NewMask.push_back(255);
+      continue;
+    }
+
+    FirstUsed |= M < NumElts;
+    SecondUsed |= M >= NumElts;
     for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
-      unsigned Offset = Byte + Val * BytesPerElt;
-      CstIdxs.emplace_back(ConstantInt::get(Type::getInt8Ty(Ctx), Offset));
+      unsigned Offset = Byte + M * BytesPerElt;
+      NewMask.push_back(Offset);
     }
   }
 
+  // If the first is unused or all zeros, use the second src in a tbl1.
+  if (!FirstUsed) {
+    int ByteLanes = DstTy.getSizeInBits() == 128 ? 16 : 8;
+    for (int &M : NewMask) {
+      if (M != 255) {
+        assert(M >= ByteLanes && M < 2 * ByteLanes);
+        M -= ByteLanes;
+      }
+    }
+    std::swap(Src1Reg, Src2Reg);
+    std::swap(FirstUsed, SecondUsed);
+  }
+
   // Use a constant pool to load the index vector for TBL.
+  SmallVector<Constant *> CstIdxs;
+  transform(NewMask, std::back_inserter(CstIdxs), [&Ctx](int M) {
+    return ConstantInt::get(Type::getInt8Ty(Ctx), M);
+  });
   Constant *CPVal = ConstantVector::get(CstIdxs);
   MachineInstr *IndexLoad = emitLoadFromConstantPool(CPVal, MIB);
   if (!IndexLoad) {
@@ -5198,6 +5250,14 @@ bool AArch64InstructionSelector::selectShuffleVector(
         MIB.buildInstr(TargetOpcode::COPY, {I.getOperand(0).getReg()}, {})
             .addReg(TBL1.getReg(0), {}, AArch64::dsub);
     RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (!SecondUsed) {
+    auto TBL1 = MIB.buildInstr(AArch64::TBLv16i8One, {I.getOperand(0)},
+                               {Src1Reg, IndexLoad->getOperand(0)});
+    constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
     I.eraseFromParent();
     return true;
   }

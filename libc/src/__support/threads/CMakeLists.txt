@@ -112,7 +112,9 @@ add_header_library(
     thread.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.hdr.types.struct_sched_param
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view

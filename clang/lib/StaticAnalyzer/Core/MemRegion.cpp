@@ -998,23 +998,22 @@ static llvm::PointerUnion<const StackFrame *, const VarRegion *>
 getStackOrCaptureRegionForDeclContext(const StackFrame *SF,
                                       const DeclContext *DC,
                                       const VarDecl *VD) {
-  while (SF) {
-    if (cast<DeclContext>(SF->getDecl()) == DC)
-      return SF;
-    if (SF->getData()) {
-      // FIXME: This can be made more efficient.
-      for (auto Var : static_cast<const BlockDataRegion *>(SF->getData())
-                          ->referenced_vars()) {
-        const TypedValueRegion *OrigR = Var.getOriginalRegion();
-        if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
-          if (VR->getDecl() == VD)
-            return cast<VarRegion>(Var.getCapturedRegion());
+  if (SF)
+    for (const StackFrame &Frame : SF->parentsIncludingSelf()) {
+      if (cast<DeclContext>(Frame.getDecl()) == DC)
+        return &Frame;
+      if (Frame.getData()) {
+        // FIXME: This can be made more efficient.
+        for (auto Var : static_cast<const BlockDataRegion *>(Frame.getData())
+                            ->referenced_vars()) {
+          const TypedValueRegion *OrigR = Var.getOriginalRegion();
+          if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
+            if (VR->getDecl() == VD)
+              return cast<VarRegion>(Var.getCapturedRegion());
+          }
         }
       }
     }
-
-    SF = SF->getParent();
-  }
   return (const StackFrame *)nullptr;
 }
 
@@ -1036,6 +1035,7 @@ static bool isStdStreamVar(const VarDecl *D) {
 
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const StackFrame *SF) {
+  assert(SF);
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
