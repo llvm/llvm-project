@@ -162,16 +162,31 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
 }
 #endif
 
-/// This is wrapper over IRBuilderBase::restoreIP that also restores the current
-/// debug location to the last instruction in the specified basic block if the
-/// insert point points to the end of the block.
+/// This is a wrapper over IRBuilderBase::restoreIP that also restores a current
+/// debug location when the insert point is at the end of a block. It picks a
+/// location scoped to the current function: the block's last instruction
+/// location if the block is non-empty, otherwise a location synthesized from
+///  the function's subprogram (when the function has debug info).
 static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
                                  llvm::IRBuilderBase::InsertPoint IP) {
   Builder.restoreIP(IP);
+  // When IP points at a real instruction, restoreIP (SetInsertPoint) already
+  // set the debug location from that instruction, so leave it alone.
   llvm::BasicBlock *BB = Builder.GetInsertBlock();
-  llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
-  if (!BB->empty() && I == BB->end())
+  if (Builder.GetInsertPoint() != BB->end())
+    return;
+
+  // At the end of a block, pick a location guaranteed to belong to the current
+  // insertion function's subprogram. Prefer the block's own last instruction;
+  // otherwise synthesize a location from the function's subprogram.
+  if (!BB->empty())
     Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+  else if (llvm::DISubprogram *FSP =
+               BB->getParent() ? BB->getParent()->getSubprogram() : nullptr) {
+    unsigned Line = FSP->getScopeLine() ? FSP->getScopeLine() : FSP->getLine();
+    Builder.SetCurrentDebugLocation(
+        llvm::DILocation::get(FSP->getContext(), Line, /*Column=*/0, FSP));
+  }
 }
 
 static bool hasGridValue(const Triple &T) {
@@ -10758,7 +10773,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
         CodeGenIP = Builder.saveIP();
         Builder.restoreIP(AllocaIP);
         Info.DevicePtrInfoMap[BPVal] = {BP, Builder.CreateAlloca(PtrTy)};
-        Builder.restoreIP(CodeGenIP);
+        restoreIPandDebugLoc(Builder, CodeGenIP);
         if (DeviceAddrCB)
           DeviceAddrCB(I, Info.DevicePtrInfoMap[BPVal].second);
       } else if (CombinedInfo.DevicePointers[I] == DeviceInfoTy::Address) {
