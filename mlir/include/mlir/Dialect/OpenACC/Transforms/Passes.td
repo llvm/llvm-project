@@ -211,6 +211,14 @@ def ACCEmitRemarksPrivate
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
+def ACCEmitRemarksData : Pass<"acc-emit-remarks-data", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC data-mapping remarks";
+  let description = [{
+    This pass emits remarks describing the data clauses associated
+    with OpenACC data constructs and unstructured data directives.
+  }];
+}
+
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   let summary = "Tile OpenACC loops with tile clauses";
   let description = [{
