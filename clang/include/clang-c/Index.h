@@ -3734,6 +3734,14 @@ CINDEX_LINKAGE CXType clang_Type_getModifiedType(CXType T);
  */
 CINDEX_LINKAGE CXType clang_Type_getValueType(CXType CT);
 
+
+/**
+ *  Gets the expression associated with this dependent sized array
+ *
+ *  If a non-dependent type is passed in, an invalid cursor is returned.
+ */
+CINDEX_LINKAGE CXCursor clang_Type_getDependentSizeExpr(CXType CT);
+
 /**
  * Return the offset of the field represented by the Cursor.
  *

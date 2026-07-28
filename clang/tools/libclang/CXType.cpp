@@ -912,6 +912,32 @@ long long clang_getNumElements(CXType CT) {
   return result;
 }
 
+CXCursor clang_Type_getDependentSizeExpr(CXType CT) {
+  QualType T = GetQualType(CT);
+  const Type *TP = T.getTypePtrOrNull();
+
+  if (!TP)
+    return cxcursor::MakeCXCursorInvalid(CXCursor_NoDeclFound);
+
+  const Expr* E = nullptr;
+
+  switch (TP->getTypeClass()) {
+  case Type::DependentSizedArray:
+    E = cast<DependentSizedArrayType> (TP)->getSizeExpr();
+    break;
+  case Type::DependentSizedExtVector:
+    E = cast<DependentSizedExtVectorType> (TP)->getSizeExpr();
+    break;
+  default:
+    break;
+  }
+
+  if (!E) 
+    return cxcursor::MakeCXCursorInvalid(CXCursor_NoDeclFound);
+  
+  return cxcursor::MakeCXCursor(E, nullptr, GetTU(CT));
+}
+
 CXType clang_getArrayElementType(CXType CT) {
   QualType ET = QualType();
   QualType T = GetQualType(CT);
