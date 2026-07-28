@@ -77,8 +77,7 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP5]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP12]], 3
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP12]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP13]], 1
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP6]], [[TMP16]]

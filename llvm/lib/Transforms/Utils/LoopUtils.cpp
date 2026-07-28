@@ -2294,18 +2294,14 @@ Value *llvm::addDiffRuntimeChecks(
       assert(isUIntN(Ty->getScalarSizeInBits(), ICTimesStride));
     }
 
-    Value *One = ConstantInt::get(Ty, 1);
     Value *&ThresholdMinusOne =
         ThresholdCache[{Ty, IC, AbsCommonStrideInBytes}];
-    if (!ThresholdMinusOne) {
-      auto *VectorIterAccessSpan =
+    if (!ThresholdMinusOne)
+      ThresholdMinusOne = ChkBuilder.CreateSub(
           ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                               ConstantInt::get(Ty, ICTimesStride));
-      VectorIterAccessSpan = ChkBuilder.CreateSub(
-          VectorIterAccessSpan,
-          ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize));
-      ThresholdMinusOne = ChkBuilder.CreateSub(VectorIterAccessSpan, One);
-    }
+                               ConstantInt::get(Ty, ICTimesStride)),
+          ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize + 1));
+
     Value *Diff = Expander.expandCodeFor(
         SE.getNoopOrSignExtend(SE.getMinusSCEV(SinkStart, SrcStart), Ty), Ty,
         Loc);
@@ -2319,6 +2315,7 @@ Value *llvm::addDiffRuntimeChecks(
     // Use (Diff - 1) <u (VectorIterAccessSpanMinusOne - 1), equivalent to
     // 0 < Diff <u VectorIterAccessSpanMinusOne, to exclude Diff == 0 (equal
     // pointers are safe).
+    Value *One = ConstantInt::get(Ty, 1);
     IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
                                           ThresholdMinusOne, "diff.check");
     SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
