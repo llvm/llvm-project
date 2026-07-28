@@ -9419,11 +9419,17 @@ type, and must be one of:
 * - Value
   - Meaning
 
+* - `"float"`
+  - IEEE 754 single precision (32-bit).
+
 * - `"double"`
   - IEEE 754 double precision (64-bit).
 
 * - `"fp128"`
   - IEEE 754 quadruple precision (128-bit).
+
+* - `"x86_fp80"`
+  - x87 80-bit extended precision.
 
 * - `"ppc_fp128"`
   - IBM `double-double` (a pair of IEEE doubles).
