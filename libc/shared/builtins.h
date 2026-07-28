@@ -54,6 +54,8 @@
 #include "builtins/floatunsisf.h"
 #include "builtins/floatuntidf.h"
 #include "builtins/floatuntisf.h"
+#include "builtins/gesf2.h"
+#include "builtins/lesf2.h"
 #include "builtins/muldf3.h"
 #include "builtins/mulsf3.h"
 #include "builtins/multf3.h"
@@ -69,5 +71,6 @@
 #include "builtins/trunctfhf2.h"
 #include "builtins/trunctfsf2.h"
 #include "builtins/trunctfxf2.h"
+#include "builtins/unordsf2.h"
 
 #endif // LLVM_LIBC_SHARED_BUILTINS_H
