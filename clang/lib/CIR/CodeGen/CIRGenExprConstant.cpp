@@ -1020,48 +1020,51 @@ ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
   return {};
 }
 
-static cir::GlobalViewAttr
-tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
-                             const CompoundLiteralExpr *e) {
-  CIRGenModule &cgm = emitter.cgm;
-  CIRGenBuilderTy &builder = cgm.getBuilder();
+cir::GlobalOp
+ConstantEmitter::tryEmitGlobalCompoundLiteral(const CompoundLiteralExpr *e) {
   CharUnits align = cgm.getASTContext().getTypeAlignInChars(e->getType());
 
-  if (cir::GlobalOp addr = cgm.getAddrOfConstantCompoundLiteralIfEmitted(e))
-    return builder.getGlobalViewAttr(addr);
+  if (cir::GlobalOp global = cgm.getAddrOfConstantCompoundLiteralIfEmitted(e))
+    return global;
 
   assert(!cir::MissingFeatures::addressSpace());
-  mlir::Attribute c =
-      emitter.tryEmitForInitializer(e->getInitializer(), e->getType());
-  if (!c) {
-    assert(!e->isFileScope() &&
-           "file-scope compound literal did not have constant initializer!");
+  mlir::Attribute initializer =
+      tryEmitForInitializer(e->getInitializer(), e->getType());
+  if (!initializer) {
+    assert((!e->hasGlobalStorage() || cgm.getDiags().hasErrorOccurred()) &&
+           "global compound literal did not have constant initializer!");
     return {};
   }
 
-  auto typedInit = mlir::cast<mlir::TypedAttr>(c);
+  auto typedInitializer = mlir::cast<mlir::TypedAttr>(initializer);
   bool isConstant = e->getType().isConstantStorage(cgm.getASTContext(),
                                                    /*ExcludeCtor=*/true,
                                                    /*ExcludeDtor=*/false);
 
   std::string name = cgm.getUniqueGlobalName(".compoundliteral");
   mlir::Location loc = cgm.getLoc(e->getSourceRange());
-  cir::GlobalOp gv =
-      cgm.createGlobalOp(loc, name, typedInit.getType(), isConstant);
-  gv.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
-  gv.setAlignment(align.getAsAlign().value());
-  CIRGenModule::setInitializer(gv, c);
+  cir::GlobalOp global =
+      cgm.createGlobalOp(loc, name, typedInitializer.getType(), isConstant);
+  global.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+  global.setAlignment(align.getAsAlign().value());
+  if (e->hasThreadStorage())
+    global.setTlsModel(cgm.getDefaultCIRTLSModel());
+  CIRGenModule::setInitializer(global, initializer);
 
-  emitter.finalize(gv);
-  cgm.setAddrOfConstantCompoundLiteral(e, gv);
-  return builder.getGlobalViewAttr(gv);
+  finalize(global);
+  cgm.setAddrOfConstantCompoundLiteral(e, global);
+  return global;
 }
 
 ConstantLValue
 ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
   ConstantEmitter compoundLiteralEmitter(cgm, emitter.cgf);
   compoundLiteralEmitter.setInConstantContext(emitter.isInConstantContext());
-  return tryEmitGlobalCompoundLiteral(compoundLiteralEmitter, e);
+
+  cir::GlobalOp global = compoundLiteralEmitter.tryEmitGlobalCompoundLiteral(e);
+  if (!global)
+    return {};
+  return cgm.getBuilder().getGlobalViewAttr(global);
 }
 
 ConstantLValue
@@ -1426,9 +1429,9 @@ mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
                                                 QualType destType) {
   assert(!destType->isVoidType() && "can't emit a void constant");
 
-  if (mlir::Attribute c =
+  if (mlir::Attribute constant =
           ConstExprEmitter(*this).Visit(const_cast<Expr *>(e), destType))
-    return llvm::dyn_cast<mlir::TypedAttr>(c);
+    return llvm::dyn_cast<mlir::TypedAttr>(constant);
 
   Expr::EvalResult result;
 
@@ -1441,8 +1444,8 @@ mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
         e->EvaluateAsRValue(result, cgm.getASTContext(), inConstantContext);
 
   if (success && !result.hasSideEffects()) {
-    mlir::Attribute c = tryEmitPrivate(result.Val, destType);
-    return llvm::dyn_cast<mlir::TypedAttr>(c);
+    mlir::Attribute constant = tryEmitPrivate(result.Val, destType);
+    return llvm::dyn_cast_if_present<mlir::TypedAttr>(constant);
   }
 
   return nullptr;

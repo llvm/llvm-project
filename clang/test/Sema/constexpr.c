@@ -36,7 +36,7 @@ constexpr static const auto V6 = 1;
 constexpr static const int V7 = 1;
 constexpr static int V8 = 1;
 constexpr auto Ulong = 1L;
-constexpr auto CompoundLiteral = (int){13};
+constexpr auto CompoundLiteral = (constexpr int){13};
 constexpr auto DoubleCast = (double)(1 / 3);
 constexpr auto String = "this is a string"; // expected-error {{constexpr pointer initializer is not null}}
 constexpr signed auto Long = 1L; // expected-error {{illegal storage class on file-scoped variable}}
@@ -473,3 +473,75 @@ static_assert(s2[0].L[2] == 'x');// expected-warning {{folding it to a constant 
 
 x y; // expected-error{{unknown type name 'x'}}
 constexpr int *p = (int*){y};
+
+struct S12 { int n; };
+union U4 { int n; double f; };
+const int C1 = 1;
+
+constexpr int C2 = (int){1};                // expected-warning {{reading a non-constexpr compound literal}}
+constexpr struct S12 C3 = (struct S12){1};  // expected-warning {{reading a non-constexpr compound literal}}
+constexpr union U4 C4 = (union U4){.n = 1}; // expected-warning {{reading a non-constexpr compound literal}}
+constexpr int C5 = (int){C1};               // expected-error {{constexpr variable 'C5' must be initialized by a constant expression}}
+static_assert(C2 == 1 && C3.n == 1 && C4.n == 1);
+
+constexpr struct S12 C6 = (struct S12){C1};    // expected-error {{constexpr variable 'C6' must be initialized by a constant expression}}
+constexpr union U4 C7 = (union U4){.n = C1};   // expected-error {{constexpr variable 'C7' must be initialized by a constant expression}}
+constexpr int C8 = (int){(int){C1}};           // expected-error {{constexpr variable 'C8' must be initialized by a constant expression}}
+constexpr int C9 = 1;
+constexpr int C10 = (int){C9};                 // expected-warning {{reading a non-constexpr compound literal}}
+constexpr int C11 = (constexpr int){C9};
+constexpr int C12 = (constexpr int){(int){C1}}; // expected-error {{initializer of compound literal must be a constant expression}}
+static_assert(C10 == 1 && C11 == 1);
+
+void compound_literals(int value) {
+  constexpr int a = (int){1};                // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr struct S12 b = (struct S12){1};  // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr union U4 c = (union U4){.n = 1}; // expected-warning {{reading a non-constexpr compound literal}}
+  constexpr int d = (int){C1};               // expected-error {{constexpr variable 'd' must be initialized by a constant expression}}
+  (void)(constexpr int){(int){1}};           // expected-warning {{reading a non-constexpr compound literal}}
+  (void)(constexpr int){(static int){1}};    // expected-warning {{reading a non-constexpr compound literal}}
+  static_assert(a == 1 && b.n == 1 && c.n == 1);
+
+  const int e = 1;
+  constexpr int f = (int){e};                // expected-error {{constexpr variable 'f' must be initialized by a constant expression}}
+  constexpr struct S12 g = (struct S12){e};  // expected-error {{constexpr variable 'g' must be initialized by a constant expression}}
+  constexpr union U4 h = (union U4){.n = e}; // expected-error {{constexpr variable 'h' must be initialized by a constant expression}}
+  constexpr int i = (int){(int){e}};         // expected-error {{constexpr variable 'i' must be initialized by a constant expression}}
+
+  constexpr int j = (int){1} + e;                           // expected-error {{constexpr variable 'j' must be initialized by a constant expression}}
+  constexpr int k = __builtin_constant_p((int){e}) + e;     // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
+  constexpr int l = __builtin_constant_p((int){value}) + e; // expected-error {{constexpr variable 'l' must be initialized by a constant expression}}
+  constexpr int m = (int){(int){value}};                    // expected-error {{constexpr variable 'm' must be initialized by a constant expression}}
+}
+
+void complex_initializers(int value) {
+  constexpr _Complex float a = 16777217;                    // expected-error {{not exactly representable}}
+  constexpr _Complex float b = 0.1;                         // expected-error {{not exactly representable}}
+  constexpr _Complex float c = __builtin_complex(0.1, 0.5); // expected-error {{not exactly representable}}
+  constexpr _Complex float d = __builtin_complex(0.5, 0.1); // expected-error {{not exactly representable}}
+  constexpr _Complex float e = __builtin_complex(0.5, 0.25);
+  constexpr _Complex float f = (float)0.1;
+  constexpr _Complex float g = (_Complex float)__builtin_complex(0.1, 0.2);
+  constexpr _Complex double h = e;
+  constexpr _Complex float i = h;
+  constexpr _Complex float j = INF;
+  constexpr _Complex float k = DBL_NAN;
+  constexpr _Complex float l = FLT_SNAN;
+  constexpr _Complex double m = FLT_SNAN;                   // expected-error {{not exactly representable}}
+  constexpr _Complex double n = __builtin_complex(FLT_SNAN, 0.0f);
+
+  (void)(constexpr _Complex float){16777217};               // expected-error {{not exactly representable}}
+  (void)(constexpr _Complex float){__builtin_complex(0.5, 0.25)};
+
+  struct S { _Complex float a; };
+  constexpr struct S o = {0.1};                             // expected-error {{not exactly representable}}
+  constexpr _Complex float p = 0.5 ? 16777217 : 0;          // expected-error {{not exactly representable}}
+  constexpr _Complex float q = 0.5 ? 1 : 0;
+  constexpr float r = 0.5 ? 16777217 : 0;                   // expected-error {{not exactly representable}}
+  constexpr float s = 0.5 ? 1 : 0;
+  constexpr _Complex float t = (long)&complex_initializers; // expected-error {{must be initialized by a constant expression}} \
+                                                            // expected-note {{this conversion is not allowed in a constant expression}}
+
+  constexpr _Complex float u = __builtin_constant_p(value) ? 0 : 16777217; // expected-error {{not exactly representable}}
+  constexpr _Complex float v = __builtin_constant_p(value) ? 0 : 1;
+}

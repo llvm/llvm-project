@@ -2182,13 +2182,27 @@ CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
 }
 
 LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
-  if (e->isFileScope()) {
-    cgm.errorNYI(e->getSourceRange(), "emitCompoundLiteralLValue: FileScope");
-    return {};
-  }
-
   if (e->getType()->isVariablyModifiedType())
     emitVariablyModifiedType(e->getType());
+
+  if (e->hasGlobalStorage()) {
+    ConstantEmitter emitter(*this);
+    cir::GlobalOp global = emitter.tryEmitGlobalCompoundLiteral(e);
+    if (!global) {
+      return makeNaturalAlignAddrLValue(
+          getUndefConstant(
+              getLoc(e->getSourceRange()),
+              builder.getPointerTo(convertTypeForMem(e->getType()))),
+          e->getType());
+    }
+
+    mlir::Value addr = builder.createGetGlobal(getLoc(e->getSourceRange()),
+                                               global, e->hasThreadStorage());
+    return makeAddrLValue(
+        Address(addr, global.getSymType(),
+                getContext().getTypeAlignInChars(e->getType())),
+        e->getType(), AlignmentSource::Decl);
+  }
 
   Address declPtr = createMemTemp(e->getType(), getLoc(e->getSourceRange()),
                                   ".compoundliteral");

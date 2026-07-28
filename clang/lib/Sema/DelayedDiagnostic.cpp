@@ -68,6 +68,7 @@ void DelayedDiagnostic::Destroy() {
     break;
 
   case ForbiddenType:
+  case ForbiddenStatic:
     break;
   }
 }
