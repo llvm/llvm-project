@@ -5112,16 +5112,13 @@ static void TryListInitialization(Sema &S,
       // of the assignment-expression as specified by the form of the
       // initializer. ...
       //
-      // This is a special case not following list-initialization, valid
-      // only when DestType was deduced from the initializer (the 'auto'
-      // case). A decomposition declared with an explicit, non-'auto' type
-      // is ill-formed (diagnosed elsewhere) and may still reach here with a
-      // DestType that doesn't match the initializer's array type, so check
-      // that instead of asserting it.
+      // This is a special case not following list-initialization.
       if (isa<ConstantArrayType>(DestAT) &&
           Entity.getKind() == InitializedEntity::EK_Variable &&
-          isa<DecompositionDecl>(Entity.getDecl()) &&
-          S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType)) {
+          isa<DecompositionDecl>(Entity.getDecl())) {
+        assert(
+            S.Context.hasSameUnqualifiedType(SubInit[0]->getType(), DestType) &&
+            "Deduced to other type?");
         assert(Kind.getKind() == clang::InitializationKind::IK_DirectList &&
                "List-initialize structured bindings but not "
                "direct-list-initialization?");

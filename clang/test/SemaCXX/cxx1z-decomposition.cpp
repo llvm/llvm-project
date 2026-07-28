@@ -229,10 +229,9 @@ namespace by_value_array_copy {
     auto [d] = T{};
   }
 
-  // A structured binding declared with an explicit (non-'auto') array type is
-  // ill-formed; it must be diagnosed and marked invalid rather than reaching
-  // the by-value array-copy path (which used to crash). Only the "must be
-  // 'auto'" error is expected.
+  // A structured binding cannot be declared with an explicit array type: the
+  // array type it binds to is deduced from the initializer. Such an ill-formed
+  // declaration must not be initialized, so only one error is expected here.
   typedef int array_type[3];
   void explicit_array_type() {
     int arr[4]{1, 2, 3, 4};
