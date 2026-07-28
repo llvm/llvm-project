@@ -167,6 +167,7 @@ public:
   MaybeExpr Analyze(const parser::AllocateObject &);
   MaybeExpr Analyze(const parser::PointerObject &);
   MaybeExpr Analyze(const parser::ConditionalExpr &);
+  MaybeExpr Analyze(const parser::AllocateShapeSpecListOrBounds &x);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -511,6 +512,10 @@ public:
   }
   bool Pre(const parser::PointerObject &x) {
     AnalyzeAndNoteUses(x, /*isDefinition=*/true);
+    return false;
+  }
+  bool Pre(const parser::AllocateShapeSpecListOrBounds &x) {
+    exprAnalyzer_.Analyze(x);
     return false;
   }
   bool Pre(const parser::DataStmtObject &);

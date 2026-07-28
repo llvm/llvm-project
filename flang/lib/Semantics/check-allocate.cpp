@@ -47,6 +47,7 @@ public:
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
       : allocateInfo_{info}, allocation_{alloc},
         allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
+        isArray(IsArray(alloc)),
         allocateShapeSpecRank_{ShapeSpecRank(alloc)},
         allocateCoarraySpecRank_{CoarraySpecRank(alloc)} {}
 
@@ -57,9 +58,15 @@ private:
   bool hasAllocateCoarraySpec() const { return allocateCoarraySpecRank_ != 0; }
   bool RunCoarrayRelatedChecks(SemanticsContext &) const;
 
-  static int ShapeSpecRank(const parser::Allocation &allocation) {
+  static bool IsArray(const parser::Allocation &allocation) {
+    const auto &listOrBounds{std::get<parser::AllocateShapeSpecListOrBounds>(allocation.t)};
+    return std::get_if<parser::AllocateShapeBoundsSpec>(&listOrBounds.u);
+  }
+
+  int ShapeSpecRank(const parser::Allocation &allocation) {
+    if(isArray) return 1; // just need hasAllocateShapeSpecList to return false
     return static_cast<int>(
-        std::get<std::list<parser::AllocateShapeSpec>>(allocation.t).size());
+        std::get<std::list<parser::AllocateShapeSpec>>(std::get<parser::AllocateShapeSpecListOrBounds>(allocation.t).u).size());
   }
 
   static int CoarraySpecRank(const parser::Allocation &allocation) {
@@ -91,6 +98,7 @@ private:
   AllocateCheckerInfo &allocateInfo_;
   const parser::Allocation &allocation_;
   const parser::AllocateObject &allocateObject_;
+  const bool isArray{false};
   const int allocateShapeSpecRank_{0};
   const int allocateCoarraySpecRank_{0};
   const parser::Name &name_{parser::GetLastName(allocateObject_)};
@@ -600,6 +608,10 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       }
     } else {
       // explicit shape-spec-list
+      if(isArray) {
+        context.Say("TODO: AllocateShapeBoundsSpec semantic checks in check-allocate.cpp"_err_en_US);
+        return false;
+      }
       if (allocateShapeSpecRank_ != rank_) {
         context
             .Say(name_.source,
@@ -612,7 +624,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
               static_cast<std::size_t>(allocateShapeSpecRank_)) {
         std::size_t j{0};
         for (const auto &shapeSpec :
-            std::get<std::list<parser::AllocateShapeSpec>>(allocation_.t)) {
+            std::get<std::list<parser::AllocateShapeSpec>>(std::get<parser::AllocateShapeSpecListOrBounds>(allocation_.t).u)) {
           if (j >= allocateInfo_.sourceExprShape->size()) {
             break;
           }
