@@ -1,0 +1,71 @@
+//===--- NVPTXTargetParser.def - NVPTX target data -----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is the single source of truth for the NVPTX (CUDA) GPU list. Each
+// row describes one virtual architecture (sm_XX). Adding a new target is a
+// single row here.
+//
+//   NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)
+//     NAME     - Canonical processor name string, e.g. "sm_90".
+//     KIND     - GPUKind enumerator suffix; the enumerator is GK_<KIND>
+//     VIRTUAL  - Virtual (compute_) arch name string, e.g. "compute_90".
+//     SM_ID    - Numeric compute-capability id (sm_90 -> 900).
+//     MIN_VER  - Earliest supporting CudaVersion
+//     MAX_VER  - Latest supporting CudaVersion.
+//     SUFFIX   - Arch suffix class: NONE, ACCELERATED (sm_90a), FAMILY (sm_90f).
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef NVPTX_GPU
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)
+#endif
+
+NVPTX_GPU("sm_20",   SM_20,   "compute_20",   200,  CUDA_70,  CUDA_80,  NONE)
+NVPTX_GPU("sm_21",   SM_21,   "compute_20",   210,  CUDA_70,  CUDA_80,  NONE)
+NVPTX_GPU("sm_30",   SM_30,   "compute_30",   300,  CUDA_70,  CUDA_102, NONE)
+
+// SM_32_ carries a trailing underscore to dodge a sys/mac.h macro clash on AIX
+NVPTX_GPU("sm_32",   SM_32_,  "compute_32",   320,  CUDA_70,  CUDA_102, NONE)
+NVPTX_GPU("sm_35",   SM_35,   "compute_35",   350,  CUDA_70,  CUDA_118, NONE)
+NVPTX_GPU("sm_37",   SM_37,   "compute_37",   370,  CUDA_70,  CUDA_118, NONE)
+NVPTX_GPU("sm_50",   SM_50,   "compute_50",   500,  CUDA_70,  NEW,      NONE)
+NVPTX_GPU("sm_52",   SM_52,   "compute_52",   520,  CUDA_70,  NEW,      NONE)
+NVPTX_GPU("sm_53",   SM_53,   "compute_53",   530,  CUDA_70,  NEW,      NONE)
+NVPTX_GPU("sm_60",   SM_60,   "compute_60",   600,  CUDA_80,  NEW,      NONE)
+NVPTX_GPU("sm_61",   SM_61,   "compute_61",   610,  CUDA_80,  NEW,      NONE)
+NVPTX_GPU("sm_62",   SM_62,   "compute_62",   620,  CUDA_80,  NEW,      NONE)
+NVPTX_GPU("sm_70",   SM_70,   "compute_70",   700,  CUDA_90,  NEW,      NONE)
+NVPTX_GPU("sm_72",   SM_72,   "compute_72",   720,  CUDA_91,  NEW,      NONE)
+NVPTX_GPU("sm_75",   SM_75,   "compute_75",   750,  CUDA_100, NEW,      NONE)
+NVPTX_GPU("sm_80",   SM_80,   "compute_80",   800,  CUDA_110, NEW,      NONE)
+NVPTX_GPU("sm_86",   SM_86,   "compute_86",   860,  CUDA_111, NEW,      NONE)
+NVPTX_GPU("sm_87",   SM_87,   "compute_87",   870,  CUDA_114, NEW,      NONE)
+NVPTX_GPU("sm_88",   SM_88,   "compute_88",   880,  CUDA_130, NEW,      NONE)
+NVPTX_GPU("sm_89",   SM_89,   "compute_89",   890,  CUDA_118, NEW,      NONE)
+NVPTX_GPU("sm_90",   SM_90,   "compute_90",   900,  CUDA_118, NEW,      NONE)
+NVPTX_GPU("sm_90a",  SM_90a,  "compute_90a",  900,  CUDA_120, NEW,      ACCELERATED)
+NVPTX_GPU("sm_100",  SM_100,  "compute_100",  1000, CUDA_128, NEW,      NONE)
+NVPTX_GPU("sm_100a", SM_100a, "compute_100a", 1000, CUDA_128, NEW,      ACCELERATED)
+NVPTX_GPU("sm_100f", SM_100f, "compute_100f", 1000, CUDA_129, NEW,      FAMILY)
+NVPTX_GPU("sm_101",  SM_101,  "compute_101",  1010, CUDA_128, CUDA_129, NONE)
+NVPTX_GPU("sm_101a", SM_101a, "compute_101a", 1010, CUDA_128, CUDA_129, ACCELERATED)
+NVPTX_GPU("sm_101f", SM_101f, "compute_101f", 1010, CUDA_129, CUDA_129, FAMILY)
+NVPTX_GPU("sm_103",  SM_103,  "compute_103",  1030, CUDA_129, NEW,      NONE)
+NVPTX_GPU("sm_103a", SM_103a, "compute_103a", 1030, CUDA_129, NEW,      ACCELERATED)
+NVPTX_GPU("sm_103f", SM_103f, "compute_103f", 1030, CUDA_129, NEW,      FAMILY)
+NVPTX_GPU("sm_110",  SM_110,  "compute_110",  1100, CUDA_130, NEW,      NONE)
+NVPTX_GPU("sm_110a", SM_110a, "compute_110a", 1100, CUDA_130, NEW,      ACCELERATED)
+NVPTX_GPU("sm_110f", SM_110f, "compute_110f", 1100, CUDA_130, NEW,      FAMILY)
+NVPTX_GPU("sm_120",  SM_120,  "compute_120",  1200, CUDA_128, NEW,      NONE)
+NVPTX_GPU("sm_120a", SM_120a, "compute_120a", 1200, CUDA_128, NEW,      ACCELERATED)
+NVPTX_GPU("sm_120f", SM_120f, "compute_120f", 1200, CUDA_129, NEW,      FAMILY)
+NVPTX_GPU("sm_121",  SM_121,  "compute_121",  1210, CUDA_129, NEW,      NONE)
+NVPTX_GPU("sm_121a", SM_121a, "compute_121a", 1210, CUDA_129, NEW,      ACCELERATED)
+NVPTX_GPU("sm_121f", SM_121f, "compute_121f", 1210, CUDA_129, NEW,      FAMILY)
+
+#undef NVPTX_GPU
