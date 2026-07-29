@@ -22,6 +22,15 @@ contains
     i = 'a'
     return
   end function
+
+  ! TO is the pre-5.2 spelling of ENTER, so INDIRECT is accepted with it too.
+  function func2() result(i)
+    !CHECK-52: !$OMP DECLARE TARGET TO(func2) INDIRECT(.true._4)
+    !$omp declare target to(func2) indirect(.true.)
+    character(1) :: i
+    i = 'b'
+    return
+  end function
 end module
 
 program main

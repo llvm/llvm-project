@@ -35,7 +35,8 @@ static constexpr llvm::StringRef indirectCallLookupName =
 
 namespace {
 class IndirectCallLookupPass
-    : public flangomp::impl::IndirectCallLookupPassBase<IndirectCallLookupPass> {
+    : public flangomp::impl::IndirectCallLookupPassBase<
+          IndirectCallLookupPass> {
 public:
   void runOnOperation() override {
     mlir::ModuleOp module = getOperation();
@@ -59,8 +60,8 @@ public:
     mlir::MLIRContext *ctx = &getContext();
     mlir::OpBuilder builder(ctx);
 
-    // A function value lowers to a pointer, so an opaque `() -> ()` type matches
-    // the runtime function's ptr argument and result.
+    // A function value lowers to a pointer, so an opaque `() -> ()` type
+    // matches the runtime function's ptr argument and result.
     auto opaqueFnTy = mlir::FunctionType::get(ctx, {}, {});
 
     // Declare the runtime lookup function once.
