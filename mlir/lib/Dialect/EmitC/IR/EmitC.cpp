@@ -263,26 +263,37 @@ LogicalResult AddOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AssignOp
+// Assignment operations
 //===----------------------------------------------------------------------===//
 
-/// The assign op requires that the assigned value's type matches the
-/// assigned-to variable type.
-LogicalResult emitc::AssignOp::verify() {
-  TypedValue<emitc::LValueType> variable = getVar();
+template <typename AssignmentOp>
+static LogicalResult verifyAssignmentOp(AssignmentOp op) {
+  TypedValue<emitc::LValueType> variable = op.getVar();
 
   if (!variable.getDefiningOp())
-    return emitOpError() << "cannot assign to block argument";
+    return op.emitOpError() << "cannot assign to block argument";
 
-  Type valueType = getValue().getType();
+  Type valueType = op.getValue().getType();
   Type variableType = variable.getType().getValueType();
   if (variableType != valueType)
-    return emitOpError() << "requires value's type (" << valueType
-                         << ") to match variable's type (" << variableType
-                         << ")\n  variable: " << variable
-                         << "\n  value: " << getValue() << "\n";
+    return op.emitOpError() << "requires value's type (" << valueType
+                            << ") to match variable's type (" << variableType
+                            << ")\n  variable: " << variable
+                            << "\n  value: " << op.getValue() << "\n";
   return success();
 }
+
+LogicalResult emitc::AssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::AddAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::SubAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::MulAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::DivAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::RemAssignOp::verify() { return verifyAssignmentOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -304,6 +315,19 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
        emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
       (emitc::isIntegerIndexOrOpaqueType(output) ||
        emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
+}
+
+Speculation::Speculatability emitc::CastOp::getSpeculatability() {
+  return getPure() ? Speculation::Speculatable : Speculation::NotSpeculatable;
+}
+
+void emitc::CastOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (getPure())
+    return;
+
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1715,14 +1739,6 @@ LogicalResult FieldOp::verify() {
 //===----------------------------------------------------------------------===//
 // GetFieldOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult GetFieldOp::verify() {
-  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
-  if (!parentClassOp.getOperation())
-    return emitOpError(" must be nested within an emitc.class operation");
-
-  return success();
-}
 
 LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();

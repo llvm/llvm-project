@@ -3007,6 +3007,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsAcrossEmptyLines) {
                Style);
 }
 
+TEST_F(FormatTestComments, OverEmptyLinesBreaksAlignmentAtBlockBoundaries) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.AlignTrailingComments.Kind, FormatStyle::TCAS_Always);
+  Style.AlignTrailingComments.OverEmptyLines = 3;
+  Style.AllowShortFunctionsOnASingleLine = {};
+
+  verifyNoChange("void f() {\n"
+                 "  int a; /* e */\n"
+                 "}\n"
+                 "/* c */\n"
+                 "void g() {\n"
+                 "  int b;    /* f */\n"
+                 "  int abcd; /* g */\n"
+                 "}",
+                 Style);
+
+  verifyFormat("void f() {\n"
+               "  int a; /* e */\n"
+               "}\n"
+               "void g() {\n"
+               "  int b;    /* f */\n"
+               "  int abcd; /* g */\n"
+               "}",
+               Style);
+
+  verifyFormat("struct A {\n"
+               "  int a; /* e */\n"
+               "};\n"
+               "int i; /* comment */\n"
+               "struct M {\n"
+               "  int b;    /* f */\n"
+               "  int abcd; /* g */\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
@@ -3057,6 +3093,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                "namespace ns {\n"
                "int i;\n"
                "int j;\n"
+               "}",
+               Style);
+
+  // Move comments along, when it appears, that the indentation changed when a
+  // scope has been added or removed.
+  verifyFormat("void func() {\n"
+               "  int i;\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "}",
+               "void func() {\n"
+               "    int i;\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "    int i;\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // non-trailing comment\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "     // non-trailing comment\n"
+               "    int i;\n"
                "}",
                Style);
 

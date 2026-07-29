@@ -66,6 +66,10 @@ public:
                                           cir::LangAddressSpace::Default);
   }
 
+  virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
+    return nullptr;
+  }
+
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
   /// convention or the non-variadic convention.

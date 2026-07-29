@@ -73,9 +73,9 @@ public:
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // Specialized in __tree & __hash_table for their _NodeType.
 template <class _NodeType, class _Alloc>
@@ -169,7 +169,9 @@ template <class _NodeType, class _Derived>
 struct __set_node_handle_specifics {
   typedef typename _NodeType::__node_value_type value_type;
 
-  _LIBCPP_HIDE_FROM_ABI value_type& value() const { return static_cast<_Derived const*>(this)->__ptr_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_type& value() const {
+    return static_cast<_Derived const*>(this)->__ptr_->__get_value();
+  }
 };
 
 template <class _NodeType, class _Derived>
@@ -200,9 +202,9 @@ struct __insert_return_type {
   _NodeType node;
 };
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

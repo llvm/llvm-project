@@ -8,6 +8,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 
+#include <stddef.h> // size_t
+
 #include "hdr/stdint_proxy.h"                // SIZE_MAX
 #include "src/__support/macros/attributes.h" // LIBC_INLINE_VAR
 #include "src/__support/macros/is_defined.h"
@@ -15,8 +17,6 @@
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "src/string/memory_utils/utils.h"
-
-#include <stddef.h> // size_t
 
 #ifdef LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
 #error LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
@@ -27,7 +27,6 @@
 #endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace x86 {
 
 LIBC_INLINE_VAR constexpr size_t K_ONE_CACHELINE = 64;
@@ -53,6 +52,19 @@ LIBC_INLINE_VAR constexpr size_t K_NTA_THRESHOLD = 0;
 #endif
 LIBC_INLINE_VAR constexpr size_t K_REP_MOVSB_THRESHOLD =
     LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
+
+// The code using __m256i is if constexpr unreachable, but not entirely #if'd
+// out to avoid bitrot when compiling all the permutations.  However, the
+// __m256i type doesn't exist at all without AVX and an unknown type name can't
+// appear even in an if constexpr unreachable context.  So define an alias or
+// stub type to use in the AVX-specific code below.
+#ifdef __AVX__
+using m256i = __m256i;
+#else
+struct alignas(32) m256i {
+  uint64_t x[256 / 64];
+};
+#endif
 
 } // namespace x86
 
@@ -159,12 +171,13 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
     if (count >= x86::K_NTA_THRESHOLD) {
       while (offset + K_THREE_CACHELINES + 64 <= count) {
         for (size_t i = 0; i < 3; ++i, offset += K_ONE_CACHELINE) {
-          generic::stream(dst + offset, generic::load<__m256i>(src + offset));
+          generic::stream(dst + offset,
+                          generic::load<x86::m256i>(src + offset));
           generic::stream(dst + offset + 32,
-                          generic::load<__m256i>(src + offset + 32));
+                          generic::load<x86::m256i>(src + offset + 32));
         }
       }
-      generic::fence<__m256i>();
+      generic::fence<x86::m256i>();
       need_prefetch_run = false;
     }
   }
@@ -190,15 +203,10 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
-#if defined(__AVX512F__)
-  constexpr size_t VECTOR_SIZE = 64;
-#elif defined(__AVX__)
-  constexpr size_t VECTOR_SIZE = 32;
-#elif defined(__SSE2__)
-  constexpr size_t VECTOR_SIZE = 16;
-#else
-  constexpr size_t VECTOR_SIZE = 8;
-#endif
+  constexpr size_t VECTOR_SIZE = x86::K_AVX512_F ? 64
+                                 : x86::K_AVX    ? 32
+                                 : x86::K_SSE2   ? 16
+                                                 : 8;
   if (count == 0)
     return;
   if (count == 1)

@@ -275,7 +275,7 @@ def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
 >;
 
 def SIlds : SDNode<"AMDGPUISD::LDS",
-  SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
+  SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0,1>]>
 >;
 
 def SIload_d16_lo : SDNode<"AMDGPUISD::LOAD_D16_LO",
@@ -879,11 +879,6 @@ return CurDAG->getTargetConstant(
 def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def frameindex_to_targetframeindex : SDNodeXForm<frameindex, [{
-  auto FI = cast<FrameIndexSDNode>(N);
-  return CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i32);
 }]>;
 
 // Copied from the AArch64 backend:
@@ -3576,22 +3571,15 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
 
-// Instructions eligible to be the first (X) instruction in Dual Issue VALU
-// (VOPD) encoding. Consumed by buildVOPDXYLookup() to build a direct lookup
-// table; no helper is generated.
-def VOPDXTable : GenericTable {
-  let FilterClass = "VOPDX";
+// Direct lookup table for VOPDXY eligibility, indexed by the packed
+// (VOPDOp << 5) | (Subtarget << 1) | VOPD3 key.
+def VOPDXYTable : GenericTable {
+  let FilterClass = "VOPDXY";
   let CppTypeName = "VOPDXYInfo";
-  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
-}
-
-// Instructions eligible to be the second (Y) instruction in Dual Issue VALU
-// (VOPD) encoding. Consumed by buildVOPDXYLookup() to build a direct lookup
-// table; no helper is generated.
-def VOPDYTable : GenericTable {
-  let FilterClass = "VOPDY";
-  let CppTypeName = "VOPDXYInfo";
-  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
+  let Fields = ["VOPDXYKey", "IsX", "IsY"];
+  let PrimaryKey = ["VOPDXYKey"];
+  let PrimaryKeyName = "getVOPDXYInfo";
+  let DisallowSparseTable = false;
 }
 
 include "SIInstructions.td"

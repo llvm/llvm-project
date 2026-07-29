@@ -134,7 +134,7 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ROTR, MVT::i32, Legal);
 
   setOperationAction(ISD::Constant, MVT::i32, Legal);
-  setOperationAction(ISD::UNDEF, MVT::i32, Legal);
+  setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::i32, Legal);
 
   // Need multiplier
   setOperationAction(ISD::MUL, MVT::i32, Legal);
@@ -236,6 +236,7 @@ SDValue ARCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ARCISD::GAWRAPPER, SDLoc(N), MVT::i32, GA);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "ARCGenCallingConv.inc"
 
 //===----------------------------------------------------------------------===//

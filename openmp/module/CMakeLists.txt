@@ -26,14 +26,13 @@ if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   target_compile_options(libomp-mod PRIVATE -fno-range-check)
 endif ()
 
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+if (LIBOMP_TARGET_IS_GPU)
   target_compile_options(libomp-mod PRIVATE
     $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
   )
 endif ()
 
 flang_module_target(libomp-mod PUBLIC)
-add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
 
 install(FILES
   "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h"
