@@ -2,7 +2,8 @@
 Test lldb-dap evaluate request
 """
 
-from typing import Optional
+import re
+from typing import Optional, Union
 
 from lldbsuite.test.decorators import skipIfWindows
 from lldbsuite.test.lldbtest import line_number
@@ -35,7 +36,9 @@ class TestDAP_evaluate(DAPTestCaseBase):
         context_parses_expressions = context != "hover"
         session = self.build_and_create_session()
 
-        def assert_eval(expression: str, matches: str, *, as_hex=False, **expects):
+        def assert_eval(
+            expression: str, matches: Union[str, re.Pattern], *, as_hex=False, **expects
+        ):
             fmt = ValueFormat(hex=True) if as_hex else None
             if eval_frame := self._eval_frame:
                 body = eval_frame.evaluate(expression, context=context, format=fmt)
@@ -43,7 +46,6 @@ class TestDAP_evaluate(DAPTestCaseBase):
                 body = session.evaluate(expression, context=context, format=fmt)
             expects.setdefault("has_mem_ref", True)
             session.verify_evaluate(body, ExpectEval(matches=matches, **expects))
-            return body
 
         def assert_eval_fails(expression: str):
             frame_id = self._eval_frame.id if self._eval_frame else None
@@ -54,14 +56,14 @@ class TestDAP_evaluate(DAPTestCaseBase):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
         breakpoint_lines = [
-            line_number(source, f"// breakpoint 1"),
-            line_number(source, f"// breakpoint 2"),
-            line_number(source, f"// breakpoint 3"),
-            line_number(source, f"// breakpoint 4"),
-            line_number(source, f"// breakpoint 5"),
-            line_number(source, f"// breakpoint 6"),
-            line_number(source, f"// breakpoint 7"),
-            line_number(source, f"// breakpoint 8"),
+            line_number(source, "// breakpoint 1"),
+            line_number(source, "// breakpoint 2"),
+            line_number(source, "// breakpoint 3"),
+            line_number(source, "// breakpoint 4"),
+            line_number(source, "// breakpoint 5"),
+            line_number(source, "// breakpoint 6"),
+            line_number(source, "// breakpoint 7"),
+            line_number(source, "// breakpoint 8"),
         ]
 
         launch = LaunchArgs(
