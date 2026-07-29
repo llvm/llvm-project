@@ -1441,8 +1441,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   bool rhsHasDeviceOnly{rhsNbSymbols > rhsNbManagedSymbols};
 
   // Assignments done on the host, with no copy.
-  // - A whole allocatable left-hand side with no device data. The assignment may
-  //   reallocate it, which is done on the host.
+  // - A whole allocatable left-hand side with no device data. The assignment
+  //   may reallocate it, which is done on the host.
   // - A managed left-hand side with no whole managed array on either side. Only
   //   sections and elements are involved, and the host reads and writes them in
   //   place.
