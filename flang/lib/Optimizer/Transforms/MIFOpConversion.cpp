@@ -1581,9 +1581,9 @@ struct MIFEventPostOpConversion
                 "allocatable or pointer component of a coarray.");
 
     mlir::Value offset = builder.createTemporary(loc, i64Ty);
-    mlir::Value zero = computeOffsetInBytes(builder, loc, mod, dl,
+    mlir::Value offset_val = computeOffsetInBytes(builder, loc, mod, dl,
                                             typeConverter, op.getEvent());
-    fir::StoreOp::create(builder, loc, zero, offset);
+    fir::StoreOp::create(builder, loc, offset_val, offset);
 
     mlir::Value coarrayHandle = getCoarrayHandle(builder, loc, op.getEvent());
     mlir::Value imageNum =
