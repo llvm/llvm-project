@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Gnu.h"
 #include "NetBSD.h"
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
+#include "Gnu.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
