@@ -36,11 +36,12 @@ enum GPUKind : uint32_t {
   GK_NONE = 0,
 
 #define R600_GPU(NAME, ENUM, FEATURES) ENUM,
-#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
-#include "AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
+#define AMDGPU_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 
-  GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
-  GK_AMDGCN_GENERIC_LAST = GK_GFX13_GENERIC,
+  GK_AMDGPU_GENERIC_FIRST = GK_GFX9_GENERIC,
+  GK_AMDGPU_GENERIC_LAST = GK_GFX13_GENERIC,
 };
 
 /// Instruction set architecture version.
