@@ -55,9 +55,9 @@ using CompiledModelType = RegAllocEvictModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
-#if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
+#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
 #include "llvm/Analysis/EmitCModelRunner.h"
-#include "llvm/CodeGen/RegAllocEvictModelMulti.h"
+#include "llvm/CodeGen/RegAllocEvictModels.h"
 
 enum class MLGORegAllocModelChoice {
   Default,
@@ -406,7 +406,7 @@ public:
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner) {
       if (InteractiveChannelBaseName.empty()) {
-#if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
+#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
         if (SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default) {
           Runner = createMLGORegAllocModelRunner(MF.getFunction().getContext(),
                                                  InputFeatures);
@@ -1066,7 +1066,7 @@ RegAllocEvictionAdvisorProvider *
 llvm::createReleaseModeAdvisorProvider(LLVMContext &Ctx) {
   return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
                  !InteractiveChannelBaseName.empty()
-#if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
+#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
                  ||
                  SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default
 #endif
@@ -1086,7 +1086,7 @@ RegAllocEvictionAdvisorAnalysisLegacy *
 llvm::createReleaseModeAdvisorAnalysisLegacy() {
   return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
                  !InteractiveChannelBaseName.empty()
-#if defined(LLVM_HAVE_EMITC_COMPILE_REGALLOC)
+#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
                  ||
                  SelectedMLGORegAllocModel != MLGORegAllocModelChoice::Default
 #endif

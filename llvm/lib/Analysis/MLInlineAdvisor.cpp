@@ -72,9 +72,9 @@ using CompiledModelType = llvm::InlinerSizeModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
-#if defined(LLVM_HAVE_EMITC_COMPILE_INLINER)
+#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
 #include "llvm/Analysis/EmitCModelRunner.h"
-#include "llvm/Analysis/InlinerSizeModelMulti.h"
+#include "llvm/Analysis/InlinerModels.h"
 
 enum class EmitCModelChoice {
   Default,
@@ -113,7 +113,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                             std::function<bool(CallBase &)> GetDefaultAdvice) {
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty()
-#if defined(LLVM_HAVE_EMITC_COMPILE_INLINER)
+#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
       && SelectedMLGOModel == EmitCModelChoice::Default
 #endif
   )
@@ -122,7 +122,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
       -> std::unique_ptr<MLModelRunner> {
     std::unique_ptr<MLModelRunner> AOTRunner;
     if (InteractiveChannelBaseName.empty()) {
-#if defined(LLVM_HAVE_EMITC_COMPILE_INLINER)
+#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
       if (SelectedMLGOModel != EmitCModelChoice::Default) {
         AOTRunner = createEmitCModelRunner(M.getContext(), InputFeatures);
       } else

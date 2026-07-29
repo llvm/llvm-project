@@ -26,8 +26,8 @@ public:
   template <class FType>
   EmitCModelRunner(LLVMContext &Ctx, const FType &InputSpec)
       : MLModelRunner(Ctx, MLModelRunner::Kind::Release, InputSpec.size()) {
-    for (size_t I = 0; I < InputSpec.size(); ++I)
-      populateTensor(I, InputSpec[I]);
+    for (auto [I, Spec] : llvm::enumerate(InputSpec))
+      populateTensor(I, Spec);
   }
 
   ~EmitCModelRunner() override = default;

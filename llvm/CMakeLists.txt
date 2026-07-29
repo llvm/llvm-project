@@ -1227,7 +1227,7 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
 
-set(LLVM_MLGO_MODELS "" CACHE STRING "List of AOT MLGO models")
+set(LLVM_MLGO_MODELS "" CACHE STRING "List of MLGO models")
 set(LLVM_MLGO_MLIR_OPT "mlir-opt" CACHE STRING "Path or system binary name for mlir-opt")
 set(LLVM_MLGO_MLIR_TRANSLATE "mlir-translate" CACHE STRING "Path or system binary name for mlir-translate")
 
