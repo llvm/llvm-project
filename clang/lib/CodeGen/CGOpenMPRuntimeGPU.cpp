@@ -2267,11 +2267,9 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       !llvm::NVPTX::supportsUnifiedAddressing(llvm::NVPTX::parseArch(CPU))) {
     for (const OMPClause *Clause : D->clauselists()) {
       if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
-        SmallString<256> Buffer;
-        llvm::raw_svector_ostream Out(Buffer);
-        Out << "Target architecture " << CPU
-            << " does not support unified addressing";
-        CGM.Error(Clause->getBeginLoc(), Out.str());
+        CGM.getDiags().Report(Clause->getBeginLoc(),
+                              diag::err_omp_unified_shared_memory_unsupported)
+            << CPU;
         return;
       }
     }
