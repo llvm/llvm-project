@@ -157,7 +157,7 @@ option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc"
 option(LLVM_LIBC_INCLUDE_STARTUP "Build LLVM libc startup objects" ON)
 option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
        "Link hermetic tests against LLVM libc's own startup object"
-       ${LLVM_LIBC_INCLUDE_STARTUP})
+       ON)
 option(LLVM_LIBC_ENABLE_MINOR_VARIANT "Build LLVM libc as a minor variant overlay" OFF)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
