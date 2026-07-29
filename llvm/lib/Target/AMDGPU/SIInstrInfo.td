@@ -70,6 +70,24 @@ def SIreg_load : SDNode<"AMDGPUISD::REG_LOAD", SDTRegIdxLoad,
 def SIreg_store : SDNode<"AMDGPUISD::REG_STORE", SDTRegIdxStore,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// VGPR address space sub-dword (8/16-bit) load/store with dword index. The
+// access is described by the dword index plus the bit position within that
+// dword; the store form carries a pre-shifted value and an insert mask.
+def SDTRegIdxBitsLoad : SDTypeProfile<1, 4,
+    [SDTCisInt<0>,       // result (i32 or i16)
+     SDTCisVT<1, i32>,   // dword_index
+     SDTCisVT<2, i32>,   // bitsize
+     SDTCisVT<3, i32>,   // bitoffset
+     SDTCisVT<4, i32>]>; // is_sext_load
+def SDTRegIdxBitsStore : SDTypeProfile<0, 3,
+    [SDTCisInt<0>,       // data (i32 or i16), pre-shifted insert value
+     SDTCisVT<1, i32>,   // dword_index
+     SDTCisVT<2, i32>]>; // insert mask
+def SIreg_load_bits : SDNode<"AMDGPUISD::REG_LOAD_BITS", SDTRegIdxBitsLoad,
+                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def SIreg_store_bits : SDNode<"AMDGPUISD::REG_STORE_BITS", SDTRegIdxBitsStore,
+                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc

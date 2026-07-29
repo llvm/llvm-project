@@ -229,6 +229,9 @@ extern char &AMDGPURegBankLegalizeID;
 void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
 
+void initializeAMDGPULowerIdxOpsLegacyPass(PassRegistry &);
+extern char &AMDGPULowerIdxOpsID;
+
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
 extern char &SILowerSGPRSpillsLegacyID;
 
@@ -441,6 +444,13 @@ class AMDGPUMarkLastScratchLoadPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &AM);
+};
+
+class AMDGPULowerIdxOpsPass
+    : public RequiredPassInfoMixin<AMDGPULowerIdxOpsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class SIInsertWaitcntsPass

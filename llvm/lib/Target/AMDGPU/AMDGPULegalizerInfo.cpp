@@ -560,12 +560,20 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 }
 
 // Whether the VGPR ("as memory") load/store lowering handles a MemSize-bit
-// memory access producing/consuming a ValSize-bit value. Only whole-dword
-// accesses (those with a matching V_LOAD_IDX/V_STORE_IDX pseudo) are supported
-// for now; sub-dword (8/16-bit) support lands later.
+// memory access producing/consuming a ValSize-bit value. Whole-dword accesses
+// (those with a matching V_LOAD_IDX/V_STORE_IDX pseudo) are supported, as are
+// 8-/16-bit accesses, including extending loads into a 16- or 32-bit value.
 static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
-  return MemSize == ValSize &&
-         AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
+  if (MemSize == 8 || MemSize == 16) {
+    if (ValSize == MemSize)
+      return true;
+    if (ValSize > MemSize && (ValSize == 16 || ValSize == 32))
+      return true;
+    return false;
+  }
+  if (MemSize != ValSize)
+    return false;
+  return AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
 }
 
 /// Return true if a load or store of the type should be lowered with a bitcast
@@ -1820,6 +1828,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                      {S16, ConstantPtr, S8, GlobalAlign8}})
           .legalIf([=](const LegalityQuery &Query) -> bool {
             return isLoadStoreLegal(ST, Query);
+          })
+          // VGPR ("as memory") extending loads are custom-lowered to
+          // G_AMDGPU_REG_LOAD_BITS. Always take the custom path so an
+          // unsupported access is diagnosed cleanly rather than failing to
+          // legalize.
+          .customIf([=](const LegalityQuery &Query) -> bool {
+            return Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR;
           });
 
   if (ST.hasFlatAddressSpace()) {
@@ -3493,18 +3508,21 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
-/// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into a legal
-/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE indexed by the pointer's dword offset
-/// (pointer >> 2). Parallels the SelectionDAG LowerLoadStoreVGPR.
+/// Lower a G_LOAD / G_STORE / G_SEXTLOAD / G_ZEXTLOAD on AMDGPUAS::VGPR into a
+/// legal G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE (or their _BITS forms for
+/// sub-dword accesses) indexed by the pointer's dword offset (pointer >> 2).
+/// Parallels the SelectionDAG LowerLoadStoreVGPR.
 static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
   MachineMemOperand &MMO = **MI.memoperands_begin();
 
-  const bool IsStore = MI.getOpcode() == AMDGPU::G_STORE;
+  const unsigned Opcode = MI.getOpcode();
+  const bool IsStore = Opcode == AMDGPU::G_STORE;
   Register ValReg = MI.getOperand(0).getReg();
   Register PtrReg = MI.getOperand(1).getReg();
 
+  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
   // The GISel selection patterns for the indexed pseudos - and for the shift /
@@ -3513,26 +3531,123 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   // integer types rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
-  // Only dword-aligned whole-dword, non-extending/non-truncating accesses are
-  // implemented. Reject anything else with a diagnostic instead of failing to
-  // legalize (sub-dword support lands in a later change).
+  // Dword-aligned whole-dword and 8-/16-bit accesses are implemented. Reject
+  // anything else with a diagnostic instead of failing to legalize.
   //
-  // The alignment is checked here rather than in the size predicate: the index
-  // built below is the pointer shifted right by two, which discards the low two
-  // bits rather than accounting for them, so an under-aligned access would
-  // silently reach the dword containing the address instead of the bytes asked
-  // for. That is a property of how the address is formed, not of the size.
-  if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
-                                    ValSize) ||
-      MMO.getAlign() < Align(4)) {
+  // The alignment is checked here rather than in the size predicate, since it
+  // is a property of how the address is formed rather than of the size: a
+  // whole-dword access addresses registers by the dword index pointer >> 2,
+  // which discards the low two bits rather than accounting for them, so an
+  // under-aligned one would silently reach the dword containing the address.
+  // The sub-dword path below computes a bit offset instead, and carries its own
+  // alignment rule.
+  if (!isVGPRLoadStoreSizeSupported(MemSize, ValSize) ||
+      (MemSize >= 32 && MMO.getAlign() < Align(4))) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword loads and stores are implemented",
+        "dword-aligned whole-dword and 8-/16-bit loads and stores are "
+        "implemented",
         MI.getDebugLoc()));
     if (!IsStore)
       B.buildUndef(ValReg);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Handle bytes and aligned shorts. These become a bit-field extract out of
+  // the containing dword (loads), or a read-modify-write of it (stores); see
+  // AMDGPULowerIdxOps.
+  if (MemSize < 32) {
+    assert(MemSize == 8 || MemSize == 16);
+    assert(MemSize <= ValSize && ValSize <= 32);
+
+    // Determine the bit-offset, optimizing the case where the LSBs are
+    // known constant.
+    Register BaseReg = PtrReg;
+    int64_t Offset = 0;
+    if (auto *PtrAdd = getOpcodeDef<GPtrAdd>(PtrReg, MRI)) {
+      if (auto MaybeOff =
+              getIConstantVRegValWithLookThrough(PtrAdd->getOffsetReg(), MRI)) {
+        BaseReg = PtrAdd->getBaseReg();
+        Offset = MaybeOff->Value.getSExtValue();
+      }
+    }
+
+    bool HaveConstantBitOffset = false;
+    int64_t ConstantBitOffsetVal = 0;
+    if (Offset == 0 && MMO.getAlign() >= Align(4)) {
+      HaveConstantBitOffset = true;
+      ConstantBitOffsetVal = 0;
+    } else {
+      auto &VT = *Helper.getValueTracking();
+      KnownBits BaseKB = VT.getKnownBits(BaseReg).trunc(2);
+      if (BaseKB.isConstant()) {
+        Offset += BaseKB.getConstant().getZExtValue();
+        HaveConstantBitOffset = true;
+        ConstantBitOffsetVal = (Offset & 3) * 8;
+      }
+    }
+
+    // Setup common registers.
+    const auto PtrAsInt = B.buildPtrToInt(I32, PtrReg);
+    auto Two = B.buildConstant(I32, 2);
+    const auto Index = B.buildLShr(I32, PtrAsInt, Two);
+
+    const auto BitWidthReg = B.buildConstant(I32, MemSize);
+    Register BitOffsetReg;
+    if (HaveConstantBitOffset) {
+      BitOffsetReg = B.buildConstant(I32, ConstantBitOffsetVal).getReg(0);
+    } else {
+      // V_{LOAD,STORE}_IDX_BITS only care about the low 5 bits of the bit
+      // offset, so masking the high bits is unnecessary.
+      auto Three = B.buildConstant(I32, 3);
+      BitOffsetReg = B.buildShl(I32, PtrAsInt, Three).getReg(0);
+    }
+
+    if (IsStore) {
+      LLT IValTy = LLT::integer(ValSize);
+      Register Value = ValReg;
+      if (IValTy != ValTy)
+        Value = B.buildBitcast(IValTy, Value).getReg(0);
+      if (ValSize != 32)
+        Value = B.buildAnyExt(I32, Value).getReg(0);
+
+      Register ShiftAmt = BitOffsetReg;
+      if (!HaveConstantBitOffset) {
+        auto Mask = B.buildConstant(I32, 31);
+        ShiftAmt = B.buildAnd(I32, BitOffsetReg, Mask).getReg(0);
+      }
+      Value = B.buildShl(I32, Value, ShiftAmt).getReg(0);
+
+      const auto MaskBase = B.buildConstant(I32, (1u << MemSize) - 1);
+      const auto Mask = B.buildShl(I32, MaskBase, ShiftAmt);
+
+      B.buildInstr(AMDGPU::G_AMDGPU_REG_STORE_BITS, {}, {Value, Index, Mask})
+          .addMemOperand(&MMO);
+    } else {
+      const bool IsSExt = Opcode == AMDGPU::G_SEXTLOAD;
+      const auto IsSExtReg = B.buildConstant(I32, IsSExt ? 1 : 0);
+      Register Result =
+          B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD_BITS, {I32},
+                       {Index, BitWidthReg, BitOffsetReg, IsSExtReg})
+              .addMemOperand(&MMO)
+              .getReg(0);
+
+      if (ValTy != I32) {
+        LLT ResultTy = I32;
+        if (ValSize != 32) {
+          ResultTy = LLT::integer(ValSize);
+          Result = B.buildTrunc(ResultTy, Result).getReg(0);
+        }
+        if (ResultTy != ValTy)
+          Result = B.buildBitcast(ValTy, Result).getReg(0);
+      }
+
+      B.buildCopy(ValReg, Result);
+    }
+
     MI.eraseFromParent();
     return true;
   }
@@ -3579,7 +3694,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AddrSpace = PtrTy.getAddressSpace();
 
-  if (AddrSpace == AMDGPUAS::VGPR && MI.getOpcode() == AMDGPU::G_LOAD)
+  // G_LOAD as well as the extending loads (G_SEXTLOAD / G_ZEXTLOAD) are
+  // custom-lowered; the latter only exist for sub-dword accesses.
+  if (AddrSpace == AMDGPUAS::VGPR)
     return lowerLoadStoreVGPR(Helper, MI);
 
   if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {

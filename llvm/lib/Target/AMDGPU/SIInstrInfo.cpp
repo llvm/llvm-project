@@ -11214,7 +11214,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
   // A VGPR ("as memory") indexed load is always divergent: it reads the wave's
   // per-lane view of its vector registers, so even a uniform index yields a
   // per-lane (divergent) value.
-  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD ||
+      Opcode == AMDGPU::G_AMDGPU_REG_LOAD_BITS)
     return ValueUniformity::NeverUniform;
 
   // Loads from the private and flat address spaces are divergent, because
