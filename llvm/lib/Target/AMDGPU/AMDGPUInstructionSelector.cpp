@@ -15,7 +15,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
-#include "AMDGPUMachineInstrs.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -4496,26 +4495,6 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectRegLoadStore(MachineInstr &I) const {
-  // Remember where the selected machine instruction will land.
-  MachineBasicBlock::iterator II = std::next(I.getIterator());
-
-  if (!selectImpl(I, *CoverageInfo))
-    return false;
-
-  // The selected V_LOAD_IDX / V_STORE_IDX expands to an M0-relative move (see
-  // AMDGPULowerVGPREncoding), which clobbers M0 whether it indexes with movrel
-  // or with the VGPR indexing mode. Add an implicit-def of $m0 to record that,
-  // and - because an instruction defining a physical register is not
-  // hoisted/sunk - to keep a divergent access pinned inside its waterfall loop.
-
-  auto *LdStIdx = cast<AMDGPUMI::VLoadStoreIdxInst>(&*std::prev(II));
-  if (LdStIdx->getIdxOp().isReg())
-    LdStIdx->addOperand(MachineOperand::CreateReg(AMDGPU::M0, /*isDef=*/true,
-                                                  /*isImp=*/true));
-  return true;
-}
-
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
 
   if (!I.isPreISelOpcode()) {
@@ -4651,9 +4630,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
     return selectBVHIntersectRayIntrinsic(I);
-  case AMDGPU::G_AMDGPU_REG_LOAD:
-  case AMDGPU::G_AMDGPU_REG_STORE:
-    return selectRegLoadStore(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);

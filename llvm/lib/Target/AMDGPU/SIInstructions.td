@@ -1089,10 +1089,11 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_512, VReg_1024] in {
   // The units of $idx and $offset are in dwords.
   //
-  // VALU adds an implicit $exec use; together with the implicit-def $m0 added
-  // by AdjustInstrPostInstrSelection (see hasPostISelHook), this keeps a
-  // divergent-index access pinned inside its waterfall loop rather than being
-  // hoisted/sunk out.
+  // The index reaches the hardware through M0, so these define it: either by
+  // writing M0 for v_movrel[sd], or through s_set_gpr_idx_on where the subtarget
+  // indexes with the VGPR indexing mode. Declaring that here also keeps a
+  // divergent-index access pinned inside its waterfall loop, since an
+  // instruction defining a physical register is not hoisted or sunk.
   def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
     (outs rc:$data),
     (ins SReg_32:$idx, i32imm:$offset)>,
@@ -1101,7 +1102,7 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
       let VALU = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
-      let hasPostISelHook = 1;
+      let Defs = [M0];
   }
   def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
     (outs),
@@ -1111,7 +1112,7 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
       let VALU = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
-      let hasPostISelHook = 1;
+      let Defs = [M0];
   }
 }
 
