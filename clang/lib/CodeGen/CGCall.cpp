@@ -5856,32 +5856,32 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                 ArgMemory, ArgInfo.getInAllocaFieldIndex());
             Builder.CreateStore(Addr.getPointer(), ArgSlot);
           }
-        } else {
-          RawAddress Addr = I->hasLValue()
-                                ? I->getKnownLValue().getAddress()
-                                : I->getKnownRValue().getAggregateAddress();
-          llvm::Instruction *Placeholder =
-              cast<llvm::Instruction>(Addr.getPointer());
-
-          if (!ArgInfo.getInAllocaIndirect()) {
-            // Replace the placeholder with the appropriate argument slot GEP.
-            CGBuilderTy::InsertPoint IP = Builder.saveIP();
-            Builder.SetInsertPoint(Placeholder);
-            Addr = Builder.CreateStructGEP(ArgMemory,
-                                           ArgInfo.getInAllocaFieldIndex());
-            Builder.restoreIP(IP);
-          } else {
-            // For indirect things such as overaligned structs, replace the
-            // placeholder with a regular aggregate temporary alloca. Store the
-            // address of this alloca into the struct.
-            Addr =
-                CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
-            Address ArgSlot = Builder.CreateStructGEP(
-                ArgMemory, ArgInfo.getInAllocaFieldIndex());
-            Builder.CreateStore(Addr.getPointer(), ArgSlot);
-          }
-          deferPlaceholderReplacement(Placeholder, Addr.getPointer());
+          break;
         }
+        RawAddress Addr = I->hasLValue()
+                              ? I->getKnownLValue().getAddress()
+                              : I->getKnownRValue().getAggregateAddress();
+        llvm::Instruction *Placeholder =
+            cast<llvm::Instruction>(Addr.getPointer());
+
+        if (!ArgInfo.getInAllocaIndirect()) {
+          // Replace the placeholder with the appropriate argument slot GEP.
+          CGBuilderTy::InsertPoint IP = Builder.saveIP();
+          Builder.SetInsertPoint(Placeholder);
+          Addr = Builder.CreateStructGEP(ArgMemory,
+                                         ArgInfo.getInAllocaFieldIndex());
+          Builder.restoreIP(IP);
+        } else {
+          // For indirect things such as overaligned structs, replace the
+          // placeholder with a regular aggregate temporary alloca. Store the
+          // address of this alloca into the struct.
+          Addr =
+              CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
+          Address ArgSlot = Builder.CreateStructGEP(
+              ArgMemory, ArgInfo.getInAllocaFieldIndex());
+          Builder.CreateStore(Addr.getPointer(), ArgSlot);
+        }
+        deferPlaceholderReplacement(Placeholder, Addr.getPointer());
       } else if (ArgInfo.getInAllocaIndirect()) {
         // Make a temporary alloca and store the address of it into the argument
         // struct.
