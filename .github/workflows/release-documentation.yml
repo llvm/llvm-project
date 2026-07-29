@@ -38,6 +38,24 @@ on:
       LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
         description: "Private key for our GitHub App we use for generating access tokens."
         required: true
+  # Run on pull_requests for testing purposes.
+  pull_request:
+    paths:
+      - '.github/workflows/release-documentation.yml'
+      - 'llvm/utils/release/build-docs.sh'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
+  cancel-in-progress: True
 
 jobs:
   # This job checks permissions and validates inputs to prevent potential
@@ -47,9 +65,6 @@ jobs:
   release-man-pages-validate-input:
     name: Release Man Pages Validate Input
     runs-on: ubuntu-24.04
-    environment:
-      name: release
-      deployment: false
     permissions:
       contents: read
     steps:
@@ -58,13 +73,6 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             .github/workflows/
-
-      - name: Check Permissions
-        uses: ./.github/workflows/require-team-membership
-        with:
-          team-slug: llvm-release-managers
-          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
       - name: Validate Input
         uses: ./.github/workflows/validate-release-version
@@ -84,8 +92,6 @@ jobs:
       man-page-tarball-name: ${{ steps.vars.outputs.man-page-tarball-name }}
       man-page-upload: ${{ steps.vars.outputs.man-page-upload }}
       man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
-    env:
-      upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Collect Variables
         id: vars
@@ -155,8 +161,23 @@ jobs:
           name: release-notes
           path: docs-build/html-export/
 
+
+  upload-release-notes:
+    name: "Upload Release Notes"
+    runs-on: ubuntu-24.04
+    environment:
+      deployment: false
+      name: release
+    needs:
+      - release-documentation
+    if: >-
+      github.event_name != 'pull_request' &&
+      inputs.upload &&
+      !contains(inputs.release-version, 'rc')
+    permissions:
+      contents: read
+    steps:
       - name: Clone www-releases
-        if: env.upload
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: ${{ github.repository_owner }}/www-releases
@@ -166,7 +187,6 @@ jobs:
           persist-credentials: false
 
       - name: Upload Release Notes
-        if: env.upload
         env:
           PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
