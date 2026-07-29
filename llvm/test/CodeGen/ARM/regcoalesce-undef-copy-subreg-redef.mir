@@ -11,37 +11,9 @@
 # This focused test starts at the RegisterCoalescer boundary, after that
 # lowering has produced the undef COPY and partial redef sequence.
 
---- |
-  define void @init(i64 %0, i1 %c, ptr %1) {
-    ret void
-  }
-...
 ---
 name:            init
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: dpair }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: dpr }
-  - { id: 7, class: dpr }
-  - { id: 8, class: qpr }
-  - { id: 9, class: dpr }
-  - { id: 11, class: gpr }
-  - { id: 12, class: dpr }
-  - { id: 13, class: dpr }
-  - { id: 14, class: gpr }
-  - { id: 15, class: qpr }
-  - { id: 16, class: dpr }
-  - { id: 17, class: dpr }
-  - { id: 18, class: qpr }
-liveins:
-  - { reg: '$r0', virtual-reg: '%1' }
-  - { reg: '$r1', virtual-reg: '%2' }
-  - { reg: '$r2', virtual-reg: '%3' }
-  - { reg: '$r3', virtual-reg: '%4' }
 body:             |
   ; CHECK-LABEL: name: init
   ; CHECK: bb.0:
@@ -68,7 +40,7 @@ body:             |
   ; CHECK-NEXT:   [[VSETLNi32_:%[0-9]+]].dsub_0:qpr = VSETLNi32 [[VSETLNi32_]].dsub_0, [[MOVi]], 0, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[MOVi1:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   [[VSETLNi32_:%[0-9]+]].dsub_0:qpr = VSETLNi32 [[VSETLNi32_]].dsub_0, [[MOVi1]], 1, 14 /* CC::al */, $noreg
-  ; CHECK-NEXT:   VST1q64 [[COPY]], 0, [[VSETLNi32_]], 14 /* CC::al */, $noreg :: (store (s128) into %ir.1, align 8)
+  ; CHECK-NEXT:   VST1q64 [[COPY]], 0, [[VSETLNi32_]], 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   B %bb.1
   bb.0:
     successors: %bb.1, %bb.2
@@ -107,6 +79,6 @@ body:             |
     %17:dpr = VSETLNi32 %17, killed %14, 1, 14 /* CC::al */, $noreg
     %18:qpr = COPY killed %15
     %18.dsub_0:qpr = COPY killed %17
-    VST1q64 killed %4, 0, killed %18, 14 /* CC::al */, $noreg :: (store (s128) into %ir.1, align 8)
+    VST1q64 killed %4, 0, killed %18, 14 /* CC::al */, $noreg
     B %bb.1
 ...
