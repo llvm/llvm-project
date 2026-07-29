@@ -20,5 +20,5 @@ static_assert(sizeof(0i64) == __SIZEOF_INT64__, "");
 #endif
 
 namespace gh212504 {
-  static_assert(1234i8, "");
+  static_assert(1234i8 == -46, "");
 }
