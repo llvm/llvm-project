@@ -104,21 +104,29 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
-void addSemanticSignatureMD(
-    ArrayRef<llvm::hlsl::SemanticSignatureElement> InputElements,
-    llvm::Function *Fn, llvm::Module &M) {
-  if (InputElements.empty())
-    return;
+MDNode *buildSemanticSignatureMD(
+    ArrayRef<llvm::hlsl::SemanticSignatureElement> Elements, LLVMContext &Ctx) {
+  if (Elements.empty())
+    return nullptr;
 
-  LLVMContext &Ctx = M.getContext();
-  SmallVector<Metadata *> InputElementMD;
-  llvm::transform(InputElements, std::back_inserter(InputElementMD),
+  SmallVector<Metadata *> ElementMD;
+  llvm::transform(Elements, std::back_inserter(ElementMD),
                   [&Ctx](const llvm::hlsl::SemanticSignatureElement &Element) {
                     return Element.toMetadata(Ctx);
                   });
+  return MDNode::get(Ctx, ElementMD);
+}
 
-  MDNode *InputSignature = MDNode::get(Ctx, InputElementMD);
-  MDNode *OutputSignature = nullptr;
+void addSemanticSignatureMD(
+    ArrayRef<llvm::hlsl::SemanticSignatureElement> InputElements,
+    ArrayRef<llvm::hlsl::SemanticSignatureElement> OutputElements,
+    llvm::Function *Fn, llvm::Module &M) {
+  if (InputElements.empty() && OutputElements.empty())
+    return;
+
+  LLVMContext &Ctx = M.getContext();
+  MDNode *InputSignature = buildSemanticSignatureMD(InputElements, Ctx);
+  MDNode *OutputSignature = buildSemanticSignatureMD(OutputElements, Ctx);
   MDNode *MDVals = MDNode::get(
       Ctx, {ValueAsMetadata::get(Fn), InputSignature, OutputSignature});
 
@@ -1293,6 +1301,24 @@ getSignatureSemanticKind(StringRef SemanticName) {
   return llvm::dxbc::PSV::SemanticKind::Invalid;
 }
 
+static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
+    CodeGenModule &CGM, uint32_t SigId, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index, const SemanticShape &Shape) {
+  llvm::hlsl::SemanticSignatureElement Element{};
+  Element.SigId = SigId;
+  Element.SemanticName = Semantic->getAttrName()->getName();
+  Element.CompType = getSignatureComponentType(CGM, Shape.RowType);
+  Element.SemanticKind = getSignatureSemanticKind(Element.SemanticName);
+  Element.Rows = Shape.Rows;
+  Element.Cols = static_cast<uint8_t>(Shape.Cols);
+
+  uint32_t FirstSemanticIndex = Index.value_or(0);
+  for (uint32_t I = 0; I < Shape.Rows; ++I)
+    Element.SemanticIndices.push_back(FirstSemanticIndex + I);
+
+  return Element;
+}
+
 llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
     llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
@@ -1300,20 +1326,9 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   SemanticShape Shape =
       getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
 
-  llvm::hlsl::SemanticSignatureElement SigElement{};
-  SigElement.SigId = DXILInputSemanticIndex++;
-  SigElement.SemanticName = Name;
-  SigElement.CompType = getSignatureComponentType(CGM, Shape.RowType);
-  SigElement.SemanticKind = getSignatureSemanticKind(Name);
-  SigElement.Rows = Shape.Rows;
-  SigElement.Cols = static_cast<uint8_t>(Shape.Cols);
-
-  uint32_t FirstSemanticIndex = Index.value_or(0);
-  for (uint32_t I = 0; I < Shape.Rows; ++I)
-    SigElement.SemanticIndices.push_back(FirstSemanticIndex + I);
-
-  unsigned SigId = SigElement.SigId;
-  InputSignature.push_back(SigElement);
+  unsigned SigId = DXILInputSemanticIndex++;
+  InputSignature.push_back(
+      createSemanticSignatureElement(CGM, SigId, Semantic, Index, Shape));
 
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
@@ -1362,6 +1377,11 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                               std::optional<unsigned> Index) {
   SemanticShape Shape =
       getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
+
+  unsigned SigId = DXILOutputSemanticIndex++;
+  OutputSignature.push_back(
+      createSemanticSignatureElement(CGM, SigId, Semantic, Index, Shape));
+
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
@@ -1373,8 +1393,6 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     llvm::Value *bundleArgs[] = {Token};
     OB.emplace_back("convergencectrl", bundleArgs);
   }
-
-  unsigned SigId = DXILOutputSemanticIndex++;
 
   const unsigned NumRows = Shape.getNumRows();
   for (unsigned Row = 0; Row < NumRows; ++Row) {
@@ -1648,6 +1666,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                       llvm::Function *Fn) {
   DXILOutputSemanticIndex = 0;
   InputSignature.clear();
+  OutputSignature.clear();
 
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &Ctx = M.getContext();
@@ -1759,7 +1778,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     }
   }
 
-  addSemanticSignatureMD(InputSignature, EntryFn, M);
+  addSemanticSignatureMD(InputSignature, OutputSignature, EntryFn, M);
 }
 
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
