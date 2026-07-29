@@ -59,16 +59,14 @@ static void renderDependencyGenerationOptions(Compilation &C,
   Arg *ArgM = Args.getLastArg(options::OPT_M, options::OPT_MM);
   Arg *ArgMD = Args.getLastArg(options::OPT_MD, options::OPT_MMD);
 
-  if (!ArgM && !ArgMD) {
+  if (!ArgM && !ArgMD)
     return;
-  }
 
   // Drop warnings for -M/-MM so they don't mix into the dependency output.
-  if (ArgM) {
+  if (ArgM)
     CmdArgs.push_back("-w");
-  } else {
+  else
     ArgM = ArgMD;
-  }
 
   // Emit "-MT <target>", quoting Make metacharacters when requested.
   auto addTarget = [&](StringRef Target, bool Quote) {
@@ -97,11 +95,10 @@ static void renderDependencyGenerationOptions(Compilation &C,
   } else {
     // -MD/-MMD: name it after -o, else the input, with a .d extension.
     SmallString<128> P;
-    if (Arg *OutputOpt = Args.getLastArg(options::OPT_o)) {
+    if (Arg *OutputOpt = Args.getLastArg(options::OPT_o))
       P = OutputOpt->getValue();
-    } else {
+    else
       P = llvm::sys::path::filename(Inputs[0].getBaseInput());
-    }
     llvm::sys::path::replace_extension(P, "d");
     DepFile = Args.MakeArgString(P);
     C.addFailureResultFile(DepFile, &JA);
@@ -1152,9 +1149,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fsyntax-only");
     } else {
       CmdArgs.push_back("-E");
-      if (Args.getLastArg(options::OPT_dM)) {
+      if (Args.getLastArg(options::OPT_dM))
         CmdArgs.push_back("-dM");
-      }
     }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
