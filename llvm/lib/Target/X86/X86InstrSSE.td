@@ -1156,6 +1156,53 @@ def : InstAlias<"cvtsi2ss\t{$src, $dst|$dst, $src}",
 def : InstAlias<"cvtsi2sd\t{$src, $dst|$dst, $src}",
                 (CVTSI2SDrm_Int VR128:$dst, i32mem:$src), 0, "att">;
 
+let Predicates = [UseSSE1] in {
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
+          (CVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
+          (CVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseSSE2] in {
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
+          (CVTSI2SDrr_Int (v2f64 (V_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
+          (CVTSI642SDrr_Int (v2f64 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseAVX] in {
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SDrr_Int (v2f64 (V_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SDrr_Int (v2f64 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseSSE41] in {
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))),
+                            (i8 1))),
+          (CVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))),
+                            (i8 1))),
+          (CVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseAVX] in {
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))),
+                            (i8 1))),
+          (VCVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))),
+                            (i8 1))),
+          (VCVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+}
+
 /// SSE 1 Only
 
 // Aliases for intrinsics

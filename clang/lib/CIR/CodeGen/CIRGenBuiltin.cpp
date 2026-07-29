@@ -1144,6 +1144,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__arithmetic_fence: {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    QualType argType = e->getArg(0)->getType();
+    FPOptions fpFeatures = e->getFPFeaturesInEffect(getLangOpts());
+    if (fpFeatures.getAllowFPReassociate() &&
+        getContext().getTargetInfo().checkArithmeticFenceSupported()) {
+      cgm.errorNYI(e->getSourceRange(), "__arithmetic_fence with reassocc");
+    }
+    if (argType->isComplexType())
+      return RValue::getComplex(emitComplexExpr(e->getArg(0)));
+    return RValue::get(emitScalarExpr(e->getArg(0)));
+  }
+
   case Builtin::BI__builtin_assume_dereferenceable: {
     mlir::Value ptrValue = emitScalarExpr(e->getArg(0));
     mlir::Value sizeValue = emitScalarExpr(e->getArg(1));

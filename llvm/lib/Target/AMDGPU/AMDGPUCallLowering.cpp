@@ -1374,7 +1374,9 @@ bool AMDGPUCallLowering::lowerTailCall(
       if (auto CI = dyn_cast<ConstantInt>(Arg.OrigValue)) {
         MIB.addImm(CI->getSExtValue());
       } else {
-        MIB.addReg(Arg.Regs[0]);
+        Register Reg = Arg.Regs[0];
+        auto CopyToOpWithRC = MIRBuilder.buildCopy(MRI.getType(Reg), Reg);
+        MIB.addReg(CopyToOpWithRC.getReg(0));
         unsigned Idx = MIB->getNumOperands() - 1;
         MIB->getOperand(Idx).setReg(constrainOperandRegClass(
             MF, *TRI, MRI, *TII, *ST.getRegBankInfo(), *MIB, MIB->getDesc(),
