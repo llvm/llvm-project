@@ -127,8 +127,8 @@ define i1 @icmp_ult_assume_c_ule_c2(i8 %x, i8 %c, i8 %c2) {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]], i8 [[C2:%.*]]) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ule i8 [[C]], [[C2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[C]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[ADD]], [[C2]]
+; CHECK-NEXT:    [[LIMIT:%.*]] = sub i8 [[C2]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[LIMIT]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cond = icmp ule i8 %c, %c2
@@ -153,8 +153,8 @@ define i1 @icmp_ult_assume_constant_c2(i8 %x, i8 %c) {
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[C]], 30
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[C]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[ADD]], 30
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i8 30, [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cond = icmp ult i8 %c, 30
