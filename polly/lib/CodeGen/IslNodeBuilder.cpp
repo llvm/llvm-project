@@ -464,22 +464,24 @@ static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
   return false;
 }
 
-static Value *adjustToType(IRBuilderBase &Builder, Value *V, Type *Ty) {
+/// Sign-extend or truncate V to Ty.
+///
+/// Returns V unchanged if it already has type Ty, sign-extends it if
+/// Ty is wider, or truncates it if Ty is narrower.
+static Value *castToType(IRBuilderBase &Builder, Value *V, Type *Ty) {
   if (V->getType() == Ty)
     return V;
-  if (V->getType()->getIntegerBitWidth() < Ty->getIntegerBitWidth())
-    return Builder.CreateSExt(V, Ty);
-  return Builder.CreateTrunc(V, Ty);
+  return Builder.CreateSExtOrTrunc(V, Ty);
 }
 
-// Returns true when V is known to fit in IntPtrTy without data loss.
-// Accepts i64 constants such as 0 and 1 that ISL materialises as i64 even on
-// 32-bit targets.
-static bool fitsInPtrTy(Value *V, IntegerType *IntPtrTy) {
-  if (V->getType()->getIntegerBitWidth() <= IntPtrTy->getBitWidth())
+/// Returns true when V is known to fit in IntPtrTy without data loss.
+/// Accepts i64 constants such as 0 and 1 that ISL materialises as i64 even on
+/// 32-bit targets.
+static bool fitsInTy(Value *V, IntegerType *IntTy) {
+  if (V->getType()->getIntegerBitWidth() <= IntTy->getBitWidth())
     return true;
   if (auto *CI = dyn_cast<ConstantInt>(V))
-    return CI->getValue().isSignedIntN(IntPtrTy->getBitWidth());
+    return CI->getValue().isSignedIntN(IntTy->getBitWidth());
   return false;
 }
 
@@ -525,14 +527,14 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   // to avoid an unsafe truncation.
   IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
   if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
-      fitsInPtrTy(ValueLB, IntPtrTy) && fitsInPtrTy(ValueUB, IntPtrTy) &&
-      fitsInPtrTy(ValueInc, IntPtrTy))
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
     MaxType = IntPtrTy;
 
   // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
-  ValueLB = adjustToType(Builder, ValueLB, MaxType);
-  ValueUB = adjustToType(Builder, ValueUB, MaxType);
-  ValueInc = adjustToType(Builder, ValueInc, MaxType);
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   // If we can show that LB <Predicate> UB holds at least once, we can
   // omit the GuardBB in front of the loop.
@@ -615,14 +617,14 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // to avoid an unsafe truncation.
   IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
   if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
-      fitsInPtrTy(ValueLB, IntPtrTy) && fitsInPtrTy(ValueUB, IntPtrTy) &&
-      fitsInPtrTy(ValueInc, IntPtrTy))
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
     MaxType = IntPtrTy;
 
   // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
-  ValueLB = adjustToType(Builder, ValueLB, MaxType);
-  ValueUB = adjustToType(Builder, ValueUB, MaxType);
-  ValueInc = adjustToType(Builder, ValueInc, MaxType);
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   BasicBlock::iterator LoopBody;
 
