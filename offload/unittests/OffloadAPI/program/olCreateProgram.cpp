@@ -38,6 +38,11 @@ TEST_P(olCreateProgramTest, JITSuccess) {
                                  DeviceBin->getBufferSize(), &Program));
   ASSERT_NE(Program, nullptr);
 
+  ol_symbol_handle_t Symbol;
+  ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &Symbol));
+
+  ASSERT_NE(Symbol, nullptr);
+
   ASSERT_SUCCESS(olDestroyProgram(Program));
 }
 
