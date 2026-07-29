@@ -210,14 +210,6 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
 
 /// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
 /// \p MaxBTC is guaranteed inbounds of the accessed object.
-///
-/// The accessed byte range is [LowestOffset, LowestOffset + SpanBytes), where
-///   SpanBytes    = MaxBTC * |Step| + EltSize,
-///   LowestOffset = smallest byte offset from StartPtr any iteration reaches.
-///
-/// Safety invariants (both directions):
-///   1. LowestOffset >= 0                       — no access below StartPtr.
-///   2. LowestOffset + SpanBytes <= DerefBytes  — no access past the region.
 static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
@@ -276,13 +268,14 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
   // For the computations below, make sure they don't unsigned wrap.
-  // FIXME: for a negative step LowestAddr should be evaluated at the last
-  // iteration as AR->evaluateAtIteration(MaxBTC, SE).
-  const SCEV *LowestAddr = AR->getStart();
-  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, LowestAddr, StartPtr))
+  // FIXME: for a negative step the lowest accessed address is not
+  // AR->getStart() but AR->evaluateAtIteration(MaxBTC, SE); the check below
+  // therefore compares StartPtr against the highest accessed address instead
+  // of the lowest.
+  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
     return false;
-  const SCEV *LowestOffset =
-      SE.getNoopOrZeroExtend(SE.getMinusSCEV(LowestAddr, StartPtr), WiderTy);
+  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
+      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
   if (!LoopGuards)
     LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
@@ -315,21 +308,21 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   // accessed range.
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    MaxOffset = addSCEVNoOverflow(LowestOffset, SpanBytes, SE);
+    MaxOffset = addSCEVNoOverflow(StartOffset, SpanBytes, SE);
     if (!MaxOffset)
       return false;
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
   } else {
     // FIXME: two independent off-by-EltSize bugs on this branch:
-    //  1. LowestOffset here is actually the HIGHEST offset, because
-    //     LowestAddr is computed from AR->getStart() rather than
+    //  1. StartOffset here is actually the HIGHEST offset, because it is
+    //     computed from AR->getStart() rather than
     //     AR->evaluateAtIteration(MaxBTC, SE) (see FIXME above).
     //  2. The lower check is over-strict by EltSize and the upper is
     //     under-counted by EltSize.
     assert(SE.isKnownNegative(Step) && "must be known negative");
-    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, LowestOffset, SpanBytes))
+    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, SpanBytes))
       return false;
-    MaxOffset = LowestOffset;
+    MaxOffset = StartOffset;
   }
   // MaxOffset must not exceed the deref-region end.
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
