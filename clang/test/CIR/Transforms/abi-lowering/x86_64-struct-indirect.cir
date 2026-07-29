@@ -1,17 +1,22 @@
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
 
+!s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!s128i = !cir.int<s, 128>
 !rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
 !rec_NoRegs = !cir.struct<"NoRegs" {!s32i, !s32i}>
+!rec_Big128 = !cir.struct<"Big128" {!s128i, !s8i}>
 
 module attributes {
   cir.record_layouts = {NoRegs = #cir.record_layout<
     arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
     record_align = 4>},
   dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
 } {
 
   // A 24-byte struct does not fit in registers: passed byval.  The body reads
@@ -48,4 +53,20 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_NoRegs})
+
+  // {__int128, char} spans more than two eightbytes, so it does not fit in
+  // registers: the argument is byval and the return uses sret.
+  cir.func @take_big128(%arg0: !rec_Big128) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_big128(%arg0: !cir.ptr<!rec_Big128> {llvm.align = 16 : i64, llvm.byval = !rec_Big128, llvm.noalias, llvm.noundef})
+
+  cir.func @ret_big128() -> !rec_Big128 {
+    %0 = cir.alloca "r" align(16) : !cir.ptr<!rec_Big128>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big128>, !rec_Big128
+    cir.return %1 : !rec_Big128
+  }
+
+  // CHECK: cir.func{{.*}} @ret_big128(%arg0: !cir.ptr<!rec_Big128> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big128, llvm.writable})
 }

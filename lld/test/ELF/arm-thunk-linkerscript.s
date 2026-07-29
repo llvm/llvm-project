@@ -1,12 +1,12 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi a.s -o a.o
-// RUN: ld.lld --no-rosegment --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --no-rosegment --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 a.s -o a.o
-// RUN: ld.lld --no-rosegment --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --no-rosegment --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
-// RUN: ld.lld --be8 --no-rosegment --script a.lds a.o -o %t2
+// RUN: ld.lld -z nosort-thunks --be8 --no-rosegment --script a.lds a.o -o %t2
 // RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
 
 //--- a.lds

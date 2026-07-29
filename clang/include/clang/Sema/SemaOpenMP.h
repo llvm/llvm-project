@@ -1012,12 +1012,12 @@ public:
                                     SourceLocation LParenLoc,
                                     SourceLocation MLoc, SourceLocation KindLoc,
                                     SourceLocation EndLoc);
-  /// Called on well-formed 'update' clause.
-  OMPClause *ActOnOpenMPUpdateClause(OpenMPDependClauseKind Kind,
-                                     SourceLocation KindLoc,
-                                     SourceLocation StartLoc,
-                                     SourceLocation LParenLoc,
-                                     SourceLocation EndLoc);
+  /// Called on well-formed 'update_depend_objects' clause.
+  OMPClause *ActOnOpenMPUpdateDependObjectsClause(OpenMPDependClauseKind Kind,
+                                                  SourceLocation KindLoc,
+                                                  SourceLocation StartLoc,
+                                                  SourceLocation LParenLoc,
+                                                  SourceLocation EndLoc);
   /// Called on well-formed 'holds' clause.
   OMPClause *ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,

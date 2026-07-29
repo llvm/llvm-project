@@ -49,6 +49,15 @@ bool Record::hasTrivialDtor() const {
   return !Dtor || Dtor->isTrivial();
 }
 
+const Record::Field *Record::findField(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Fields,
+          [=](const Record::Field &F) -> bool { return F.Offset == Offset; });
+      It != Fields.end())
+    return &*It;
+  return nullptr;
+}
+
 const Record::Base *Record::getBase(const RecordDecl *RD) const {
   auto It = BaseMap.find(RD);
   assert(It != BaseMap.end() && "Missing base");
