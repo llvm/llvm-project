@@ -5993,7 +5993,7 @@ CodeGenFunction::EmitLValueForFieldInitialization(LValue Base,
 }
 
 LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
-  if (E->isFileScope() || E->hasGlobalStorage()) {
+  if (E->hasGlobalStorage()) {
     if (E->getType()->isVariablyModifiedType())
       EmitVariablyModifiedType(E->getType());
 
