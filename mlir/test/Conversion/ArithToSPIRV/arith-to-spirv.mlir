@@ -1158,6 +1158,47 @@ func.func @fptosi2(%arg0 : f16) -> i16 {
 
 // -----
 
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Float16, BFloat16TypeKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @convertf_f16_to_bf16
+func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
+  // CHECK: %[[WIDE:.+]] = spirv.FConvert %{{.*}} : f16 to f32
+  // CHECK: spirv.FConvert %[[WIDE]] : f32 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @convertf_bf16_to_f16
+func.func @convertf_bf16_to_f16(%arg0 : bf16) -> f16 {
+  // CHECK: %[[WIDE:.+]] = spirv.FConvert %{{.*}} : bf16 to f32
+  // CHECK: spirv.FConvert %[[WIDE]] : f32 to f16
+  %0 = arith.convertf %arg0 : bf16 to f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @convertf_vector_f16_to_bf16
+func.func @convertf_vector_f16_to_bf16(%arg0 : vector<4xf16>) -> vector<4xbf16> {
+  // CHECK: %[[WIDE:.+]] = spirv.FConvert %{{.*}} : vector<4xf16> to vector<4xf32>
+  // CHECK: spirv.FConvert %[[WIDE]] : vector<4xf32> to vector<4xbf16>
+  %0 = arith.convertf %arg0 : vector<4xf16> to vector<4xbf16>
+  return %0 : vector<4xbf16>
+}
+
+// CHECK-LABEL: @convertf_rounding_mode
+func.func @convertf_rounding_mode(%arg0 : f16) -> bf16 {
+  // CHECK: %[[WIDE:.+]] = spirv.FConvert %{{.*}} : f16 to f32
+  // CHECK: spirv.FConvert %[[WIDE]] {fp_rounding_mode = #spirv.fp_rounding_mode<RTE>} : f32 to bf16
+  %0 = arith.convertf %arg0 to_nearest_even : f16 to bf16
+  return %0 : bf16
+}
+
+} // end module
+
+// -----
+
 // Checks that cast types will be adjusted when missing special capabilities for
 // certain non-32-bit scalar types.
 module attributes {

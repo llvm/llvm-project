@@ -1069,6 +1069,55 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertFOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.convertf (same-bitwidth FP cast, e.g. f16 <-> bf16) to
+/// SPIR-V. spirv.FConvert requires differing component widths, so widen to
+/// f32 first and then narrow to the destination type.
+struct ConvertFOpPattern final : public OpConversionPattern<arith::ConvertFOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::ConvertFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    if (dstType == adaptor.getIn().getType()) {
+      rewriter.replaceOp(op, adaptor.getIn());
+      return success();
+    }
+
+    Location loc = op.getLoc();
+    Type f32Type = Float32Type::get(rewriter.getContext());
+    if (auto vecType = dyn_cast<VectorType>(dstType))
+      f32Type = VectorType::get(vecType.getShape(), f32Type);
+
+    Value widened =
+        spirv::FConvertOp::create(rewriter, loc, f32Type, adaptor.getIn());
+
+    std::optional<spirv::FPRoundingMode> rm = std::nullopt;
+    if (arith::RoundingModeAttr roundingMode = op.getRoundingmodeAttr()) {
+      if (!(rm = convertArithRoundingModeToSPIRV(roundingMode.getValue())))
+        return rewriter.notifyMatchFailure(
+            op->getLoc(),
+            llvm::formatv("unsupported rounding mode '{0}'", roundingMode));
+    }
+
+    auto narrowed =
+        rewriter.replaceOpWithNewOp<spirv::FConvertOp>(op, dstType, widened);
+    if (rm) {
+      narrowed->setAttr(
+          getDecorationString(spirv::Decoration::FPRoundingMode),
+          spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
+    }
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
@@ -1500,6 +1549,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
+    ConvertFOpPattern,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
     BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,
