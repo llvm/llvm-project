@@ -18,7 +18,7 @@ define void @cond_access_large_negative_offset(ptr %a, ptr %b, i64 %n, i64 %k) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
-; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
+; CHECK-NEXT:            Member: {%b,+,4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
@@ -71,7 +71,7 @@ define void @cond_access_small_negative_offset(ptr %a, ptr %b, i64 %n, i64 %k) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
-; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
+; CHECK-NEXT:            Member: {%b,+,4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4 + %a) High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {(-4 + %a),+,4}<%loop.header>
@@ -337,7 +337,7 @@ define void @uncond_accesses_large_negative_offset_early_exit(ptr %a, ptr %b, i6
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: (4 + (4 * (%k umin_seq (-1 + %n))) + %b))
-; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
+; CHECK-NEXT:            Member: {%b,+,4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-4398046511104 + %a) High: (4 + (4 * (%k umin_seq (-1 + %n))) + %a))
 ; CHECK-NEXT:            Member: {(-4398046511104 + %a),+,4}<%loop.header>
