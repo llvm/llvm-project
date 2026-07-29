@@ -337,11 +337,11 @@ exit:
   ret i1 %c.3
 }
 
-; Multi-exit loop with body size > 5 but <= 10. Exercises the raised Apple
-; budget (AppleMLoopSizeBudget=10).
-define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %mask) {
+; Multi-exit loop with a body too large for the generic size budget (5) but
+; within the larger budget used for Apple CPUs (7).
+define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt) {
 ; APPLE-LABEL: define i1 @multi_exit_search_apple_budget(
-; APPLE-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[TGT:%.*]], i32 [[MASK:%.*]]) #[[ATTR0]] {
+; APPLE-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[TGT:%.*]]) #[[ATTR0]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
 ; APPLE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; APPLE-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
@@ -364,8 +364,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; APPLE-NEXT:    [[L_1_PROL:%.*]] = load i32, ptr [[PTR_IV_PROL]], align 4
 ; APPLE-NEXT:    [[GEP_1_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_PROL]], i64 4
 ; APPLE-NEXT:    [[L_2_PROL:%.*]] = load i32, ptr [[GEP_1_PROL]], align 4
-; APPLE-NEXT:    [[AND_PROL:%.*]] = and i32 [[L_1_PROL]], [[MASK]]
-; APPLE-NEXT:    [[SUM_PROL:%.*]] = add i32 [[AND_PROL]], [[L_2_PROL]]
+; APPLE-NEXT:    [[SUM_PROL:%.*]] = add i32 [[L_1_PROL]], [[L_2_PROL]]
 ; APPLE-NEXT:    [[C_1_PROL:%.*]] = icmp eq i32 [[SUM_PROL]], [[TGT]]
 ; APPLE-NEXT:    br i1 [[C_1_PROL]], label %[[EXIT_UNR_LCSSA_LOOPEXIT3:.*]], label %[[LOOP_LATCH_PROL]]
 ; APPLE:       [[LOOP_LATCH_PROL]]:
@@ -390,8 +389,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; APPLE-NEXT:    [[L_1:%.*]] = load i32, ptr [[PTR_IV]], align 4
 ; APPLE-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 4
 ; APPLE-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_1]], align 4
-; APPLE-NEXT:    [[AND:%.*]] = and i32 [[L_1]], [[MASK]]
-; APPLE-NEXT:    [[SUM:%.*]] = add i32 [[AND]], [[L_2]]
+; APPLE-NEXT:    [[SUM:%.*]] = add i32 [[L_1]], [[L_2]]
 ; APPLE-NEXT:    [[C_1:%.*]] = icmp eq i32 [[SUM]], [[TGT]]
 ; APPLE-NEXT:    br i1 [[C_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP_LATCH:.*]]
 ; APPLE:       [[LOOP_LATCH]]:
@@ -399,8 +397,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; APPLE-NEXT:    [[L_1_1:%.*]] = load i32, ptr [[PTR_IV_NEXT]], align 4
 ; APPLE-NEXT:    [[GEP_1_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT]], i64 4
 ; APPLE-NEXT:    [[L_2_1:%.*]] = load i32, ptr [[GEP_1_1]], align 4
-; APPLE-NEXT:    [[AND_1:%.*]] = and i32 [[L_1_1]], [[MASK]]
-; APPLE-NEXT:    [[SUM_1:%.*]] = add i32 [[AND_1]], [[L_2_1]]
+; APPLE-NEXT:    [[SUM_1:%.*]] = add i32 [[L_1_1]], [[L_2_1]]
 ; APPLE-NEXT:    [[C_1_1:%.*]] = icmp eq i32 [[SUM_1]], [[TGT]]
 ; APPLE-NEXT:    br i1 [[C_1_1]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_1:.*]]
 ; APPLE:       [[LOOP_LATCH_1]]:
@@ -408,8 +405,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; APPLE-NEXT:    [[L_1_2:%.*]] = load i32, ptr [[PTR_IV_NEXT_1]], align 4
 ; APPLE-NEXT:    [[GEP_1_2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_1]], i64 4
 ; APPLE-NEXT:    [[L_2_2:%.*]] = load i32, ptr [[GEP_1_2]], align 4
-; APPLE-NEXT:    [[AND_2:%.*]] = and i32 [[L_1_2]], [[MASK]]
-; APPLE-NEXT:    [[SUM_2:%.*]] = add i32 [[AND_2]], [[L_2_2]]
+; APPLE-NEXT:    [[SUM_2:%.*]] = add i32 [[L_1_2]], [[L_2_2]]
 ; APPLE-NEXT:    [[C_1_2:%.*]] = icmp eq i32 [[SUM_2]], [[TGT]]
 ; APPLE-NEXT:    br i1 [[C_1_2]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_2:.*]]
 ; APPLE:       [[LOOP_LATCH_2]]:
@@ -417,8 +413,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; APPLE-NEXT:    [[L_1_3:%.*]] = load i32, ptr [[PTR_IV_NEXT_2]], align 4
 ; APPLE-NEXT:    [[GEP_1_3:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV_NEXT_2]], i64 4
 ; APPLE-NEXT:    [[L_2_3:%.*]] = load i32, ptr [[GEP_1_3]], align 4
-; APPLE-NEXT:    [[AND_3:%.*]] = and i32 [[L_1_3]], [[MASK]]
-; APPLE-NEXT:    [[SUM_3:%.*]] = add i32 [[AND_3]], [[L_2_3]]
+; APPLE-NEXT:    [[SUM_3:%.*]] = add i32 [[L_1_3]], [[L_2_3]]
 ; APPLE-NEXT:    [[C_1_3:%.*]] = icmp eq i32 [[SUM_3]], [[TGT]]
 ; APPLE-NEXT:    br i1 [[C_1_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_LATCH_3]]
 ; APPLE:       [[LOOP_LATCH_3]]:
@@ -440,7 +435,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; APPLE-NEXT:    ret i1 [[C_3]]
 ;
 ; NOUNROLL-LABEL: define i1 @multi_exit_search_apple_budget(
-; NOUNROLL-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[TGT:%.*]], i32 [[MASK:%.*]]) #[[ATTR0]] {
+; NOUNROLL-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[TGT:%.*]]) #[[ATTR0]] {
 ; NOUNROLL-NEXT:  [[ENTRY:.*]]:
 ; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
 ; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
@@ -450,8 +445,7 @@ define i1 @multi_exit_search_apple_budget(ptr %start, ptr %end, i32 %tgt, i32 %m
 ; NOUNROLL-NEXT:    [[L_1:%.*]] = load i32, ptr [[PTR_IV]], align 4
 ; NOUNROLL-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 4
 ; NOUNROLL-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_1]], align 4
-; NOUNROLL-NEXT:    [[AND:%.*]] = and i32 [[L_1]], [[MASK]]
-; NOUNROLL-NEXT:    [[SUM:%.*]] = add i32 [[AND]], [[L_2]]
+; NOUNROLL-NEXT:    [[SUM:%.*]] = add i32 [[L_1]], [[L_2]]
 ; NOUNROLL-NEXT:    [[C_1:%.*]] = icmp eq i32 [[SUM]], [[TGT]]
 ; NOUNROLL-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; NOUNROLL:       [[LOOP_LATCH]]:
@@ -473,8 +467,7 @@ loop.header:
   %l.1 = load i32, ptr %ptr.iv, align 4
   %gep.1 = getelementptr inbounds nuw i8, ptr %ptr.iv, i64 4
   %l.2 = load i32, ptr %gep.1, align 4
-  %and = and i32 %l.1, %mask
-  %sum = add i32 %and, %l.2
+  %sum = add i32 %l.1, %l.2
   %c.1 = icmp eq i32 %sum, %tgt
   br i1 %c.1, label %exit, label %loop.latch
 
