@@ -6,6 +6,7 @@
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
 
 typedef struct { long a, b, c, d; } Big;
+typedef struct { int a, b; } Pair;
 
 // Scalar indirect call: no ABI reshaping, the callee pointer is called as-is.
 int call_scalar(int (*fp)(int), int x) { return fp(x); }
@@ -14,6 +15,16 @@ int call_scalar(int (*fp)(int), int x) { return fp(x); }
 // CIR:   %{{.+}} = cir.call %{{.+}}(%{{.+}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i {llvm.noundef}) -> !s32i
 // LLVM: define dso_local i32 @call_scalar(ptr noundef %{{.+}}, i32 noundef %{{.+}})
 // LLVM:   call i32 %{{.+}}(i32 noundef %{{.+}})
+
+// Indirect call whose small-struct argument and return are coerced to a
+// register: the callee pointer is bitcast so its pointee tracks both.
+Pair call_coerce(Pair (*fp)(Pair), Pair p) { return fp(p); }
+
+// CIR: cir.func {{.*}}@call_coerce(%arg0: !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>> {{.*}}, %arg1: !u64i{{.*}}) -> !u64i
+// CIR:   %[[PCAST:.*]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>> -> !cir.ptr<!cir.func<(!u64i) -> !u64i>>
+// CIR:   %{{.+}} = cir.call %[[PCAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!u64i) -> !u64i>>, !u64i) -> !u64i
+// LLVM: define dso_local i64 @call_coerce(ptr noundef %{{.+}}, i64 %{{.+}})
+// LLVM:   call i64 %{{.+}}(i64 %{{.+}})
 
 // Indirect call with a byval struct argument: the argument is spilled to a
 // stack slot and the callee pointer is bitcast to the coerced signature.

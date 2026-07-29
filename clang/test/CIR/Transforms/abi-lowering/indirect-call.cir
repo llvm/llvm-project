@@ -4,6 +4,8 @@
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+!rec_Empty = !cir.struct<"Empty" {}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -37,6 +39,40 @@ module attributes {
   // CHECK: cir.func{{.*}} @call_ext
   // CHECK-NOT: cir.cast bitcast
   // CHECK:   cir.call %{{.+}}(%{{.+}}) : (!cir.ptr<!cir.func<(!s16i) -> !s16i>>, !s16i {llvm.signext}) -> (!s16i {llvm.signext})
+
+  // Indirect call whose small-struct argument and return are Direct with a
+  // coerce type: the callee pointer is bitcast so its pointee tracks both the
+  // coerced parameter and the coerced result.
+  cir.func @call_coerce(%fp: !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>>,
+                        %out: !cir.ptr<!rec_Pair>) {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
+    %2 = cir.call %fp(%1)
+        : (!cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>>,
+           !rec_Pair) -> !rec_Pair
+    cir.store %2, %out : !rec_Pair, !cir.ptr<!rec_Pair>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_coerce(%arg0: !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>>
+  // CHECK:   %[[CCAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Pair) -> !rec_Pair>> -> !cir.ptr<!cir.func<(!u64i) -> !u64i>>
+  // CHECK:   cir.call %[[CCAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!u64i) -> !u64i>>, !u64i) -> !u64i
+
+  // Indirect call with an Ignore-classified empty-record argument: the operand
+  // is dropped and the callee pointer loses that parameter.
+  cir.func @call_ignore(%fp: !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>>,
+                        %x: !s32i) -> !s32i {
+    %0 = cir.alloca "e" align(1) : !cir.ptr<!rec_Empty>
+    %1 = cir.load %0 : !cir.ptr<!rec_Empty>, !rec_Empty
+    %2 = cir.call %fp(%1, %x)
+        : (!cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>>,
+           !rec_Empty, !s32i) -> !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @call_ignore(%arg0: !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>>
+  // CHECK:   %[[ICAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Empty, !s32i) -> !s32i>> -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  // CHECK:   cir.call %[[ICAST]](%arg1) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
 
   // Indirect call with a by-value (byval) struct argument: the argument is
   // spilled to a stack slot and the callee pointer is bitcast to the coerced

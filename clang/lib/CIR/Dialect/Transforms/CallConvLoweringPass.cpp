@@ -295,11 +295,11 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 /// (which classifies from the callee function pointer's pointee FuncType).
 /// Returns std::nullopt and emits an NYI error via \p emitError if the
 /// signature uses a type the bridge does not handle yet.
-static std::optional<FunctionClassification>
-classifyX86_64Sig(mlir::Type retCIR, mlir::TypeRange inputs, MLIRContext *ctx,
-                  const DataLayout &dl, mlir::abi::ABITypeMapper &typeMapper,
-                  const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
-                  llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+static std::optional<FunctionClassification> classifyX86_64Signature(
+    mlir::Type retCIR, mlir::TypeRange inputs, MLIRContext *ctx,
+    const DataLayout &dl, mlir::abi::ABITypeMapper &typeMapper,
+    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(retCIR && "signature return type must be non-null");
   bool voidRet = isa<cir::VoidType>(retCIR);
 
@@ -368,9 +368,9 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                        const llvm::abi::TargetInfo &targetInfo,
                        ModuleOp modOp) {
   cir::FuncType fnTy = func.getFunctionType();
-  return classifyX86_64Sig(fnTy.getReturnType(), fnTy.getInputs(),
-                           func->getContext(), dl, typeMapper, targetInfo,
-                           modOp, [&]() { return func.emitOpError(); });
+  return classifyX86_64Signature(fnTy.getReturnType(), fnTy.getInputs(),
+                                 func->getContext(), dl, typeMapper, targetInfo,
+                                 modOp, [&]() { return func.emitOpError(); });
 }
 
 struct CallConvLoweringPass
@@ -525,9 +525,10 @@ void CallConvLoweringPass::runOnOperation() {
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the
   // function pointer's pointee FuncType and let rewriteCallSite retype the
-  // callee pointer to match the coerced signature.  Collect the calls first
-  // because rewriteCallSite erases and replaces each one, which would
-  // invalidate a live walk.
+  // callee pointer to match the coerced signature.  Collect the calls first:
+  // when an sret rewrite reuses a single-use store's destination as the return
+  // slot it erases that store, which is the operation a live walk has already
+  // cached as the next one to visit.
   SmallVector<cir::CallOp> indirectCalls;
   moduleOp.walk([&](cir::CallOp c) {
     if (c.isIndirect())
@@ -549,9 +550,9 @@ void CallConvLoweringPass::runOnOperation() {
     auto funcTy = cast<cir::FuncType>(ptrTy.getPointee());
     std::optional<FunctionClassification> fc;
     if (x86Target)
-      fc = classifyX86_64Sig(funcTy.getReturnType(), funcTy.getInputs(), ctx,
-                             dl, *x86TypeMapper, *x86Target, moduleOp,
-                             [&]() { return c.emitOpError(); });
+      fc = classifyX86_64Signature(funcTy.getReturnType(), funcTy.getInputs(),
+                                   ctx, dl, *x86TypeMapper, *x86Target,
+                                   moduleOp, [&]() { return c.emitOpError(); });
     else
       fc = mlir::abi::test::classify(funcTy.getInputs(), funcTy.getReturnType(),
                                      dl);

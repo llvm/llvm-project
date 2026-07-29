@@ -804,15 +804,20 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
 /// pointer whose signature matches the rewritten operands and return type.
 /// No-op for direct calls.
 static void prependIndirectCallee(cir::CallOp call,
-                                  SmallVector<mlir::Value> &args,
+                                  SmallVectorImpl<mlir::Value> &args,
                                   mlir::Type retTy, mlir::OpBuilder &builder) {
   if (!call.isIndirect())
     return;
   mlir::Value calleePtr = call.getIndirectCall();
   SmallVector<mlir::Type> paramTypes;
   paramTypes.reserve(args.size());
-  for (mlir::Value v : args)
-    paramTypes.push_back(v.getType());
+  llvm::transform(args, std::back_inserter(paramTypes),
+                  [](mlir::Value v) { return v.getType(); });
+  // Lowering builds an indirect call's LLVM function type from the callee
+  // pointer's pointee and takes the call's result from that type, so the
+  // pointee's return type has to track the rewrite: an sret return would
+  // leave a result the call no longer produces, and a coerced return one of
+  // the wrong type.
   auto newPtrTy = cir::PointerType::get(cir::FuncType::get(paramTypes, retTy));
   if (calleePtr.getType() != newPtrTy)
     calleePtr = cir::CastOp::create(builder, call.getLoc(), newPtrTy,
