@@ -126,19 +126,19 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
 }
 
 std::optional<std::pair<size_t, const RegisterInfo *>>
-ValueObjectRegisterSet::GetRegisterInfoForChildWithName(llvm::StringRef name) {
+ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
   if (!m_reg_ctx_sp || !m_reg_set)
     return {};
 
-  for (size_t i = 0; i < m_reg_set->num_registers; ++i) {
-    if (const RegisterInfo *reg_info =
-            m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[i])) {
-      if (name.equals_insensitive(reg_info->name) ||
-          name.equals_insensitive(reg_info->alt_name)) {
-        return std::make_pair(i, reg_info);
-      }
-    }
-  }
+  // See if the register exists at all in any set.
+  const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
+  if (!reg_info)
+    return {};
+
+  // See if this register is in this register set.
+  for (size_t i = 0; i < m_reg_set->num_registers; ++i)
+    if (reg_info->kinds[eRegisterKindLLDB] == m_reg_set->registers[i])
+      return std::make_pair(i, reg_info);
 
   return {};
 }
@@ -146,7 +146,7 @@ ValueObjectRegisterSet::GetRegisterInfoForChildWithName(llvm::StringRef name) {
 lldb::ValueObjectSP
 ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
                                                bool can_create) {
-  if (auto maybe_info = GetRegisterInfoForChildWithName(name)) {
+  if (auto maybe_info = LookupChildWithName(name)) {
     ValueObject *valobj =
         new ValueObjectRegister(*this, m_reg_ctx_sp, maybe_info->second);
     return valobj->GetSP();
@@ -157,7 +157,7 @@ ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
 
 llvm::Expected<size_t>
 ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
-  if (auto maybe_info = GetRegisterInfoForChildWithName(name))
+  if (auto maybe_info = LookupChildWithName(name))
     return maybe_info->first;
 
   return llvm::createStringErrorV("type has no child named '{0}'", name);
