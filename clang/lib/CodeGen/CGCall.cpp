@@ -4928,18 +4928,8 @@ void CodeGenFunction::EmitCallArgs(
       std::swap(Args.back(), *(&Args.back() - 1));
   };
 
-  bool CallHasSuspend = false;
-  if (isCoroutine()) {
-    for (const Expr *A : ArgRange) {
-      if (A && A->containsCoroutineSuspendPoints()) {
-        CallHasSuspend = true;
-        break;
-      }
-    }
-  }
-
   SmallVector<const MaterializeTemporaryExpr *, 4> MTEsToPreEvaluate;
-  if (CallHasSuspend && hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
+  if (isCoroutine() && hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
     for (const Expr *A : ArgRange) {
       if (auto *MTE = getMTEToPreEvaluate(A)) {
         MTEsToPreEvaluate.push_back(MTE);
