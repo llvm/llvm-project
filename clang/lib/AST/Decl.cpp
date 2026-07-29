@@ -2837,7 +2837,7 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   return !InitTy->isZeroSize();
 }
 
-CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
+CharUnits VarDecl::getFlexibleArrayInitChars() const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *RD = getType()->getAsRecordDecl();
   if (!RD || !RD->hasFlexibleArrayMember())
@@ -2845,6 +2845,8 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List || List->getNumInits() == 0)
     return CharUnits::Zero();
+
+  const ASTContext &Ctx = getASTContext();
   const Expr *FlexibleInit = List->getInit(List->getNumInits() - 1);
   auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
   if (!InitTy)

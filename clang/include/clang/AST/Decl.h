@@ -1737,7 +1737,7 @@ public:
   /// necessary to store those elements. Otherwise, returns zero.
   ///
   /// This can only be called for declarations where hasInit() is true.
-  CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
+  CharUnits getFlexibleArrayInitChars() const;
 
   /// Apply a deduced address space, if one isn't already set.
   void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);

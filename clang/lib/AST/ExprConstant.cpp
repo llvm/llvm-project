@@ -16684,7 +16684,7 @@ static void addFlexibleArrayMemberInitSize(EvalInfo &Info, const QualType &T,
     if (const auto *V = LV.getLValueBase().dyn_cast<const ValueDecl *>())
       if (const auto *VD = dyn_cast<VarDecl>(V))
         if (VD->hasInit())
-          Size += VD->getFlexibleArrayInitChars(Info.Ctx);
+          Size += VD->getFlexibleArrayInitChars();
 }
 
 /// Helper for tryEvaluateBuiltinObjectSize -- Given an LValue, this will

@@ -384,7 +384,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
 
 #ifndef NDEBUG
   CharUnits VarSize = CGM.getContext().getTypeSizeInChars(D.getType()) +
-                      D.getFlexibleArrayInitChars(getContext());
+                      D.getFlexibleArrayInitChars();
   CharUnits CstSize = CharUnits::fromQuantity(
       CGM.getDataLayout().getTypeAllocSize(Init->getType()));
   assert(VarSize == CstSize && "Emitted constant has unexpected size");
