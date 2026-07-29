@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// std::optional<T&>
-
 #ifndef _LIBCPP___FWD_OPTIONAL_H
 #define _LIBCPP___FWD_OPTIONAL_H
 
@@ -35,7 +33,7 @@ optional(_Tp) -> optional<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

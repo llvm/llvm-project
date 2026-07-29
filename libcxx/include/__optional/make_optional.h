@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// std::optional<T&>
-
 #ifndef _LIBCPP_OPTIONAL_MAKE_OPTIONAL_H
 #define _LIBCPP_OPTIONAL_MAKE_OPTIONAL_H
 
