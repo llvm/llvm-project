@@ -4,13 +4,13 @@
 # RUN:       .text_low 0x2000: { *(.text_low) } \
 # RUN:       .text_high 0x2002000 : { *(.text_high) } \
 # RUN:       }' > %t.script
-# RUN: ld.lld -z nosort-thunks -pie -T %t.script %t.o -o %t
+# RUN: ld.lld -pie -T %t.script %t.o -o %t
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC-PIE %s
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## RELATIVE relocs relocating NOBITS .branch_lt do not cause --check-dynamic-relocations errors.
-# RUN: ld.lld -z nosort-thunks -shared -T %t.script %t.o -o %t.so --apply-dynamic-relocs --check-dynamic-relocations
+# RUN: ld.lld -shared -T %t.script %t.o -o %t.so --apply-dynamic-relocs --check-dynamic-relocations
 # RUN: llvm-readelf -S %t.so | FileCheck --check-prefix=SEC-SHARED %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
 
@@ -32,15 +32,15 @@
 # RELOC-NEXT: }
 
 # CHECK:      <_start>:
-# CHECK-NEXT:     2000:       bl 0x2010
+# CHECK-NEXT:     2000:       bl 0x2050
 # CHECK-NEXT:                 bl 0x2002000
 # CHECK-NEXT:                 bl 0x2030
-# CHECK-NEXT:                 bl 0x2050
+# CHECK-NEXT:                 bl 0x2010
 
-## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32744
+## &.branch_lt[2] - .TOC. = .branch_lt - (.got+0x8000) = -32728
 # CHECK:      <__long_branch_>:
 # CHECK-NEXT:     2010:       addis 12, 2, 0
-# CHECK-NEXT:                 ld 12, -32744(12)
+# CHECK-NEXT:                 ld 12, -32728(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 
@@ -51,10 +51,10 @@
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 
-## &.branch_lt[2] - .TOC. = .branch_lt - (.got+0x8000) = -32728
+## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32744
 # CHECK:      <__long_branch_>:
 # CHECK-NEXT:     2050:       addis 12, 2, 0
-# CHECK-NEXT:                 ld 12, -32728(12)
+# CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 

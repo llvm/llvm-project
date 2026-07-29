@@ -10720,9 +10720,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI))
         ScalarArgs[J] = CI->getArgOperand(J);
     for (Value *V : VL) {
-      // A copyable element stands in for the call via a substituted
-      // idempotent operand, so it is exempt from the checks below.
-      if (S.isCopyableElement(V))
+      // Skip copyables (idempotent stand-ins) and poisons.
+      if (isa<PoisonValue>(V) || S.isCopyableElement(V))
         continue;
       CallInst *CI2 = dyn_cast<CallInst>(V);
       Intrinsic::ID ID2 = CI2 ? getVectorIntrinsicIDForCall(CI2, TLI)
@@ -11326,10 +11325,12 @@ class InstructionsCompatibilityAnalysis {
   }
 
   /// Checks if \p I can be the main op for copyable analysis: a supported
-  /// binary operator or an integer min/max intrinsic, the only call with a
-  /// well-defined idempotent value (FP min/max lacks one because of NaNs).
+  /// binary operator, fmuladd, or an integer min/max intrinsic, the only
+  /// call with a well-defined idempotent value (FP min/max lacks one because of
+  /// NaNs).
   static bool isSupportedMainOp(Instruction *I) {
-    return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I);
+    return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
+           RecurrenceDescriptor::isFMulAddIntrinsic(I);
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -11459,6 +11460,11 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
+    // fmuladd(0.0, -0.0, V) == V.
+    if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
+      Type *Ty = MainOp->getType();
+      return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
+    }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     return {V, selectBestIdempotentValue()};
   }
@@ -11972,14 +11978,18 @@ public:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
-        // Instruction::Call returns above before reaching this switch.
+        // Calls (min/max, fmuladd) return above before reaching this switch.
         llvm_unreachable("Unexpected instruction.");
       }
       if (VectorCost > ScalarCost)
         return OrigS;
       return S;
     }
-    assert(Operands.size() == 2 && "Unexpected number of operands!");
+    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    assert((Operands.size() == 2 ||
+            (Operands.size() == 3 &&
+             RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
+           "Unexpected number of operands!");
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
     if (CopyableNum < VL.size() / 2)
@@ -11995,7 +12005,7 @@ public:
       return OrigS;
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
-    if (isCommutative(MainOp)) {
+    if (Operands.size() == 2 && isCommutative(MainOp)) {
       Value *BestFrontOp = nullptr;
       for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
         // Make instructions the first operands.
@@ -12028,8 +12038,10 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized.
-    if (count_if(Operands.back(), IsaPred<Instruction>) > 1)
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
+    // is checked below and may legitimately hold many instructions.
+    if (Operands.size() == 2 &&
+        count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
     auto CheckOperand = [&](ArrayRef<Value *> Ops) {
       if (allConstant(Ops) || isSplat(Ops))
@@ -12064,7 +12076,9 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    if (!CheckOperand(Operands.front()))
+    // Check the addend for fmuladd, first operand otherwise.
+    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
+                                           : Operands.back()))
       return OrigS;
 
     return S;
@@ -12077,10 +12091,12 @@ public:
     if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
-      // Min/max is commutative, so this yields 2 args and never counts the
-      // trailing callee operand.
+      // Excludes the trailing callee operand (2 for min/max, 3 for fmuladd).
+      // getNumberOfPotentiallyCommutativeOps collapses fmuladd to 2 and must
+      // not be used here. Only the 2-operand case is commutative-normalized.
+      auto *CI = dyn_cast<CallInst>(MainOp);
       const unsigned NumMainOpOperands =
-          ::getNumberOfPotentiallyCommutativeOps(MainOp);
+          CI ? CI->arg_size() : MainOp->getNumOperands();
       const bool IsCommutative =
           isCommutative(MainOp) && NumMainOpOperands == 2;
       Operands.assign(NumMainOpOperands,
