@@ -320,9 +320,9 @@ class ValueAPITestCase(TestBase):
                 reg_name = reg_value.GetName()
 
                 # GetIndexOfChildWithName should return the same index.
-                child_with_name_idex = reg_set.GetIndexOfChildWithName(reg_name)
-                self.assertTrue(child_with_name_idex < num_registers)
-                self.assertEqual(child_idx, child_with_name_idex)
+                child_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
+                self.assertTrue(child_with_name_index < num_registers)
+                self.assertEqual(child_idx, child_with_name_index)
 
                 # GetChildMemberWithName should return a value with a matching name.
                 child_member = reg_set.GetChildMemberWithName(reg_name)
