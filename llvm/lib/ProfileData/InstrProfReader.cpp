@@ -514,21 +514,46 @@ Error RawInstrProfReader<IntPtrT>::readHeader() {
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
     return error(instrprof_error::bad_header);
-  auto *Header = reinterpret_cast<const RawInstrProf::Header *>(
+  auto *FirstHeader = reinterpret_cast<const RawInstrProf::Header *>(
       DataBuffer->getBufferStart());
-  ShouldSwapBytes = Header->Magic != RawInstrProf::getMagic<IntPtrT>();
-  return readHeader(*Header);
+  ShouldSwapBytes = FirstHeader->Magic != RawInstrProf::getMagic<IntPtrT>();
+
+  BinaryIds.clear();
+  Symtab = std::make_unique<InstrProfSymtab>();
+
+  // A value-profile target recorded by one image can name a function or
+  // vtable in a later concatenated raw profile. Build the address-to-name
+  // mappings for the entire buffer before deserializing the first record.
+  const RawInstrProf::Header *Header = FirstHeader;
+  while (Header) {
+    if (Error E = readHeader(*Header, Symtab.get(), true))
+      return E;
+
+    Expected<const char *> NextPos = getNextHeaderPosForCurrentHeader();
+    if (Error E = NextPos.takeError())
+      return error(std::move(E));
+
+    Expected<const RawInstrProf::Header *> NextHeader = getNextHeader(*NextPos);
+    if (Error E = NextHeader.takeError())
+      return error(std::move(E));
+    Header = *NextHeader;
+  }
+
+  // Restore the first header's iteration state without adding its mappings or
+  // binary IDs a second time.
+  return readHeader(*FirstHeader, nullptr, false);
 }
 
 template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
+Expected<const RawInstrProf::Header *>
+RawInstrProfReader<IntPtrT>::getNextHeader(const char *CurrentPos) const {
   const char *End = DataBuffer->getBufferEnd();
   // Skip zero padding between profiles.
   while (CurrentPos != End && *CurrentPos == 0)
     ++CurrentPos;
   // If there's nothing left, we're done.
   if (CurrentPos == End)
-    return make_error<InstrProfError>(instrprof_error::eof);
+    return nullptr;
   // If there isn't enough space for another header, this is probably just
   // garbage at the end of the file.
   if (CurrentPos + sizeof(RawInstrProf::Header) > End)
@@ -543,9 +568,48 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
   if (Magic != swap(RawInstrProf::getMagic<IntPtrT>()))
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
-  // There's another profile to read, so we need to process the header.
-  auto *Header = reinterpret_cast<const RawInstrProf::Header *>(CurrentPos);
-  return readHeader(*Header);
+  return reinterpret_cast<const RawInstrProf::Header *>(CurrentPos);
+}
+
+template <class IntPtrT>
+Expected<const char *>
+RawInstrProfReader<IntPtrT>::getNextHeaderPosForCurrentHeader() const {
+  const uint8_t *CurrentPos = ValueDataStart;
+  const uint8_t *BufferEnd =
+      reinterpret_cast<const uint8_t *>(DataBuffer->getBufferEnd());
+  for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
+    uint32_t NumValueKinds = 0;
+    for (uint32_t K = 0; K < IPVK_Last + 1; ++K)
+      NumValueKinds += I->NumValueSites[K] != 0;
+    if (!NumValueKinds)
+      continue;
+
+    if (BufferEnd - CurrentPos < static_cast<ptrdiff_t>(sizeof(ValueProfData)))
+      return make_error<InstrProfError>(instrprof_error::truncated);
+
+    uint32_t TotalSize =
+        support::endian::read32(CurrentPos, getDataEndianness());
+    if (TotalSize < sizeof(ValueProfData) || TotalSize % sizeof(uint64_t) != 0)
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          "invalid total size for value profile data");
+    if (TotalSize > static_cast<uint64_t>(BufferEnd - CurrentPos))
+      return make_error<InstrProfError>(instrprof_error::too_large);
+    CurrentPos += TotalSize;
+  }
+  return reinterpret_cast<const char *>(CurrentPos);
+}
+
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
+  Expected<const RawInstrProf::Header *> Header = getNextHeader(CurrentPos);
+  if (Error E = Header.takeError())
+    return E;
+  if (!*Header)
+    return make_error<InstrProfError>(instrprof_error::eof);
+
+  // The full-buffer symtab and binary ID list were built by readHeader().
+  return readHeader(**Header, nullptr, false);
 }
 
 template <class IntPtrT>
@@ -579,7 +643,8 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readHeader(
-    const RawInstrProf::Header &Header) {
+    const RawInstrProf::Header &Header, InstrProfSymtab *SymtabToPopulate,
+    bool RecordBinaryIds) {
   Version = swap(Header.Version);
   if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::raw_profile_version_mismatch,
@@ -599,7 +664,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
     return error(instrprof_error::bad_header);
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
-  if (!BinaryIdsBuffer.empty()) {
+  if (RecordBinaryIds && !BinaryIdsBuffer.empty()) {
     if (Error Err = readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer,
                                           BinaryIds, getDataEndianness()))
       return Err;
@@ -705,11 +770,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   UniformCountersEnd = UniformCountersStart + UniformCountersSectionSize;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = createSymtab(*NewSymtab))
-    return E;
-
-  Symtab = std::move(NewSymtab);
+  if (SymtabToPopulate)
+    if (Error E = createSymtab(*SymtabToPopulate))
+      return E;
   return success();
 }
 

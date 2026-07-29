@@ -29,13 +29,18 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\20\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\1\0\0\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
+RUN: printf '\050\0\0\0\1\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\1\0\0\0' >> %t-foo.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\40\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\7\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
 RUN: printf '\13\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -62,7 +67,7 @@ RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\40\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -72,14 +77,17 @@ RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\3\0bar\0\0\0' >> %t-bar.profraw
 
 RUN: cat %t-foo.profraw %t-bar.profraw > %t-pad.profraw
-RUN: llvm-profdata show %t-pad.profraw -all-functions -counts | FileCheck %s
+RUN: llvm-profdata show %t-pad.profraw -all-functions -counts -ic-targets | FileCheck %s
 
 CHECK: Counters:
 CHECK:   foo:
 CHECK:     Hash: 0x0000000000000001
 CHECK:     Counters: 1
 CHECK:     Function count: 19
+CHECK:     Indirect Call Site Count: 1
 CHECK:     Block counts: []
+CHECK:     Indirect Target Results:
+CHECK:         [  0, bar,          7 ]
 CHECK:   bar:
 CHECK:     Hash: 0x0000000000000002
 CHECK:     Counters: 2

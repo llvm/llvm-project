@@ -448,8 +448,12 @@ public:
 
 private:
   Error createSymtab(InstrProfSymtab &Symtab);
+  Expected<const RawInstrProf::Header *>
+  getNextHeader(const char *CurrentPos) const;
+  Expected<const char *> getNextHeaderPosForCurrentHeader() const;
   Error readNextHeader(const char *CurrentPos);
-  Error readHeader(const RawInstrProf::Header &Header);
+  Error readHeader(const RawInstrProf::Header &Header,
+                   InstrProfSymtab *SymtabToPopulate, bool RecordBinaryIds);
 
   template <class IntT> IntT swap(IntT Int) const {
     return ShouldSwapBytes ? llvm::byteswap(Int) : Int;
