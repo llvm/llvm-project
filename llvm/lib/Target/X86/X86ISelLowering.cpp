@@ -43242,6 +43242,40 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       }
     }
 
+    // Fold (vzext_movl (scalar_to_vector (cmov A, B))) ->
+    //      (cmov (push_vzext A), (push_vzext B))
+    // and push vzext_movl through scalar conversions and selected scalar
+    // operations to expose target conversion idioms (like vcvtsi2ss with
+    // V_SET0).
+    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && N0.hasOneUse() &&
+        (N0.getOperand(0).getOpcode() == ISD::FADD ||
+         N0.getOperand(0).getOpcode() == X86ISD::CMOV)) {
+      auto PushVzext = [&](auto &Self, SDValue S, unsigned Depth) -> SDValue {
+        if (Depth >= SelectionDAG::MaxRecursionDepth)
+          return SDValue();
+        if (S.getOpcode() == ISD::SINT_TO_FP ||
+            S.getOpcode() == ISD::UINT_TO_FP)
+          return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT,
+                             DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, S));
+        if (S.getOpcode() == ISD::FADD && S.hasOneUse()) {
+          SDValue A = Self(Self, S.getOperand(0), Depth + 1);
+          SDValue B = Self(Self, S.getOperand(1), Depth + 1);
+          if (A && B)
+            return DAG.getNode(ISD::FADD, DL, VT, A, B, S->getFlags());
+        }
+        if (S.getOpcode() == X86ISD::CMOV && S.hasOneUse()) {
+          SDValue A = Self(Self, S.getOperand(0), Depth + 1);
+          SDValue B = Self(Self, S.getOperand(1), Depth + 1);
+          if (A && B)
+            return DAG.getNode(X86ISD::CMOV, DL, VT, A, B, S.getOperand(2),
+                               S.getOperand(3));
+        }
+        return SDValue();
+      };
+      if (SDValue Res = PushVzext(PushVzext, N0.getOperand(0), 0))
+        return Res;
+    }
+
     // Fold (v4i32 (vzext_movl (v2i64 bitcast (scalar_to_vector (i64 X)))))
     // ---> (v4i32 (vzext_movl (scalar_to_vector (i32 (trunc X))))).
     if (VT == MVT::v4i32 && N0.getOpcode() == ISD::BITCAST && N0.hasOneUse()) {
