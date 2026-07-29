@@ -83,7 +83,7 @@ cpp::string describeValue(cpp::wstring_view Value) {
   }
 
   if (S.empty() && !Value.empty())
-    S = cpp::string("<Failed Converstion To UTF-8>");
+    S = cpp::string("<Failed Conversion To UTF-8>");
 
   return S;
 }
