@@ -563,7 +563,7 @@ static llvm::Type *getAggregateType(llvm::Type *ScalarTy, QualType ArgTy) {
     return llvm::VectorType::get(
         ScalarTy,
         ElementCount::getFixed(MatTy->getNumRows() * MatTy->getNumColumns()));
-  if (auto *VecTy = ArgTy->getAs<VectorType>())
+  if (auto *VecTy = ArgTy->getAs<clang::VectorType>())
     return llvm::VectorType::get(
         ScalarTy, ElementCount::getFixed(VecTy->getNumElements()));
   return ScalarTy;
