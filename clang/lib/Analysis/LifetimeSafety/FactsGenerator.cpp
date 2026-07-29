@@ -1051,7 +1051,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       const Expr *CapturedByArg =
           (CapturingArgIdx == LifetimeCaptureByAttr::This)
               ? Args[0]
-              : Args[CapturingArgIdx];
+              : Args[CapturingArgIdx + (IsInstance ? 1 : 0)];
       assert(CapturedByArg && "Capturer expression must be valid");
 
       OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
