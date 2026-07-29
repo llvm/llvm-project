@@ -268,17 +268,18 @@ test execution.
 
 #### Script Interpreter Plugins
 
-LLDB's script interpreter plugins can be built as static or dynamic libraries.
-This is controlled by `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS`, which defaults
-to `ON` on Darwin and FreeBSD and `OFF` everywhere else.
+LLDB's script interpreter plugins (for Python and  Lua) can be built as static
+or dynamic libraries. This is controlled by
+`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS`, which defaults to `ON` on masOS and
+FreeBSD, and `OFF` everywhere else.
 
-This option is used in combination with `LLDB_ENABLE_PYTHON_LIMITED_API`, which
-defaults to `ON` when using SWIG 4.2 or later. When enabled, LLDB uses the
-Python [Limited API](https://docs.python.org/3/c-api/stable.html).
+`LLDB_ENABLE_PYTHON_LIMITED_API` makes LLDB use the Python
+[Limited API](https://docs.python.org/3/c-api/stable.html). It defaults to `ON`
+when using SWIG 4.2 or later.
 
-The Python Limited API allows LLDB to use, and be used from, a different
-version of Python (3.8 or later) than it was built against. Except on Windows,
-this also requires the script interpreters to be built as dynamic libraries.
+When both of these options are enabled, LLDB can use, and be used from, a
+different version of Python (3.8 or later) than it was built against. Note that
+on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required.
 
 #### Windows
 
