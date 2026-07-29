@@ -173,7 +173,6 @@ public:
       CoroutineSuspendParameterBypassExpr *E) {
     return Visit(E->getMoveExpr());
   }
-
   ComplexPairTy VisitPseudoObjectExpr(PseudoObjectExpr *E) {
     return CGF.EmitPseudoObjectRValue(E).getComplexVal();
   }

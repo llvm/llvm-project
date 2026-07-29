@@ -5552,8 +5552,6 @@ public:
   }
 };
 
-/// Helper that selects an expression from an InitListExpr depending on the
-/// current expansion index. See 'CXXExpansionStmtPattern' for how this is used.
 /// Represents a temporary that needs to be pre-evaluated in a coroutine
 /// because it is passed to a call that contains suspend points, and we
 /// want to delay inalloca allocation until after all suspends.
@@ -5603,6 +5601,8 @@ public:
   }
 };
 
+/// Helper that selects an expression from an InitListExpr depending on the
+/// current expansion index. See 'CXXExpansionStmtPattern' for how this is used.
 class CXXExpansionSelectExpr : public Expr {
   friend class ASTStmtReader;
 

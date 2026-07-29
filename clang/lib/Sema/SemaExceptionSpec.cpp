@@ -1240,6 +1240,10 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     return mergeCanThrow(CT, canSubStmtsThrow(*this, BTE));
   }
 
+  case Expr::CoroutineSuspendParameterBypassExprClass:
+    return canThrow(
+        cast<CoroutineSuspendParameterBypassExpr>(S)->getMoveExpr());
+
   case Expr::PseudoObjectExprClass: {
     auto *POE = cast<PseudoObjectExpr>(S);
     CanThrowResult CT = CT_Cannot;

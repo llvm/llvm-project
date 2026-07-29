@@ -3844,6 +3844,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXStdInitializerListExprClass:
   case SubstNonTypeTemplateParmExprClass:
   case MaterializeTemporaryExprClass:
+  case CoroutineSuspendParameterBypassExprClass:
   case ShuffleVectorExprClass:
   case ConvertVectorExprClass:
   case AsTypeExprClass:

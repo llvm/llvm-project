@@ -233,6 +233,10 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::ConstantExprClass:
     return ClassifyInternal(Ctx, cast<ConstantExpr>(E)->getSubExpr());
 
+  case Expr::CoroutineSuspendParameterBypassExprClass:
+    return ClassifyInternal(
+        Ctx, cast<CoroutineSuspendParameterBypassExpr>(E)->getMoveExpr());
+
     // Next come the complicated cases.
   case Expr::SubstNonTypeTemplateParmExprClass:
     return ClassifyInternal(Ctx,

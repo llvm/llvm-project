@@ -6350,8 +6350,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
             << Arg->getType() << ProtoArgType;
       }
       bool NeedsBypass = CallHasSuspend && Arg->isPRValue() &&
-                         (isWin32InAllocaRecord(Context, ProtoArgType) ||
-                          Arg->containsCoroutineSuspendPoints());
+                         isWin32InAllocaRecord(Context, ProtoArgType);
       Expr *PreBypassArg = Arg;
       if (NeedsBypass) {
         ExprResult Materialized =
