@@ -107,11 +107,11 @@ define i64 @test_single_tailcall_reloaded_lr(i64 %arg) #0 {
 ; ASM-NEXT:    //NO_APP
 ; ASM-NEXT:    ldr x30, [sp], #16
 ; ASM-NEXT:    autiasp
-; ASM-NEXT:  .LBB3_2:
 ; ASM-NEXT:    eor x16, x30, x30, lsl #1
 ; ASM-NEXT:    tbz x16, #62, .Lauth_success_2
 ; ASM-NEXT:    brk #0xc470
 ; ASM-NEXT:  .Lauth_success_2:
+; ASM-NEXT:  .LBB3_2:
 ; ASM-NEXT:    b callee
   %cond = icmp eq i64 %arg, 0
   br i1 %cond, label %if.end, label %if.then
@@ -194,10 +194,6 @@ define i64 @test_single_safe_tailcall_single_return(i64 %arg) #0 {
 ; ASM-NEXT:    ldr x30, [sp], #16
 ; ASM-NEXT:    retaa
 ; ASM-NEXT:  .LBB5_2:
-; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_5
-; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_5:
 ; ASM-NEXT:    b callee
   %cond = icmp eq i64 %arg, 0
   br i1 %cond, label %do.tailcall, label %ret.to.authed.lr
@@ -227,15 +223,11 @@ define i64 @test_two_tailcalls(i64 %arg) #0 {
 ; ASM-NEXT:    ldr x30, [sp], #16
 ; ASM-NEXT:    autiasp
 ; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_6
+; ASM-NEXT:    tbz x16, #62, .Lauth_success_5
 ; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_6:
+; ASM-NEXT:  .Lauth_success_5:
 ; ASM-NEXT:    b callee
 ; ASM-NEXT:  .LBB6_2:
-; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_7
-; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_7:
 ; ASM-NEXT:    b callee2
   %cond = icmp eq i64 %arg, 0
   br i1 %cond, label %do.tailcall.safe.lr, label %do.tailcall.authed.lr
@@ -277,15 +269,11 @@ define i64 @test_unlikely_tailcall_after_shrink_wrapped_epilogue(i64 %arg) #0 {
 ; ASM-NEXT:    cmp x8, #11
 ; ASM-NEXT:    b.lo .LBB7_8
 ; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_8
+; ASM-NEXT:    tbz x16, #62, .Lauth_success_6
 ; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_8:
+; ASM-NEXT:  .Lauth_success_6:
 ; ASM-NEXT:    b callee
 ; ASM-NEXT:  .LBB7_5:
-; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_9
-; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_9:
 ; ASM-NEXT:    b callee2
 ; ASM-NEXT:  .LBB7_6:
 ; ASM-NEXT:    mov x0, x8
@@ -349,25 +337,17 @@ define i64 @test_only_tailcalls_after_shrink_wrapped_epilogue(i64 %arg, i64 %arg
 ; ASM-NEXT:    //NO_APP
 ; ASM-NEXT:    ldr x30, [sp], #16
 ; ASM-NEXT:    autiasp
-; ASM-NEXT:    cbz x8, .LBB8_5
 ; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_10
+; ASM-NEXT:    tbz x16, #62, .Lauth_success_7
 ; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_10:
+; ASM-NEXT:  .Lauth_success_7:
+; ASM-NEXT:    cbz x8, .LBB8_5
 ; ASM-NEXT:    b callee2
 ; ASM-NEXT:  .LBB8_3:
 ; ASM-NEXT:    cmp x1, #999
 ; ASM-NEXT:    b.hi .LBB8_6
-; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_11
-; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_11:
 ; ASM-NEXT:    b callee3
 ; ASM-NEXT:  .LBB8_5:
-; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_12
-; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_12:
 ; ASM-NEXT:    b callee
 ; ASM-NEXT:  .LBB8_6:
 ; ASM-NEXT:    add x0, x1, #1
@@ -425,21 +405,17 @@ define i64 @test_various_exits_after_shrink_wrapped_epilogue(i64 %arg) #0 {
 ; ASM-NEXT:    cmp x0, #999
 ; ASM-NEXT:    b.hi .LBB9_6
 ; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_13
+; ASM-NEXT:    tbz x16, #62, .Lauth_success_8
 ; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_13:
+; ASM-NEXT:  .Lauth_success_8:
 ; ASM-NEXT:    b callee2
 ; ASM-NEXT:  .LBB9_4:
-; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_14
-; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_14:
 ; ASM-NEXT:    b callee3
 ; ASM-NEXT:  .LBB9_5:
 ; ASM-NEXT:    eor x16, x30, x30, lsl #1
-; ASM-NEXT:    tbz x16, #62, .Lauth_success_15
+; ASM-NEXT:    tbz x16, #62, .Lauth_success_9
 ; ASM-NEXT:    brk #0xc470
-; ASM-NEXT:  .Lauth_success_15:
+; ASM-NEXT:  .Lauth_success_9:
 ; ASM-NEXT:    b callee
 ; ASM-NEXT:  .LBB9_6:
 ; ASM-NEXT:    add x0, x0, #1

@@ -2115,6 +2115,13 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
+// Check that LR contains a correctly-authenticated address - depending on the
+// security vs. performance tradeoff, this may be desired before performing a
+// tail call.
+//
+// A scratch register must be provided as an implicit-def operand.
+def PAUTH_CHECK_LR : Pseudo<(outs), (ins), []>, Sched<[]>;
+
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
 
