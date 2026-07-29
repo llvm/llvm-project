@@ -1070,9 +1070,10 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 // a 32-bit value that may be uniform (SGPR) or divergent (VGPR); $offset is a
 // constant dword offset folded in at selection.
 //
-// AMDGPUAssignIdxToM0 copies $idx into M0 before register allocation, then
-// AMDGPULowerVGPREncoding lowers each into v_movrels_b32 (load) /
-// v_movreld_b32 (store) over the wave's vector registers.
+// AMDGPULowerVGPREncoding lowers each into an M0-relative move over the wave's
+// vector registers: v_movrels_b32 (load) / v_movreld_b32 (store) where the
+// subtarget has movrel, and a v_mov_b32 under the VGPR indexing mode otherwise.
+// It writes $idx to M0 there, beside the move that reads it.
 
 // Populates the VLdStIdxOpcodeInfo searchable table (see AMDGPUMachineInstrs.h
 // and AMDGPU::getVLdStIdxOpcodeInfo*), mapping each pseudo to its bit width and
