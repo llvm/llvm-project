@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
@@ -49,7 +50,8 @@ static void
 partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
                SmallVector<const DIDerivedType *> &PointerTypes,
                SmallVector<const DISubroutineType *> &SubroutineTypes,
-               SmallVector<const DICompositeType *> &VectorTypes) {
+               SmallVector<const DICompositeType *> &VectorTypes,
+               SmallVector<const DICompositeType *> &ArrayTypes) {
   if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
     BasicTypes.push_back(BT);
     return;
@@ -59,8 +61,23 @@ partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
     return;
   }
   if (const auto *CT = dyn_cast<DICompositeType>(Ty)) {
-    if (CT->getTag() == dwarf::DW_TAG_array_type && CT->isVector())
-      VectorTypes.push_back(CT);
+    if (CT->getTag() == dwarf::DW_TAG_array_type) {
+      // A vector is an array with DINode::FlagVector. A plain array is the
+      // same tag without it. A matrix is also lowered to a DW_TAG_array_type
+      // (two subranges), so it is indistinguishable from a 2D array here and
+      // is emitted as a DebugTypeArray.
+      //
+      // FIXME: Emitting a matrix as a DebugTypeArray is valid but loses the
+      // matrix shape. DWARF has no matrix tag, so distinguishing a matrix needs
+      // a new DINode flag analogous to FlagVector, set on the array, plus a way
+      // to carry column-major vs row-major traits. Array-of-vectors alone would
+      // not disambiguate a matrix from a genuine array of vectors. Once the
+      // frontend marks matrices, route them to a DebugTypeMatrix path here.
+      if (CT->isVector())
+        VectorTypes.push_back(CT);
+      else
+        ArrayTypes.push_back(CT);
+    }
     return;
   }
   const auto *DT = dyn_cast<DIDerivedType>(Ty);
@@ -193,7 +210,9 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   PointerTypes.clear();
   SubroutineTypes.clear();
   VectorTypes.clear();
+  ArrayTypes.clear();
   SubprogramDeclarations.clear();
+  GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
   ScopeToPathOpStringReg.clear();
   CUToCompilationUnitDbgReg.clear();
@@ -207,6 +226,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   NonSemanticOpStringsSectionEmitted = false;
 #endif
   CachedDebugInfoNoneReg = MCRegister();
+  CachedEmptyStringReg = MCRegister();
   CachedOpTypeVoidReg = MCRegister();
   CachedOpTypeInt32Reg = MCRegister();
 
@@ -244,12 +264,32 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   DebugInfoFinder Finder;
   Finder.processModule(*M);
   llvm::for_each(Finder.types(), [&](DIType *Ty) {
-    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes);
+    partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes,
+                   ArrayTypes);
   });
 
   for (const DISubprogram *SP : Finder.subprograms()) {
     if (!SP->isDefinition())
       SubprogramDeclarations.push_back(SP);
+  }
+
+  // Walk LLVM globals to map each DIGlobalVariable to its llvm::GlobalVariable.
+  DenseMap<const DIGlobalVariable *, const GlobalVariable *> DIGVToLLVMGV;
+  for (const GlobalVariable &G : M->globals()) {
+    SmallVector<DIGlobalVariableExpression *> GVEs;
+    G.getDebugInfo(GVEs);
+    for (DIGlobalVariableExpression *GVE : GVEs) {
+      if (const DIGlobalVariable *GV = GVE->getVariable()) {
+        DIGVToLLVMGV.try_emplace(GV, &G);
+      }
+    }
+  }
+
+  for (const DIGlobalVariableExpression *GVE : Finder.global_variables()) {
+    const DIGlobalVariable *GV = GVE->getVariable();
+    const DIExpression *Expr = GVE->getExpression();
+    GlobalVariableDebugInfoMap.try_emplace(
+        GV, GlobalVariableDebugInfo{Expr, DIGVToLLVMGV.lookup(GV)});
   }
 }
 
@@ -311,6 +351,23 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
          "NSDI OpString missing from cache; emitNonSemanticDebugStrings must "
          "cache every string used in section 10");
   return It->second;
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::getCachedScopePathOpStringReg(
+    const DIScope *Scope, bool UseEmptyPathIfNullScope) {
+  if (!Scope) {
+    assert(UseEmptyPathIfNullScope &&
+           "null scope path lookup requires UseEmptyPathIfNullScope");
+    assert(CachedEmptyStringReg.isValid() &&
+           "empty path OpString must be cached in emitNonSemanticDebugStrings");
+    return CachedEmptyStringReg;
+  }
+  auto It = ScopeToPathOpStringReg.find(Scope);
+  assert(It != ScopeToPathOpStringReg.end() &&
+         "path OpString must be cached in emitNonSemanticDebugStrings");
+  MCRegister FileStrReg = It->second;
+  assert(FileStrReg.isValid() && "path OpString id must be valid once cached");
+  return FileStrReg;
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI32(
@@ -519,13 +576,7 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
 
   MCRegister ParentReg = *ParentRegOpt;
 
-  auto PathStrIt = ScopeToPathOpStringReg.find(SP);
-  assert(PathStrIt != ScopeToPathOpStringReg.end() &&
-         "declaration path OpString must be cached in "
-         "emitNonSemanticDebugStrings");
-  MCRegister FileStrReg = PathStrIt->second;
-  assert(FileStrReg.isValid() &&
-         "declaration path OpString id must be valid once cached");
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(SP);
 
   MCRegister NameReg = getCachedOpStringReg(SP->getName());
   MCRegister LinkageReg = getCachedOpStringReg(SP->getLinkageName());
@@ -561,6 +612,96 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
   return lookupOptReg(DebugTypeRegs, Ty);
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::resolveGlobalVariableParent(
+    const DIGlobalVariable *) const {
+  // TODO: When this backend emits debug instructions for namespace, subprogram,
+  // compilation units, and module scopes return GV->getScope()'s debug id.
+
+  // !CompileUnits.empty() was already checked before staring the emission of
+  // NSDI instructions.
+  assert(!CompileUnits.empty() &&
+         "resolveGlobalVariableParent requires non-empty CompileUnits");
+  std::optional<MCRegister> ParentRegOpt =
+      lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
+  assert(ParentRegOpt && "DebugCompilationUnit must be emitted before "
+                         "resolveGlobalVariableParent");
+  // Fallback: first module compile unit (SPIRV-LLVM-Translator default).
+  return *ParentRegOpt;
+}
+
+// Unimplemented no-op; see emitDebugExpression declaration.
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
+    const DIExpression *, MCRegister, MCRegister, SPIRV::ModuleAnalysisInfo &) {
+  return std::nullopt;
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
+    const DIGlobalVariable *GV, const GlobalVariableDebugInfo &Info,
+    MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  assert(GV && "GV must not be null in emitDebugGlobalVariable");
+
+  MCRegister ParentReg = resolveGlobalVariableParent(GV);
+
+  // TyReg: DebugInfoNone when GV has no DI type (as done in
+  // SPIRV-LLVM-Translator). Declarations (isDefinition: false) can have null
+  // getType() while definitions must have a non-null one (enforced by the IR
+  // verifier).
+  MCRegister TyReg = CachedDebugInfoNoneReg;
+  if (const DIType *Ty = GV->getType()) {
+    auto TyRegOpt = lookupOptReg(DebugTypeRegs, Ty);
+    if (!TyRegOpt)
+      return std::nullopt;
+    TyReg = *TyRegOpt;
+  }
+
+  std::optional<MCRegister> StaticMemberRegOpt;
+  if (const DIDerivedType *SM = GV->getStaticDataMemberDeclaration()) {
+    StaticMemberRegOpt = lookupOptReg(DebugTypeRegs, SM);
+    if (!StaticMemberRegOpt)
+      return std::nullopt;
+  }
+
+  MCRegister NameReg = getCachedOpStringReg(GV->getName());
+  MCRegister LinkageReg = getCachedOpStringReg(GV->getLinkageName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      GV->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(GV->getLine()), I32TypeReg, MAI);
+  // DIGlobalVariable or DIGlobalVariableExpression metadata carry no column
+  // field. Column is hardcoded to 0 (because it can't be determined), matching
+  // SPIRV-LLVM-Translator.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+
+  // Variable: @g OpVariable id when !dbg matches; else a DebugExpression for
+  // the GVE init value when no @g exists; else DebugInfoNone.
+  MCRegister VariableReg = CachedDebugInfoNoneReg;
+  if (const GlobalVariable *LLVMGV = Info.LLVMGV) {
+    MCRegister GVReg = MAI.getGlobalObjReg(LLVMGV);
+    if (GVReg.isValid())
+      VariableReg = GVReg;
+  } else if (Info.Expr) {
+    if (auto ExprReg =
+            emitDebugExpression(Info.Expr, VoidTypeReg, ExtInstSetReg, MAI))
+      VariableReg = *ExprReg;
+  }
+
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(GV), I32TypeReg, MAI);
+
+  SmallVector<MCRegister, 10> Ops = {NameReg,    TyReg,       SrcReg,
+                                     LineReg,    ColReg,      ParentReg,
+                                     LinkageReg, VariableReg, FlagsReg};
+
+  if (StaticMemberRegOpt)
+    Ops.push_back(*StaticMemberRegOpt);
+
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugGlobalVariable,
+                     VoidTypeReg, ExtInstSetReg, Ops, MAI);
+}
+
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
     const DICompositeType *VT, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
@@ -587,6 +728,46 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
       static_cast<uint32_t>(CI->getZExtValue()), I32TypeReg, MAI);
   return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeVector, VoidTypeReg,
                      ExtInstSetReg, {BTIt->second, CountReg}, MAI);
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
+    const DICompositeType *AT, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  // The element (base) type must already be in DebugTypeRegs. Unlike
+  // DebugTypeVector, the element may be any debug type, not only a basic type.
+  auto BaseRegOpt = lookupOptReg(DebugTypeRegs, AT->getBaseType());
+  if (!BaseRegOpt)
+    return std::nullopt;
+
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+
+  SmallVector<MCRegister> Ops;
+  Ops.push_back(*BaseRegOpt);
+
+  // One component count per DISubrange, in DWARF subrange order. Emit 0 for
+  // counts that are not a compile-time constant (dynamic arrays). This matches
+  // OpTypeRuntimeArray.
+  for (const DINode *Element : AT->getElements()) {
+    const auto *SR = dyn_cast<DISubrange>(Element);
+    if (!SR)
+      continue;
+    // A DIVariable count (a variable-length array) is not a ConstantInt, so it
+    // maps to 0 here. DebugTypeArray also allows a DebugLocalVariable or
+    // DebugGlobalVariable id for it, but no frontend we target emits one. A
+    // constant wider than 32 bits maps to 0 too, since the count operand is a
+    // 32-bit OpConstant and such an array cannot occur in a shader.
+    uint32_t Count = 0;
+    if (const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount())) {
+      const APInt &Value = CI->getValue();
+      if (Value.getActiveBits() <= 32)
+        Count = static_cast<uint32_t>(Value.getZExtValue());
+    }
+    Ops.push_back(emitOpConstantI32(Count, I32TypeReg, MAI));
+  }
+
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeArray, VoidTypeReg,
+                     ExtInstSetReg, Ops, MAI);
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
@@ -618,6 +799,17 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitOpStringIfNew(SP->getLinkageName(), MAI);
     ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
   }
+
+  for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
+    emitOpStringIfNew(GV->getName(), MAI);
+    emitOpStringIfNew(GV->getLinkageName(), MAI);
+    SmallString<128> Path = getDebugFullPath(GV->getFile());
+    MCRegister PathReg = emitOpStringIfNew(Path, MAI);
+    if (const DIFile *F = GV->getFile())
+      ScopeToPathOpStringReg[F] = PathReg;
+  }
+
+  CachedEmptyStringReg = emitOpStringIfNew("", MAI);
 
 #ifndef NDEBUG
   NonSemanticOpStringsSectionEmitted = true;
@@ -743,6 +935,14 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
       DebugTypeRegs[PT] = *PtrReg;
   }
 
+  // Emit DebugTypeArray for each collected array type. Placed after the basic,
+  // vector, and pointer types so an array over any of them can resolve its
+  // element id. An array whose element type was not emitted is skipped.
+  for (const DICompositeType *AT : ArrayTypes) {
+    if (auto ArrReg = emitDebugTypeArray(AT, ExtInstSetReg, MAI))
+      DebugTypeRegs[AT] = *ArrReg;
+  }
+
   // Emit DebugTypeFunction for each distinct DISubroutineType.
   for (const DISubroutineType *ST : SubroutineTypes) {
     if (auto FnTyReg =
@@ -756,6 +956,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
                                                     ExtInstSetReg, MAI))
       DebugFunctionDeclarationRegs[SP] = *DeclReg;
   }
+
+  // Emit DebugGlobalVariable for each collected DIGlobalVariable.
+  for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)
+    emitDebugGlobalVariable(GV, Info, VoidTypeReg, I32TypeReg, ExtInstSetReg,
+                            MAI);
 }
 
 SmallString<128>

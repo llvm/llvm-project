@@ -96,9 +96,9 @@ define i32 @ctz1(i32 %x) !prof !0 {
 ; CHECK: !prof [[PROF_0:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]], !prof [[PROF_1:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -118,9 +118,9 @@ define i32 @ctz1_nusw(i32 %x) {
 ; CHECK-LABEL: @ctz1_nusw(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -230,9 +230,9 @@ define i32 @ctz4(i64 %b) {
 ; CHECK-LABEL: @ctz4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.cttz.i64(i64 [[B:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[B]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
@@ -251,9 +251,9 @@ define i32 @ctz5(i32 %x) {
 ; CHECK-LABEL: @ctz5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -275,9 +275,9 @@ define i32 @ctz6(i64 %n) {
 ; CHECK-LABEL: @ctz6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.cttz.i64(i64 [[N:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[N]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 63, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 63, i32 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
@@ -297,7 +297,7 @@ define i32 @ctz8(i32 %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[V:%.*]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[V]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 31, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 31, i32 [[TMP0]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -317,9 +317,9 @@ define i32 @ctz9(i32 %x) {
 ; CHECK-LABEL: @ctz9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -339,9 +339,9 @@ define i32 @ctz1_with_i8_gep(i32 %x) {
 ; CHECK-LABEL: @ctz1_with_i8_gep(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -409,9 +409,9 @@ define i32 @cttz_i16_via_i128(i16 noundef %x) {
 ; CHECK-LABEL: @cttz_i16_via_i128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i16 [[TMP0]] to i8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i16 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP3]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV6]]
 ;
@@ -460,9 +460,9 @@ define i128 @ctz1_i128(i32 %x) {
 ; CHECK-LABEL: @ctz1_i128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i128
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i128 0, i128 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    ret i128 [[TMP3]]
 ;
 entry:
@@ -482,9 +482,9 @@ define i32 @src(i128 noundef %x) {
 ; CHECK-LABEL: @src(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i128 @llvm.cttz.i128(i128 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i128 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i128 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i128 0, i128 [[TMP3]]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[TMP1]], i8 0, i8 [[TMP2]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
@@ -498,6 +498,49 @@ entry:
   %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
   ret i32 %conv
+}
+
+@table.wider = constant [16 x i32] [i32 15, i32 0, i32 1, i32 4, i32 2, i32 8, i32 5, i32 10, i32 14, i32 3, i32 7, i32 9, i32 13, i32 6, i32 12, i32 11]
+define i32 @cttz_accesstype_wider_nonconst(i16 %x) {
+; CHECK-LABEL: @cttz_accesstype_wider_nonconst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[X]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 15, i32 [[TMP1]], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+entry:
+  %neg = sub i16 0, %x
+  %and = and i16 %neg, %x
+  %mul = mul i16 %and, 2479
+  %shr = lshr i16 %mul, 11
+  %mask = and i16 %shr, 15
+  %idx = zext i16 %mask to i64
+  %gep = getelementptr inbounds [16 x i32], ptr @table.wider, i64 0, i64 %idx
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
+
+@table.zeroelement.wider = constant [27 x i128] [i128 18446744073709551632, i128 0, i128 1, i128 0, i128 0, i128 2, i128 7, i128 0, i128 0, i128 5, i128 3, i128 11, i128 13, i128 8, i128 0, i128 0, i128 15, i128 0, i128 0, i128 6, i128 4, i128 10, i128 12, i128 0, i128 14, i128 0, i128 9]
+define i128 @cttz_zeroelement_wider(i16 %x) {
+; CHECK-LABEL: @cttz_zeroelement_wider(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[X]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i128 18446744073709551632, i128 [[TMP1]], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    ret i128 [[TMP3]]
+;
+entry:
+  %neg = sub i16 0, %x
+  %and = and i16 %neg, %x
+  %mul = mul i16 %and, 2667
+  %shr = lshr i16 %mul, 11
+  %idx = zext i16 %shr to i64
+  %gep = getelementptr inbounds [27 x i128], ptr @table.zeroelement.wider, i64 0, i64 %idx
+  %res  = load i128, ptr %gep, align 16
+  ret i128 %res
 }
 
 !0 = !{!"function_entry_count", i64 1000}

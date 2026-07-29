@@ -210,6 +210,224 @@ entry:
   ret void
 }
 
+define void @test_dup_switch_successor(ptr %dst, ptr %x, ptr %y, i32 %cond) {
+; CHECK-LABEL: define void @test_dup_switch_successor(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], ptr [[Y:%.*]], i32 [[COND:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DST10:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[Y9:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X8:%.*]] = ptrtoaddr ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[X8]], 64
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[Y9]], 64
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[DST10]], 64
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST10]], [[TMP0]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[X8]], [[TMP2]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_BOUND011:%.*]] = icmp ult i64 [[DST10]], [[TMP1]]
+; CHECK-NEXT:    [[RT_BOUND112:%.*]] = icmp ult i64 [[Y9]], [[TMP2]]
+; CHECK-NEXT:    [[RT_CONFLICT13:%.*]] = and i1 [[RT_BOUND011]], [[RT_BOUND112]]
+; CHECK-NEXT:    [[RT_CONFLICT_ALL:%.*]] = or i1 [[RT_CONFLICT]], [[RT_CONFLICT13]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT_ALL]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK:       [[EXIT:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ENTRY_RTVEC]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <4 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[X4P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 4
+; CHECK-NEXT:    [[Y4P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 4
+; CHECK-NEXT:    [[DST4:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x double>, ptr [[X4P]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x double>, ptr [[Y4P]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <4 x double> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    store <4 x double> [[TMP8]], ptr [[DST4]], align 8
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT:.*]]
+; CHECK:       [[ENTRY_RTSCALAR]]:
+; CHECK-NEXT:    [[X0_SCALAR:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[Y0_SCALAR:%.*]] = load double, ptr [[Y]], align 8
+; CHECK-NEXT:    [[D0_SCALAR:%.*]] = fdiv double [[X0_SCALAR]], [[Y0_SCALAR]]
+; CHECK-NEXT:    store double [[D0_SCALAR]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[X1P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1_SCALAR:%.*]] = load double, ptr [[X1P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y1P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[Y1_SCALAR:%.*]] = load double, ptr [[Y1P_SCALAR]], align 8
+; CHECK-NEXT:    [[D1_SCALAR:%.*]] = fdiv double [[X1_SCALAR]], [[Y1_SCALAR]]
+; CHECK-NEXT:    [[DST1_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 1
+; CHECK-NEXT:    store double [[D1_SCALAR]], ptr [[DST1_SCALAR]], align 8
+; CHECK-NEXT:    [[X2P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X2_SCALAR:%.*]] = load double, ptr [[X2P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y2P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 2
+; CHECK-NEXT:    [[Y2_SCALAR:%.*]] = load double, ptr [[Y2P_SCALAR]], align 8
+; CHECK-NEXT:    [[D2_SCALAR:%.*]] = fdiv double [[X2_SCALAR]], [[Y2_SCALAR]]
+; CHECK-NEXT:    [[DST2_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 2
+; CHECK-NEXT:    store double [[D2_SCALAR]], ptr [[DST2_SCALAR]], align 8
+; CHECK-NEXT:    [[X3P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 3
+; CHECK-NEXT:    [[X3_SCALAR:%.*]] = load double, ptr [[X3P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y3P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 3
+; CHECK-NEXT:    [[Y3_SCALAR:%.*]] = load double, ptr [[Y3P_SCALAR]], align 8
+; CHECK-NEXT:    [[D3_SCALAR:%.*]] = fdiv double [[X3_SCALAR]], [[Y3_SCALAR]]
+; CHECK-NEXT:    [[DST3_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 3
+; CHECK-NEXT:    store double [[D3_SCALAR]], ptr [[DST3_SCALAR]], align 8
+; CHECK-NEXT:    [[X4P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 4
+; CHECK-NEXT:    [[X4_SCALAR:%.*]] = load double, ptr [[X4P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y4P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 4
+; CHECK-NEXT:    [[Y4_SCALAR:%.*]] = load double, ptr [[Y4P_SCALAR]], align 8
+; CHECK-NEXT:    [[D4_SCALAR:%.*]] = fdiv double [[X4_SCALAR]], [[Y4_SCALAR]]
+; CHECK-NEXT:    [[DST4_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 4
+; CHECK-NEXT:    store double [[D4_SCALAR]], ptr [[DST4_SCALAR]], align 8
+; CHECK-NEXT:    [[X5P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 5
+; CHECK-NEXT:    [[X5_SCALAR:%.*]] = load double, ptr [[X5P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y5P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 5
+; CHECK-NEXT:    [[Y5_SCALAR:%.*]] = load double, ptr [[Y5P_SCALAR]], align 8
+; CHECK-NEXT:    [[D5_SCALAR:%.*]] = fdiv double [[X5_SCALAR]], [[Y5_SCALAR]]
+; CHECK-NEXT:    [[DST5_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 5
+; CHECK-NEXT:    store double [[D5_SCALAR]], ptr [[DST5_SCALAR]], align 8
+; CHECK-NEXT:    [[X6P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 6
+; CHECK-NEXT:    [[X6_SCALAR:%.*]] = load double, ptr [[X6P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y6P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 6
+; CHECK-NEXT:    [[Y6_SCALAR:%.*]] = load double, ptr [[Y6P_SCALAR]], align 8
+; CHECK-NEXT:    [[D6_SCALAR:%.*]] = fdiv double [[X6_SCALAR]], [[Y6_SCALAR]]
+; CHECK-NEXT:    [[DST6_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 6
+; CHECK-NEXT:    store double [[D6_SCALAR]], ptr [[DST6_SCALAR]], align 8
+; CHECK-NEXT:    [[X7P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[X]], i64 7
+; CHECK-NEXT:    [[X7_SCALAR:%.*]] = load double, ptr [[X7P_SCALAR]], align 8
+; CHECK-NEXT:    [[Y7P_SCALAR:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 7
+; CHECK-NEXT:    [[Y7_SCALAR:%.*]] = load double, ptr [[Y7P_SCALAR]], align 8
+; CHECK-NEXT:    [[D7_SCALAR:%.*]] = fdiv double [[X7_SCALAR]], [[Y7_SCALAR]]
+; CHECK-NEXT:    [[DST7_SCALAR:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 7
+; CHECK-NEXT:    store double [[D7_SCALAR]], ptr [[DST7_SCALAR]], align 8
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT]]
+; CHECK:       [[ENTRY_RTCONT]]:
+; CHECK-NEXT:    switch i32 [[COND]], label %[[EXIT]] [
+; CHECK-NEXT:      i32 0, label %[[EXIT]]
+; CHECK-NEXT:    ]
+;
+; NOCHK-LABEL: define void @test_dup_switch_successor(
+; NOCHK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], ptr [[Y:%.*]], i32 [[COND:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[ENTRY:.*:]]
+; NOCHK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; NOCHK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
+; NOCHK-NEXT:    [[D0:%.*]] = fdiv double [[X0]], [[Y0]]
+; NOCHK-NEXT:    store double [[D0]], ptr [[DST]], align 8
+; NOCHK-NEXT:    [[X1P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 1
+; NOCHK-NEXT:    [[X1:%.*]] = load double, ptr [[X1P]], align 8
+; NOCHK-NEXT:    [[Y1P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 1
+; NOCHK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y1P]], align 8
+; NOCHK-NEXT:    [[D1:%.*]] = fdiv double [[X1]], [[Y1]]
+; NOCHK-NEXT:    [[DST1:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 1
+; NOCHK-NEXT:    store double [[D1]], ptr [[DST1]], align 8
+; NOCHK-NEXT:    [[X2P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
+; NOCHK-NEXT:    [[X2:%.*]] = load double, ptr [[X2P]], align 8
+; NOCHK-NEXT:    [[Y2P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 2
+; NOCHK-NEXT:    [[Y2:%.*]] = load double, ptr [[Y2P]], align 8
+; NOCHK-NEXT:    [[D2:%.*]] = fdiv double [[X2]], [[Y2]]
+; NOCHK-NEXT:    [[DST2:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 2
+; NOCHK-NEXT:    store double [[D2]], ptr [[DST2]], align 8
+; NOCHK-NEXT:    [[X3P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 3
+; NOCHK-NEXT:    [[X3:%.*]] = load double, ptr [[X3P]], align 8
+; NOCHK-NEXT:    [[Y3P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 3
+; NOCHK-NEXT:    [[Y3:%.*]] = load double, ptr [[Y3P]], align 8
+; NOCHK-NEXT:    [[D3:%.*]] = fdiv double [[X3]], [[Y3]]
+; NOCHK-NEXT:    [[DST3:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 3
+; NOCHK-NEXT:    store double [[D3]], ptr [[DST3]], align 8
+; NOCHK-NEXT:    [[X4P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 4
+; NOCHK-NEXT:    [[X4:%.*]] = load double, ptr [[X4P]], align 8
+; NOCHK-NEXT:    [[Y4P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 4
+; NOCHK-NEXT:    [[Y4:%.*]] = load double, ptr [[Y4P]], align 8
+; NOCHK-NEXT:    [[D4:%.*]] = fdiv double [[X4]], [[Y4]]
+; NOCHK-NEXT:    [[DST4:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 4
+; NOCHK-NEXT:    store double [[D4]], ptr [[DST4]], align 8
+; NOCHK-NEXT:    [[X5P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 5
+; NOCHK-NEXT:    [[X5:%.*]] = load double, ptr [[X5P]], align 8
+; NOCHK-NEXT:    [[Y5P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 5
+; NOCHK-NEXT:    [[Y5:%.*]] = load double, ptr [[Y5P]], align 8
+; NOCHK-NEXT:    [[D5:%.*]] = fdiv double [[X5]], [[Y5]]
+; NOCHK-NEXT:    [[DST5:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 5
+; NOCHK-NEXT:    store double [[D5]], ptr [[DST5]], align 8
+; NOCHK-NEXT:    [[X6P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 6
+; NOCHK-NEXT:    [[X6:%.*]] = load double, ptr [[X6P]], align 8
+; NOCHK-NEXT:    [[Y6P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 6
+; NOCHK-NEXT:    [[Y6:%.*]] = load double, ptr [[Y6P]], align 8
+; NOCHK-NEXT:    [[D6:%.*]] = fdiv double [[X6]], [[Y6]]
+; NOCHK-NEXT:    [[DST6:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 6
+; NOCHK-NEXT:    store double [[D6]], ptr [[DST6]], align 8
+; NOCHK-NEXT:    [[X7P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 7
+; NOCHK-NEXT:    [[X7:%.*]] = load double, ptr [[X7P]], align 8
+; NOCHK-NEXT:    [[Y7P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 7
+; NOCHK-NEXT:    [[Y7:%.*]] = load double, ptr [[Y7P]], align 8
+; NOCHK-NEXT:    [[D7:%.*]] = fdiv double [[X7]], [[Y7]]
+; NOCHK-NEXT:    [[DST7:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 7
+; NOCHK-NEXT:    store double [[D7]], ptr [[DST7]], align 8
+; NOCHK-NEXT:    switch i32 [[COND]], label %[[EXIT:.*]] [
+; NOCHK-NEXT:      i32 0, label %[[EXIT]]
+; NOCHK-NEXT:    ]
+; NOCHK:       [[EXIT]]:
+; NOCHK-NEXT:    ret void
+;
+entry:
+  %x0 = load double, ptr %x, align 8
+  %y0 = load double, ptr %y, align 8
+  %d0 = fdiv double %x0, %y0
+  store double %d0, ptr %dst, align 8
+  %x1p = getelementptr inbounds double, ptr %x, i64 1
+  %x1 = load double, ptr %x1p, align 8
+  %y1p = getelementptr inbounds double, ptr %y, i64 1
+  %y1 = load double, ptr %y1p, align 8
+  %d1 = fdiv double %x1, %y1
+  %dst1 = getelementptr inbounds double, ptr %dst, i64 1
+  store double %d1, ptr %dst1, align 8
+  %x2p = getelementptr inbounds double, ptr %x, i64 2
+  %x2 = load double, ptr %x2p, align 8
+  %y2p = getelementptr inbounds double, ptr %y, i64 2
+  %y2 = load double, ptr %y2p, align 8
+  %d2 = fdiv double %x2, %y2
+  %dst2 = getelementptr inbounds double, ptr %dst, i64 2
+  store double %d2, ptr %dst2, align 8
+  %x3p = getelementptr inbounds double, ptr %x, i64 3
+  %x3 = load double, ptr %x3p, align 8
+  %y3p = getelementptr inbounds double, ptr %y, i64 3
+  %y3 = load double, ptr %y3p, align 8
+  %d3 = fdiv double %x3, %y3
+  %dst3 = getelementptr inbounds double, ptr %dst, i64 3
+  store double %d3, ptr %dst3, align 8
+  %x4p = getelementptr inbounds double, ptr %x, i64 4
+  %x4 = load double, ptr %x4p, align 8
+  %y4p = getelementptr inbounds double, ptr %y, i64 4
+  %y4 = load double, ptr %y4p, align 8
+  %d4 = fdiv double %x4, %y4
+  %dst4 = getelementptr inbounds double, ptr %dst, i64 4
+  store double %d4, ptr %dst4, align 8
+  %x5p = getelementptr inbounds double, ptr %x, i64 5
+  %x5 = load double, ptr %x5p, align 8
+  %y5p = getelementptr inbounds double, ptr %y, i64 5
+  %y5 = load double, ptr %y5p, align 8
+  %d5 = fdiv double %x5, %y5
+  %dst5 = getelementptr inbounds double, ptr %dst, i64 5
+  store double %d5, ptr %dst5, align 8
+  %x6p = getelementptr inbounds double, ptr %x, i64 6
+  %x6 = load double, ptr %x6p, align 8
+  %y6p = getelementptr inbounds double, ptr %y, i64 6
+  %y6 = load double, ptr %y6p, align 8
+  %d6 = fdiv double %x6, %y6
+  %dst6 = getelementptr inbounds double, ptr %dst, i64 6
+  store double %d6, ptr %dst6, align 8
+  %x7p = getelementptr inbounds double, ptr %x, i64 7
+  %x7 = load double, ptr %x7p, align 8
+  %y7p = getelementptr inbounds double, ptr %y, i64 7
+  %y7 = load double, ptr %y7p, align 8
+  %d7 = fdiv double %x7, %y7
+  %dst7 = getelementptr inbounds double, ptr %dst, i64 7
+  store double %d7, ptr %dst7, align 8
+  switch i32 %cond, label %exit [
+  i32 0, label %exit
+  ]
+
+exit:
+  ret void
+}
+
 define void @reject_noduplicate_call(ptr %dst, ptr %x, ptr %y) {
 ; CHECK-LABEL: define void @reject_noduplicate_call(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR1]] {

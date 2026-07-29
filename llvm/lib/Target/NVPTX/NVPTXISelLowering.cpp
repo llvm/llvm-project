@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -110,14 +111,15 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::init(true));
 
 // PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
-// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
-// when they disagree. This flag is an escape hatch to use atom.add anyway,
-// trading correct denormal handling for the speed of the native instruction.
+// (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
+// when they disagree. This option (enabled by default) allows using atom.add
+// anyway, trading correct denormal handling for the speed of the native
+// instruction.
 static cl::opt<bool> AllowFTZAtomics(
     "nvptx-allow-ftz-atomics", cl::Hidden,
     cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
              "FTZ behavior does not match the function's denormal mode."),
-    cl::init(false));
+    cl::init(true));
 
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
@@ -1230,28 +1232,25 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
   }
 }
 
-static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
-                                      const DataLayout &DL,
-                                      const TargetLowering &TL) {
-  if (Ptr->getOpcode() == ISD::FrameIndex) {
-    auto Ty = TL.getPointerTy(DL, ADDRESS_SPACE_LOCAL);
-    Ptr = DAG.getAddrSpaceCast(SDLoc(), Ty, Ptr, ADDRESS_SPACE_GENERIC,
-                               ADDRESS_SPACE_LOCAL);
-
-    return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
-  }
-
-  // Peel of an addrspacecast to generic and load directly from the specific
-  // address space.
+static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG) {
+  // Load directly from the source address space of a cast to generic.
+  unsigned SrcAS = ADDRESS_SPACE_GENERIC;
   if (Ptr->getOpcode() == ISD::ADDRSPACECAST) {
     const auto *ASC = cast<AddrSpaceCastSDNode>(Ptr);
     if (ASC->getDestAddressSpace() == ADDRESS_SPACE_GENERIC) {
       Ptr = ASC->getOperand(0);
-      return MachinePointerInfo(ASC->getSrcAddressSpace());
+      SrcAS = ASC->getSrcAddressSpace();
     }
   }
 
-  return MachinePointerInfo();
+  // Preserve the alloca's address space through frame-index inference.
+  if (const auto *FIN = dyn_cast<FrameIndexSDNode>(Ptr))
+    if (const AllocaInst *AI =
+            DAG.getMachineFunction().getFrameInfo().getObjectAllocation(
+                FIN->getIndex()))
+      return MachinePointerInfo(AI);
+
+  return MachinePointerInfo(SrcAS);
 }
 
 static ISD::NodeType getExtOpcode(const ISD::ArgFlagsTy &Flags) {
@@ -1418,7 +1417,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (IsByVal) {
       assert(ArgOutVals.size() == 1 && "We must pass only one value as byval");
       SDValue SrcPtr = ArgOutVals[0];
-      const auto PointerInfo = refinePtrAS(SrcPtr, DAG, DL, *this);
+      const MachinePointerInfo SrcPtrInfo = refinePtrAS(SrcPtr, DAG);
       // Don't use Flags.getNonZeroByValAlign as this includes the stackalign,
       // which does not apply to the source pointer.
       const Align BaseSrcAlign = [&]() {
@@ -1447,7 +1446,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Align SrcAlign = commonAlignment(BaseSrcAlign, Offsets[J]);
         SDValue SrcAddr = DAG.getObjectPtrOffset(dl, SrcPtr, Offsets[J]);
         SDValue SrcLoad =
-            DAG.getLoad(LoadVT, dl, CallChain, SrcAddr, PointerInfo, SrcAlign);
+            DAG.getLoad(LoadVT, dl, CallChain, SrcAddr,
+                        SrcPtrInfo.getWithOffset(Offsets[J]), SrcAlign);
 
         TypeSize ParamOffset = Offsets[J].getWithIncrement(VAOffset);
         Align ParamAlign = commonAlignment(ArgAlign, ParamOffset);
@@ -1713,10 +1713,11 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                   {Chain, DAG.getZExtOrTrunc(Size, DL, LocalVT),
                    DAG.getTargetConstant(Align, DL, MVT::i32)});
 
-  SDValue ASC = DAG.getAddrSpaceCast(
-      DL, Op.getValueType(), Alloc, ADDRESS_SPACE_LOCAL, ADDRESS_SPACE_GENERIC);
+  // NVPTXLowerAlloca puts allocas in the local address space, so a local
+  // pointer is requested here; escapes are explicit addrspacecasts in the IR.
+  assert(Op.getValueType() == LocalVT && "Unexpected alloca pointer size");
 
-  return DAG.getMergeValues({ASC, SDValue(Alloc.getNode(), 1)}, DL);
+  return DAG.getMergeValues({Alloc, SDValue(Alloc.getNode(), 1)}, DL);
 }
 
 SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
@@ -3399,8 +3400,7 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   // Finally, the offset operand. We expect this to always be undef, and it will
   // be ignored in lowering, but to mirror the handling of the other vector
   // store instructions we include it in the new SDNode.
-  assert(Offset.getOpcode() == ISD::UNDEF &&
-         "Offset operand expected to be undef");
+  assert(Offset.isUndef() && "Offset operand expected to be undef or poison");
   Ops.push_back(Offset);
 
   SDValue NewSt =
@@ -4070,10 +4070,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   const DataLayout &DL = DAG.getDataLayout();
   LLVMContext &Ctx = *DAG.getContext();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   const Function &F = DAG.getMachineFunction().getFunction();
   const bool IsKernel = isKernelFunction(F);
+
+  const MVT PtrVT = getPointerTy(DL, IsKernel ? ADDRESS_SPACE_ENTRY_PARAM
+                                              : ADDRESS_SPACE_LOCAL);
 
   SDValue Root = DAG.getRoot();
   SmallVector<SDValue, 16> OutChains;
@@ -4128,18 +4130,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       const auto &ByvalIn = ArgIns[0];
       assert(getValueType(DL, Ty) == ByvalIn.VT &&
              "Ins type did not match function type");
-      assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
       if (IsKernel) {
-        assert(Arg.getType()->getPointerAddressSpace() ==
-                   ADDRESS_SPACE_ENTRY_PARAM &&
+        assert(Ty->getPointerAddressSpace() == ADDRESS_SPACE_ENTRY_PARAM &&
                "Kernel ByVal argument must be lowered to the param address "
                "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
-        P = DAG.getNode(NVPTXISD::MoveParam, dl, ByvalIn.VT, ArgSymbol);
+        P = DAG.getNode(NVPTXISD::MoveParam, dl, ArgSymbol.getValueType(),
+                        ArgSymbol);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         P = DAG.getAddrSpaceCast(dl, ByvalIn.VT, P, ADDRESS_SPACE_LOCAL,
                                  ADDRESS_SPACE_GENERIC);

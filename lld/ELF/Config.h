@@ -215,6 +215,7 @@ private:
   void createFiles(llvm::opt::InputArgList &args);
   void loadFiles();
   void inferMachineType();
+  void waitForLTOCleanup();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
   // True if we are in --whole-archive and --no-whole-archive.
@@ -451,6 +452,7 @@ struct Config {
   bool zRodynamic;
   bool zSectionHeader;
   bool zShstk;
+  bool zSortThunks;
   bool zStartStopGC;
   uint8_t zStartStopVisibility;
   bool zText;

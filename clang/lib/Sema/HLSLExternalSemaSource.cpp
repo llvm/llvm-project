@@ -661,6 +661,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .addByteAddressBufferLoadMethods()
         .addByteAddressBufferStoreMethods()
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -670,6 +671,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -743,6 +745,26 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(PartialSpec2DA, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                      /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // RWTexture2DArray — same as RWTexture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
         .completeDefinition();
   });
 }
@@ -821,6 +843,8 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_add");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
                             "__builtin_hlsl_interlocked_or");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedXor",
+                            "__builtin_hlsl_interlocked_xor");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
