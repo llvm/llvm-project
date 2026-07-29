@@ -522,8 +522,7 @@ bindRequiredArrayElementToEnvironment(ProgramStateRef State,
   return State->BindExpr(Ctor->getArg(0), SF, loc::MemRegionVal(ElementRegion));
 }
 
-void ExprEngine::handleConstructor(const Expr *E,
-                                   ExplodedNode *Pred,
+void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   const auto *CE = dyn_cast<CXXConstructExpr>(E);
   const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(E);
@@ -756,7 +755,7 @@ void ExprEngine::handleConstructor(const Expr *E,
              "We should not have inlined this constructor!");
 
       for (ExplodedNode *N : DstEvaluated) {
-        Engine.makePostStmtNode(E, N->getState(), N, /*MarkAsSink=*/ true);
+        Engine.makePostStmtNode(E, N->getState(), N, /*MarkAsSink=*/true);
       }
 
       // There is no need to run the PostCall and PostStmt checker
@@ -831,7 +830,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
     } else {
       static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
       Engine.makeNode(Pred->getLocation().withTag(&T), Pred->getState(), Pred,
-                      /*MarkAsSink=*/ true);
+                      /*MarkAsSink=*/true);
       return;
     }
   }
