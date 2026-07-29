@@ -4433,8 +4433,10 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
 
     if (Scalar) {
       DenseMap<User *, unsigned> UserToExtractIdx;
-      for (auto *U : Scalar->users()) {
-        if (!IsUserFMulScalarTy(U))
+      for (auto &[S, U, L] : ScalarUserAndIdx) {
+        if (S != Scalar)
+          continue;
+        if (!U || !IsUserFMulScalarTy(U))
           return false;
         // Recording entry for the user is important. Index value is not
         // important.
@@ -4442,19 +4444,19 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       }
       if (UserToExtractIdx.empty())
         return false;
-      for (auto &[S, U, L] : ScalarUserAndIdx) {
-        for (auto *U : S->users()) {
-          if (UserToExtractIdx.contains(U)) {
-            auto *FMul = cast<BinaryOperator>(U);
-            auto *Op0 = FMul->getOperand(0);
-            auto *Op1 = FMul->getOperand(1);
-            if ((Op0 == S && Op1 == S) || Op0 != S || Op1 != S) {
-              UserToExtractIdx[U] = L;
-              break;
-            }
+
+      for (auto &[U, L] : UserToExtractIdx) {
+        auto *FMul = cast<BinaryOperator>(U);
+        Value *OtherOp = FMul->getOperand(0) == Scalar ? FMul->getOperand(1)
+                                                       : FMul->getOperand(0);
+        for (auto &[S, ScalarUser, Lane] : ScalarUserAndIdx) {
+          if (S == OtherOp && ScalarUser == U) {
+            L = Lane;
+            break;
           }
         }
       }
+
       for (auto &[U, L] : UserToExtractIdx) {
         if (!IsExtractLaneEquivalentToZero(Index, Val->getScalarSizeInBits()) &&
             !IsExtractLaneEquivalentToZero(L, Val->getScalarSizeInBits()))

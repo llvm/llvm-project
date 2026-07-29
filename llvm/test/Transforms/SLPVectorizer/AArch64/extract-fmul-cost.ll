@@ -2,36 +2,27 @@
 ; RUN: opt -passes=slp-vectorizer -slp-threshold=3 \
 ; RUN:   -mtriple=aarch64-unknown-linux -S < %s | FileCheck %s
 
-; TODO: The first fadd pair should also be vectorized because the scalar fmul
-; can use the required vector lanes without separate extract instructions.
-
 define double @lane1_times_lane2(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: define double @lane1_times_lane2(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A0P:%.*]] = getelementptr double, ptr [[A]], i64 0
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr double, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[A2P:%.*]] = getelementptr double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[B0P:%.*]] = getelementptr double, ptr [[B]], i64 0
-; CHECK-NEXT:    [[B1P:%.*]] = getelementptr double, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[B2P:%.*]] = getelementptr double, ptr [[B]], i64 2
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A0P]], align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[A1P]], align 8
-; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B0P]], align 8
-; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[B1P]], align 8
-; CHECK-NEXT:    [[X0:%.*]] = fadd double [[A0]], [[B0]]
-; CHECK-NEXT:    [[X1:%.*]] = fadd double [[A1]], [[B1]]
 ; CHECK-NEXT:    [[O0:%.*]] = getelementptr double, ptr [[OUT]], i64 0
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[OUT]], i64 1
 ; CHECK-NEXT:    [[O2:%.*]] = getelementptr double, ptr [[OUT]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A2P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B2P]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A0P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B0P]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    store double [[X0]], ptr [[O0]], align 8
-; CHECK-NEXT:    store double [[X1]], ptr [[O1]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[O2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[X1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[A2P]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[B2P]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[O0]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[O2]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:
