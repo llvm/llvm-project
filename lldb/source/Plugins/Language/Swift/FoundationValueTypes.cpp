@@ -347,17 +347,39 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
   // where the byte count is the size of _slice. Detect that layout and handle
   // it before falling through to the legacy enum logic below.
   {
+    CompilerType repr_type = representation_enum_sp->GetCompilerType();
+    const uint32_t repr_flags = repr_type.GetTypeInfo();
+    const bool is_struct = (repr_flags & lldb::eTypeIsStructUnion) &&
+                           !(repr_flags & lldb::eTypeIsEnumeration);
+
+    static constexpr llvm::StringLiteral g__storage("_storage");
     static constexpr llvm::StringLiteral g__slice("_slice");
+    ValueObjectSP storage_sp =
+        representation_enum_sp->GetChildAtNamePath({g__storage});
     ValueObjectSP slice_sp =
         representation_enum_sp->GetChildAtNamePath({g__slice});
-    if (slice_sp) {
+    // Swift's Int is pointer-sized, so a Range<Int> is two pointers wide.
+    ProcessSP process_sp(valobj.GetProcessSP());
+    const uint64_t int_size = process_sp ? process_sp->GetAddressByteSize() : 0;
+    const uint64_t range_size = 2 * int_size;
+    if (!int_size)
+      return false;
+    const uint64_t slice_size =
+        slice_sp ? llvm::expectedToStdOptional(slice_sp->GetByteSize())
+                       .value_or(0)
+                 : 0;
+
+    // Identify the layout structurally: a struct (not the legacy enum) with
+    // both _storage and a _slice that is exactly two Ints wide.
+    if (is_struct && storage_sp && slice_sp && slice_size == range_size) {
       DataExtractor extractor;
       Status error;
-      if (slice_sp->GetData(extractor, error) < 16 || error.Fail())
+      if (slice_sp->GetData(extractor, error) < range_size || error.Fail())
         return false;
       lldb::offset_t offset = 0;
-      int64_t lowerBound = (int64_t)extractor.GetU64(&offset);
-      int64_t upperBound = (int64_t)extractor.GetU64(&offset);
+      // GetAddress() reads a pointer-sized value.
+      int64_t lowerBound = (int64_t)extractor.GetAddress(&offset);
+      int64_t upperBound = (int64_t)extractor.GetAddress(&offset);
 
       int64_t count = upperBound - lowerBound;
       if (count == 1)
