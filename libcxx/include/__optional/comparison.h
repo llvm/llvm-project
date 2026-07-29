@@ -124,7 +124,7 @@ operator<=>(const optional<_Tp>& __x, const optional<_Up>& __y) {
 // [optional.nullops] Comparison with nullopt
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, std::nullopt_t) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, nullopt_t) noexcept {
   return !static_cast<bool>(__x);
 }
 
