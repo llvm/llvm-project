@@ -6176,11 +6176,12 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     return Cost;
   }
 
-  if (isa<ScalableVectorType>(ValTy))
-    return getArithmeticReductionCostSVE(Opcode, ValTy, CostKind);
-
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   MVT MTy = LT.second;
+
+  if (isa<ScalableVectorType>(ValTy) || TLI->useSVEForFixedLengthVectorVT(MTy))
+    return getArithmeticReductionCostSVE(Opcode, ValTy, CostKind);
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
