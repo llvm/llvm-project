@@ -1548,12 +1548,13 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
     // but not on OpVariable.
     const bool IsUntyped =
         PointerType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
-    auto VarMIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
-                          TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
-                                            : SPIRV::OpVariable))
-                      .addDef(PointerVReg)
-                      .addUse(GR.getSPIRVTypeID(PointerType))
-                      .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
+    auto VarMIB =
+        BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                  : SPIRV::OpVariable))
+            .addDef(PointerVReg)
+            .addUse(GR.getSPIRVTypeID(PointerType))
+            .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
     if (IsUntyped)
       VarMIB.addUse(GR.getSPIRVTypeID(PointeeTy)); // Data Type
     VarMIB.constrainAllUses(TII, TRI, RBI);
@@ -1631,12 +1632,13 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     // but not on OpVariable.
     const bool IsUntyped =
         PointerType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
-    auto VarMIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
-                          TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
-                                            : SPIRV::OpVariable))
-                      .addDef(PointerVReg)
-                      .addUse(GR.getSPIRVTypeID(PointerType))
-                      .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
+    auto VarMIB =
+        BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                  : SPIRV::OpVariable))
+            .addDef(PointerVReg)
+            .addUse(GR.getSPIRVTypeID(PointerType))
+            .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
     if (IsUntyped)
       VarMIB.addUse(GR.getSPIRVTypeID(ResType)); // Data Type
     VarMIB.constrainAllUses(TII, TRI, RBI);
@@ -2445,13 +2447,12 @@ SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
   // Pick the matching opcode/operands so the synthesized constant global is
   // valid SPIR-V.
   const bool IsUntyped = VarTy->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
-  auto MIBVar =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
-                                : SPIRV::OpVariable))
-          .addDef(VarReg)
-          .addUse(GR.getSPIRVTypeID(VarTy))
-          .addImm(SPIRV::StorageClass::UniformConstant);
+  auto MIBVar = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                        TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                          : SPIRV::OpVariable))
+                    .addDef(VarReg)
+                    .addUse(GR.getSPIRVTypeID(VarTy))
+                    .addImm(SPIRV::StorageClass::UniformConstant);
   if (IsUntyped)
     MIBVar.addUse(GR.getSPIRVTypeID(SpvArrTy)); // Data Type
   MIBVar.addUse(Const);                         // Initializer
