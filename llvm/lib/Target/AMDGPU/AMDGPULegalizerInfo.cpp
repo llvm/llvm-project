@@ -302,6 +302,7 @@ constexpr LLT F64 = LLT::float64();
 constexpr LLT V2F16 = LLT::fixed_vector(2, F16);
 constexpr LLT V2BF16 = LLT::fixed_vector(2, BF16);
 constexpr LLT V2F32 = LLT::fixed_vector(2, F32);
+constexpr LLT V2F64 = LLT::fixed_vector(2, F64);
 
 constexpr LLT S1 = LLT::scalar(1);
 constexpr LLT S8 = LLT::scalar(8);
@@ -979,10 +980,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({CodePtr});
 
-  auto &FPOpActions = getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
-      G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
-    .legalFor({S32, S64});
+  auto &FPOpActions =
+      getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
+                                   G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
+          .legalFor({F32, F64});
   auto &TrigActions = getActionDefinitionsBuilder({G_FSIN, G_FCOS})
     .customFor({S32, S64});
   auto &FDIVActions = getActionDefinitionsBuilder(G_FDIV)
@@ -990,27 +991,27 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.has16BitInsts()) {
     if (ST.hasVOP3PInsts())
-      FPOpActions.legalFor({S16, V2S16});
+      FPOpActions.legalFor({F16, V2F16});
     else
-      FPOpActions.legalFor({S16});
+      FPOpActions.legalFor({F16});
 
     TrigActions.customFor({S16});
     FDIVActions.customFor({S16});
   }
 
   if (ST.hasPackedFP32Ops()) {
-    FPOpActions.legalFor({V2S32});
-    FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
+    FPOpActions.legalFor({V2F32});
+    FPOpActions.clampMaxNumElementsStrict(0, F32, 2);
   }
 
   if (ST.hasPackedFP64Ops()) {
-    FPOpActions.legalFor({V2S64});
-    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+    FPOpActions.legalFor({V2F64});
+    FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
 
   if (ST.hasPackedFP64Ops()) {
-    FPOpActions.legalFor({V2S64});
-    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+    FPOpActions.legalFor({V2F64});
+    FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
 
   auto &MinNumMaxNumIeee =
@@ -1057,11 +1058,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasVOP3PInsts())
-    FPOpActions.clampMaxNumElementsStrict(0, S16, 2);
+    FPOpActions.clampMaxNumElementsStrict(0, F16, 2);
 
-  FPOpActions
-    .scalarize(0)
-    .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
+  FPOpActions.scalarize(0).clampScalar(0, ST.has16BitInsts() ? F16 : F32, F64);
 
   TrigActions
     .scalarize(0)
@@ -1164,25 +1163,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
   if (ST.has16BitInsts()) {
     FSubActions
-      // Use actual fsub instruction
-      .legalFor({S32, S16})
-      // Must use fadd + fneg
-      .lowerFor({S64, V2S16});
+        // Use actual fsub instruction
+        .legalFor({F32, F16})
+        // Must use fadd + fneg
+        .lowerFor({F64, V2F16});
   } else {
     FSubActions
-      // Use actual fsub instruction
-      .legalFor({S32})
-      // Must use fadd + fneg
-      .lowerFor({S64, S16, V2S16});
+        // Use actual fsub instruction
+        .legalFor({F32})
+        // Must use fadd + fneg
+        .lowerFor({F64, F16, V2F16});
   }
 
   if (ST.hasPackedFP32Ops())
-    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
+    FSubActions.lowerFor({V2F32}).clampMaxNumElements(0, F32, 2);
 
-  FSubActions
-    .clampMaxNumElements(0, S16, 2)
-    .scalarize(0)
-    .clampScalar(0, S32, S64);
+  FSubActions.clampMaxNumElements(0, F16, 2).scalarize(0).clampScalar(0, F32,
+                                                                      F64);
 
   // Whether this is legal depends on the floating point mode for the function.
   auto &FMad = getActionDefinitionsBuilder(G_FMAD);
