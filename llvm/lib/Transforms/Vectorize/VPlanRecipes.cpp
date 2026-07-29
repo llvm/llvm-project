@@ -1329,6 +1329,13 @@ InstructionCost VPInstruction::computeExtractElementCost(VectorType *VecTy,
                                     Ctx.CostKind);
 }
 
+InstructionCost
+VPInstruction::computeShuffleCost(TargetTransformInfo::ShuffleKind Kind,
+                                 VectorType *VecTy, VPCostContext &Ctx) {
+  return Ctx.TTI.getShuffleCost(Kind, VecTy, VecTy, /*Mask=*/{}, Ctx.CostKind,
+                                /*Index=*/0);
+}
+
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {

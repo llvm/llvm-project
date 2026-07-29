@@ -34,6 +34,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
@@ -1444,6 +1445,13 @@ public:
   /// recipe.
   static InstructionCost computeExtractElementCost(VectorType *VecTy,
                                                    VPCostContext &Ctx);
+
+  /// Return the cost of a shuffle of kind \p Kind over vector type \p VecTy.
+  /// Static helper so callers can price the operation without constructing a
+  /// recipe.
+  static InstructionCost
+  computeShuffleCost(TargetTransformInfo::ShuffleKind Kind, VectorType *VecTy,
+                     VPCostContext &Ctx);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPInstruction to dbgs() (for debugging).

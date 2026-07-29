@@ -3906,7 +3906,9 @@ void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
           VPInstruction::computeAnyOfCost(MaskTy, CostCtx) +
           VPWidenLoadRecipe::computeMaskedCost(Instruction::Load, VecTy,
                                                Alignment, AS, CostCtx) +
-          VPInstruction::computeExtractElementCost(VecTy, CostCtx);
+          VPInstruction::computeExtractElementCost(VecTy, CostCtx) +
+          VPInstruction::computeShuffleCost(TargetTransformInfo::SK_Broadcast,
+                                            VecTy, CostCtx);
       InstructionCost OldCost = RepR->computeCost(VF, CostCtx);
       if (NewCost > OldCost) {
         Beneficial = false;

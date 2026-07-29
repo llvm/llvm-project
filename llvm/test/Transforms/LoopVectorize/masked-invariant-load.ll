@@ -285,15 +285,9 @@ define void @cond_invar_load_two_ptrs(ptr noalias %a, ptr noalias %cond, ptr noa
 ; ON-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> zeroinitializer, i1 [[TMP3]], i32 0
 ; ON-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[INV1]], <4 x i1> [[TMP4]], <4 x i32> poison)
 ; ON-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[WIDE_MASKED_LOAD]], i64 0
-; ON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
-; ON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; ON-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[INV2]], <4 x i1> [[TMP4]], <4 x i32> poison)
 ; ON-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[WIDE_MASKED_LOAD1]], i64 0
-; ON-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
-; ON-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; ON-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
-; ON-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT3]], i64 0
-; ON-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], [[TMP8]]
+; ON-NEXT:    [[TMP9:%.*]] = add i32 [[TMP5]], [[TMP6]]
 ; ON-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP9]], i64 0
 ; ON-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; ON-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
