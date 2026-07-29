@@ -192,6 +192,8 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseMacOSXVersionMin>(
       ".macosx_version_min");
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
+    addDirectiveHandler<&DarwinAsmParser::parseTargetTripleDirective>(
+        ".target_triple");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
         ".cg_profile");
     addDirectiveHandler<&DarwinAsmParser::parsePtrAuthABIVersion>(
@@ -461,6 +463,7 @@ public:
   }
 
   bool parseBuildVersion(StringRef Directive, SMLoc Loc);
+  bool parseTargetTripleDirective(StringRef Directive, SMLoc Loc);
   bool parseVersionMin(StringRef Directive, SMLoc Loc, MCVersionMinType Type);
   bool parseMajorMinorVersionComponent(unsigned *Major, unsigned *Minor,
                                        const char *VersionName);
@@ -1190,6 +1193,25 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
     = getOSTypeFromPlatform((MachO::PlatformType)Platform);
   checkVersion(Directive, PlatformName, Loc, ExpectedOS);
   getStreamer().emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+  return false;
+}
+
+/// parseTargetTripleDirective
+///   ::= .target_triple parseTargetTriple
+bool DarwinAsmParser::parseTargetTripleDirective(StringRef Directive,
+                                                 SMLoc Loc) {
+  StringRef TargetTriple;
+  SMLoc TargetTripleLoc = getTok().getLoc();
+  if (getParser().parseIdentifier(TargetTriple))
+    return TokError("target triple expected");
+  std::string NormalizedTriple = Triple::normalize(TargetTriple);
+  if (!Triple(NormalizedTriple).isOSDarwin())
+    return Error(TargetTripleLoc, "non-Darwin target triple");
+
+  if (parseEOL())
+    return addErrorSuffix(" in '.target_triple' directive");
+
+  getStreamer().emitTargetTriple(NormalizedTriple);
   return false;
 }
 

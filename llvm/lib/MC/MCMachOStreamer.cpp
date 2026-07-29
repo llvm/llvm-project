@@ -95,6 +95,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
   void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                              bool PtrAuthKernelABIVersion) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
@@ -254,6 +255,10 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     VersionTuple SDKVersion) {
   getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
                                            Minor, Update, SDKVersion);
+}
+
+void MCMachOStreamer::emitTargetTriple(StringRef TargetTriple) {
+  getWriter().setTargetTriple(TargetTriple);
 }
 
 void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
