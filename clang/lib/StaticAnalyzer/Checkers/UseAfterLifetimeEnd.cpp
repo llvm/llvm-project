@@ -35,9 +35,30 @@ public:
   PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                     const ExplodedNode *N,
                                     PathSensitiveBugReport &BR) override;
+  PathDiagnosticPieceRef createSourcePiece(const ExplodedNode *N,
+                                           BugReporterContext &BRC,
+                                           StringRef Message) const;
 };
 
 } // namespace
+
+static const Expr *getLifetimeBoundArg(const Expr *RetExpr) {
+  const CallExpr *Expr = dyn_cast_or_null<CallExpr>(RetExpr);
+  if (!Expr)
+    return nullptr;
+  const FunctionDecl *FD = Expr->getDirectCallee();
+  if (!FD)
+    return nullptr;
+
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    if (PVD->hasAttr<LifetimeBoundAttr>()) {
+      unsigned Idx = PVD->getFunctionScopeIndex();
+      if (Idx < Expr->getNumArgs())
+        return Expr->getArg(Idx);
+    }
+  }
+  return nullptr;
+}
 
 void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
                                            CheckerContext &C) const {
@@ -76,8 +97,8 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
                                                CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Returning value bound to '") + Source->getString() +
-       "' that will go out of scope"),
+      (llvm::Twine("Returning value bound to ") +
+       lifetime_modeling::getRegionName(Source) + " that will go out of scope"),
       N);
 
   if (SourceRange Range = getRegionDeclRange(Source); Range.isValid())
@@ -85,6 +106,30 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
 
   BR->addVisitor<UseAfterLifetimeEndBRVisitor>(Val, Source);
   C.emitReport(std::move(BR));
+}
+
+PathDiagnosticPieceRef UseAfterLifetimeEndBRVisitor::createSourcePiece(
+    const ExplodedNode *N, BugReporterContext &BRC, StringRef Message) const {
+  const Stmt *S = N->getStmtForDiagnostics();
+  if (!S)
+    return nullptr;
+
+  const Expr *RetExpr = dyn_cast_or_null<Expr>(S);
+  const Expr *Arg = getLifetimeBoundArg(RetExpr);
+
+  PathDiagnosticLocation Pos;
+
+  if (Arg != nullptr)
+    Pos =
+        PathDiagnosticLocation(Arg, BRC.getSourceManager(), N->getStackFrame());
+  else
+    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(), N->getStackFrame());
+
+  auto Note = std::make_shared<PathDiagnosticEventPiece>(Pos, Message, true);
+  if (SourceRange Range = getRegionDeclRange(SourceRegion); Range.isValid())
+    Note->addRange(Range);
+
+  return Note;
 }
 
 PathDiagnosticPieceRef
@@ -99,21 +144,11 @@ UseAfterLifetimeEndBRVisitor::VisitNode(const ExplodedNode *N,
       lifetime_modeling::isBoundToLifetimeSource(Pred->getState(), BoundVal))
     return nullptr;
 
-  const Stmt *S = N->getStmtForDiagnostics();
-  if (!S)
-    return nullptr;
-
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
-  auto Piece = std::make_shared<PathDiagnosticEventPiece>(
-      Pos,
-      (llvm::Twine("Value's lifetime bound to the lifetime of '") +
-       SourceRegion->getString() + "' here")
-          .str(),
-      true);
-
-  if (SourceRange Range = getRegionDeclRange(SourceRegion); Range.isValid())
-    Piece->addRange(Range);
-
+  auto Piece = createSourcePiece(
+      N, BRC,
+      (llvm::Twine("Value's lifetime bound to the lifetime of ") +
+       lifetime_modeling::getRegionName(SourceRegion) + " here")
+          .str());
   return Piece;
 }
 
@@ -121,21 +156,11 @@ PathDiagnosticPieceRef
 UseAfterLifetimeEndBRVisitor::getEndPath(BugReporterContext &BRC,
                                          const ExplodedNode *N,
                                          PathSensitiveBugReport &BR) {
-  const Stmt *S = N->getStmtForDiagnostics();
-  if (!S)
-    return nullptr;
-
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
-  auto Piece = std::make_shared<PathDiagnosticEventPiece>(
-      Pos,
-      llvm::Twine(("Lifetime of '") + SourceRegion->getString() +
-                  "' ended here")
-          .str(),
-      true);
-
-  if (SourceRange Range = getRegionDeclRange(SourceRegion); Range.isValid())
-    Piece->addRange(Range);
-
+  auto Piece = createSourcePiece(
+      N, BRC,
+      (llvm::Twine("Lifetime of ") +
+       lifetime_modeling::getRegionName(SourceRegion) + " ended here")
+          .str());
   return Piece;
 }
 
