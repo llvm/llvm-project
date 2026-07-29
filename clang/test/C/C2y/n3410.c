@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -verify=c89-23 -std=c99 -Wall -pedantic -Wno-unused %s
 // RUN: %clang_cc1 -verify=c89-23 -std=c89 -Wall -pedantic -Wno-unused -Wno-comment %s
 
-/* WG14 N3410: Clang 23
+/* WG14 N3410: Clang 24
  * Slay Some Earthly Demons XI
  *
  * It is now ill-formed for the same identifier within a TU to have both
