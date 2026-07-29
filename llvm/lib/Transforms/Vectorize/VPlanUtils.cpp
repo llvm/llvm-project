@@ -673,8 +673,12 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
 
 std::pair<VPBasicBlock *, VPBasicBlock *>
 VPBlockUtils::getPlainCFGHeaderAndLatch(const VPlan &Plan) {
-  auto *Header = cast<VPBasicBlock>(
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  VPBasicBlock *Header = cast<VPBasicBlock>(
+      Plan.getEntry()->getNumSuccessors() == 1
+          ? Plan.getEntry()->getSingleSuccessor()
+          : Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  assert(Header->getNumPredecessors() == 2 &&
+         "Header must have exactly 2  predecessors");
   auto *Latch = cast<VPBasicBlock>(Header->getPredecessors()[1]);
   return {Header, Latch};
 }
