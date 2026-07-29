@@ -4092,7 +4092,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           !Context.getTargetInfo().hasInt128Type())
         PP.Diag(Tok.getLocation(), diag::err_integer_literal_too_large)
             << Literal.isUnsigned;
-      BitsNeeded = Literal.MicrosoftInteger;
+      BitsNeeded = std::max<unsigned>(BitsNeeded, Literal.MicrosoftInteger);
     }
 
     llvm::APInt ResultVal(BitsNeeded, 0);
@@ -4134,6 +4134,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           Ty = Context.getIntTypeForBitwidth(Width,
                                              /*Signed=*/!Literal.isUnsigned);
         }
+        ResultVal = ResultVal.zextOrTrunc(Width);
       }
 
       // Bit-precise integer literals are automagically-sized based on the
