@@ -237,19 +237,7 @@ public:
 };
 
 FunctionPass *createWebAssemblyLateEHPrepareLegacyPass();
-<<<<<<< HEAD
-FunctionPass *createWebAssemblyCFGSort();
-FunctionPass *createWebAssemblyCFGStackify();
-FunctionPass *createWebAssemblyExplicitLocals();
-FunctionPass *createWebAssemblyLowerBrUnless();
-FunctionPass *createWebAssemblyRegNumbering();
-FunctionPass *createWebAssemblyVecReduce();
-FunctionPass *createWebAssemblyDebugFixup();
-FunctionPass *createWebAssemblyStackTaggingPass();
-FunctionPass *createWebAssemblyPeephole();
-ModulePass *createWebAssemblyMCLowerPrePass();
 ModulePass *createWebAssemblyGlobalsTaggingPass();
-=======
 
 class WebAssemblyCFGSortPass
     : public RequiredPassInfoMixin<WebAssemblyCFGSortPass> {
@@ -321,7 +309,6 @@ public:
 };
 
 ModulePass *createWebAssemblyMCLowerPreLegacyPass();
->>>>>>> parent/main
 
 // PassRegistry initialization declarations.
 void initializeWebAssemblyOptimizeReturnedLegacyPass(PassRegistry &);
