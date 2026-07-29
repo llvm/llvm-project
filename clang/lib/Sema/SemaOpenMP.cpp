@@ -15036,11 +15036,34 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
 /// Build loop variable finalization statement from HelperExprs.Finals.
 /// Returns a CompoundStmt containing all finalization statements, or nullptr
 /// if there are no finalization statements.
+/// Note: Loops with non-arithmetic loop variables (e.g., iterators) are skipped
+/// because finalization only applies to integer/floating-point counters.
 static Stmt *buildLoopFinalization(
     ASTContext &Context,
-    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers) {
+    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
+    ArrayRef<Stmt *> LoopStmts) {
+  assert(LoopHelpers.size() == LoopStmts.size() &&
+         "LoopHelpers and LoopStmts must have the same size");
   SmallVector<Stmt *, 8> FinalizationStmts;
-  for (const auto &Helper : LoopHelpers) {
+  for (const auto &[Helper, LoopStmt] : llvm::zip(LoopHelpers, LoopStmts)) {
+    // Skip finalization for range-based for loops (CXXForRangeStmt) since
+    // their loop variables are iterators, not integer counters.
+    if (isa<CXXForRangeStmt>(LoopStmt))
+      continue;
+
+    // For ForStmt, check if the loop variable is arithmetic.
+    if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
+      if (auto *InitDeclStmt = dyn_cast_or_null<DeclStmt>(For->getInit())) {
+        if (InitDeclStmt->isSingleDecl()) {
+          if (auto *InitVar = dyn_cast<VarDecl>(InitDeclStmt->getSingleDecl())) {
+            // Skip finalization if loop variable is not arithmetic (e.g., iterator).
+            if (!InitVar->getType()->isArithmeticType())
+              continue;
+          }
+        }
+      }
+    }
+
     for (auto *Final : Helper.Finals)
       if (Final)
         FinalizationStmts.push_back(Final);
@@ -15324,7 +15347,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
                                   AStmt, Inner,
                                   buildPreInits(Context, PreInits),
-                                  buildLoopFinalization(Context, LoopHelpers));
+                                  buildLoopFinalization(Context, LoopHelpers, LoopStmts));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
@@ -15585,7 +15608,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   return OMPStripeDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+      buildLoopFinalization(Context, LoopHelpers, LoopStmts));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
@@ -16055,7 +16078,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   return OMPReverseDirective::Create(
       Context, StartLoc, EndLoc, AStmt, NumLoops, ReversedFor,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+      buildLoopFinalization(Context, LoopHelpers, {LoopStmt}));
 }
 
 /// Build the AST for \#pragma omp split counts(c1, c2, ...).
@@ -16482,7 +16505,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
   return OMPInterchangeDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
       buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, LoopHelpers));
+      buildLoopFinalization(Context, LoopHelpers, LoopStmts));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
@@ -16909,12 +16932,14 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               IncrExpr.get()->getEndLoc());
 
   // 8. Build finalization statements for fused loops.
-  // Collect HelperExprs from the fused loops.
+  // Collect HelperExprs and loop statements from the fused loops.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> FusedLoopHelpers;
+  SmallVector<Stmt *, 4> FusedLoopStmts;
   for (unsigned I = FirstVal - 1; I < LastVal; ++I) {
     if (SeqAnalysis.Loops[I].isRegularLoop() &&
         isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt)) {
       FusedLoopHelpers.push_back(SeqAnalysis.Loops[I].HelperExprs);
+      FusedLoopStmts.push_back(SeqAnalysis.Loops[I].TheForStmt);
     }
   }
 
@@ -16969,7 +16994,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   return OMPFuseDirective::Create(
       Context, StartLoc, EndLoc, Clauses, NumGeneratedTopLevelLoops, AStmt,
       FusionStmt, buildPreInits(Context, PreInits),
-      buildLoopFinalization(Context, FusedLoopHelpers));
+      buildLoopFinalization(Context, FusedLoopHelpers, FusedLoopStmts));
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
