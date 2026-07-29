@@ -343,12 +343,10 @@ func.func @peeling_main_loop() {
 
 // USE-EXPENSIVE-MATH: %[[C0:.*]] = arith.constant 0 : index
 // USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
-// USE-EXPENSIVE-MATH: %[[MAIN_RES:.*]] = affine.for %[[IV_MAIN:.*]] = 0 to 4 iter_args(%[[ARG_MAIN:.*]] = %[[C0]]) -> (index) {
+// USE-EXPENSIVE-MATH: %[[MAIN_RES:.*]] = affine.for %[[IV_MAIN:.*]] = 0 to 4 iter_args(%[[ARG_MAIN:.*]] = %[[C0]]) -> (index)
 // USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV_MAIN]])[%[[BOUND]]]
-// USE-EXPENSIVE-MATH: }
-// USE-EXPENSIVE-MATH: %[[TAIL_RES:.*]] = affine.for %[[IV_TAIL:.*]] = 4 to #[[$MAP_UB]]()[%[[BOUND]]] iter_args(%[[ARG_TAIL:.*]] = %[[MAIN_RES]]) -> (index) {
+// USE-EXPENSIVE-MATH: %[[TAIL_RES:.*]] = affine.for %[[IV_TAIL:.*]] = 4 to #[[$MAP_UB]]()[%[[BOUND]]] iter_args(%[[ARG_TAIL:.*]] = %[[MAIN_RES]]) -> (index)
 // USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV_TAIL]])[%[[BOUND]]]
-// USE-EXPENSIVE-MATH: }
 
 // -----
 
@@ -366,9 +364,8 @@ func.func @fully_constantized_no_peeling() {
 
 // USE-EXPENSIVE-MATH: %[[C0:.*]] = arith.constant 0 : index
 // USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
-// USE-EXPENSIVE-MATH: %{{.*}} = affine.for %[[IV:.*]] = 0 to 3 iter_args(%{{.*}} = %[[C0]]) -> (index) {
+// USE-EXPENSIVE-MATH: %{{.*}} = affine.for %[[IV:.*]] = 0 to 3 iter_args(%{{.*}} = %[[C0]]) -> (index)
 // USE-EXPENSIVE-MATH:   %{{.*}} = affine.apply #[[$MAP_APPLY]](%[[IV]])[%[[BOUND]]]
-// USE-EXPENSIVE-MATH: }
 
 // -----
 
@@ -379,25 +376,19 @@ func.func @peel_nested_loops() {
   %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
   affine.for %i = %bound to 7 step 2 {
     affine.for %j = %bound to 7 step 2 { 
-    "test.foo"() : () -> ()
+      "test.foo"() : () -> ()
     }
   }
   return
 }
 
 // USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds
-// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 0 to 3 {
-// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3 {
-// USE-EXPENSIVE-MATH:   }
-// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]] {
-// USE-EXPENSIVE-MATH:   }
-// USE-EXPENSIVE-MATH: }
-// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]] {
-// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3 {
-// USE-EXPENSIVE-MATH:   }
-// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]] {
-// USE-EXPENSIVE-MATH:   }
-// USE-EXPENSIVE-MATH: }
+// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 0 to 3
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]]
+// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]]
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]]
 
 // -----
 
