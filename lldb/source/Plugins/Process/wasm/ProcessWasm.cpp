@@ -86,19 +86,21 @@ std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
   return std::make_shared<ThreadWasm>(*this, tid);
 }
 
-size_t ProcessWasm::ReadGlobal(uint32_t index, void *buf, size_t size,
-                               Status &error) {
-  // The protocol asks for a global relative to a frame, so a read needs one.
-  // FIXME: A global belongs to a module instance rather than to a frame, so the
-  // frame is only a proxy for the instance and the module the address names is
-  // ignored. A global in an instance with no active frame cannot be read at
-  // all. See https://github.com/llvm/llvm-project/issues/212833.
+size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
+                               size_t size, Status &error) {
+  // FIXME: The module id is what should select the instance holding the global,
+  // but the qWasmGlobal packet takes a frame index instead, so the selected
+  // frame has to stand in for the instance. That leaves a global in an instance
+  // with no active frame out of reach. See
+  // https://github.com/llvm/llvm-project/issues/212833.
   ThreadSP thread = GetThreadList().GetSelectedThread();
   StackFrameSP frame =
       thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
   if (!frame) {
-    error = Status::FromErrorString(
-        "Wasm global read failed: no frame to read the global from");
+    error = Status::FromErrorStringWithFormatv(
+        "Wasm global read failed: no frame to read global {0} of module {1:x} "
+        "from",
+        index, module_id);
     return 0;
   }
 
@@ -132,7 +134,8 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   case WasmAddressType::Object:
     return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
   case WasmAddressType::Global:
-    return ReadGlobal(wasm_addr.GetOffset(), buf, size, error);
+    return ReadGlobal(wasm_addr.GetModuleID(), wasm_addr.GetOffset(), buf, size,
+                      error);
   case WasmAddressType::Invalid:
     break;
   }

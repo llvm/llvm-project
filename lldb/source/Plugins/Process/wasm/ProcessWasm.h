@@ -59,8 +59,11 @@ private:
   friend class UnwindWasm;
   friend class ThreadWasm;
 
-  /// Read a WebAssembly global by its index in the global index space.
-  size_t ReadGlobal(uint32_t index, void *buf, size_t size, Status &error);
+  /// Read a WebAssembly global by its index in the global index space of the
+  /// module it belongs to. The index space is per module, so an index only
+  /// names a global together with the module it is an index into.
+  size_t ReadGlobal(uint32_t module_id, uint32_t index, void *buf, size_t size,
+                    Status &error);
 
   lldb::DynamicRegisterInfoSP &GetRegisterInfo() { return m_register_info_sp; }
 
