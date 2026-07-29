@@ -1,6 +1,5 @@
-; RUN: llc -O0 -global-isel -verify-machineinstrs -mtriple=spirv64 %s -o - | FileCheck %s
-; spirv-val errors about a 7 element vector.
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64 < %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -global-isel -verify-machineinstrs -mtriple=spirv64 --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64 --spirv-ext=+SPV_EXT_long_vector < %s -o - -filetype=obj | spirv-val %}
 
 ; G_CONCAT_VECTORS should select to OpCompositeConstruct, which
 ; concatenates its vector constituents (each sharing the result component type).

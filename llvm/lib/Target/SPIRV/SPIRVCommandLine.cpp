@@ -179,7 +179,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_AMD_weak_linkage", SPIRV::Extension::Extension::SPV_AMD_weak_linkage},
     {"SPV_KHR_abort", SPIRV::Extension::Extension::SPV_KHR_abort},
     {"SPV_KHR_poison_freeze",
-     SPIRV::Extension::Extension::SPV_KHR_poison_freeze}};
+     SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {
