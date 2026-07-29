@@ -942,3 +942,47 @@ exit:
   %res = load i32, ptr %min.select, align 4
   ret i32 %res
 }
+
+define float @float_value_select_nsz_fn_attr(ptr %p1, ptr %p2, i1 %c) #0 {
+; CHECK-LABEL: @float_value_select_nsz_fn_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V1:%.*]] = load float, ptr [[P1:%.*]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load float, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select nsz i1 [[C]], float [[V1]], float [[V2]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[V1]], [[TMP0]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd float [[R]], [[V2]]
+; CHECK-NEXT:    ret float [[R2]]
+;
+entry:
+  %v1 = load float, ptr %p1, align 4
+  %v2 = load float, ptr %p2, align 4
+  %s = select i1 %c, ptr %p1, ptr %p2
+  %v = load float, ptr %s, align 4
+  %r = fadd float %v1, %v
+  %r2 = fadd float %r, %v2
+  ret float %r2
+}
+
+define float @float_value_select_no_nsz_fn_attr(ptr %p1, ptr %p2, i1 %c) {
+; CHECK-LABEL: @float_value_select_no_nsz_fn_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V1:%.*]] = load float, ptr [[P1:%.*]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load float, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C]], float [[V1]], float [[V2]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[V1]], [[TMP0]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd float [[R]], [[V2]]
+; CHECK-NEXT:    ret float [[R2]]
+;
+entry:
+  %v1 = load float, ptr %p1, align 4
+  %v2 = load float, ptr %p2, align 4
+  %s = select i1 %c, ptr %p1, ptr %p2
+  %v = load float, ptr %s, align 4
+  %r = fadd float %v1, %v
+  %r2 = fadd float %r, %v2
+  ret float %r2
+}
+
+attributes #0 = { "no-signed-zeros-fp-math"="true" }

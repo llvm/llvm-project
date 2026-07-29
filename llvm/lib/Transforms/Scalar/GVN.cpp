@@ -1187,10 +1187,17 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     // Introduce a new value select for a load from an eligible pointer select.
     Value *Cond = getSelectCondition();
     assert(V1 && V2 && "both value operands of the select must be present");
-    Res = SelectInst::Create(Cond, V1, V2, "", InsertPt->getIterator());
+    auto *Sel = SelectInst::Create(Cond, V1, V2, "", InsertPt->getIterator());
     // We use the DebugLoc from the original load here, as this instruction
     // materializes the value that would previously have been loaded.
-    cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());
+    Sel->setDebugLoc(Load->getDebugLoc());
+    // Propagate nsz flag from the function attribute to enable min/max folding.
+    if (isa<FPMathOperator>(Sel) &&
+        Load->getFunction()
+            ->getFnAttribute("no-signed-zeros-fp-math")
+            .getValueAsBool())
+      Sel->setHasNoSignedZeros(true);
+    Res = Sel;
   } else {
     llvm_unreachable("Should not materialize value from dead block");
   }
