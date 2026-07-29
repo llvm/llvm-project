@@ -453,6 +453,10 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
+  const llvm::omp::GV &getGridValue() const override {
+    return llvm::omp::SPIRVGridValues;
+  }
+
   void setAuxTarget(const TargetInfo *Aux) override;
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
