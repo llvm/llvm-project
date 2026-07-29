@@ -191,8 +191,11 @@ void AMDGPUTargetInfo::fillValidCPUList(
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
     : TargetInfo(Triple),
-      GPUKind(Triple.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Opts.CPU)
-                                : llvm::AMDGPU::parseArchR600(Opts.CPU)),
+      GPUKind(Triple.isAMDGCN()
+                  ? (Opts.CPU.empty() ? llvm::AMDGPU::getGPUKindFromSubArch(
+                                            Triple.getSubArch())
+                                      : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
+                  : llvm::AMDGPU::parseArchR600(Opts.CPU)),
       GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
                                     : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout();
@@ -290,8 +293,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // Sanitize the name of generic targets.
   // e.g. gfx10-1-generic -> gfx10_1_generic
-  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
-      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
+  if (GPUKind >= llvm::AMDGPU::GK_AMDGPU_GENERIC_FIRST &&
+      GPUKind <= llvm::AMDGPU::GK_AMDGPU_GENERIC_LAST) {
     llvm::replace(CanonName, '-', '_');
   }
 

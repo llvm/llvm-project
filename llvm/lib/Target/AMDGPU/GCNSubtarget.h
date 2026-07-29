@@ -80,6 +80,9 @@ protected:
   // Instruction cache line size in bytes; set from TableGen subtarget features.
   unsigned InstCacheLineSize = 0;
 
+  // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
+  unsigned DataCacheLineSize = 0;
+
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
@@ -198,6 +201,10 @@ public:
 
   /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
   unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
+
+  /// Data (VMEM) cache line size in bytes (128 for gfx12), has no use before
+  /// GFX12.
+  unsigned getDataCacheLineSize() const { return DataCacheLineSize; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
@@ -382,11 +389,6 @@ public:
 
   bool hasVINTERPEncoding() const {
     return HasGFX11Insts && !hasGFX1250Insts();
-  }
-
-  // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX1250Insts();
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
@@ -899,10 +901,6 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
-
-  bool supportsWave32() const { return getGeneration() >= GFX10; }
-
-  bool supportsWave64() const { return !hasGFX1250Insts() || HasGFX13Insts; }
 
   bool isWave32() const { return getWavefrontSize() == 32; }
 
