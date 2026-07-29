@@ -91,29 +91,20 @@ features = [
         ),
         actions=[AddLinkFlag("-latomic")],
     ),
-    Feature(
-        name="has-64-bit-atomics",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { char storage[64/8]; };
-            std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
-          """,
-        ),
-    ),
-    Feature(
-        name="has-1024-bit-atomics",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <atomic>
-            struct Large { char storage[1024/8]; };
-            std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
-          """,
-        ),
+    *(
+        Feature(
+            name=f"has-{n}-bit-atomics",
+            when=lambda cfg, n=n: sourceBuilds(
+                cfg,
+                f"""
+                #include <atomic>
+                struct Large {{ char storage[{n}/8]; }};
+                std::atomic<Large> x;
+                int main(int, char**) {{ (void)x.load(); (void)x.is_lock_free(); return 0; }}
+                """,
+            ),
+        )
+        for n in [64, 128, 1024]
     ),
     # Tests that require 64-bit architecture
     Feature(
@@ -217,7 +208,6 @@ features = [
         # This is not allowed per C11 7.1.2 Standard headers/6
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
-        or "__FreeBSD__" in compilerMacros(cfg)
         or ("_WIN32" in compilerMacros(cfg) and not _mingwSupportsModules(cfg))
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.

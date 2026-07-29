@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -21,6 +22,7 @@
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 namespace omp {
@@ -32,6 +34,9 @@ namespace Fortran {
 namespace lower {
 class AbstractConverter;
 } // namespace lower
+namespace semantics {
+class SemanticsContext;
+} // namespace semantics
 } // namespace Fortran
 
 namespace Fortran {
@@ -76,6 +81,14 @@ public:
   static ReductionIdentifier
   getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
+  /// Map a clause-level intrinsic operator to the parser-level one, so callers
+  /// can build the operator's mangled reduction name
+  /// (MangledIntrinsicOperatorReductionName) that semantics stores a
+  /// user-defined intrinsic-operator reduction under. Only the operators a user
+  /// reduction may use are handled.
+  static parser::DefinedOperator::IntrinsicOperator
+  toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
+
   static ReductionIdentifier
   getReductionType(const fir::ReduceOperationEnum &pd);
 
@@ -95,6 +108,20 @@ public:
   static std::string getReductionName(ReductionIdentifier redId,
                                       const fir::KindMapping &kindMap,
                                       mlir::Type ty, bool isByRef);
+
+  /// Returns the module-unique name of the omp.declare_reduction op for a
+  /// user-defined reduction (named or operator). Derived from the reduction
+  /// symbol's ultimate name, qualified with its owning scope via
+  /// AbstractConverter::mangleName so same-spelling reductions in different
+  /// modules do not collide, then suffixed with the reduction type (via
+  /// getReductionName) so a reduction listing several types produces one op per
+  /// type (single-type is N=1). The directive and clause sides must both call
+  /// this with the same unwrapped type and isByRef, since both tokens are part
+  /// of the name, or the names diverge.
+  static std::string
+  getScopedUserReductionName(AbstractConverter &converter,
+                             const semantics::Symbol &reductionSymbol,
+                             mlir::Type reductionType, bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
@@ -158,8 +185,17 @@ public:
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+      llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
+      semantics::SemanticsContext *semaCtx = nullptr,
       llvm::DenseMap<const semantics::Symbol *, mlir::Value>
           *reductionVarCache = nullptr);
+
+  /// Check if an expression is lowered as a Reduction object. This ensures
+  /// reductions such as Array Elements are properly represented, rather than
+  /// reducing the full array.
+  // TODO support more types of objects
+  // to avoid Reduction clauses being represented in FIR as full arrays.
+  static bool isExpressionLoweredAsReductionObject(const Object *object);
 };
 
 template <typename FloatOp, typename IntegerOp>

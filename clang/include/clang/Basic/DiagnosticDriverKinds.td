@@ -171,6 +171,11 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_option_for_runtime : Warning<
   "ignoring '%0' option as it is not currently supported for runtime '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_hexagon_reserved_caller_saved_reg : Warning<
+  "reserving the caller-saved register '%0' may lead to incorrect code if it "
+  "is not also reserved in all other translation units and libraries; you are "
+  "responsible for ensuring the register is managed consistently">,
+  InGroup<DiagGroup<"hexagon-reserved-caller-saved">>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
@@ -436,6 +441,11 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
 
 def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
+def err_drv_no_compiler_rt_builtins_bc : Error<
+  "no compiler-rt builtins bitcode library '%0' found in the clang resource "
+  "directory; build compiler-rt with SPIR-V support or pass '--no-offloadlib' "
+  "to compile without it">;
+
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
 
@@ -597,8 +607,8 @@ def err_analyzer_checker_option_invalid_input : Error<
 def err_analyzer_checker_incompatible_analyzer_option : Error<
   "checker cannot be enabled with analyzer option '%0' == %1">;
 def err_analyzer_not_built_with_z3 : Error<
-  "analyzer constraint manager 'z3' is only available if LLVM was built with "
-  "-DLLVM_ENABLE_Z3_SOLVER=ON">;
+  "analyzer constraint manager 'unsupported-z3' is only available if LLVM was "
+  "built with -DLLVM_ENABLE_Z3_SOLVER=ON">;
 
 def warn_drv_needs_hvx : Warning<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">,
@@ -881,6 +891,8 @@ def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_dxc_Fre_requires_Fo_metal
     : Error<"-Fre option requires -Fo option when targeting Metal">;
+def err_drv_dxc_invalid_shader_hash
+    : Error<"cannot specify both /Zss and /Zsb">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<

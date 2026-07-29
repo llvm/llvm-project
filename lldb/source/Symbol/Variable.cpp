@@ -200,8 +200,6 @@ bool Variable::DumpDeclaration(Stream *s, bool show_fullpaths,
   return dumped_declaration_info;
 }
 
-size_t Variable::MemorySize() const { return sizeof(Variable); }
-
 CompilerDeclContext Variable::GetDeclContext() {
   Type *type = GetType();
   if (type)

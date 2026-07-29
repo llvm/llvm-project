@@ -1,12 +1,12 @@
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %t/valid.ll | FileCheck --check-prefix=GCN %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/vmem.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/vmem-read.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/vmem-write.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/ds.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/ds-read.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/ds-write.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %t/ldsdma.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: llc -mtriple=amdgpu9.08 < %t/valid.ll | FileCheck --check-prefix=GCN %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/vmem.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/vmem-read.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/vmem-write.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/ds.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/ds-read.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/ds-write.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+; RUN: not --crash llc -mtriple=amdgpu9.08 -verify-machineinstrs < %t/ldsdma.ll 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
 
 ; CHECK-ERR: S_SETPRIO mask contains invalid memory operation bits
 

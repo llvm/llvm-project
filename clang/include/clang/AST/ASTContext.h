@@ -439,6 +439,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
 
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
+
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
 
@@ -513,6 +516,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   FunctionDecl *cudaGetParameterBufferDecl = nullptr;
   /// Declaration for the CUDA cudaLaunchDevice function.
   FunctionDecl *cudaLaunchDeviceDecl = nullptr;
+
+  llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
+      CtorClosureDefaultArgs;
 
   /// Keeps track of all declaration attributes.
   ///
@@ -1148,6 +1154,11 @@ public:
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
 
+  ArrayRef<CXXDefaultArgExpr *>
+  getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
+  void setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                 ArrayRef<CXXDefaultArgExpr *> Args);
+
   /// Get all ExplicitInstantiationDecls for a given specialization.
   ArrayRef<ExplicitInstantiationDecl *>
   getExplicitInstantiationDecls(const NamedDecl *Spec) const;
@@ -1629,6 +1640,12 @@ public:
   getCountAttributedType(QualType T, Expr *CountExpr, bool CountInBytes,
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
+  /// Return a placeholder type for a late-parsed type attribute.
+  /// This type wraps another type and holds the LateParsedAttribute
+  /// that will be parsed later.
+  QualType getLateParsedAttrType(QualType Wrapped,
+                                 LateParsedTypeAttribute *LateParsedAttr) const;
 
   /// Return the uniqued reference to a type adjusted from the original
   /// type to a new type.
@@ -2521,6 +2538,17 @@ public:
     if (!MSTypeInfoTagDecl)
       MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be

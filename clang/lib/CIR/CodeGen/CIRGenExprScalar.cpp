@@ -211,16 +211,7 @@ public:
     cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
         builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
         blockInfoAttr);
-    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
-    if (!resolvedLabel) {
-      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
-      // Still add the op to maintain insertion order it will be resolved in
-      // resolveBlockAddresses
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
-    } else {
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
-    }
-    cgf.instantiateIndirectGotoBlock();
+    cgf.indirectGotoTargets.push_back(blockInfoAttr);
     return blockAddressOp;
   }
 
@@ -451,6 +442,12 @@ public:
   }
 
   mlir::Value emitIntToBoolConversion(mlir::Value srcVal, mlir::Location loc) {
+    // The enumerator of an enum with an integral underlying type is lowered to
+    // that type, which can be bool.  In that case the operand is already a
+    // !cir.bool, so return it -- int_to_bool requires a !cir.int source.
+    if (mlir::isa<cir::BoolType>(srcVal.getType()))
+      return srcVal;
+
     // Because of the type rules of C, we often end up computing a
     // logical value, then zero extending it to int, then wanting it
     // as a logical value again.
@@ -972,19 +969,10 @@ public:
     if (srcType->isHalfType() &&
         !cgf.getContext().getLangOpts().NativeHalfType) {
       // Cast to FP using the intrinsic if the half type itself isn't supported.
-      if (mlir::isa<cir::FPTypeInterface>(mlirDstType)) {
-        if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-          cgf.getCIRGenModule().errorNYI(loc,
-                                         "cast via llvm.convert.from.fp16");
-      } else {
-        // Cast to other types through float, using either the intrinsic or
-        // FPExt, depending on whether the half type itself is supported (as
-        // opposed to operations on half, available with NativeHalfType).
-        if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-          cgf.getCIRGenModule().errorNYI(loc,
-                                         "cast via llvm.convert.from.fp16");
-        // FIXME(cir): For now lets pretend we shouldn't use the conversion
-        // intrinsics and insert a cast here unconditionally.
+      if (!mlir::isa<cir::FPTypeInterface>(mlirDstType)) {
+        // Cast to other types through float, using FPExt, depending on whether
+        // the half type itself is supported (as opposed to operations on half,
+        // available with NativeHalfType).
         src = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, src,
                                  cgf.floatTy);
         srcType = cgf.getContext().FloatTy;
@@ -1042,11 +1030,6 @@ public:
     res = emitScalarCast(src, srcType, dstType, mlirSrcType, mlirDstType, opts);
 
     if (mlirDstType != resTy) {
-      if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        cgf.getCIRGenModule().errorNYI(loc, "cast via llvm.convert.to.fp16");
-      }
-      // FIXME(cir): For now we never use FP16 conversion intrinsics even if
-      // required by the target. Change that once this is implemented
       res = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, res,
                                resTy);
     }
@@ -2773,16 +2756,18 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
       return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+          loc, cir::IntAttr::get(cgf.cgm.sizeTy,
                                  e->EvaluateKnownConstInt(cgf.getContext())));
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty, vecTy.getSize()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
   }
 
+  // The result type is size_t (target-dependent width); use it so the IntAttr
+  // width matches the APInt from EvaluateKnownConstInt.
   return builder.getConstant(
-      loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+      loc, cir::IntAttr::get(cgf.cgm.sizeTy,
                              e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
@@ -2921,8 +2906,6 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
   mlir::Value condV = cgf.emitOpOnBoolExpr(loc, condExpr);
   CIRGenFunction::ConditionalEvaluation eval(cgf);
-  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
-  mlir::Type yieldTy{};
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc, Expr *expr) {
     CIRGenFunction::LexicalScope lexScope{cgf, loc, b.getInsertionBlock()};
@@ -2940,49 +2923,35 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       branchCleanups.forceCleanup({&branch});
     }
 
-    if (branch) {
-      yieldTy = branch.getType();
+    if (branch)
       cir::YieldOp::create(b, loc, branch);
-    } else {
-      // If LHS or RHS is a throw or void expression we need to patch
-      // arms as to properly match yield types.
-      insertPoints.push_back(b.saveInsertionPoint());
-    }
   };
 
-  mlir::Value result = cir::TernaryOp::create(
-                           builder, loc, condV,
-                           /*trueBuilder=*/
-                           [&](mlir::OpBuilder &b, mlir::Location loc) {
-                             emitBranch(b, loc, lhsExpr);
-                           },
-                           /*falseBuilder=*/
-                           [&](mlir::OpBuilder &b, mlir::Location loc) {
-                             emitBranch(b, loc, rhsExpr);
-                           })
-                           .getResult();
+  cir::TernaryOp ternary = cir::TernaryOp::create(
+      builder, loc, condV,
+      /*trueBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, lhsExpr);
+      },
+      /*falseBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, rhsExpr);
+      });
 
-  if (!insertPoints.empty()) {
-    // If both arms are void, so be it.
-    if (!yieldTy)
-      yieldTy = cgf.voidTy;
-
-    // Insert required yields.
-    for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
+  // Only a void arm can be left unterminated (a noreturn arm already ends
+  // in cir.unreachable); close it with an empty cir.yield.
+  for (mlir::Region *region :
+       {&ternary.getTrueRegion(), &ternary.getFalseRegion()}) {
+    mlir::Block &lastBlock = region->back();
+    if (lastBlock.empty() ||
+        !lastBlock.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
       mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(toInsert);
-
-      // Block does not return: build empty yield.
-      if (mlir::isa<cir::VoidType>(yieldTy)) {
-        cir::YieldOp::create(builder, loc);
-      } else { // Block returns: set null yield value.
-        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-        cir::YieldOp::create(builder, loc, op0);
-      }
+      builder.setInsertionPointToEnd(&lastBlock);
+      cir::YieldOp::create(builder, loc);
     }
   }
 
-  return result;
+  return ternary.getResult();
 }
 
 mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,

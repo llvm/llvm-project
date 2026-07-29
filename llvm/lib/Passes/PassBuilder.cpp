@@ -74,6 +74,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/Analysis/StructuralHash.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -128,6 +129,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCFGPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
+#include "llvm/CodeGen/MachineCheckDebugify.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
@@ -138,6 +140,7 @@
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
@@ -162,6 +165,7 @@
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
@@ -180,6 +184,8 @@
 #include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
+#include "llvm/CodeGen/StaticDataAnnotator.h"
+#include "llvm/CodeGen/StaticDataSplitter.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
@@ -304,6 +310,7 @@
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/Transforms/Scalar/LogicalSROA.h"
 #include "llvm/Transforms/Scalar/LoopAccessAnalysisPrinter.h"
 #include "llvm/Transforms/Scalar/LoopBoundSplit.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
@@ -356,6 +363,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
@@ -373,6 +381,7 @@
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/LowerCommentStringPass.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
@@ -389,7 +398,6 @@
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Utils/TriggerCrashPass.h"
-#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
@@ -886,7 +894,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
     if (OptLevel) {
-      UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
+      UnrollOpts.setOptLevel(static_cast<int>(*OptLevel));
       continue;
     }
     if (ParamName.consume_front("full-unroll-max=")) {
@@ -910,6 +918,8 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
       UnrollOpts.setRuntime(Enable);
     } else if (ParamName == "upperbound") {
       UnrollOpts.setUpperBound(Enable);
+    } else if (ParamName == "prepare-for-lto") {
+      UnrollOpts.setPrepareForLTO(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid LoopUnrollPass parameter '{}'", ParamName).str(),
@@ -2058,8 +2068,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
+  PTO.LoopVectorization = L >= OptimizationLevel::O2;
+  PTO.SLPVectorization = L >= OptimizationLevel::O2;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,
@@ -2854,7 +2864,7 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
 
 LLVM_ATTRIBUTE_NOINLINE static void printPassNameList(StringTable PassNames,
                                                       raw_ostream &OS) {
-  for (StringRef PassName : drop_begin(PassNames))
+  for (StringRef PassName : PassNames)
     OS << "  " << PassName << '\n';
 }
 
@@ -2862,7 +2872,6 @@ LLVM_ATTRIBUTE_NOINLINE static void
 printPassNameListWithParams(StringTable PassNames, raw_ostream &OS) {
   auto I = PassNames.begin();
   auto End = PassNames.end();
-  ++I;
   while (I != End) {
     StringRef Name = *I;
     ++I;

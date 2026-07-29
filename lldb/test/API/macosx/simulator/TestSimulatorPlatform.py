@@ -76,6 +76,7 @@ class TestSimulatorPlatformLaunching(TestBase):
                 expected_platform, self.trace
             )
             _, matched_strings = lldbutil.launch_exe_in_apple_simulator(
+                self,
                 device_udid,
                 self.getBuildArtifact("a.out"),
                 exe_args=[],

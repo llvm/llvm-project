@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -486,6 +487,16 @@ LogicalResult ReductionAccumulateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateArrayOp::verify() {
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
@@ -778,6 +789,42 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPUSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUSharedMemoryOp::verify() {
+  if (getNumCopies() <= 0)
+    return emitOpError("num_copies must be positive");
+  if (getStaticUpperBoundBytes() <= 0)
+    return emitOpError("static_upper_bound_bytes must be positive");
+
+  bool hasScaling = static_cast<bool>(getDynamicSharedMemoryScalingBytes());
+  bool hasFixed = static_cast<bool>(getDynamicSharedMemoryFixedBytes());
+  if (hasScaling != hasFixed)
+    return emitOpError(
+        "dynamic_shared_memory_scaling_bytes and "
+        "dynamic_shared_memory_fixed_bytes must both be present or both be "
+        "absent");
+  if (auto scalingAttr = getDynamicSharedMemoryScalingBytesAttr())
+    if (scalingAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_scaling_bytes must be "
+                         "non-negative");
+  if (auto fixedAttr = getDynamicSharedMemoryFixedBytesAttr())
+    if (fixedAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_fixed_bytes must be "
+                         "non-negative");
+
+  auto resultTy = cast<MemRefType>(getResult().getType());
+  auto addrSpace =
+      dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
+  if (!addrSpace ||
+      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+    return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();
 }

@@ -201,6 +201,47 @@ exit:
   ret void
 }
 
+define void @test_select_chain_debugloc(ptr noalias %dst, ptr noalias %a, ptr noalias %b, i64 %n) !dbg !42 {
+; CHECK-LABEL: define void @test_select_chain_debugloc(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr %a, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %b, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD1]], splat (i32 100)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]], !dbg [[LOC9:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]],
+; CHECK-NEXT:    br i1 [[TMP7]], label %middle.block, label %vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %la = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %lb = load i32, ptr %gep.b, align 4
+  %m0 = icmp sgt i32 %la, 0
+  %m1 = icmp slt i32 %lb, 100
+  %inner = select i1 %m1, i32 %la, i32 %lb, !dbg !44
+  %outer = select i1 %m0, i32 %inner, i32 %lb, !dbg !45
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %outer, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; CHECK: ![[LOC2]] = !DILocation(line: 3
 ; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
 ; CHECK: ![[LOC1]] = !DILocation(line: 6
@@ -210,6 +251,7 @@ exit:
 ; CHECK: [[LOC6]] = !DILocation(line: 430
 ; CHECK: [[LOC7]] = !DILocation(line: 540
 ; CHECK: [[LOC8]] = !DILocation(line: 650
+; CHECK: [[LOC9]] = !DILocation(line: 761
 
 
 
@@ -255,3 +297,7 @@ exit:
 !39 = distinct !DISubprogram(name: "test_scalar_Steps", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
 !40 = distinct !DILexicalBlock(scope: !39, file: !5, line: 137, column: 2)
 !41 = !DILocation(line: 650, column: 44, scope: !40)
+!42 = distinct !DISubprogram(name: "test_select_chain_debugloc", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
+!43 = distinct !DILexicalBlock(scope: !42, file: !5, line: 137, column: 2)
+!44 = !DILocation(line: 760, column: 44, scope: !43)
+!45 = !DILocation(line: 761, column: 44, scope: !43)

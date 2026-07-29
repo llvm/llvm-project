@@ -231,13 +231,12 @@ public:
   ///
   /// \return
   ///     A const reference to the directory string object.
-  const ConstString &GetDirectory() const { return m_directory; }
+  llvm::StringRef GetDirectory() const { return m_directory; }
 
   /// Directory string set accessor.
   ///
   /// \param[in] directory
   ///     The value to replace the directory with.
-  void SetDirectory(ConstString directory);
   void SetDirectory(llvm::StringRef directory);
 
   /// Clear the directory in this object.
@@ -247,13 +246,12 @@ public:
   ///
   /// \return
   ///     A const reference to the filename string object.
-  const ConstString &GetFilename() const { return m_filename; }
+  llvm::StringRef GetFilename() const { return m_filename; }
 
   /// Filename string set accessor.
   ///
   /// \param[in] filename
   ///     The const string to replace the directory with.
-  void SetFilename(ConstString filename);
   void SetFilename(llvm::StringRef filename);
 
   /// Clear the filename in this object.
@@ -326,9 +324,9 @@ public:
 
   /// Extract the extension of the file.
   ///
-  /// Returns a ConstString that represents the extension of the filename for
+  /// Returns a StringRef that represents the extension of the filename for
   /// this FileSpec object. If this object does not represent a file, or the
-  /// filename has no extension, ConstString(nullptr) is returned. The dot
+  /// filename has no extension, an empty StringRef is returned. The dot
   /// ('.') character is the first character in the returned string.
   ///
   /// \return Returns the extension of the file as a StringRef.
@@ -336,12 +334,12 @@ public:
 
   /// Return the filename without the extension part
   ///
-  /// Returns a ConstString that represents the filename of this object
+  /// Returns a StringRef that represents the filename of this object
   /// without the extension part (e.g. for a file named "foo.bar", "foo" is
   /// returned)
   ///
-  /// \return Returns the filename without extension as a ConstString object.
-  ConstString GetFileNameStrippingExtension() const;
+  /// \return Returns the filename without extension as a StringRef object.
+  llvm::StringRef GetFileNameStrippingExtension() const;
 
   /// Get the memory cost of this object.
   ///
@@ -464,10 +462,8 @@ template <> struct format_provider<lldb_private::FileSpec> {
 template <> struct DenseMapInfo<lldb_private::FileSpec> {
   static unsigned getHashValue(lldb_private::FileSpec file_spec) {
     return llvm::hash_combine(
-        DenseMapInfo<lldb_private::ConstString>::getHashValue(
-            file_spec.GetDirectory()),
-        DenseMapInfo<lldb_private::ConstString>::getHashValue(
-            file_spec.GetFilename()),
+        DenseMapInfo<llvm::StringRef>::getHashValue(file_spec.GetDirectory()),
+        DenseMapInfo<llvm::StringRef>::getHashValue(file_spec.GetFilename()),
         DenseMapInfo<llvm::sys::path::Style>::getHashValue(
             file_spec.GetPathStyle()));
   }

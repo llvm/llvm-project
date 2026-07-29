@@ -399,7 +399,7 @@ bool SanitizerArgs::needsLTO() const {
 SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
                              bool DiagnoseErrors, bool DiagnoseBoundArchErrors,
-                             StringRef BoundArch,
+                             BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) {
   SanitizerMask AllRemove;      // During the loop below, the accumulated set of
                                 // sanitizers disabled by the current sanitizer
@@ -416,14 +416,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask Kinds;
 
   // Figure out the base toolchain's sanitizer support so we can diagnose the
-  // diff for a specific BoundArch.
+  // diff for a specific BA.
   const SanitizerMask ToolChainSupported =
-      setGroupBits(TC.getSupportedSanitizers("", DeviceOffloadKind));
+      setGroupBits(TC.getSupportedSanitizers({}, DeviceOffloadKind));
 
   const SanitizerMask BoundArchSupported =
-      BoundArch.empty() ? ToolChainSupported
-                        : setGroupBits(TC.getSupportedSanitizers(
-                              BoundArch, DeviceOffloadKind));
+      BA ? setGroupBits(TC.getSupportedSanitizers(BA, DeviceOffloadKind))
+         : ToolChainSupported;
 
   CfiCrossDso = Args.hasFlag(options::OPT_fsanitize_cfi_cross_dso,
                              options::OPT_fno_sanitize_cfi_cross_dso, false);
@@ -567,7 +566,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         // Check if the toolchain provides a feature requirement hint for
         // any of the unsupported sanitizers
         StringRef Requirement =
-            TC.getSanitizerRequirement(ArchSpecificUnsupported, BoundArch);
+            TC.getSanitizerRequirement(ArchSpecificUnsupported, BA);
         if (!Requirement.empty()) {
           // Emit diagnostic with feature requirement
           //
@@ -579,7 +578,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         err_drv_unsupported_option_for_offload_arch_req_feature
                   : diag::
                         warn_drv_unsupported_option_for_offload_arch_req_feature)
-              << Arg->getAsString(Args) << BoundArch << Requirement;
+              << Arg->getAsString(Args) << BA.ArchName << Requirement;
         } else {
           // Fall back to generic diagnostic if no requirement was provided
           SanitizerSet UnsupportedSet;
@@ -706,7 +705,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Type,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
+                         SanitizerKind::Thread),
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
@@ -782,6 +781,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
         << "-ffixed-x18";
+  }
+
+  if ((Kinds & SanitizerKind::ShadowCallStack) &&
+      TC.getTriple().getArch() == llvm::Triple::hexagon &&
+      !Args.hasArg(options::OPT_ffixed_r19) && DiagnoseErrors) {
+    D.Diag(diag::err_drv_argument_only_allowed_with)
+        << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
+        << "-ffixed-r19";
   }
 
   // Report error if there are non-trapping sanitizers that require

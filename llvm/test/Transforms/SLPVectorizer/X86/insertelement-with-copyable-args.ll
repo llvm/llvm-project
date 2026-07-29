@@ -11,10 +11,12 @@ define i64 @test(i32 %arg) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) null, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[ARG]], i32 3
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[FREEZE]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[FREEZE]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[FREEZE]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> poison, i32 [[FREEZE]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i32> [[TMP14]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[ARG]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[LOAD]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x i32> [[TMP4]], [[TMP6]]
