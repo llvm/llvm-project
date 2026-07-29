@@ -24,7 +24,8 @@ endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
-  list(APPEND use_system_file "COMPILE_OPTIONS" "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+  set(use_system_file "COMPILE_OPTIONS")
+  libc_add_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(
@@ -128,10 +129,10 @@ add_entrypoint_object(
   HDRS
     sprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -147,10 +148,10 @@ add_entrypoint_object(
   HDRS
     snprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -166,9 +167,9 @@ add_entrypoint_object(
   HDRS
     asprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.vasprintf_internal
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.vasprintf_internal
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -185,10 +186,10 @@ add_entrypoint_object(
   HDRS
     vsprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -205,10 +206,10 @@ add_entrypoint_object(
   HDRS
     vsnprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -225,14 +226,13 @@ add_entrypoint_object(
   HDRS
     vasprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.vasprintf_internal
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.vasprintf_internal
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
 
-add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
 add_entrypoint_object(
@@ -262,6 +262,7 @@ add_stdio_entrypoint_object(feof_unlocked)
 add_stdio_entrypoint_object(ferror)
 add_stdio_entrypoint_object(ferror_unlocked)
 add_stdio_entrypoint_object(fseek)
+add_stdio_entrypoint_object(rewind)
 add_stdio_entrypoint_object(ftell)
 add_stdio_entrypoint_object(fseeko)
 add_stdio_entrypoint_object(fileno)

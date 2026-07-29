@@ -29,7 +29,7 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a2
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB0_1
+; RV64I-NEXT:    bltu a0, sp, .LBB0_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    sd a0, 0(a1)
@@ -61,7 +61,7 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB0_1
+; RV32I-NEXT:    bltu a0, sp, .LBB0_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    sw a0, 0(a2)
@@ -105,7 +105,7 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; RV64I-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a1
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB1_1
+; RV64I-NEXT:    bltu a0, sp, .LBB1_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    sd a0, 0(a2)
@@ -139,7 +139,7 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; RV32I-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB1_1
+; RV32I-NEXT:    bltu a0, sp, .LBB1_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    sw a0, 0(a3)
@@ -188,7 +188,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a2
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB2_1
+; RV64I-NEXT:    bltu a0, sp, .LBB2_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    sd a0, 0(a1)
@@ -227,7 +227,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB2_1
+; RV32I-NEXT:    bltu a0, sp, .LBB2_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    sw a0, 0(a2)
@@ -279,15 +279,15 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    slli sp, a2, 13
 ; RV64I-NEXT:    mv s1, sp
 ; RV64I-NEXT:    addi a0, a0, 15
-; RV64I-NEXT:    lui a2, 1048574
 ; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub a0, sp, a0
+; RV64I-NEXT:    lui a2, 1048574
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    lui a2, 1
 ; RV64I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a2
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB3_1
+; RV64I-NEXT:    bltu a0, sp, .LBB3_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    sd a0, 0(a1)
@@ -330,15 +330,15 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    slli sp, a1, 13
 ; RV32I-NEXT:    mv s1, sp
 ; RV32I-NEXT:    addi a0, a0, 15
-; RV32I-NEXT:    lui a1, 1048574
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
+; RV32I-NEXT:    lui a1, 1048574
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB3_1
+; RV32I-NEXT:    bltu a0, sp, .LBB3_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    sw a0, 0(a2)
@@ -373,16 +373,16 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    addi s0, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub a0, sp, a0
-; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:  .LBB4_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a1
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB4_1
+; RV64I-NEXT:    bltu a0, sp, .LBB4_1
 ; RV64I-NEXT:  # %bb.2: # %entry
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    lui a1, 1
@@ -412,16 +412,16 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:    slli a0, a0, 2
 ; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
-; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:  .LBB4_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB4_1
+; RV32I-NEXT:    bltu a0, sp, .LBB4_1
 ; RV32I-NEXT:  # %bb.2: # %entry
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    lui a1, 1
@@ -538,7 +538,7 @@ define void @dynamic_vector(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, a2
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    blt a0, sp, .LBB6_1
+; RV64I-NEXT:    bltu a0, sp, .LBB6_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    sd a0, 0(a1)
@@ -571,7 +571,7 @@ define void @dynamic_vector(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, a1
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    blt a0, sp, .LBB6_1
+; RV32I-NEXT:    bltu a0, sp, .LBB6_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    mv sp, a0
 ; RV32I-NEXT:    sw a0, 0(a2)

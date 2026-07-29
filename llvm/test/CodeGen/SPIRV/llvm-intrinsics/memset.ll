@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpDecorate %[[#Memset_p0i32:]] LinkageAttributes "spirv.llvm_memset_p0_i32" Export
 ; CHECK-DAG: OpDecorate %[[#Memset_p3i32:]] LinkageAttributes "spirv.llvm_memset_p3_i32" Export
@@ -84,6 +85,9 @@ define spir_func void @_Z5foo11v(ptr addrspace(4) noalias nocapture sret(ptr add
 
   ;; Volatile
   tail call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %c, i8 %v, i64 %s2, i1 true)
+
+  ;; Constant zero size is a no-op and must not emit OpCopyMemorySized.
+  tail call void @llvm.memset.p0.i32(ptr align 4 %x.bc, i8 21, i32 0, i1 false)
   ret void
 }
 

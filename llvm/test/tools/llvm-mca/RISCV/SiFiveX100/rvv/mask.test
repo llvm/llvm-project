@@ -25,93 +25,93 @@
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmmv.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMAND_MM             vmand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnot.m	v8, v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMNAND_MM            vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMANDN_MM            vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
@@ -157,49 +157,49 @@
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMANDN_MM            vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmclr.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXOR_MM             vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMOR_MM              vmor.mm	v8, v8, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
@@ -333,49 +333,49 @@
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMORN_MM             vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmset.m	v8
+# CHECK-NEXT:  1      4     2.00                         4     VLEN128X100SiFive7VA1[1,3],VLEN128X100SiFive7VCQ VMXNOR_MM            vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN128X100SiFive7VA1[1,2],VLEN128X100SiFive7VCQ VMSBF_M              vmsbf.m	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN128X100SiFive7PipeA,VLEN128X100SiFive7PipeAB VSETVLI              vsetvli	t3, zero, e8, mf4, tu, mu
@@ -644,93 +644,93 @@
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmmv.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnot.m	v8, v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmnand.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -776,49 +776,49 @@
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmandn.mm	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmclr.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmor.mm	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -952,49 +952,49 @@
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmorn.mm	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmset.m	v8
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmxnor.mm	v7, v8, v9
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsbf.m	v8, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu

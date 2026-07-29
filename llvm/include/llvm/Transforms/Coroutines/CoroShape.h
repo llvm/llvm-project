@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 #define LLVM_TRANSFORMS_COROUTINES_COROSHAPE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -57,6 +58,11 @@ struct Shape {
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
+  // Map from suspend instructions to their execution frequency, used for branch
+  // weights in the resume function.
+  SmallDenseMap<AnyCoroSuspendInst *, uint64_t, 4> SuspendFreqs;
+  // Estimated profile execution count for the resume function if available.
+  std::optional<uint64_t> ResumeEntryCount;
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
 
@@ -70,6 +76,8 @@ struct Shape {
     CoroSizes.clear();
     CoroAligns.clear();
     CoroSuspends.clear();
+    SuspendFreqs.clear();
+    ResumeEntryCount = std::nullopt;
     CoroAwaitSuspends.clear();
     SymmetricTransfers.clear();
 
@@ -82,8 +90,7 @@ struct Shape {
   // Scan the function and collect the above intrinsics for later processing
   LLVM_ABI void analyze(Function &F,
                         SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                        CoroPromiseInst *&CoroPromise);
+                        SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
   // If for some reason, we were not able to find coro.begin, bailout.
   LLVM_ABI void
   invalidateCoroutine(Function &F,
@@ -91,9 +98,9 @@ struct Shape {
   // Perform ABI related initial transformation
   LLVM_ABI void initABI();
   // Remove orphaned and unnecessary intrinsics
-  LLVM_ABI void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                               CoroPromiseInst *CoroPromise);
+  LLVM_ABI void
+  cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                 SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
 
   coro::ABI ABI;
 
@@ -113,6 +120,7 @@ struct Shape {
     unsigned IndexOffset;
     bool HasFinalSuspend;
     bool HasUnwindCoroEnd;
+    bool HasCoroElideNoAllocVariant;
   };
 
   struct RetconLoweringStorage {
@@ -212,7 +220,10 @@ struct Shape {
   CallingConv::ID getResumeFunctionCC() const {
     switch (ABI) {
     case coro::ABI::Switch:
-      return CallingConv::Fast;
+      // Use the platform C calling convention so that resume/destroy
+      // function pointers stored in the coroutine frame are
+      // interoperable with other compilers.
+      return CallingConv::C;
 
     case coro::ABI::Retcon:
     case coro::ABI::RetconOnce:
@@ -254,14 +265,13 @@ struct Shape {
   explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
-    CoroPromiseInst *CoroPromise = nullptr;
 
-    analyze(F, CoroFrames, UnusedCoroSaves, CoroPromise);
+    analyze(F, CoroFrames, UnusedCoroSaves);
     if (!CoroBegin) {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    cleanCoroutine(CoroFrames, UnusedCoroSaves, CoroPromise);
+    cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
 };
 

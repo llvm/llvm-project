@@ -7,7 +7,7 @@
 define void @foo() presplitcoroutine {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr @foo.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 40)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[VFRAME]], align 8
@@ -35,7 +35,7 @@ entry:
 
   ; address of %stackvar escapes and may be relied upon even after
   ; suspending/resuming the coroutine regardless of the lifetime markers.
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr null)
   %size = call i64 @llvm.coro.size.i64()
   %alloc = call ptr @malloc(i64 %size)
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)

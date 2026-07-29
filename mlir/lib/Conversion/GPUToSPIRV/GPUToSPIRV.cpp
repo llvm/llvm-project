@@ -100,13 +100,26 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier op.
+/// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier or
+/// spirv.MemoryNamedBarrier op.
 class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
 public:
   using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a gpu.initialize_named_barrier into
+/// spirv.NamedBarrierInitialize.
+class GPUInitializeNamedBarrierConversion final
+    : public OpConversionPattern<gpu::InitializeNamedBarrierOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(gpu::InitializeNamedBarrierOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -437,18 +450,58 @@ LogicalResult GPUReturnOpConversion::matchAndRewrite(
 // Barrier.
 //===----------------------------------------------------------------------===//
 
+/// Map gpu::BarrierScope to spirv::Scope.
+static FailureOr<spirv::Scope>
+mapGPUBarrierScopeToSPIRV(gpu::BarrierScope gpuScope) {
+  switch (gpuScope) {
+  case gpu::BarrierScope::Subgroup:
+    return spirv::Scope::Subgroup;
+  case gpu::BarrierScope::Workgroup:
+    return spirv::Scope::Workgroup;
+  case gpu::BarrierScope::Cluster:
+    return failure();
+  }
+  return failure();
+}
+
 LogicalResult GPUBarrierConversion::matchAndRewrite(
     gpu::BarrierOp barrierOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   MLIRContext *context = getContext();
-  // Both execution and memory scope should be workgroup.
-  auto scope = spirv::ScopeAttr::get(context, spirv::Scope::Workgroup);
+
+  // Map GPU scope to SPIR-V scope.
+  auto spirvScope = mapGPUBarrierScopeToSPIRV(barrierOp.getScope());
+  if (failed(spirvScope))
+    return rewriter.notifyMatchFailure(
+        barrierOp, "cluster scope is not supported in SPIR-V");
+
+  auto scopeAttr = spirv::ScopeAttr::get(context, *spirvScope);
+  auto memoryScopeAttr =
+      spirv::ScopeAttr::get(context, spirv::Scope::Workgroup);
+
   // Require acquire and release memory semantics for workgroup memory.
   auto memorySemantics = spirv::MemorySemanticsAttr::get(
       context, spirv::MemorySemantics::WorkgroupMemory |
                    spirv::MemorySemantics::AcquireRelease);
-  rewriter.replaceOpWithNewOp<spirv::ControlBarrierOp>(barrierOp, scope, scope,
-                                                       memorySemantics);
+
+  if (adaptor.getNamedBarrier()) {
+    spirv::MemoryNamedBarrierOp::create(rewriter, barrierOp.getLoc(),
+                                        adaptor.getNamedBarrier(),
+                                        memoryScopeAttr, memorySemantics);
+    rewriter.eraseOp(barrierOp);
+  } else {
+    rewriter.replaceOpWithNewOp<spirv::ControlBarrierOp>(
+        barrierOp, scopeAttr, memoryScopeAttr, memorySemantics);
+  }
+  return success();
+}
+
+LogicalResult GPUInitializeNamedBarrierConversion::matchAndRewrite(
+    gpu::InitializeNamedBarrierOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  auto nbType = spirv::NamedBarrierType::get(getContext());
+  rewriter.replaceOpWithNewOp<spirv::NamedBarrierInitializeOp>(
+      op, nbType, adaptor.getMemberCount());
   return success();
 }
 
@@ -665,6 +718,33 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
       .getResult();
 }
 
+template <typename NonUniformOp>
+static Value createGroupNonUniformBitwiseReduceOpImpl(
+    OpBuilder &builder, Location loc, Value arg, bool isGroup, bool isUniform,
+    std::optional<uint32_t> clusterSize) {
+  spirv::Scope scope =
+      isGroup ? spirv::Scope::Workgroup : spirv::Scope::Subgroup;
+  if (isUniform || scope != spirv::Scope::Subgroup)
+    return Value();
+
+  Type type = arg.getType();
+  auto scopeAttr = mlir::spirv::ScopeAttr::get(builder.getContext(), scope);
+  auto groupOp = spirv::GroupOperationAttr::get(
+      builder.getContext(), clusterSize.has_value()
+                                ? spirv::GroupOperation::ClusteredReduce
+                                : spirv::GroupOperation::Reduce);
+
+  Value clusterSizeValue;
+  if (clusterSize.has_value())
+    clusterSizeValue = spirv::ConstantOp::create(
+        builder, loc, builder.getI32Type(),
+        builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
+
+  return NonUniformOp::create(builder, loc, type, scopeAttr, groupOp, arg,
+                              clusterSizeValue)
+      .getResult();
+}
+
 static std::optional<Value>
 createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
                     gpu::AllReduceOperation opType, bool isGroup,
@@ -731,11 +811,22 @@ createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
                                 spirv::GroupNonUniformFMinOp>},
       {ReduceType::MAXIMUMF, ElemType::Float,
        &createGroupReduceOpImpl<spirv::GroupFMaxOp,
-                                spirv::GroupNonUniformFMaxOp>}};
+                                spirv::GroupNonUniformFMaxOp>},
+      {ReduceType::AND, ElemType::Integer,
+       &createGroupNonUniformBitwiseReduceOpImpl<
+           spirv::GroupNonUniformBitwiseAndOp>},
+      {ReduceType::OR, ElemType::Integer,
+       &createGroupNonUniformBitwiseReduceOpImpl<
+           spirv::GroupNonUniformBitwiseOrOp>},
+      {ReduceType::XOR, ElemType::Integer,
+       &createGroupNonUniformBitwiseReduceOpImpl<
+           spirv::GroupNonUniformBitwiseXorOp>}};
 
   for (const OpHandler &handler : handlers)
     if (handler.kind == opType && elementType == handler.elemType)
-      return handler.func(builder, loc, arg, isGroup, isUniform, clusterSize);
+      if (Value result =
+              handler.func(builder, loc, arg, isGroup, isUniform, clusterSize))
+        return result;
 
   return std::nullopt;
 }
@@ -921,9 +1012,10 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
-      GPUBarrierConversion, GPUBallotConversion, GPUFuncOpConversion,
-      GPUModuleConversion, GPUReturnOpConversion, GPUShuffleConversion,
-      GPURotateConversion, GPUSubgroupBroadcastConversion,
+      GPUBarrierConversion, GPUInitializeNamedBarrierConversion,
+      GPUBallotConversion, GPUFuncOpConversion, GPUModuleConversion,
+      GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
+      GPUSubgroupBroadcastConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
@@ -942,4 +1034,11 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       WorkGroupSizeConversion, GPUAllReduceConversion,
       GPUSubgroupReduceConversion, GPUPrintfConversion>(typeConverter,
                                                         patterns.getContext());
+}
+
+void mlir::populateGPUNamedBarrierToSPIRVTypeConversion(
+    SPIRVTypeConverter &typeConverter) {
+  typeConverter.addConversion([](gpu::NamedBarrierType type) {
+    return spirv::NamedBarrierType::get(type.getContext());
+  });
 }

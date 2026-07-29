@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -46,6 +47,9 @@ using namespace llvm;
 #define DEBUG_TYPE "bolt"
 
 namespace opts {
+
+extern cl::opt<bool> LargeCodeModel;
+extern cl::opt<bool> UpdateDebugSections;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -192,8 +196,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64: {
-    ArchName = "riscv64";
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32: {
+    ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
@@ -224,8 +229,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         make_error_code(std::errc::not_supported),
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
-  // Set up disassembler.
-  MCTargetOptions MCOptions;
+  // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
+  // make it static to outlive the AsmInfo.
+  static const MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
@@ -252,20 +258,10 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no instruction info for target ", TripleName));
 
   std::unique_ptr<MCContext> Ctx(
-      new MCContext(TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
+      new MCContext(TheTriple, *AsmInfo, *MRI, *STI));
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());
-  // We do not support X86 Large code model. Change this in the future.
-  bool Large = false;
-  if (TheTriple.getArch() == llvm::Triple::aarch64)
-    Large = true;
-  unsigned LSDAEncoding =
-      Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-  if (IsPIC) {
-    LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-                   (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
-  }
 
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, *Ctx));
@@ -303,7 +299,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm), Logger);
 
-  BC->LSDAEncoding = LSDAEncoding;
+  // Use large code model encoding for AArch64 (always). For X86, this is
+  // updated after detecting .ltext if unset.
+  // Otherwise allow the user to force it via `--large-code-model` flag.
+  if (TheTriple.getArch() == llvm::Triple::aarch64)
+    BC->UseLargeCodeModel = true;
+  else if (opts::LargeCodeModel.getNumOccurrences())
+    BC->UseLargeCodeModel = opts::LargeCodeModel;
 
   BC->MAB = std::unique_ptr<MCAsmBackend>(
       BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
@@ -314,6 +316,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   BC->SymbolicDisAsm = std::unique_ptr<MCDisassembler>(
       BC->TheTarget->createMCDisassembler(*BC->STI, *BC->Ctx));
+
+  BC->updateLSDAEncoding();
 
   if (!BC->SymbolicDisAsm)
     return createStringError(
@@ -388,6 +392,14 @@ bool BinaryContext::validateHoles() const {
     }
   }
   return Valid;
+}
+
+void BinaryContext::updateLSDAEncoding() {
+  LSDAEncoding = HasFixedLoadAddress
+                     ? dwarf::DW_EH_PE_absptr
+                     : (dwarf::DW_EH_PE_pcrel |
+                        (this->UseLargeCodeModel ? dwarf::DW_EH_PE_sdata8
+                                                 : dwarf::DW_EH_PE_sdata4));
 }
 
 void BinaryContext::updateObjectNesting(BinaryDataMapType::iterator GAI) {
@@ -770,6 +782,9 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
     if (!Success) {
+      // Re-analysis here is stricter than during disassembly (the referenced
+      // function is now disassembled), so it may fail on a table we accepted
+      // earlier. Ignore the owning function(s) instead of aborting.
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
         JT->print(dbgs());
@@ -778,7 +793,16 @@ void BinaryContext::populateJumpTables() {
           NextJTI->second->print(dbgs());
         }
       });
-      llvm_unreachable("jump table heuristic failure");
+      JT->EntriesAsAddress.clear();
+      JT->IsSplit = false;
+      // Keep JT in the map so it is still freed by ~BinaryContext.
+      for (BinaryFunction *Frag : JT->Parents) {
+        this->errs()
+            << "BOLT-WARNING: unable to analyze jump table in function "
+            << *Frag << "; ignoring the function\n";
+        Frag->setIgnored();
+      }
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       if (JT->IsSplit)
@@ -1886,6 +1910,7 @@ void BinaryContext::preprocessDebugInfo() {
         LineTable->Prologue.FileNames;
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
+    BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
@@ -1948,6 +1973,87 @@ void BinaryContext::preprocessDebugInfo() {
                     " info. Use --comp-dir-override to locate the file(s) or"
                     " --update-debug-sections=0 to remove debug info\n";
     exit(1);
+  }
+}
+
+void BinaryContext::collectDebugScopeBoundaries() {
+  // Record DWARF lexical-scope boundaries (inlined_subroutine / lexical_block)
+  // into each containing BinaryFunction, so disassembly keeps an offset for the
+  // boundary instructions (see BinaryFunction::DebugScopeBoundaryOffsets) and
+  // translateInputToOutputRange() can map scope ranges precisely.
+
+  auto recordRange = [&](uint64_t LowPC, uint64_t HighPC) {
+    BinaryFunction *BF = getBinaryFunctionContainingAddress(LowPC);
+    if (!BF)
+      return;
+    BF->addDebugScopeBoundaryOffset(
+        static_cast<uint32_t>(LowPC - BF->getAddress()));
+    // Mark HighPC only if it lies strictly inside the same function.
+    if (HighPC > LowPC && getBinaryFunctionContainingAddress(HighPC) == BF)
+      BF->addDebugScopeBoundaryOffset(
+          static_cast<uint32_t>(HighPC - BF->getAddress()));
+  };
+
+  // Record the boundaries of a single scope DIE.
+  auto processScopeDie = [&](const DWARFDie &Die) {
+    const dwarf::Tag Tag = Die.getTag();
+    if (Tag != dwarf::DW_TAG_inlined_subroutine &&
+        Tag != dwarf::DW_TAG_lexical_block && Tag != dwarf::DW_TAG_try_block &&
+        Tag != dwarf::DW_TAG_catch_block)
+      return;
+    if (Expected<DWARFAddressRangesVector> Ranges = Die.getAddressRanges()) {
+      for (const DWARFAddressRange &R : *Ranges)
+        recordRange(R.LowPC, R.HighPC);
+    } else {
+      consumeError(Ranges.takeError());
+    }
+  };
+
+  for (const std::unique_ptr<DWARFUnit> &CUPtr : DwCtx->compile_units()) {
+    DWARFUnit *CU = CUPtr.get();
+    if (!ProcessedCUs.count(CU))
+      continue;
+
+    // Extract only the CU DIE (the .dwo's, for split DWARF). This is cheap (one
+    // DIE) and sets the unit's range/addr/str-offset bases that
+    // getAddressRanges needs, without materializing the full DIE array.
+    DWARFDie CUDie = CU->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true);
+    if (!CUDie)
+      continue;
+    DWARFUnit *DIEUnit = CUDie.getDwarfUnit();
+
+    // For split DWARF, preprocessDWODebugInfo already fully extracts the .dwo's
+    // DIE array.
+    if (DIEUnit->isDWOUnit()) {
+      for (const DWARFDebugInfoEntry &Entry : DIEUnit->dies())
+        processScopeDie(DWARFDie(DIEUnit, &Entry));
+      continue;
+    }
+    // Walk the unit's DIEs by streaming them one at a time. Track nesting depth
+    // with a counter: a DIE with children descends a level (++), a null entry
+    // (sibling-chain terminator) ascends (--), the unit-end offset limits the
+    // walk. This is done to avoid recording all DIEs in a vector like
+    // DWARFUnit's extractDIEsToVector() does, since that is more work than
+    // needed if we just want to lookup specific tags.
+    DWARFDataExtractor DebugInfoData = DIEUnit->getDebugInfoExtractor();
+    uint64_t DIEOffset = DIEUnit->getOffset() + DIEUnit->getHeaderSize();
+    const uint64_t NextCUOffset = DIEUnit->getNextUnitOffset();
+    DWARFDebugInfoEntry DIEEntry;
+    int32_t CurrentDepth = 1;
+    while (CurrentDepth > 0 && DIEOffset < NextCUOffset &&
+           DIEEntry.extractFast(*DIEUnit, &DIEOffset, DebugInfoData,
+                                NextCUOffset, 0)) {
+      const DWARFAbbreviationDeclaration *Abbrev =
+          DIEEntry.getAbbreviationDeclarationPtr();
+      if (!Abbrev) {
+        // End of the current sibling chain.
+        --CurrentDepth;
+        continue;
+      }
+      processScopeDie(DWARFDie(DIEUnit, &DIEEntry));
+      if (Abbrev->hasChildren())
+        ++CurrentDepth;
+    }
   }
 }
 
@@ -2125,8 +2231,7 @@ ArrayRef<uint8_t> BinaryContext::extractData(uint64_t Address,
 
 void BinaryContext::printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
                               uint64_t Offset) const {
-  DataExtractor DE(Data, AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Data, AsmInfo->isLittleEndian());
   uint64_t DataOffset = 0;
   while (DataOffset + 4 <= Data.size()) {
     OS << format("    %08" PRIx64 ": \t.word\t0x", Offset + DataOffset);
@@ -2422,8 +2527,7 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getUnsigned(&ValueOffset, Size);
 }
@@ -2437,8 +2541,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
   if (Section->isVirtual())
     return 0;
 
-  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian(),
-                   AsmInfo->getCodePointerSize());
+  DataExtractor DE(Section->getContents(), AsmInfo->isLittleEndian());
   auto ValueOffset = static_cast<uint64_t>(Address - Section->getAddress());
   return DE.getSigned(&ValueOffset, Size);
 }
@@ -2454,11 +2557,11 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value) {
+                                         uint64_t Value, bool IsRELR) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value);
+                                Addend, Value, IsRELR);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

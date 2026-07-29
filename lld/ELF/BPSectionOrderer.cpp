@@ -32,6 +32,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   static bool isCodeSection(const Section &sec) {
     return sec.flags & ELF::SHF_EXECINSTR;
   }
+  static StringRef getSectionName(const Section &sec) { return sec.name; }
   ArrayRef<Defined *> getSymbols(const Section &sec) {
     auto it = secToSym.find(&sec);
     if (it == secToSym.end())
@@ -63,9 +64,10 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
 } // namespace
 
 DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
-    Ctx &ctx, StringRef profilePath, bool forFunctionCompression,
-    bool forDataCompression, bool compressionSortStartupFunctions,
-    bool verbose) {
+    Ctx &ctx, StringRef profilePath,
+    ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
+    bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSectionBase *> sections;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
@@ -93,8 +95,8 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       addSection(*sym);
-  return orderer.computeOrder(profilePath, forFunctionCompression,
-                              forDataCompression,
+  return orderer.computeOrder(profilePath, compressionSortSpecs,
+                              forFunctionCompression, forDataCompression,
                               compressionSortStartupFunctions, verbose,
                               sections, rootSymbolToSectionIdxs);
 }

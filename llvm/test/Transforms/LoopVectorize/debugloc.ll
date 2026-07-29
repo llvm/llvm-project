@@ -29,10 +29,10 @@ entry:
   %cmp4 = icmp eq i32 %size, 0, !dbg !21
   br i1 %cmp4, label %for.end, label %for.body.lr.ph, !dbg !21
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   br label %for.body, !dbg !21
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %sum = phi i32 [ 0, %for.body.lr.ph ], [ %sum.next, %for.body ]
   %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv, !dbg !19
@@ -47,12 +47,12 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %exitcond = icmp ne i32 %lftr.wideiv, %size, !dbg !21
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge, !dbg !21
 
-for.cond.for.end_crit_edge:                       ; preds = %for.body
+for.cond.for.end_crit_edge:
   %add.lcssa = phi i32 [ %sum.next, %for.body ]
   call void @llvm.dbg.value(metadata i32 %add.lcssa, metadata !15, metadata !DIExpression()), !dbg !22
   br label %for.end, !dbg !21
 
-for.end:                                          ; preds = %entry, %for.cond.for.end_crit_edge
+for.end:
   %sum.0.lcssa = phi i32 [ %add.lcssa, %for.cond.for.end_crit_edge ], [ 0, %entry ]
   ret i32 %sum.0.lcssa, !dbg !26
 }
@@ -62,7 +62,7 @@ define i32 @test_debug_loc_on_branch_in_loop(ptr noalias %src, ptr noalias %dst)
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
 ; CHECK-NEXT:   [[CMP:%.+]] = icmp ne <2 x i32> [[LOAD]], splat (i32 10), !dbg [[LOC3:!.+]]
-; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i32 0, !dbg [[LOC3]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i64 0, !dbg [[LOC3]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
@@ -100,7 +100,7 @@ define i32 @test_different_debug_loc_on_replicate_recipe(ptr noalias %src, ptr n
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
 ; CHECK-NEXT:   [[CMP:%.+]] = icmp ne <2 x i32> [[LOAD]], splat (i32 10), !dbg [[LOC4:!.+]]
-; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i32 0, !dbg [[LOC4]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i64 0, !dbg [[LOC4]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
@@ -170,7 +170,7 @@ define void @test_scalar_steps(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg
 ; CHECK-LABEL: define void @test_scalar_steps(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2, !dbg [[LOC8:!.+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP7]]
@@ -201,6 +201,47 @@ exit:
   ret void
 }
 
+define void @test_select_chain_debugloc(ptr noalias %dst, ptr noalias %a, ptr noalias %b, i64 %n) !dbg !42 {
+; CHECK-LABEL: define void @test_select_chain_debugloc(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr %a, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %b, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD1]], splat (i32 100)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]], !dbg [[LOC9:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]],
+; CHECK-NEXT:    br i1 [[TMP7]], label %middle.block, label %vector.body
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %la = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %lb = load i32, ptr %gep.b, align 4
+  %m0 = icmp sgt i32 %la, 0
+  %m1 = icmp slt i32 %lb, 100
+  %inner = select i1 %m1, i32 %la, i32 %lb, !dbg !44
+  %outer = select i1 %m0, i32 %inner, i32 %lb, !dbg !45
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %outer, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; CHECK: ![[LOC2]] = !DILocation(line: 3
 ; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
 ; CHECK: ![[LOC1]] = !DILocation(line: 6
@@ -210,11 +251,10 @@ exit:
 ; CHECK: [[LOC6]] = !DILocation(line: 430
 ; CHECK: [[LOC7]] = !DILocation(line: 540
 ; CHECK: [[LOC8]] = !DILocation(line: 650
+; CHECK: [[LOC9]] = !DILocation(line: 761
 
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18, !27}
@@ -245,8 +285,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !27 = !{i32 1, !"Debug Info Version", i32 3}
 !28 = !DILocation(line: 137, column: 44, scope: !29)
 !29 = distinct !DILexicalBlock(scope: !30, file: !5, line: 137, column: 2)
-!30 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!31 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!30 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, type: !7, unit: !0)
+!31 = distinct !DISubprogram(name: "Place", scope: !5, file: !5, line: 135, scopeLine: 135, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, type: !7, unit: !0)
 !32 = distinct !DILexicalBlock(scope: !31, file: !5, line: 137, column: 2)
 !33 = !DILocation(line: 210, column: 44, scope: !32)
 !34 = !DILocation(line: 320, column: 44, scope: !32)
@@ -257,3 +297,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !39 = distinct !DISubprogram(name: "test_scalar_Steps", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
 !40 = distinct !DILexicalBlock(scope: !39, file: !5, line: 137, column: 2)
 !41 = !DILocation(line: 650, column: 44, scope: !40)
+!42 = distinct !DISubprogram(name: "test_select_chain_debugloc", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
+!43 = distinct !DILexicalBlock(scope: !42, file: !5, line: 137, column: 2)
+!44 = !DILocation(line: 760, column: 44, scope: !43)
+!45 = !DILocation(line: 761, column: 44, scope: !43)

@@ -1,3 +1,9 @@
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  message(STATUS "libc.src.__support.OSUtil.osutil is not available. "
+                  "Skip libc.src.time.linux.* targets.")
+  return()
+endif()
+
 add_entrypoint_object(
   timespec_get
   SRCS
@@ -64,19 +70,5 @@ add_entrypoint_object(
     libc.hdr.types.clockid_t
     libc.hdr.types.struct_timespec
     libc.src.__support.time.clock_settime
-    libc.src.errno.errno
-)
-
-add_entrypoint_object(
-  gettimeofday
-  SRCS
-    gettimeofday.cpp
-  HDRS
-    ../gettimeofday.h
-  DEPENDS
-    libc.hdr.time_macros
-    libc.hdr.types.suseconds_t
-    libc.src.__support.time.clock_gettime
-    libc.src.__support.time.units
     libc.src.errno.errno
 )

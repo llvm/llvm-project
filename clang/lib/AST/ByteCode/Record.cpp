@@ -49,10 +49,23 @@ bool Record::hasTrivialDtor() const {
   return !Dtor || Dtor->isTrivial();
 }
 
-const Record::Base *Record::getBase(const RecordDecl *FD) const {
-  auto It = BaseMap.find(FD);
+const Record::Field *Record::findField(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Fields,
+          [=](const Record::Field &F) -> bool { return F.Offset == Offset; });
+      It != Fields.end())
+    return &*It;
+  return nullptr;
+}
+
+const Record::Base *Record::getBase(const RecordDecl *RD) const {
+  auto It = BaseMap.find(RD);
   assert(It != BaseMap.end() && "Missing base");
   return It->second;
+}
+
+const Record::Base *Record::getBaseOrNull(const RecordDecl *RD) const {
+  return BaseMap.lookup(RD);
 }
 
 const Record::Base *Record::getBase(QualType T) const {
@@ -63,6 +76,7 @@ const Record::Base *Record::getBase(QualType T) const {
 
 const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
   auto It = VirtualBaseMap.find(FD);
-  assert(It != VirtualBaseMap.end() && "Missing virtual base");
+  if (It == VirtualBaseMap.end())
+    return nullptr;
   return It->second;
 }

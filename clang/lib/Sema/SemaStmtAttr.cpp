@@ -38,6 +38,18 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
   }
 
+  // CWG 3045: The innermost enclosing switch statement of a fallthrough
+  // statement S shall be contained in the innermost enclosing expansion
+  // statement (8.7 [stmt.expand]) of S, if any.
+  for (Scope *Sc = S.getCurScope();
+       Sc && !Sc->isFunctionScope() && !Sc->isSwitchScope();
+       Sc = Sc->getParent()) {
+    if (Sc->isExpansionStmtScope()) {
+      S.Diag(A.getLoc(), diag::err_fallthrough_attr_invalid_placement);
+      return nullptr;
+    }
+  }
+
   // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus17 && A.isCXX11Attribute() &&
@@ -314,7 +326,17 @@ static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   AlwaysInlineAttr AIA(S.Context, A);
-  if (!AIA.isClangAlwaysInline()) {
+  if (!S.getLangOpts().MicrosoftExt &&
+      (AIA.isMSVCForceInline() || AIA.isMSVCForceInlineCalls())) {
+    S.Diag(St->getBeginLoc(), diag::warn_attribute_ignored) << A;
+    return nullptr;
+  }
+  if (AIA.isMSVCForceInline()) {
+    S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
+        << "[[msvc::forceinline_calls]]";
+    return nullptr;
+  }
+  if (!AIA.isClangAlwaysInline() && !AIA.isMSVCForceInlineCalls()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::always_inline]]";
     return nullptr;

@@ -128,9 +128,10 @@ static const SCEV *getNarrowestLatchMaxTakenCountEstimate(ScalarEvolution &SE,
 }
 
 std::optional<LoopStructure>
-LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
+LoopStructure::parseLoopStructure(SCEVExpander &Expander, Loop &L,
                                   bool AllowUnsignedLatchCond,
                                   const char *&FailureReason) {
+  ScalarEvolution &SE = *Expander.getSE();
   if (!L.isLoopSimplifyForm()) {
     FailureReason = "loop not in LoopSimplify form";
     return std::nullopt;
@@ -200,7 +201,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   }
 
   auto HasNoSignedWrap = [&](const SCEVAddRecExpr *AR) {
-    if (AR->getNoWrapFlags(SCEV::FlagNSW))
+    if (AR->hasNoSignedWrap())
       return true;
 
     IntegerType *Ty = cast<IntegerType>(AR->getType());
@@ -222,7 +223,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     }
 
     // We may have proved this when computing the sign extension above.
-    return AR->getNoWrapFlags(SCEV::FlagNSW) != SCEV::FlagAnyWrap;
+    return AR->hasNoSignedWrap();
   };
 
   // `ICI` is interpreted as taking the backedge if the *next* value of the
@@ -287,7 +288,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+        if (IndVarBase->hasNoUnsignedWrap() &&
             cannotBeMinInLoop(RightSCEV, &L, SE, /*Signed*/ false)) {
           Pred = ICmpInst::ICMP_UGT;
           RightSCEV =
@@ -351,7 +352,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         //     break;                       break;
         //   ...                          ...
         // }                            }
-        if (IndVarBase->getNoWrapFlags(SCEV::FlagNUW) &&
+        if (IndVarBase->hasNoUnsignedWrap() &&
             cannotBeMaxInLoop(RightSCEV, &L, SE, /* Signed */ false)) {
           Pred = ICmpInst::ICMP_ULT;
           RightSCEV = SE.getAddExpr(RightSCEV, SE.getOne(RightSCEV->getType()));
@@ -403,7 +404,6 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
-  SCEVExpander Expander(SE, "loop-constrainer");
   Instruction *Ins = Preheader->getTerminator();
 
   if (FixedRightSCEV)
@@ -411,7 +411,6 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         Expander.expandCodeFor(FixedRightSCEV, FixedRightSCEV->getType(), Ins);
 
   Value *IndVarStartV = Expander.expandCodeFor(IndVarStart, IndVarTy, Ins);
-  IndVarStartV->setName("indvar.start");
 
   LoopStructure Result;
 
@@ -452,8 +451,7 @@ static void DisableAllLoopOptsOnLoop(Loop &L) {
   MDNode *DisableLICMVersioning = MDNode::get(
       Context, {MDString::get(Context, "llvm.loop.licm_versioning.disable")});
   MDNode *DisableDistribution = MDNode::get(
-      Context,
-      {MDString::get(Context, "llvm.loop.distribute.enable"), FalseVal});
+      Context, {MDString::get(Context, "llvm.loop.distribute.disable")});
   MDNode *NewLoopID =
       MDNode::get(Context, {Dummy, DisableUnroll, DisableVectorize,
                             DisableLICMVersioning, DisableDistribution});
@@ -739,6 +737,7 @@ bool LoopConstrainer::run() {
   IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
   SCEVExpander Expander(SE, "loop-constrainer");
+  SCEVExpanderCleaner ExpanderCleaner(Expander);
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'
@@ -779,7 +778,6 @@ bool LoopConstrainer::run() {
     }
 
     ExitPreLoopAt = Expander.expandCodeFor(ExitPreLoopAtSCEV, IVTy, InsertPt);
-    ExitPreLoopAt->setName("exit.preloop.at");
   }
 
   if (NeedsPostLoop) {
@@ -808,6 +806,12 @@ bool LoopConstrainer::run() {
     ExitMainLoopAt = Expander.expandCodeFor(ExitMainLoopAtSCEV, IVTy, InsertPt);
     ExitMainLoopAt->setName("exit.mainloop.at");
   }
+
+  // All checks which can fail after expanding SCEVs are complete. Keep the
+  // expansions now that the loop transformation is guaranteed to proceed.
+  ExpanderCleaner.markResultUsed();
+  if (ExitPreLoopAt)
+    ExitPreLoopAt->setName("exit.preloop.at");
 
   // We clone these ahead of time so that we don't have to deal with changing
   // and temporarily invalid IR as we transform the loops.

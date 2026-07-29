@@ -124,6 +124,19 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  rewind
+  SRCS
+    rewind.cpp
+  HDRS
+    ../rewind.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.macros.null_check
+)
+
+add_generic_entrypoint_object(
   ftell
   SRCS
     ftell.cpp
@@ -399,9 +412,9 @@ list(APPEND fprintf_deps
       libc.src.__support.arg_list
       libc.src.__support.CPP.limits
       libc.src.__support.libc_errno
-      libc.src.stdio.printf_core.vfprintf_internal
-      libc.src.stdio.printf_core.core_structs
-      libc.src.stdio.printf_core.error_mapper
+      libc.src.__support.printf_core.vfprintf_internal
+      libc.src.__support.printf_core.core_structs
+      libc.src.__support.printf_core.error_mapper
 )
 
 if(LLVM_LIBC_FULL_BUILD)

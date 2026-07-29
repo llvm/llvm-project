@@ -240,6 +240,7 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}_COMPILER_RT_CXX_LIBRARY "libcxx" CACHE STRING "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_LLVM_UNWINDER ON CACHE BOOL "")
+    set(RUNTIMES_${target}_COMPILER_RT_ASAN_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_HIDE_SYMBOLS ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
@@ -320,7 +321,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-n
       set(BUILTINS_${target}_CMAKE_${lang}_local_flags "${BUILTINS_${target}_CMAKE_${lang}_local_flags} -mthumb")
     endif()
     if(${target} STREQUAL "armv8m.main-none-eabi")
-      set(BUILTINS_${target}_CMAKE_${lang}_local_flags "${BUILTINS_${target}_CMAKE_${lang}_local_flags} -mfloat-abi=softfp -march=armv8m.main+fp+dsp -mcpu=cortex-m33")
+      set(BUILTINS_${target}_CMAKE_${lang}_local_flags "${BUILTINS_${target}_CMAKE_${lang}_local_flags} -mfloat-abi=hard -march=armv8m.main+fp+dsp -mcpu=cortex-m33")
     endif()
     if(${target} STREQUAL "armv8.1m.main-none-eabi")
       set(BUILTINS_${target}_CMAKE_${lang}_local_flags "${BUILTINS_${target}_CMAKE_${lang}_local_flags} -mfloat-abi=hard -march=armv8.1-m.main+mve.fp+fp.dp -mcpu=cortex-m55")
@@ -346,7 +347,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-n
       set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mthumb")
     endif()
     if(${target} STREQUAL "armv8m.main-none-eabi")
-      set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mfloat-abi=softfp -march=armv8m.main+fp+dsp -mcpu=cortex-m33")
+      set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mfloat-abi=hard -march=armv8m.main+fp+dsp -mcpu=cortex-m33")
     endif()
     if(${target} STREQUAL "armv8.1m.main-none-eabi")
       set(RUNTIMES_${target}_CMAKE_${lang}_local_flags "${RUNTIMES_${target}_CMAKE_${lang}_local_flags} -mfloat-abi=hard -march=armv8.1-m.main+mve.fp+fp.dp -mcpu=cortex-m55")
@@ -473,6 +474,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-otool
   llvm-pdbutil
   llvm-profdata
+  llvm-profgen
   llvm-rc
   llvm-ranlib
   llvm-readelf

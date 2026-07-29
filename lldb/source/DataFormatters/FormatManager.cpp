@@ -189,7 +189,7 @@ void FormatManager::GetPossibleMatches(
       target_sp->GetDebugger().GetScriptInterpreter();
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
-    sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
+    sstring.Format("{0}:{1}", type_name, valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
     entries.push_back({bitfieldname, script_interpreter,
                        TypeImpl(compiler_type), current_flags,

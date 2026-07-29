@@ -23,14 +23,8 @@ class SparcELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit SparcELFMCAsmInfo(const Triple &TheTriple);
-
-  const MCExpr*
-  getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
-                              MCStreamer &Streamer) const override;
-  const MCExpr* getExprForFDESymbol(const MCSymbol *Sym,
-                                    unsigned Encoding,
-                                    MCStreamer &Streamer) const override;
+  explicit SparcELFMCAsmInfo(const Triple &TheTriple,
+                             const MCTargetOptions &Options);
 
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;

@@ -45,7 +45,6 @@ end subroutine
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest_as_strided_elementalElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest_as_strided_elementalEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest_as_strided_elementalEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_7]], %[[VAL_8]] : i64
@@ -55,8 +54,7 @@ end subroutine
 ! CHECK:           %[[VAL_13:.*]] = arith.divsi %[[VAL_11]], %[[VAL_12]] : i64
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_16:.*]] = arith.maxsi %[[VAL_13]], %[[VAL_14]] : i64
-! CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_6]], %[[VAL_16]] : i64
-! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i64) -> index
+! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (i64) -> index
 ! CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_18]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> index

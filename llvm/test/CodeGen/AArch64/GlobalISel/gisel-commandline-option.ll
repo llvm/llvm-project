@@ -58,7 +58,7 @@
 ; ENABLED-O1-NEXT: Function Alias Analysis Results
 ; ENABLED:       IRTranslator
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  PreLegalizerCombiner
@@ -73,6 +73,7 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
+; ENABLED-O1-NEXT: Natural Loop Information
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect
 ; ENABLED-O1-NEXT:  AArch64 Post Select Optimizer

@@ -9,10 +9,14 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXTARGETSTREAMER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCStreamer.h"
+#include <optional>
 
 namespace llvm {
 class MCSection;
+class MCSymbol;
+class formatted_raw_ostream;
 
 /// Implments NVPTX-specific streamer.
 class NVPTXTargetStreamer : public MCTargetStreamer {
@@ -23,6 +27,42 @@ private:
 public:
   NVPTXTargetStreamer(MCStreamer &S);
   ~NVPTXTargetStreamer() override;
+
+  /// Emit the banner which specifies details of PTX generator.
+  virtual void emitBanner() {}
+
+  /// Emit the PTX ISA version number.
+  virtual void emitVersionDirective(unsigned PTXVersion) {}
+
+  /// Emit architecture and platform target.
+  virtual void emitTargetDirective(StringRef Target, bool TexModeIndependent,
+                                   bool HasDebug) {}
+
+  /// Emit address size used for this PTX module.
+  virtual void emitAddressSizeDirective(unsigned AddrSize) {}
+
+  /// Emit the list of branch targets a brx.idx may jump to.
+  virtual void emitBranchTargetsDirective(ArrayRef<const MCSymbol *> Targets) {}
+
+  /// Declare a register \p SizeInBits wide. \p Count declares a numbered bank
+  /// of that many registers sharing \p Name as their prefix, rather than a
+  /// single register named \p Name.
+  virtual void emitRegDirective(unsigned SizeInBits, StringRef Name,
+                                std::optional<unsigned> Count = std::nullopt) {}
+
+  /// Declare \p Size bytes of local (stack) memory named \p Name.
+  virtual void emitLocalDirective(Align Alignment, const MCSymbol *Name,
+                                  uint64_t Size) {}
+
+  /// Emit an alias from \p Name to \p Aliasee.
+  virtual void emitAliasDirective(const MCSymbol *Name,
+                                  const MCSymbol *Aliasee) {}
+
+  /// Emit a pragma governing the code that follows it.
+  virtual void emitPragmaDirective(StringRef Pragma) {}
+
+  /// Emit a section with an empty body.
+  virtual void emitEmptySectionDirective(StringRef Name) {}
 
   /// Outputs the list of the DWARF '.file' directives to the streamer.
   void outputDwarfFileDirectives();
@@ -53,9 +93,35 @@ public:
 };
 
 class NVPTXAsmTargetStreamer : public NVPTXTargetStreamer {
+  formatted_raw_ostream &OS;
+
 public:
-  NVPTXAsmTargetStreamer(MCStreamer &S);
+  NVPTXAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS);
   ~NVPTXAsmTargetStreamer() override;
+
+  void emitBanner() override;
+
+  void emitVersionDirective(unsigned PTXVersion) override;
+
+  void emitTargetDirective(StringRef Target, bool TexModeIndependent,
+                           bool HasDebug) override;
+
+  void emitAddressSizeDirective(unsigned AddrSize) override;
+
+  void emitBranchTargetsDirective(ArrayRef<const MCSymbol *> Targets) override;
+
+  void emitRegDirective(unsigned SizeInBits, StringRef Name,
+                        std::optional<unsigned> Count) override;
+
+  void emitLocalDirective(Align Alignment, const MCSymbol *Name,
+                          uint64_t Size) override;
+
+  void emitAliasDirective(const MCSymbol *Name,
+                          const MCSymbol *Aliasee) override;
+
+  void emitPragmaDirective(StringRef Pragma) override;
+
+  void emitEmptySectionDirective(StringRef Name) override;
 };
 
 } // end namespace llvm

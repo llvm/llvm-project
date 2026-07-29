@@ -28,11 +28,15 @@ public:
 
   virtual ~Service();
 
-  /// The onDetach method will be called when the controller disconnects from
-  /// the session (or if the Session is shut down without a controller ever
-  /// being attached).
+  /// Called when controller access becomes permanently unavailable.
   ///
-  /// Once onDetach is called no further requests will be made to the Service
+  /// This is guaranteed to be called exactly once before onShutdown,
+  /// regardless of how the Session reaches that state. It is called when:
+  ///   - The controller explicitly disconnects.
+  ///   - The Session::detach() method is called.
+  ///   - The Session shuts down (even if no controller was ever attached).
+  ///
+  /// After onDetach is called no further requests will be made to the Service
   /// by the controller. Note that JIT'd code may continue to make requests to
   /// the service concurrent with a call to onDetach.
   ///

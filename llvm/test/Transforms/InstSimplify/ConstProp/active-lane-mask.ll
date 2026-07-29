@@ -297,9 +297,7 @@ entry:
 define <4 x float> @poisonc(<4 x float> %a, i32 %n) {
 ; CHECK-LABEL: @poisonc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAR27:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 1024)
-; CHECK-NEXT:    [[VAR33:%.*]] = select <4 x i1> [[VAR27]], <4 x float> [[A:%.*]], <4 x float> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[VAR33]]
+; CHECK-NEXT:    ret <4 x float> poison
 ;
 entry:
   %new0 = shl i1 0, 1

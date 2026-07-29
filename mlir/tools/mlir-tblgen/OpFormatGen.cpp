@@ -318,6 +318,10 @@ struct OperationFormat {
     std::optional<StringRef> getVarTransformer() const {
       return variableTransformer;
     }
+    /// Returns true if the type is parsed directly from the assembly format.
+    bool isDirectlyParsed() const {
+      return !builderIdx && !getVariable() && !getAttribute();
+    }
     void setResolver(ConstArgument arg, std::optional<StringRef> transformer) {
       resolver = arg;
       variableTransformer = transformer;
@@ -1313,6 +1317,46 @@ if (!dict) {
 (void)ctx;
 )decl";
 
+  // `operandSegmentSizes`/`resultSegmentSizes` are trait-injected properties
+  // not enumerated by `op.getProperties()`, so they need to be special-cased
+  // here, mirroring `setPropertiesFromAttr` in OpDefinitionsGen.cpp. This is
+  // only necessary when the format can't infer the sizes itself (bulk
+  // `operands`/`type(results)` directives, or when there is no declarative
+  // assemblyFormat at all -- e.g. `hasCustomAssemblyFormat`, where this
+  // generated setter may still be reused by a hand-written parser that has
+  // no other way to recover the sizes); when the format spells out each
+  // variadic group individually, `genParserVariadicSegmentResolution` always
+  // overwrites the property from the parsed operand/result groups, so the key
+  // is left completely untouched here (same as any other property not
+  // handled by this format).
+  //
+  // {0}: segment sizes property name
+  const char *segmentSizesFromAttrFmt = R"decl(
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
+usedKeys.insert({0}AttrName);
+auto attr = dict.get({0}AttrName);
+if (!attr) {{
+  emitError() << "expected key entry for {0} in DictionaryAttr to set "
+             "Properties.";
+  return ::mlir::failure();
+}
+if (::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
+      return emitError() << "for `{0}`: ";
+    })))
+  return ::mlir::failure();
+)decl";
+  bool hasNoDeclarativeFormat = !op.hasAssemblyFormat();
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      (hasNoDeclarativeFormat || fmt.allOperands)) {
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    body << formatv(segmentSizesFromAttrFmt, "operandSegmentSizes");
+  }
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      (hasNoDeclarativeFormat || fmt.allResultTypes)) {
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+    body << formatv(segmentSizesFromAttrFmt, "resultSegmentSizes");
+  }
+
   // {0}: fromAttribute call
   // {1}: property name
   // {2}: isRequired
@@ -1329,7 +1373,9 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
+      return emitError() << "for `{1}`: ";
+    })))
   return ::mlir::failure();
 )decl";
 
@@ -1848,19 +1894,22 @@ void OperationFormat::genParserOperandTypeResolution(
   // separately.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
     NamedTypeConstraint &operand = op.getOperand(i);
-    // Optional operands may not be present; guard resolution to avoid
-    // out-of-bounds access on the (potentially empty) types vector.
-    if (operand.isOptional())
+    TypeResolution &operandType = operandTypes[i];
+    // Inferred type resolution may access another optional variable's empty
+    // type vector. Directly parsed type ranges are safe and must always be
+    // resolved so that operand/type cardinality is validated.
+    bool guardOptionalOperand =
+        operand.isOptional() && !operandType.isDirectlyParsed();
+    if (guardOptionalOperand)
       body << "  if (!" << operand.name << "Operands.empty()) {\n";
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.
-    TypeResolution &operandType = operandTypes[i];
     emitTypeResolver(operandType, operand.name);
 
     body << ", " << operand.name
          << "OperandsLoc, result.operands))\n    return ::mlir::failure();\n";
-    if (operand.isOptional())
+    if (guardOptionalOperand)
       body << "  }\n";
   }
 }
@@ -2887,6 +2936,25 @@ OpFormatParser::verifyAttributes(SMLoc loc,
     if (var->constraint.isVariadicOfVariadic()) {
       fmt.inferredAttributes.insert(
           var->constraint.getVariadicOfVariadicSegmentSizeAttr());
+    }
+  }
+
+  // Check that optional attributes are not used directly (i.e. outside of an
+  // optional group or oilist). Printing an absent optional attribute passes a
+  // null Attribute to the printer, which leads to crashes in alias
+  // initialisation. OIList elements require optional attributes by design, so
+  // attributes nested inside them are not checked here.
+  for (FormatElement *element : elements) {
+    if (auto *attrVar = dyn_cast<AttributeVariable>(element)) {
+      const NamedAttribute *var = attrVar->getVar();
+      if (var->attr.isOptional()) {
+        return emitErrorAndNote(
+            loc,
+            "optional attribute '" + var->name +
+                "' cannot be used outside of an optional group",
+            "to conditionally print the attribute, use '($" + var->name +
+                "^)?'");
+      }
     }
   }
 

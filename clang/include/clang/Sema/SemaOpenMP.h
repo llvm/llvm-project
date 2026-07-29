@@ -31,6 +31,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include <array>
 #include <optional>
 #include <string>
 #include <utility>
@@ -42,6 +43,7 @@ class FunctionScopeInfo;
 
 class DeclContext;
 class DeclGroupRef;
+class EnumConstantDecl;
 class ParsedAttr;
 class Scope;
 
@@ -457,6 +459,11 @@ public:
   /// Called on well-formed '#pragma omp reverse'.
   StmtResult ActOnOpenMPReverseDirective(Stmt *AStmt, SourceLocation StartLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed '#pragma omp split' after parsing of its
+  /// associated statement.
+  StmtResult ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
+                                       Stmt *AStmt, SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp interchange' after parsing of its
   /// clauses and the associated statement.
   StmtResult ActOnOpenMPInterchangeDirective(ArrayRef<OMPClause *> Clauses,
@@ -911,6 +918,12 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
+  /// Called on well-formed 'counts' clause after parsing its arguments.
+  OMPClause *
+  ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs, SourceLocation StartLoc,
+                          SourceLocation LParenLoc, SourceLocation EndLoc,
+                          std::optional<unsigned> FillIdx,
+                          SourceLocation FillLoc, unsigned FillCount);
   /// Called on well-form 'permutation' clause after parsing its arguments.
   OMPClause *ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
                                           SourceLocation StartLoc,
@@ -1176,8 +1189,15 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend,
-                            ///< lastprivate, or use_device_ptr clause.
+    std::array<int, 2> ExtraModifierArray = {-1, -1};
+    std::array<Expr *, 2> ExtraModifierExprArray = {nullptr, nullptr};
+    std::array<SourceLocation, 2> ExtraModifierLocArray = {SourceLocation(),
+                                                           SourceLocation()};
+    /// Additional modifier for linear, map, depend, lastprivate,
+    /// use_device_ptr, or num_teams clause.
+    int &ExtraModifier = ExtraModifierArray[0];
+    Expr *&ExtraModifierExpr = ExtraModifierExprArray[0];
+    SourceLocation &ExtraModifierLoc = ExtraModifierLocArray[0];
     int OriginalSharingModifier = 0; // Default is shared
     int NeedDevicePtrModifier = 0;
     SourceLocation NeedDevicePtrModifierLoc;
@@ -1189,7 +1209,6 @@ public:
         MotionModifiers;
     SmallVector<SourceLocation, NumberOfOMPMotionModifiers> MotionModifiersLoc;
     bool IsMapTypeImplicit = false;
-    SourceLocation ExtraModifierLoc;
     SourceLocation OriginalSharingModifierLoc;
     SourceLocation OmpAllMemoryLoc;
     SourceLocation
@@ -1329,15 +1348,17 @@ public:
       const OMPVarListLocTy &Locs, bool NoDiagnose = false,
       ArrayRef<Expr *> UnresolvedMappers = {});
   /// Called on well-formed 'num_teams' clause.
-  OMPClause *ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
-                                       SourceLocation StartLoc,
-                                       SourceLocation LParenLoc,
-                                       SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPNumTeamsClause(
+      ArrayRef<Expr *> VarList, OpenMPNumTeamsClauseModifier Modifier,
+      Expr *ModifierExpr, SourceLocation ModifierLoc,
+      OpenMPNumTeamsClauseModifier ModifierExtra, Expr *ModifierExtraExpr,
+      SourceLocation ModifierExtraLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc);
   /// Called on well-formed 'thread_limit' clause.
-  OMPClause *ActOnOpenMPThreadLimitClause(ArrayRef<Expr *> VarList,
-                                          SourceLocation StartLoc,
-                                          SourceLocation LParenLoc,
-                                          SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPThreadLimitClause(
+      ArrayRef<Expr *> VarList, OpenMPThreadLimitClauseModifier Modifier,
+      Expr *ModifierExpr, SourceLocation ModifierLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc);
   /// Called on well-formed 'priority' clause.
   OMPClause *ActOnOpenMPPriorityClause(Expr *Priority, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
@@ -1469,6 +1490,12 @@ public:
   ExprResult ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
                                   SourceLocation LLoc, SourceLocation RLoc,
                                   ArrayRef<OMPIteratorData> Data);
+
+  ExprResult ActOnOpenMPDimsModifier(OpenMPClauseKind Kind, int Modifier,
+                                     Expr *ModifierExpr,
+                                     SourceLocation ModifierLoc,
+                                     ArrayRef<Expr *> VarList,
+                                     SourceLocation VarListEndLoc);
 
   void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 

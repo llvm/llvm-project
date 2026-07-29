@@ -402,6 +402,20 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %10 = llvm.addrspacecast %arg4 : !llvm.ptr to !llvm.ptr<2>
 // CHECK:  = llvm.bitcast %[[I64]] : i64 to f64
   %11 = llvm.bitcast %arg1 : i64 to f64
+// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<64>
+  %12 = llvm.bitcast %arg1 : i64 to !llvm.byte<64>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i64
+  %13 = llvm.bitcast %12 : !llvm.byte<64> to i64
+// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<8>
+  %14 = llvm.bitcast %arg1 : i64 to !llvm.byte<8>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i32
+  %15 = llvm.bitcast %12 : !llvm.byte<64> to i32
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
+  %16 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
+  %17 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
+// CHECK:  = llvm.bitcast %[[PTR]] : !llvm.ptr to !llvm.byte<8>
+  %18 = llvm.bitcast %arg4 : !llvm.ptr to !llvm.byte<8>
   llvm.return
 }
 
@@ -547,6 +561,8 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: llvm.atomicrmw fminimumnum %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %3 = llvm.atomicrmw fminimumnum %ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 
@@ -1124,6 +1140,32 @@ llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
   // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> i32
   %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> (i32)
   llvm.return %0 : i32
+}
+
+// CHECK-LABEL: constrained_fp_metadata
+llvm.func @constrained_fp_metadata(%a: f32, %b: f32) -> f32 {
+  // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.fadd.f32"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+  %rm = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  %eb = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  %r = llvm.call_intrinsic "llvm.experimental.constrained.fadd.f32"(%a, %b, %rm, %eb)
+      : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+  llvm.return %r : f32
+}
+
+// CHECK-LABEL: metadata_as_value_shapes
+llvm.func @metadata_as_value_shapes() {
+  // Exercise each of the LLVM metadata-attribute kinds the op accepts.
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
+  %0 = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_func<@md_kernel>
+  %2 = llvm.mlir.metadata_as_value #llvm.md_func<@md_kernel>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %3 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  llvm.return
 }
 
 llvm.mlir.global private @blockaddr_global() {addr_space = 0 : i32, dso_local} : !llvm.ptr {

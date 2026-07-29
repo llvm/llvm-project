@@ -202,6 +202,25 @@ TEST(HashingTest, HashCombineRangeBasicTest) {
   EXPECT_EQ(arr5_hash, d_arr5_hash);
 }
 
+TEST(HashingTest, HashCombineRangeIteratorOverInlineBuffer) {
+  // Drive the non-pointer iterator overload past the inline stack buffer
+  // (>256 bytes of hashable data) into the heap-grow path.
+  constexpr size_t N = 100; // 100 * sizeof(size_t) = 800 bytes
+  std::vector<size_t> v(N);
+  for (size_t i = 0; i < N; ++i)
+    v[i] = i * 0x9E3779B97F4A7C15ULL;
+  std::list<size_t> l(v.begin(), v.end());
+
+  // Iterator and pointer paths see the same byte stream and agree past the
+  // inline buffer threshold.
+  EXPECT_EQ(hash_combine_range(v), hash_combine_range(l));
+  EXPECT_EQ(hash_combine_range(l), hash_combine_range(l));
+
+  std::list<size_t> l2 = l;
+  l2.push_back(0xDEADBEEFu);
+  EXPECT_NE(hash_combine_range(l), hash_combine_range(l2));
+}
+
 TEST(HashingTest, HashCombineRangeLengthDiff) {
   // Test that as only the length varies, we compute different hash codes for
   // sequences.

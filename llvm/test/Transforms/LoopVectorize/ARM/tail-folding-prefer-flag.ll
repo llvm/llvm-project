@@ -2,7 +2,7 @@
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled \
-; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
+; RUN:     -tail-folding-policy=must-fold-tail -S < %s | \
 ; RUN:     FileCheck -check-prefix=PREDFLAG %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -77,16 +77,16 @@ entry:
   %cmp8 = icmp sgt i32 %N, 0
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i32 %i.09
   %0 = load i32, ptr %arrayidx, align 4

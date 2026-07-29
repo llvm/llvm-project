@@ -27,14 +27,14 @@ entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %0 = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %0 to float

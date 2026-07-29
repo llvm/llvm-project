@@ -55,12 +55,13 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override {
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF32BEKind)
-      elf::scanSection1<ARM, ELF32BE>(*this, sec);
+      elf::scanSection1<ARM, ELF32BE>(*this, sec, shard);
     else
-      elf::scanSection1<ARM, ELF32LE>(*this, sec);
+      elf::scanSection1<ARM, ELF32LE>(*this, sec, shard);
   }
 
   DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
@@ -169,8 +170,9 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
 }
 
 template <class ELFT, class RelTy>
-void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                          unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
@@ -1183,7 +1185,7 @@ void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
       if (!isArmMapSymbol(def) && !isDataMapSymbol(def) &&
           !isThumbMapSymbol(def))
         continue;
-      if (auto *sec = cast_if_present<InputSection>(def->section))
+      if (auto *sec = dyn_cast_if_present<InputSection>(def->section))
         if (sec->flags & SHF_EXECINSTR)
           sectionMap[sec].push_back(def);
     }

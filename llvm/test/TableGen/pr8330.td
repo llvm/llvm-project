@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s
-// XFAIL: vg_leak
 
 class Or4<bits<8> Val> {
   bits<8> V = {Val{7}, Val{6}, Val{5}, Val{4}, Val{3}, 1, Val{1}, Val{0} };

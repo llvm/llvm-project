@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc  -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2
+// RUN: ld.lld -z nosort-thunks %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100000 --stop-address=0x10000c | FileCheck --check-prefix=CHECK1 %s
@@ -13,6 +13,7 @@
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1e00000 --stop-address=0x1e00006 | FileCheck --check-prefix=CHECK8 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2200000 --stop-address=0x220000a | FileCheck --check-prefix=CHECK9 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2300000 --stop-address=0x230000a | FileCheck --check-prefix=CHECK10 %s
+// RUN: rm %t %t2
 
 // Test the Range extension Thunks for Thumb when all the code is in a single
 // OutputSection. The Thumb unconditional branch b.w and branch and link bl

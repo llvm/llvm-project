@@ -112,6 +112,10 @@ TEST(FormatTests, FormatStringTraversal) {
               "I4", "E10.1", "E10.1"},
           1},
       {1, "(F)", ResultsTy{"F"}, 1}, // missing 'w'
+      {1, "(AT)", ResultsTy{"AT"}, 1}, // AT edit descriptor
+      {2, "(AT,AT)", ResultsTy{"AT", "AT"}, 1}, // multiple AT
+      {1, "(2AT)", ResultsTy{"2*AT"}, 2}, // AT with repeat
+      {1, "(A10)", ResultsTy{"A10"}, 1}, // A with width (not AT)
   };
 
   for (const auto &[n, format, expect, repeat] : params) {

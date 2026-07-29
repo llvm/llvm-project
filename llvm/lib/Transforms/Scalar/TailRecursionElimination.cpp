@@ -60,6 +60,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
@@ -89,11 +90,47 @@ using namespace llvm;
 STATISTIC(NumEliminated, "Number of tail calls removed");
 STATISTIC(NumRetDuped,   "Number of return duplicated");
 STATISTIC(NumAccumAdded, "Number of accumulators introduced");
+STATISTIC(NumTREPreventedCold,
+          "Number of tail calls/recursion eliminations prevented due to cold "
+          "calling convention or attribute");
 
-static cl::opt<bool> ForceDisableBFI(
+static cl::opt<bool> DisableEntryCountRecompute(
     "tre-disable-entrycount-recompute", cl::init(false), cl::Hidden,
     cl::desc("Force disabling recomputing of function entry count, on "
              "successful tail recursion elimination."));
+
+static cl::opt<bool> DisableTailCallElimForColdCalls(
+    "disable-tail-call-elim-for-cold-calls", cl::Hidden, cl::init(false),
+    cl::desc("Disable tail call elimination and optimization for cold calls or "
+             "in cold functions"));
+
+static bool shouldDisableTailCallsForCold(const CallBase *CB,
+                                          const Function *Caller,
+                                          const ProfileSummaryInfo *PSI,
+                                          BlockFrequencyInfo *BFI) {
+  if (!DisableTailCallElimForColdCalls)
+    return false;
+
+  if (CB && CB->isMustTailCall())
+    return false;
+
+  if (CB && (CB->hasFnAttr(Attribute::Cold) ||
+             CB->getCallingConv() == CallingConv::Cold))
+    return true;
+
+  if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
+                 Caller->getCallingConv() == CallingConv::Cold))
+    return true;
+
+  if (!PSI || !PSI->hasProfileSummary())
+    return false;
+
+  if (CB && BFI &&
+      (PSI->isColdCallSite(*CB, BFI) || PSI->isColdBlock(CB->getParent(), BFI)))
+    return true;
+
+  return false;
+}
 
 /// Scan the specified function for alloca instructions.
 /// If it contains any dynamic allocas, returns false.
@@ -194,7 +231,8 @@ struct AllocaDerivedValueTracker {
 };
 } // namespace
 
-static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
+static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
+                      ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
@@ -258,10 +296,13 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
-      bool IsNoTail = CI->isNoTailCall() ||
+      bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
+      bool IsNoTail = CI->isNoTailCall() || DisableForCold ||
                       CI->hasOperandBundlesOtherThan(
                           {LLVMContext::OB_clang_arc_attachedcall,
                            LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
+      if (!CI->isNoTailCall() && DisableForCold)
+        ++NumTREPreventedCold;
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed
@@ -407,6 +448,8 @@ class TailRecursionEliminator {
   OptimizationRemarkEmitter *ORE;
   DomTreeUpdater &DTU;
   BlockFrequencyInfo *const BFI;
+  ProfileSummaryInfo *const PSI;
+  const bool UpdateFunctionEntryCount;
   const uint64_t OrigEntryBBFreq;
   const uint64_t OrigEntryCount;
 
@@ -438,17 +481,19 @@ class TailRecursionEliminator {
 
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
-                          DomTreeUpdater &DTU, BlockFrequencyInfo *BFI)
-      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
+                          DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
+                          ProfileSummaryInfo *PSI,
+                          bool UpdateFunctionEntryCount)
+      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI), PSI(PSI),
+        UpdateFunctionEntryCount(UpdateFunctionEntryCount),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
-        OrigEntryCount(F.getEntryCount() ? F.getEntryCount()->getCount() : 0) {
+        OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
     if (BFI) {
       // The assert is meant as API documentation for the caller.
-      assert((OrigEntryCount != 0 && OrigEntryBBFreq != 0) &&
-             "If a BFI was provided, the function should have both an entry "
-             "count that is non-zero and an entry basic block with a non-zero "
-             "frequency.");
+      assert(OrigEntryBBFreq != 0 &&
+             "If a BFI was provided, the function should have an entry "
+             "basic block with a non-zero frequency.");
     }
   }
 
@@ -471,7 +516,8 @@ class TailRecursionEliminator {
 public:
   static bool eliminate(Function &F, const TargetTransformInfo *TTI,
                         AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
-                        DomTreeUpdater &DTU, BlockFrequencyInfo *BFI);
+                        DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
+                        ProfileSummaryInfo *PSI, bool UpdateFunctionEntryCount);
 };
 } // namespace
 
@@ -497,7 +543,7 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
 
   assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
          "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall())
+  if (!CI->isTailCall() || shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
     return nullptr;
 
   // As a special case, detect code like this:
@@ -721,6 +767,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // the result of the call anymore, instead, use the PHI node we just
     // inserted.
     AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
+
+    // Reassociating into the loop reorders the operands, so flags from the
+    // original order (nsw/nuw/exact/...) may no longer hold.
+    AccRecInstr->dropPoisonGeneratingFlags();
   }
 
   // Update our return value tracking
@@ -756,7 +806,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
-  if (OrigEntryBBFreq) {
+  if (!DisableEntryCountRecompute && UpdateFunctionEntryCount &&
+      OrigEntryBBFreq) {
     assert(F.getEntryCount().has_value());
     // This pass is not expected to remove BBs, only add an entry BB. For that
     // reason, and because the BB here isn't the new entry BB, the BFI lookup is
@@ -767,7 +818,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
         static_cast<double>(OrigEntryBBFreq);
     auto ToSubtract =
         static_cast<uint64_t>(std::round(RelativeBBFreq * OrigEntryCount));
-    auto OldEntryCount = F.getEntryCount()->getCount();
+    auto OldEntryCount = *F.getEntryCount();
     if (OldEntryCount <= ToSubtract) {
       LLVM_DEBUG(
           errs() << "[TRE] The entrycount attributable to the recursive call, "
@@ -775,7 +826,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
                  << ", should be strictly lower than the function entry count, "
                  << OldEntryCount << "\n");
     } else {
-      F.setEntryCount(OldEntryCount - ToSubtract, F.getEntryCount()->getType());
+      F.setEntryCount(OldEntryCount - ToSubtract);
     }
   }
   return true;
@@ -897,17 +948,16 @@ bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
   return false;
 }
 
-bool TailRecursionEliminator::eliminate(Function &F,
-                                        const TargetTransformInfo *TTI,
-                                        AliasAnalysis *AA,
-                                        OptimizationRemarkEmitter *ORE,
-                                        DomTreeUpdater &DTU,
-                                        BlockFrequencyInfo *BFI) {
+bool TailRecursionEliminator::eliminate(
+    Function &F, const TargetTransformInfo *TTI, AliasAnalysis *AA,
+    OptimizationRemarkEmitter *ORE, DomTreeUpdater &DTU,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+    bool UpdateFunctionEntryCount) {
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE);
+  MadeChange |= markTails(F, ORE, PSI, BFI);
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
@@ -918,7 +968,8 @@ bool TailRecursionEliminator::eliminate(Function &F,
     return MadeChange;
 
   // Change any tail recursive calls to loops.
-  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI);
+  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI, PSI,
+                              UpdateFunctionEntryCount);
 
   for (BasicBlock &BB : F)
     MadeChange |= TRE.processBlock(BB);
@@ -961,7 +1012,7 @@ struct TailCallElim : public FunctionPass {
         F, &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
         &getAnalysis<AAResultsWrapperPass>().getAAResults(),
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(), DTU,
-        /*BFI=*/nullptr);
+        /*BFI=*/nullptr, /*PSI=*/nullptr, /*UpdateFunctionEntryCount=*/false);
   }
 };
 } // namespace
@@ -987,10 +1038,11 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // This must come first. It needs the 2 analyses, meaning, if it came after
   // the lines asking for the cached result, should they be nullptr (which, in
   // the case of the PDT, is likely), updates to the trees would be missed.
-  auto *BFI = (!ForceDisableBFI && UpdateFunctionEntryCount &&
-               F.getEntryCount().has_value() && F.getEntryCount()->getCount())
+  auto *BFI = F.getEntryCount().has_value()
                   ? &AM.getResult<BlockFrequencyAnalysis>(F)
                   : nullptr;
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   auto *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
@@ -998,8 +1050,8 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // UpdateStrategy based on some test results. It is feasible to switch the
   // UpdateStrategy to Lazy if we find it profitable later.
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager);
-  bool Changed =
-      TailRecursionEliminator::eliminate(F, &TTI, &AA, &ORE, DTU, BFI);
+  bool Changed = TailRecursionEliminator::eliminate(
+      F, &TTI, &AA, &ORE, DTU, BFI, PSI, UpdateFunctionEntryCount);
 
   if (!Changed)
     return PreservedAnalyses::all();

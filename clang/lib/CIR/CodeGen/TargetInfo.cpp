@@ -3,8 +3,10 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -55,6 +57,8 @@ public:
   AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
 
+  bool supportsLibCall() const override { return false; }
+
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
     if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {
@@ -69,6 +73,36 @@ public:
         gv.setDSOLocal(true);
       }
     }
+  }
+
+  clang::LangAS
+  getGlobalVarAddressSpace(CIRGenModule &cgm,
+                           const clang::VarDecl *decl) const override {
+    using clang::LangAS;
+    assert(!cgm.getLangOpts().OpenCL &&
+           !(cgm.getLangOpts().CUDA && cgm.getLangOpts().CUDAIsDevice) &&
+           "Address space agnostic languages only");
+    LangAS defaultGlobalAS = LangAS::opencl_global;
+    if (!decl)
+      return defaultGlobalAS;
+
+    LangAS addrSpace = decl->getType().getAddressSpace();
+    if (addrSpace != LangAS::Default)
+      return addrSpace;
+
+    // Only promote to address space 4 if VarDecl has constant initialization.
+    if (decl->getType().isConstantStorage(cgm.getASTContext(), false, false) &&
+        decl->hasConstantInitialization())
+      return LangAS::opencl_constant;
+
+    return defaultGlobalAS;
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getCIRAllocaAddressSpace() const override {
+    return cir::LangAddressSpaceAttr::get(
+        &getABIInfo().cgt.getMLIRContext(),
+        cir::LangAddressSpace::OffloadPrivate);
   }
 };
 
@@ -86,31 +120,11 @@ public:
   X8664TargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<X8664ABIInfo>(cgt)) {}
 };
-
-} // namespace
-
-namespace {
-
-class NVPTXABIInfo : public ABIInfo {
-public:
-  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
-};
-
-class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
-public:
-  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
-      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
-};
 } // namespace
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
-}
-
-std::unique_ptr<TargetCIRGenInfo>
-clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
-  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
 }
 
 std::unique_ptr<TargetCIRGenInfo>

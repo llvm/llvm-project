@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=none -print-symbolic-inline-asm-ops -o - %s | FileCheck --match-full-lines %s
+# RUN: llc -run-pass=none -o - %s | FileCheck --match-full-lines %s
 
 ---
 name: test_attdialect

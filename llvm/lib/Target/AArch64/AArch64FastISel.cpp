@@ -538,6 +538,8 @@ Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   // arm64_32 has 32-bit pointers held in 64-bit registers. Because of that,
   // 'null' pointers need to have a somewhat special treatment.
   if (isa<ConstantPointerNull>(C)) {
+    if (C->getType()->isVectorTy())
+      return Register();
     assert(VT == MVT::i64 && "Expected 64-bit pointers");
     return materializeInt(ConstantInt::get(Type::getInt64Ty(*Context), 0), VT);
   }
@@ -674,8 +676,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -4458,54 +4459,6 @@ Register AArch64FastISel::emitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
   return fastEmitInst_rii(Opc, RC, SrcReg, 0, Imm);
 }
 
-static bool isZExtLoad(const MachineInstr *LI) {
-  switch (LI->getOpcode()) {
-  default:
-    return false;
-  case AArch64::LDURBBi:
-  case AArch64::LDURHHi:
-  case AArch64::LDURWi:
-  case AArch64::LDRBBui:
-  case AArch64::LDRHHui:
-  case AArch64::LDRWui:
-  case AArch64::LDRBBroX:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRWroX:
-  case AArch64::LDRBBroW:
-  case AArch64::LDRHHroW:
-  case AArch64::LDRWroW:
-    return true;
-  }
-}
-
-static bool isSExtLoad(const MachineInstr *LI) {
-  switch (LI->getOpcode()) {
-  default:
-    return false;
-  case AArch64::LDURSBWi:
-  case AArch64::LDURSHWi:
-  case AArch64::LDURSBXi:
-  case AArch64::LDURSHXi:
-  case AArch64::LDURSWi:
-  case AArch64::LDRSBWui:
-  case AArch64::LDRSHWui:
-  case AArch64::LDRSBXui:
-  case AArch64::LDRSHXui:
-  case AArch64::LDRSWui:
-  case AArch64::LDRSBWroX:
-  case AArch64::LDRSHWroX:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSWroX:
-  case AArch64::LDRSBWroW:
-  case AArch64::LDRSHWroW:
-  case AArch64::LDRSBXroW:
-  case AArch64::LDRSHXroW:
-  case AArch64::LDRSWroW:
-    return true;
-  }
-}
-
 bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
                                          MVT SrcVT) {
   const auto *LI = dyn_cast<LoadInst>(I->getOperand(0));
@@ -4531,7 +4484,8 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
     LoadMI = MRI.getUniqueVRegDef(LoadReg);
     assert(LoadMI && "Expected valid instruction");
   }
-  if (!(IsZExt && isZExtLoad(LoadMI)) && !(!IsZExt && isSExtLoad(LoadMI)))
+  if (!(IsZExt && AArch64InstrInfo::isZExtLoad(*LoadMI)) &&
+      !(!IsZExt && AArch64InstrInfo::isSExtLoad(*LoadMI)))
     return false;
 
   // Nothing to be done.

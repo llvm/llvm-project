@@ -25,8 +25,8 @@
 ; LAXX-NEXT: Library Function Lowering Analysis
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
-; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Create Garbage Collector Module Metadata
+; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Machine Branch Probability Analysis
 ; LAXX-NEXT: Default Regalloc Eviction Advisor
 ; LAXX-NEXT: Default Regalloc Priority Advisor
@@ -50,19 +50,13 @@
 ; LAXX-NEXT:         Canonicalize Freeze Instructions in Loops
 ; LAXX-NEXT:         Induction Variable Users
 ; LAXX-NEXT:         Loop Strength Reduction
-; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
-; LAXX-NEXT:       Function Alias Analysis Results
-; LAXX-NEXT:       Merge contiguous icmps into a memcmp
-; LAXX-NEXT:       Natural Loop Information
-; LAXX-NEXT:       Lazy Branch Probability Analysis
-; LAXX-NEXT:       Lazy Block Frequency Analysis
-; LAXX-NEXT:       Expand memcmp() to load/stores
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG
-; LAXX-NEXT:       Natural Loop Information
+; LAXX-NEXT:       Cycle Info Analysis
 ; LAXX-NEXT:       Post-Dominator Tree Construction
 ; LAXX-NEXT:       Branch Probability Analysis
+; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       Constant Hoisting
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
@@ -75,6 +69,7 @@
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Type Promotion
+; LAXX-NEXT:       Cycle Info Analysis
 ; LAXX-NEXT:       Post-Dominator Tree Construction
 ; LAXX-NEXT:       Branch Probability Analysis
 ; LAXX-NEXT:       Block Frequency Analysis
@@ -87,11 +82,12 @@
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; LAXX-NEXT:       Function Alias Analysis Results
-; LAXX-NEXT:       Natural Loop Information
+; LAXX-NEXT:       Cycle Info Analysis
 ; LAXX-NEXT:       Post-Dominator Tree Construction
 ; LAXX-NEXT:       Branch Probability Analysis
 ; LAXX-NEXT:       Assignment Tracking Analysis
 ; LAXX-NEXT:       Lazy Branch Probability Analysis
+; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Lazy Block Frequency Analysis
 ; LAXX-NEXT:       LoongArch DAG->DAG Pattern Instruction Selection
 ; LAXX-NEXT:       Finalize ISel and expand pseudo-instructions
@@ -111,6 +107,7 @@
 ; LAXX-NEXT:       Machine Common Subexpression Elimination
 ; LAXX-NEXT:       MachinePostDominator Tree Construction
 ; LAXX-NEXT:       Machine Cycle Info Analysis
+; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Machine code sinking
 ; LAXX-NEXT:       Peephole Optimizations
 ; LAXX-NEXT:       Remove dead machine instructions

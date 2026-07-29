@@ -366,4 +366,3 @@ exit:
   ret i64 %spec.select7
 }
 
-declare i64 @llvm.smax.i64(i64, i64)

@@ -84,6 +84,9 @@ void UseNodiscardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
   auto FunctionObj =
       cxxRecordDecl(hasAnyName("::std::function", "::boost::function"));
+  auto NoDiscardClassTemplateSpecialization =
+      classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl(
+          has(cxxRecordDecl(hasAttr(attr::WarnUnusedResult))))));
 
   // Find all non-void const methods which have not already been marked to
   // warn on unused result.
@@ -93,6 +96,8 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
           unless(anyOf(
               returns(voidType()),
               returns(hasDeclaration(decl(hasAttr(attr::WarnUnusedResult)))),
+              returns(hasUnqualifiedDesugaredType(recordType(
+                  hasDeclaration(NoDiscardClassTemplateSpecialization)))),
               isNoReturn(), isOverloadedOperator(), isVariadic(),
               hasTemplateReturnType(), hasClassMutableFields(),
               isConversionOperator(), hasAttr(attr::WarnUnusedResult),
