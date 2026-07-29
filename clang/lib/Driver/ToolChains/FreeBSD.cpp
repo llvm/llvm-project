@@ -10,6 +10,7 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
+#include "Gnu.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
@@ -434,8 +435,7 @@ void FreeBSD::AddClangSystemIncludeArgs(
 
 void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                     llvm::opt::ArgStringList &CC1Args) const {
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
+  Generic_GCC::addLibCxxIncludePaths(DriverArgs, CC1Args);
 }
 
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
