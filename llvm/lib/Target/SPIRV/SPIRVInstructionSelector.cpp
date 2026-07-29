@@ -5034,9 +5034,9 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                                              SPIRV::AccessQualifier::ReadWrite,
                                              /*EmitIR=*/false);
     }
-    if (!BaseType) {
-      BaseType = GR.getOrCreateSPIRVIntegerType(8, I, TII);
-    }
+    if (!BaseType)
+      return diagnoseUnsupported(
+          I, "could not deduce the base type of an untyped access chain");
     Res.addUse(GR.getSPIRVTypeID(BaseType));
   }
 

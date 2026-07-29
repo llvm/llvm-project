@@ -1510,18 +1510,6 @@ unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
              : 0;
 }
 
-unsigned SPIRVGlobalRegistry::getSPIRVTypeByteSize(SPIRVTypeInst Type) const {
-  if (!Type)
-    return 0;
-  if (const llvm::Type *LLVMTy = getTypeForSPIRVType(Type))
-    return DL.getTypeAllocSize(const_cast<llvm::Type *>(LLVMTy))
-        .getFixedValue();
-  // Fall back to the scalar/vector bit width.
-  if (unsigned Bits = getNumScalarOrVectorTotalBitWidth(Type))
-    return (Bits + 7) / 8;
-  return 0;
-}
-
 bool SPIRVGlobalRegistry::isSpecialOpaqueElementType(
     SPIRVTypeInst ElemType) const {
   // A function pointer has to keep its function type, which an untyped pointer

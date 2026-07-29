@@ -420,9 +420,6 @@ public:
   // argument. Otherwise returns 0.
   unsigned getNumScalarOrVectorTotalBitWidth(SPIRVTypeInst Type) const;
 
-  // Size in bytes of the LLVM type for the given SPIR-V type, or 0 if unknown.
-  unsigned getSPIRVTypeByteSize(SPIRVTypeInst Type) const;
-
   // True if a pointer to this element type must stay typed rather than become
   // OpTypeUntypedPointerKHR (an opaque builtin type like an image or sampler).
   bool isSpecialOpaqueElementType(SPIRVTypeInst ElemType) const;
