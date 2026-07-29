@@ -988,6 +988,15 @@ bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
   return !TII->isSDWA(MI);
 }
 
+// Returns true if any instruction in \p L modifies EXEC.
+static bool loopModifiesExec(const MachineLoop &L, const SIRegisterInfo &TRI) {
+  for (const MachineBasicBlock *MBB : L.getBlocks())
+    for (const MachineInstr &MI : *MBB)
+      if (MI.modifiesRegister(TRI.getExec(), &TRI))
+        return true;
+  return false;
+}
+
 // An SGPR->VGPR copy inside a divergent loop latches each lane value as it
 // exits. Folding its scalar source into a use after the loop would make every
 // lane read the same reconverged value, so do not fold across the loop exit.
@@ -1001,7 +1010,8 @@ bool SIFoldOperandsImpl::isTemporallyDivergentUse(
       !TRI->isSGPRReg(*MRI, OpToFold.getReg()))
     return false;
   const MachineLoop *DefLoop = MLI->getLoopFor(DefMI->getParent());
-  return DefLoop && !DefLoop->contains(UseMI.getParent());
+  return DefLoop && !DefLoop->contains(UseMI.getParent()) &&
+         loopModifiesExec(*DefLoop, *TRI);
 }
 
 static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
