@@ -49,6 +49,14 @@ body {
   overflow-wrap: break-word;
 }
 
+/* Pygments emits Error tokens that the theme's style renders as
+   red-bordered boxes. Render them like ordinary code text instead. */
+.highlight .err {
+    border: none;
+    background-color: transparent;
+    color: inherit;
+}
+
 /* Printing support. */
 @media print {
     pre {
