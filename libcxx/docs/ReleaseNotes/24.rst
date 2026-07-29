@@ -65,15 +65,16 @@ Potentially breaking changes
 Announcements About Future Releases
 -----------------------------------
 
+- ``std::allocator`` is trivially default constructible since LLVM 22. In LLVM 23 and LLVM 24, the
+  ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR`` macro was provided as an escape hatch to revert that change.
+  This escape hatch will be removed in LLVM 25 if there is no evidence of it being useful.
+
+- ``bitset::operator[]`` returns ``bool`` since LLVM 22, fixing a conformance bug. In LLVM 23 and LLVM 24, the
+  ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF`` macro was provided as an escape hatch to revert
+  that change. This escape hatch will be removed in LLVM 25 if there is no evidence of it being useful.
 
 ABI Affecting Changes
 ---------------------
-
-- TODO: ``std::allocator`` is trivially default constructible since LLVM 22. In LLVM 23, the ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR``
-  macro was provided as an escape hatch, but it has been removed in LLVM 24 since there was no evidence of it being useful.
-
-- TODO: ``bitset::operator[]`` returns ``bool`` since LLVM 22, fixing a conformance bug. In LLVM 23, the ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``
-  macro was provided as an escape hatch, but it has been removed in LLVM 24 since there was no evidence of it being useful.
 
 Build System Changes
 --------------------

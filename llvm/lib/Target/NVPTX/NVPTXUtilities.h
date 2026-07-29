@@ -81,7 +81,7 @@ inline auto packed_types() {
 
 // Checks if the type VT can fit into a single register.
 inline bool isPackedVectorTy(EVT VT) {
-  return any_of(packed_types(), equal_to(VT));
+  return is_contained(packed_types(), VT);
 }
 
 // Checks if two or more of the type ET can fit into a single register.

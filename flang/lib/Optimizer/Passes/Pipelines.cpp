@@ -66,18 +66,19 @@ void addCfgConversionPass(mlir::PassManager &pm,
       pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
 }
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
-  ArrayValueCopyOptions options;
-  options.optimizeConflicts = optLevel != llvm::OptimizationLevel::O0;
-  addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableFirAvc, [&]() { return createArrayValueCopyPass(options); });
-}
-
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
     return fir::createMemoryAllocationOpt(
         {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
+}
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
+  fir::AllocationPlacementOptions options;
+  options.stackArrays = stackArrays;
+  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
+  options.totalStackLimitBytes = allocationPlacementStackLimit;
+  pm.addPass(fir::createAllocationPlacement(options));
 }
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
@@ -205,7 +206,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.setRegionSimplificationLevel(
       mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCSEPass());
-  fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
@@ -223,7 +223,9 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCSEPass());
 
-  if (pc.StackArrays)
+  if (enableAllocationPlacement)
+    fir::addAllocationPlacement(pm, pc.StackArrays);
+  else if (pc.StackArrays)
     pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
