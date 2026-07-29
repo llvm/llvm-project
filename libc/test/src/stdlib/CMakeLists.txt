@@ -530,8 +530,6 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
 
   add_libc_test(
     atexit_test
-    # TODO: Fix this test in hermetic mode.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS

@@ -1,15 +1,15 @@
 // REQUIRES: arm
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi a.s -o a.o
-// RUN: ld.lld --no-rosegment --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --no-rosegment --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x94 --stop-address=0xbc | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x20000bc --stop-address=0x20000de | FileCheck --check-prefix=CHECK2 %s
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 a.s -o a.o
-// RUN: ld.lld --no-rosegment --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --no-rosegment --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x94 --stop-address=0xbc | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x20000bc --stop-address=0x20000de | FileCheck --check-prefix=CHECK2 %s
-// RUN: ld.lld --be8 --no-rosegment --script a.lds a.o -o exe
+// RUN: ld.lld -z nosort-thunks --be8 --no-rosegment --script a.lds a.o -o exe
 // RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x94 --stop-address=0xbc | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x20000bc --stop-address=0x20000de | FileCheck --check-prefix=CHECK2 %s
 // RUN: rm a.o exe

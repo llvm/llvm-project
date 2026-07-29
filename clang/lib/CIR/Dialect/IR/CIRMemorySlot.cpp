@@ -72,6 +72,11 @@ bool cir::LoadOp::canUsesBeRemoved(
     const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
+
+  // Volatile load or atomic load should not be removed.
+  if (getIsVolatile() || getMemOrder().has_value())
+    return false;
+
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          getType() == slot.elemType;
@@ -106,6 +111,11 @@ bool cir::StoreOp::canUsesBeRemoved(
     const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
+
+  // Volatile store or atomic store should not be removed.
+  if (getIsVolatile() || getMemOrder().has_value())
+    return false;
+
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          getValue() != slot.ptr && slot.elemType == getValue().getType();
@@ -141,8 +151,8 @@ DeletionKind cir::CopyOp::removeBlockingUses(
     const DataLayout &dataLayout) {
   if (loadsFrom(slot))
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
-                         /*isVolatile=*/false,
-                         /*isNontemporal=*/false,
+                         /*is_volatile=*/false,
+                         /*is_nontemporal=*/false,
                          /*alignment=*/mlir::IntegerAttr{},
                          /*sync_scope=*/cir::SyncScopeKindAttr(),
                          /*mem-order=*/cir::MemOrderAttr());
