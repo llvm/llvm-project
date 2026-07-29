@@ -5836,25 +5836,23 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       assert(getTarget().getTriple().getArch() == llvm::Triple::x86);
       if (I->isAggregate()) {
         if (I->isBypassed()) {
+          Address Addr = Address::invalid();
           if (!ArgInfo.getInAllocaIndirect()) {
-            Address Addr = Builder.CreateStructGEP(ArgMemory,
-                                                   ArgInfo.getInAllocaFieldIndex());
-            AggValueSlot Slot = AggValueSlot::forAddr(
-                Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
-                AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
-                AggValueSlot::DoesNotOverlap);
-            EmitAggExpr(I->getMoveExpr(), Slot);
+            Addr = Builder.CreateStructGEP(ArgMemory,
+                                           ArgInfo.getInAllocaFieldIndex());
           } else {
-            RawAddress Addr =
-                CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
-            AggValueSlot Slot = AggValueSlot::forAddr(
-                Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
-                AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
-                AggValueSlot::DoesNotOverlap);
-            EmitAggExpr(I->getMoveExpr(), Slot);
+            Addr = CreateMemTempWithoutCast(info_it->type,
+                                            "inalloca.indirect.tmp");
+          }
+          AggValueSlot Slot = AggValueSlot::forAddr(
+              Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
+              AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+              AggValueSlot::DoesNotOverlap);
+          EmitAggExpr(I->getMoveExpr(), Slot);
+          if (ArgInfo.getInAllocaIndirect()) {
             Address ArgSlot = Builder.CreateStructGEP(
                 ArgMemory, ArgInfo.getInAllocaFieldIndex());
-            Builder.CreateStore(Addr.getPointer(), ArgSlot);
+            Builder.CreateStore(Addr.emitRawPointer(*this), ArgSlot);
           }
           break;
         }
