@@ -51,11 +51,11 @@ int f6(void) {
 }
 
 // CHECK-LABEL: define dso_local i64 @f7()
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval, ptr align 4 @.compoundliteral.5, i64 8, i1 true)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval, ptr align 4 @.compoundliteral.5, i64 8, i1 false)
 // CHECK-NEXT: %[[VALUE:.*]] = load i64, ptr %retval, align 4
 // CHECK-NEXT: ret i64 %[[VALUE]]
 struct S f7(void) {
-  return (static volatile struct S){9, 10};
+  return (static struct S){9, 10};
 }
 
 // CHECK-LABEL: define dso_local i64 @f8()
@@ -272,4 +272,15 @@ int f28(const int *);
 // CHECK-NEXT: }
 int f29(int a[f28(&(constexpr int){3})]) {
   return a[0];
+}
+
+// CHECK-LABEL: define dso_local i64 @f30()
+// CHECK: %.compoundliteral = alloca %struct.S
+// CHECK: store i32 19
+// CHECK: store i32 20
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %retval, ptr align 4 %.compoundliteral, i64 8, i1 true)
+// CHECK-NEXT: %[[VALUE:.*]] = load i64, ptr %retval, align 4
+// CHECK-NEXT: ret i64 %[[VALUE]]
+struct S f30(void) {
+  return (volatile struct S){19, 20};
 }

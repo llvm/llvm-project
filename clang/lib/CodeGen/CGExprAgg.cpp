@@ -789,15 +789,14 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
 }
 
 void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
-  if (E->hasGlobalStorage() || E->getType()->isAtomicType() ||
-      (E->getStorageClass() == SC_Register &&
-       E->getType().isVolatileQualified()) ||
-      Dest.isPotentiallyAliased()) {
+  QualType Ty = E->getType();
+  if (Dest.isPotentiallyAliased() || E->hasGlobalStorage() ||
+      Ty->isAtomicType() || Ty.isVolatileQualified()) {
     EmitAggLoadOfLValue(E);
     return;
   }
 
-  AggValueSlot Slot = EnsureSlot(E->getType());
+  AggValueSlot Slot = EnsureSlot(Ty);
 
   // Block-scope compound literals are destroyed at the end of the enclosing
   // scope in C.
@@ -809,9 +808,9 @@ void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   CGF.EmitAggExpr(E->getInitializer(), Slot);
 
   if (Destruct)
-    if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
+    if (QualType::DestructionKind DtorKind = Ty.isDestructedType())
       CGF.pushLifetimeExtendedDestroy(
-          CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
+          CGF.getCleanupKind(DtorKind), Slot.getAddress(), Ty,
           CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
 }
 
