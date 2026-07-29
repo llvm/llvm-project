@@ -6,7 +6,7 @@ if (LLVM_HAVE_EMITC_COMPILE)
     "${LLVM_MLGO_MLIR_TRANSLATE}"
     inliner
     llvm/Analysis
-    MLGOModels.def
+    InlinerModels.def
     InlinerSizeModelMulti.h
   )
 elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)

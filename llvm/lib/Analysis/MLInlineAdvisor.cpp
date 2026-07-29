@@ -76,33 +76,33 @@ using CompiledModelType = NoopSavedModelImpl;
 #include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/Analysis/InlinerSizeModelMulti.h"
 
-enum class MLGOModelChoice {
+enum class EmitCModelChoice {
   Default,
 #define MLGO_MODEL(CLASS_NAME, CLI_FLAG) CLASS_NAME,
-#include "llvm/Analysis/MLGOModels.def"
+#include "llvm/Analysis/InlinerModels.def"
 };
 
-static llvm::cl::opt<MLGOModelChoice> SelectedMLGOModel(
+static llvm::cl::opt<EmitCModelChoice> SelectedMLGOModel(
     "mlgo-model", llvm::cl::desc("Select the MLGO model to execute:"),
-    llvm::cl::init(MLGOModelChoice::Default),
-    llvm::cl::values(clEnumValN(MLGOModelChoice::Default, "default",
+    llvm::cl::init(EmitCModelChoice::Default),
+    llvm::cl::values(clEnumValN(EmitCModelChoice::Default, "default",
                                 "Use standard heuristic")
 #define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
-  , clEnumValN(MLGOModelChoice::CLASS_NAME, CLI_FLAG,                          \
+  , clEnumValN(EmitCModelChoice::CLASS_NAME, CLI_FLAG,                         \
                "Use the " CLI_FLAG " MLGO model")
-#include "llvm/Analysis/MLGOModels.def"
+#include "llvm/Analysis/InlinerModels.def"
                          ));
 
 static std::unique_ptr<MLModelRunner>
-createMLGOModelRunner(LLVMContext &Ctx,
-                      const std::vector<TensorSpec> &InputFeatures) {
+createEmitCModelRunner(LLVMContext &Ctx,
+                       const std::vector<TensorSpec> &InputFeatures) {
   switch (SelectedMLGOModel) {
-  case MLGOModelChoice::Default:
+  case EmitCModelChoice::Default:
     return nullptr;
 #define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
-  case MLGOModelChoice::CLASS_NAME:                                            \
+  case EmitCModelChoice::CLASS_NAME:                                           \
     return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
-#include "llvm/Analysis/MLGOModels.def"
+#include "llvm/Analysis/InlinerModels.def"
   }
   llvm_unreachable("Unknown MLGO model type!");
 }
@@ -114,7 +114,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty()
 #if defined(LLVM_HAVE_EMITC_COMPILE_INLINER)
-      && SelectedMLGOModel == MLGOModelChoice::Default
+      && SelectedMLGOModel == EmitCModelChoice::Default
 #endif
   )
     return nullptr;
@@ -123,8 +123,8 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
     std::unique_ptr<MLModelRunner> AOTRunner;
     if (InteractiveChannelBaseName.empty()) {
 #if defined(LLVM_HAVE_EMITC_COMPILE_INLINER)
-      if (SelectedMLGOModel != MLGOModelChoice::Default) {
-        AOTRunner = createMLGOModelRunner(M.getContext(), InputFeatures);
+      if (SelectedMLGOModel != EmitCModelChoice::Default) {
+        AOTRunner = createEmitCModelRunner(M.getContext(), InputFeatures);
       } else
 #endif
       {

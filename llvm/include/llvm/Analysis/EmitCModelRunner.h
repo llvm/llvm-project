@@ -17,7 +17,6 @@
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 
-#include <memory>
 #include <type_traits>
 
 namespace llvm {
@@ -25,11 +24,8 @@ namespace llvm {
 template <class TGen> class EmitCModelRunner final : public MLModelRunner {
 public:
   template <class FType>
-  EmitCModelRunner(LLVMContext &Ctx, const FType &InputSpec,
-                   std::unique_ptr<TGen> Model = std::make_unique<TGen>())
-      : MLModelRunner(Ctx, MLModelRunner::Kind::Release, InputSpec.size()),
-        CompiledModel(std::move(Model)) {
-    assert(CompiledModel && "The CompiledModel should be valid");
+  EmitCModelRunner(LLVMContext &Ctx, const FType &InputSpec)
+      : MLModelRunner(Ctx, MLModelRunner::Kind::Release, InputSpec.size()) {
     for (size_t I = 0; I < InputSpec.size(); ++I)
       populateTensor(I, InputSpec[I]);
   }
@@ -46,28 +42,23 @@ protected:
 private:
   void populateTensor(size_t Pos, const TensorSpec &Spec) {
     void *Buffer = nullptr;
-    auto It = CompiledModel->reflectionMap.find(Spec.name());
-    if (It != CompiledModel->reflectionMap.end())
+    auto It = CompiledModel.reflectionMap.find(Spec.name());
+    if (It != CompiledModel.reflectionMap.end())
       Buffer = static_cast<void *>(It->second);
     setUpBufferForTensor(Pos, Spec, Buffer);
   }
 
   using ResultType = decltype(std::declval<TGen>()());
+  static_assert(!std::is_void_v<ResultType>,
+                "EmitCModelRunner models must return a non-void result.");
 
-  template <typename R = ResultType>
-  std::enable_if_t<!std::is_void_v<R>, void *> evaluateImpl() {
-    Result = (*CompiledModel)();
+  void *evaluateImpl() {
+    Result = CompiledModel();
     return &Result;
   }
 
-  template <typename R = ResultType>
-  std::enable_if_t<std::is_void_v<R>, void *> evaluateImpl() {
-    (*CompiledModel)();
-    return nullptr;
-  }
-
-  std::conditional_t<std::is_void_v<ResultType>, char, ResultType> Result{};
-  std::unique_ptr<TGen> CompiledModel;
+  ResultType Result{};
+  TGen CompiledModel{};
 };
 
 } // namespace llvm
