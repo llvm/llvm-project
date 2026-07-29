@@ -428,9 +428,11 @@ public:
   bool isSpecialOpaqueElementType(SPIRVTypeInst ElemType) const;
 
   // Byte size of a pointer value's IR-deduced element type, or 0 if unknown.
+  // Alloc size is what array indexing and copy strides use, so a 3-component
+  // vector counts as 4 components as OpenCL requires.
   unsigned getDeducedPointeeByteSize(const Value *PtrVal) {
     if (Type *ElemTy = findDeducedElementType(PtrVal))
-      return DL.getTypeStoreSize(ElemTy).getFixedValue();
+      return DL.getTypeAllocSize(ElemTy).getFixedValue();
     return 0;
   }
 

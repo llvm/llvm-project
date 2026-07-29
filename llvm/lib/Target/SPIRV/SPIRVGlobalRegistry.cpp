@@ -1514,7 +1514,7 @@ unsigned SPIRVGlobalRegistry::getSPIRVTypeByteSize(SPIRVTypeInst Type) const {
   if (!Type)
     return 0;
   if (const llvm::Type *LLVMTy = getTypeForSPIRVType(Type))
-    return DL.getTypeStoreSize(const_cast<llvm::Type *>(LLVMTy))
+    return DL.getTypeAllocSize(const_cast<llvm::Type *>(LLVMTy))
         .getFixedValue();
   // Fall back to the scalar/vector bit width.
   if (unsigned Bits = getNumScalarOrVectorTotalBitWidth(Type))

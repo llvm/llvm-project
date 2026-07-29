@@ -383,7 +383,8 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
       if (SpvType) {
         // check if the address space needs correction
         LLT RegType = MRI.getType(Reg);
-        if (SpvType->getOpcode() == SPIRV::OpTypePointer &&
+        if ((SpvType->getOpcode() == SPIRV::OpTypePointer ||
+             SpvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR) &&
             RegType.isPointer() &&
             storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
                 RegType.getAddressSpace()) {

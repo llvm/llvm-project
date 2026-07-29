@@ -1869,6 +1869,8 @@ multiclass OpcodeOperand<bits<32> value> {
 // TODO: implement other mnemonics.
 defm InBoundsAccessChain : OpcodeOperand<66>;
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
+defm UntypedInBoundsAccessChainKHR : OpcodeOperand<4420>;
+defm UntypedInBoundsPtrAccessChainKHR : OpcodeOperand<4424>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
 defm GenericCastToPtr : OpcodeOperand<122>;
 defm GenericCastToPtrExplicit : OpcodeOperand<123>;
@@ -2028,6 +2030,10 @@ defm AccessChain :  SpecConstantOpOperandsOperand<65, [], [Kernel]>;
 defm InBoundsAccessChain :  SpecConstantOpOperandsOperand<66, [], [Kernel]>;
 defm PtrAccessChain :  SpecConstantOpOperandsOperand<67, [], [Kernel]>;
 defm InBoundsPtrAccessChain :  SpecConstantOpOperandsOperand<70, [], [Kernel]>;
+defm UntypedAccessChainKHR :  SpecConstantOpOperandsOperand<4419, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedInBoundsAccessChainKHR :  SpecConstantOpOperandsOperand<4420, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedPtrAccessChainKHR :  SpecConstantOpOperandsOperand<4423, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedInBoundsPtrAccessChainKHR :  SpecConstantOpOperandsOperand<4424, [SPV_KHR_untyped_pointers], [Kernel]>;
 defm CooperativeMatrixLengthKHR : SpecConstantOpOperandsOperand<4460, [], []>;
 
 //===----------------------------------------------------------------------===//

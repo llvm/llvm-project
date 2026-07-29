@@ -1310,14 +1310,33 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
          UseIt != UseEnd; UseIt = std::next(UseIt)) {
       if ((*UseIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
           (*UseIt).getOpcode() == SPIRV::OpSpecConstantOp ||
-          (*UseIt).getOpcode() == SPIRV::OpVariable) {
+          (*UseIt).getOpcode() == SPIRV::OpVariable ||
+          (*UseIt).getOpcode() == SPIRV::OpUntypedVariableKHR) {
         IsGVInit = true;
         break;
       }
     }
     MachineBasicBlock &BB = *I.getParent();
+    // An untyped base needs OpUntypedInBoundsPtrAccessChainKHR, which spells
+    // out the Base Type. The offset of G_PTR_ADD is a byte count, so the Base
+    // Type is i8 and the offset is the Element index as is.
+    SPIRVTypeInst GVType = GR.getSPIRVTypeForVReg(GV);
+    const bool UseUntypedPointers =
+        ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR && GVType &&
+        GVType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+    if (UseUntypedPointers) {
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addImm(static_cast<uint32_t>(
+              SPIRV::Opcode::UntypedInBoundsPtrAccessChainKHR))
+          .addUse(GR.getSPIRVTypeID(GR.getOrCreateSPIRVIntegerType(8, I, TII)))
+          .addUse(GV)
+          .addUse(I.getOperand(2).getReg())
+          .constrainAllUses(TII, TRI, RBI);
+      return true;
+    }
     if (!IsGVInit) {
-      SPIRVTypeInst GVType = GR.getSPIRVTypeForVReg(GV);
       SPIRVTypeInst GVPointeeType = GR.getPointeeType(GVType);
       SPIRVTypeInst ResPointeeType = GR.getPointeeType(ResType);
       if (GVPointeeType && ResPointeeType && GVPointeeType != ResPointeeType) {
@@ -1881,7 +1900,9 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
       }
       if (DefOpCode == TargetOpcode::G_GLOBAL_VALUE ||
           DefOpCode == TargetOpcode::G_CONSTANT ||
-          DefOpCode == SPIRV::OpVariable || DefOpCode == SPIRV::OpConstantI) {
+          DefOpCode == SPIRV::OpVariable ||
+          DefOpCode == SPIRV::OpUntypedVariableKHR ||
+          DefOpCode == SPIRV::OpConstantI) {
         IsGV = true;
         break;
       }
@@ -2826,6 +2847,7 @@ static bool isASCastInGVar(MachineRegisterInfo *MRI, Register ResVReg) {
         if (Opcode == SPIRV::OpConstantComposite ||
             Opcode == SPIRV::OpSpecConstantComposite ||
             Opcode == SPIRV::OpVariable ||
+            Opcode == SPIRV::OpUntypedVariableKHR ||
             isSpvIntrinsic(It, Intrinsic::spv_init_global))
           return IsGRef = true;
         return Opcode == SPIRV::OpName;

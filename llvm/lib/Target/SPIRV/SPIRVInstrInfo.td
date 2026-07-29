@@ -249,7 +249,9 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
+// The first operand of the wrapped opcode is a type id when that opcode is one
+// of the untyped access chains, so it accepts both type and non-type ids.
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ANY:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
