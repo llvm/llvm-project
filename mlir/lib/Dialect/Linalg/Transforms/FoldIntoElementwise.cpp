@@ -50,25 +50,6 @@ struct ElementwiseOpFolder {
 };
 
 template <typename... ProducerOps>
-static bool foldInputOperands(LinalgOp op, SmallVector<Value> &newIns,
-                              SmallVector<AffineMap> &newMaps) {
-  bool changed = false;
-  for (OpOperand *operand : op.getDpsInputOperands()) {
-    AffineMap consumerMap = op.getMatchingIndexingMap(operand);
-    const bool folded = (ElementwiseOpFolder<ProducerOps>::fold(
-                             operand, consumerMap, newIns, newMaps) ||
-                         ...);
-    if (folded) {
-      changed = true;
-    } else {
-      newIns.push_back(operand->get());
-      newMaps.push_back(consumerMap);
-    }
-  }
-  return changed;
-}
-
-template <typename... ProducerOps>
 struct FoldIntoElementwisePattern : public OpInterfaceRewritePattern<LinalgOp> {
   using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
@@ -77,9 +58,23 @@ struct FoldIntoElementwisePattern : public OpInterfaceRewritePattern<LinalgOp> {
     if (!isa<GenericOp, ElementwiseOp>(op.getOperation()) || !isElementwise(op))
       return failure();
 
+    bool changed = false;
     SmallVector<Value> newIns;
     SmallVector<AffineMap> newMaps;
-    if (!foldInputOperands<ProducerOps...>(op, newIns, newMaps))
+    for (OpOperand *operand : op.getDpsInputOperands()) {
+      AffineMap consumerMap = op.getMatchingIndexingMap(operand);
+      const bool folded = (ElementwiseOpFolder<ProducerOps>::fold(
+                               operand, consumerMap, newIns, newMaps) ||
+                           ...);
+      if (folded) {
+        changed = true;
+      } else {
+        newIns.push_back(operand->get());
+        newMaps.push_back(consumerMap);
+      }
+    }
+
+    if (!changed)
       return failure();
 
     // Keep all output operands and their maps unchanged.
