@@ -187,9 +187,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
             continue
         is_in_function = is_in_function_start = True
 
-    output_lines = common.reorder_function_start_check_blocks(
-        output_lines, ti.run_line_prefix_order, ";"
-    )
+    output_lines = common.sort_check_blocks(output_lines, ti.all_run_lines, ";")
     if ti.args.gen_unused_prefix_body:
         output_lines.extend(
             ti.get_checks_for_unused_prefixes(prefix_list, generated_prefixes)
