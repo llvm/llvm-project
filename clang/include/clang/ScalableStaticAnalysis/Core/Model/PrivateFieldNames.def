@@ -17,8 +17,7 @@
 #define FIELD(CLASS, FIELD_NAME)
 #endif
 
-FIELD(BuildNamespace, Kind)
-FIELD(BuildNamespace, Name)
+FIELD(BuildNamespace, Names)
 FIELD(EntityId, Index)
 FIELD(EntityIdTable, Entities)
 FIELD(EntityLinkage, Linkage)
@@ -39,7 +38,6 @@ FIELD(MultiArchStaticLibrary, Members)
 FIELD(MultiArchStaticLibrary, Namespace)
 FIELD(MultiArchSharedLibrary, Members)
 FIELD(MultiArchSharedLibrary, Namespace)
-FIELD(NestedBuildNamespace, Namespaces)
 FIELD(StaticLibrary, Members)
 FIELD(StaticLibrary, Namespace)
 FIELD(StaticLibrary, TargetTriple)

@@ -1,8 +1,7 @@
 {
   "type": "StaticLibrary",
-  "namespace": {
-    "kind": "StaticLibrary",
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "members": []
 }

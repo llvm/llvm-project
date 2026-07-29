@@ -40,7 +40,7 @@ class LUSummary {
   /// Target triple of the link unit.
   llvm::Triple TargetTriple;
 
-  NestedBuildNamespace LUNamespace;
+  BuildNamespace LUNamespace;
 
   EntityIdTable IdTable;
 
@@ -50,11 +50,11 @@ class LUSummary {
       Data;
 
 public:
-  LUSummary(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
+  LUSummary(llvm::Triple TargetTriple, BuildNamespace LUNamespace)
       : TargetTriple(std::move(TargetTriple)),
         LUNamespace(std::move(LUNamespace)) {}
 
-  const NestedBuildNamespace &getNamespace() const { return LUNamespace; }
+  const BuildNamespace &getNamespace() const { return LUNamespace; }
 };
 
 } // namespace clang::ssaf

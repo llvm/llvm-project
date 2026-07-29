@@ -71,28 +71,18 @@ JSONFormat::readStaticLibraryFromObject(const Object &RootObject) {
 
   llvm::Triple T(*OptTargetTriple);
 
-  const Object *NamespaceObject = RootObject.getObject("namespace");
-  if (!NamespaceObject) {
+  const Array *NamespaceArray = RootObject.getArray("namespace");
+  if (!NamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespace", "namespace", "object")
+                                "BuildNamespace", "namespace", "array")
         .build();
   }
 
-  auto ExpectedNamespace = buildNamespaceFromJSON(*NamespaceObject);
+  auto ExpectedNamespace = buildNamespaceFromJSON(*NamespaceArray);
   if (!ExpectedNamespace) {
     return ErrorBuilder::wrap(ExpectedNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespace", "namespace")
-        .build();
-  }
-
-  if (getKind(*ExpectedNamespace) != BuildNamespaceKind::StaticLibrary) {
-    return ErrorBuilder::create(
-               std::errc::invalid_argument,
-               ErrorMessages::MismatchedSummaryType,
-               buildNamespaceKindToJSON(BuildNamespaceKind::StaticLibrary),
-               "namespace.kind",
-               buildNamespaceKindToJSON(getKind(*ExpectedNamespace)))
         .build();
   }
 

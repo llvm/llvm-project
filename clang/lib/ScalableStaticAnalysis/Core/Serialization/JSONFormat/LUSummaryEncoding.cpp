@@ -76,14 +76,14 @@ JSONFormat::readLUSummaryEncodingFromObject(const Object &RootObject) {
   if (!LUNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "NestedBuildNamespace", "lu_namespace", "array")
+                                "BuildNamespace", "lu_namespace", "array")
         .build();
   }
 
-  auto ExpectedLUNamespace = nestedBuildNamespaceFromJSON(*LUNamespaceArray);
+  auto ExpectedLUNamespace = buildNamespaceFromJSON(*LUNamespaceArray);
   if (!ExpectedLUNamespace) {
     return ErrorBuilder::wrap(ExpectedLUNamespace.takeError())
-        .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
+        .context(ErrorMessages::ReadingFromField, "BuildNamespace",
                  "lu_namespace")
         .build();
   }
@@ -183,7 +183,7 @@ Object JSONFormat::luSummaryEncodingToJSON(
       llvm::Triple::normalize(getTargetTriple(SummaryEncoding).str());
 
   RootObject["lu_namespace"] =
-      nestedBuildNamespaceToJSON(getLUNamespace(SummaryEncoding));
+      buildNamespaceToJSON(getLUNamespace(SummaryEncoding));
 
   RootObject["id_table"] = luEntityIdTableToJSON(getIdTable(SummaryEncoding));
 

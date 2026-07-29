@@ -1,9 +1,8 @@
 {
   "members": [],
-  "namespace": {
-    "kind": "StaticLibrary",
-    "name": "libempty"
-  },
+  "namespace": [
+    "libempty"
+  ],
   "target_triple": "arm64-apple-macosx",
   "type": "StaticLibrary"
 }

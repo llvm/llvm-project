@@ -58,14 +58,14 @@ class MultiArchSharedLibrary {
   // library. It matches the LUNamespace of every member exactly (same
   // path, same kinds, same names): the shared library's identity is the
   // same across all its architecture slices.
-  NestedBuildNamespace Namespace;
+  BuildNamespace Namespace;
 
   // LUSummaryEncoding objects ordered by TargetTriple enum components.
   // Two members with the same TargetTriple are not permitted.
   std::set<std::unique_ptr<LUSummaryEncoding>, MemberByTargetTriple> Members;
 
 public:
-  explicit MultiArchSharedLibrary(NestedBuildNamespace Namespace)
+  explicit MultiArchSharedLibrary(BuildNamespace Namespace)
       : Namespace(std::move(Namespace)) {}
 };
 

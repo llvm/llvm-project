@@ -302,15 +302,13 @@ protected:
   }
 
   std::unique_ptr<LUSummary> makeLUSummary() {
-    NestedBuildNamespace NS(
-        {BuildNamespace(BuildNamespaceKind::LinkUnit, "TestLU")});
+    BuildNamespace NS("TestLU");
     return std::make_unique<LUSummary>(llvm::Triple("arm64-apple-macosx"),
                                        std::move(NS));
   }
 
   EntityId addEntity(LUSummary &LU, llvm::StringRef USR) {
-    NestedBuildNamespace NS(
-        {BuildNamespace(BuildNamespaceKind::LinkUnit, "TestLU")});
+    BuildNamespace NS("TestLU");
     EntityName Name(USR.str(), "", NS);
     EntityId Id = getIdTable(LU).getId(Name);
     getLinkageTable(LU).insert({Id, ExternalLinkage});

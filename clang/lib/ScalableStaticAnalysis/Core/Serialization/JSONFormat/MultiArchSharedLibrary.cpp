@@ -59,15 +59,14 @@ JSONFormat::readMultiArchSharedLibraryFromObject(const Object &RootObject) {
   if (!NamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "NestedBuildNamespace", "namespace", "array")
+                                "BuildNamespace", "namespace", "array")
         .build();
   }
 
-  auto ExpectedNamespace = nestedBuildNamespaceFromJSON(*NamespaceArray);
+  auto ExpectedNamespace = buildNamespaceFromJSON(*NamespaceArray);
   if (!ExpectedNamespace) {
     return ErrorBuilder::wrap(ExpectedNamespace.takeError())
-        .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
-                 "namespace")
+        .context(ErrorMessages::ReadingFromField, "BuildNamespace", "namespace")
         .build();
   }
 
@@ -142,7 +141,7 @@ JSONFormat::writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
 
   RootObject[JSONTypeKey] = JSONTypeValueMultiArchSharedLibrary;
 
-  RootObject["namespace"] = nestedBuildNamespaceToJSON(getNamespace(M));
+  RootObject["namespace"] = buildNamespaceToJSON(getNamespace(M));
 
   Array MembersArray;
   MembersArray.reserve(getMembers(M).size());

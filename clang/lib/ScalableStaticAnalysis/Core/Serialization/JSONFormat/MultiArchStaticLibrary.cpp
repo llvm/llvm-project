@@ -55,30 +55,18 @@ JSONFormat::readMultiArchStaticLibrary(llvm::StringRef Path) {
 
 llvm::Expected<MultiArchStaticLibrary>
 JSONFormat::readMultiArchStaticLibraryFromObject(const Object &RootObject) {
-  const Object *NamespaceObject = RootObject.getObject("namespace");
-  if (!NamespaceObject) {
+  const Array *NamespaceArray = RootObject.getArray("namespace");
+  if (!NamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespace", "namespace", "object")
+                                "BuildNamespace", "namespace", "array")
         .build();
   }
 
-  auto ExpectedNamespace = buildNamespaceFromJSON(*NamespaceObject);
+  auto ExpectedNamespace = buildNamespaceFromJSON(*NamespaceArray);
   if (!ExpectedNamespace) {
     return ErrorBuilder::wrap(ExpectedNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespace", "namespace")
-        .build();
-  }
-
-  if (getKind(*ExpectedNamespace) !=
-      BuildNamespaceKind::MultiArchStaticLibrary) {
-    return ErrorBuilder::create(
-               std::errc::invalid_argument,
-               ErrorMessages::MismatchedSummaryType,
-               buildNamespaceKindToJSON(
-                   BuildNamespaceKind::MultiArchStaticLibrary),
-               "namespace.kind",
-               buildNamespaceKindToJSON(getKind(*ExpectedNamespace)))
         .build();
   }
 
@@ -93,7 +81,7 @@ JSONFormat::readMultiArchStaticLibraryFromObject(const Object &RootObject) {
 
   MultiArchStaticLibrary M(std::move(*ExpectedNamespace));
   auto &Members = getMembers(M);
-  const auto &ExpectedName = getName(getNamespace(M));
+  const auto &WrapperNamespace = getNamespace(M);
 
   for (const auto &[Index, MemberValue] : llvm::enumerate(*MembersArray)) {
     const Object *MemberObject = MemberValue.getAsObject();
@@ -121,11 +109,11 @@ JSONFormat::readMultiArchStaticLibraryFromObject(const Object &RootObject) {
           .build();
     }
 
-    const auto &MemberName = getName(getNamespace(*ExpectedMember));
-    if (MemberName != ExpectedName) {
+    const auto &MemberNamespace = getNamespace(*ExpectedMember);
+    if (MemberNamespace != WrapperNamespace) {
       return ErrorBuilder::create(std::errc::invalid_argument,
-                                  ErrorMessages::MismatchedSummaryType,
-                                  ExpectedName, "namespace.name", MemberName)
+                                  ErrorMessages::MismatchedNestedNamespace,
+                                  "namespace")
           .context(ErrorMessages::ReadingFromIndex,
                    "MultiArchStaticLibrary member", Index)
           .build();

@@ -39,7 +39,7 @@ SummaryOps TUSummaryOps{
       return Result ? llvm::Error::success() : Result.takeError();
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
-      BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+      BuildNamespace BN("test.cpp");
       TUSummary S(llvm::Triple("arm64-apple-macosx"), std::move(BN));
       return JSONFormat().writeTUSummary(S, FilePath);
     },
@@ -59,7 +59,7 @@ SummaryOps TUSummaryEncodingOps{
       return Result ? llvm::Error::success() : Result.takeError();
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
-      BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+      BuildNamespace BN("test.cpp");
       TUSummaryEncoding E(llvm::Triple("arm64-apple-macosx"), std::move(BN));
       return JSONFormat().writeTUSummaryEncoding(E, FilePath);
     },
@@ -183,10 +183,7 @@ TEST_P(TUSummaryTest, NoReadPermission) {
   PathString FileName("no-read-permission.json");
 
   auto ExpectedFilePath = writeJSON(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "tu_namespace": ["test.cpp"],
     "id_table": [],
     "linkage_table": [],
     "data": []
@@ -215,10 +212,7 @@ TEST_P(TUSummaryTest, NoReadPermission) {
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
   auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "tu_namespace": ["test.cpp"],
     "target_triple": "arm64-apple-macosx",
     "type": "TUSummary",
     "id_table": [],
@@ -251,10 +245,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
   auto Result = readTUSummaryFromString(R"({
-    "tu_namespace": {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    },
+    "tu_namespace": ["test.cpp"],
     "target_triple": "arm64-apple-macosx",
     "type": "TUSummary",
     "id_table": [],
@@ -295,12 +286,10 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
 // ============================================================================
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
-  TUSummary Summary(
-      llvm::Triple("arm64-apple-macosx"),
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  TUSummary Summary(llvm::Triple("arm64-apple-macosx"),
+                    BuildNamespace("test.cpp"));
 
-  NestedBuildNamespace Namespace =
-      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  BuildNamespace Namespace = BuildNamespace("test.cpp");
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
@@ -314,12 +303,10 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
 }
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
-  TUSummary Summary(
-      llvm::Triple("arm64-apple-macosx"),
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  TUSummary Summary(llvm::Triple("arm64-apple-macosx"),
+                    BuildNamespace("test.cpp"));
 
-  NestedBuildNamespace Namespace =
-      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  BuildNamespace Namespace = BuildNamespace("test.cpp");
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
@@ -412,12 +399,10 @@ TEST_P(TUSummaryTest, WriteStreamOpenFailure) {
 // ============================================================================
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
-  TUSummary Summary(
-      llvm::Triple("arm64-apple-macosx"),
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  TUSummary Summary(llvm::Triple("arm64-apple-macosx"),
+                    BuildNamespace("test.cpp"));
 
-  NestedBuildNamespace Namespace =
-      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  BuildNamespace Namespace = BuildNamespace("test.cpp");
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 

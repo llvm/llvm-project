@@ -20,7 +20,7 @@
 // No read permission
 // ============================================================================
 
-// RUN: echo '{"lu_namespace": [{"kind": "LinkUnit", "name": "test.exe"}], "id_table": [], "linkage_table": [], "data": []}' > %t/no-read-permission.json
+// RUN: echo '{"lu_namespace": [{"name": "test.exe"}], "id_table": [], "linkage_table": [], "data": []}' > %t/no-read-permission.json
 // RUN: chmod -r %t/no-read-permission.json
 // RUN: not clang-ssaf-format --type lu %t/no-read-permission.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-READ-PERMISSION

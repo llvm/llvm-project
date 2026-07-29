@@ -5,10 +5,7 @@
       "id": 1,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@bar"
@@ -18,10 +15,7 @@
       "id": 2,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@baz"
@@ -31,10 +25,7 @@
       "id": 0,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "test.cpp"
-          }
+          "test.cpp"
         ],
         "suffix": "",
         "usr": "c:@F@foo"
@@ -62,10 +53,7 @@
     }
   ],
   "lu_namespace": [
-    {
-      "kind": "CompilationUnit",
-      "name": "test.cpp"
-    }
+    "test.cpp"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "LUSummary"

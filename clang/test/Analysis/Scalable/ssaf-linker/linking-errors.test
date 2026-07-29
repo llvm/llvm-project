@@ -7,7 +7,7 @@
 // RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json %S/Inputs/tu-empty.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=DUP-NS
 // DUP-NS:      clang-ssaf-linker: error: Linking summary '{{.*}}tu-empty.json'
-// DUP-NS-NEXT: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, empty.cpp)
+// DUP-NS-NEXT: failed to link TU summary: duplicate BuildNamespace([empty.cpp])
 
 // Entity ID object in summary data blob with '@' key alongside extra keys is a fatal error.
 // RUN: not clang-ssaf-linker %S/Inputs/tu-invalid-entity-id-multikey.json -o %t/lu.json 2>&1 \

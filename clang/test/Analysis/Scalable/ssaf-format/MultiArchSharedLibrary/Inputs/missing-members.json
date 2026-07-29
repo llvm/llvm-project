@@ -1,9 +1,6 @@
 {
   "namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

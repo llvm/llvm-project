@@ -34,7 +34,7 @@ class EntityName {
 
   std::string USR;
   llvm::SmallString<16> Suffix;
-  NestedBuildNamespace Namespace;
+  BuildNamespace Namespace;
 
   auto asTuple() const { return std::tie(USR, Suffix, Namespace); }
 
@@ -43,7 +43,7 @@ public:
   /// Use getEntityName and other functions in ASTEntityMapping.h to get
   /// entity names.
   EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
-             NestedBuildNamespace Namespace);
+             BuildNamespace Namespace);
 
   bool operator==(const EntityName &Other) const;
   bool operator!=(const EntityName &Other) const;
@@ -52,7 +52,7 @@ public:
   /// Creates a new EntityName with additional build namespace qualification.
   ///
   /// \param Namespace The namespace steps to append to this entity's namespace.
-  EntityName makeQualified(NestedBuildNamespace Namespace) const;
+  EntityName makeQualified(BuildNamespace Namespace) const;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityName &EN);

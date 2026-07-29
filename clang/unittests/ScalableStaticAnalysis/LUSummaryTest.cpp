@@ -14,8 +14,8 @@ namespace clang::ssaf {
 namespace {
 
 TEST(LUSummaryTest, GetNamespace) {
-  BuildNamespace LU(BuildNamespaceKind::LinkUnit, "app");
-  NestedBuildNamespace NS(LU);
+  BuildNamespace LU("app");
+  BuildNamespace NS(LU);
   LUSummary Summary(llvm::Triple("arm64-apple-macosx"), NS);
 
   EXPECT_EQ(Summary.getNamespace(), NS);

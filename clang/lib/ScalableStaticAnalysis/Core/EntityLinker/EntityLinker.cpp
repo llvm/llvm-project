@@ -46,11 +46,10 @@ static constexpr const char *DuplicateTUNamespace =
 
 } // namespace ErrorMessages
 
-static NestedBuildNamespace
-resolveNamespace(const NestedBuildNamespace &LUNamespace,
-                 const NestedBuildNamespace &TUNamespace,
-                 const NestedBuildNamespace &EntityNamespace,
-                 EntityLinkageType Linkage) {
+static BuildNamespace resolveNamespace(const BuildNamespace &LUNamespace,
+                                       const BuildNamespace &TUNamespace,
+                                       const BuildNamespace &EntityNamespace,
+                                       EntityLinkageType Linkage) {
   switch (Linkage) {
   case EntityLinkageType::None:
   case EntityLinkageType::Internal:
@@ -59,7 +58,7 @@ resolveNamespace(const NestedBuildNamespace &LUNamespace,
     return EntityNamespace.makeQualified(TUNamespace)
         .makeQualified(LUNamespace);
   case EntityLinkageType::External:
-    return NestedBuildNamespace(LUNamespace);
+    return BuildNamespace(LUNamespace);
   }
 
   llvm_unreachable("Unhandled EntityLinkageType variant");
@@ -67,8 +66,8 @@ resolveNamespace(const NestedBuildNamespace &LUNamespace,
 
 EntityId EntityLinker::resolveEntity(const EntityName &OldName,
                                      const EntityLinkage &Linkage,
-                                     const NestedBuildNamespace &TUNamespace) {
-  NestedBuildNamespace NewNamespace = resolveNamespace(
+                                     const BuildNamespace &TUNamespace) {
+  BuildNamespace NewNamespace = resolveNamespace(
       Output.LUNamespace, TUNamespace, OldName.Namespace, Linkage.getLinkage());
 
   EntityName NewName(OldName.USR, OldName.Suffix, NewNamespace);
@@ -108,8 +107,8 @@ EntityLinker::resolve(const TUSummaryEncoding &Summary) {
 
     const EntityLinkage &Linkage = Iter->second;
 
-    EntityId NewId = resolveEntity(OldName, Linkage,
-                                   NestedBuildNamespace(Summary.TUNamespace));
+    EntityId NewId =
+        resolveEntity(OldName, Linkage, BuildNamespace(Summary.TUNamespace));
 
     auto [_, Inserted] = EntityResolutionTable.insert({OldId, NewId});
     if (!Inserted) {

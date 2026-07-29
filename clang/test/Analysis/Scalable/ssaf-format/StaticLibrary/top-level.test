@@ -39,34 +39,7 @@
 // RUN: not clang-ssaf-format --type static-library %S/Inputs/missing-namespace.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-NAMESPACE
 // MISSING-NAMESPACE:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}missing-namespace.json'
-// MISSING-NAMESPACE-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON object
-
-// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-MISSING-KIND
-// NAMESPACE-MISSING-KIND:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-missing-kind.json'
-// NAMESPACE-MISSING-KIND-NEXT: reading BuildNamespace from field 'namespace'
-// NAMESPACE-MISSING-KIND-NEXT: failed to read BuildNamespaceKind from field 'kind': expected JSON string
-
-// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-INVALID-KIND
-// NAMESPACE-INVALID-KIND:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-invalid-kind.json'
-// NAMESPACE-INVALID-KIND-NEXT: reading BuildNamespace from field 'namespace'
-// NAMESPACE-INVALID-KIND-NEXT: reading BuildNamespaceKind from field 'kind'
-// NAMESPACE-INVALID-KIND-NEXT: invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'
-
-// StaticLibrary's namespace field must specifically have kind=StaticLibrary.
-// Any other well-formed kind (CompilationUnit, LinkUnit) is reported as a
-// mismatch.
-// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-wrong-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-WRONG-KIND
-// NAMESPACE-WRONG-KIND:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-wrong-kind.json'
-// NAMESPACE-WRONG-KIND-NEXT: expected 'StaticLibrary' for field 'namespace.kind' but got 'CompilationUnit'
-
-// RUN: not clang-ssaf-format --type static-library %S/Inputs/namespace-missing-name.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-MISSING-NAME
-// NAMESPACE-MISSING-NAME:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}namespace-missing-name.json'
-// NAMESPACE-MISSING-NAME-NEXT: reading BuildNamespace from field 'namespace'
-// NAMESPACE-MISSING-NAME-NEXT: failed to read BuildNamespaceName from field 'name': expected JSON string
+// MISSING-NAMESPACE-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON array
 
 // ============================================================================
 // members array errors
@@ -111,7 +84,7 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-INNER-ERROR
 // MEMBER-INNER-ERROR:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}member-inner-error.json'
 // MEMBER-INNER-ERROR-NEXT: reading StaticLibrary member from index '0'
-// MEMBER-INNER-ERROR-NEXT: failed to read BuildNamespace from field 'tu_namespace': expected JSON object
+// MEMBER-INNER-ERROR-NEXT: failed to read BuildNamespace from field 'tu_namespace': expected JSON array
 
 // RUN: not clang-ssaf-format --type static-library %S/Inputs/member-triple-mismatch.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-TRIPLE-MISMATCH
@@ -122,4 +95,4 @@
 // RUN: not clang-ssaf-format --type static-library %S/Inputs/duplicate-member.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE-MEMBER
 // DUPLICATE-MEMBER:      clang-ssaf-format: error: reading StaticLibrary from file '{{.*}}duplicate-member.json'
-// DUPLICATE-MEMBER-NEXT: failed to insert StaticLibrary member at index '1': encountered duplicate 'BuildNamespace(CompilationUnit, a.cpp)'
+// DUPLICATE-MEMBER-NEXT: failed to insert StaticLibrary member at index '1': encountered duplicate 'BuildNamespace([a.cpp])'

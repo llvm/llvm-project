@@ -1,10 +1,5 @@
 {
-  "lu_namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "test.exe"
-    }
-  ],
+  "lu_namespace": ["test.exe"],
   "id_table": [
     {
       "id": 0,
@@ -12,9 +7,7 @@
         "usr": "c:@F@foo",
         "suffix": "",
         "namespace": [
-          {
-            "name": "test.cpp"
-          }
+          42
         ]
       }
     }
@@ -23,7 +16,7 @@
     {
       "id": 0,
       "linkage": {
-        "type": "Internal"
+        "type": "None"
       }
     }
   ],

@@ -3,10 +3,7 @@
     "not an object"
   ],
   "namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

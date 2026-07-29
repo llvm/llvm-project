@@ -403,10 +403,7 @@
       "id": 0,
       "name": {
         "namespace": [
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_ext#"
@@ -416,14 +413,8 @@
       "id": 1,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu1.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu1.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_int#"
@@ -433,14 +424,8 @@
       "id": 6,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu2.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu2.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_int#"
@@ -450,14 +435,8 @@
       "id": 2,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu1.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu1.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_none#"
@@ -467,14 +446,8 @@
       "id": 7,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu2.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu2.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@shared_none#"
@@ -484,10 +457,7 @@
       "id": 3,
       "name": {
         "namespace": [
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_ext_tu1#"
@@ -497,10 +467,7 @@
       "id": 8,
       "name": {
         "namespace": [
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_ext_tu2#"
@@ -510,14 +477,8 @@
       "id": 4,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu1.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu1.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_int_tu1#"
@@ -527,14 +488,8 @@
       "id": 9,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu2.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu2.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_int_tu2#"
@@ -544,14 +499,8 @@
       "id": 5,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu1.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu1.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_none_tu1#"
@@ -561,14 +510,8 @@
       "id": 10,
       "name": {
         "namespace": [
-          {
-            "kind": "CompilationUnit",
-            "name": "tu2.cpp"
-          },
-          {
-            "kind": "LinkUnit",
-            "name": "lu-1+2"
-          }
+          "tu2.cpp",
+          "lu-1+2"
         ],
         "suffix": "",
         "usr": "c:@F@unique_none_tu2#"
@@ -644,10 +587,7 @@
     }
   ],
   "lu_namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "lu-1+2"
-    }
+    "lu-1+2"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "LUSummary"

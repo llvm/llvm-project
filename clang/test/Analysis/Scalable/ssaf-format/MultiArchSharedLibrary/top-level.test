@@ -26,13 +26,13 @@
 // RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/missing-namespace.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-NAMESPACE
 // MISSING-NAMESPACE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}missing-namespace.json'
-// MISSING-NAMESPACE-NEXT: failed to read NestedBuildNamespace from field 'namespace': expected JSON array
+// MISSING-NAMESPACE-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON array
 
 // The namespace field must be a JSON array, not a string.
 // RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/namespace-not-array.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-NOT-ARRAY
 // NAMESPACE-NOT-ARRAY:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}namespace-not-array.json'
-// NAMESPACE-NOT-ARRAY-NEXT: failed to read NestedBuildNamespace from field 'namespace': expected JSON array
+// NAMESPACE-NOT-ARRAY-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON array
 
 // ============================================================================
 // members field errors
@@ -102,4 +102,4 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-INNER-ERROR
 // MEMBER-INNER-ERROR:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-inner-error.json'
 // MEMBER-INNER-ERROR-NEXT: reading MultiArchSharedLibrary member from index '0'
-// MEMBER-INNER-ERROR-NEXT: failed to read NestedBuildNamespace from field 'lu_namespace': expected JSON array
+// MEMBER-INNER-ERROR-NEXT: failed to read BuildNamespace from field 'lu_namespace': expected JSON array

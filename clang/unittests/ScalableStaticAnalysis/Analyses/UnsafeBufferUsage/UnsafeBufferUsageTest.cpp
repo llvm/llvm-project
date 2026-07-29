@@ -43,8 +43,7 @@ protected:
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
-      : TUSum(llvm::Triple("arm64-apple-macosx"),
-              BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
+      : TUSum(llvm::Triple("arm64-apple-macosx"), BuildNamespace("Mock.cpp")),
         Builder(TUSum, Opts) {}
 
   bool setUpTest(StringRef Code, const SSAFOptions &Opts = {}) {

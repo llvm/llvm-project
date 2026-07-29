@@ -1,8 +1,7 @@
 {
-  "tu_namespace": {
-    "kind": "CompilationUnit",
-    "name": "test.cpp"
-  },
+  "tu_namespace": [
+    "test.cpp"
+  ],
   "id_table": [
     {
       "id": 0,
@@ -15,11 +14,11 @@
   "linkage_table": [
     {
       "id": 0,
-      "linkage": { "type": "External" }
+      "linkage": {"type": "External"}
     },
     {
       "id": 0,
-      "linkage": { "type": "Internal" }
+      "linkage": {"type": "Internal"}
     }
   ],
   "data": [],

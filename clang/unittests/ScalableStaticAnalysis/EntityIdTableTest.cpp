@@ -84,11 +84,10 @@ TEST(EntityIdTableTest, MultipleEntities) {
 TEST(EntityIdTableTest, WithBuildNamespace) {
   EntityIdTable Table;
 
-  NestedBuildNamespace NS = NestedBuildNamespace::makeCompilationUnit("test.o");
+  BuildNamespace NS(BuildNamespace("test.o"));
 
   EntityName Entity1("c:@F@foo", "", NS);
-  EntityName Entity2("c:@F@foo", "",
-                     NestedBuildNamespace::makeCompilationUnit("other.o"));
+  EntityName Entity2("c:@F@foo", "", BuildNamespace("other.o"));
 
   EntityId Id1 = Table.getId(Entity1);
   EntityId Id2 = Table.getId(Entity2);

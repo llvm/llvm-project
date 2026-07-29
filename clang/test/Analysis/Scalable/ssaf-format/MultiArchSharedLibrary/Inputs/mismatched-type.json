@@ -1,10 +1,7 @@
 {
   "members": [],
   "namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchStaticLibrary"
 }

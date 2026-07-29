@@ -3,10 +3,7 @@
   "id_table": [],
   "linkage_table": [],
   "lu_namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "test.exe"
-    }
+    "test.exe"
   ],
   "target_triple": "arm64-apple-macosx"
 }

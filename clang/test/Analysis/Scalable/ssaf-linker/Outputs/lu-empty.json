@@ -3,10 +3,7 @@
   "id_table": [],
   "linkage_table": [],
   "lu_namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "lu-empty"
-    }
+    "lu-empty"
   ],
   "target_triple": "arm64-apple-macosx",
   "type": "LUSummary"

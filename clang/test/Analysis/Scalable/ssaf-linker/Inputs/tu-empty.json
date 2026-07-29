@@ -1,8 +1,7 @@
 {
-  "tu_namespace": {
-    "kind": "CompilationUnit",
-    "name": "empty.cpp"
-  },
+  "tu_namespace": [
+    "empty.cpp"
+  ],
   "id_table": [],
   "linkage_table": [],
   "data": [],

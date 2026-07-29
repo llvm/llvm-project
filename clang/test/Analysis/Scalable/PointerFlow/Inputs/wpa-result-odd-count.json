@@ -4,10 +4,7 @@
       "id": 0,
       "name": {
         "namespace": [
-          {
-            "kind": "LinkUnit",
-            "name": "test.exe"
-          }
+          "test.exe"
         ],
         "suffix": "",
         "usr": "c:@F@foo#"

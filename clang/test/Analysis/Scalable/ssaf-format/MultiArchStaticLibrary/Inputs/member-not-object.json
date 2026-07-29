@@ -2,9 +2,8 @@
   "members": [
     "not an object"
   ],
-  "namespace": {
-    "kind": "MultiArchStaticLibrary",
-    "name": "libfoo"
-  },
+  "namespace": [
+    "libfoo"
+  ],
   "type": "MultiArchStaticLibrary"
 }

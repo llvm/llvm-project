@@ -7,10 +7,7 @@
           "id": 0,
           "name": {
             "namespace": [
-              {
-                "kind": "LinkUnit",
-                "name": "libfoo"
-              }
+              "libfoo"
             ],
             "suffix": "",
             "usr": "c:@F@foo"
@@ -26,10 +23,7 @@
         }
       ],
       "lu_namespace": [
-        {
-          "kind": "LinkUnit",
-          "name": "libfoo"
-        }
+        "libfoo"
       ],
       "target_triple": "arm64-apple-macosx",
       "type": "LUSummary"
@@ -41,10 +35,7 @@
           "id": 0,
           "name": {
             "namespace": [
-              {
-                "kind": "LinkUnit",
-                "name": "libfoo"
-              }
+              "libfoo"
             ],
             "suffix": "",
             "usr": "c:@F@foo"
@@ -60,20 +51,14 @@
         }
       ],
       "lu_namespace": [
-        {
-          "kind": "LinkUnit",
-          "name": "libfoo"
-        }
+        "libfoo"
       ],
       "target_triple": "x86_64-apple-macosx",
       "type": "LUSummary"
     }
   ],
   "namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "libfoo"
-    }
+    "libfoo"
   ],
   "type": "MultiArchSharedLibrary"
 }

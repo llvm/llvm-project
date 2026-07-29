@@ -25,19 +25,13 @@
 // RUN: not clang-ssaf-format --type multi-arch-static-library %S/Inputs/missing-namespace.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-NAMESPACE
 // MISSING-NAMESPACE:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}missing-namespace.json'
-// MISSING-NAMESPACE-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON object
+// MISSING-NAMESPACE-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON array
 
-// The namespace field must be a JSON object, not a string.
-// RUN: not clang-ssaf-format --type multi-arch-static-library %S/Inputs/namespace-not-object.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-NOT-OBJECT
-// NAMESPACE-NOT-OBJECT:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}namespace-not-object.json'
-// NAMESPACE-NOT-OBJECT-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON object
-
-// The namespace kind must be MultiArchStaticLibrary.
-// RUN: not clang-ssaf-format --type multi-arch-static-library %S/Inputs/namespace-wrong-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-WRONG-KIND
-// NAMESPACE-WRONG-KIND:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}namespace-wrong-kind.json'
-// NAMESPACE-WRONG-KIND-NEXT: expected 'MultiArchStaticLibrary' for field 'namespace.kind' but got 'StaticLibrary'
+// The namespace field must be a JSON array, not a string.
+// RUN: not clang-ssaf-format --type multi-arch-static-library %S/Inputs/namespace-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-NOT-ARRAY
+// NAMESPACE-NOT-ARRAY:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}namespace-not-array.json'
+// NAMESPACE-NOT-ARRAY-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON array
 
 // ============================================================================
 // members field errors
@@ -82,7 +76,7 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-NAMESPACE-MISMATCH
 // MEMBER-NAMESPACE-MISMATCH:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}member-namespace-mismatch.json'
 // MEMBER-NAMESPACE-MISMATCH-NEXT: reading MultiArchStaticLibrary member from index '0'
-// MEMBER-NAMESPACE-MISMATCH-NEXT: expected 'libfoo' for field 'namespace.name' but got 'libbar'
+// MEMBER-NAMESPACE-MISMATCH-NEXT: field 'namespace' does not equal the enclosing artifact's namespace
 
 // Members are identified by their full target_triple. Two members sharing
 // the same target_triple are rejected.
@@ -99,4 +93,4 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-INNER-ERROR
 // MEMBER-INNER-ERROR:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}member-inner-error.json'
 // MEMBER-INNER-ERROR-NEXT: reading MultiArchStaticLibrary member from index '0'
-// MEMBER-INNER-ERROR-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON object
+// MEMBER-INNER-ERROR-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON array

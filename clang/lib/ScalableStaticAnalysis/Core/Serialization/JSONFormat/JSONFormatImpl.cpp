@@ -236,110 +236,35 @@ Object JSONFormat::entityIdToJSONObject(EntityId EI) {
 }
 
 //----------------------------------------------------------------------------
-// BuildNamespaceKind
-//----------------------------------------------------------------------------
-
-llvm::Expected<BuildNamespaceKind>
-buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
-  auto OptBuildNamespaceKind =
-      buildNamespaceKindFromString(BuildNamespaceKindStr);
-  if (!OptBuildNamespaceKind) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::InvalidBuildNamespaceKind,
-                                BuildNamespaceKindStr)
-        .build();
-  }
-  return *OptBuildNamespaceKind;
-}
-
-// Provided for consistency with respect to rest of the codebase.
-llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
-  return buildNamespaceKindToString(BNK);
-}
-
-//----------------------------------------------------------------------------
 // BuildNamespace
 //----------------------------------------------------------------------------
 
 llvm::Expected<BuildNamespace>
-JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
-  auto OptBuildNamespaceKindStr = BuildNamespaceObject.getString("kind");
-  if (!OptBuildNamespaceKindStr) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespaceKind", "kind", "string")
-        .build();
-  }
+JSONFormat::buildNamespaceFromJSON(const Array &BuildNamespaceArray) const {
+  std::vector<std::string> Names;
+  Names.reserve(BuildNamespaceArray.size());
 
-  auto ExpectedKind = buildNamespaceKindFromJSON(*OptBuildNamespaceKindStr);
-  if (!ExpectedKind) {
-    return ErrorBuilder::wrap(ExpectedKind.takeError())
-        .context(ErrorMessages::ReadingFromField, "BuildNamespaceKind", "kind")
-        .build();
-  }
-
-  auto OptNameStr = BuildNamespaceObject.getString("name");
-  if (!OptNameStr) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespaceName", "name", "string")
-        .build();
-  }
-
-  return {BuildNamespace(*ExpectedKind, *OptNameStr)};
-}
-
-Object JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
-  Object Result;
-  Result["kind"] = buildNamespaceKindToJSON(getKind(BN));
-  Result["name"] = getName(BN);
-  return Result;
-}
-
-//----------------------------------------------------------------------------
-// NestedBuildNamespace
-//----------------------------------------------------------------------------
-
-llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
-    const Array &NestedBuildNamespaceArray) const {
-  std::vector<BuildNamespace> Namespaces;
-
-  size_t NamespaceCount = NestedBuildNamespaceArray.size();
-  Namespaces.reserve(NamespaceCount);
-
-  for (const auto &[Index, BuildNamespaceValue] :
-       llvm::enumerate(NestedBuildNamespaceArray)) {
-    const Object *BuildNamespaceObject = BuildNamespaceValue.getAsObject();
-    if (!BuildNamespaceObject) {
+  for (const auto &[Index, NameValue] : llvm::enumerate(BuildNamespaceArray)) {
+    auto OptNameStr = NameValue.getAsString();
+    if (!OptNameStr) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtIndex,
-                                  "BuildNamespace", Index, "object")
+                                  "BuildNamespace name", Index, "string")
           .build();
     }
-
-    auto ExpectedBuildNamespace = buildNamespaceFromJSON(*BuildNamespaceObject);
-    if (!ExpectedBuildNamespace) {
-      return ErrorBuilder::wrap(ExpectedBuildNamespace.takeError())
-          .context(ErrorMessages::ReadingFromIndex, "BuildNamespace", Index)
-          .build();
-    }
-
-    Namespaces.push_back(std::move(*ExpectedBuildNamespace));
+    Names.emplace_back(*OptNameStr);
   }
 
-  return NestedBuildNamespace(std::move(Namespaces));
+  return BuildNamespace(std::move(Names));
 }
 
-Array JSONFormat::nestedBuildNamespaceToJSON(
-    const NestedBuildNamespace &NBN) const {
+Array JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
   Array Result;
-  const auto &Namespaces = getNamespaces(NBN);
-  Result.reserve(Namespaces.size());
-
-  for (const auto &BN : Namespaces) {
-    Result.push_back(buildNamespaceToJSON(BN));
+  const auto &Names = getNames(BN);
+  Result.reserve(Names.size());
+  for (const auto &Name : Names) {
+    Result.push_back(Name);
   }
-
   return Result;
 }
 
@@ -377,7 +302,7 @@ JSONFormat::tuEntityNameFromJSON(const Object &EntityNameObject) const {
     return ExpectedCore.takeError();
 
   auto [USR, Suffix] = *ExpectedCore;
-  return EntityName{USR, Suffix, NestedBuildNamespace()};
+  return EntityName{USR, Suffix, BuildNamespace()};
 }
 
 Object JSONFormat::tuEntityNameToJSON(const EntityName &EN) const {
@@ -399,15 +324,14 @@ JSONFormat::luEntityNameFromJSON(const Object &EntityNameObject) const {
   if (!OptNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "NestedBuildNamespace", "namespace", "array")
+                                "BuildNamespace", "namespace", "array")
         .build();
   }
 
-  auto ExpectedNamespace = nestedBuildNamespaceFromJSON(*OptNamespaceArray);
+  auto ExpectedNamespace = buildNamespaceFromJSON(*OptNamespaceArray);
   if (!ExpectedNamespace) {
     return ErrorBuilder::wrap(ExpectedNamespace.takeError())
-        .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
-                 "namespace")
+        .context(ErrorMessages::ReadingFromField, "BuildNamespace", "namespace")
         .build();
   }
 
@@ -418,7 +342,7 @@ Object JSONFormat::luEntityNameToJSON(const EntityName &EN) const {
   Object Result;
   Result["usr"] = getUSR(EN);
   Result["suffix"] = getSuffix(EN);
-  Result["namespace"] = nestedBuildNamespaceToJSON(getNamespace(EN));
+  Result["namespace"] = buildNamespaceToJSON(getNamespace(EN));
   return Result;
 }
 

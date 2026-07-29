@@ -1,9 +1,6 @@
 {
   "lu_namespace": [
-    {
-      "kind": "LinkUnit",
-      "name": "test.exe"
-    }
+    "test.exe"
   ],
   "id_table": [
     {
@@ -11,10 +8,7 @@
       "name": {
         "usr": "c:@F@foo",
         "namespace": [
-          {
-            "kind": "LinkUnit",
-            "name": "test.exe"
-          }
+          "test.exe"
         ]
       }
     }

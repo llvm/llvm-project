@@ -91,9 +91,8 @@ void PrintTo(const MockSummaryData3 &S, std::ostream *OS) {
 
 struct TUSummaryBuilderTest : ssaf::TestFixture {
   SSAFOptions Opts;
-  TUSummary Summary{
-      llvm::Triple("arm64-apple-macosx"),
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
+  TUSummary Summary{llvm::Triple("arm64-apple-macosx"),
+                    BuildNamespace("Mock.cpp")};
   TUSummaryBuilder Builder{Summary, Opts};
   TUSummaryExtractor Extractor{Builder};
 

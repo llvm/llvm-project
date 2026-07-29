@@ -1,8 +1,5 @@
 {
-  "lu_namespace": {
-    "kind": "CompilationUnit",
-    "name": "test.cpp"
-  },
+  "lu_namespace": "test.cpp",
   "id_table": [],
   "linkage_table": [],
   "data": [],

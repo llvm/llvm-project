@@ -1,8 +1,7 @@
 {
-  "tu_namespace": {
-    "kind": "CompilationUnit",
-    "name": "invalid-entity-id-multikey.cpp"
-  },
+  "tu_namespace": [
+    "invalid-entity-id-multikey.cpp"
+  ],
   "id_table": [
     {
       "id": 0,

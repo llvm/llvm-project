@@ -41,7 +41,7 @@ class LUSummaryEncoding {
   llvm::Triple TargetTriple;
 
   // The namespace identifying this link unit.
-  NestedBuildNamespace LUNamespace;
+  BuildNamespace LUNamespace;
 
   // Maps entity names to their unique identifiers within this link unit.
   EntityIdTable IdTable;
@@ -55,7 +55,7 @@ class LUSummaryEncoding {
       Data;
 
 public:
-  LUSummaryEncoding(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
+  LUSummaryEncoding(llvm::Triple TargetTriple, BuildNamespace LUNamespace)
       : TargetTriple(std::move(TargetTriple)),
         LUNamespace(std::move(LUNamespace)) {}
 };

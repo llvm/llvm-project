@@ -184,7 +184,7 @@ public:
   }
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              llvm::StringRef) override {
-    lastCapturedName() = getName(getTUNamespace(Summary));
+    lastCapturedName() = getNames(getTUNamespace(Summary)).front();
     return llvm::Error::success();
   }
   llvm::Expected<TUSummaryEncoding>
