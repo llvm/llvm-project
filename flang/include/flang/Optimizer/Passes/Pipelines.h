@@ -81,9 +81,9 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
-
 void addMemoryAllocationOpt(mlir::PassManager &pm);
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 

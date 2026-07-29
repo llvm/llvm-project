@@ -54,7 +54,8 @@
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL-DARWIN
 // ALL-DARWIN: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos"{{.*}} "-faarch64-jump-table-hardening"
 
-// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
+// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=PAUTHABI1 --implicit-check-not='"-fptrauth-function-pointer-type-discrimination"'
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=PAUTHABI1 --implicit-check-not='"-fptrauth-function-pointer-type-discrimination"'
 // PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
@@ -78,7 +79,8 @@
 
 //// Non-linux OS: pauthtest ABI has no effect in terms of passing ptrauth cc1 flags.
 //// An error about unsupported ABI will be emitted later in pipeline (see ERR3 below)
-// RUN: %clang -### -c --target=aarch64 -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// RUN: %clang -### -c --target=aarch64 -mabi=pauthtest %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=PAUTHABI2 --implicit-check-not='"-fptrauth-' --implicit-check-not='"-faarch64-jump-table-hardening"'
 
 // PAUTHABI2:      "-cc1"
 // PAUTHABI2-SAME: "-target-abi" "pauthtest"

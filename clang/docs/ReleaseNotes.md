@@ -62,6 +62,18 @@ honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
+- On MIPS, a `_Complex` value with an integer element type is now returned packed
+  into a single integer register when it fits in one, matching GCC. A `_Complex char` or
+  `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
+  with one part per register. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
+- On MIPS N32/N64, a `_Complex float` or `_Complex double` argument is now packed
+  into integer registers, or onto the stack, once there is no longer room to give
+  each of its parts a floating-point register, matching GCC. Clang previously
+  always passed the parts separately. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -349,6 +361,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed an assertion on omp taskloop transparent (#GH197162)
+- Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 
@@ -370,6 +384,8 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
+- Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
+
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
@@ -387,6 +403,10 @@ features cannot lower the translation-unit ABI level;
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
   argument instead of asserting. (#GH210714)
 
+- Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
+  parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
+  Clang now diagnoses the error instead of asserting. (#GH211207)
+
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
@@ -401,6 +421,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
+- Fixed an assertion failure in `-extract-api` when a documentation comment
+  contains invalid UTF-8. (#GH212393)
 
 ### OpenACC Specific Changes
 

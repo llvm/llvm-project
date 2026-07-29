@@ -54,6 +54,12 @@ StringRef recordKindToMacro(const Record *R) {
   return Macro;
 }
 
+void emitTokenKey(const RecordKeeper &Records, raw_ostream &OS) {
+  for (const Record *R : getAllDerivedDefsInDeclOrder(Records, "TokenKey")) {
+    OS << "  " << R->getName() << " = " << R->getValueAsInt("Value") << ",\n";
+  }
+}
+
 void emitMacro(const Record *R, raw_ostream &OS) {
   OS << recordKindToMacro(R) << "(";
   if (R->isSubClassOf("TransformTypeTrait")) {
@@ -147,6 +153,15 @@ void emitEnums(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "  UETT_Last = " << UETTs.size() + CXX11UETTs.size() - 1
      << " // UETT_Last == last UETT_XX in the enum.\n"
      << "};\n\n";
+
+  const auto ExpressionTraits =
+      getAllDerivedDefsInDeclOrder(Records, "ExpressionTrait");
+  OS << "/// Names for the expression traits.\n"
+        "enum ExpressionTrait {\n";
+  emitEnumerators(OS, ExpressionTraits);
+  OS << "  ET_Last = " << ExpressionTraits.size() - 1
+     << " // ET_Last == last ET_XX in the enum.\n"
+     << "};\n\n";
 }
 
 template <typename RangeT>
@@ -192,6 +207,9 @@ void emitArrays(const RecordKeeper &Records, raw_ostream &OS) {
       concat<const Record *const>(
           getAllDerivedDefsInDeclOrder(Records, "UnaryExprOrTypeTrait"),
           getAllDerivedDefsInDeclOrder(Records, "CXX11UnaryExprOrTypeTrait")));
+  emitNamesAndSpellings(
+      OS, "ExpressionTrait",
+      getAllDerivedDefsInDeclOrder(Records, "ExpressionTrait"));
 }
 
 void emitStdNameCases(const RecordKeeper &Records, raw_ostream &OS) {
@@ -210,7 +228,10 @@ void emitStdNameCases(const RecordKeeper &Records, raw_ostream &OS) {
 
 void clang::EmitClangTraits(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Type and expression traits", OS, Records);
-  OS << "#if defined(EMIT_ENUMS)\n";
+  OS << "#if defined(EMIT_TOKENKEY)\n";
+  emitTokenKey(Records, OS);
+
+  OS << "#elif defined(EMIT_ENUMS)\n";
   emitEnums(Records, OS);
 
   OS << "#elif defined(EMIT_ARRAYS)\n";
@@ -227,6 +248,7 @@ void clang::EmitClangTraits(const RecordKeeper &Records, raw_ostream &OS) {
 #undef EMIT_ARRAYS
 #undef EMIT_ENUMS
 #undef EMIT_STD_NAME_CASES
+#undef EMIT_TOKENKEY
 
 )";
 }
