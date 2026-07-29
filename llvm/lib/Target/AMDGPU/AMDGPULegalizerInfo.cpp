@@ -1683,7 +1683,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // G_AMDGPU_REG_LOAD/STORE target instructions. Always take the custom path
     // so an unsupported (e.g. sub-dword) access is diagnosed cleanly rather
     // than failing to legalize.
-    Actions.customIf([=](const LegalityQuery &Query) -> bool {
+    Actions.customIf([](const LegalityQuery &Query) -> bool {
       return Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR;
     });
 
@@ -3511,9 +3511,9 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
     return true;
   }
 
-  const auto PtrAsInt = B.buildPtrToInt(I32, PtrReg);
-  auto Two = B.buildConstant(I32, 2);
-  const auto Index = B.buildLShr(I32, PtrAsInt, Two);
+  const MachineInstrBuilder PtrAsInt = B.buildPtrToInt(I32, PtrReg);
+  MachineInstrBuilder Two = B.buildConstant(I32, 2);
+  const MachineInstrBuilder Index = B.buildLShr(I32, PtrAsInt, Two);
 
   // Normalize the value to i32 / <N x i32> so a selection pattern always
   // exists (e.g. for v4i8).
@@ -3533,7 +3533,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
     B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {ValReg}, {Index.getReg(0)})
         .addMemOperand(&MMO);
   } else {
-    const auto Result =
+    const MachineInstrBuilder Result =
         B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {RegTy}, {Index.getReg(0)})
             .addMemOperand(&MMO);
     B.buildBitcast(ValReg, Result);

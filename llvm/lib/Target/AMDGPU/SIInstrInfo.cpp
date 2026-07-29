@@ -264,6 +264,13 @@ bool SIInstrInfo::isReMaterializableImpl(
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   assert(isVALU(MI, /*AllowLDSDMA=*/true));
 
+  // A VGPR "as memory" indexed access reads or writes the per-lane vector
+  // registers of the active lanes, so which lanes are active is part of what it
+  // does. Its implicit use of EXEC must not be treated as ignorable, or the
+  // access could be moved across a write to EXEC.
+  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
+    return true;
+
   // If it is convergent it depends on EXEC.
   if (MI.isConvergent())
     return true;
@@ -11320,6 +11327,12 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
 
     return ValueUniformity::Default;
   }
+
+  // As above for the generic opcodes, but after instruction selection: an
+  // indexed load reads the wave's per-lane view of its vector registers, so
+  // even a uniform index yields a divergent value.
+  if (isa<AMDGPUMI::VLoadIdxInst>(MI))
+    return ValueUniformity::NeverUniform;
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
