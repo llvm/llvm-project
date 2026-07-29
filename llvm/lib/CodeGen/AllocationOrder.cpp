@@ -36,6 +36,14 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   bool HardHints =
       TRI->getRegAllocationHints(VirtReg, Order, Hints, MF, &VRM, Matrix);
 
+  // TODO: Consider changing the interface of
+  // TargetRegisterInfo::getRegAllocationHints to take a SetVector to enforce
+  // uniqueness at the API boundary. Ensure hints are unique while preserving
+  // priority order.
+  SmallDenseSet<MCPhysReg, 16> Seen;
+  llvm::erase_if(Hints,
+                 [&](MCPhysReg Reg) { return !Seen.insert(Reg).second; });
+
   LLVM_DEBUG({
     if (!Hints.empty()) {
       dbgs() << "hints:";
@@ -47,5 +55,8 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   assert(all_of(Hints,
                 [&](MCPhysReg Hint) { return is_contained(Order, Hint); }) &&
          "Target hint is outside allocation order.");
+  assert(
+      all_of(Hints, [&](MCPhysReg Hint) { return count(Hints, Hint) == 1; }) &&
+      "Target hints contain duplicates.");
   return AllocationOrder(std::move(Hints), Order, HardHints);
 }
