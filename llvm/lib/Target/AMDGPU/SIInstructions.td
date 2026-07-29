@@ -1176,10 +1176,12 @@ defm : VRegIdxLoadStorePat<vt>;
 //
 // Only bitsize of 8 or 16 bits are supported and must be a compile-time
 // constant.
-class V_LOAD_IDX_BITS<RegisterClass data_rc>
-    : VPseudoInstSI<(outs data_rc:$data),
-                    (ins SReg_32:$idx, i32imm:$offset, i32imm:$bitsize,
-                         VSrc_b32:$bitoffset, i32imm:$is_sext_load)> {
+// The lowering normalizes the loaded value to a dword, so only a 32-bit $data
+// form is needed.
+def V_LOAD_IDX_BITS : VPseudoInstSI<(outs VGPR_32:$data),
+                                    (ins SReg_32:$idx, i32imm:$offset,
+                                         i32imm:$bitsize, VSrc_b32:$bitoffset,
+                                         i32imm:$is_sext_load)> {
   let mayLoad = 1;
   let VALU = 1;
   let UseNamedOperandTable = 1;
@@ -1187,15 +1189,13 @@ class V_LOAD_IDX_BITS<RegisterClass data_rc>
   let Defs = [M0];
 }
 
-def V_LOAD_IDX_BITS : V_LOAD_IDX_BITS<VGPR_32>;
-
 // Used for byte or short stores.
 //
 // $data holds the pre-shifted insert value and $mask holds the insert mask
 // that is used when lowering to V_BFI_B32.
-class V_STORE_IDX_BITS<RegisterClass data_op_rc>
-    : VPseudoInstSI<(outs), (ins data_op_rc:$data, SReg_32:$idx,
-                                i32imm:$offset, VSrc_b32:$mask)> {
+def V_STORE_IDX_BITS : VPseudoInstSI<(outs),
+                                     (ins VGPR_32:$data, SReg_32:$idx,
+                                          i32imm:$offset, VSrc_b32:$mask)> {
   let mayStore = 1;
   let VALU = 1;
   let UseNamedOperandTable = 1;
@@ -1203,32 +1203,25 @@ class V_STORE_IDX_BITS<RegisterClass data_op_rc>
   let Defs = [M0];
 }
 
-def V_STORE_IDX_BITS : V_STORE_IDX_BITS<VGPR_32>;
-
 // Select the REG_LOAD_BITS/REG_STORE_BITS target nodes into the sub-dword
 // indexed pseudos. As for the whole-dword patterns above, an (add idx, imm)
 // shape folds a constant dword offset into the pseudo's $offset operand.
-multiclass VRegIdxBitsLoadStorePat<Instruction load_inst,
-                                   Instruction store_inst, ValueType vt> {
-  def : GCNPat<
-    (vt (SIreg_load_bits (add i32:$idx, (i32 imm:$offset)),
-                         (i32 imm:$bitsize), i32:$bitoffset,
-                         (i32 imm:$is_sext_load))),
-    (load_inst $idx, imm:$offset, imm:$bitsize, $bitoffset,
-               imm:$is_sext_load)>;
-  def : GCNPat<
-    (vt (SIreg_load_bits i32:$idx, (i32 imm:$bitsize), i32:$bitoffset,
-                         (i32 imm:$is_sext_load))),
-    (load_inst $idx, 0, imm:$bitsize, $bitoffset, imm:$is_sext_load)>;
-  def : GCNPat<
-    (SIreg_store_bits vt:$data, (add i32:$idx, (i32 imm:$offset)), i32:$mask),
-    (store_inst $data, $idx, imm:$offset, $mask)>;
-  def : GCNPat<
-    (SIreg_store_bits vt:$data, i32:$idx, i32:$mask),
-    (store_inst $data, $idx, 0, $mask)>;
-}
-
-defm : VRegIdxBitsLoadStorePat<V_LOAD_IDX_BITS, V_STORE_IDX_BITS, i32>;
+def : GCNPat<
+  (i32 (SIreg_load_bits (add i32:$idx, (i32 imm:$offset)),
+                        (i32 imm:$bitsize), i32:$bitoffset,
+                        (i32 imm:$is_sext_load))),
+  (V_LOAD_IDX_BITS $idx, imm:$offset, imm:$bitsize, $bitoffset,
+                   imm:$is_sext_load)>;
+def : GCNPat<
+  (i32 (SIreg_load_bits i32:$idx, (i32 imm:$bitsize), i32:$bitoffset,
+                        (i32 imm:$is_sext_load))),
+  (V_LOAD_IDX_BITS $idx, 0, imm:$bitsize, $bitoffset, imm:$is_sext_load)>;
+def : GCNPat<
+  (SIreg_store_bits i32:$data, (add i32:$idx, (i32 imm:$offset)), i32:$mask),
+  (V_STORE_IDX_BITS $data, $idx, imm:$offset, $mask)>;
+def : GCNPat<
+  (SIreg_store_bits i32:$data, i32:$idx, i32:$mask),
+  (V_STORE_IDX_BITS $data, $idx, 0, $mask)>;
 
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
 // vector operand appears only twice, once as def and once as use. Using this
