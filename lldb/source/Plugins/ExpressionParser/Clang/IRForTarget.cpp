@@ -1210,12 +1210,12 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
       remove = true;
 
     if (remove) {
-      // MS ABI callback thunks (mangled "??__F...") reference the static
+      // MS ABI destructor thunks (mangled "??__F...") reference the static
       // they destroy; track them to clear once the call is gone.
       if (call->arg_size() > 0)
         if (auto *cb = dyn_cast<llvm::Function>(
                 call->getArgOperand(0)->stripPointerCasts()))
-          if (cb->hasInternalLinkage() && cb->getName().starts_with("??__"))
+          if (cb->hasInternalLinkage() && cb->getName().starts_with("??__F"))
             dead_atexit_callbacks.push_back(cb);
       calls_to_remove.push_back(call);
     }
