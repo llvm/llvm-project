@@ -1,9 +1,27 @@
 PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]: r-xp /home/noinline-cs-noprobe.perfbin
-// The 5th LBR entry 0x4005e9/0x400637 is a return (0x4005e9 is `retq` in bar)
-// whose target 0x400637 is NOT preceded by a call instruction (0x400634 is a
-// `mov`). getCallAddrFromFrameAddr(0x400637) returns 0, driving unwindReturn
+// Hand-crafted (synthetic) hybrid CS sample. It is intentionally NOT a
+// self-consistent physical trace: only the return anomaly below matters, and the
+// surrounding LBR entries are filler (e.g. the leaf 0x4005dc is unwound at the
+// `call bar` entry yet bar is re-entered later -- an artifact of the synthetic
+// stack, not something the unwinder relies on).
+//
+// Intended case: the LBR entry 0x4005e9/0x400637 is a return (0x4005e9 is `retq`
+// in bar) whose target 0x400637 is NOT preceded by a call instruction -- 0x400634
+// (the real return site of `call bar` at 0x40062f) is a `mov`; 0x400637 is a
+// `jmp`. So getCallAddrFromFrameAddr(0x400637) returns 0, driving unwindReturn
 // into the zero-address path. Without the guard, switchToFrame(0) trips the
 // "Address can't be zero!" assertion in getOrCreateChildFrame.
+//
+// Such call-less return targets are real, not just synthetic, so the unwinder
+// must tolerate them defensively:
+//   - the LBR is a fixed-depth hardware ring buffer, so a return's paired call
+//     can be truncated off the top of the sampling window;
+//   - perf's software branch synthesis (`perf script --itrace`, and the Arm
+//     CoreSight/CS-ETM decoder) can emit unpaired/standalone entries at
+//     trace-window seams, interrupts, or context switches;
+//   - tail calls, PLT stubs, and returns into prolog/epilog (before the
+//     frame-pointer chain is established) legitimately land on non-post-call
+//     addresses.
 
 	          4005dc
 	          400634
