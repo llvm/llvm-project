@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 namespace affine {
@@ -50,7 +51,8 @@ static FailureOr<int64_t> computeConstantBound(AffineMap map,
 static LogicalResult
 inferAffineLoopUpperConstantBound(RewriterBase &b, AffineForOp forOp,
                                   bool promoteSingleIter = true) {
-  // Ensure the loop is normalized (lower bound is strictly 0 and step is 1).
+  // The loop is normalized so we can expect its lower bound to be 0 and step to
+  // be 1
   if (!forOp.hasConstantLowerBound() || forOp.getConstantLowerBound() != 0)
     return failure();
   if (forOp.getStepAsInt() != 1)
@@ -80,7 +82,7 @@ inferAffineLoopUpperConstantBound(RewriterBase &b, AffineForOp forOp,
     forOp.setConstantLowerBound(*upperMin);
     forOp.getInitsMutable().assign(clonedForOp->getResults());
     if (promoteSingleIter)
-      (void)promoteIfSingleIteration(forOp);
+      (void)promoteIfSingleIteration(clonedForOp);
 
     return success();
   }
@@ -117,9 +119,17 @@ struct AffineLoopNormalizePass
     // loop.
     if (useExpensiveMath) {
       IRRewriter b(&getContext());
-      getOperation()->walk([&](AffineForOp forOp) {
+      SmallVector<AffineForOp> loops;
+
+      // Collect target loops because `inferAffineLoopUpperConstantBound` may
+      // create new loops during processing.
+      // TODO: When running `normalizeAffineFor` with `promoteSingleIter=true`,
+      // there is currently no clean way to know if the loop was promoted. We
+      // can improve this in the future to avoid calling `walk` to pre-collect
+      // loops.
+      getOperation()->walk([&](AffineForOp forOp) { loops.push_back(forOp); });
+      for (AffineForOp forOp : loops)
         (void)inferAffineLoopUpperConstantBound(b, forOp, promoteSingleIter);
-      });
     }
   }
 };

@@ -372,16 +372,59 @@ func.func @fully_constantized_no_peeling() {
 
 // -----
 
-// USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @constantized_single_iter_promoted
+// USE-EXPENSIVE-MATH-DAG: #[[$MAP_REMAIN:.*]] = affine_map<()[s0] -> ((-s0 + 7) ceildiv 2)>
+// USE-EXPENSIVE-MATH-LABEL: func @peel_nested_loops
+func.func @peel_nested_loops() {
+  %c0 = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %i = %bound to 7 step 2 {
+    affine.for %j = %bound to 7 step 2 { 
+    "test.foo"() : () -> ()
+    }
+  }
+  return
+}
 
-func.func @constantized_single_iter_promoted() {
+// USE-EXPENSIVE-MATH: %[[BOUND:.*]] = test.value_with_bounds
+// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 0 to 3 {
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3 {
+// USE-EXPENSIVE-MATH:   }
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]] {
+// USE-EXPENSIVE-MATH:   }
+// USE-EXPENSIVE-MATH: }
+// USE-EXPENSIVE-MATH: affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]] {
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 0 to 3 {
+// USE-EXPENSIVE-MATH:   }
+// USE-EXPENSIVE-MATH:   affine.for %{{.*}} = 3 to #[[$MAP_REMAIN]]()[%[[BOUND]]] {
+// USE-EXPENSIVE-MATH:   }
+// USE-EXPENSIVE-MATH: }
+
+// -----
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @single_iter_promoted
+func.func @single_iter_promoted() {
   %c0 = arith.constant 0 :index
   %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
-  affine.for %iv = %bound to 2 step 2 iter_args(%arg = %c0) -> index {
-    %sum = arith.addi %arg, %bound : index
-    affine.yield %sum : index
+  affine.for %iv = %bound to 2 step 2 {
+    "test.foo"() : () -> ()
   }
   return
 }
 
 // USE-EXPENSIVE-MATH-AND-PROMOTE-NOT: affine.for
+
+// -----
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE-LABEL: func @single_iter_promoted_with_remainder
+func.func @single_iter_promoted_with_remainder() {
+  %c0 = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %i = %bound to 3 step 2 {
+    "test.foo"() : () -> ()
+  }
+  return
+}
+
+// USE-EXPENSIVE-MATH-AND-PROMOTE: "test.foo"() : () -> ()
+// USE-EXPENSIVE-MATH-AND-PROMOTE: affine.for
+// USE-EXPENSIVE-MATH-AND-PROMOTE:   "test.foo"() : () -> ()
