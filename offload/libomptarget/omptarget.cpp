@@ -1692,8 +1692,6 @@ class PrivateArgumentManagerTy {
 
   /// A vector of information of all first-private arguments to be packed
   SmallVector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
-  /// Host buffer for all arguments to be packed
-  SmallVector<char> FirstPrivateArgBuffer;
   /// The total size of all arguments to be packed
   int64_t FirstPrivateArgSize = 0;
 
@@ -1966,8 +1964,17 @@ public:
     if (!FirstPrivateArgInfo.empty()) {
       assert(FirstPrivateArgSize != 0 &&
              "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
-      FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
-      auto *Itr = FirstPrivateArgBuffer.begin();
+      // The packed buffer is the host source of the asynchronous submitData
+      // below, so its lifetime must outlive this object rather than be tied to
+      // it.
+      char *FirstPrivateArgBuffer =
+          getOrCreateSourceBufferForSubmitData(AsyncInfo, FirstPrivateArgSize);
+      // Not strictly necessary: the loop below writes every entry, and the
+      // inter-entry padding gaps it skips are never read by the device. Zero
+      // them anyway to keep the transferred buffer deterministic, which makes
+      // dumps easier to read and avoids tripping memory sanitizers.
+      std::memset(FirstPrivateArgBuffer, 0, FirstPrivateArgSize);
+      auto *Itr = FirstPrivateArgBuffer;
       // Copy all host data to this buffer
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
         // First pad the pointer as we (have to) pad it on the device too.
@@ -1983,7 +1990,7 @@ public:
       }
       // Allocate target memory
       void *TgtPtr =
-          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
+          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer);
       if (TgtPtr == nullptr) {
         ODBG(ODT_Alloc)
             << "Failed to allocate target memory for private arguments.";
@@ -1993,7 +2000,7 @@ public:
       ODBG(ODT_Alloc) << "Allocated " << FirstPrivateArgSize
                       << " bytes of target memory at " << TgtPtr;
       // Transfer data to target device
-      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
+      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer,
                                   FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
         ODBG(ODT_DataTransfer) << "Failed to submit data of private arguments.";
