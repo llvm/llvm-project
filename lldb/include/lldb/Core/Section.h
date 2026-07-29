@@ -287,7 +287,8 @@ public:
   /// Return true if this section's bytes in the host object file are guaranteed
   /// identical to its bytes in the running process, so a reader may serve them
   /// from the file instead of issuing a live memory read.  Conservative:
-  /// returns false unless the section is positively known to be immutable.
+  /// returns false unless positively known immutable, so a section that is
+  /// read-only but loader-relocated (e.g. Mach-O __DATA_CONST) returns false.
   bool IsImmutableAfterLoad() const;
 
 protected:

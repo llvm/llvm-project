@@ -470,7 +470,34 @@ bool Section::IsGOTSection() const {
   return GetObjectFile()->IsGOTSection(*this);
 }
 
-bool Section::IsImmutableAfterLoad() const { return m_readable && !m_writable; }
+bool Section::IsImmutableAfterLoad() const {
+  if (m_writable || !m_readable)
+    return false;
+
+  if (m_relocated)
+    return false;
+
+  if (IsGOTSection())
+    return false;
+
+  if (SectionSP parent_sp = GetParent()) {
+    llvm::StringRef seg_name = parent_sp->GetName();
+    if (seg_name == "__DATA_CONST" || seg_name == "__AUTH_CONST")
+      return false;
+  }
+
+  switch (m_type) {
+  case eSectionTypeDataCString:
+  case eSectionTypeData4:
+  case eSectionTypeData8:
+  case eSectionTypeData16:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
 
 #pragma mark SectionList
 
