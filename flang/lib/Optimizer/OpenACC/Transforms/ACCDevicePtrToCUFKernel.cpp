@@ -22,11 +22,9 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -137,9 +135,9 @@ private:
       deviceOperands.push_back(&operand);
       if (auto embox = arg.getDefiningOp<fir::EmboxCharOp>()) {
         boxCharArgs[&operand] = embox;
-        deviceArgs.insert(embox.getMemref());   // translate the base pointer
+        deviceArgs.insert(embox.getMemref()); // translate the base pointer
       } else {
-        deviceArgs.insert(arg);                 // general case
+        deviceArgs.insert(arg); // general case
       }
     }
 
