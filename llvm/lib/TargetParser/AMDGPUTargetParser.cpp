@@ -22,6 +22,17 @@
 using namespace llvm;
 using namespace AMDGPU;
 
+AMDGPU::MemoryScope llvm::AMDGPU::getMemoryScope(StringRef Name) {
+  return StringSwitch<MemoryScope>(Name)
+      .Case("agent", MemoryScope::Agent)
+      .Case("device", MemoryScope::Agent)
+      .Case("workgroup", MemoryScope::Workgroup)
+      .Case("wavefront", MemoryScope::Wavefront)
+      .Case("singlethread", MemoryScope::SingleThread)
+      .Case("cluster", MemoryScope::Cluster)
+      .Default(MemoryScope::System);
+}
+
 StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   StringRef ArchName = getArchNameAMDGCN(AK);
   assert((AK >= GK_AMDGPU_GENERIC_FIRST && AK <= GK_AMDGPU_GENERIC_LAST) ==

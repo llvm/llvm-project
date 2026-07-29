@@ -38,9 +38,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -100,6 +103,16 @@ STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
 const char kTsanModuleCtorName[] = "tsan.module_ctor";
 const char kTsanInitName[] = "__tsan_init";
 
+// Reconstruct the target memory scope from the sync scope name. The numeric
+// encoding is shared with the runtime.
+static ConstantInt *createScope(IRBuilder<> *IRB, LLVMContext &Ctx,
+                                SyncScope::ID SSID) {
+  std::optional<StringRef> Name = Ctx.getSyncScopeName(SSID);
+  auto Scope =
+      Name ? AMDGPU::getMemoryScope(*Name) : AMDGPU::MemoryScope::System;
+  return IRB->getInt32(static_cast<uint32_t>(Scope));
+}
+
 namespace {
 
 /// ThreadSanitizer: instrument the code in module to find races.
@@ -145,7 +158,9 @@ private:
   int getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr, const DataLayout &DL);
   void InsertRuntimeIgnores(Function &F);
 
+  bool HasMemoryScope = false;
   Type *IntptrTy;
+  FunctionCallee TsanKernelEntry;
   FunctionCallee TsanFuncEntry;
   FunctionCallee TsanFuncExit;
   FunctionCallee TsanIgnoreBegin;
@@ -197,18 +212,40 @@ PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
   // Return early if nosanitize_thread module flag is present for the module.
   if (checkIfAlreadyInstrumented(M, "nosanitize_thread"))
     return PreservedAnalyses::all();
-  insertModuleCtor(M);
+  if (!M.getTargetTriple().isAMDGPU())
+    insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
 void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   const DataLayout &DL = M.getDataLayout();
   LLVMContext &Ctx = M.getContext();
   IntptrTy = DL.getIntPtrType(Ctx);
+  HasMemoryScope = M.getTargetTriple().isAMDGPU();
 
   IRBuilder<> IRB(Ctx);
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
+
+  IntegerType *OrdTy = IRB.getInt32Ty();
+
+  // On GPU targets, atomic runtime functions take an extra i32 scope argument
+  // and we skip TLI-based parameter attributes (not needed for GPU ABIs).
+  auto getAtomicFnDecl = [&](StringRef Name, AttributeList HostAttr,
+                             Type *RetTy,
+                             ArrayRef<Type *> ArgTys) -> FunctionCallee {
+    SmallVector<Type *, 6> FinalArgs(ArgTys);
+    if (HasMemoryScope) {
+      FinalArgs.push_back(OrdTy);
+      return M.getOrInsertFunction(
+          Name, FunctionType::get(RetTy, FinalArgs, false), Attr);
+    }
+    return M.getOrInsertFunction(
+        Name, FunctionType::get(RetTy, FinalArgs, false), HostAttr);
+  };
+
   // Initialize the callbacks.
+  TsanKernelEntry =
+      M.getOrInsertFunction("__tsan_kernel_entry", Attr, IRB.getVoidTy());
   TsanFuncEntry = M.getOrInsertFunction("__tsan_func_entry", Attr,
                                         IRB.getVoidTy(), IRB.getPtrTy());
   TsanFuncExit =
@@ -217,7 +254,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
                                           IRB.getVoidTy());
   TsanIgnoreEnd =
       M.getOrInsertFunction("__tsan_ignore_thread_end", Attr, IRB.getVoidTy());
-  IntegerType *OrdTy = IRB.getInt32Ty();
+
   for (size_t i = 0; i < kNumberOfAccessSizes; ++i) {
     const unsigned ByteSize = 1U << i;
     const unsigned BitSize = ByteSize * 8;
@@ -270,20 +307,20 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
     Type *PtrTy = PointerType::get(Ctx, 0);
     SmallString<32> AtomicLoadName("__tsan_atomic" + BitSizeStr + "_load");
     TsanAtomicLoad[i] =
-        M.getOrInsertFunction(AtomicLoadName,
-                              TLI.getAttrList(&Ctx, {1}, /*Signed=*/true,
-                                              /*Ret=*/BitSize <= 32, Attr),
-                              Ty, PtrTy, OrdTy);
+        getAtomicFnDecl(AtomicLoadName,
+                        TLI.getAttrList(&Ctx, {1}, /*Signed=*/true,
+                                        /*Ret=*/BitSize <= 32, Attr),
+                        Ty, {PtrTy, OrdTy});
 
     // Args of type Ty need extension only when BitSize is 32 or less.
     using Idxs = std::vector<unsigned>;
-    Idxs Idxs2Or12   ((BitSize <= 32) ? Idxs({1, 2})       : Idxs({2}));
+    Idxs Idxs2Or12((BitSize <= 32) ? Idxs({1, 2}) : Idxs({2}));
     Idxs Idxs34Or1234((BitSize <= 32) ? Idxs({1, 2, 3, 4}) : Idxs({3, 4}));
     SmallString<32> AtomicStoreName("__tsan_atomic" + BitSizeStr + "_store");
-    TsanAtomicStore[i] = M.getOrInsertFunction(
+    TsanAtomicStore[i] = getAtomicFnDecl(
         AtomicStoreName,
         TLI.getAttrList(&Ctx, Idxs2Or12, /*Signed=*/true, /*Ret=*/false, Attr),
-        IRB.getVoidTy(), PtrTy, Ty, OrdTy);
+        IRB.getVoidTy(), {PtrTy, Ty, OrdTy});
 
     for (unsigned Op = AtomicRMWInst::FIRST_BINOP;
          Op <= AtomicRMWInst::LAST_BINOP; ++Op) {
@@ -306,35 +343,35 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
       else
         continue;
       SmallString<32> RMWName("__tsan_atomic" + itostr(BitSize) + NamePart);
-      TsanAtomicRMW[Op][i] = M.getOrInsertFunction(
-          RMWName,
-          TLI.getAttrList(&Ctx, Idxs2Or12, /*Signed=*/true,
-                          /*Ret=*/BitSize <= 32, Attr),
-          Ty, PtrTy, Ty, OrdTy);
+      TsanAtomicRMW[Op][i] =
+          getAtomicFnDecl(RMWName,
+                          TLI.getAttrList(&Ctx, Idxs2Or12, /*Signed=*/true,
+                                          /*Ret=*/BitSize <= 32, Attr),
+                          Ty, {PtrTy, Ty, OrdTy});
     }
 
     SmallString<32> AtomicCASName("__tsan_atomic" + BitSizeStr +
                                   "_compare_exchange_val");
-    TsanAtomicCAS[i] = M.getOrInsertFunction(
-        AtomicCASName,
-        TLI.getAttrList(&Ctx, Idxs34Or1234, /*Signed=*/true,
-                        /*Ret=*/BitSize <= 32, Attr),
-        Ty, PtrTy, Ty, Ty, OrdTy, OrdTy);
+    TsanAtomicCAS[i] =
+        getAtomicFnDecl(AtomicCASName,
+                        TLI.getAttrList(&Ctx, Idxs34Or1234, /*Signed=*/true,
+                                        /*Ret=*/BitSize <= 32, Attr),
+                        Ty, {PtrTy, Ty, Ty, OrdTy, OrdTy});
   }
   TsanVptrUpdate =
       M.getOrInsertFunction("__tsan_vptr_update", Attr, IRB.getVoidTy(),
                             IRB.getPtrTy(), IRB.getPtrTy());
   TsanVptrLoad = M.getOrInsertFunction("__tsan_vptr_read", Attr,
                                        IRB.getVoidTy(), IRB.getPtrTy());
-  TsanAtomicThreadFence = M.getOrInsertFunction(
+  TsanAtomicThreadFence = getAtomicFnDecl(
       "__tsan_atomic_thread_fence",
       TLI.getAttrList(&Ctx, {0}, /*Signed=*/true, /*Ret=*/false, Attr),
-      IRB.getVoidTy(), OrdTy);
+      IRB.getVoidTy(), {OrdTy});
 
-  TsanAtomicSignalFence = M.getOrInsertFunction(
+  TsanAtomicSignalFence = getAtomicFnDecl(
       "__tsan_atomic_signal_fence",
       TLI.getAttrList(&Ctx, {0}, /*Signed=*/true, /*Ret=*/false, Attr),
-      IRB.getVoidTy(), OrdTy);
+      IRB.getVoidTy(), {OrdTy});
 
   MemmoveFn =
       M.getOrInsertFunction("__tsan_memmove", Attr, IRB.getPtrTy(),
@@ -374,10 +411,17 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   }
 
   // Do not instrument accesses from different address spaces; we cannot deal
-  // with them.
+  // with them. On GPU targets, we accept flat, global, and local (LDS).
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
-  if (PtrTy->getPointerAddressSpace() != 0)
-    return false;
+  unsigned AS = PtrTy->getPointerAddressSpace();
+  if (M->getTargetTriple().isAMDGPU()) {
+    if (AS != AMDGPUAS::FLAT_ADDRESS && AS != AMDGPUAS::LOCAL_ADDRESS &&
+        !AMDGPU::isExtendedGlobalAddrSpace(AS))
+      return false;
+  } else {
+    if (AS != 0)
+      return false;
+  }
 
   return true;
 }
@@ -577,6 +621,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
+    if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL)
+      IRB.CreateCall(TsanKernelEntry, {});
     auto ProgramAsPtrTy = PointerType::get(F.getParent()->getContext(),
                                            DL.getProgramAddressSpace());
     Value *ReturnAddress = IRB.CreateIntrinsic(
@@ -659,7 +705,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
     else
       OnAccessFunc = IsWrite ? TsanUnalignedWrite[Idx] : TsanUnalignedRead[Idx];
   }
-  IRB.CreateCall(OnAccessFunc, Addr);
+  IRB.CreateCall(OnAccessFunc, IRB.CreateAddrSpaceCast(Addr, IRB.getPtrTy()));
   if (IsCompoundRW || IsWrite)
     NumInstrumentedWrites++;
   if (IsCompoundRW || !IsWrite)
@@ -698,16 +744,14 @@ bool ThreadSanitizer::instrumentMemIntrinsic(Instruction *I) {
     Value *Cast1 = IRB.CreateIntCast(M->getArgOperand(1), IRB.getInt32Ty(), false);
     Value *Cast2 = IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false);
     IRB.CreateCall(
-        MemsetFn,
-        {M->getArgOperand(0),
-         Cast1,
-         Cast2});
+        MemsetFn, {IRB.CreateAddrSpaceCast(M->getArgOperand(0), IRB.getPtrTy()),
+                   Cast1, Cast2});
     I->eraseFromParent();
   } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
     IRB.CreateCall(
         isa<MemCpyInst>(M) ? MemcpyFn : MemmoveFn,
-        {M->getArgOperand(0),
-         M->getArgOperand(1),
+        {IRB.CreateAddrSpaceCast(M->getArgOperand(0), IRB.getPtrTy()),
+         IRB.CreateAddrSpaceCast(M->getArgOperand(1), IRB.getPtrTy()),
          IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
     I->eraseFromParent();
   }
@@ -724,20 +768,27 @@ bool ThreadSanitizer::instrumentMemIntrinsic(Instruction *I) {
 
 bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
   InstrumentationIRBuilder IRB(I);
+  Module *M = I->getModule();
+  LLVMContext &Ctx = M->getContext();
+
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    Value *Addr = LI->getPointerOperand();
+    Value *Addr =
+        IRB.CreateAddrSpaceCast(LI->getPointerOperand(), IRB.getPtrTy());
     Type *OrigTy = LI->getType();
     int Idx = getMemoryAccessFuncIndex(OrigTy, Addr, DL);
     if (Idx < 0)
       return false;
-    Value *Args[] = {Addr,
-                     createOrdering(&IRB, LI->getOrdering())};
+    SmallVector<Value *, 4> Args = {Addr,
+                                    createOrdering(&IRB, LI->getOrdering())};
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, LI->getSyncScopeID()));
     Value *C = IRB.CreateCall(TsanAtomicLoad[Idx], Args);
     Value *Cast = IRB.CreateBitOrPointerCast(C, OrigTy);
     I->replaceAllUsesWith(Cast);
     I->eraseFromParent();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    Value *Addr = SI->getPointerOperand();
+    Value *Addr =
+        IRB.CreateAddrSpaceCast(SI->getPointerOperand(), IRB.getPtrTy());
     int Idx =
         getMemoryAccessFuncIndex(SI->getValueOperand()->getType(), Addr, DL);
     if (Idx < 0)
@@ -745,13 +796,16 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     const unsigned ByteSize = 1U << Idx;
     const unsigned BitSize = ByteSize * 8;
     Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
-    Value *Args[] = {Addr,
-                     IRB.CreateBitOrPointerCast(SI->getValueOperand(), Ty),
-                     createOrdering(&IRB, SI->getOrdering())};
+    SmallVector<Value *, 4> Args = {
+        Addr, IRB.CreateBitOrPointerCast(SI->getValueOperand(), Ty),
+        createOrdering(&IRB, SI->getOrdering())};
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, SI->getSyncScopeID()));
     IRB.CreateCall(TsanAtomicStore[Idx], Args);
     SI->eraseFromParent();
   } else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    Value *Addr = RMWI->getPointerOperand();
+    Value *Addr =
+        IRB.CreateAddrSpaceCast(RMWI->getPointerOperand(), IRB.getPtrTy());
     int Idx =
         getMemoryAccessFuncIndex(RMWI->getValOperand()->getType(), Addr, DL);
     if (Idx < 0)
@@ -763,13 +817,16 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     const unsigned BitSize = ByteSize * 8;
     Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
     Value *Val = RMWI->getValOperand();
-    Value *Args[] = {Addr, IRB.CreateBitOrPointerCast(Val, Ty),
-                     createOrdering(&IRB, RMWI->getOrdering())};
+    SmallVector<Value *, 4> Args = {Addr, IRB.CreateBitOrPointerCast(Val, Ty),
+                                    createOrdering(&IRB, RMWI->getOrdering())};
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, RMWI->getSyncScopeID()));
     Value *C = IRB.CreateCall(F, Args);
     I->replaceAllUsesWith(IRB.CreateBitOrPointerCast(C, Val->getType()));
     I->eraseFromParent();
   } else if (AtomicCmpXchgInst *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
-    Value *Addr = CASI->getPointerOperand();
+    Value *Addr =
+        IRB.CreateAddrSpaceCast(CASI->getPointerOperand(), IRB.getPtrTy());
     Type *OrigOldValTy = CASI->getNewValOperand()->getType();
     int Idx = getMemoryAccessFuncIndex(OrigOldValTy, Addr, DL);
     if (Idx < 0)
@@ -781,11 +838,12 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
       IRB.CreateBitOrPointerCast(CASI->getCompareOperand(), Ty);
     Value *NewOperand =
       IRB.CreateBitOrPointerCast(CASI->getNewValOperand(), Ty);
-    Value *Args[] = {Addr,
-                     CmpOperand,
-                     NewOperand,
-                     createOrdering(&IRB, CASI->getSuccessOrdering()),
-                     createOrdering(&IRB, CASI->getFailureOrdering())};
+    SmallVector<Value *, 6> Args = {
+        Addr, CmpOperand, NewOperand,
+        createOrdering(&IRB, CASI->getSuccessOrdering()),
+        createOrdering(&IRB, CASI->getFailureOrdering())};
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, CASI->getSyncScopeID()));
     CallInst *C = IRB.CreateCall(TsanAtomicCAS[Idx], Args);
     Value *Success = IRB.CreateICmpEQ(C, CmpOperand);
     Value *OldVal = C;
@@ -801,7 +859,9 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     I->replaceAllUsesWith(Res);
     I->eraseFromParent();
   } else if (FenceInst *FI = dyn_cast<FenceInst>(I)) {
-    Value *Args[] = {createOrdering(&IRB, FI->getOrdering())};
+    SmallVector<Value *, 2> Args = {createOrdering(&IRB, FI->getOrdering())};
+    if (HasMemoryScope)
+      Args.push_back(createScope(&IRB, Ctx, FI->getSyncScopeID()));
     FunctionCallee F = FI->getSyncScopeID() == SyncScope::SingleThread
                            ? TsanAtomicSignalFence
                            : TsanAtomicThreadFence;
