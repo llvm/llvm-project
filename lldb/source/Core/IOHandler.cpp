@@ -395,13 +395,13 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
       if (r == nullptr) {
-#ifdef _WIN32
         if (feof(in)) {
           got_line = SplitLineEOF(m_line_buffer);
           break;
         }
         if (ferror(in) && errno == EINTR)
           continue;
+#ifdef _WIN32
         // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
         // according to the docs on MSDN. However, this has evidently been a
         // known bug since Windows 8. Therefore, we can't detect if a signal
