@@ -628,6 +628,13 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    // A sub-dword access is not described by a dword index and width alone -
+    // the bit position within the dword is part of the address - and has no
+    // entry in the width table. Report it as opaque so that callers such as
+    // areMemAccessesTriviallyDisjoint() fall back to assuming an overlap.
+    if (!AMDGPU::getVLdStIdxOpcodeInfoByOpcode(LdSt.getOpcode()))
+      return false;
+
     BaseOp = &LdStIdx->getIdxOp();
     OffsetOp = &LdStIdx->getOffsetOp();
 
