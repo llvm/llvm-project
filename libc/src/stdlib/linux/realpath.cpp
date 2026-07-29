@@ -40,8 +40,10 @@ constexpr size_t MAX_SYMLINK_FOLLOWS = SYMLOOP_MAX;
 #else
 // Maximum number of symlinks that may be followed during path resolution.
 // This is a large, arbitrary value consistent with other libc implementations.
-// Must be at least _POSIX_SYMLOOP_MAX (8). Ideally should be read from sysconf,
-// so that it follows limits set by the system libc in overlay mode.
+// Must be at least _POSIX_SYMLOOP_MAX (8).
+//
+// TODO: This value should ideally be read from sysconf, so that it follows
+// limits set by the system libc when LLVM-libc us used in overlay mode.
 constexpr size_t MAX_SYMLINK_FOLLOWS = 40;
 #endif
 
