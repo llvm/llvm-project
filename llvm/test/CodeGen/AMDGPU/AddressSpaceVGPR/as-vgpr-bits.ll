@@ -2,6 +2,14 @@
 ; RUN: llc -global-isel=0 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1200 -o - %s | FileCheck %s --check-prefixes=GFX12,GFX12-SDAG
 ; RUN: llc -global-isel=1 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1200 -o - %s | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
 
+; Also compile for a wave64 movrel subtarget. The expansion itself is subtarget
+; independent - AMDGPULowerIdxOps consults no subtarget predicate - and the
+; sub-dword code is the same there modulo register allocation, so only compile
+; and verify rather than checking the output a second time. What differs is the
+; waterfall around a divergent access, which uses a 64-bit exec mask.
+; RUN: llc -global-isel=0 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx942 -filetype=null %s
+; RUN: llc -global-isel=1 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx942 -filetype=null %s
+
 ; End-to-end lowering of sub-dword (8/16-bit) accesses of the VGPR "as memory"
 ; address space (13). A load reads the containing dword with an M0-relative
 ; move and extracts the accessed bits with v_bfe_{u,i}32; a store is a
