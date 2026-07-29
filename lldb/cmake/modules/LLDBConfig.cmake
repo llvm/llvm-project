@@ -80,7 +80,9 @@ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   directory containing the LLDB library.")
 
 set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
-  "Text appended to diagnostics when LLDB cannot locate DWO debug information.")
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information files. Clients can
+  customize this message with a URL or additional information to help users know how to fix or
+  troubleshoot the issue.")
 
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
