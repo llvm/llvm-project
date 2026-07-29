@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/Wasm/WasmBinaryEncoding.h"
@@ -1519,6 +1520,25 @@ private:
   template <std::byte opCode>
   static constexpr bool hasParseredRegistered =
       HasParserRegistered<opCode>::value;
+
+  template <std::byte OpCode, typename = void>
+  struct HasParserWthSubOpCodeRegistered : std::false_type {};
+
+  template <std::byte opCode>
+  struct HasParserWthSubOpCodeRegistered<
+      opCode, std::void_t<decltype(parse(
+                  std::declval<OpCode<opCode>>(), std::declval<OpBuilder &>(),
+                  std::declval<ExpressionParser::ExprParserProxy &>(),
+                  std::declval<std::uint32_t>()))>> : std::true_type {
+    static_assert(!hasParseredRegistered<opCode>,
+                  "plain parser and parser with sub-opcode can't be registered "
+                  "for the same opcode");
+  };
+
+  template <std::byte opCode>
+  static constexpr bool hasParseredWithSubOpCodeRegistered =
+      HasParserWthSubOpCodeRegistered<opCode>::value;
+
   using dispatch_t = parsed_inst_t (*)(OpBuilder &,
                                        ExpressionParser::ExprParserProxy &);
 
@@ -1537,9 +1557,22 @@ private:
   }
 
   template <std::byte opCode>
+  static parsed_inst_t
+  forwardToParserWithSubOpCode(OpBuilder &builder,
+                               ExpressionParser::ExprParserProxy &exprParser) {
+    auto loc = exprParser.getCurrentOpLoc();
+    auto subOpCode = exprParser.parser().parseLiteral<std::uint32_t>();
+    if (failed(subOpCode))
+      return emitError(loc) << "expecting sub opcode for opcode " << opCode;
+    return parse(OpCode<opCode>{}, builder, exprParser, subOpCode.value());
+  }
+
+  template <std::byte opCode>
   static constexpr dispatch_t getHandlerForOpCode() {
     if constexpr (hasParseredRegistered<opCode>)
       return forwardToParser<opCode>;
+    else if constexpr (hasParseredWithSubOpCodeRegistered<opCode>)
+      return forwardToParserWithSubOpCode<opCode>;
     else
       return unreachableHandler;
   }
@@ -1560,7 +1593,8 @@ private:
                ExpressionParser::ExprParserProxy &exprParser,
                ByteSequence<opCodes...>) {
     static constexpr std::array<bool, 256> opcodeValidityMap{
-        hasParseredRegistered<opCodes>...};
+        (hasParseredRegistered<opCodes> ||
+         hasParseredWithSubOpCodeRegistered<opCodes>)...};
     static constexpr std::array<dispatch_t, 256> dispatchTable{
         getHandlerForOpCode<opCodes>()...};
     if (opcodeValidityMap[static_cast<size_t>(opCode)]) {
