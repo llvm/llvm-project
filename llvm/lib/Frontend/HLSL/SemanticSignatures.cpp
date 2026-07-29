@@ -24,7 +24,7 @@ namespace {
 
 // Inclusive upper bounds of the operand enums
 constexpr uint32_t MaxCompType =
-    static_cast<uint32_t>(dxil::ElementType::PackedU8x32);
+    static_cast<uint32_t>(dxil::ElementType::LastEntry);
 constexpr uint32_t MaxSemanticKind =
     static_cast<uint32_t>(dxbc::PSV::SemanticKind::Invalid);
 constexpr uint32_t MaxInterpMode =
@@ -59,9 +59,9 @@ SemanticSignatureElement::fromMetadata(const MDNode *Node) {
     UsageMask,
     DynIndexMask,
     GSStream,
-    NumOperands,
+    LastEntry = GSStream,
   };
-  const unsigned NumElementOperands = to_underlying(OpIdx::NumOperands);
+  const unsigned NumElementOperands = to_underlying(OpIdx::LastEntry) + 1;
 
   if (!Node)
     return makeError("signature element node is null");
