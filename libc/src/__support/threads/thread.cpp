@@ -131,6 +131,7 @@ public:
       atexit_unit.callback(atexit_unit.obj);
       mtx.lock();
     }
+    mtx.unlock();
   }
 };
 

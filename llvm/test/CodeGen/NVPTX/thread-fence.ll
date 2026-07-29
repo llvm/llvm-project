@@ -7,7 +7,6 @@ define void @test_fence_acquire() {
 ; CHECK-LABEL: test_fence_acquire(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.acquire.sync_restrict::shared::cluster.cluster;
 ; CHECK-NEXT:    ret;
@@ -20,7 +19,6 @@ define void @test_fence_acquire() {
 define void @test_fence_release() {
 ; CHECK-LABEL: test_fence_release(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.release.sync_restrict::shared::cta.cluster;

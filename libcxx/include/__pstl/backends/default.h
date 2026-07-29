@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 #define _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 
+#include <__algorithm/adjacent_find.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
@@ -24,6 +25,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
@@ -66,6 +68,7 @@ namespace __pstl {
 //
 // mismatch family
 // ---------------
+// - adjacent_find
 // - lexicographical_compare
 // - mismatch_3leg
 //
@@ -273,6 +276,48 @@ struct __mismatch_3leg<__default_backend_tag, _ExecutionPolicy> {
     } else {
       // Currently only random access iterators are supported for parallel mismatch_3leg.
       return std::mismatch(std::move(__first1), std::move(__last1), std::move(__first2), std::move(__comp));
+    }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _BinaryPredicate>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __predicate)
+      const noexcept {
+    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
+      using _Mismatch = __dispatch<__mismatch, __current_configuration, _ExecutionPolicy>;
+      if (__first == __last) {
+        return __last; // Empty range, return __last.
+      }
+      _ForwardIterator __first2 = std::next(__first);
+      if (__first2 == __last) {
+        return __last; // Single element range, no adjacent elements, return __last.
+      }
+      _ForwardIterator __last2 = std::prev(__last);
+      // Find the first match within two overlapping ranges, expressed as a double negation of the predicate:
+      //   [first, __last - 1)
+      //   [first + 1, __last)
+      auto __res = _Mismatch()(
+          __policy,
+          std::move(__first),
+          std::move(__last2),
+          std::move(__first2),
+          __last,
+          [&](__iterator_reference<_ForwardIterator> __lhs, __iterator_reference<_ForwardIterator> __rhs) {
+            return !__predicate(__lhs, __rhs);
+          });
+      if (!__res) {
+        return nullopt; // Failed to run the algorithm, propagate the error.
+      }
+      if (__res->second == __last) {
+        return __last; // No adjacent elements found, return __last.
+      }
+      return __res->first; // Return the first iterator of the pair of mismatched elements.
+    } else {
+      // Currently anything outside bidirectional iterators has to be processed serially
+      return std::adjacent_find(std::move(__first), std::move(__last), std::move(__predicate));
     }
   }
 };

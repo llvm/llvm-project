@@ -163,6 +163,12 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::adjacent_find(pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: adjacent_find}}
+    (void)std::adjacent_find(
+        pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: adjacent_find}}
+  }
+
+  {
     (void)std::move(pol, non_fwd, non_fwd, out); // expected-error@*:* {{static assertion failed: move}}
     (void)std::move(pol, it, it, non_fwd);       // expected-error@*:* {{static assertion failed: move}}
     (void)std::move(pol, it, it, non_output);    // expected-error@*:* {{static assertion failed: move}}
