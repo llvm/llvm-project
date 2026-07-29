@@ -318,7 +318,7 @@ Error replayKernel() {
 
     std::filesystem::path JITImageFilepath = Filepath;
     JITImageFilepath.replace_extension("image");
-    if (setenv("LIBOMPTARGET_JIT_SAVE_IMAGE", JITImageFilepath.c_str(),
+    if (setenv("LIBOMPTARGET_JIT_POST_OPT_SAVE_IMAGE", JITImageFilepath.c_str(),
                /*Replace=*/1) != 0)
       return createErr("failed to configure JIT image output file");
   }
