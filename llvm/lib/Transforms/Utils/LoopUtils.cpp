@@ -250,6 +250,26 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
   TheLoop->setLoopID(NewLoopID);
 }
 
+void llvm::addStringMetadataToLoop(Loop *TheLoop, StringRef StringMD) {
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  SmallVector<Metadata *, 4> MDs(1);
+  // Retain existing metadata, skipping a name-only node with the same string.
+  if (MDNode *LoopID = TheLoop->getLoopID())
+    for (const MDOperand &Op : drop_begin(LoopID->operands())) {
+      MDNode *Node = cast<MDNode>(Op);
+      if (Node->getNumOperands() == 1)
+        if (auto *S = dyn_cast<MDString>(Node->getOperand(0)))
+          if (S->getString() == StringMD)
+            return;
+      MDs.push_back(Node);
+    }
+  MDs.push_back(MDNode::get(Context, {MDString::get(Context, StringMD)}));
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  TheLoop->setLoopID(NewLoopID);
+}
+
 std::optional<ElementCount>
 llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   std::optional<int> Width =
@@ -408,8 +428,7 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.vectorize.disable"))
     return TM_SuppressedByUser;
 
-  std::optional<bool> Enable =
-      getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
+  bool Enable = getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable");
 
   std::optional<ElementCount> VectorizeWidth =
       getOptionalElementCountLoopAttribute(L);
@@ -418,14 +437,14 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 
   // 'Forcing' vector width and interleave count to one effectively disables
   // this tranformation.
-  if (Enable == true && VectorizeWidth && VectorizeWidth->isScalar() &&
+  if (Enable && VectorizeWidth && VectorizeWidth->isScalar() &&
       InterleaveCount == 1)
     return TM_SuppressedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
     return TM_Disable;
 
-  if (Enable == true)
+  if (Enable)
     return TM_ForcedByUser;
 
   if ((VectorizeWidth && VectorizeWidth->isScalar()) && InterleaveCount == 1)

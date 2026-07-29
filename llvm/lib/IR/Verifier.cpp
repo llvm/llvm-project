@@ -1022,8 +1022,7 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
         (CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.enable") ||
          CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.disable")))
       Check(CurrentMD->getNumOperands() == 1,
-            "Expected one operand for llvm.loop.vectorize.enable metadata",
-            CurrentMD);
+            "Expecting only the metadata name", CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",

@@ -7023,9 +7023,9 @@ static bool isOldDistributeEnable(const MDTuple *T) {
   return mdconst::hasa<ConstantInt>(T->getOperand(1));
 }
 
-// Old two-operand form: !{!"llvm.loop.vectorize.enable", i1 X}. The new
-// single-operand form uses "llvm.loop.vectorize.enable" for X = true and
-// "llvm.loop.vectorize.disable" for X = false.
+/// Old two-operand form: !{!"llvm.loop.vectorize.enable", i1 X}. The new
+/// single-operand form uses "llvm.loop.vectorize.enable" for X = true and
+/// "llvm.loop.vectorize.disable" for X = false.
 static bool isOldVectorizeEnable(const MDTuple *T) {
   if (T->getNumOperands() != 2)
     return false;
@@ -7035,8 +7035,8 @@ static bool isOldVectorizeEnable(const MDTuple *T) {
   return mdconst::hasa<ConstantInt>(T->getOperand(1));
 }
 
-// Build the single-operand vectorize enable/disable node that replaces a
-// boolean operand: nonzero -> enable, zero -> disable.
+/// Build the single-operand vectorize enable/disable node that replaces a
+/// boolean operand: nonzero -> enable, zero -> disable.
 static Metadata *makeVectorizeEnableNode(LLVMContext &C, const MDOperand &Op) {
   bool Enable = !mdconst::extract<ConstantInt>(Op)->isZero();
   return MDTuple::get(
