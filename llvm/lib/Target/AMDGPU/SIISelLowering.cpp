@@ -13602,8 +13602,8 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword and 8-/16-bit loads and stores are "
-        "implemented",
+        "dword-aligned whole-dword and naturally aligned 8-/16-bit loads and "
+        "stores are implemented",
         DL.getDebugLoc()));
     SmallVector<EVT, 2> ResultTypes(Op->values());
     return DAG.getErrorMergeValues(ResultTypes, MemOp->getChain(), DL);
@@ -13614,6 +13614,12 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   // AMDGPULowerIdxOps.
   if (BitWidth < 32) {
     if (BitWidth != 8 && BitWidth != 16)
+      return reportUnsupported();
+
+    // The access becomes a bit-field extract from (or insert into) the dword
+    // containing it, so it must not straddle a dword boundary. An 8-bit access
+    // never can; a 16-bit one only if it is 2-byte aligned.
+    if (MemOp->getAlign() < Align(BitWidth / 8))
       return reportUnsupported();
 
     // Bail out for sub-dword types we cannot handle.
