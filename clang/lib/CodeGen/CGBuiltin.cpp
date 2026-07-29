@@ -2802,6 +2802,62 @@ static llvm::TargetExtType *getTargetExtType(CodeGenFunction &CGF,
   return RetType;
 }
 
+/// Returns a suffix encoding ALL parameters of a spirv.CooperativeMatrixKHR
+/// TargetExtType: element type + scope + rows + cols + use.
+/// E.g. target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 2) ->
+/// "_f32_sc3_16x16_u2"
+static std::string getCoopMatFullSuffix(llvm::Type *Ty) {
+  auto *TET = cast<llvm::TargetExtType>(Ty);
+  llvm::Type *ElemTy = TET->getTypeParameter(0);
+
+  // Element type string
+  std::string ElemStr;
+  if (ElemTy->isFloatTy())
+    ElemStr = "f32";
+  else if (ElemTy->isHalfTy())
+    ElemStr = "f16";
+  else if (ElemTy->isDoubleTy())
+    ElemStr = "f64";
+  else if (auto *IntTy = dyn_cast<llvm::IntegerType>(ElemTy))
+    ElemStr = "i" + std::to_string(IntTy->getBitWidth());
+  else
+    llvm_unreachable("Unsupported cooperative matrix element type");
+
+  // Integer parameters: scope, rows, cols, use
+  unsigned Scope = TET->getIntParameter(0);
+  unsigned Rows = TET->getIntParameter(1);
+  unsigned Cols = TET->getIntParameter(2);
+  unsigned Use = TET->getIntParameter(3);
+
+  return "_" + ElemStr + "_sc" + std::to_string(Scope) + "_" +
+         std::to_string(Rows) + "x" + std::to_string(Cols) + "_u" +
+         std::to_string(Use);
+}
+
+/// Returns a name suffix encoding the address space of a pointer type,
+/// matching OpenCL/SPIR-V address space conventions.
+/// E.g.  ptr addrspace(1) -> "_global"
+///        ptr addrspace(3) -> "_local"
+///        ptr addrspace(0) -> "_private"
+///        ptr addrspace(4) -> "_generic"
+static std::string getPtrAddrSpaceSuffix(llvm::Type *PtrTy) {
+  unsigned AS = cast<llvm::PointerType>(PtrTy)->getAddressSpace();
+  switch (AS) {
+  case 0:
+    return "_private";
+  case 1:
+    return "_global";
+  case 2:
+    return "_constant";
+  case 3:
+    return "_local";
+  case 4:
+    return "_generic";
+  default:
+    return "_as" + std::to_string(AS);
+  }
+}
+
 } // namespace
 
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
@@ -4677,7 +4733,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionType *FTy = llvm::FunctionType::get(
         RetType, {Ptr->getType(), Layout->getType(), Stride->getType()}, false);
     // Function name mangling.
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    std::string Name =
+        getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+        getPtrAddrSpaceSuffix(ConvertType(E->getArg(0)->getType())) +
+        getCoopMatFullSuffix(ConvertType(E->getType()));
 
     llvm::FunctionCallee LoadFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
@@ -4710,7 +4769,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         VoidTy, {Ptr->getType(), ArgType, Layout->getType(), Stride->getType()},
         false);
     // Function name mangling.
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    std::string Name =
+        getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+        getPtrAddrSpaceSuffix(ConvertType(E->getArg(0)->getType())) +
+        getCoopMatFullSuffix(ConvertType(E->getArg(1)->getType()));
 
     llvm::FunctionCallee StoreFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
@@ -4752,7 +4814,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {AType, BType, CType, Int1Ty}, false);
 
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(Arg0->getType())) +
+                       getCoopMatFullSuffix(ConvertType(Arg1->getType())) +
+                       getCoopMatFullSuffix(ConvertType(Arg2->getType()));
     llvm::FunctionCallee MatMulFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(MatMulFn.getCallee()))
@@ -4792,6 +4858,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         (ElTy->isIntegerTy())
             ? getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel)
             : getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, /*IsFloat*/ true);
+    // Function name mangling.
+    Name = Name + getCoopMatFullSuffix(ConvertType(E->getType()));
     llvm::FunctionCallee BinaryFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(BinaryFn.getCallee()))
@@ -4821,7 +4889,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(E->getType()));
     llvm::FunctionCallee ScalarMulFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarMulFn.getCallee()))
@@ -4849,7 +4919,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {AType, Int1Ty}, false);
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(E->getType()));
     llvm::FunctionCallee ScalarNegFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarNegFn.getCallee()))
@@ -4866,7 +4938,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Set function type.
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {Init->getType()}, false);
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(E->getType()));
     llvm::FunctionCallee InitFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(InitFn.getCallee()))
@@ -4883,7 +4957,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(ConvertType(E->getType()), {AType}, false);
 
-    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel);
+    // Function name mangling.
+    std::string Name =
+        getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+        getCoopMatFullSuffix(ConvertType(E->getArg(0)->getType()));
     llvm::FunctionCallee LengthFn =
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(LengthFn.getCallee()))
