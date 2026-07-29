@@ -1046,15 +1046,17 @@ void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
   if (CGM.getTypes().isLongDoubleReferenced()) {
     llvm::LLVMContext &Ctx = CGM.getLLVMContext();
     const auto *flt = &CGM.getTarget().getLongDoubleFormat();
+    StringRef Type;
     if (flt == &llvm::APFloat::PPCDoubleDouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "doubledouble"));
+      Type = "ppc_fp128";
     else if (flt == &llvm::APFloat::IEEEquad())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeequad"));
+      Type = "fp128";
     else if (flt == &llvm::APFloat::IEEEdouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeedouble"));
+      Type = "double";
+
+    if (!Type.empty())
+      CGM.getModule().addModuleFlag(llvm::Module::Error, "long-double-type",
+                                    llvm::MDString::get(Ctx, Type));
   }
 }
 

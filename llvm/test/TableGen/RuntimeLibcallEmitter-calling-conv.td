@@ -16,10 +16,15 @@ def __target_override_cc : RuntimeLibcallImpl<TARGET_OVERRIDE_CC>;
 
 def malloc : RuntimeLibcallImpl<MALLOC>;
 
-def isAVR : RuntimeLibcallAvailability<[{TT.getArch() == Triple::avr}]>;
+def IsAVR : LibcallPredicate<[{TT.getArch() == Triple::avr}]>;
+def IsOSHurd : LibcallPredicate<[{TT.isOSHurd()}]>;
+def IsMSP430 : LibcallPredicate<[{TT.getArch() == Triple::msp430}]>;
+def IsFooLeaf : LibcallPredicate<[{ isFoo() }]>;
+def IsBarLeaf : LibcallPredicate<[{ isBar() }]>;
 
-def isAVRHurd : RuntimeLibcallAvailability<
-  [{TT.getArch() == Triple::avr && TT.isOSHurd()}]>;
+def isAVR : RuntimeLibcallAvailability<(all_of IsAVR)>;
+
+def isAVRHurd : RuntimeLibcallAvailability<(all_of IsAVR, IsOSHurd)>;
 
 def AVRLibrary : SystemRuntimeLibrary<isAVR,
   (add malloc, LibcallsWithCC<(add __divmodqi4, __udivmodhi4), AVR_BUILTIN>)
@@ -32,12 +37,12 @@ def AVRHurdLibrary : SystemRuntimeLibrary<isAVRHurd,
     = LibcallCallingConv<[{isFoo() ? CallingConv::Fast : CallingConv::GHC}]>;
 }
 
-def isMSP430 : RuntimeLibcallAvailability<[{TT.getArch() == Triple::msp430}]>;
+def isMSP430 : RuntimeLibcallAvailability<(all_of IsMSP430)>;
 
 def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
   (add malloc,
-       LibcallsWithCC<(add __divmodqi4), AVR_BUILTIN, RuntimeLibcallAvailability<[{ isFoo() }]>>,
-       LibcallsWithCC<(add __udivmodhi4), MSP430_BUILTIN, RuntimeLibcallAvailability<[{ isBar() }]>>)
+       LibcallsWithCC<(add __divmodqi4), AVR_BUILTIN, RuntimeLibcallAvailability<(all_of IsFooLeaf)>>,
+       LibcallsWithCC<(add __udivmodhi4), MSP430_BUILTIN, RuntimeLibcallAvailability<(all_of IsBarLeaf)>>)
 >;
 
 

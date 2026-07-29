@@ -8,7 +8,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-
 define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; VPLANS-LABEL: VPlan for loop in 'simple_memset'
 ; VPLANS:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {

@@ -5074,9 +5074,18 @@ struct FormatStyle {
     ///    # include "A-util.h"           # include "A.inc"
     /// \endcode
     bool IgnoreExtension;
+    /// Whether or not includes are sorted by natural ordering i.e., whether
+    /// embedded runs of digits are compared as numbers rather than sequences of
+    /// characters.
+    /// \code
+    ///    true:                      false:
+    ///    #include "A2.h"     vs.    #include "A10.h"
+    ///    #include "A10.h"           #include "A2.h"
+    /// \endcode
+    bool Natural;
     bool operator==(const SortIncludesOptions &R) const {
       return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase &&
-             IgnoreExtension == R.IgnoreExtension;
+             IgnoreExtension == R.IgnoreExtension && Natural == R.Natural;
     }
     bool operator!=(const SortIncludesOptions &R) const {
       return !(*this == R);
