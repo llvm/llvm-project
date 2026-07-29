@@ -447,3 +447,46 @@ define void @store_i8_divergent(ptr addrspace(13) %p, i8 %v) {
   store i8 %v, ptr addrspace(13) %p
   ret void
 }
+
+; A 2-byte aligned 16-bit access sits at bit offset 0 or 16, so it always fits
+; within the containing dword even though the offset is not known statically.
+; (An under-aligned 16-bit access is rejected; see as-vgpr-unsupported.ll.)
+define i32 @load_i16_offset2(ptr addrspace(13) inreg %p) {
+; GFX12-SDAG-LABEL: load_i16_offset2:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, 2
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    s_lshl_b32 s0, s0, 3
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, s0, 16
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: load_i16_offset2:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 2
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    s_lshl_b32 s0, s0, 3
+; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_bfe_u32 v0, v0, s0, 16
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %q = getelementptr i8, ptr addrspace(13) %p, i32 2
+  %x = load i16, ptr addrspace(13) %q, align 2
+  %y = zext i16 %x to i32
+  ret i32 %y
+}

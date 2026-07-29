@@ -560,11 +560,26 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 }
 
 // Whether the VGPR ("as memory") load/store lowering handles a MemSize-bit
-// memory access producing/consuming a ValSize-bit value. Whole-dword accesses
-// (those with a matching V_LOAD_IDX/V_STORE_IDX pseudo) are supported, as are
-// 8-/16-bit accesses, including extending loads into a 16- or 32-bit value.
-static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
+// memory access producing/consuming a ValSize-bit value at the given alignment.
+// Whole-dword accesses (those with a matching V_LOAD_IDX/V_STORE_IDX pseudo)
+// are supported when dword aligned, as are 8-/16-bit accesses, including
+// extending loads into a 16- or 32-bit value.
+//
+// A sub-dword access is implemented as a bit-field extract from (or insert
+// into) the dword containing it, so it must not straddle a dword boundary. An
+// 8-bit access never can; a 16-bit one only if it is 2-byte aligned. Requiring
+// natural alignment covers both, and is what lets the bit offset within the
+// dword be computed from a possibly dynamic pointer.
+//
+// A whole-dword access addresses registers by the dword index pointer >> 2,
+// which discards the low two bits rather than accounting for them, so an
+// under-aligned one would silently access the containing dword instead of the
+// bytes asked for.
+static bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
+                                     Align Alignment) {
   if (MemSize == 8 || MemSize == 16) {
+    if (Alignment < Align(MemSize / 8))
+      return false;
     if (ValSize == MemSize)
       return true;
     if (ValSize > MemSize && (ValSize == 16 || ValSize == 32))
@@ -572,6 +587,8 @@ static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
     return false;
   }
   if (MemSize != ValSize)
+    return false;
+  if (Alignment < Align(4))
     return false;
   return AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
 }
@@ -3531,24 +3548,16 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   // integer types rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
-  // Dword-aligned whole-dword and 8-/16-bit accesses are implemented. Reject
-  // anything else with a diagnostic instead of failing to legalize.
-  //
-  // The alignment is checked here rather than in the size predicate, since it
-  // is a property of how the address is formed rather than of the size: a
-  // whole-dword access addresses registers by the dword index pointer >> 2,
-  // which discards the low two bits rather than accounting for them, so an
-  // under-aligned one would silently reach the dword containing the address.
-  // The sub-dword path below computes a bit offset instead, and carries its own
-  // alignment rule.
-  if (!isVGPRLoadStoreSizeSupported(MemSize, ValSize) ||
-      (MemSize >= 32 && MMO.getAlign() < Align(4))) {
+  // Dword-aligned whole-dword and naturally aligned 8-/16-bit accesses are
+  // implemented. Reject anything else with a diagnostic instead of failing to
+  // legalize.
+  if (!isVGPRLoadStoreSupported(MemSize, ValSize, MMO.getAlign())) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword and 8-/16-bit loads and stores are "
-        "implemented",
+        "dword-aligned whole-dword and naturally aligned 8-/16-bit loads and "
+        "stores are implemented",
         MI.getDebugLoc()));
     if (!IsStore)
       B.buildUndef(ValReg);

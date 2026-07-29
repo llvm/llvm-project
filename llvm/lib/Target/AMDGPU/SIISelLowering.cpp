@@ -13494,18 +13494,18 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
 
-  // Dword-aligned whole-dword and 8-/16-bit accesses are implemented. Reject
-  // anything else with a diagnostic (replacing the value with poison) instead
-  // of failing instruction selection. Both callers - operation legalization and
-  // the pre-ISel combine - replace the node with this result, so the diagnostic
-  // is emitted exactly once.
+  // Dword-aligned whole-dword and naturally aligned 8-/16-bit accesses are
+  // implemented. Reject anything else with a diagnostic (replacing the value
+  // with poison) instead of failing instruction selection. Both callers -
+  // operation legalization and the pre-ISel combine - replace the node with
+  // this result, so the diagnostic is emitted exactly once.
   auto reportUnsupported = [&]() -> SDValue {
     const Function &F = DAG.getMachineFunction().getFunction();
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword and 8-/16-bit loads and stores are "
-        "implemented",
+        "dword-aligned whole-dword and naturally aligned 8-/16-bit loads and "
+        "stores are implemented",
         DL.getDebugLoc()));
     if (isa<StoreSDNode>(MemOp))
       return MemOp->getChain();
@@ -13518,6 +13518,12 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   // AMDGPULowerIdxOps.
   if (BitWidth < 32) {
     if (BitWidth != 8 && BitWidth != 16)
+      return reportUnsupported();
+
+    // The access becomes a bit-field extract from (or insert into) the dword
+    // containing it, so it must not straddle a dword boundary. An 8-bit access
+    // never can; a 16-bit one only if it is 2-byte aligned.
+    if (MemOp->getAlign() < Align(BitWidth / 8))
       return reportUnsupported();
 
     // Bail out for sub-dword types we cannot handle.
