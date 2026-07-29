@@ -17,7 +17,7 @@ fsgnjn.d fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: register must be a FPR
 # Integer registers where FP regs are expected
 fadd.d a2, a1, a0 # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-1]]:8: note: register must be a FPR
-# CHECK: :[[@LINE-2]]:8: note: register must be a GPR when used as FPR
+# CHECK: :[[@LINE-2]]:8: note: register must be a GPR when used as an FP operand
 # CHECK: :[[@LINE-3]]:8: note: register must be an even-numbered GPR when used as an FP operand
 
 # FP registers where integer regs are expected

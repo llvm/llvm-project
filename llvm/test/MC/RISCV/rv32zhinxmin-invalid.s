@@ -9,7 +9,7 @@ fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: register must be a FPR
 fmv.x.h s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
-fcvt.h.s a100, a1 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as FPR
+fcvt.h.s a100, a1 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as an FP operand
 
 # Valid in Zhinx
 fmadd.h x10, x11, x12, x13, dyn # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zhinx' (Half Float in Integer){{$}}

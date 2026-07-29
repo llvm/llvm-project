@@ -9,11 +9,11 @@ fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: register must be a FPR
 fmv.x.h s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
-fadd.h a100, a2, a3 # CHECK: :[[@LINE]]:8: error: register must be a GPR when used as FPR
-fsgnjn.h a100, a2, a3 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as FPR
+fadd.h a100, a2, a3 # CHECK: :[[@LINE]]:8: error: register must be a GPR when used as an FP operand
+fsgnjn.h a100, a2, a3 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as an FP operand
 
 # Rounding mode when a register is expected
-fmadd.h x10, x11, x12, ree # CHECK: :[[@LINE]]:24: error: register must be a GPR when used as FPR
+fmadd.h x10, x11, x12, ree # CHECK: :[[@LINE]]:24: error: register must be a GPR when used as an FP operand
 
 # Invalid rounding modes
 fmadd.h x10, x11, x12, x13, ree # CHECK: :[[@LINE]]:29: error: operand must be a valid floating point rounding mode mnemonic

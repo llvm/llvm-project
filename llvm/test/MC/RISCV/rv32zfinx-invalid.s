@@ -10,11 +10,11 @@ fmv.x.w s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 fadd.d t1, t3, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
 
 # Invalid register names
-fadd.s a100, a2, a3 # CHECK: :[[@LINE]]:8: error: register must be a GPR when used as FPR
-fsgnjn.s a100, a2, a3 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as FPR
+fadd.s a100, a2, a3 # CHECK: :[[@LINE]]:8: error: register must be a GPR when used as an FP operand
+fsgnjn.s a100, a2, a3 # CHECK: :[[@LINE]]:10: error: register must be a GPR when used as an FP operand
 
 # Rounding mode when a register is expected
-fmadd.s x10, x11, x12, ree # CHECK: :[[@LINE]]:24: error: register must be a GPR when used as FPR
+fmadd.s x10, x11, x12, ree # CHECK: :[[@LINE]]:24: error: register must be a GPR when used as an FP operand
 
 # Invalid rounding modes
 fmadd.s x10, x11, x12, x13, ree # CHECK: :[[@LINE]]:29: error: operand must be a valid floating point rounding mode mnemonic
