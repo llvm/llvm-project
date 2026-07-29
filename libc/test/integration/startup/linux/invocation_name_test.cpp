@@ -1,9 +1,14 @@
-//===-- Integration test for program_invocation_name ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Integration test for program_invocation_name.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/program_invocation_name.h"
@@ -70,16 +75,33 @@ TEST_MAIN(int argc, char **argv, char **envp) {
 
     const char *self_path = argv[2];
     char *const child_argv[] = {
-        const_cast<char *>("invocation_name_no_slash"),
+        const_cast<char *>("/known/path/to/dir/"),
         const_cast<char *>("reexec4"),
+        const_cast<char *>(self_path),
         nullptr,
     };
     LIBC_NAMESPACE::execve(self_path, child_argv, envp);
     ASSERT_TRUE(false);
   }
 
-  if (argc == 2 && my_streq(argv[1], "reexec4")) {
-    // Step 4: Executed with a path without slashes.
+  if (argc == 3 && my_streq(argv[1], "reexec4")) {
+    // Step 4: Executed with a path ending in a slash.
+    ASSERT_TRUE(my_streq(LIBC_NAMESPACE::program_invocation_name,
+                         "/known/path/to/dir/"));
+    ASSERT_TRUE(my_streq(LIBC_NAMESPACE::program_invocation_short_name, ""));
+
+    const char *self_path = argv[2];
+    char *const child_argv[] = {
+        const_cast<char *>("invocation_name_no_slash"),
+        const_cast<char *>("reexec5"),
+        nullptr,
+    };
+    LIBC_NAMESPACE::execve(self_path, child_argv, envp);
+    ASSERT_TRUE(false);
+  }
+
+  if (argc == 2 && my_streq(argv[1], "reexec5")) {
+    // Step 5: Executed with a path without slashes.
     ASSERT_TRUE(LIBC_NAMESPACE::program_invocation_name ==
                 LIBC_NAMESPACE::program_invocation_short_name);
     ASSERT_TRUE(my_streq(LIBC_NAMESPACE::program_invocation_name,
