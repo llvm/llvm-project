@@ -1547,13 +1547,8 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    // Do not let a non-pointer (scalar/aggregate) element type clobber an
-    // already-deduced pointer element type for the same operand. A pointer
-    // that points to a pointer (e.g. a `T*&` reference parameter, deduced as
-    // pointer-to-pointer) must keep its pointer pointee; collapsing it to the
-    // pointee-of-the-pointee loses a level of indirection and corrupts every
-    // value that flows through it. The conflicting use is handled below by a
-    // localized spv_ptrcast instead.
+    // Do not let a non-pointer element type clobber an already-deduced pointer
+    // element type for the same operand.
     bool WouldClobberPtrWithNonPtr = Ty && isPointerTyOrWrapper(Ty) &&
                                      !isPointerTyOrWrapper(KnownElemTy) &&
                                      tracesToPointerAlloca(Op);
@@ -2217,15 +2212,6 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
     }
   }
 
-  // Never replace an already-deduced pointer pointee with a non-pointer one:
-  // a pointer that points to a pointer (e.g. a `T*&` reference parameter,
-  // deduced as pointer-to-pointer) must keep its pointer pointee. Collapsing
-  // it to the pointee-of-the-pointee loses a level of indirection and corrupts
-  // every value that flows through it. Such a conflicting use comes from a
-  // mis-deduced expected type; leave the operand untouched (it stays a typed
-  // pointer-to-pointer / untyped pointer that the use can consume) rather than
-  // rewriting the value's element type or emitting a bogus ptrcast that would
-  // re-introduce the collapsed type at the use site.
   if (PointerElemTy && isPointerTyOrWrapper(PointerElemTy) &&
       !isPointerTyOrWrapper(ExpectedElementType) &&
       tracesToPointerAlloca(Pointer))
