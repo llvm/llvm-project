@@ -147,36 +147,46 @@ template <class T>
 struct throwing_allocator {
   using value_type = T;
 
-  bool throw_on_copy_ = false;
+  bool throw_on_allocation_ = false;
+  int payload_              = 0;
 
   explicit throwing_allocator(bool throw_on_ctor = true) {
     if (throw_on_ctor)
       throw 0;
   }
 
-  explicit throwing_allocator(bool throw_on_ctor, bool throw_on_copy) : throw_on_copy_(throw_on_copy) {
+  explicit throwing_allocator(bool throw_on_ctor, bool throw_on_allocation)
+      : throw_on_allocation_(throw_on_allocation) {
     if (throw_on_ctor)
       throw 0;
   }
 
-  throwing_allocator(const throwing_allocator& rhs) : throw_on_copy_(rhs.throw_on_copy_) {
-    if (throw_on_copy_)
-      throw 0;
-  }
+  throwing_allocator(const throwing_allocator& rhs) TEST_NOEXCEPT
+      : throw_on_allocation_(rhs.throw_on_allocation_),
+        payload_(rhs.payload_) {}
 
   template <class U>
-  throwing_allocator(const throwing_allocator<U>& rhs) : throw_on_copy_(rhs.throw_on_copy_) {
-    if (throw_on_copy_)
-      throw 0;
-  }
+  throwing_allocator(const throwing_allocator<U>& rhs) TEST_NOEXCEPT
+      : throw_on_allocation_(rhs.throw_on_allocation_),
+        payload_(rhs.payload_) {}
 
-  T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
+  T* allocate(std::size_t n) {
+    if (throw_on_allocation_)
+      throw 0;
+    return std::allocator<T>().allocate(n);
+  }
   void deallocate(T* ptr, std::size_t n) { std::allocator<T>().deallocate(ptr, n); }
 
   template <class U>
-  friend bool operator==(const throwing_allocator&, const throwing_allocator<U>&) {
-    return true;
+  friend bool operator==(const throwing_allocator& lhs, const throwing_allocator<U>& rhs) {
+    return lhs.payload_ == rhs.payload_;
   }
+#if TEST_STD_VER < 20
+  template <class U>
+  friend bool operator!=(const throwing_allocator& lhs, const throwing_allocator<U>& rhs) {
+    return !(lhs == rhs);
+  }
+#endif
 };
 
 template <class T, class IterCat>
