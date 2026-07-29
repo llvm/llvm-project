@@ -891,7 +891,6 @@ body:             |
     STNT1D_4Z_STRIDED_IMM renamable $z16_z20_z24_z28, renamable $pn8, %stack.0, -9
     STNT1D_4Z_STRIDED_IMM renamable $z16_z20_z24_z28, renamable $pn8, %stack.0, 8
 
-    ; Store pseudos with out-of-range frame offsets.
     ST1B_2Z_IMM_PSEUDO renamable $z16_z17, renamable $pn8, %stack.0, -9
     STNT1D_2Z_IMM_PSEUDO renamable $z16_z24, renamable $pn8, %stack.0, 8
     ST1W_4Z_IMM_PSEUDO renamable $z16_z17_z18_z19, renamable $pn8, %stack.0, -9

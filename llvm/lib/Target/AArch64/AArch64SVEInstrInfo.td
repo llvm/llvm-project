@@ -4727,9 +4727,11 @@ defm WHILELO_CXX : sve2p1_int_while_rr_pn<"whilelo", 0b110, AArch64whilelo_pn_fl
 defm WHILELS_CXX : sve2p1_int_while_rr_pn<"whilels", 0b111, AArch64whilels_pn_flag>;
 } // End HasSVE2p1_or_StreamingSME2
 
+// Override the default contiguous-only patterns when SME2 is available,
+// allow register allocation to choose a strided or contiguous tuple.
 multiclass store_pn_x2_sme2<ValueType Ty, SDPatternOperator Store,
                              Instruction RegImmPseudo> {
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 2 in
     // scalar + immediate (mul vl)
     def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg,
                 (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
@@ -4737,7 +4739,6 @@ multiclass store_pn_x2_sme2<ValueType Ty, SDPatternOperator Store,
                   (REG_SEQUENCE ZPR2StridedOrContiguous,
                                 Ty:$vec0, zsub0, Ty:$vec1, zsub1),
                   PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
-  }
 
   let AddedComplexity = 1 in
   def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg, GPR64:$base),
@@ -4749,7 +4750,7 @@ multiclass store_pn_x2_sme2<ValueType Ty, SDPatternOperator Store,
 
 multiclass store_pn_x4_sme2<ValueType Ty, SDPatternOperator Store,
                              Instruction RegImmPseudo> {
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 2 in
     // scalar + immediate (mul vl)
     def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
                 aarch64svcount:$PNg,
@@ -4759,7 +4760,6 @@ multiclass store_pn_x4_sme2<ValueType Ty, SDPatternOperator Store,
                                 Ty:$vec0, zsub0, Ty:$vec1, zsub1,
                                 Ty:$vec2, zsub2, Ty:$vec3, zsub3),
                   PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
-  }
 
   let AddedComplexity = 1 in
   def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
