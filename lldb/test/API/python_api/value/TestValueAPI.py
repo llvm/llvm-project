@@ -319,6 +319,21 @@ class ValueAPITestCase(TestBase):
                 self.assertTrue(reg_value.IsValid())
                 reg_name = reg_value.GetName()
 
+                if (
+                    self.getArchitecture() in ["amd64", "i386", "x86_64"]
+                    and reg_name == "sp"
+                ):
+                    # x86 has "rsp", and "sp" which is a subset of "rsp". Then there is
+                    # the ABI name "sp", which LLDB resolves to "rsp", not to the
+                    # architectural register "sp".
+                    # See https://github.com/llvm/llvm-project/issues/212778.
+                    sp_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
+                    self.assertTrue(sp_with_name_index < num_registers)
+                    rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
+                    self.assertTrue(rsp_with_name_index < num_registers)
+                    self.assertEqual(sp_with_name_index, rsp_with_name_index)
+                    continue
+
                 # GetIndexOfChildWithName should return the same index.
                 child_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
                 self.assertTrue(child_with_name_index < num_registers)
