@@ -10038,6 +10038,12 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       auto *ToD = CreatedToD;
       ImportedDecls.erase(Pos);
 
+      // Also scrub the imported type mapping, if applicable. Import(Type*) can
+      // cache a type mapping to a declaration that ultimately fails.
+      if (const auto *FromTD = dyn_cast<TagDecl>(FromD))
+        if (const Type *FromTy = getFromContext().getCanonicalTagType(FromTD).getTypePtr())
+          ImportedTypes.erase(FromTy);
+
       // ImportedDecls and ImportedFromDecls are not symmetric.  It may happen
       // (e.g. with namespaces) that several decls from the 'from' context are
       // mapped to the same decl in the 'to' context.  If we removed entries

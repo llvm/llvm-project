@@ -6608,6 +6608,42 @@ TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
   EXPECT_FALSE(ImportedOK);
 }
 
+// A member whose signature refers back to the enclosing class (e.g. a
+// copy constructor's `const Self&` parameter) can succeed and cache the
+// class's *type* before a later, failing member causes the class's own
+// Decl import to fail as a whole. Check that this doesn't leave a stale,
+// "successfully imported" entry for the class's type behind: any later,
+// independent request to import that type must also fail, not silently
+// hand back the half-built class.
+TEST_P(ErrorHandlingTest, ImportedTypeCacheIsInvalidatedOnFailure) {
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+      class X {
+        void ok(const X &) {}          // Succeeds; imports X's own type
+                                        // as a side effect, before X's
+                                        // own import is known to fail.
+        void bad() { )") + ErroneousStmt + R"( }  // Fails to import.
+      };
+      )",
+                                          Lang_CXX03);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+
+  CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX03);
+  EXPECT_FALSE(ImportedX); // X itself fails to import.
+
+  // The bug: without the fix, a later, independent request to import X's
+  // type silently succeeds, returning the half-built X as if nothing had
+  // gone wrong, because ASTImporter::ImportedTypes was never scrubbed
+  // when X's own Decl import failed.
+  ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+  const Type *FromXTy = FromTU->getASTContext().getCanonicalTagType(FromX)->getTypePtr();
+  ASSERT_TRUE(FromXTy);
+  Expected<const Type *> ToTyOrErr = Importer->Import(FromXTy);
+  EXPECT_FALSE(static_cast<bool>(ToTyOrErr));
+  if (!ToTyOrErr)
+    llvm::consumeError(ToTyOrErr.takeError());
+}
+
 // Check that an error propagates to the dependent AST nodes.
 // In the below code it means that an error in X should propagate to A.
 // And even to F since the containing A is erroneous.
