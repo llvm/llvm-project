@@ -71,9 +71,10 @@ task my_task() {
   // After resume:
   // CHECK: call x86_thiscallcc void @"?await_resume@Awaiter@@QAE?AUNoisy@@XZ"(ptr {{[^,]*}} %{{.*}}, ptr dead_on_unwind writable sret(%struct.Noisy) align 4 %[[MTE_X]])
   
-  // Allocate inalloca:
+  // Allocate inalloca and start its lifetime:
   // CHECK: %[[STACKSAVE:.+]] = call ptr @llvm.stacksave.p0()
   // CHECK: %[[ARGMEM:.+]] = alloca inalloca <{ %struct.Noisy, %struct.Noisy }>, align 4, !coro.outside.frame ![[METADATA_NUM:[0-9]+]]
+  // CHECK: call void @llvm.lifetime.start.p0(ptr %[[ARGMEM]])
   
   // Move y (pre-evaluated Noisy(42)) to inalloca:
   // CHECK: %[[GEP_Y:.+]] = getelementptr inbounds nuw <{ %struct.Noisy, %struct.Noisy }>, ptr %[[ARGMEM]], i32 0, i32 1
@@ -83,8 +84,7 @@ task my_task() {
   // CHECK: %[[GEP_X:.+]] = getelementptr inbounds nuw <{ %struct.Noisy, %struct.Noisy }>, ptr %[[ARGMEM]], i32 0, i32 0
   // CHECK: call x86_thiscallcc noundef ptr @"??0Noisy@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} %[[GEP_X]], ptr noundef nonnull align 4 dereferenceable(4) %[[MTE_X]])
 
-  // Lifetime start and call:
-  // CHECK: call void @llvm.lifetime.start.p0(ptr %[[ARGMEM]])
+  // Call:
   // CHECK: call void @"?consume_two@@YAXUNoisy@@0@Z"(ptr inalloca(<{ %struct.Noisy, %struct.Noisy }>) %[[ARGMEM]])
   
   consume_two(co_await Awaiter{}, Noisy(42));

@@ -5725,7 +5725,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     assert(AI->isUsedWithInAlloca() && !AI->isStaticAlloca());
     ArgMemory = RawAddress(AI, ArgStruct, Align);
     if (isCoroutine()) {
+      CGBuilderTy::InsertPoint SavedIP = Builder.saveIP();
+      if (llvm::Instruction *Next = AI->getNextNode()) {
+        Builder.SetInsertPoint(Next);
+      } else {
+        Builder.SetInsertPoint(AI->getParent());
+      }
       EmitLifetimeStart(AI);
+      Builder.restoreIP(SavedIP);
     }
   }
 
