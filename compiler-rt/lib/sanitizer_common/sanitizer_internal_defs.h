@@ -500,5 +500,8 @@ using namespace __sanitizer;
 namespace __memprof {
 using namespace __sanitizer;
 }
+namespace __tsan_deadlock {
+using namespace __sanitizer;
+}
 
 #endif  // SANITIZER_DEFS_H

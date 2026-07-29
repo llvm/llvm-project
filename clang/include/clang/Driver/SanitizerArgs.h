@@ -106,6 +106,9 @@ public:
   }
   bool needsTysanRt() const { return Sanitizers.has(SanitizerKind::Type); }
   bool needsTsanRt() const { return Sanitizers.has(SanitizerKind::Thread); }
+  bool needsDeadlockRt() const {
+    return Sanitizers.has(SanitizerKind::ThreadDeadlock);
+  }
   bool needsMsanRt() const { return Sanitizers.has(SanitizerKind::Memory); }
   bool needsFuzzer() const { return Sanitizers.has(SanitizerKind::Fuzzer); }
   bool needsLsanRt() const {

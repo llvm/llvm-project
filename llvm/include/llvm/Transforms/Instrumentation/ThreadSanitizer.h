@@ -20,13 +20,27 @@ namespace llvm {
 class Function;
 class Module;
 
+struct ThreadSanitizerOptions {
+  bool InstrumentMemoryAccesses = true;
+  bool InstrumentAtomics = true;
+  bool InstrumentMemIntrinsics = true;
+  bool AlwaysInstrumentFuncEntryExit = false;
+};
+
 /// A function pass for tsan instrumentation.
 ///
 /// Instruments functions to detect race conditions reads. This function pass
 /// inserts calls to runtime library functions. If the functions aren't declared
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
-struct ThreadSanitizerPass : public RequiredPassInfoMixin<ThreadSanitizerPass> {
+class ThreadSanitizerPass : public RequiredPassInfoMixin<ThreadSanitizerPass> {
+public:
+  LLVM_ABI
+  ThreadSanitizerPass(const ThreadSanitizerOptions &Options = {})
+      : Options(Options) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+private:
+  ThreadSanitizerOptions Options;
 };
 
 /// A module pass for tsan instrumentation.
