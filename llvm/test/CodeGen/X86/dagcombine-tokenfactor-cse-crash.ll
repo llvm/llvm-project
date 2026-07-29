@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+avx2 -o /dev/null
+; RUN: llc < %s -o /dev/null
 ;
 ; Verify that CSE-reusing a TokenFactor during broadcast-load combining does not
 ; introduce a self-reference while replacing the old chain.
