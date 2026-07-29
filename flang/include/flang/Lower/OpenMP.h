@@ -113,6 +113,10 @@ namespace omp {
 const Fortran::semantics::Symbol *
 resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
                             AbstractConverter &converter);
+
+/// Return the i1 `novariants` value of an enclosing `omp.dispatch`, or a null
+/// Value if there is none.
+mlir::Value getEnclosingDispatchNovariants(mlir::OpBuilder &builder);
 } // namespace omp
 
 // Materialize (idempotently) the omp.declare_reduction op for one already-

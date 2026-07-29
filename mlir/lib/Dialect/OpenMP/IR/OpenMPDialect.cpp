@@ -5103,7 +5103,7 @@ void MaskedOp::build(OpBuilder &builder, OperationState &state,
 
 void DispatchOp::build(OpBuilder &builder, OperationState &state,
                        const DispatchOperands &clauses) {
-  DispatchOp::build(builder, state, clauses.nowait);
+  DispatchOp::build(builder, state, clauses.novariants, clauses.nowait);
 }
 
 //===----------------------------------------------------------------------===//

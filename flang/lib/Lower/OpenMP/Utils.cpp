@@ -1450,6 +1450,15 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   return variants[bestIdx];
 }
 
+mlir::Value getEnclosingDispatchNovariants(mlir::OpBuilder &builder) {
+  mlir::Block *block = builder.getInsertionBlock();
+  for (mlir::Operation *op = block ? block->getParentOp() : nullptr; op;
+       op = op->getParentOp())
+    if (auto dispatch = mlir::dyn_cast<mlir::omp::DispatchOp>(op))
+      return dispatch.getNovariants();
+  return {};
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

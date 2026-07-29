@@ -6,7 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s
 
 !CHECK-LABEL: define void @_QMfuncsPfoo_variant()
 !CHECK: call ptr @_FortranAioBeginExternalListOutput
@@ -19,6 +19,18 @@
 !CHECK: br label %omp.dispatch.region
 !CHECK: omp.dispatch.region:
 !CHECK: call void @_QMfuncsPfoo_variant()
+!CHECK: br label %omp.region.cont
+!CHECK: omp.region.cont:
+
+! novariants: runtime select of base/variant address, then indirect call.
+!CHECK-LABEL: define void @test_novariants_(
+!CHECK-SAME: ptr noalias %[[ARG:[0-9]+]])
+!CHECK: %[[LOAD:.*]] = load i32, ptr %[[ARG]], align 4
+!CHECK: %[[COND:.*]] = icmp ne i32 %[[LOAD]], 0
+!CHECK: br label %omp.dispatch.region
+!CHECK: omp.dispatch.region:
+!CHECK: %[[TARGET:.*]] = select i1 %[[COND]], ptr @_QMfuncsPfoo_dispatch, ptr @_QMfuncsPfoo_variant
+!CHECK: call void %[[TARGET]]()
 !CHECK: br label %omp.region.cont
 !CHECK: omp.region.cont:
 
@@ -48,3 +60,13 @@ program dispatch_test
   call foo_dispatch()
 
 end program
+
+subroutine test_novariants(cond)
+  use funcs
+  implicit none
+  logical :: cond
+
+  !$omp dispatch novariants(cond)
+  call foo_dispatch()
+
+end subroutine

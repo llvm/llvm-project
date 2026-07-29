@@ -60,4 +60,22 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     }
     return
   }
+  // novariants: runtime select of base/variant address, then indirect call.
+  // CHECK-LABEL: func.func @omp_dispatch_novariants
+  func.func @omp_dispatch_novariants(%cond : i1) {
+    // CHECK: omp.dispatch novariants(%[[COND:.*]]) {
+    omp.dispatch novariants(%cond) {
+      // CHECK: %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
+      %variant = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
+      // CHECK: %[[BASE:.*]] = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
+      %base = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
+      // CHECK: %[[TARGET:.*]] = arith.select %[[COND]], %[[BASE]], %[[VARIANT]] : () -> ()
+      %target = arith.select %cond, %base, %variant : () -> ()
+      // CHECK: fir.call %[[TARGET]]()
+      fir.call %target() fastmath<contract> : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    return
+  }
 }

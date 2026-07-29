@@ -503,6 +503,34 @@ class OpenMP_FinalClauseSkip<
 def OpenMP_FinalClause : OpenMP_FinalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [7.6.1] `novariants` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NovariantsClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<I1>:$novariants
+  );
+
+  let optAssemblyFormat = [{
+    `novariants` `(` $novariants `)`
+  }];
+
+  let description = [{
+    When a `novariants` clause is present and its expression evaluates to
+    `true`, no function variant is selected for the target call of the dispatch
+    region, even if one would be selected normally. The use of a variable in a
+    `novariants` clause expression causes an implicit reference to the variable
+    in all enclosing constructs.
+  }];
+}
+
+def OpenMP_NovariantsClause : OpenMP_NovariantsClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [12.6.1] `grainsize` clause
 //===----------------------------------------------------------------------===//
 

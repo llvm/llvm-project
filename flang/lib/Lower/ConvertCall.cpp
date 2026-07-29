@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -35,6 +36,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -576,6 +578,31 @@ Fortran::lower::genCallOpAndResult(
       funcSymbolAttr = {}; // This marks it as indirect call
     }
     funcType = *modifiedFuncType;
+  }
+
+  // OpenMP dispatch `novariants`: at runtime pick base (cond true) or variant
+  // (false) via an indirect call, evaluating arguments once. Both targets share
+  // one signature; revisit if declare-variant `adjust_args`/`append_args` land.
+  if (funcSymbolAttr) {
+    if (mlir::Value novariantsCond =
+            Fortran::lower::omp::getEnclosingDispatchNovariants(builder)) {
+      const Fortran::semantics::Symbol *baseSym =
+          caller.getCallDescription().proc().GetSymbol();
+      const Fortran::semantics::Symbol *selectedSym =
+          caller.getProcedureSymbol();
+      if (baseSym && selectedSym &&
+          &baseSym->GetUltimate() != &selectedSym->GetUltimate()) {
+        mlir::Value variantAddr =
+            fir::AddrOfOp::create(builder, loc, funcType, funcSymbolAttr);
+        mlir::Value baseAddr =
+            fir::AddrOfOp::create(builder, loc, funcType,
+                                  builder.getSymbolRefAttr(converter.mangleName(
+                                      baseSym->GetUltimate())));
+        funcPointer = mlir::arith::SelectOp::create(
+            builder, loc, novariantsCond, baseAddr, variantAddr);
+        funcSymbolAttr = {}; // Mark as an indirect call.
+      }
+    }
   }
 
   llvm::SmallVector<mlir::Value> operands;

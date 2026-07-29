@@ -26,6 +26,7 @@ end module funcs
 program dispatch_test
   use funcs
   implicit none
+  logical :: cond
 
   ! A call outside any dispatch region targets the base procedure.
   !HLFIR: fir.call @_QMfuncsPfoo_dispatch() {{.*}}: () -> ()
@@ -41,6 +42,20 @@ program dispatch_test
   !HLFIR: omp.dispatch nowait {
   !$omp dispatch nowait
   !HLFIR:   fir.call @_QMfuncsPfoo_variant() {{.*}}: () -> ()
+    call foo_dispatch()
+  !HLFIR:   omp.terminator
+  !HLFIR: }
+
+  ! novariants: runtime select of base/variant address, then indirect call, so
+  ! the arguments are evaluated once.
+  !HLFIR:   %[[COND:.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
+  !HLFIR:   %[[COND_I1:.*]] = fir.convert %[[COND]] : (!fir.logical<4>) -> i1
+  !HLFIR: omp.dispatch novariants(%[[COND_I1]]) {
+  !$omp dispatch novariants(cond)
+  !HLFIR:   %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
+  !HLFIR:   %[[BASE:.*]] = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
+  !HLFIR:   %[[TARGET:.*]] = arith.select %[[COND_I1]], %[[BASE]], %[[VARIANT]] : () -> ()
+  !HLFIR:   fir.call %[[TARGET]]() {{.*}}: () -> ()
     call foo_dispatch()
   !HLFIR:   omp.terminator
   !HLFIR: }

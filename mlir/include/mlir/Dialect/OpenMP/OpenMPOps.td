@@ -2331,9 +2331,8 @@ def MaskedOp : OpenMP_Op<"masked", traits = [
 def DispatchOp : OpenMP_Op<"dispatch", traits = [
     NoRegionArguments
   ], clauses = [
-    // TODO: Complete clause list (device, depend, is_device_ptr, nocontext,
-    // novariants).
-    OpenMP_NowaitClause
+    // TODO: Complete clause list (device, depend, is_device_ptr, nocontext).
+    OpenMP_NovariantsClause, OpenMP_NowaitClause
   ], singleRegion = true> {
   let summary = "dispatch construct";
   let description = [{

@@ -2473,13 +2473,14 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
 
 static void genDispatchClauses(lower::AbstractConverter &converter,
                                semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::DispatchOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNovariants(stmtCtx, clauseOps);
   cp.processNowait(clauseOps);
   cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
-                 clause::Nocontext, clause::Novariants>(
-      loc, llvm::omp::Directive::OMPD_dispatch);
+                 clause::Nocontext>(loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
 static void genFlushClauses(lower::AbstractConverter &converter,
@@ -2999,14 +3000,14 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, nameAttr);
 }
 
-static mlir::omp::DispatchOp
-genDispatchOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-              semantics::SemanticsContext &semaCtx,
-              lower::pft::Evaluation &eval, mlir::Location loc,
-              const ConstructQueue &queue,
-              ConstructQueue::const_iterator item) {
+static mlir::omp::DispatchOp genDispatchOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   mlir::omp::DispatchOperands clauseOps;
-  genDispatchClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     clauseOps);
 
   return genOpWithBody<mlir::omp::DispatchOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -4915,7 +4916,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_dispatch:
-    newOp = genDispatchOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    newOp = genDispatchOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
+                          queue, item);
     break;
   case llvm::omp::Directive::OMPD_distribute:
     newOp = genStandaloneDistribute(converter, symTable, stmtCtx, semaCtx, eval,

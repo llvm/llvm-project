@@ -51,5 +51,36 @@ func.func @omp_dispatch_nowait(%x : memref<i32>) -> () {
   return
 }
 
+// novariants clause round-trip; the frontend materializes the runtime
+// base/variant selection inside the region.
+// CHECK-LABEL: func.func @omp_dispatch_novariants
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_novariants(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch novariants(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch novariants(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// novariants and nowait together.
+// CHECK-LABEL: func.func @omp_dispatch_novariants_nowait
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_novariants_nowait(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch novariants(%[[COND]]) nowait {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch novariants(%cond) nowait {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: func.func private @variant(memref<i32>)
 func.func private @variant(memref<i32>) -> ()
