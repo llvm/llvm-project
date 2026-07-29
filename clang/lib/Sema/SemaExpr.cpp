@@ -6273,6 +6273,31 @@ static bool isWin32InAllocaRecord(ASTContext &Context, QualType Ty) {
 
   return true;
 }
+static ExprResult InitializeAndBypassArg(Sema &S, const InitializedEntity &Entity,
+                                         Expr *Arg, bool NeedsBypass,
+                                         bool IsListInitialization,
+                                         bool AllowExplicit) {
+  Expr *PreBypassArg = Arg;
+  if (NeedsBypass) {
+    ExprResult Materialized =
+        S.CreateMaterializeTemporaryExpr(Arg->getType(), Arg, false);
+    if (Materialized.isInvalid())
+      return ExprError();
+    PreBypassArg = Materialized.get();
+  }
+
+  ExprResult ArgE =
+      S.PerformCopyInitialization(Entity, SourceLocation(), PreBypassArg,
+                                  IsListInitialization, AllowExplicit);
+  if (ArgE.isInvalid())
+    return ExprError();
+
+  Expr *Result = ArgE.getAs<Expr>();
+  if (NeedsBypass) {
+    Result = CoroutineSuspendParameterBypassExpr::Create(S.Context, PreBypassArg, Result);
+  }
+  return Result;
+}
 
 bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   const FunctionProtoType *Proto,
@@ -6286,6 +6311,21 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     for (const Expr *A : Args) {
       if (A && A->containsCoroutineSuspendPoints()) {
         CallHasSuspend = true;
+        break;
+      }
+    }
+  }
+  bool CallUsesInAlloca = false;
+  for (unsigned i = 0; i < NumParams; i++) {
+    if (isWin32InAllocaRecord(Context, Proto->getParamType(i))) {
+      CallUsesInAlloca = true;
+      break;
+    }
+  }
+  if (!CallUsesInAlloca && Proto->isVariadic()) {
+    for (size_t i = NumParams; i < Args.size(); i++) {
+      if (Args[i] && isWin32InAllocaRecord(Context, Args[i]->getType())) {
+        CallUsesInAlloca = true;
         break;
       }
     }
@@ -6349,28 +6389,13 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                         : diag::warn_obt_discarded_at_function_boundary)
             << Arg->getType() << ProtoArgType;
       }
-      bool NeedsBypass = CallHasSuspend && Arg->isPRValue() &&
-                         isWin32InAllocaRecord(Context, ProtoArgType);
-      Expr *PreBypassArg = Arg;
-      if (NeedsBypass) {
-        ExprResult Materialized =
-            CreateMaterializeTemporaryExpr(Arg->getType(), Arg, false);
-        if (!Materialized.isInvalid())
-          PreBypassArg = Materialized.get();
-      }
-
-      ExprResult ArgE =
-          PerformCopyInitialization(Entity, SourceLocation(), PreBypassArg,
-                                    IsListInitialization, AllowExplicit);
+      bool NeedsBypass = CallUsesInAlloca && CallHasSuspend &&
+                         (!ProtoArgType->isReferenceType() || Arg->isPRValue());
+      ExprResult ArgE = InitializeAndBypassArg(*this, Entity, Arg, NeedsBypass,
+                                               IsListInitialization, AllowExplicit);
       if (ArgE.isInvalid())
         return true;
-
       Arg = ArgE.getAs<Expr>();
-
-      if (NeedsBypass) {
-        Arg = CoroutineSuspendParameterBypassExpr::Create(Context, PreBypassArg,
-                                                          Arg);
-      }
     } else {
       assert(Param && "can't use default arguments without a known callee");
 
@@ -6410,7 +6435,18 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       for (Expr *A : Args.slice(ArgIx)) {
         ExprResult Arg = DefaultVariadicArgumentPromotion(A, CallType, FDecl);
         Invalid |= Arg.isInvalid();
-        AllArgs.push_back(Arg.get());
+        if (!Arg.isInvalid()) {
+          Expr *E = Arg.get();
+          bool NeedsBypass = CallUsesInAlloca && CallHasSuspend && E->isPRValue();
+          if (NeedsBypass) {
+            InitializedEntity ArgEntity =
+                InitializedEntity::InitializeTemporary(E->getType());
+            ExprResult ArgE = InitializeAndBypassArg(*this, ArgEntity, E, true, false, false);
+            if (!ArgE.isInvalid())
+              E = ArgE.getAs<Expr>();
+          }
+          AllArgs.push_back(E);
+        }
       }
     }
 

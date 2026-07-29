@@ -239,6 +239,7 @@ private:
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
   mutable bool IsUsed;
+  const Expr *MoveExpr = nullptr;
 
 public:
   QualType Ty;
@@ -269,6 +270,10 @@ public:
   bool isAggregate() const { return HasLV || RV.isAggregate(); }
 
   void copyInto(CodeGenFunction &CGF, Address A) const;
+
+  bool isBypassed() const { return MoveExpr != nullptr; }
+  void setMoveExpr(const Expr *E) { MoveExpr = E; }
+  const Expr *getMoveExpr() const { return MoveExpr; }
 };
 
 /// CallArgList - Type for representing both the value and type of

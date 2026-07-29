@@ -5204,9 +5204,6 @@ void CodeGenFunction::EmitCallArgs(
     Args.reverseWritebacks();
   }
 
-  for (const auto *MTE : MTEsToPreEvaluate) {
-    PreEvaluatedMaterializedTemporaries.erase(MTE);
-  }
 }
 
 namespace {
@@ -5283,15 +5280,35 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
+  bool IsBypassed = false;
+  const Expr *MoveExpr = nullptr;
+  const Expr *SubExpr = E;
+  if (auto *Bypass = dyn_cast<CoroutineSuspendParameterBypassExpr>(E)) {
+    IsBypassed = true;
+    MoveExpr = Bypass->getMoveExpr();
+    SubExpr = Bypass->getSubExpr();
+  }
+
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);
-    return args.add(EmitReferenceBindingToExpr(E), type);
+    RValue RV = EmitReferenceBindingToExpr(SubExpr);
+    args.add(RV, type);
+    if (IsBypassed)
+      args.back().setMoveExpr(MoveExpr);
+    return;
   }
 
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
+
+  if (IsBypassed && HasAggregateEvalKind) {
+    LValue LV = getPreEvaluatedTemporary(cast<MaterializeTemporaryExpr>(SubExpr));
+    args.addUncopiedAggregate(LV, type);
+    args.back().setMoveExpr(MoveExpr);
+    return;
+  }
 
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
@@ -5313,7 +5330,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
 
-    EmitAggExpr(E, Slot);
+    EmitAggExpr(SubExpr, Slot);
     RValue RV = Slot.asRValue();
     args.add(RV, type);
 
@@ -5332,19 +5349,21 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   }
 
   if (HasAggregateEvalKind) {
-    auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+    auto *ICE = dyn_cast<ImplicitCastExpr>(SubExpr);
     if (ICE && ICE->getCastKind() == CK_LValueToRValue &&
         ICE->getSubExpr()->getType().getAddressSpace() !=
             LangAS::hlsl_constant &&
         !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
-      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
+      LValue L = EmitLValue(cast<CastExpr>(SubExpr)->getSubExpr());
       assert(L.isSimple());
       args.addUncopiedAggregate(L, type);
       return;
     }
   }
 
-  args.add(EmitAnyExprToTemp(E), type);
+  args.add(EmitAnyExprToTemp(SubExpr), type);
+  if (IsBypassed)
+    args.back().setMoveExpr(MoveExpr);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {
@@ -5653,6 +5672,7 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -5815,30 +5835,53 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       assert(NumIRArgs == 0);
       assert(getTarget().getTriple().getArch() == llvm::Triple::x86);
       if (I->isAggregate()) {
-        RawAddress Addr = I->hasLValue()
-                              ? I->getKnownLValue().getAddress()
-                              : I->getKnownRValue().getAggregateAddress();
-        llvm::Instruction *Placeholder =
-            cast<llvm::Instruction>(Addr.getPointer());
-
-        if (!ArgInfo.getInAllocaIndirect()) {
-          // Replace the placeholder with the appropriate argument slot GEP.
-          CGBuilderTy::InsertPoint IP = Builder.saveIP();
-          Builder.SetInsertPoint(Placeholder);
-          Addr = Builder.CreateStructGEP(ArgMemory,
-                                         ArgInfo.getInAllocaFieldIndex());
-          Builder.restoreIP(IP);
+        if (I->isBypassed()) {
+          if (!ArgInfo.getInAllocaIndirect()) {
+            Address Addr = Builder.CreateStructGEP(ArgMemory,
+                                                   ArgInfo.getInAllocaFieldIndex());
+            AggValueSlot Slot = AggValueSlot::forAddr(
+                Addr, I->Ty.getQualifiers(),
+                AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+                AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+            EmitAggExpr(I->getMoveExpr(), Slot);
+          } else {
+            RawAddress Addr =
+                CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
+            AggValueSlot Slot = AggValueSlot::forAddr(
+                Addr, I->Ty.getQualifiers(),
+                AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+                AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+            EmitAggExpr(I->getMoveExpr(), Slot);
+            Address ArgSlot = Builder.CreateStructGEP(
+                ArgMemory, ArgInfo.getInAllocaFieldIndex());
+            Builder.CreateStore(Addr.getPointer(), ArgSlot);
+          }
         } else {
-          // For indirect things such as overaligned structs, replace the
-          // placeholder with a regular aggregate temporary alloca. Store the
-          // address of this alloca into the struct.
-          Addr =
-              CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
-          Address ArgSlot = Builder.CreateStructGEP(
-              ArgMemory, ArgInfo.getInAllocaFieldIndex());
-          Builder.CreateStore(Addr.getPointer(), ArgSlot);
+          RawAddress Addr = I->hasLValue()
+                                ? I->getKnownLValue().getAddress()
+                                : I->getKnownRValue().getAggregateAddress();
+          llvm::Instruction *Placeholder =
+              cast<llvm::Instruction>(Addr.getPointer());
+
+          if (!ArgInfo.getInAllocaIndirect()) {
+            // Replace the placeholder with the appropriate argument slot GEP.
+            CGBuilderTy::InsertPoint IP = Builder.saveIP();
+            Builder.SetInsertPoint(Placeholder);
+            Addr = Builder.CreateStructGEP(ArgMemory,
+                                           ArgInfo.getInAllocaFieldIndex());
+            Builder.restoreIP(IP);
+          } else {
+            // For indirect things such as overaligned structs, replace the
+            // placeholder with a regular aggregate temporary alloca. Store the
+            // address of this alloca into the struct.
+            Addr =
+                CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
+            Address ArgSlot = Builder.CreateStructGEP(
+                ArgMemory, ArgInfo.getInAllocaFieldIndex());
+            Builder.CreateStore(Addr.getPointer(), ArgSlot);
+          }
+          deferPlaceholderReplacement(Placeholder, Addr.getPointer());
         }
-        deferPlaceholderReplacement(Placeholder, Addr.getPointer());
       } else if (ArgInfo.getInAllocaIndirect()) {
         // Make a temporary alloca and store the address of it into the argument
         // struct.

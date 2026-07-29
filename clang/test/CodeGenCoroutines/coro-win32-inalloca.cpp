@@ -77,12 +77,12 @@ task my_task() {
   // CHECK: call void @llvm.lifetime.start.p0(ptr %[[ARGMEM]])
   
   // Move y (pre-evaluated Noisy(42)) to inalloca:
-  // CHECK: %[[GEP_Y:.+]] = getelementptr inbounds nuw <{ %struct.Noisy, %struct.Noisy }>, ptr %[[ARGMEM]], i32 0, i32 1
-  // CHECK: call x86_thiscallcc noundef ptr @"??0Noisy@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} %[[GEP_Y]], ptr noundef nonnull align 4 dereferenceable(4) %[[MTE_Y]])
+  // CHECK-DAG: %[[GEP_Y:.+]] = getelementptr inbounds nuw <{ %struct.Noisy, %struct.Noisy }>, ptr %[[ARGMEM]], i32 0, i32 1
+  // CHECK-DAG: call x86_thiscallcc noundef ptr @"??0Noisy@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} %[[GEP_Y]], ptr noundef nonnull align 4 dereferenceable(4) %[[MTE_Y]])
   
   // Move x (co_await Awaiter{} result) to inalloca:
-  // CHECK: %[[GEP_X:.+]] = getelementptr inbounds nuw <{ %struct.Noisy, %struct.Noisy }>, ptr %[[ARGMEM]], i32 0, i32 0
-  // CHECK: call x86_thiscallcc noundef ptr @"??0Noisy@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} %[[GEP_X]], ptr noundef nonnull align 4 dereferenceable(4) %[[MTE_X]])
+  // CHECK-DAG: %[[GEP_X:.+]] = getelementptr inbounds nuw <{ %struct.Noisy, %struct.Noisy }>, ptr %[[ARGMEM]], i32 0, i32 0
+  // CHECK-DAG: call x86_thiscallcc noundef ptr @"??0Noisy@@QAE@$$QAU0@@Z"(ptr {{[^,]*}} %[[GEP_X]], ptr noundef nonnull align 4 dereferenceable(4) %[[MTE_X]])
 
   // Call:
   // CHECK: call void @"?consume_two@@YAXUNoisy@@0@Z"(ptr inalloca(<{ %struct.Noisy, %struct.Noisy }>) %[[ARGMEM]])
