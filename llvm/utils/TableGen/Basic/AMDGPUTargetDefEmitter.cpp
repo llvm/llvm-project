@@ -200,6 +200,29 @@ static void emitR600(raw_ostream &OS, const RecordKeeper &RK) {
         "#undef R600_GPU_ALIAS\n";
 }
 
+// Return \p Entries with the generic-family entries moved after the non-generic
+// ones, each group keeping definition order. The GPUKind enum and GPUInfo table
+// are positional and rely on the generics forming a contiguous block at the
+// end, so both are emitted in this order.
+static std::vector<GPUEntry>
+orderGenericsLast(ArrayRef<GPUEntry> Entries,
+                  const StringMap<const Record *> &Canonicals) {
+  std::vector<GPUEntry> Ordered;
+  Ordered.reserve(Entries.size());
+
+  for (const GPUEntry &E : Entries) {
+    if (!E.isGeneric(Canonicals))
+      Ordered.push_back(E);
+  }
+
+  for (const GPUEntry &E : Entries) {
+    if (E.isGeneric(Canonicals))
+      Ordered.push_back(E);
+  }
+
+  return Ordered;
+}
+
 static void emitAMDGPUEntry(raw_ostream &OS, const GPUEntry &E) {
   StringRef Name = E.Rec->getValueAsString("Name");
   if (E.IsAlias) {
@@ -232,18 +255,8 @@ static void emitAMDGPU(raw_ostream &OS, const RecordKeeper &RK) {
         "#define AMDGPU_GPU_ALIAS(NAME, ENUM)\n"
         "#endif\n\n";
 
-  // The GPUKind enum is positional and code relies on the generic targets being
-  // a contiguous block at the end, so emit all non-generic entries first, then
-  // the generics, each group preserving TableGen definition order.
-  for (const GPUEntry &E : Entries) {
-    if (!E.isGeneric(Canonicals))
-      emitAMDGPUEntry(OS, E);
-  }
-
-  for (const GPUEntry &E : Entries) {
-    if (E.isGeneric(Canonicals))
-      emitAMDGPUEntry(OS, E);
-  }
+  for (const GPUEntry &E : orderGenericsLast(Entries, Canonicals))
+    emitAMDGPUEntry(OS, E);
 
   OS << "\n#undef AMDGPU_GPU\n"
         "#undef AMDGPU_GPU_ALIAS\n";
@@ -255,16 +268,16 @@ static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK) {
   if (Entries.empty())
     return;
 
-  // Canonicals only (aliases share a canonical's GPUKind row), in the same
-  // non-generic-then-generic order as the GPUKind enum.
-  std::vector<const Record *> Canon;
+  StringMap<const Record *> Canonicals;
   for (const GPUEntry &E : Entries) {
-    if (!E.IsAlias && !isGenericTarget(E.Rec))
-      Canon.push_back(E.Rec);
+    if (!E.IsAlias)
+      Canonicals[E.Rec->getValueAsString("Name")] = E.Rec;
   }
 
-  for (const GPUEntry &E : Entries) {
-    if (!E.IsAlias && isGenericTarget(E.Rec))
+  // Canonicals only; aliases share a canonical's GPUKind row.
+  std::vector<const Record *> Canon;
+  for (const GPUEntry &E : orderGenericsLast(Entries, Canonicals)) {
+    if (!E.IsAlias)
       Canon.push_back(E.Rec);
   }
 
