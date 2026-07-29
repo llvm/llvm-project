@@ -107,6 +107,14 @@ set(hlsl_files
   ${hlsl_subdir_files}
   )
 
+set(swift_bridging_files
+  swift/bridging
+  swift/bridging.h
+  swift/bridging.modulemap  # Note: the modulemap isn't named module.modulemap
+                            # because that would allow #include <bridging>;
+                            # we only want #include <swift/bridging>.
+  )
+
 set(loongarch_files
   larchintrin.h
   lasxintrin.h
@@ -480,7 +488,7 @@ endfunction(clang_generate_header)
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
            ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
            ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
-           ${llvm_offload_wrapper_files})
+           ${llvm_offload_wrapper_files} ${swift_bridging_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -582,6 +590,7 @@ add_dependencies("clang-resource-headers"
                  "ppc-htm-resource-headers"
                  "riscv-resource-headers"
                  "spirv-resource-headers"
+                 "swift-bridging-resource-headers"
                  "systemz-resource-headers"
                  "ve-resource-headers"
                  "webassembly-resource-headers"
@@ -615,6 +624,7 @@ add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" "${hlsl_files};${hlsl_generated_files}")
+add_header_target("swift-bridging-resource-headers" ${swift_bridging_files})
 add_header_target("spirv-resource-headers" ${spirv_files})
 add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("llvm-libc-resource-headers" ${llvm_libc_wrapper_files})
@@ -674,6 +684,11 @@ install(
 install(
   FILES ${zos_wrapper_files}
   DESTINATION ${header_install_dir}/zos_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${swift_bridging_files}
+  DESTINATION ${header_install_dir}/swift
   COMPONENT clang-resource-headers)
 
 #############################################################
@@ -839,6 +854,12 @@ install(
   COMPONENT hlsl-resource-headers)
 
 install(
+  FILES ${swift_bridging_files}
+  DESTINATION ${header_install_dir}/swift
+  EXCLUDE_FROM_ALL
+  COMPONENT swift-bridging-resource-headers)
+
+install(
   FILES ${spirv_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
@@ -932,6 +953,9 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-hlsl-resource-headers
                            DEPENDS hlsl-resource-headers
                            COMPONENT hlsl-resource-headers)
+  add_llvm_install_targets(install-swift-bridging-resource-headers
+                           DEPENDS swift-bridging-resource-headers
+                           COMPONENT swift-bridging-resource-headers)
   add_llvm_install_targets(install-opencl-resource-headers
                            DEPENDS opencl-resource-headers
                            COMPONENT opencl-resource-headers)
