@@ -4004,6 +4004,15 @@ static bool containsCoroutineSuspendPoints(const Stmt *S) {
   if (isa<CoawaitExpr>(S) || isa<CoyieldExpr>(S) ||
       isa<DependentCoawaitExpr>(S))
     return true;
+
+  if (auto *LE = dyn_cast<LambdaExpr>(S)) {
+    for (const Expr *Init : LE->capture_inits()) {
+      if (Init && containsCoroutineSuspendPoints(Init))
+        return true;
+    }
+    return false;
+  }
+
   for (const Stmt *Child : S->children())
     if (Child && containsCoroutineSuspendPoints(Child))
       return true;

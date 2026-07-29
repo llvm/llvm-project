@@ -6350,7 +6350,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
             << Arg->getType() << ProtoArgType;
       }
       if (CallHasSuspend && Arg->isPRValue() &&
-          isWin32InAllocaRecord(Context, ProtoArgType)) {
+          (isWin32InAllocaRecord(Context, ProtoArgType) ||
+           Arg->containsCoroutineSuspendPoints())) {
         ExprResult Materialized =
             CreateMaterializeTemporaryExpr(Arg->getType(), Arg, false);
         if (!Materialized.isInvalid())
