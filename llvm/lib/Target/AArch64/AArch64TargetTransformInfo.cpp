@@ -2057,12 +2057,13 @@ simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
     // and RHS the wrong element count.
     Type *WideVT = VectorType::get(RHS->getType()->getScalarType(),
                                    cast<VectorType>(LHS->getType()));
-    if (ICmpInst::isSigned(CmpPred)) {
-      LHS = ConstantInt::get(WideVT, LHSVal->getSExtValue());
-      RHS = ConstantInt::get(WideVT, RHSVal->getSExtValue());
-    } else {
+    // NOTE: Wide equality comparisons are signed.
+    if (ICmpInst::isUnsigned(CmpPred)) {
       LHS = ConstantInt::get(WideVT, LHSVal->getZExtValue());
       RHS = ConstantInt::get(WideVT, RHSVal->getZExtValue());
+    } else {
+      LHS = ConstantInt::get(WideVT, LHSVal->getSExtValue());
+      RHS = ConstantInt::get(WideVT, RHSVal->getSExtValue());
     }
   }
 
