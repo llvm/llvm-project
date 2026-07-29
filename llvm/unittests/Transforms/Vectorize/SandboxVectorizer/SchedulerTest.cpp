@@ -282,7 +282,6 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   auto *L1 = cast<sandboxir::LoadInst>(&*It++);
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
-  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
                              sandboxir::SchedDirection::BottomUp);
@@ -924,10 +923,13 @@ define void @foo(ptr %ptr) {
   sandboxir::ReadyListContainer ReadyList;
   // Check empty().
   EXPECT_TRUE(ReadyList.empty());
-  // Check insert(), pop().
+  EXPECT_FALSE(ReadyList.contains(L0N));
+  // Check insert(), pop(), contains().
   ReadyList.insert(L0N);
   EXPECT_FALSE(ReadyList.empty());
+  EXPECT_TRUE(ReadyList.contains(L0N));
   EXPECT_EQ(ReadyList.pop(), L0N);
+  EXPECT_FALSE(ReadyList.contains(L0N));
   // Check clear().
   ReadyList.insert(L0N);
   EXPECT_FALSE(ReadyList.empty());
@@ -939,7 +941,11 @@ define void @foo(ptr %ptr) {
   ReadyList.insert(L0N);
   ReadyList.insert(S0N);
   ReadyList.insert(RetN);
+  EXPECT_TRUE(ReadyList.contains(L0N));
+  EXPECT_TRUE(ReadyList.contains(S0N));
+  EXPECT_TRUE(ReadyList.contains(RetN));
   ReadyList.remove(S0N);
+  EXPECT_FALSE(ReadyList.contains(S0N));
   DenseSet<sandboxir::DGNode *> Nodes;
   Nodes.insert(ReadyList.pop());
   Nodes.insert(ReadyList.pop());

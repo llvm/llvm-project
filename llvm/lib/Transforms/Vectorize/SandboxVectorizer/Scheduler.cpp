@@ -418,9 +418,9 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
       auto *N = DAG.getNode(&I);
       if (N->scheduled())
         continue;
-      ReadyList.remove(N);
-      if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                          : N->readyTopDown())
+      bool IsReady = Dir == SchedDirection::BottomUp ? N->readyBottomUp()
+                                                     : N->readyTopDown();
+      if (IsReady && !ReadyList.contains(N))
         ReadyList.insert(N);
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.
