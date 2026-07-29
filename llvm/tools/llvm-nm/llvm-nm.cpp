@@ -2069,10 +2069,10 @@ static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
 /// human-readable string, e.g. "[64-bit + XPLink]".
 /// Any bits above the known 3-bit mask produce a trailing "?" flag.
 static std::string decodeZOSAttributes(uint32_t Attrs) {
-  bool Unknown = (Attrs & ~0x7u) != 0;
-  bool Is64Bit = (Attrs & 0x4) != 0;
-  bool IsXPLink = (Attrs & 0x2) != 0;
-  bool IsWSA    = (Attrs & 0x1) != 0;
+  bool Unknown = (Attrs & ~Archive::Symbol::ZOSKnownAttrMask) != 0;
+  bool Is64Bit = (Attrs & Archive::Symbol::ZOSAttr64Bit) != 0;
+  bool IsXPLink = (Attrs & Archive::Symbol::ZOSAttrXPLink) != 0;
+  bool IsWSA    = (Attrs & Archive::Symbol::ZOSAttrWSA) != 0;
 
   std::string Result = "[";
   bool NeedPlus = false;
@@ -2108,7 +2108,9 @@ static void printZOSArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
          << left_justify("Member", MemberW) << " "
          << left_justify("Attributes", AttrsW) << " "
          << "Attribute Description\n";
-  outs() << std::string(NameW + 1 + MemberW + 1 + AttrsW + 1 + 21, '-') << "\n";
+  constexpr unsigned AttrDescW = sizeof("Attribute Description") - 1;
+  outs() << std::string(NameW + 1 + MemberW + 1 + AttrsW + 1 + AttrDescW, '-')
+         << "\n";
 
   for (auto I : Map) {
     Expected<Archive::Child> C = I.getMember();
