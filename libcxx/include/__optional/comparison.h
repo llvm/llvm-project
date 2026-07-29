@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_OPTIONAL_COMPARISON_H
-#define _LIBCPP_OPTIONAL_COMPARISON_H
+#ifndef _LIBCPP___OPTIONAL_COMPARISON_H
+#define _LIBCPP___OPTIONAL_COMPARISON_H
 
 #include <__compare/compare_three_way_result.h>
 #include <__compare/ordering.h>
@@ -344,4 +344,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif
+#endif // _LIBCPP___OPTIONAL_COMPARISON_H

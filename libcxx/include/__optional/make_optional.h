@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_OPTIONAL_MAKE_OPTIONAL_H
-#define _LIBCPP_OPTIONAL_MAKE_OPTIONAL_H
+#ifndef _LIBCPP___OPTIONAL_MAKE_OPTIONAL_H
+#define _LIBCPP___OPTIONAL_MAKE_OPTIONAL_H
 
 #include <__config>
 #include <__fwd/optional.h>
@@ -88,4 +88,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_OPTIONAL_MAKE_OPTIONAL_H
+#endif // _LIBCPP___OPTIONAL_MAKE_OPTIONAL_H

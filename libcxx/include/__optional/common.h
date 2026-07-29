@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_OPTIONAL_COMMON_H
-#define _LIBCPP_OPTIONAL_COMMON_H
+#ifndef _LIBCPP___OPTIONAL_COMMON_H
+#define _LIBCPP___OPTIONAL_COMMON_H
 
 #include <__assert>
 #include <__config>
@@ -47,7 +47,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-[[noreturn]] inline void __throw_bad_optional_access() {
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_optional_access() {
 #  if _LIBCPP_HAS_EXCEPTIONS
   throw bad_optional_access();
 #  else
@@ -90,4 +90,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif
+#endif // _LIBCPP___OPTIONAL_COMMON_H

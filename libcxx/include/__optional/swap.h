@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_OPTIONAL_SWAP_H
-#define _LIBCPP_OPTIONAL_SWAP_H
+#ifndef _LIBCPP___OPTIONAL_SWAP_H
+#define _LIBCPP___OPTIONAL_SWAP_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -40,6 +40,6 @@ swap(optional<_Tp>& __x, optional<_Tp>& __y) noexcept(noexcept(__x.swap(__y))) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif
+#endif // _LIBCPP_STD_VER >= 17
 
-#endif
+#endif // _LIBCPP___OPTIONAL_SWAP_H

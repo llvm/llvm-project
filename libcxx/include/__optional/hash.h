@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_OPTIONAL_HASH_H
-#define _LIBCPP_OPTIONAL_HASH_H
+#ifndef _LIBCPP___OPTIONAL_HASH_H
+#define _LIBCPP___OPTIONAL_HASH_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -44,4 +44,4 @@ _LIBCPP_END_NAMESPACE_STD
 #endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
-#endif // _LIBCPP_OPTIONAL_HASH_H
+#endif // _LIBCPP___OPTIONAL_HASH_H

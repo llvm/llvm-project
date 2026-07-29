@@ -8,8 +8,8 @@
 
 // std::optional<T&>
 
-#ifndef _LIBCPP_OPTIONAL_OPTIONAL_REF_H
-#define _LIBCPP_OPTIONAL_OPTIONAL_REF_H
+#ifndef _LIBCPP___OPTIONAL_OPTIONAL_REF_H
+#define _LIBCPP___OPTIONAL_OPTIONAL_REF_H
 
 #include <__assert>
 #include <__concepts/invocable.h>
@@ -363,4 +363,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_OPTIONAL_OPTIONAL_REF_H
+#endif // _LIBCPP___OPTIONAL_OPTIONAL_REF_H
