@@ -2316,9 +2316,6 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  if (Ty->isConstantMatrixBoolType())
-    return Builder.CreateTrunc(Value, ResTy, "loadedv");
-
   bool HasBoolRep = Ty->hasBooleanRepresentation() || Ty->isExtVectorBoolType();
   if (HasBoolRep && CGM.getCodeGenOpts().isConvertingBoolWithCmp0()) {
     return Builder.CreateICmpNE(

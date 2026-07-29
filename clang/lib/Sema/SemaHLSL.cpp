@@ -4463,7 +4463,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
                                    CheckFloatOrHalfRepresentation))
       return true;
-    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(
+            TheCall, Sema::EltwiseBuiltinArgTyRestriction::FloatTy))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
     break;
