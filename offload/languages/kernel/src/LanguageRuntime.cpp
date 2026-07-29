@@ -16,6 +16,7 @@
 #include "LanguageRuntime.h"
 // clang-format on
 
+#include "LanguageUtils.h"
 #include "State.h"
 #include "Types.h"
 
@@ -31,17 +32,6 @@
 
 using RuntimeState = llvm::offload::StateTy;
 using ThreadState = llvm::offload::ThreadStateTy;
-
-static Error_t convertResult(ol_result_t Result) {
-  if (Result == OL_SUCCESS)
-    return Success;
-  switch (Result->Code) {
-  case OL_ERRC_INVALID_VALUE:
-    return ErrorInvalidValue;
-  default:
-    return ErrorInvalidValue;
-  }
-}
 
 Error_t Malloc(void **DevPtr, size_t Size) {
   ol_device_handle_t Device = ThreadState::getDefaultDevice();
@@ -105,7 +95,7 @@ Error_t DeviceSynchronize() {
 Error_t GetDevice(int *DeviceNo) {
   ol_device_handle_t Device = ThreadState::getDevice(DeviceNo);
   if (!Device)
-    return ErrorInvalidValue;
+    return ErrorInvalidDevice;
   return Success;
 }
 
@@ -117,7 +107,7 @@ Error_t GetDeviceCount(int *Count) {
 Error_t SetDevice(int DeviceNo) {
   ol_device_handle_t Device = ThreadState::setDefaultDevice(DeviceNo);
   if (!Device)
-    return ErrorInvalidValue;
+    return ErrorInvalidDevice;
   assert(Device == ThreadState::getDefaultDevice() &&
          "Set Device is not Default Device");
   return Success;
@@ -154,19 +144,13 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   return Success;
 }
 
-static Error_t getQueueFromStream(Stream_t Stream, ol_queue_handle_t *Queue) {
-  if (!Stream)
-    return ErrorInvalidValue;
-  *Queue = reinterpret_cast<ol_queue_handle_t>(Stream);
-  return Success;
-}
-
 Error_t StreamCreate(Stream_t *Stream) {
   ol_queue_handle_t Queue;
-  olCreateQueue(RuntimeState::getContext(), ThreadState::getDefaultDevice(),
-                &Queue);
-  *Stream = reinterpret_cast<Stream_t>(Queue);
-  return Success;
+  ol_result_t Result = olCreateQueue(RuntimeState::getContext(),
+                                     ThreadState::getDefaultDevice(), &Queue);
+  if (Result == OL_SUCCESS)
+    *Stream = reinterpret_cast<Stream_t>(Queue);
+  return convertResult(Result);
 }
 
 Error_t StreamDestroy(Stream_t Stream) {

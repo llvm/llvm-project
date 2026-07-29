@@ -14,6 +14,10 @@
 #undef DeviceSynchronize
 #undef Success
 #undef ErrorInvalidValue
+#undef ErrorInvalidDevice
+#undef ErrorUnknown
+#undef GetErrorName
+#undef GetErrorString
 #undef MemcpyKind
 #undef MemcpyHostToHost
 #undef MemcpyHostToDevice

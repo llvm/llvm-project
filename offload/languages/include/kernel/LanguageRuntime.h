@@ -16,10 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-enum Error_t : uint32_t {
-  Success = 0,
-  ErrorInvalidValue = 1,
-};
+#include "LanguageErrors.h"
 
 struct DeviceProp_t {
   char name[256];
