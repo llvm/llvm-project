@@ -3,12 +3,12 @@
 // RUN:   -Wdeprecated-declarations -o - | FileCheck %s \
 // RUN:   -DFNATTRS="hidden noundef" -DTARGET=dx
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -Wdeprecated-declarations -o - | FileCheck %s \
 // RUN:   -DFNATTRS="hidden spir_func noundef" -DTARGET=spv
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:   -verify -verify-ignore-unexpected=note
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s \
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s \
 // RUN:   -verify -verify-ignore-unexpected=note
 
 // CHECK: define [[FNATTRS]] <2 x i1> @
