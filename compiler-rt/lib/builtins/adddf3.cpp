@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements compiler-rt's __addtf3, quad-precision addition, on top
-/// of LLVM-libc's shared::addtf3.
+/// This file implements compiler-rt's __adddf3, double-precision addition, on
+/// top of LLVM-libc's shared::adddf3.
 ///
 //===----------------------------------------------------------------------===//
 
-#define QUAD_PRECISION
+#define DOUBLE_PRECISION
 #include "fp_lib.h"
 
 #include "fp_libc_config.h"
 #include "int_lib.h"
-#include "shared/builtins/addtf3.h"
+#include "shared/builtins/adddf3.h"
 
-extern "C" COMPILER_RT_ABI fp_t __addtf3(fp_t a, fp_t b) {
-  return LIBC_NAMESPACE::shared::addtf3(a, b);
+extern "C" COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b) {
+  return LIBC_NAMESPACE::shared::adddf3(a, b);
 }

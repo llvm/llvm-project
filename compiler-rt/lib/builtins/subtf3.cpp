@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements compiler-rt's __addtf3, quad-precision addition, on top
-/// of LLVM-libc's shared::addtf3.
+/// This file implements compiler-rt's __subtf3, quad-precision subtraction, on
+/// top of LLVM-libc's shared::subtf3.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +17,8 @@
 
 #include "fp_libc_config.h"
 #include "int_lib.h"
-#include "shared/builtins/addtf3.h"
+#include "shared/builtins/subtf3.h"
 
-extern "C" COMPILER_RT_ABI fp_t __addtf3(fp_t a, fp_t b) {
-  return LIBC_NAMESPACE::shared::addtf3(a, b);
+extern "C" COMPILER_RT_ABI fp_t __subtf3(fp_t a, fp_t b) {
+  return LIBC_NAMESPACE::shared::subtf3(a, b);
 }
