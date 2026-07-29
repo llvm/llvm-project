@@ -323,6 +323,8 @@ class WttReport(Report):
             self._write_results_to_file(tests, elapsed, f)
 
     def _write_results_to_file(self, tests, elapsed, file):
+        tests.sort(key=by_suite_and_test_path)
+
         machine = os.getenv("COMPUTERNAME", "")
         pid = os.getpid()
 
