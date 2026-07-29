@@ -102,7 +102,7 @@ jobs:
         run: |
           ./llvm/utils/release/build-docs.sh \
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release $INPUTS_RELEASE_VERSION || echo -srcdir llvm) -no-doxygen
-          echo "man-page-tarball-name=$(find . -iname 'llvm_man_pages-*')" >> "$GITHUB_OUTPUT"
+          echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*'))" >> "$GITHUB_OUTPUT"
 
 
       - name: Generate sha256 digest for man page tarball
