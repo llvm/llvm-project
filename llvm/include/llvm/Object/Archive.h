@@ -348,6 +348,11 @@ public:
     LLVM_ABI Expected<Child> getMember() const;
     LLVM_ABI Symbol getNext() const;
     LLVM_ABI bool isECSymbol() const;
+    /// For K_ZOS archives, returns the 32-bit attribute word stored alongside
+    /// the symbol-table entry. The currently defined low bits are:
+    /// bit 2 = 64-bit, bit 1 = XPLink, and bit 0 = WSA.
+    /// Returns 0 for non-z/OS archives.
+    LLVM_ABI uint32_t getZOSAttributes() const;
   };
 
   class symbol_iterator {

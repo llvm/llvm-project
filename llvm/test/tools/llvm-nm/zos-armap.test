@@ -1,0 +1,51 @@
+## Test that llvm-nm --print-armap prints both the standard archive map and
+## the z/OS-specific attribute map for GOFF archives.
+##
+## All 8 combinations of the 3 attribute bits are exercised in this test:
+##   bit 2 (0x4): 64-bit  (AMODE == ESD_AMODE_64)
+##   bit 1 (0x2): XPLink  (LinkageType == ESD_LT_XPLink)
+##   bit 0 (0x1): WSA     (parent ED namespace == ESD_NS_Parts)
+##
+## The archive is generated directly using generate_zos_archive.py.
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+
+# RUN: %python %S/../../Object/Inputs/generate_zos_archive.py \
+# RUN:   --output %t.dir/test.a          \
+# RUN:   --member "test.o:hex:abcdabcd"  \
+# RUN:   --symtab "sym000:0:0"           \
+# RUN:   --symtab "sym001:0:1"           \
+# RUN:   --symtab "sym010:0:2"           \
+# RUN:   --symtab "sym011:0:3"           \
+# RUN:   --symtab "sym100:0:4"           \
+# RUN:   --symtab "sym101:0:5"           \
+# RUN:   --symtab "sym110:0:6"           \
+# RUN:   --symtab "sym111:0:7"
+
+# RUN: llvm-nm --print-armap %t.dir/test.a | FileCheck %s
+
+## Check the standard archive map with the usual "name in member" format.
+# CHECK:      Archive map
+# CHECK-NEXT: sym000 in test.o
+# CHECK-NEXT: sym001 in test.o
+# CHECK-NEXT: sym010 in test.o
+# CHECK-NEXT: sym011 in test.o
+# CHECK-NEXT: sym100 in test.o
+# CHECK-NEXT: sym101 in test.o
+# CHECK-NEXT: sym110 in test.o
+# CHECK-NEXT: sym111 in test.o
+
+## Check the z/OS attribute map follows with header and separator line.
+# CHECK:      Archive map (z/OS attributes)
+# CHECK-NEXT: Name{{.*}}Member{{.*}}Attributes{{.*}}Attribute Description
+# CHECK-NEXT: ---
+
+## All 8 bit combinations: raw hex and decoded description.
+# CHECK: sym000{{[ ]+}}test.o{{[ ]+}}0x00000000{{[ ]+}}[none]
+# CHECK: sym001{{[ ]+}}test.o{{[ ]+}}0x00000001{{[ ]+}}[WSA]
+# CHECK: sym010{{[ ]+}}test.o{{[ ]+}}0x00000002{{[ ]+}}[XPLink]
+# CHECK: sym011{{[ ]+}}test.o{{[ ]+}}0x00000003{{[ ]+}}[XPLink + WSA]
+# CHECK: sym100{{[ ]+}}test.o{{[ ]+}}0x00000004{{[ ]+}}[64-bit]
+# CHECK: sym101{{[ ]+}}test.o{{[ ]+}}0x00000005{{[ ]+}}[64-bit + WSA]
+# CHECK: sym110{{[ ]+}}test.o{{[ ]+}}0x00000006{{[ ]+}}[64-bit + XPLink]
+# CHECK: sym111{{[ ]+}}test.o{{[ ]+}}0x00000007{{[ ]+}}[64-bit + XPLink + WSA]

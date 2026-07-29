@@ -2065,11 +2065,84 @@ static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
   outs() << "\n";
 }
 
+/// Decode the low 3 bits of a z/OS archive symbol attribute word into a
+/// human-readable string, e.g. "[64-bit + XPLink]".
+/// Any bits above the known 3-bit mask produce a trailing "?" flag.
+static std::string decodeZOSAttributes(uint32_t Attrs) {
+  bool Unknown = (Attrs & ~0x7u) != 0;
+  bool Is64Bit = (Attrs & 0x4) != 0;
+  bool IsXPLink = (Attrs & 0x2) != 0;
+  bool IsWSA    = (Attrs & 0x1) != 0;
+
+  std::string Result = "[";
+  bool NeedPlus = false;
+  auto append = [&](const char *S) {
+    if (NeedPlus)
+      Result += " + ";
+    Result += S;
+    NeedPlus = true;
+  };
+  if (Is64Bit)  append("64-bit");
+  if (IsXPLink) append("XPLink");
+  if (IsWSA)    append("WSA");
+  if (Unknown)  append("?");
+  if (!NeedPlus) append("none");
+  Result += "]";
+  return Result;
+}
+
+/// Print the z/OS-specific archive map with archive symbol attributes.
+///
+/// Columns:
+///   Name                   - symbol name
+///   Member                 - archive member filename
+///   Attributes             - raw attribute word (hex)
+///   Attribute Description  - decoded bit flags of the archive attributes
+static void printZOSArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
+                               StringRef Filename) {
+  constexpr unsigned NameW   = 20;
+  constexpr unsigned MemberW = 22;
+  constexpr unsigned AttrsW  = 12;
+
+  outs() << left_justify("Name", NameW) << " "
+         << left_justify("Member", MemberW) << " "
+         << left_justify("Attributes", AttrsW) << " "
+         << "Attribute Description\n";
+  outs() << std::string(NameW + 1 + MemberW + 1 + AttrsW + 1 + 21, '-') << "\n";
+
+  for (auto I : Map) {
+    Expected<Archive::Child> C = I.getMember();
+    if (!C) {
+      error(C.takeError(), Filename);
+      break;
+    }
+    Expected<StringRef> FileNameOrErr = C->getName();
+    if (!FileNameOrErr) {
+      error(FileNameOrErr.takeError(), Filename);
+      break;
+    }
+    uint32_t Attrs = I.getZOSAttributes();
+    std::string AttrsStr;
+    llvm::raw_string_ostream(AttrsStr) << format("0x%08x", Attrs);
+    outs() << left_justify(I.getName(), NameW) << " "
+           << left_justify(FileNameOrErr.get(), MemberW) << " "
+           << left_justify(AttrsStr, AttrsW) << " "
+           << decodeZOSAttributes(Attrs) << "\n";
+  }
+  outs() << "\n";
+}
+
 static void dumpArchiveMap(Archive *A, StringRef Filename) {
   auto Map = A->symbols();
   if (!Map.empty()) {
     outs() << "Archive map\n";
     printArchiveMap(Map, Filename);
+    // For z/OS archives, also print the extended map showing per-symbol
+    // attributes (64-bit, XPLink, WSA) stored in the __.SYMDEF symbol table.
+    if (A->kind() == Archive::K_ZOS) {
+      outs() << "Archive map (z/OS attributes)\n";
+      printZOSArchiveMap(Map, Filename);
+    }
   }
 
   auto ECMap = A->ec_symbols();
