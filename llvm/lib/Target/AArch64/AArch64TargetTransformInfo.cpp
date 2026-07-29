@@ -2079,7 +2079,7 @@ simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
   if (match(SimpleII, m_ZeroInt()))
     return IC.replaceInstUsesWith(II, SimpleII);
 
-  // Inactive lanes must be zero'd.
+  // Inactive lanes must be zeroed.
   SimpleII = IC.Builder.CreateLogicalAnd(Pg, SimpleII);
   return IC.replaceInstUsesWith(II, SimpleII);
 }

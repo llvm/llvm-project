@@ -6,8 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; The following tests verify the mechanics of simplification. The operation is
 ; not important beyond being commutative.
 
-define <vscale x 4 x i1> @cannonicalise_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i1> @cannonicalise_constant_to_rhs(
+define <vscale x 4 x i1> @canonicalise_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i1> @canonicalise_constant_to_rhs(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> splat (i32 303))
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[R]]
@@ -16,8 +16,8 @@ define <vscale x 4 x i1> @cannonicalise_constant_to_rhs(<vscale x 4 x i1> %pg, <
   ret <vscale x 4 x i1> %r
 }
 
-define <vscale x 4 x i1> @cannot_cannonicalise_constant_to_rhs_not_commutative_int(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i1> @cannot_cannonicalise_constant_to_rhs_not_commutative_int(
+define <vscale x 4 x i1> @cannot_canonicalise_constant_to_rhs_not_commutative_int(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i1> @cannot_canonicalise_constant_to_rhs_not_commutative_int(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 303), <vscale x 4 x i32> [[A]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[R]]
@@ -26,8 +26,8 @@ define <vscale x 4 x i1> @cannot_cannonicalise_constant_to_rhs_not_commutative_i
   ret <vscale x 4 x i1> %r
 }
 
-define <vscale x 4 x i1> @cannot_cannonicalise_constant_to_rhs_operand_type_mismatch(<vscale x 4 x i1> %pg, <vscale x 2 x i64> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i1> @cannot_cannonicalise_constant_to_rhs_operand_type_mismatch(
+define <vscale x 4 x i1> @cannot_canonicalise_constant_to_rhs_operand_type_mismatch(<vscale x 4 x i1> %pg, <vscale x 2 x i64> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i1> @cannot_canonicalise_constant_to_rhs_operand_type_mismatch(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 2 x i64> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 303), <vscale x 2 x i64> [[A]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[R]]
@@ -36,8 +36,8 @@ define <vscale x 4 x i1> @cannot_cannonicalise_constant_to_rhs_operand_type_mism
   ret <vscale x 4 x i1> %r
 }
 
-define <vscale x 4 x i1> @cannonicalise_fp_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i1> @cannonicalise_fp_constant_to_rhs(
+define <vscale x 4 x i1> @canonicalise_fp_constant_to_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i1> @canonicalise_fp_constant_to_rhs(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpne.nxv4f32(<vscale x 4 x i1> [[PG]], <vscale x 4 x float> [[A]], <vscale x 4 x float> splat (float 5.000000e+00))
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[R]]
@@ -46,8 +46,8 @@ define <vscale x 4 x i1> @cannonicalise_fp_constant_to_rhs(<vscale x 4 x i1> %pg
   ret <vscale x 4 x i1> %r
 }
 
-define <vscale x 4 x i1> @cannot_cannonicalise_fp_constant_to_rhs_not_commutative_fp(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) #0 {
-; CHECK-LABEL: define <vscale x 4 x i1> @cannot_cannonicalise_fp_constant_to_rhs_not_commutative_fp(
+define <vscale x 4 x i1> @cannot_canonicalise_fp_constant_to_rhs_not_commutative_fp(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) #0 {
+; CHECK-LABEL: define <vscale x 4 x i1> @cannot_canonicalise_fp_constant_to_rhs_not_commutative_fp(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpge.nxv4f32(<vscale x 4 x i1> [[PG]], <vscale x 4 x float> splat (float 5.000000e+00), <vscale x 4 x float> [[A]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[R]]
@@ -57,8 +57,8 @@ define <vscale x 4 x i1> @cannot_cannonicalise_fp_constant_to_rhs_not_commutativ
 }
 
 ; Show that we only need to know the active lanes are constant.
-define <vscale x 4 x i1> @constant_icmp_after_striping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
-; CHECK-LABEL: define <vscale x 4 x i1> @constant_icmp_after_striping_inactive_lanes(
+define <vscale x 4 x i1> @constant_icmp_after_stripping_inactive_lanes(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i1> @constant_icmp_after_stripping_inactive_lanes(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[PG]]
 ;
@@ -101,7 +101,7 @@ define <vscale x 16 x i1> @constant_icmp_wide_due_to_range_of_type(<vscale x 16 
   ret <vscale x 16 x i1> %r
 }
 
-; Ensure inactive lanes are zero'd after simplification.
+; Ensure inactive lanes are zeroed after simplification.
 define <vscale x 4 x i1> @non_constant_simplification(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i1> @non_constant_simplification(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i1> [[A:%.*]]) #[[ATTR0]] {
