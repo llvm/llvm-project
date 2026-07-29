@@ -1078,12 +1078,10 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     if (!Queue) {
       std::memcpy(DstPtr, SrcPtr, Size);
       return Error::success();
-    } else {
-      return createOffloadError(
-          ErrorCode::INVALID_ARGUMENT,
-          "one of DstDevice and SrcDevice must be a non-host device if "
-          "queue is specified");
     }
+
+    return Queue->Device->Device->dataMemcpy(DstPtr, SrcPtr, Size,
+                                             Queue->AsyncInfo);
   }
 
   // If no queue is given the memcpy will be synchronous

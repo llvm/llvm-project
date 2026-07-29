@@ -1067,6 +1067,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Copy data between arbitrary memory locations.
+  Error dataMemcpy(void *DstPtr, const void *SrcPtr, int64_t Size,
+                   __tgt_async_info *AsyncInfo);
+  virtual Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
   /// Instert a data fence between previous data operations and the following
   /// operations if necessary for the device
   virtual Error dataFence(__tgt_async_info *AsyncInfo) = 0;

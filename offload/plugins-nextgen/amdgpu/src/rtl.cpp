@@ -2952,6 +2952,33 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           PinnedMemoryManager);
   }
 
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    struct MemcpyArgsTy {
+      void *DstPtr;
+      const void *SrcPtr;
+      int64_t Size;
+    };
+
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    auto Args =
+        std::make_unique<MemcpyArgsTy>(MemcpyArgsTy{DstPtr, SrcPtr, Size});
+    if (auto Err = Stream->pushHostCallback(
+            [](void *Data) {
+              std::unique_ptr<MemcpyArgsTy> Args(
+                  static_cast<MemcpyArgsTy *>(Data));
+              std::memcpy(Args->DstPtr, Args->SrcPtr, Args->Size);
+            },
+            Args.get()))
+      return Err;
+
+    Args.release();
+    return Plugin::success();
+  }
+
   /// Exchange data between two devices within the plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
