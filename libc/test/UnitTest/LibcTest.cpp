@@ -24,7 +24,13 @@
 #include <time.h>
 
 #include "src/time/clock.h"
+#ifdef LIBC_ENABLE_MINOR_VARIANT
+extern "C" [[gnu::weak]] clock_t clock() noexcept {
+  return LIBC_NAMESPACE::clock();
+}
+#else
 extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
+#endif
 #define LIBC_TEST_USE_CLOCK
 #endif
 

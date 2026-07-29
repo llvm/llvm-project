@@ -45,30 +45,45 @@ static uint8_t *ptr = memory;
 
 extern "C" {
 
+#ifdef LIBC_ENABLE_MINOR_VARIANT
+#define LIBC_HERMETIC_TEST_SHIM [[gnu::weak]]
+#else
+#define LIBC_HERMETIC_TEST_SHIM
+#endif
+
 // Hermetic tests rely on the following memory functions. This is because the
 // compiler code generation can emit calls to them. We want to map the external
 // entrypoint to the internal implementation of the function used for testing.
 // This is done manually as not all targets support aliases.
 
-int bcmp(const void *lhs, const void *rhs, size_t count) {
+LIBC_HERMETIC_TEST_SHIM int bcmp(const void *lhs, const void *rhs,
+                                 size_t count) {
   return LIBC_NAMESPACE::bcmp(lhs, rhs, count);
 }
-void bzero(void *ptr, size_t count) { LIBC_NAMESPACE::bzero(ptr, count); }
-int memcmp(const void *lhs, const void *rhs, size_t count) {
+LIBC_HERMETIC_TEST_SHIM void bzero(void *ptr, size_t count) {
+  LIBC_NAMESPACE::bzero(ptr, count);
+}
+LIBC_HERMETIC_TEST_SHIM int memcmp(const void *lhs, const void *rhs,
+                                   size_t count) {
   return LIBC_NAMESPACE::memcmp(lhs, rhs, count);
 }
-void *memcpy(void *__restrict dst, const void *__restrict src, size_t count) {
+LIBC_HERMETIC_TEST_SHIM void *memcpy(void *__restrict dst,
+                                     const void *__restrict src,
+                                     size_t count) {
   return LIBC_NAMESPACE::memcpy(dst, src, count);
 }
-void *memmove(void *dst, const void *src, size_t count) {
+LIBC_HERMETIC_TEST_SHIM void *memmove(void *dst, const void *src,
+                                      size_t count) {
   return LIBC_NAMESPACE::memmove(dst, src, count);
 }
-void *memset(void *ptr, int value, size_t count) {
+LIBC_HERMETIC_TEST_SHIM void *memset(void *ptr, int value, size_t count) {
   return LIBC_NAMESPACE::memset(ptr, value, count);
 }
 
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
-int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
+LIBC_HERMETIC_TEST_SHIM int atexit(void (*func)(void)) {
+  return LIBC_NAMESPACE::atexit(func);
+}
 
 void *aligned_alloc(size_t align, size_t s) {
   if (align & (align - 1)) // Must be power of 2
@@ -79,11 +94,11 @@ void *aligned_alloc(size_t align, size_t s) {
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
 
-void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
+LIBC_HERMETIC_TEST_SHIM void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
+  
+LIBC_HERMETIC_TEST_SHIM void free(void *) {}
 
-void free(void *) {}
-
-void *realloc(void *mem, size_t s) {
+LIBC_HERMETIC_TEST_SHIM void *realloc(void *mem, size_t s) {
   if (mem == nullptr)
     return malloc(s);
   uint8_t *newmem = reinterpret_cast<uint8_t *>(malloc(s));
