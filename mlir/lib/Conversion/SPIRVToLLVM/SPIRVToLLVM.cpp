@@ -1712,19 +1712,10 @@ public:
                                 LLVM::FCmpPredicate::olt, operand, zero);
     } else {
       auto intElemType = cast<IntegerType>(getElementTypeOrSelf(srcType));
-      IntegerAttr zeroAttr = rewriter.getIntegerAttr(intElemType, 0);
-      IntegerAttr oneAttr = rewriter.getIntegerAttr(intElemType, 1);
-      if (vecSrcType) {
-        zero = LLVM::ConstantOp::create(
-            rewriter, loc, dstType,
-            SplatElementsAttr::get(vecSrcType, zeroAttr));
-        one = LLVM::ConstantOp::create(
-            rewriter, loc, dstType,
-            SplatElementsAttr::get(vecSrcType, oneAttr));
-      } else {
-        zero = LLVM::ConstantOp::create(rewriter, loc, dstType, zeroAttr);
-        one = LLVM::ConstantOp::create(rewriter, loc, dstType, oneAttr);
-      }
+      zero = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                   rewriter.getIntegerAttr(intElemType, 0));
+      one = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                  rewriter.getIntegerAttr(intElemType, 1));
       minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
       gt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
                                 LLVM::ICmpPredicate::sgt, operand, zero);
