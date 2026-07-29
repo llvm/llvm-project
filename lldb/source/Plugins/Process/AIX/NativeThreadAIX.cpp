@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallString.h"
 
 #include "Plugins/Process/POSIX/CrashReason.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include <procinfo.h>
 #include <sys/procfs.h>
 #include <sys/types.h>
@@ -216,19 +217,16 @@ Status NativeThreadAIX::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   return Status("Clearing hardware breakpoint failed.");
 }
 
-Status NativeThreadAIX::Resume(uint32_t signo) {
-  const StateType new_state = StateType::eStateRunning;
-  MaybeLogStateChange(new_state);
-  m_state = new_state;
-
+void NativeThreadAIX::SetRunning() {
+  MaybeLogStateChange(StateType::eStateRunning);
+  m_state = StateType::eStateRunning;
   m_stop_info.reason = StopReason::eStopReasonNone;
   m_stop_description.clear();
 
   // If watchpoints have been set, but none on this thread, then this is a new
-  // thread. So set all existing watchpoints.
+  // thread.  Apply all existing process-level watchpoints now.
   if (m_watchpoint_index_map.empty()) {
     NativeProcessAIX &process = GetProcess();
-
     const auto &watchpoint_map = process.GetWatchpointMap();
     m_reg_context_up->ClearAllHardwareWatchpoints();
     for (const auto &pair : watchpoint_map) {
@@ -237,10 +235,9 @@ Status NativeThreadAIX::Resume(uint32_t signo) {
     }
   }
 
-  // Set all active hardware breakpoint on all threads.
+  // Apply all active hardware breakpoints to this thread.
   if (m_hw_break_index_map.empty()) {
     NativeProcessAIX &process = GetProcess();
-
     const auto &hw_breakpoint_map = process.GetHardwareBreakpointMap();
     m_reg_context_up->ClearAllHardwareBreakpoints();
     for (const auto &pair : hw_breakpoint_map) {
@@ -248,32 +245,13 @@ Status NativeThreadAIX::Resume(uint32_t signo) {
       SetHardwareBreakpoint(bp.m_addr, bp.m_size);
     }
   }
-
-  intptr_t data = 0;
-
-  if (signo != LLDB_INVALID_SIGNAL_NUMBER)
-    data = signo;
-
-  return NativeProcessAIX::PtraceWrapper(PTT_CONTINUE, GetID(), nullptr,
-                                           reinterpret_cast<void *>(data));
 }
 
-Status NativeThreadAIX::SingleStep(uint32_t signo) {
-  const StateType new_state = StateType::eStateStepping;
-  MaybeLogStateChange(new_state);
-  m_state = new_state;
+void NativeThreadAIX::SetStepping() {
+  MaybeLogStateChange(StateType::eStateStepping);
+  m_state = StateType::eStateStepping;
   m_stop_info.reason = StopReason::eStopReasonNone;
-
-  intptr_t data = 0;
-  if (signo != LLDB_INVALID_SIGNAL_NUMBER)
-    data = signo;
-
-  // If hardware single-stepping is not supported, we just do a continue. The
-  // breakpoint on the next instruction has been setup in
-  // NativeProcessAIX::Resume.
-  return NativeProcessAIX::PtraceWrapper(
-      GetProcess().SupportHardwareSingleStepping() ? PTT_STEP : PTT_CONTINUE,
-      GetID(), nullptr, reinterpret_cast<void *>(data));
+  m_stop_description.clear();
 }
 
 void NativeThreadAIX::SetStoppedBySignal(uint32_t signo,
@@ -474,25 +452,23 @@ void NativeThreadAIX::SetExited() {
 Status NativeThreadAIX::RequestStop() {
   Log *log = GetLog(LLDBLog::Thread);
 
-  NativeProcessAIX &process = GetProcess();
-
-  lldb::pid_t pid = process.GetID();
+  lldb::pid_t pid = GetProcess().GetID();
   lldb::tid_t tid = GetID();
 
   LLDB_LOGF(log,
             "NativeThreadAIX::%s requesting thread stop(pid: %" PRIu64
             ", tid: %" PRIu64 ")",
             __FUNCTION__, pid, tid);
-
-  Status err;
-  errno = 0;
-  if (::kill(pid, SIGSTOP) != 0) {
-    err = Status::FromErrno();
-    LLDB_LOGF(log,
-              "NativeThreadAIX::%s kill(%" PRIu64 ", SIGSTOP) failed: %s",
-              __FUNCTION__, pid, err.AsCString());
-  }
-  return err;
+  // On AIX, PTT_CONTINUE only resumes threads explicitly listed in the
+  // ptthreads64 buffer.  Any thread that is NOT in that list is left stopped
+  // by the kernel automatically -- no SIGSTOP or extra waitpid event is
+  // generated.  Sending kill(pid, SIGSTOP) here would stop the whole process
+  // and never produce the per-thread waitpid
+  //
+  // Therefore we simply mark the thread's LLDB state as stopped-with-no-reason
+  LLDB_LOG(log, "Marking thread stopped");
+  SetStoppedWithNoReason();
+  return Status();
 }
 
 void NativeThreadAIX::MaybeLogStateChange(lldb::StateType new_state) {

@@ -45,6 +45,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -264,34 +266,29 @@ static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
 static llvm::Expected<std::vector<::pid_t>> DiscoverThreads(::pid_t pid) {
   Log *log = GetLog(POSIXLog::Process);
 
-  llvm::SmallString<128> proc_lwp_dir;
-  llvm::sys::path::append(proc_lwp_dir, "/proc/", std::to_string(pid), "/lwp/");
-  std::vector<::pid_t> tids;
-
-  std::error_code ec;
-  bool is_dir_result;
-  if (!llvm::sys::fs::is_directory(proc_lwp_dir, is_dir_result) && 
-      is_dir_result) {
-      for (llvm::sys::fs::directory_iterator it(proc_lwp_dir, ec), end;
-           it != end && !ec; it.increment(ec)) {
-          llvm::StringRef name = llvm::sys::path::filename(it->path());
-
-          if (name == "." || name == "..")
-              continue;
-
-          lldb::tid_t tid = 0;
-          if (!name.getAsInteger(10, tid)) {
-              LLDB_LOG(log, "Discovered tid {0}", tid);
-              tids.push_back(tid);
-              break; // only supported for single threaded processes right now
-          }
-      }
+  // Use getthrds64 to enumerate all kernel threads for the process.
+  // Two-phase: first call with a null buffer to get the count, then fetch.
+  tid64_t cursor = 0;
+  int count = getthrds64(pid, nullptr, sizeof(struct thrdentry64), &cursor, INT_MAX);
+  if (count <= 0) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No threads found for process %d", pid);
   }
 
-  if (tids.empty()) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "No threads found for process %d", pid);
+  std::vector<struct thrdentry64> entries(count);
+  cursor = 0;
+  int actual = getthrds64(pid, entries.data(), sizeof(struct thrdentry64),
+                          &cursor, count);
+  if (actual <= 0) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No threads found for process %d", pid);
+  }
+
+  std::vector<::pid_t> tids;
+  tids.reserve(actual);
+  for (int i = 0; i < actual; i++) {
+    LLDB_LOG(log, "Discovered tid {0}", entries[i].ti_tid);
+    tids.push_back(static_cast<::pid_t>(entries[i].ti_tid));
   }
 
   return tids;
@@ -439,51 +436,18 @@ void NativeProcessAIX::Manager::SigchldHandler() {
     lldb::pid_t pid = wait_result->first;
     WaitStatus status = wait_result->second;
 
-    // Ask each process whether it wants to handle the event. Each event should
-    // be handled by exactly one process, but thread creation events require
-    // special handling.
-    // Thread creation consists of two events (one on the parent and one on the
-    // child thread) and they can arrive in any order nondeterministically. The
-    // parent event carries the information about the child thread, but not
-    // vice-versa. This means that if the child event arrives first, it may not
-    // be handled by any process (because it doesn't know the thread belongs to
-    // it).
+    LLDB_LOG(log, "Signal {0}",status.status);
     bool handled = llvm::any_of(m_processes, [&](NativeProcessAIX *process) {
       return process->TryHandleWaitStatus(pid, status);
     });
     if (!handled) {
-      if (status.type == WaitStatus::Stop && status.status == SIGSTOP) {
-        // Store the thread creation event for later collection.
-        m_unowned_threads.insert(pid /*needs tid?*/);
-      } else {
         LLDB_LOG(log, "Ignoring waitpid event {0} for pid {1}", status, pid);
-      }
     }
   }
 }
 
 void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {
-  Log *log = GetLog(POSIXLog::Process);
-
-  if (m_unowned_threads.erase(tid))
-    return; // We've encountered this thread already.
-
-  // The TID is not tracked yet, let's wait for it to appear.
-  int status = -1;
-  LLDB_LOG(log,
-           "received clone event for tid {0}. tid not tracked yet, "
-           "waiting for it to appear...",
-           tid);
-  ::pid_t wait_pid =
-      llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, P_ALL/*__WALL*/);
-
-  // It's theoretically possible to get other events if the entire process was
-  // SIGKILLed before we got a chance to check this. In that case, we'll just
-  // clean everything up when we get the process exit event.
-
-  LLDB_LOG(log,
-           "waitpid({0}, &status, __WALL) => {1} (errno: {2}, status = {3})",
-           tid, wait_pid, errno, WaitStatus::Decode(status));
+    // Not applicable for AIX
 }
 
 // Public Instance Methods
@@ -532,48 +496,56 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
 }
 
 NativeThreadAIX* NativeProcessAIX::FindStoppedThread() {
-     Log *log = GetLog(POSIXLog::Process);
+    Log *log = GetLog(POSIXLog::Process);
 
-  for (const auto &thread_sp : m_threads) {
-    lldb::tid_t tid = thread_sp->GetID();
+    tid64_t index = 0;
+    int thread_count = getthrds64(GetID(), NULL, sizeof(struct thrdentry64),
+            &index, INT_MAX);
 
-    // Read lwpstatus for this thread
-    auto buffer_or = getProcFile(GetID(), tid, "lwpstatus");
-    if (!buffer_or) {
-      LLDB_LOG(log, "Failed to read lwpstatus for tid {0}", tid);
-      continue;
+    if (thread_count > 0) {
+        std::vector<struct thrdentry64> entries(thread_count);
+        index = 0;
+        int actual = getthrds64(GetID(), entries.data(),
+                sizeof(struct thrdentry64),
+                &index, thread_count);
+        
+        if (actual > 0) {
+            // Find thread with TTRCSIG flag set
+            for (int i = 0; i < actual; i++) {
+                if (entries[i].ti_flag & TTRCSIG) {
+                    lldb::tid_t stopped_tid = static_cast<lldb::tid_t>(entries[i].ti_tid);
+                    LLDB_LOG(log, "Found stopped thread via TTRCSIG: tid={0}, cursig={1}, state={2}",
+                            stopped_tid, entries[i].ti_cursig, entries[i].ti_state);
+
+                    // Find the corresponding NativeThreadAIX object
+                    for (const auto &thread_sp : m_threads) {
+                        if (thread_sp->GetID() == stopped_tid) {
+                            return static_cast<NativeThreadAIX *>(thread_sp.get());
+                        }
+                    }
+                    LLDB_LOG(log, "Warning: TTRCSIG thread {0} not in thread list", stopped_tid);
+                }
+            }
+        }
     }
 
-    auto &buffer = *buffer_or;
-    if (buffer->getBufferSize() < sizeof(lwpstatus_t)) {
-      LLDB_LOG(log, "lwpstatus too small for tid {0}", tid);
-      continue;
-    }
-
-    const lwpstatus_t *lwpstatus =
-        reinterpret_cast<const lwpstatus_t *>(buffer->getBufferStart());
-
-    if (lwpstatus->pr_flags & PR_STOPPED) {
-      LLDB_LOG(log, "Found stopped thread: tid {0}, pr_why={1}, pr_what={2}",
-               tid, lwpstatus->pr_why, lwpstatus->pr_what);
-      return static_cast<NativeThreadAIX *>(thread_sp.get());
-    }
-  }
-
-  LLDB_LOG(log, "No stopped thread found among {0} threads", m_threads.size());
-  return nullptr;
+    LLDB_LOG(log, "No stopped thread found among {0} threads", m_threads.size());
+    return nullptr;
 }
 
 
 bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid,
                                              WaitStatus status) {
+  Log *log = GetLog(POSIXLog::Process);
   if (pid == GetID() &&
       (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal)) {
     // The process exited.  We're done monitoring.  Report to delegate.
     SetExitStatus(status, true);
     return true;
   }
-  if (NativeThreadAIX *thread = FindStoppedThread()) {
+  m_triggering_tid = FindStoppedThread()->GetID();
+  LLDB_LOG(log, "m_triggering_tid {0} ",m_triggering_tid);
+  if (NativeThreadAIX *thread = GetThreadByID(m_triggering_tid)) {
     MonitorCallback(*thread, status);
     return true;
   }
@@ -709,10 +681,6 @@ void NativeProcessAIX::MonitorWatchpoint(NativeThreadAIX &thread,
 void NativeProcessAIX::MonitorSignal(const WaitStatus status,
                                        NativeThreadAIX &thread) {
   int8_t signo = GetSignalInfo(status);
-#if 0
-  const bool is_from_llgs = info.si_pid == getpid();
-#endif
-
   Log *log = GetLog(POSIXLog::Process);
 
   // POSIX says that process behaviour is undefined after it ignores a SIGFPE,
@@ -730,10 +698,8 @@ void NativeProcessAIX::MonitorSignal(const WaitStatus status,
            "waitpid pid = {3})",
            Host::GetSignalAsCString(signo), signo, thread.GetID(), GetID());
 
-#if 0
   // Check for thread stop notification.
-  // FIXME
-  if (is_from_llgs /*&& (info.si_code == SI_TKILL)*/ && (signo == SIGSTOP)) {
+  if (signo == SIGSTOP) {
     // This is a tgkill()-based stop.
     LLDB_LOG(log, "pid {0} tid {1}, thread stopped", GetID(), thread.GetID());
 
@@ -755,7 +721,7 @@ void NativeProcessAIX::MonitorSignal(const WaitStatus status,
       // the thread that was chosen as the triggering thread.
       if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID) {
         if (m_pending_notification_tid == thread.GetID())
-          thread.SetStoppedBySignal(SIGSTOP, &info);
+          thread.SetStoppedBySignal(SIGSTOP);
         else
           thread.SetStoppedWithNoReason();
 
@@ -780,7 +746,6 @@ void NativeProcessAIX::MonitorSignal(const WaitStatus status,
     // Done handling.
     return;
   }
-#endif
 
   // Check if debugger should stop at this signal or just ignore it and resume
   // the inferior.
@@ -859,39 +824,67 @@ bool NativeProcessAIX::SupportHardwareSingleStepping() const {
   return false;
 }
 
+Status NativeProcessAIX::IssuePTTContinue(
+        lldb::tid_t triggering_tid, int signo,
+        llvm::ArrayRef<lldb::tid_t> other_tids) {
+    Log *log = GetLog(POSIXLog::Process);
+
+    struct ptthreads64 buf;
+    memset(&buf, 0, sizeof(buf));
+    size_t idx = 0;
+    for (lldb::tid_t tid : other_tids) {
+        if (tid == triggering_tid)
+            continue; // triggering thread is the id arg, not in the list
+        if (idx >= (sizeof(buf.th) / sizeof(buf.th[0])) - 1) {
+            LLDB_LOG(log, "IssuePTTContinue: too many threads, truncating list");
+            break;
+        }
+        buf.th[idx++] = static_cast<tid64_t>(tid);
+    }
+    buf.th[idx] = 0; // null-terminate
+
+    LLDB_LOG(log,
+            "IssuePTTContinue: triggering_tid={0} signo={1} other_count={2}",
+            triggering_tid, signo, idx);
+
+    return PtraceWrapper(PTT_CONTINUE,
+            triggering_tid,
+            /*addr=*/&buf,
+            /*data=*/reinterpret_cast<void *>(static_cast<intptr_t>(signo)));
+}
+
 Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid {0}", GetID());
 
-  bool software_single_step = !SupportHardwareSingleStepping();
-
-  if (software_single_step) {
-    for (const auto &thread : m_threads) {
-      assert(thread && "thread list should not contain NULL threads");
-
-      const ResumeAction *const action =
-          resume_actions.GetActionForThread(thread->GetID(), true);
-      if (action == nullptr)
-        continue;
-
-      if (action->state == eStateStepping) {
-        Status error = SetupSoftwareSingleStepping(
-            static_cast<NativeThreadAIX &>(*thread));
-        if (error.Fail())
-          return error;
-      }
+  for (const auto &thread : m_threads) {
+    assert(thread && "thread list should not contain NULL threads");
+    const ResumeAction *const action =
+        resume_actions.GetActionForThread(thread->GetID(), true);
+    if (action && action->state == eStateStepping) {
+      Status error = SetupSoftwareSingleStepping(
+          static_cast<NativeThreadAIX &>(*thread));
+      if (error.Fail())
+        return error;
     }
   }
 
+  int signal_to_deliver = 0;
+
+  // Collect the set of tids to run (excluding the triggering thread itself,
+  // which is always started via the id arg of PTT_CONTINUE).
+  llvm::SmallVector<lldb::tid_t, 16> tids_to_run;
+
   for (const auto &thread : m_threads) {
     assert(thread && "thread list should not contain NULL threads");
-
+    auto &aix_thread = static_cast<NativeThreadAIX &>(*thread);
     const ResumeAction *const action =
         resume_actions.GetActionForThread(thread->GetID(), true);
 
     if (action == nullptr) {
       LLDB_LOG(log, "no action specified for pid {0} tid {1}", GetID(),
                thread->GetID());
+      // No action, keep this thread suspended (don't add to tids_to_run).
       continue;
     }
 
@@ -900,32 +893,60 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
 
     switch (action->state) {
     case eStateRunning:
-    case eStateStepping: {
-      // Run the thread, possibly feeding it the signal.
-      const int signo = action->signal;
-      Status error = ResumeThread(static_cast<NativeThreadAIX &>(*thread),
-                                  action->state, signo);
-      if (error.Fail())
-        return Status::FromErrorStringWithFormat("NativeProcessAIX::%s: failed to resume thread "
-                      "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
-                      __FUNCTION__, GetID(), thread->GetID(),
-                      error.AsCString());
+    case eStateStepping:
+      // Update the thread's LLDB state.
+      if (action->state == eStateStepping)
+        aix_thread.SetStepping();
+      else
+        aix_thread.SetRunning();
 
+      // Capture the signal from the triggering thread; other threads are
+      // resumed without signal delivery.
+      if (thread->GetID() == m_triggering_tid) {
+        if (action->signal != LLDB_INVALID_SIGNAL_NUMBER)
+          signal_to_deliver = action->signal;
+      }
+
+      // Add all threads-to-run to the list; IssuePTTContinue will exclude
+      // the triggering tid from the ptthreads64 buffer automatically.
+      tids_to_run.push_back(thread->GetID());
       break;
-    }
 
     case eStateSuspended:
     case eStateStopped:
       break;
 
     default:
-      return Status::FromErrorStringWithFormat("NativeProcessAIX::%s (): unexpected state %s specified "
-                    "for pid %" PRIu64 ", tid %" PRIu64,
-                    __FUNCTION__, StateAsCString(action->state), GetID(),
-                    thread->GetID());
+      return Status::FromErrorStringWithFormat(
+          "NativeProcessAIX::%s (): unexpected state %s specified "
+          "for pid %" PRIu64 ", tid %" PRIu64,
+          __FUNCTION__, StateAsCString(action->state), GetID(),
+          thread->GetID());
     }
   }
 
+  if (tids_to_run.empty()) {
+    LLDB_LOG(log, "Resume: no threads to run for pid {0}", GetID());
+    return Status();
+  }
+
+  // m_triggering_tid MUST be the stopped thread
+  if (llvm::find(tids_to_run, m_triggering_tid) == tids_to_run.end()) {
+    m_triggering_tid = FindStoppedThread()->GetID();
+    LLDB_LOG(log, "m_triggering_tid {0} ",m_triggering_tid);
+  }
+
+  // Issue the single PTT_CONTINUE that starts the whole process.
+  Status error = IssuePTTContinue(m_triggering_tid, signal_to_deliver,
+                                  tids_to_run);
+  if (error.Fail())
+    return Status::FromErrorStringWithFormat(
+        "NativeProcessAIX::%s: PTT_CONTINUE failed for pid %" PRIu64
+        ", triggering_tid %" PRIu64 ", error = %s",
+        __FUNCTION__, GetID(), m_triggering_tid, error.AsCString());
+
+  m_triggering_tid = LLDB_INVALID_THREAD_ID;
+  SetState(eStateRunning, true);
   return Status();
 }
 
@@ -1653,11 +1674,7 @@ NativeThreadAIX &NativeProcessAIX::AddThread(lldb::tid_t thread_id,
   NativeThreadAIX &thread =
       static_cast<NativeThreadAIX &>(*m_threads.back());
 
-  Status tracing_error = NotifyTracersOfNewThread(thread.GetID());
-  if (tracing_error.Fail()) {
-    thread.SetStoppedByProcessorTrace(tracing_error.AsCString());
-    StopRunningThreads(thread.GetID());
-  } else if (resume)
+  if (resume)
     ResumeThread(thread, eStateRunning, LLDB_INVALID_SIGNAL_NUMBER);
   else
     thread.SetStoppedBySignal(SIGSTOP);
@@ -1717,11 +1734,10 @@ Status NativeProcessAIX::ResumeThread(NativeThreadAIX &thread,
   Log *const log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "tid: {0}", thread.GetID());
 
-  // Before we do the resume below, first check if we have a pending stop
-  // notification that is currently waiting for all threads to stop.  This is
-  // potentially a buggy situation since we're ostensibly waiting for threads
-  // to stop before we send out the pending notification, and here we are
-  // resuming one before we send out the pending stop notification.
+  // We are only using the NativeThreadAIX level resume/step 
+  // to set states for lldb book keeping. 
+  // The actual call is issued by IssuePTTContinue which is supposed to be
+  // a once per stop call.
   if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID) {
     LLDB_LOG(log,
              "about to resume tid {0} per explicit request but we have a "
@@ -1730,17 +1746,22 @@ Status NativeProcessAIX::ResumeThread(NativeThreadAIX &thread,
              thread.GetID(), m_pending_notification_tid);
   }
 
-  // Request a resume.  We expect this to be synchronous and the system to
-  // reflect it is running after this completes.
+  int signal_to_deliver =
+      (signo != LLDB_INVALID_SIGNAL_NUMBER) ? signo : 0;
+
   switch (state) {
   case eStateRunning: {
-    Status resume_result = thread.Resume(signo);
+    thread.SetRunning();
+    Status resume_result =
+        IssuePTTContinue(thread.GetID(), signal_to_deliver, /*other_tids=*/{});
     if (resume_result.Success())
       SetState(eStateRunning, true);
     return resume_result;
   }
   case eStateStepping: {
-    Status step_result = thread.SingleStep(signo);
+    thread.SetStepping();
+    Status step_result =
+        IssuePTTContinue(thread.GetID(), signal_to_deliver, /*other_tids=*/{});
     if (step_result.Success())
       SetState(eStateRunning, true);
     return step_result;
@@ -1763,8 +1784,11 @@ void NativeProcessAIX::StopRunningThreads(const lldb::tid_t triggering_tid) {
   // Request a stop for all the thread stops that need to be stopped and are
   // not already known to be stopped.
   for (const auto &thread : m_threads) {
-    if (StateIsRunningState(thread->GetState()))
+    LLDB_LOG(log, "StateIsRunningState(thread->GetState(): {0}",
+            StateIsRunningState(thread->GetState()));  
+    if (StateIsRunningState(thread->GetState())) {
       static_cast<NativeThreadAIX *>(thread.get())->RequestStop();
+    }
   }
 
   SignalIfAllThreadsStopped();
@@ -1805,12 +1829,14 @@ void NativeProcessAIX::ThreadWasCreated(NativeThreadAIX &thread) {
   Log *const log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "tid: {0}", thread.GetID());
 
-  if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID &&
-      StateIsRunningState(thread.GetState())) {
-    // We will need to wait for this new thread to stop as well before firing
-    // the notification.
-    thread.RequestStop();
-  }
+  // On AIX, a newly-discovered thread is always already kernel-stopped 
+  // (either it has TTRCSIG set, or it implicitly set by a signal 
+  // AddThread() initialises  the LLDB state to eStateStopped, 
+  // so there is nothing to request here.
+  // If there is a pending notification, SignalIfAllThreadsStopped() will
+  // check and fire once all threads report stopped.  
+  if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID)
+    SignalIfAllThreadsStopped();
 }
 
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
@@ -1855,8 +1881,7 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t id, void *addr,
 
   Log *log = GetLog(POSIXLog::Ptrace);
 
-  PtraceDisplayBytes(req, data, data_size);
-
+  LLDB_LOG(log, "Entered PtraceWrapper for req: {0}", req);
   errno = 0;
   /* NOTE: id could be pid or tid, based on the caller */
   switch (req) {
@@ -1903,8 +1928,14 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t id, void *addr,
       break;
 
     case PTT_CONTINUE:
-      /* Needs to be modified for multiple threads */
-      ptrace64(req, id, 1, (int)(size_t)data, nullptr);
+      // id   = triggering tid (the one with TTRCSIG)
+      // addr = 1 means resume from current IAR
+      // data = signal number (0 = discard the signal)
+      // buffer = pointer to a null-terminated ptthreads64 listing all OTHER
+      //          threads that should also be started.  May be nullptr when
+      //          only the triggering thread needs to run (e.g. single-step
+      //          with all other threads suspended).
+      ptrace64(req, id, 1, (int)(size_t)data, (int *)addr);
       break;
 
     case PT_ATTACH: {

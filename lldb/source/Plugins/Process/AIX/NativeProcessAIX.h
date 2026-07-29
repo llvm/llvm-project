@@ -170,6 +170,7 @@ public:
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
   /// memory region pointed to by \p siginfo.
   int8_t GetSignalInfo(WaitStatus wstatus) const;
+
   NativeThreadAIX* FindStoppedThread();
 
 protected:
@@ -184,6 +185,8 @@ private:
   ArchSpec m_arch;
   /*MainLoop& m_main_loop;*/
   static lldb::pid_t process_pid; // For Access to PtraceWrapper
+
+  lldb::tid_t m_triggering_tid = LLDB_INVALID_THREAD_ID;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
@@ -271,6 +274,15 @@ private:
   // operation (continue, single-step) depends on the state parameter.
   Status ResumeThread(NativeThreadAIX &thread, lldb::StateType state,
                       int signo);
+
+  // Issue a single PTT_CONTINUE ptrace call.
+  //   triggering_tid - the thread with TTRCSIG that caused the exception
+  //   signo          - 0 to discard, or a valid signal number to deliver
+  //   other_tids     - all OTHER threads to start simultaneously (null-
+  //                    terminated ptthreads64 is built internally).
+  //                    The triggering_tid itself is NOT included here.
+  Status IssuePTTContinue(lldb::tid_t triggering_tid, int signo,
+                          llvm::ArrayRef<lldb::tid_t> other_tids);
 
   void ThreadWasCreated(NativeThreadAIX &thread);
 
