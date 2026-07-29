@@ -110,99 +110,10 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "TARGET " GETNAME(TARGET_NAME) " RTL"
 #endif
 
-// Extension function pointer for getting argument sizes.
-static ze_result_t (*zexKernelGetArgumentSize_ptr)(ze_kernel_handle_t, uint32_t,
-                                                   uint32_t *) = nullptr;
-
-static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
-    ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
-    const ze_group_count_t groupCounts, const ze_group_size_t groupSizes,
-    void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
-    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
-
-  static std::once_flag zexKernelGetArgumentSize_once;
-  ze_result_t Res;
-
-  // Load zexKernelGetArgumentSize extension if available.
-  std::call_once(zexKernelGetArgumentSize_once, []() {
-    uint32_t DriverCount = 0;
-    if (zeDriverGet(&DriverCount, nullptr) == ZE_RESULT_SUCCESS &&
-        DriverCount > 0) {
-      ze_driver_handle_t Driver;
-      DriverCount = 1;
-      if (zeDriverGet(&DriverCount, &Driver) == ZE_RESULT_SUCCESS) {
-        void *ExtFunc = nullptr;
-        if (zeDriverGetExtensionFunctionAddress(
-                Driver, "zexKernelGetArgumentSize", &ExtFunc) ==
-                ZE_RESULT_SUCCESS &&
-            ExtFunc) {
-          zexKernelGetArgumentSize_ptr =
-              reinterpret_cast<decltype(zexKernelGetArgumentSize_ptr)>(ExtFunc);
-          ODBG(OLDT_Init) << "Loaded zexKernelGetArgumentSize extension";
-        }
-      }
-    }
-  });
-  if (!zexKernelGetArgumentSize_ptr) {
-    ODBG(OLDT_Kernel) << "zeCommandListAppendLaunchKernelWithArguments is not "
-                         "available, and no fallback is possible without "
-                         "argument size information.";
-    return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
-  }
-
-  Res = zeKernelSetGroupSize(hKernel, groupSizes.groupSizeX,
-                             groupSizes.groupSizeY, groupSizes.groupSizeZ);
-  if (Res != ZE_RESULT_SUCCESS)
-    return Res;
-
-  ze_kernel_properties_t KernelProps = {};
-  KernelProps.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
-  Res = zeKernelGetProperties(hKernel, &KernelProps);
-  if (Res != ZE_RESULT_SUCCESS)
-    return Res;
-
-  uint32_t NumKernelArgs = KernelProps.numKernelArgs;
-
-  for (uint32_t KernelArg = 0; KernelArg < NumKernelArgs; KernelArg++) {
-    uint32_t ArgSize = 0;
-
-    Res = zexKernelGetArgumentSize_ptr(hKernel, KernelArg, &ArgSize);
-    if (Res != ZE_RESULT_SUCCESS)
-      return Res;
-
-    Res = zeKernelSetArgumentValue(hKernel, KernelArg, ArgSize,
-                                   pArguments[KernelArg]);
-    if (Res != ZE_RESULT_SUCCESS)
-      return Res;
-  }
-
-  bool IsCooperative = false;
-  if (pNext) {
-    const ze_command_list_append_launch_kernel_param_cooperative_desc_t
-        *CoopDesc = static_cast<
-            const ze_command_list_append_launch_kernel_param_cooperative_desc_t
-                *>(pNext);
-    if (CoopDesc->stype ==
-        ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC)
-      IsCooperative = CoopDesc->isCooperative;
-  }
-
-  if (IsCooperative)
-    return zeCommandListAppendLaunchCooperativeKernel(
-        hCommandList, hKernel, &groupCounts, hSignalEvent, numWaitEvents,
-        phWaitEvents);
-  return zeCommandListAppendLaunchKernel(hCommandList, hKernel, &groupCounts,
-                                         hSignalEvent, numWaitEvents,
-                                         phWaitEvents);
-}
-
 static struct {
   const char *Name;
   void *FallbackFunc;
-} ZeFallbacksTbl[] = {
-    {"zeCommandListAppendLaunchKernelWithArguments",
-     reinterpret_cast<void *>(
-         &zeCommandListAppendLaunchKernelWithArgumentsFallback)}};
+} ZeFallbacksTbl[] = {};
 constexpr size_t ZeFallbacksTblSz =
     sizeof(ZeFallbacksTbl) / sizeof(ZeFallbacksTbl[0]);
 
