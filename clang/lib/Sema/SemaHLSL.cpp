@@ -2987,19 +2987,14 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
          "expected DeclRefExpr or MemberExpr");
 
-  // has a definition -> add to stack to be scanned
-  const FunctionDecl *FDWithBody = nullptr;
-  if (FD->hasBody(FDWithBody)) {
-    if (!WasAlreadyScannedInCurrentStage(FDWithBody))
-      DeclsToScan.push_back(FDWithBody);
-    return;
-  }
-
-  // no body -> diagnose availability
-  const AvailabilityAttr *AA = FindAvailabilityAttr(FD);
-  if (AA)
+  if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
     CheckDeclAvailability(
         FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+
+  // has a definition -> add to stack to be scanned
+  const FunctionDecl *FDWithBody = nullptr;
+  if (FD->hasBody(FDWithBody) && !WasAlreadyScannedInCurrentStage(FDWithBody))
+    DeclsToScan.push_back(FDWithBody);
 }
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(
@@ -3775,6 +3770,96 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
 
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
 
+static StringRef getSampleMethodName(SampleKind Kind) {
+  switch (Kind) {
+  case SampleKind::Sample:
+    return "Sample";
+  case SampleKind::Bias:
+    return "SampleBias";
+  case SampleKind::Grad:
+    return "SampleGrad";
+  case SampleKind::Level:
+    return "SampleLevel";
+  case SampleKind::Cmp:
+    return "SampleCmp";
+  case SampleKind::CmpLevelZero:
+    return "SampleCmpLevelZero";
+  }
+  llvm_unreachable("Invalid SampleKind");
+}
+
+// Returns the name of the resource method whose body the sampling or gather
+// builtin is being emitted into, which is the name the user called. This
+// matters for methods that share a builtin, like 'Gather' and 'GatherRed'.
+// Falls back to DefaultName if the builtin is used outside of a resource
+// method.
+static StringRef getCurrentResourceMethodName(Sema &S, StringRef DefaultName) {
+  const auto *MD = dyn_cast_if_present<CXXMethodDecl>(S.getCurFunctionDecl());
+  if (!MD || !MD->getDeclName().isIdentifier())
+    return DefaultName;
+
+  QualType RecordTy = S.Context.getCanonicalTagType(MD->getParent());
+  if (!RecordTy->isHLSLResourceRecord())
+    return DefaultName;
+
+  return MD->getName();
+}
+
+// Returns the element type of a typed resource's contained type. Typed resource
+// element types are scalars or vectors of scalars, so anything that is not a
+// vector is already the element type.
+static QualType getTypedResourceElementType(QualType ContainedType) {
+  if (const auto *VecTy = ContainedType->getAs<VectorType>())
+    return VecTy->getElementType();
+  return ContainedType;
+}
+
+// Sampling from and gathering on resources with a 'double' element type is not
+// supported. Such resources are still valid declarations whose contents can be
+// accessed by other means, like Load or the subscript operator.
+static bool CheckNoDoubleElementType(Sema &S, CallExpr *TheCall,
+                                     QualType ContainedType,
+                                     StringRef DefaultName) {
+  QualType EltTy = getTypedResourceElementType(ContainedType);
+  if (!EltTy->isSpecificBuiltinType(BuiltinType::Double))
+    return false;
+
+  S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_sample_double_element_type)
+      << getCurrentResourceMethodName(S, DefaultName) << ContainedType;
+  return true;
+}
+
+// Sampling textures with an integer element type was introduced in SM 6.7 as
+// part of Advanced Texture Operations. The shader model only applies to DirectX
+// targets; Vulkan has no such restriction.
+static bool CheckIntegerElementTypeShaderModel(Sema &S, CallExpr *TheCall,
+                                               QualType ContainedType,
+                                               SampleKind Kind) {
+  // Comparison sampling requires a floating point element type at every shader
+  // model, which the caller diagnoses.
+  if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero)
+    return false;
+
+  // 'bool' is an integer type in HLSL, but sampling bool resources is never
+  // allowed, so it must not be reported as requiring shader model 6.7.
+  QualType EltTy = getTypedResourceElementType(ContainedType);
+  if (!EltTy->isIntegerType() || EltTy->isBooleanType())
+    return false;
+
+  const TargetInfo &TI = S.Context.getTargetInfo();
+  if (!TI.getTriple().isDXIL())
+    return false;
+
+  VersionTuple SMVersion = TI.getPlatformMinVersion();
+  if (SMVersion >= VersionTuple(6, 7))
+    return false;
+
+  S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_sample_integer_element_type)
+      << getCurrentResourceMethodName(S, getSampleMethodName(Kind))
+      << ContainedType << SMVersion.getAsString();
+  return true;
+}
+
 static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
                                            bool IncludeArraySlice = true) {
   // Check the texture handle.
@@ -3889,6 +3974,10 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
          "Expecting a contained type for resource with a dimension "
          "attribute.");
   QualType ReturnType = ResourceTy->getContainedType();
+
+  if (CheckNoDoubleElementType(S, TheCall, ReturnType,
+                               IsCmp ? "GatherCmp" : "Gather"))
+    return true;
 
   if (IsCmp) {
     if (!ReturnType->hasFloatingRepresentation()) {
@@ -4038,6 +4127,14 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
          "Expecting a contained type for resource with a dimension "
          "attribute.");
   QualType ReturnType = ResourceTy->getContainedType();
+
+  if (CheckNoDoubleElementType(S, TheCall, ReturnType,
+                               getSampleMethodName(Kind)))
+    return true;
+
+  if (CheckIntegerElementTypeShaderModel(S, TheCall, ReturnType, Kind))
+    return true;
+
   if (Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
     if (!ReturnType->hasFloatingRepresentation()) {
       S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_samplecmp_requires_float);

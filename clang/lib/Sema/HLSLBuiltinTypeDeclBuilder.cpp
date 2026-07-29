@@ -96,6 +96,32 @@ QualType getInoutParameterType(ASTContext &AST, QualType Ty) {
   return Ty;
 }
 
+// Attaches availability attributes to a method that requires implicit
+// derivatives. Implicit derivatives are always available in pixel
+// shaders. Shader Model 6.6 made derivatives available in compute, mesh and
+// amplification shaders as well. All other shader stages do not support
+// derivatives.
+void addDerivativeAvailabilityAttrs(ASTContext &AST, FunctionDecl *FD) {
+  struct DerivativeShaderStage {
+    StringRef Environment;
+    VersionTuple Introduced;
+  };
+  const DerivativeShaderStage Stages[] = {
+      {"pixel", VersionTuple(6, 0)},
+      {"compute", VersionTuple(6, 6)},
+      {"mesh", VersionTuple(6, 6)},
+      {"amplification", VersionTuple(6, 6)},
+  };
+
+  const IdentifierInfo *Platform = &AST.Idents.get("shadermodel");
+  for (const DerivativeShaderStage &Stage : Stages)
+    FD->addAttr(AvailabilityAttr::CreateImplicit(
+        AST, Platform, Stage.Introduced, /*Deprecated=*/VersionTuple(),
+        /*Obsoleted=*/VersionTuple(), /*Unavailable=*/false, /*Message=*/"",
+        /*Strict=*/false, /*Replacement=*/"", Sema::AP_Explicit,
+        &AST.Idents.get(Stage.Environment), /*InferredAttr=*/nullptr));
+}
+
 } // namespace
 
 // Builder for template arguments of builtin types. Used internally
@@ -1670,6 +1696,19 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
 }
 
 BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addDerivativeAvailability(StringRef MethodName) {
+  ASTContext &AST = Record->getASTContext();
+  DeclarationName Name(&AST.Idents.get(MethodName, tok::TokenKind::identifier));
+  for (NamedDecl *D : Record->lookup(Name)) {
+    if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      D = FTD->getTemplatedDecl();
+    if (auto *MD = dyn_cast<CXXMethodDecl>(D))
+      addDerivativeAvailabilityAttrs(AST, MD);
+  }
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
@@ -1706,7 +1745,7 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
       .finalize();
 
   // T Sample(SamplerState s, float2 location, int2 offset, float clamp)
-  return BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", CoordTy)
       .addParam("Offset", OffsetTy)
@@ -1716,6 +1755,9 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
                    PH::LastStmt, PH::_1, PH::_2, PH::_3)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  // Sample uses implicit derivatives to calculate the mip level.
+  return addDerivativeAvailability("Sample");
 }
 
 BuiltinTypeDeclBuilder &
@@ -1759,7 +1801,7 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
 
   // T SampleBias(SamplerState s, float2 location, float bias, int2 offset,
   // float clamp)
-  return BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", CoordTy)
       .addParam("Bias", FloatTy)
@@ -1770,6 +1812,9 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  // SampleBias uses implicit derivatives to calculate the mip level.
+  return addDerivativeAvailability("SampleBias");
 }
 
 BuiltinTypeDeclBuilder &
@@ -1914,7 +1959,7 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
 
   // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value,
   // int2 offset, float clamp)
-  return BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
       .addParam("Location", CoordTy)
       .addParam("CompareValue", FloatTy)
@@ -1925,6 +1970,9 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
                    PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
       .returnValue(PH::LastStmt)
       .finalize();
+
+  // SampleCmp uses implicit derivatives to calculate the mip level.
+  return addDerivativeAvailability("SampleCmp");
 }
 
 BuiltinTypeDeclBuilder &
@@ -2038,14 +2086,17 @@ BuiltinTypeDeclBuilder::addCalculateLodMethods(ResourceDimension Dim) {
       .finalize();
 
   // float CalculateLevelOfDetailUnclamped(SamplerState s, float2 location)
-  return BuiltinTypeMethodBuilder(*this, "CalculateLevelOfDetailUnclamped",
-                                  ReturnType)
+  BuiltinTypeMethodBuilder(*this, "CalculateLevelOfDetailUnclamped", ReturnType)
       .addParam("Sampler", SamplerStateType)
       .addParam("Location", LocationTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_calculate_lod_unclamped",
                    ReturnType, PH::Handle, PH::LastStmt, PH::_1)
       .finalize();
+
+  // Both methods use implicit derivatives to calculate the level of detail.
+  addDerivativeAvailability("CalculateLevelOfDetail");
+  return addDerivativeAvailability("CalculateLevelOfDetailUnclamped");
 }
 
 QualType BuiltinTypeDeclBuilder::getGatherReturnType() {
