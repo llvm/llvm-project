@@ -1,4 +1,4 @@
 # RUN: lldb-mcp --version | FileCheck %s
 # RUN: lldb-mcp -v | FileCheck %s
-# CHECK: lldb-mcp:
+# CHECK: lldb-mcp{{.*}}:
 # CHECK: liblldb:
