@@ -340,38 +340,4 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
   ];
 }
 
-def ElevateAllocsToGlobalsPass : Pass<"elevate-allocs-to-globals", "ModuleOp"> {
-  let summary = "Elevate allocs to globals";
-  let description = [{
-    This pass converts statically-shaped `memref.alloc` operations that are not
-    enclosed within loops or control flow into private `memref.global` operations.
-    `memref.alloc` operations are replaced with `memref.get_global` references and
-    any associated `memref.dealloc` operations are removed.
-
-    Example:
-
-    ```mlir
-    func.func @example() {
-      %0 = memref.alloc() {alignment = 64 : i64} : memref<10xf32>
-      memref.dealloc %0 : memref<10xf32>
-      return
-    }
-    ```
-
-    is transformed to
-
-    ```mlir
-    memref.global "private" @global_alloc : memref<10xf32> = uninitialized {alignment = 64 : i64}
-
-    func.func @example() {
-      %0 = memref.get_global @global_alloc : memref<10xf32>
-      return
-    }
-    ```
-  }];
-  let dependentDialects = [
-      "memref::MemRefDialect"
-  ];
-}
-
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
