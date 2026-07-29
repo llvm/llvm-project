@@ -76,8 +76,9 @@ public:
   AMDGPUAssignIdxToM0Legacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
+    // This is required lowering, not an optimization: without the copy to M0
+    // the movrel that AMDGPULowerVGPREncoding emits later reads a stale index.
+    // It therefore must not be skipped for optnone functions.
     return assignIdxToM0(MF);
   }
 
