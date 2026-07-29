@@ -1,0 +1,26 @@
+# lc_target_triple.arm64 created thusly
+# // lc_target_triple.c
+# int main(int argc, const char * argv[]) {
+#    return 0;
+#}
+#
+# xcrun clang -target arm64-apple-macos27.0.0 \
+# -g -gdwarf-4 -fno-unwind-tables -fno-exceptions -mno-outline -Oz \
+# -c lc_target_triple.c -o lc_target_triple.o
+#
+# xcrun ld -platform_version macos 27.0.0 27.0.0 \
+# -target arm64-apple-macos27.0.0 -o lc_target_triple.arm64 lc_target_triple.o \
+# -dead_strip -static -preload -e _main -oso_prefix "$PWD"
+
+# RUN: dsymutil -f %p/../Inputs/lc_target_triple.arm64 -o - \
+# RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
+
+# RUN: dsymutil --linker parallel -f %p/../Inputs/lc_target_triple.arm64 -o - \
+# RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
+
+CHECK: LoadCommands:
+CHECK:   - cmd:             LC_TARGET_TRIPLE
+CHECK-NEXT:    cmdsize:         40
+CHECK-NEXT:    triple:          12
+CHECK-NEXT:    Content:         arm64-apple-macos27.0.0
+CHECK-NEXT:    ZeroPadBytes:    5
