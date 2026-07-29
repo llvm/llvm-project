@@ -512,6 +512,13 @@ void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
     SubExpr = Record.readSubStmt();
 }
 
+void ASTStmtReader::VisitCoroutineSuspendParameterBypassExpr(
+    CoroutineSuspendParameterBypassExpr *E) {
+  VisitExpr(E);
+  E->setSubExpr(cast_or_null<Expr>(Record.readSubExpr()));
+  E->setMoveExpr(cast_or_null<Expr>(Record.readSubExpr()));
+}
+
 void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
   VisitStmt(S);
   Record.skipInts(1);
@@ -4553,6 +4560,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_DEPENDENT_COAWAIT:
       S = new (Context) DependentCoawaitExpr(Empty);
+      break;
+
+    case EXPR_COROUTINE_SUSPEND_PARAMETER_BYPASS:
+      S = new (Context) CoroutineSuspendParameterBypassExpr(Empty);
       break;
 
     case EXPR_CONCEPT_SPECIALIZATION: {

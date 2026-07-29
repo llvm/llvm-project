@@ -69,6 +69,7 @@ class PackIndexingExpr;
 class SubstNonTypeTemplateParmExpr;
 class CoroutineSuspendExpr;
 class DependentCoawaitExpr;
+class CoroutineSuspendParameterBypassExpr;
 class CXXNewExpr;
 class CXXPseudoDestructorExpr;
 class OverloadExpr;
@@ -161,6 +162,7 @@ ExprDependence computeDependence(PackIndexingExpr *E);
 ExprDependence computeDependence(SubstNonTypeTemplateParmExpr *E);
 ExprDependence computeDependence(CoroutineSuspendExpr *E);
 ExprDependence computeDependence(DependentCoawaitExpr *E);
+ExprDependence computeDependence(CoroutineSuspendParameterBypassExpr *E);
 ExprDependence computeDependence(CXXNewExpr *E);
 ExprDependence computeDependence(CXXPseudoDestructorExpr *E);
 ExprDependence computeDependence(OverloadExpr *E, bool KnownDependent,

@@ -6349,21 +6349,29 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                         : diag::warn_obt_discarded_at_function_boundary)
             << Arg->getType() << ProtoArgType;
       }
-      if (CallHasSuspend && Arg->isPRValue() &&
-          (isWin32InAllocaRecord(Context, ProtoArgType) ||
-           Arg->containsCoroutineSuspendPoints())) {
+      bool NeedsBypass = CallHasSuspend && Arg->isPRValue() &&
+                         (isWin32InAllocaRecord(Context, ProtoArgType) ||
+                          Arg->containsCoroutineSuspendPoints());
+      Expr *PreBypassArg = Arg;
+      if (NeedsBypass) {
         ExprResult Materialized =
             CreateMaterializeTemporaryExpr(Arg->getType(), Arg, false);
         if (!Materialized.isInvalid())
-          Arg = Materialized.get();
+          PreBypassArg = Materialized.get();
       }
 
-      ExprResult ArgE = PerformCopyInitialization(
-          Entity, SourceLocation(), Arg, IsListInitialization, AllowExplicit);
+      ExprResult ArgE =
+          PerformCopyInitialization(Entity, SourceLocation(), PreBypassArg,
+                                    IsListInitialization, AllowExplicit);
       if (ArgE.isInvalid())
         return true;
 
       Arg = ArgE.getAs<Expr>();
+
+      if (NeedsBypass) {
+        Arg = CoroutineSuspendParameterBypassExpr::Create(Context, PreBypassArg,
+                                                          Arg);
+      }
     } else {
       assert(Param && "can't use default arguments without a known callee");
 

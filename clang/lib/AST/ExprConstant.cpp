@@ -22378,6 +22378,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
   case Expr::CXXExpansionSelectExprClass:
+  case Expr::CoroutineSuspendParameterBypassExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::MemberExprClass: {

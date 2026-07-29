@@ -3163,6 +3163,13 @@ DEF_TRAVERSE_STMT(CoyieldExpr, {
   }
 })
 
+DEF_TRAVERSE_STMT(CoroutineSuspendParameterBypassExpr, {
+  if (!getDerived().shouldVisitImplicitCode()) {
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getSubExpr());
+    ShouldVisitChildren = false;
+  }
+})
+
 DEF_TRAVERSE_STMT(ConceptSpecializationExpr, {
   TRY_TO(TraverseConceptReference(S->getConceptReference()));
 })

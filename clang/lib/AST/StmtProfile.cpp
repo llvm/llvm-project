@@ -2175,6 +2175,11 @@ void StmtProfiler::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
          const_cast<CXXDestructorDecl *>(S->getTemporary()->getDestructor()));
 }
 
+void StmtProfiler::VisitCoroutineSuspendParameterBypassExpr(
+    const CoroutineSuspendParameterBypassExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitCXXConstructExpr(const CXXConstructExpr *S) {
   VisitExpr(S);
   VisitDecl(S->getConstructor());

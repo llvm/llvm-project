@@ -5554,6 +5554,55 @@ public:
 
 /// Helper that selects an expression from an InitListExpr depending on the
 /// current expansion index. See 'CXXExpansionStmtPattern' for how this is used.
+/// Represents a temporary that needs to be pre-evaluated in a coroutine
+/// because it is passed to a call that contains suspend points, and we
+/// want to delay inalloca allocation until after all suspends.
+class CoroutineSuspendParameterBypassExpr : public Expr {
+  friend class ASTStmtReader;
+
+  Stmt *SubExpr = nullptr;
+  Stmt *MoveExpr = nullptr;
+
+  CoroutineSuspendParameterBypassExpr(Expr *SubExpr, Expr *MoveExpr)
+      : Expr(CoroutineSuspendParameterBypassExprClass, MoveExpr->getType(),
+             MoveExpr->getValueKind(), MoveExpr->getObjectKind()),
+        SubExpr(SubExpr), MoveExpr(MoveExpr) {
+    setDependence(computeDependence(this));
+  }
+
+public:
+  CoroutineSuspendParameterBypassExpr(EmptyShell Empty)
+      : Expr(CoroutineSuspendParameterBypassExprClass, Empty) {}
+
+  static CoroutineSuspendParameterBypassExpr *
+  Create(const ASTContext &C, Expr *SubExpr, Expr *MoveExpr);
+
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  void setSubExpr(Expr *E) { SubExpr = E; }
+
+  Expr *getMoveExpr() { return cast<Expr>(MoveExpr); }
+  const Expr *getMoveExpr() const { return cast<Expr>(MoveExpr); }
+  void setMoveExpr(Expr *E) { MoveExpr = E; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return SubExpr->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return MoveExpr->getEndLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CoroutineSuspendParameterBypassExprClass;
+  }
+
+  child_range children() { return child_range(&MoveExpr, &MoveExpr + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&MoveExpr, &MoveExpr + 1);
+  }
+};
+
 class CXXExpansionSelectExpr : public Expr {
   friend class ASTStmtReader;
 

@@ -15964,6 +15964,12 @@ TreeTransform<Derived>::TransformCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
   return getDerived().TransformExpr(E->getSubExpr());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCoroutineSuspendParameterBypassExpr(
+    CoroutineSuspendParameterBypassExpr *E) {
+  return getDerived().TransformExpr(E->getSubExpr());
+}
+
 /// Transform a C++ expression that contains cleanups that should
 /// be run after the expression is evaluated.
 ///

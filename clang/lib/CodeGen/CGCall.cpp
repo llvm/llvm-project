@@ -5031,46 +5031,6 @@ static bool isObjCMethodWithTypeParams(const ObjCMethodDecl *method) {
 }
 #endif
 
-static const MaterializeTemporaryExpr *getMTEToPreEvaluate(const Expr *E) {
-  while (true) {
-    E = E->IgnoreParens();
-    if (auto *Cleanups = dyn_cast<ExprWithCleanups>(E)) {
-      E = Cleanups->getSubExpr();
-      continue;
-    }
-    if (auto *Bind = dyn_cast<CXXBindTemporaryExpr>(E)) {
-      E = Bind->getSubExpr();
-      continue;
-    }
-    break;
-  }
-
-  if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
-    if (CE->getNumArgs() > 0) {
-      const Expr *Arg = CE->getArg(0);
-      while (true) {
-        Arg = Arg->IgnoreParens();
-        if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Arg))
-          return MTE;
-        if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Arg)) {
-          Arg = Cleanups->getSubExpr();
-          continue;
-        }
-        if (auto *Bind = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
-          Arg = Bind->getSubExpr();
-          continue;
-        }
-        if (auto *ICE = dyn_cast<ImplicitCastExpr>(Arg)) {
-          Arg = ICE->getSubExpr();
-          continue;
-        }
-        break;
-      }
-    }
-  }
-  return nullptr;
-}
-
 /// EmitCallArgs - Emit call arguments for a function.
 void CodeGenFunction::EmitCallArgs(
     CallArgList &Args, PrototypeWrapper Prototype,
@@ -5172,8 +5132,11 @@ void CodeGenFunction::EmitCallArgs(
   SmallVector<const MaterializeTemporaryExpr *, 4> MTEsToPreEvaluate;
   if (isCoroutine() && hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
     for (const Expr *A : ArgRange) {
-      if (auto *MTE = getMTEToPreEvaluate(A)) {
-        MTEsToPreEvaluate.push_back(MTE);
+      if (auto *Bypass = dyn_cast<CoroutineSuspendParameterBypassExpr>(A)) {
+        if (auto *MTE =
+                dyn_cast<MaterializeTemporaryExpr>(Bypass->getSubExpr())) {
+          MTEsToPreEvaluate.push_back(MTE);
+        }
       }
     }
   }

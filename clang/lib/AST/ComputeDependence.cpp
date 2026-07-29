@@ -344,6 +344,11 @@ ExprDependence clang::computeDependence(CXXBindTemporaryExpr *E) {
   return E->getSubExpr()->getDependence();
 }
 
+ExprDependence
+clang::computeDependence(CoroutineSuspendParameterBypassExpr *E) {
+  return E->getMoveExpr()->getDependence();
+}
+
 ExprDependence clang::computeDependence(CXXScalarValueInitExpr *E) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
   if (auto *TSI = E->getTypeSourceInfo())

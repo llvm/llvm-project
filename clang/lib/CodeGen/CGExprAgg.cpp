@@ -200,6 +200,8 @@ public:
   void VisitCXXTypeidExpr(CXXTypeidExpr *E) { EmitAggLoadOfLValue(E); }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E);
   void VisitOpaqueValueExpr(OpaqueValueExpr *E);
+  void VisitCoroutineSuspendParameterBypassExpr(
+      CoroutineSuspendParameterBypassExpr *E);
 
   void VisitPseudoObjectExpr(PseudoObjectExpr *E) {
     if (E->isGLValue()) {
@@ -796,6 +798,11 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     Visit(e->getSourceExpr());
   else
     EmitFinalDestCopy(e->getType(), CGF.getOrCreateOpaqueLValueMapping(e));
+}
+
+void AggExprEmitter::VisitCoroutineSuspendParameterBypassExpr(
+    CoroutineSuspendParameterBypassExpr *E) {
+  Visit(E->getMoveExpr());
 }
 
 void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
