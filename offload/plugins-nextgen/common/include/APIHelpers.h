@@ -16,12 +16,18 @@
 
 #include "DLWrap.h"
 
+#define API_HELPER_STRINGIFY_INNER(x) #x
+#define API_HELPER_STRINGIFY(x) API_HELPER_STRINGIFY_INNER(x)
+
 // Macro to mark external symbol as weak, so linker will be okay
 // if the symbol is missing. For direct linking only available on Linux, we need
 // to check if linker could find the symbol. For symbols loaded using dlsym we
 // call name##_loaded function. The name##_loaded function will be nullptr if
 // external library was linked directly.
+// _Pragma("weak name") retroactively downgrades any prior strong declaration
+// (e.g. from a vendor header included before this macro) to weak.
 #define API_HELPER_OPTIONAL(return_type, name, ...)                            \
+  _Pragma(API_HELPER_STRINGIFY(weak name))                                     \
   namespace dlwrap {                                                           \
   bool name##_loaded() __attribute__((weak));                                  \
   }                                                                            \
