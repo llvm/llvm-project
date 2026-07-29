@@ -15168,31 +15168,39 @@ static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
     DataVec = V2;
   }
 
-  // For 64-bit vectors, check single lane
-  // For 128-bit vectors, check both 64-bit lanes have same slide
-  unsigned LaneElts = 64 / EltSize;
-  unsigned NumLanes = VTSize / 64;
+  // Try lane sizes 64, 32, 16 bits.
+  // For each lane size, check all lanes have the same slide pattern.
+  for (unsigned LaneSize : {64u, 32u, 16u}) {
+    if (LaneSize < EltSize * 2)
+      break; // need at least 2 elements per lane
+    unsigned LaneElts = LaneSize / EltSize;
+    unsigned NumLanes = VTSize / LaneSize;
 
-  bool FirstIsLeftSlide;
-  unsigned FirstSlideAmt =
-      checkLaneSlide(Mask, 0, LaneElts, NumElts, FirstIsLeftSlide);
-  if (FirstSlideAmt == 0)
-    return SDValue();
+    bool FirstIsLeftSlide;
+    unsigned FirstSlideAmt =
+        checkLaneSlide(Mask, 0, LaneElts, NumElts, FirstIsLeftSlide);
+    if (FirstSlideAmt == 0)
+      continue;
 
-  // For 128-bit, verify second lane matches
-  if (NumLanes == 2) {
-    bool SecondIsLeftSlide;
-    unsigned SecondSlideAmt =
-        checkLaneSlide(Mask, LaneElts, LaneElts, NumElts, SecondIsLeftSlide);
-    if (SecondSlideAmt != FirstSlideAmt ||
-        SecondIsLeftSlide != FirstIsLeftSlide)
-      return SDValue();
+    // Verify all lanes match
+    bool AllMatch = true;
+    for (unsigned Lane = 1; Lane < NumLanes; Lane++) {
+      bool IsLeftSlide;
+      unsigned SlideAmt =
+          checkLaneSlide(Mask, Lane * LaneElts, LaneElts, NumElts, IsLeftSlide);
+      if (SlideAmt != FirstSlideAmt || IsLeftSlide != FirstIsLeftSlide) {
+        AllMatch = false;
+        break;
+      }
+    }
+    if (!AllMatch)
+      continue;
+
+    ShiftAmount = FirstSlideAmt * EltSize;
+    IsRightShift = FirstIsLeftSlide;
+    if (ShiftAmount > 0 && ShiftAmount < LaneSize)
+      return DataVec;
   }
-
-  ShiftAmount = FirstSlideAmt * EltSize;
-  IsRightShift = FirstIsLeftSlide; // left slide = right shift in bits
-  if (ShiftAmount > 0 && ShiftAmount < 64)
-    return DataVec;
   return SDValue();
 }
 
@@ -15955,7 +15963,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     bool IsRightShift;
     if (SDValue DataVec = isSlideWithZerosMask(ShuffleMask, VT, V1, V2,
                                                ShiftAmount, IsRightShift)) {
-      MVT ShiftVT = VT.getSizeInBits() == 64 ? MVT::v1i64 : MVT::v2i64;
+      MVT ShiftVT;
+      if (ShiftAmount >= 32)
+        ShiftVT = VT.getSizeInBits() == 64 ? MVT::v1i64 : MVT::v2i64;
+      else if (ShiftAmount >= 16)
+        ShiftVT = VT.getSizeInBits() == 64 ? MVT::v2i32 : MVT::v4i32;
+      else
+        ShiftVT = VT.getSizeInBits() == 64 ? MVT::v4i16 : MVT::v8i16;
       SDValue Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ShiftVT, DataVec);
 
       SDValue ShiftAmt = DAG.getTargetConstant(ShiftAmount, DL, MVT::i32);
