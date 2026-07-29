@@ -83,11 +83,10 @@ static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
                     cl::desc("The cost threshold for loop unrolling"));
 
-static cl::opt<unsigned>
-    UnrollOptSizeThreshold(
-      "unroll-optsize-threshold", cl::init(0), cl::Hidden,
-      cl::desc("The cost threshold for loop unrolling when optimizing for "
-               "size"));
+static cl::opt<unsigned> UnrollOptSizeThreshold(
+    "unroll-optsize-threshold", cl::init(0), cl::Hidden,
+    cl::desc("The cost threshold for loop unrolling when optimizing for "
+             "size"));
 
 static cl::opt<unsigned> UnrollPartialThreshold(
     "unroll-partial-threshold", cl::Hidden,
@@ -157,9 +156,9 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
              "threshold, the loop is considered as flat and will be less "
              "aggressively unrolled."));
 
-static cl::opt<bool> UnrollUnrollRemainder(
-  "unroll-remainder", cl::Hidden,
-  cl::desc("Allow the loop remainder to be unrolled."));
+static cl::opt<bool>
+    UnrollUnrollRemainder("unroll-remainder", cl::Hidden,
+                          cl::desc("Allow the loop remainder to be unrolled."));
 
 // This option isn't ever intended to be enabled, it serves to allow
 // experiments to check the assumptions about when this kind of revisit is
@@ -211,7 +210,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.MaxUpperBound = UnrollMaxUpperBound;
   UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
-  UP.FullUnrollMaxClonedInstructions = UnrollFullMaxClonedInstructions;
   UP.BEInsns = 2;
   UP.Partial = false;
   UP.Runtime = false;
@@ -255,8 +253,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.MaxUpperBound = UnrollMaxUpperBound;
   if (UnrollFullMaxCount.getNumOccurrences() > 0)
     UP.FullUnrollMaxCount = UnrollFullMaxCount;
-  if (UnrollFullMaxClonedInstructions.getNumOccurrences() > 0)
-    UP.FullUnrollMaxClonedInstructions = UnrollFullMaxClonedInstructions;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
     UP.Partial = UnrollAllowPartial;
   if (UnrollAllowRemainder.getNumOccurrences() > 0)
@@ -405,9 +401,9 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     assert(PHIUsedList.empty() && "Must start with an empty phi used list");
     CostWorklist.push_back(&RootI);
     TargetTransformInfo::TargetCostKind CostKind =
-      RootI.getFunction()->hasMinSize() ?
-      TargetTransformInfo::TCK_CodeSize :
-      TargetTransformInfo::TCK_SizeAndLatency;
+        RootI.getFunction()->hasMinSize()
+            ? TargetTransformInfo::TCK_CodeSize
+            : TargetTransformInfo::TCK_SizeAndLatency;
     for (;; --Iteration) {
       do {
         Instruction *I = CostWorklist.pop_back_val();
@@ -499,8 +495,9 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
              << "Starting LoopUnroll profitability analysis...\n");
 
   TargetTransformInfo::TargetCostKind CostKind =
-    L->getHeader()->getParent()->hasMinSize() ?
-    TargetTransformInfo::TCK_CodeSize : TargetTransformInfo::TCK_SizeAndLatency;
+      L->getHeader()->getParent()->hasMinSize()
+          ? TargetTransformInfo::TCK_CodeSize
+          : TargetTransformInfo::TCK_SizeAndLatency;
   // Simulate execution of each iteration of the loop counting instructions,
   // which would be simplified.
   // Since the same load will take different values on different iterations,
@@ -558,9 +555,10 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         // and if the visitor returns true, mark the instruction as free after
         // unrolling and continue.
         bool IsFree = Analyzer.visit(I);
-        bool Inserted = InstCostMap.insert({&I, (int)Iteration,
-                                           (unsigned)IsFree,
-                                           /*IsCounted*/ false}).second;
+        bool Inserted = InstCostMap
+                            .insert({&I, (int)Iteration, (unsigned)IsFree,
+                                     /*IsCounted*/ false})
+                            .second;
         (void)Inserted;
         assert(Inserted && "Cannot have a state for an unvisited instruction!");
 
@@ -923,21 +921,26 @@ static std::optional<unsigned> shouldFullUnroll(
     return std::nullopt;
   }
 
-  // When computing the unrolled size, note that BEInsns are not replicated
-  // like the rest of the loop body.
-  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
+  // Bound estimated transient cloning work for automatic full unrolling.
+  // Explicit requests (e.g. llvm.loop.unroll.enable with a known trip count)
+  // bypass this compile-time guard; those still reach shouldFullUnroll because
+  // shouldPragmaUnroll only handles the upper-bound enable case.
   uint64_t LoopInstructionCount = 0;
   for (const BasicBlock *BB : L->blocks())
     LoopInstructionCount += BB->size();
   uint64_t AdditionalCopies = FullUnrollTripCount - 1;
   if (!ExplicitUnroll && UP.Threshold != NoThreshold && AdditionalCopies &&
       LoopInstructionCount >
-          UP.FullUnrollMaxClonedInstructions / AdditionalCopies) {
+          UnrollFullMaxClonedInstructions / AdditionalCopies) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Not unrolling: estimated cloned instructions exceed "
-               << UP.FullUnrollMaxClonedInstructions << ".\n");
+               << UnrollFullMaxClonedInstructions << ".\n");
     return std::nullopt;
   }
+
+  // When computing the unrolled size, note that BEInsns are not replicated
+  // like the rest of the loop body.
+  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
 
   if (UnrolledSize < UP.Threshold) {
     LLVM_DEBUG(dbgs().indent(2) << "Unrolling: size " << UnrolledSize
@@ -1771,8 +1774,9 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto *BFI = (PSI && PSI->hasProfileSummary())
+                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
+                  : nullptr;
 
   bool Changed = false;
 

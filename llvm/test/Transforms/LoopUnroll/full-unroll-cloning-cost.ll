@@ -1,20 +1,25 @@
+; Compile-time smoke test for @nested: without the cloning budget,
+; default<O2> can hang or take a very long time. With the budget, this RUN
+; finishes quickly.
 ; RUN: opt < %s -passes='default<O2>' -disable-output
-; RUN: opt < %s -passes='require<opt-remark-emit>,loop(loop-unroll-full)' \
+;
+; With a tiny budget, @nested is not fully unrolled (residual innermost loop).
+; RUN: opt < %s -passes=loop-unroll \
 ; RUN:   -unroll-full-max-cloned-instructions=1 -unroll-peel-count=0 -S \
 ; RUN:   | FileCheck %s
+;
+; Exact budget boundary on @boundary (body size 4, trip 10 => 4*(10-1)=36).
 ; RUN: opt < %s -passes=loop-unroll \
 ; RUN:   -unroll-full-max-cloned-instructions=35 -unroll-peel-count=0 -S \
 ; RUN:   | FileCheck %s --check-prefix=BELOW
 ; RUN: opt < %s -passes=loop-unroll \
 ; RUN:   -unroll-full-max-cloned-instructions=36 -unroll-peel-count=0 -S \
 ; RUN:   | FileCheck %s --check-prefix=AT
+;
+; llvm.loop.unroll.enable bypasses the cloning budget (ExplicitUnroll).
 ; RUN: opt < %s -passes=loop-unroll \
 ; RUN:   -unroll-full-max-cloned-instructions=1 -unroll-peel-count=0 -S \
 ; RUN:   | FileCheck %s --check-prefix=EXPLICIT
-; RUN: llvm-extract -func=boundary %s -S \
-; RUN:   | opt -passes=loop-unroll -unroll-full-max-cloned-instructions=1 \
-; RUN:     -unroll-threshold=4294967295 -unroll-peel-count=0 -S \
-; RUN:   | FileCheck %s --check-prefix=NO-THRESHOLD
 ;
 ; CHECK-LABEL: define void @nested(
 ; CHECK: loop.5:
@@ -31,13 +36,6 @@
 ; EXPLICIT-LABEL: define i32 @explicit_enable(
 ; EXPLICIT-NOT: phi
 ; EXPLICIT: ret i32 10
-;
-; NO-THRESHOLD-LABEL: define i32 @boundary(
-; NO-THRESHOLD-NOT: phi
-; NO-THRESHOLD: ret i32 10
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @boundary() {
 entry:

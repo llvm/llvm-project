@@ -701,9 +701,6 @@ public:
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
     unsigned FullUnrollMaxCount;
-    /// Set the maximum estimated instructions cloned by automatic full
-    /// unrolling. Set to UINT64_MAX to disable.
-    uint64_t FullUnrollMaxClonedInstructions;
     // Represents number of instructions optimized when "back edge"
     // becomes "fall through" in unrolled loop.
     // For now we count a conditional branch on a backedge and a comparison
