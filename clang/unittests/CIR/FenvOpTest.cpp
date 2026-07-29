@@ -73,6 +73,8 @@ TEST_F(CIRFenvOpTest, MemoryEffects) {
       %5 = cir.fma %a, %b, %c : !cir.float {fenv = #cir.fenv<>}
       %6 = cir.lround %a : !cir.float -> !s32i
       %7 = cir.lround %a : !cir.float -> !s32i {fenv = #cir.fenv<>}
+      %8 = cir.cast floating %a : !cir.float -> !cir.double
+      %9 = cir.cast floating %a : !cir.float -> !cir.double {fenv = #cir.fenv<>}
       cir.return
     }
   )CIR");
@@ -106,6 +108,13 @@ TEST_F(CIRFenvOpTest, MemoryEffects) {
   EXPECT_TRUE(isMemoryEffectFree(lroundOps[0]));
   expectFenvReadAndWrite(lroundOps[1]);
   EXPECT_FALSE(isMemoryEffectFree(lroundOps[1]));
+
+  SmallVector<cir::CastOp> castOps = findOps<cir::CastOp>(*module);
+  ASSERT_EQ(castOps.size(), 2u);
+  EXPECT_TRUE(getEffects(castOps[0]).empty());
+  EXPECT_TRUE(isMemoryEffectFree(castOps[0]));
+  expectFenvReadAndWrite(castOps[1]);
+  EXPECT_FALSE(isMemoryEffectFree(castOps[1]));
 }
 
 TEST_F(CIRFenvOpTest, Speculatability) {
