@@ -9,5 +9,5 @@ fmv.x.h t2, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
 fmv.h.x a5, t5 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # FP registers where integer regs are expected
-fcvt.d.h a0, fa2 # CHECK: :[[@LINE]]:10: error: register must be an even-numbered GPR when used as FPR
+fcvt.d.h a0, fa2 # CHECK: :[[@LINE]]:10: error: register must be an even-numbered GPR when used as an FP operand
 fcvt.h.d a0, fa2 # CHECK: :[[@LINE]]:1: error: invalid instruction

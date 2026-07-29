@@ -12,11 +12,11 @@ fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: register must be a FPR
 fmv.x.w s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
-fadd.d a100, a2, a4 # CHECK: :[[@LINE]]:8: error: register must be an even-numbered GPR when used as FPR
-fsgnjn.d a100, a2, a4 # CHECK: :[[@LINE]]:10: error: register must be an even-numbered GPR when used as FPR
+fadd.d a100, a2, a4 # CHECK: :[[@LINE]]:8: error: register must be an even-numbered GPR when used as an FP operand
+fsgnjn.d a100, a2, a4 # CHECK: :[[@LINE]]:10: error: register must be an even-numbered GPR when used as an FP operand
 
 # Rounding mode when a register is expected
-fmadd.d x10, x12, x14, ree # CHECK: :[[@LINE]]:24: error: register must be an even-numbered GPR when used as FPR
+fmadd.d x10, x12, x14, ree # CHECK: :[[@LINE]]:24: error: register must be an even-numbered GPR when used as an FP operand
 
 # Invalid rounding modes
 fmadd.d x10, x12, x14, x16, ree # CHECK: :[[@LINE]]:29: error: operand must be a valid floating point rounding mode mnemonic
