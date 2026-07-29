@@ -209,6 +209,29 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
     RecordMemberMapperMangler mangler) {
+  auto getKindlessDefaultMapperName =
+      [](fir::RecordType recType) -> std::string {
+    auto [nameKind, deconstructed] =
+        fir::NameUniquer::deconstruct(recType.getName());
+    if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE ||
+        deconstructed.kinds.empty())
+      return {};
+
+    llvm::SmallVector<llvm::StringRef> modules;
+    llvm::SmallVector<llvm::StringRef> procs;
+    modules.reserve(deconstructed.modules.size());
+    procs.reserve(deconstructed.procs.size());
+    for (const std::string &module : deconstructed.modules)
+      modules.emplace_back(module);
+    for (const std::string &proc : deconstructed.procs)
+      procs.emplace_back(proc);
+
+    std::string mapperName =
+        deconstructed.name + llvm::omp::OmpDefaultMapperName;
+    return fir::NameUniquer::doGenerated(
+        modules, procs, deconstructed.blockId, mapperName);
+  };
+
   if (mapperNameStr.empty())
     return {};
 
@@ -216,6 +239,16 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
   if (moduleOp.lookupSymbol(mapperNameStr))
     return mlir::FlatSymbolRefAttr::get(
         firOpBuilder.getContext(), mapperNameStr);
+
+  if (std::string kindlessMapperName =
+          getKindlessDefaultMapperName(recordType);
+      !kindlessMapperName.empty() && kindlessMapperName != mapperNameStr) {
+    if (auto explicitMapper = moduleOp.lookupSymbol<mlir::omp::DeclareMapperOp>(
+            kindlessMapperName);
+        explicitMapper && explicitMapper.getType() == recordType)
+      return mlir::FlatSymbolRefAttr::get(
+          firOpBuilder.getContext(), kindlessMapperName);
+  }
 
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
 
