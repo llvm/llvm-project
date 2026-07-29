@@ -79,9 +79,9 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
 /// definition. Such symbols must be registered with
 /// cuf.register_variable_static so the driver binds the device reference to the
 /// host pointer at module-load time and HMM/ATS handles migration. A
-/// device-resident definition instead needs a CUFRegisterVariable call:
-/// registering it as host memory would override the device symbol and make
-/// cudaGetSymbolAddress fail.
+/// device-resident definition instead needs a cuf.register_variable_static
+/// with the deviceResident attribute: registering it as host memory would
+/// override the device symbol and make cudaGetSymbolAddress fail.
 static bool isDeviceExternReference(fir::GlobalOp hostGlobal,
                                     mlir::SymbolTable &gpuSymTable) {
   auto gpuGlobal = gpuSymTable.lookup<fir::GlobalOp>(hostGlobal.getSymName());
