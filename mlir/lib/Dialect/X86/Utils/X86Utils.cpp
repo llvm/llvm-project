@@ -178,13 +178,19 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
               defOp)) {
 
         if (auto constOp = dyn_cast<arith::ConstantOp>(defOp)) {
-          Attribute value = constOp.getValue();
+          if (auto denseAttr =
+                  dyn_cast<DenseElementsAttr>(constOp.getValue())) {
+            if (!denseAttr.isSplat())
+              return nullptr;
 
-          if (auto intAttr = dyn_cast<IntegerAttr>(value))
-            return intAttr.getValue().isZero() ? defOp : nullptr;
+            Attribute splat = denseAttr.getSplatValue<Attribute>();
 
-          if (auto floatAttr = dyn_cast<FloatAttr>(value))
-            return floatAttr.getValue().isZero() ? defOp : nullptr;
+            if (auto floatAttr = dyn_cast<FloatAttr>(splat))
+              return floatAttr.getValue().isZero() ? defOp : nullptr;
+
+            if (auto intAttr = dyn_cast<IntegerAttr>(splat))
+              return intAttr.getValue().isZero() ? defOp : nullptr;
+          }
 
           return nullptr;
         }
