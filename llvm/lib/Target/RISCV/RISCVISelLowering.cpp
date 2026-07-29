@@ -6585,7 +6585,7 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
       return SDValue();
   }
 
-  // Make sure we use both sources.
+  // Make sure we have a source for both lanes.
   if (!Src[0] || !Src[1])
     return SDValue();
 
