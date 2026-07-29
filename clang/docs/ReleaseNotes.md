@@ -490,6 +490,9 @@ features cannot lower the translation-unit ABI level;
 
 ### clang-format
 
+- Add `SpacesInBlockComments` option to control spacing after `/*` and
+  before `*/` in ordinary block comments.
+
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.

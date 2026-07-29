@@ -7405,9 +7405,9 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpacesInBlockComments:
 
-**SpacesInBlockComments** (``SpacesInBlockCommentsStyle``) :versionbadge:`clang-format 23` :ref:`¶ <SpacesInBlockComments>`
-  The SpacesInBlockCommentsStyle to use for single-line ordinary block
-  comments. Documentation comments such as ``/** ... */`` and ``/*! ... */``
+**SpacesInBlockComments** (``SpacesInBlockCommentsStyle``) :versionbadge:`clang-format 24` :ref:`¶ <SpacesInBlockComments>`
+  The SpacesInBlockCommentsStyle to use for ordinary block comments.
+  Documentation comments such as ``/** ... */`` and ``/*! ... */``
   and parameter comments ending with ``=`` before the closing ``*/`` are
   left unchanged.
 

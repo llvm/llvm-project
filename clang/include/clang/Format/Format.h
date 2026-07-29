@@ -5616,11 +5616,11 @@ struct FormatStyle {
     SIBCS_Leave
   };
 
-  /// The SpacesInBlockCommentsStyle to use for single-line ordinary block
-  /// comments. Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  /// The SpacesInBlockCommentsStyle to use for ordinary block comments.
+  /// Documentation comments such as ``/** ... */`` and ``/*! ... */``
   /// and parameter comments ending with ``=`` before the closing ``*/`` are
   /// left unchanged.
-  /// \version 23
+  /// \version 24
   SpacesInBlockCommentsStyle SpacesInBlockComments;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
