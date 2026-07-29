@@ -61,8 +61,11 @@ int AsyncInfoTy::synchronize() {
   }
 
   // Run any pending post-processing function registered on this async object.
-  if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
+  if (Result == OFFLOAD_SUCCESS && isQueueEmpty()) {
+    ODBG(ODT_DataTransfer)
+        << "Synchronization complete, running post-processing";
     Result = runPostProcessing();
+  }
 
   return Result;
 }
@@ -353,6 +356,8 @@ static char *getOrCreateSourceBufferForSubmitData(AsyncInfoTy &AsyncInfo,
   // Create a dynamic buffer for larger data and schedule its deletion.
   char *DataBuffer = new char[Size];
   AsyncInfo.addPostProcessingFunction([DataBuffer]() {
+    ODBG(ODT_DataTransfer) << "Releasing submitData source buffer at "
+                           << static_cast<void *>(DataBuffer);
     delete[] DataBuffer;
     return OFFLOAD_SUCCESS;
   });
@@ -2000,6 +2005,9 @@ public:
       ODBG(ODT_Alloc) << "Allocated " << FirstPrivateArgSize
                       << " bytes of target memory at " << TgtPtr;
       // Transfer data to target device
+      ODBG(ODT_DataTransfer)
+          << "Submitting packed firstprivate arguments from host buffer at "
+          << static_cast<void *>(FirstPrivateArgBuffer);
       int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer,
                                   FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
@@ -2015,7 +2023,8 @@ public:
         TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
         TP += Info.Size;
-        ODBG(ODT_Mapping) << "Firstprivate array " << Info.HstPtrBegin
+        ODBG(ODT_Mapping) << "Firstprivate array "
+                          << static_cast<void *>(Info.HstPtrBegin)
                           << " of size " << (Info.HstPtrEnd - Info.HstPtrBegin)
                           << " mapped to " << Ptr;
       }
