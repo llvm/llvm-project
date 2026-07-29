@@ -21,12 +21,13 @@
 namespace lldb_private {
 class CompileUnit;
 class ExecutionContext;
+class TypeSystemFortran;
 } // namespace lldb_private
 
 class DWARFASTParserFortran
     : public lldb_private::plugin::dwarf::DWARFASTParser {
 public:
-  DWARFASTParserFortran(lldb_private::TypeSystemFortran &m_ast);
+  DWARFASTParserFortran(lldb_private::TypeSystemFortran &ast);
 
   ~DWARFASTParserFortran() override;
 
@@ -43,8 +44,12 @@ public:
   bool CompleteTypeFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die,
       lldb_private::Type *type,
-      const lldb_private::CompilerType &compiler_type) override;
+      const lldb_private::CompilerType &compiler_type) override {
+    return false;
+  }
 
+  // TODO: The following functions are left intentionally blank and will be
+  // populated in a future patch
   lldb_private::ConstString ConstructDemangledNameFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override {
     return lldb_private::ConstString();

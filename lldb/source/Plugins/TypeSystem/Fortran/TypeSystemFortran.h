@@ -14,9 +14,24 @@
 #ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
 #define LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
 #include "lldb/Symbol/TypeSystem.h"
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/ErrorHandling.h"
+
 namespace lldb_private {
 
+namespace plugin {
+namespace fortran {
+class FortranType;
+class FortranFunction;
+} // namespace fortran
+} // namespace plugin
+
+/// A TypeSystem implementation for the Fortran language.
+///
+/// This plugin provides LLDB with the ability to understand Fortran types
+/// parsed from debug information (DWARF).
 class TypeSystemFortran : public TypeSystem {
   // LLVM RTTI support
   static char ID;
@@ -38,9 +53,17 @@ public:
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Module *module, Target *target);
 
+  CompilerType CreateType(uint32_t kind, uint64_t bitsize, ConstString name);
+
   static LanguageSet GetSupportedLanguagesForTypes();
 
   static LanguageSet GetSupportedLanguagesForExpressions();
+
+  bool SupportsLanguage(lldb::LanguageType language) override;
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+  static llvm::StringRef GetPluginNameStatic() { return "fortran"; }
 
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override { return ConstString(); }
@@ -76,14 +99,15 @@ public:
 #ifndef NDEBUG
   /// Verify the integrity of the type to catch CompilerTypes that mix
   /// and match invalid TypeSystem/Opaque type pairs.
-  bool Verify(lldb::opaque_compiler_type_t type) override { return false; };
+  bool Verify(lldb::opaque_compiler_type_t type) override { return true; }
 #endif
 
+  // Type Classification
   bool IsArrayType(lldb::opaque_compiler_type_t type,
                    CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override {
     return false;
-  };
+  }
 
   bool IsAggregateType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -92,14 +116,14 @@ public:
   bool IsCharType(lldb::opaque_compiler_type_t type) override { return false; }
 
   bool IsCompleteType(lldb::opaque_compiler_type_t type) override {
-    return false;
+    return true;
   }
 
-  bool IsDefined(lldb::opaque_compiler_type_t type) override { return false; }
-
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override {
-    return false;
+  bool IsDefined(lldb::opaque_compiler_type_t type) override {
+    return type != nullptr;
   }
+
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override;
 
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -133,9 +157,7 @@ public:
   }
 
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
-                     bool &is_signed) override {
-    return false;
-  };
+                     bool &is_signed) override;
 
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -152,30 +174,21 @@ public:
     return false;
   }
 
-  bool IsScalarType(lldb::opaque_compiler_type_t type) override {
-    return false;
-  }
+  bool IsScalarType(lldb::opaque_compiler_type_t type) override { return true; }
 
   bool IsVoidType(lldb::opaque_compiler_type_t type) override { return false; }
 
   bool CanPassInRegisters(const CompilerType &type) override { return false; }
 
-  // TypeSystems can support more than one language
-  bool SupportsLanguage(lldb::LanguageType language) override;
-
-  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  static llvm::StringRef GetPluginNameStatic() { return "fortran"; }
-
-  // Type Completion
-
+  // Type Completion, all basic types are complete
   bool GetCompleteType(lldb::opaque_compiler_type_t type) override {
-    return false;
+    return true;
   }
 
   // AST related queries
 
-  uint32_t GetPointerByteSize() override { return 0; }
+  // FIXME: This is temporary for now
+  uint32_t GetPointerByteSize() override { return 8; }
 
   CompilerType GetPointerDiffType(bool is_signed) override {
     return CompilerType();
@@ -194,21 +207,15 @@ public:
   }
 
   // Accessors
-
   ConstString GetTypeName(lldb::opaque_compiler_type_t type,
-                          bool BaseOnly) override {
-    return ConstString();
-  }
+                          bool BaseOnly) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override {
-    return ConstString();
+    return GetTypeName(type, false);
   }
 
-  uint32_t
-  GetTypeInfo(lldb::opaque_compiler_type_t type,
-              CompilerType *pointee_or_element_compiler_type) override {
-    return 0;
-  }
+  uint32_t GetTypeInfo(lldb::opaque_compiler_type_t type,
+                       CompilerType *pointee_or_element_compiler_type) override;
 
   lldb::LanguageType
   GetMinimumLanguage(lldb::opaque_compiler_type_t type) override {
@@ -216,8 +223,17 @@ public:
   }
 
   lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override {
-    return lldb::TypeClass::eTypeClassInvalid;
+    if (!type)
+      return lldb::eTypeClassInvalid;
+
+    return lldb::eTypeClassBuiltin;
   }
+
+  CompilerType GetOrCreateFortranType(int kind, uint64_t bitsize,
+                                      ConstString name);
+
+  CompilerType GetOrCreateFortranFunction(
+      ConstString name, const llvm::SmallVectorImpl<CompilerType> &parameters);
 
   // Creating related types
 
@@ -226,13 +242,16 @@ public:
     return CompilerType();
   }
 
+  //
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    if (!type)
+      return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   CompilerType
   GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   // Returns -1 if this isn't a function of if the function doesn't have a
@@ -269,6 +288,10 @@ public:
     return CompilerType();
   }
 
+  void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
+
+  lldb::ByteOrder GetByteOrder() { return m_byte_order; }
+
   // Exploring the type
 
   const llvm::fltSemantics &
@@ -278,17 +301,11 @@ public:
 
   llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
-             ExecutionContextScope *exe_scope) override {
-    return 0;
-  }
+             ExecutionContextScope *exe_scope) override;
 
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override {
-    return lldb::eEncodingInvalid;
-  }
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
-  lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override {
-    return lldb::eFormatDefault;
-  }
+  lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
   llvm::Expected<uint32_t>
   GetNumChildren(lldb::opaque_compiler_type_t type,
@@ -296,10 +313,9 @@ public:
                  const ExecutionContext *exe_ctx) override {
     return 0;
   }
-
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override {
-    return lldb::eBasicTypeUnsignedInt;
+    return lldb::eBasicTypeInt;
   }
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override {
@@ -380,10 +396,7 @@ public:
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope) override {
-    return false;
-  }
-
+                     ExecutionContextScope *exe_scope) override;
   /// Dump the type to stdout.
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,
@@ -409,12 +422,9 @@ public:
   void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
             bool show_color) override {}
 
-  /// This is used by swift.
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
-
-  // TODO: Determine if these methods should move to TypeSystemClang.
 
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override {
@@ -431,14 +441,10 @@ public:
     return 0;
   }
 
-  CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override {
-    return CompilerType();
-  }
+  CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
-                                                   size_t bit_size) override {
-    return CompilerType();
-  }
+                                                   size_t bit_size) override;
 
   bool IsBeingDefined(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -471,11 +477,15 @@ public:
 
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    if (!type)
+      return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
+    if (!type)
+      return CompilerType();
+    return CompilerType(weak_from_this(), type);
   }
 
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
@@ -484,8 +494,16 @@ public:
   }
 
 private:
+  ///
+  mutable llvm::FoldingSet<plugin::fortran::FortranType> m_basic_types;
+  mutable llvm::FoldingSet<plugin::fortran::FortranFunction> m_functions;
+  // We store all unique pointer types here so we can manage the lifecycle
+  // of the types without having to explicitly free them.
+  mutable llvm::SmallVector<std::unique_ptr<plugin::fortran::FortranType>>
+      m_types;
   std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;
-
+  /// Store byte order of the system so variables can be printed correctly.
+  lldb::ByteOrder m_byte_order;
   TypeSystemFortran(const TypeSystemFortran &) = delete;
   const TypeSystemFortran &operator=(const TypeSystemFortran &) = delete;
 };
