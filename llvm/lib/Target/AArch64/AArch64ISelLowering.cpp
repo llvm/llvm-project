@@ -1062,7 +1062,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i64, LibCall);
   }
 
-  if (Subtarget->outlineAtomics() && !Subtarget->hasLSFE()) {
+  if (Subtarget->outlineAtomics() &&
+      (!Subtarget->hasLSFE() || !Subtarget->canIgnoreFPExceptions())) {
     setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f16, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f64, LibCall);
@@ -32636,12 +32637,14 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(
   if (CanUseLSE128)
     return AtomicExpansionKind::None;
 
-  // If LSFE available, use atomic FP instructions in preference to expansion
-  if (Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
-                               AI->getOperation() == AtomicRMWInst::FMax ||
-                               AI->getOperation() == AtomicRMWInst::FMin ||
-                               AI->getOperation() == AtomicRMWInst::FMaximum ||
-                               AI->getOperation() == AtomicRMWInst::FMinimum))
+  // If LSFE is available and FP exceptions are not observable, use atomic FP
+  // instructions in preference to expansion.
+  if (Subtarget->hasLSFE() && Subtarget->canIgnoreFPExceptions() &&
+      (AI->getOperation() == AtomicRMWInst::FAdd ||
+       AI->getOperation() == AtomicRMWInst::FMax ||
+       AI->getOperation() == AtomicRMWInst::FMin ||
+       AI->getOperation() == AtomicRMWInst::FMaximum ||
+       AI->getOperation() == AtomicRMWInst::FMinimum))
     return AtomicExpansionKind::None;
 
   // Leave 128 bits to LLSC or CmpXChg.

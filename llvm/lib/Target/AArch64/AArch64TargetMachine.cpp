@@ -449,6 +449,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
                      F.hasFnAttribute("aarch64_pstate_sm_body");
   bool IsStreamingCompatible = ForceStreamingCompatible ||
                                F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  bool CanIgnoreFPExceptions =
+      !F.isStrictFP() &&
+      F.getFnAttribute("no-trapping-math").getValueAsBool();
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
@@ -485,6 +488,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   Key += utostr(IsStreaming);
   Key += "IsStreamingCompatible=";
   Key += utostr(IsStreamingCompatible);
+  Key += "CanIgnoreFPExceptions=";
+  Key += utostr(CanIgnoreFPExceptions);
   Key += CPU;
   Key += TuneCPU;
   Key += FS;
@@ -496,7 +501,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
         MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
-        EnableSRLTSubregToRegMitigation);
+        EnableSRLTSubregToRegMitigation, CanIgnoreFPExceptions);
   }
 
   if (IsStreaming && !I->hasSME())
