@@ -128,7 +128,7 @@ if [ "${no_man_pages}" != "yes" ]; then
   install_prefix=${builddir}/install
   man_page_flag=" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF -DSPHINX_OUTPUT_MAN:BOOL=ON -DCMAKE_INSTALL_PREFIX=${install_prefix}"
   extra_man_page_projects=";lldb;mlir;bolt"
-  extra_man_page_runtimes=";compiler-rt;openmp;"
+  extra_man_page_runtimes=";compiler-rt;openmp"
 else
   echo "Man pages: disabled"
 fi
