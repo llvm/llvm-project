@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include <cassert>
 #include <limits>
 #include <optional>
@@ -122,6 +123,10 @@ static Value shiftValue(Location loc, Value value, Value offset, Value mask,
 /// Returns true if the allocations of memref `type` generated from `allocOp`
 /// can be lowered to SPIR-V.
 static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
+  // Currently only support static shape
+  if (!type.hasStaticShape())
+    return false;
+
   if (isa<memref::AllocOp, memref::DeallocOp>(allocOp)) {
     auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
     if (!sc || sc.getValue() != spirv::StorageClass::Workgroup)
@@ -130,15 +135,15 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
     auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
     if (!sc || sc.getValue() != spirv::StorageClass::Function)
       return false;
+    // Function allocations of memref-compatible element types may be lowered
+    // to SPIRV pointers/arrays of the corresponding SPIRV element type.
+    if (isa<MemRefElementTypeInterface>(type.getElementType()))
+      return true;
   } else {
     return false;
   }
 
-  // Currently only support static shape and int or float, complex of int or
-  // float, or vector of int or float element type.
-  if (!type.hasStaticShape())
-    return false;
-
+  // Support memref of int or float types, or their vector/complex types.
   Type elementType = type.getElementType();
   if (auto vecType = dyn_cast<VectorType>(elementType))
     elementType = vecType.getElementType();
@@ -410,9 +415,24 @@ AllocaOpPattern::matchAndRewrite(memref::AllocaOp allocaOp, OpAdaptor adaptor,
   if (!spirvType)
     return rewriter.notifyMatchFailure(allocaOp, "type conversion failed");
 
-  rewriter.replaceOpWithNewOp<spirv::VariableOp>(allocaOp, spirvType,
-                                                 spirv::StorageClass::Function,
-                                                 /*initializer=*/nullptr);
+  auto function = allocaOp->getParentOfType<FunctionOpInterface>();
+  if (!function)
+    return rewriter.notifyMatchFailure(allocaOp,
+                                       "requires a containing function");
+
+  // SPIR-V requires Function variables to be declared in the first block.
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block &entryBlock = function->getRegion(0).front();
+  auto insertionPoint = entryBlock.begin();
+  // Insert the variable after any existing ones to preserve ordering.
+  while (insertionPoint != entryBlock.end() &&
+         isa<spirv::VariableOp>(*insertionPoint))
+    ++insertionPoint;
+  rewriter.setInsertionPoint(&entryBlock, insertionPoint);
+  Value variable = spirv::VariableOp::create(
+      rewriter, allocaOp.getLoc(), spirvType, spirv::StorageClass::Function,
+      /*initializer=*/nullptr);
+  rewriter.replaceOp(allocaOp, variable);
   return success();
 }
 
