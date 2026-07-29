@@ -57,8 +57,7 @@ typedef enum {
      representations of values of block-pointer type) are not signed. */
   ptrauth_key_block_function = ptrauth_key_asia,
 
-  /* The key used to sign C++ v-table pointers.
-     The extra data is always 0. */
+  /* The key used to sign pointers to C++ v-tables. */
   ptrauth_key_cxx_vtable_pointer = ptrauth_key_process_independent_data,
 
   /* The key used to sign metadata pointers to Objective-C method-lists. */
