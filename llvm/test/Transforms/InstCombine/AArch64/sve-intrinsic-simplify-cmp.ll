@@ -113,6 +113,26 @@ define <vscale x 4 x i1> @non_constant_simplification(<vscale x 4 x i1> %pg, <vs
   ret <vscale x 4 x i1> %r
 }
 
+; Unlike regular equality comparisons, the wide variant is explicitly signed.
+define <vscale x 16 x i1> @constant_icmpeq_wide_is_signed(<vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @constant_icmpeq_wide_is_signed(
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+  %r = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.wide.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 -1), <vscale x 2 x i64> splat (i64 -1))
+  ret <vscale x 16 x i1> %r
+}
+
+; Unlike regular equality comparisons, the wide variant is explicitly signed.
+define <vscale x 16 x i1> @constant_icmpne_wide_is_signed(<vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @constant_icmpne_wide_is_signed(
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+  %r = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat (i8 -1), <vscale x 2 x i64> splat (i64 255))
+  ret <vscale x 16 x i1> %r
+}
+
 ; The following tests demonstrate the operations for which hooks are in place to
 ; enable simplification. Given the simplications themselves are common code, it
 ; is assumed they are already well tested elsewhere.
