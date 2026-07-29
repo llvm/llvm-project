@@ -20,8 +20,8 @@ namespace ento {
 
 RangedConstraintManager::~RangedConstraintManager() {}
 
-// Is \p Assumption (i.e. "the condition is non-zero") inconsistent with a symbol
-// that simplified to the concrete integer \p V?
+// Is \p Assumption (i.e. "the condition is non-zero") inconsistent with a
+// symbol that simplified to the concrete integer \p V?
 static bool isConcreteInfeasible(const llvm::APSInt &V, bool Assumption) {
   return (V != 0) ? !Assumption : Assumption;
 }
