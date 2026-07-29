@@ -46,6 +46,17 @@ subroutine sub_use_consumer()
   arr_upper = 1
   arr_both = 2
 end subroutine
+module m
+contains
+  impure integer function impf()
+    impf = 1
+  end function
+end module
+subroutine s1()
+  use m
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer :: z(impf() : [integer::])
+end subroutine
 subroutine bar(n, bounds, rank_bounds)
   integer, intent(IN) :: n 
   integer, intent(IN) :: bounds(:)
@@ -167,16 +178,42 @@ program declaration_array_bounds
 
   integer :: dim0(0) = [integer::]
   integer :: zerosize1([integer::])
+  !PORTABILITY: specification expression refers to local object 'dim0' (initialized and saved) [-Wsaved-local-in-spec-expr]
   integer :: zerosize2(dim0 : [integer::])
+  !PORTABILITY: specification expression refers to local object 'dim0' (initialized and saved) [-Wsaved-local-in-spec-expr]
   integer :: zerosize3(999 : dim0)
-  integer :: zerosize4([integer::] : 999)
+  integer :: local9 = 9
+  !PORTABILITY: specification expression refers to local object 'local9' (initialized and saved) [-Wsaved-local-in-spec-expr]
+  integer :: zerosize4([integer::] : local9)
   !ERROR: DECLARATION bounds integer rank-1 arrays must have the same size; lower bounds has 0 elements, upper bounds has 2 elements
   integer :: zerosize_n([integer::] : [1,2])
 
   ! Test that maximum supported rank error fires. At the time of writing this test,
   ! that is 15. See flang/include/flang/Common/Fortran-consts.h.
   integer :: maxrank([(1,i=1,15)])
-  !ERROR: 'maxrank_n' has rank 16, which is greater than the maximum supported rank 15
+  !ERROR: DECLARATION rank-1 integer array bound(s) imply rank 16, which is greater than the maximum supported rank 15
   integer :: maxrank_n([(1,i=1,16)])
+  !Test a rank size between the implementation's max rank and signed 32 bit integer overflow.
+  !Previously, this was crashing the compiler, despite the size (maxRank + 1 == 16) test case above
+  !erroring gracefully as expected. This is because pre-existing Rank() API on ArraySpec
+  !(and several other classes) use C++ `int`s (despite calling inherited vector<>'s .size()
+  !which is a size_t, so there is an implicit cast from unsigned int to a possibly smaller signed int).
+  !Furthermore, this allows us to error out before pushing an absurd amount of ShapeSpec's to a 
+  !vector. This was previously not a problem, but now is due to the nature of the change this feature introduces 
+  !to a variable's rank. Previously, this was a context-free parse-time property given by 
+  !(number of commas - 1), constrained by the literal source text. Now we can use any compile-time
+  !constant value, and this can require a symbol table lookup (which makes rank a context-sensitive property, 
+  !no longer strictly as parse-time).
+  !Consider the following:
+  !integer :: dims(100)
+  !Before we'd have to declare 
+  !integer :: array(dims(1),dims(2), ..., dims(100))
+  !parsing every ',' along the way. This made overflow theoretically still possible but 
+  !practically/computationally impossible. Now we can declare
+  !integer :: array(dims)
+  !and overflow much more easily.
+  integer :: n(2147483648_8) !2^31
+  !ERROR: DECLARATION rank-1 integer array bound(s) imply rank 2147483648, which is greater than the maximum supported rank 15
+  integer :: too_big(n)
 
 end program

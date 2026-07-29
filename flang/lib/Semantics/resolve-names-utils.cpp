@@ -9,6 +9,7 @@
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
@@ -506,6 +507,43 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
   // array (they are equal when both are).  A zero-size array yields rank 0,
   // i.e. the entity is scalar.
   std::int64_t numDims{ubIsRank1 ? *ubExtent : (lbIsRank1 ? *lbExtent : 0)};
+
+  // A zero-sized rank-1 bounds array makes the entity a scalar, so neither
+  // bound is emitted into a ShapeSpec.  The per-ShapeSpec specification-
+  // expression checks in declaration checking would therefore never see these
+  // bounds, letting invalid ones slip through (impure function references,
+  // local objects, and other restricted expressions).  Validate them here
+  // instead; any diagnostic rejects the declaration.
+  if (numDims == 0) {
+    const Scope &scope{context_.FindScope(parser::FindSourceLocation(x))};
+    auto checkBound{[&](const Bound &bound, parser::CharBlock at) {
+      if (const auto &expr{bound.GetExplicit()}) {
+        auto restorer{context_.foldingContext().messages().SetLocation(at)};
+        evaluate::CheckSpecificationExpr(*expr, scope,
+            context_.foldingContext(), /*forElementalFunctionResult=*/false);
+      }
+    }};
+    checkBound(ubResult->first, parser::FindSourceLocation(upperBound));
+    if (lbResult) {
+      checkBound(lbResult->first, parser::FindSourceLocation(*lowerBoundOpt));
+    }
+  }
+
+  // numDims is the rank determined from the bounds array(s) (already validated
+  // above to agree in size when both are rank-1).  Reject a rank above the
+  // maximum here, in signed 64-bit arithmetic, before numDims is narrowed to
+  // int and used to size the ArraySpec -- this avoids the signed-int overflow
+  // and avoids building an enormous ArraySpec for an already-invalid
+  // declaration.
+  if (numDims > common::maxRank) {
+    context_.Say(parser::FindSourceLocation(x),
+        "DECLARATION rank-1 integer array bound(s) imply rank %jd, which is "
+        "greater than the maximum "
+        "supported rank %d"_err_en_US,
+        static_cast<std::intmax_t>(numDims), common::maxRank);
+    hasError = true;
+    return std::nullopt;
+  }
 
   std::optional<Bound> lb;
   if (lbResult) {

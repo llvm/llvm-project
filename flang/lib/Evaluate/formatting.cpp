@@ -895,7 +895,11 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {
-  llvm_unreachable("RankOneBoundElement has no Fortran representation");
+  // A RankOneBoundElement extracts a single element from a rank-1 array that
+  // was used as an array bound in a declaration; it has no true Fortran
+  // surface syntax.  Render it in an internal, clearly-synthetic form.
+  base().AsFortran(o << "rank1BoundElement(")
+      << ",dim=" << (dimension_ + 1) << ')';
   return o;
 }
 
