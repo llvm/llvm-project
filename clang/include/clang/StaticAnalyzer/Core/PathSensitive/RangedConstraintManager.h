@@ -479,10 +479,7 @@ private:
 };
 
 /// Try to simplify a given symbolic expression's associated `SVal` based on the
-/// constraints in State. This is needed because the Environment bindings are
-/// not getting updated when a new constraint is added to the State. The
-/// simplified SVal might be a single constant (i.e. `ConcreteInt`), which
-/// callers in the assumeSym* family use to decide feasibility directly.
+/// constraints in State.
 SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym);
 
 } // namespace ento
