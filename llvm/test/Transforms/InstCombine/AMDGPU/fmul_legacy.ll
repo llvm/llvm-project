@@ -111,7 +111,7 @@ define float @test_finite_assumed(float %x, float %y) {
 ; In IEEE mode subnormals are not logical zeros. A value known to be strictly
 ; positive (greater than 0.0) may be subnormal but is not a logical zero, so
 ; the fold fires.
-define float @test_subnormal_ieee_allows_fold(float %x, float %y) #0 {
+define float @test_subnormal_ieee_allows_fold(float %x, float %y) {
 ; CHECK-LABEL: @test_subnormal_ieee_allows_fold(
 ; CHECK-NEXT:    [[IS_POS_X:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[IS_POS_Y:%.*]] = fcmp ogt float [[Y:%.*]], 0.000000e+00
@@ -131,7 +131,7 @@ define float @test_subnormal_ieee_allows_fold(float %x, float %y) #0 {
 ; In preserve-sign mode, a value known to be strictly positive may still be
 ; subnormal, which is treated as a logical zero. The fold is blocked because
 ; the legacy zero clause could fire when subnormals are flushed to zero.
-define float @test_subnormal_flush_blocks_fold(float %x, float %y) #1 {
+define float @test_subnormal_flush_blocks_fold(float %x, float %y) #0 {
 ; CHECK-LABEL: @test_subnormal_flush_blocks_fold(
 ; CHECK-NEXT:    [[IS_POS_X:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[IS_POS_Y:%.*]] = fcmp ogt float [[Y:%.*]], 0.000000e+00
@@ -168,5 +168,4 @@ declare float @llvm.amdgcn.fmul.legacy(float, float)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)
 
-attributes #0 = { denormal_fpenv(float: ieee) }
-attributes #1 = { denormal_fpenv(float: preservesign) }
+attributes #0 = { denormal_fpenv(float: preservesign) }
