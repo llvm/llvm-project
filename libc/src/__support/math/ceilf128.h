@@ -12,13 +12,22 @@
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr Float128 ceilf128(Float128 x) { return fputil::ceil(x); }
+#ifdef LIBC_TYPES_HAS_FLOAT128
+LIBC_INLINE constexpr float128 ceilf128(float128 x) {
+  return static_cast<float128>(fputil::ceil(fputil::Float128(x)));
+}
+#else
+LIBC_INLINE constexpr fputil::Float128 ceilf128(fputil::Float128 x) {
+  return fputil::ceil(x);
+}
+#endif // LIBC_TYPES_HAS_FLOAT128
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
