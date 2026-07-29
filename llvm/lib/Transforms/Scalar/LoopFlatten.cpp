@@ -1026,6 +1026,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
     AR.MSSA->verifyMemorySSA();
 
   auto PA = getLoopPassPreservedAnalyses();
+  PA.abandon<ScalarEvolutionAnalysis>();
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
