@@ -1449,7 +1449,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
     defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
     defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
-  } // End SubtargetPredicate = HasPackedFP32Ops
+  }
+  let SubtargetPredicate = HasPackedFP32SingleSGPROps in {
+    defm V_PK_FMA_F32_gfx1250 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
+    defm V_PK_MUL_F32_gfx1250 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
+    defm V_PK_ADD_F32_gfx1250 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+  }
 
   let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
@@ -2740,9 +2745,9 @@ multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<8> op> :
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
-defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
-defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
-defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+defm V_PK_FMA_F32_gfx1250 : VOP3P_Real_gfx12<0x1f>;
+defm V_PK_MUL_F32_gfx1250 : VOP3P_Real_gfx12<0x28>;
+defm V_PK_ADD_F32_gfx1250 : VOP3P_Real_gfx12<0x29>;
 
 defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1250<0x14>;
 defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1250<0x15>;
