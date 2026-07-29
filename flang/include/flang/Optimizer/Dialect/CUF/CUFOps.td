@@ -335,7 +335,7 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
 }
 
 def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
-  let summary = "Register a device or constant global as device-resident";
+  let summary = "Register global variables in unified mode";
 
   let description = [{
     Emitted under -gpu=mem:unified for globals.
