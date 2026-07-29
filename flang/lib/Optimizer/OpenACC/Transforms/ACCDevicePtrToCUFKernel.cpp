@@ -56,6 +56,12 @@ static Value getMappedVar(Value value) {
       value = view.getViewSource(cast<OpResult>(value));
       continue;
     }
+    // TODO: drop this case once (if) fir.emboxchar implements the
+    // FortranObjectViewOpInterface.
+    if (auto embox = dyn_cast_or_null<fir::EmboxCharOp>(def)) {
+      value = embox.getMemref();
+      continue;
+    }
     // Descriptor-based (allocatable/pointer) variables: the data address is
     // extracted from the descriptor via box_addr(load(<descriptor ref>)). Peel
     // both so the walk reaches the descriptor variable, which is what OpenACC
@@ -110,6 +116,13 @@ private:
     llvm::SmallVector<OpOperand *> deviceOperands;
     llvm::SetVector<Value> deviceArgs;
 
+    // Special case: a boxchar argument is not pointer-like, so acc.use_device
+    // cannot take it. Translate its base address and rebuild the boxchar on the
+    // device address. Keyed by the launch operand so the general path below is
+    // untouched. TODO: remove once fir.emboxchar is a
+    // FortranObjectViewOpInterface.
+    llvm::DenseMap<OpOperand *, fir::EmboxCharOp> boxCharArgs;
+
     DominanceInfo domInfo;
     PostDominanceInfo postDomInfo;
     llvm::DenseSet<Value> presentAccVars =
@@ -122,7 +135,12 @@ private:
       if (!mappedVar || !presentAccVars.contains(mappedVar))
         continue;
       deviceOperands.push_back(&operand);
-      deviceArgs.insert(arg);
+      if (auto embox = arg.getDefiningOp<fir::EmboxCharOp>()) {
+        boxCharArgs[&operand] = embox;
+        deviceArgs.insert(embox.getMemref());   // translate the base pointer
+      } else {
+        deviceArgs.insert(arg);                 // general case
+      }
     }
 
     if (deviceOperands.empty())
@@ -154,7 +172,17 @@ private:
     launch->moveBefore(terminator);
 
     for (OpOperand *operand : deviceOperands) {
-      operand->assign(deviceArgsMap[operand->get()]);
+      if (fir::EmboxCharOp embox = boxCharArgs.lookup(operand)) {
+        // Char case: rebuild the boxchar on the device base address. Must be
+        // emitted before the launch so the rebuilt value dominates its use.
+        builder.setInsertionPoint(launch);
+        operand->assign(fir::EmboxCharOp::create(
+            builder, embox.getLoc(), embox.getType(),
+            deviceArgsMap[embox.getMemref()], embox.getLen()));
+      } else {
+        // General case
+        operand->assign(deviceArgsMap[operand->get()]);
+      }
     }
   }
 };
