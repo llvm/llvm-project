@@ -80,6 +80,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/CycleAnalysis.h"
@@ -5347,8 +5348,19 @@ void VPCostContext::invalidateWideningDecision(Instruction *I,
                          LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
-uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
-  return CM.getPredBlockCostDivisor(CostKind, BB);
+uint64_t
+VPCostContext::getPredBlockCostDivisor(const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  std::optional<VPExecutionFrequency> Freq =
+      Region->getEntryBranchOnMask()->getExecutionFrequency();
+  if (!Freq)
+    return 1;
+  // A recorded frequency is neither zero nor always-executing, so the
+  // probability is non-zero and the division below is safe.
+  return divideNearest(
+      BranchProbability::getDenominator(),
+      vputils::getExecutionProbability(Freq->Freq).getNumerator());
 }
 
 bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
@@ -5669,9 +5681,11 @@ LoopVectorizationPlanner::LoopVectorizationPlanner(
     const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
     std::unique_ptr<LoopVectorizationCostModel> CM, VFSelectionContext &Config,
     InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-    OptimizationRemarkEmitter *ORE)
+    OptimizationRemarkEmitter *ORE,
+    std::function<const BranchProbabilityInfo &()> GetBPI)
     : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal),
-      CM(std::move(CM)), Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
+      CM(std::move(CM)), Config(Config), IAI(IAI), PSE(PSE), ORE(ORE),
+      GetBPI(GetBPI) {}
 
 LoopVectorizationPlanner::~LoopVectorizationPlanner() = default;
 
@@ -6331,16 +6345,16 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
     Edges += VPBB->getNumSuccessors();
   uint64_t Tolerance = Edges + BranchProbability::getDenominator() / HeaderFreq;
 
-  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies =
-      vputils::computeExecutionFrequencies(Blocks);
+  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+      Frequencies = vputils::computeExecutionFrequencies(Blocks);
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
     // Compare at BranchProbability's coarser resolution, which is as precise as
     // BFI's frequencies get.
-    std::optional<BlockFrequency> Freq = Frequencies.lookup(VPBB);
+    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
     if (!Freq)
       continue;
-    BranchProbability Computed = vputils::getExecutionProbability(*Freq);
+    BranchProbability Computed = vputils::getExecutionProbability(Freq->Freq);
 
     // Clamp to the header's frequency, which BFI's rounding may exceed.
     uint64_t BBFreq = BFI.getBlockFreq(BB).getFrequency();
@@ -6379,9 +6393,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // Create initial base VPlan0, to serve as common starting point for all
   // candidates built later for specific VF ranges.
-  auto VPlan0 = VPlanTransforms::buildVPlan0(OrigLoop, *LI,
-                                             Legal->getWidestInductionType(),
-                                             PSE, LVer ? &*LVer : nullptr);
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(), PSE,
+      LVer ? &*LVer : nullptr, GetBPI);
 
   VPDominatorTree VPDT(*VPlan0);
   if (const LoopAccessInfo *LAI = Legal->getLAI())
@@ -7930,7 +7944,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       L, LI, DT, TLI, *TTI, &LVL,
       std::make_unique<LoopVectorizationCostModel>(
           SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE, GetBFI, F, IAI, Config),
-      Config, IAI, PSE, ORE);
+      Config, IAI, PSE, ORE, GetBPI);
 
   EpilogueLowering EpilogueTailLoweringStatus =
       getEpilogueTailLowering(LVP.getCostModel(), L, ORE, LVL, Hints);
@@ -8340,11 +8354,20 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  GetBFI = [this, &AM, &F]() -> BlockFrequencyInfo & {
-    // CycleInfo cached by an earlier pass is invalidated when the CFG changes.
+  // CycleInfo cached by an earlier pass is invalidated when the CFG changes.
+  // Both BlockFrequencyAnalysis and BranchProbabilityAnalysis depend on it, so
+  // drop the stale result before either is (re-)computed.
+  auto ClearStaleCycleInfo = [this, &AM, &F] {
     if (CFGChanged && AM.getCachedResult<CycleAnalysis>(F))
       AM.clearAnalysis<CycleAnalysis>(F);
+  };
+  GetBFI = [&AM, &F, ClearStaleCycleInfo]() -> BlockFrequencyInfo & {
+    ClearStaleCycleInfo();
     return AM.getResult<BlockFrequencyAnalysis>(F);
+  };
+  GetBPI = [&AM, &F, ClearStaleCycleInfo]() -> const BranchProbabilityInfo & {
+    ClearStaleCycleInfo();
+    return AM.getResult<BranchProbabilityAnalysis>(F);
   };
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)

@@ -232,10 +232,11 @@ inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
 BranchProbability getExecutionProbability(BlockFrequency Freq);
 
 /// Computes for each block in \p Blocks, which must be in reverse post-order,
-/// the frequency with which it executes relative to the first (header) block.
+/// the frequency with which it executes relative to the first (header) block,
+/// and whether that frequency was composed using any estimated branch weights.
 /// The frequency of a block is the sum over its incoming edges, or std::nullopt
 /// if any edge on a path reaching it lacks branch weights.
-DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
 namespace detail {

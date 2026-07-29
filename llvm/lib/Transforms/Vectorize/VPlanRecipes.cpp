@@ -2129,41 +2129,43 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPIRMetadata::applyMetadata(Instruction &I) const {
   if (Metadata.empty())
     return;
-  // The execution frequency is VPlan-internal and must not reach IR.
+  // Frequencies and estimated branch weights are VPlan-internal and must not
+  // reach IR.
   unsigned ExecFreqKind = getMDKindID(ExecutionFrequencyMDName);
+  unsigned EstProfKind = getMDKindID(EstimatedProfileMDName);
   for (const auto &[Kind, Node] : Metadata)
-    if (Kind != ExecFreqKind)
+    if (Kind != ExecFreqKind && Kind != EstProfKind)
       I.setMetadata(Kind, Node);
 }
 
 /// Returns the execution frequency recorded in \p Node.
-static BlockFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
+static VPExecutionFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
+  assert(Node->getNumOperands() <= 2 && "unexpected frequency node shape");
   uint64_t Freq =
       mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
   assert(Freq <= vputils::AlwaysExecutesFreq &&
          "frequency cannot exceed the one of an always executing block");
-  return BlockFrequency(Freq);
+  return {BlockFrequency(Freq), Node->getNumOperands() == 2};
 }
 
-void VPIRMetadata::setExecutionFrequency(std::optional<BlockFrequency> Freq,
-                                         LLVMContext &Ctx) {
+void VPIRMetadata::setExecutionFrequency(
+    std::optional<VPExecutionFrequency> Freq, LLVMContext &Ctx) {
   // A recipe that never or always executes needs no annotation.
-  if (!Freq || Freq->getFrequency() == 0 ||
-      Freq->getFrequency() == vputils::AlwaysExecutesFreq)
+  if (!Freq || Freq->Freq.getFrequency() == 0 ||
+      Freq->Freq.getFrequency() == vputils::AlwaysExecutesFreq)
     return;
-  Constant *Frequency =
-      ConstantInt::get(Type::getInt64Ty(Ctx), Freq->getFrequency());
-  setMetadata(Ctx.getMDKindID(ExecutionFrequencyMDName),
-              MDNode::get(Ctx, {ConstantAsMetadata::get(Frequency)}));
+  SmallVector<llvm::Metadata *, 2> Ops = {ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt64Ty(Ctx), Freq->Freq.getFrequency()))};
+  if (Freq->IsEstimated)
+    Ops.push_back(ConstantAsMetadata::get(ConstantInt::getTrue(Ctx)));
+  setMetadata(Ctx.getMDKindID(ExecutionFrequencyMDName), MDNode::get(Ctx, Ops));
 }
 
-std::optional<BlockFrequency> VPIRMetadata::getExecutionFrequency() const {
-  if (Metadata.empty())
-    return std::nullopt;
-  MDNode *Node = getMetadata(getMDKindID(ExecutionFrequencyMDName));
-  if (!Node)
-    return std::nullopt;
-  return getExecutionFrequencyFromMD(Node);
+std::optional<VPExecutionFrequency>
+VPIRMetadata::getExecutionFrequency() const {
+  if (MDNode *Node = getInternalMetadata(ExecutionFrequencyMDName))
+    return getExecutionFrequencyFromMD(Node);
+  return std::nullopt;
 }
 
 void VPIRMetadata::clearExecutionFrequency() {
@@ -2202,15 +2204,21 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     // Print the values of branch weights, which are more informative than the
     // ID of the metadata node holding them.
     SmallVector<uint32_t> Weights;
-    if (Kind == LLVMContext::MD_prof && extractBranchWeights(Node, Weights)) {
+    bool IsEstimatedProfile = MDNames[Kind] == EstimatedProfileMDName;
+    if ((Kind == LLVMContext::MD_prof || IsEstimatedProfile) &&
+        extractBranchWeights(Node, Weights)) {
+      if (IsEstimatedProfile)
+        O << "estimated ";
       O << "{";
       interleaveComma(Weights, O);
       O << "}";
     } else if (MDNames[Kind] == ExecutionFrequencyMDName) {
       // Print the frequency together with the probability it corresponds to.
-      uint64_t Freq = getExecutionFrequencyFromMD(Node).getFrequency();
-      O << Freq
-        << format(" (%.4g%%)", 100.0 * Freq / vputils::AlwaysExecutesFreq);
+      auto [Freq, IsEstimated] = getExecutionFrequencyFromMD(Node);
+      O << Freq.getFrequency()
+        << format(" (%.4g%%%s)",
+                  100.0 * Freq.getFrequency() / vputils::AlwaysExecutesFreq,
+                  IsEstimated ? ", estimated" : "");
     } else {
       Node->printAsOperand(O, M);
     }
@@ -4050,7 +4058,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+    ScalarCost /= Ctx.getPredBlockCostDivisor(getRegion());
     return ScalarCost;
   }
   case Instruction::Load:
@@ -4109,7 +4117,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-      Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+      Cost /= Ctx.getPredBlockCostDivisor(ParentRegion);
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(

@@ -36,6 +36,7 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -891,6 +892,9 @@ class LoopVectorizationPlanner {
 
   OptimizationRemarkEmitter *ORE;
 
+  /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
+  std::function<const BranchProbabilityInfo &()> GetBPI;
+
   SmallVector<VPlanPtr, 4> VPlans;
 
   /// Profitable vector factors.
@@ -921,7 +925,8 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       std::unique_ptr<LoopVectorizationCostModel> CM,
       VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      std::function<const BranchProbabilityInfo &()> GetBPI);
 
   ~LoopVectorizationPlanner();
 

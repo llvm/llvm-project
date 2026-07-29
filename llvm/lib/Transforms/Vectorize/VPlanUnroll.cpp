@@ -676,13 +676,14 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 }
 
 /// Converts the frequency \p Freq with which a block is entered to branch
-/// weights for the branch guarding it, or nullptr if \p Freq is unknown.
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown or
+/// estimated.
 static MDNode *
-convertFrequencyToBranchWeights(std::optional<BlockFrequency> Freq,
+convertFrequencyToBranchWeights(std::optional<VPExecutionFrequency> Freq,
                                 LLVMContext &Ctx) {
-  if (!Freq)
+  if (!Freq || Freq->IsEstimated)
     return nullptr;
-  BranchProbability P = vputils::getExecutionProbability(*Freq);
+  BranchProbability P = vputils::getExecutionProbability(Freq->Freq);
 
   // Use the numerators of P and its complement as weights and reduce them via
   // gcd to keep them small. Neither is zero, as P is neither zero nor one.
