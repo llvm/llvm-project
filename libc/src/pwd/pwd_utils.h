@@ -21,12 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-/// Parses a colon-separated password database line into a struct passwd.
-///
-/// \param[in,out] line Pointer to the null-terminated string to parse.
-///                     Modified in-place during tokenization.
-/// \return ErrorOr<struct passwd> containing the parsed entry on success, or
-///         an Error (e.g. EINVAL) on failure.
+// Parses a colon-separated password database line into a struct passwd.
 ErrorOr<struct passwd> parse_passwd_line(char *line);
 
 } // namespace internal
