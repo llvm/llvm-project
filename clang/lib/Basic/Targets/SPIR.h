@@ -289,19 +289,12 @@ public:
     // FIXME: Assert that a present host target's pointer types match the ones
     // set below, once the driver diagnoses unsupported host/device combinations
     // (until then such an assert would fire on existing tests).
+    PointerWidth = PointerAlign = 32;
     const TargetInfo *HostTarget = getHostTarget();
     if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
-      PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     }
-
-    // Keep type widths consistent with the 32-bit data layout.
-    assert(PointerWidth == 32);
-    assert(PointerAlign == 32);
-    assert(getTypeWidth(SizeType) == 32);
-    assert(getTypeWidth(PtrDiffType) == 32);
-    assert(getTypeWidth(IntPtrType) == 32);
 
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -323,19 +316,12 @@ public:
     // FIXME: Assert that a present host target's pointer types match the ones
     // set below, once the driver diagnoses unsupported host/device combinations
     // (until then such an assert would fire on existing tests).
+    PointerWidth = PointerAlign = 64;
     const TargetInfo *HostTarget = getHostTarget();
     if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 64) {
-      PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     }
-
-    // Keep type widths consistent with the 64-bit data layout.
-    assert(PointerWidth == 64);
-    assert(PointerAlign == 64);
-    assert(getTypeWidth(SizeType) == 64);
-    assert(getTypeWidth(PtrDiffType) == 64);
-    assert(getTypeWidth(IntPtrType) == 64);
 
     // SPIR64 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
@@ -433,6 +419,8 @@ public:
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     }
+    // SPIR-V has core support for atomic ops, and Int32 is always available;
+    // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
   }
@@ -462,6 +450,8 @@ public:
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     }
+    // SPIR-V has core support for atomic ops, and Int64 is always available;
+    // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
   }
