@@ -1314,9 +1314,9 @@ TEST(MinimizeSourceToDependencyDirectivesTest, CXX20ModuleUnitKind) {
             scanInputForCXX20ModuleUnit("export module M any pp tokens;"));
   EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
             scanInputForCXX20ModuleUnit("#line 7\nexport module M;"));
-  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
-            scanInputForCXX20ModuleUnit(
-                "# 7 \"input.cppm\"\nexport module M;"));
+  EXPECT_EQ(
+      ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+      scanInputForCXX20ModuleUnit("# 7 \"input.cppm\"\nexport module M;"));
   EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
             scanInputForCXX20ModuleUnit("#pragma once\nexport module M;"));
 }

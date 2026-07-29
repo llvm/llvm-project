@@ -47,8 +47,7 @@ enum class CXX20ModuleDirectiveKind {
   ImportDeclaration,
 };
 
-static CXX20ModuleDirectiveKind
-scanFirstCXX20ModuleDirective(StringRef Source);
+static CXX20ModuleDirectiveKind scanFirstCXX20ModuleDirective(StringRef Source);
 
 /// Does an efficient "scan" of the sources to detect the presence of
 /// preprocessor (or module import) directives and collects the raw lexed tokens
