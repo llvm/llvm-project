@@ -1022,14 +1022,11 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
         ExplodedNodeSet evaluated;
         evalBind(evaluated, CNE, Pred, Result, V, true);
 
-        Dst.insert(evaluated);
-
         Pred = *evaluated.begin();
         State = Pred->getState();
       }
     }
 
-    Dst.erase(Pred);
     Dst.insert(Engine.makeNodeWithBinding(Pred, CNE, Result, State));
     return;
   }
