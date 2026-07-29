@@ -36,7 +36,8 @@
 // bool isNAME(const TargetInstrInfo &TII,
 //             const TargetSubtargetInfo &STI,
 //             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI, const SDep *Dep) {
+//             const MachineInstr &SecondMI,
+//             const SDep *Dep) {
 //   if (isNonDataDep(Dep))
 //     return false;
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
@@ -56,7 +57,10 @@
 // bool isNAME(const TargetInstrInfo &TII,
 //             const TargetSubtargetInfo &STI,
 //             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
+//             const MachineInstr &SecondMI,
+//             const SDep *Dep) {
+//   if (isNonDataDep(Dep))
+//     return false;
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
 //   if (SecondMI.getMF()->getProperties().hasNoVRegs())
 //     return false;
