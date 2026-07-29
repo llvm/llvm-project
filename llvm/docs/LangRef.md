@@ -11559,6 +11559,13 @@ the result type. The first operand, `source`, must be a value of
 {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving
 the bit position at which the extraction begins within `source`.
 
+{ref}`Target extension types <t_target>` are not permitted as the
+result type `ty`.
+
+```{note}
+Vector types are not currently supported as the result type.
+```
+
 ##### Semantics:
 
 The result is the bit range `source[offset : offset + bitwidth(ty))`,
@@ -11601,6 +11608,14 @@ type of the value to insert. The first operand, `base`, must be a value of
 {ref}`byte type <t_byte>`. The second operand, `val`, must be a value of
 type `ty`. The `offset` operand is an `i32` giving the bit position
 at which the insertion begins within `base`.
+
+{ref}`Target extension types <t_target>` are not permitted as the
+type `ty` of the value to insert.
+
+```{note}
+Vector types are not currently supported as the type of the value
+to insert.
+```
 
 ##### Semantics:
 
