@@ -4,24 +4,8 @@
 # Regression test for WaitcntBrackets::mergeAsyncMarks rebasing surviving async
 # marks into the merged (widened) counter frame at a CFG join.
 #
-# The join (bb.3) has two predecessors:
-#   - an async-mark predecessor: one async LDS DMA + ASYNCMARK, so one async mark
-#     recorded at LOAD_CNT score 1 (small frame, UB = 1).
-#   - a load predecessor: several async LDS DMAs with no ASYNCMARK. These stay
-#     outstanding (they write LDS, no VGPR result) and extend the frame to UB = 4,
-#     but contribute no async marks.
-#
-# si-insert-waitcnts visits the branch target (bb.2) before the fall-through
-# (bb.1), so whichever of those carries the async mark seeds bb.3's incoming
-# state and the other side is merged in with an empty AsyncMarks list.
-#
-# bb.2 seeds the incoming state of bb.3. Next, bb.1 is visited and merges itself
-# as other to the incoming state. UB of LOAD_CNT is updated to 4 = max(1,4).
-# If mergeScore is not called because bb.1 has no async marks,
-# bb.2's Score 1 (ASYNCMAR) is not rebased to new UB 4. The vmcnt value finally
-# becomes 3 (= 4 - 1). If score 1 is rebased to 4 (= 1 + (4 - 1)), vmcnt
-# correctly becomes 0 (= 4 - 4).
-# Previously, mergeScore was not called when other block had no asyncmark.
+# WAIT_ASYNCMARK at bb.3, CFG join of bb.1 and bb.2, should be zero.
+# bb.1 has 4 LDS loads but no ASYNCMARK.
 
 ---
 name:            async_mark_pred_merged_first
