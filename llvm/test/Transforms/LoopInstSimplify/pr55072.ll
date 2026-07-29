@@ -9,7 +9,7 @@ define i32 @test_01() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       unreached:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
 bb:
   br label %loop

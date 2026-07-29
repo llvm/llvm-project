@@ -720,7 +720,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X >>a undef -> poison
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // TODO: undef >>a X -> poison if the shift is exact
       // undef >>a X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::Shl:

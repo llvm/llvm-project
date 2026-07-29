@@ -413,7 +413,7 @@ define i8 @shl_nsw_nuw_6_do_nothing(i8 %x) {
 ; shift amount is a nonzero constant -> poison
 define i32 @lshr_exact_undef_by_const_nonzero() {
 ; CHECK-LABEL: @lshr_exact_undef_by_const_nonzero(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %r = lshr exact i32 undef, 1
   ret i32 %r
@@ -421,7 +421,7 @@ define i32 @lshr_exact_undef_by_const_nonzero() {
 
 define i32 @ashr_exact_undef_by_const_nonzero() {
 ; CHECK-LABEL: @ashr_exact_undef_by_const_nonzero(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %r = ashr exact i32 undef, 1
   ret i32 %r
@@ -464,7 +464,7 @@ define i32 @ashr_exact_undef_by_known_zero(i32 range(i32 0, 1) %a) {
 ; shift amount is known to be nonzero -> poison
 define i32 @lshr_exact_undef_by_known_nonzero(i32 range(i32 1, 10) %a) {
 ; CHECK-LABEL: @lshr_exact_undef_by_known_nonzero(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %r = lshr exact i32 undef, %a
   ret i32 %r
@@ -472,7 +472,7 @@ define i32 @lshr_exact_undef_by_known_nonzero(i32 range(i32 1, 10) %a) {
 
 define i32 @ashr_exact_undef_by_known_nonzero(i32 range(i32 1, 10) %a) {
 ; CHECK-LABEL: @ashr_exact_undef_by_known_nonzero(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %r = ashr exact i32 undef, %a
   ret i32 %r

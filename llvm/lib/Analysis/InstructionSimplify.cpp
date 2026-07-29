@@ -1372,6 +1372,13 @@ static Value *simplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
 static Value *simplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
                                  Value *Op1, bool IsExact,
                                  const SimplifyQuery &Q, unsigned MaxRecurse) {
+  // Handle exact undef before `simplifyShift()` as it doesn't know about
+  // `IsExact` and might fold it to something else.
+  // undef exact>> X -> poison iff X is known nonzero
+  // undef exact>> X -> undef with unknown X
+  if (Q.isUndefValue(Op0) && IsExact)
+    return isKnownNonZero(Op1, Q) ? PoisonValue::get(Op0->getType()) : Op0;
+
   if (Value *V =
           simplifyShift(Opcode, Op0, Op1, /*IsNSW*/ false, Q, MaxRecurse))
     return V;
@@ -1380,10 +1387,9 @@ static Value *simplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
   if (Op0 == Op1)
     return Constant::getNullValue(Op0->getType());
 
-  // undef >> X -> 0
-  // undef >> X -> undef (if it's exact)
+  // undef non-exact>> X -> 0
   if (Q.isUndefValue(Op0))
-    return IsExact ? Op0 : Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType());
 
   // The low bit cannot be shifted out of an exact shift if it is set.
   // TODO: Generalize by counting trailing zeros (see fold for exact division).
