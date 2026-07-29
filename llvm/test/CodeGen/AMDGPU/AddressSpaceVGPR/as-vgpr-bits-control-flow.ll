@@ -37,15 +37,16 @@ define void @two_bytes_same_dword(ptr addrspace(13) inreg %p, i8 %a, i8 %b) {
 ; GFX12-SDAG-NEXT:    v_bfi_b32 v0, s2, v0, v2
 ; GFX12-SDAG-NEXT:    s_lshr_b32 s0, s0, 2
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v1, s3, v1
 ; GFX12-SDAG-NEXT:    s_lshl_b32 s1, 0xff, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v0, s3, v1
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_bfi_b32 v0, s1, v1, v0
+; GFX12-SDAG-NEXT:    v_bfi_b32 v0, s1, v0, v1
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
