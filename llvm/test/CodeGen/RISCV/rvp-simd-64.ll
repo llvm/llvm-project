@@ -6224,3 +6224,326 @@ define <4 x i16> @test_ppairoe_v4i16(<4 x i16> %a, <4 x i16> %b) {
   %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
   ret <4 x i16> %res
 }
+
+; The tests below swap the usual operand roles: the destination's even lanes
+; come from the second shuffle operand and its odd lanes from the first.
+
+define <8 x i8> @test_ppaire_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppaire_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a4, a1, 16
+; RV32-NEXT:    srli a5, a3, 16
+; RV32-NEXT:    ppaire.b a1, a3, a1
+; RV32-NEXT:    ppaire.b a3, a5, a4
+; RV32-NEXT:    srli a4, a0, 16
+; RV32-NEXT:    srli a5, a2, 16
+; RV32-NEXT:    ppaire.b a0, a2, a0
+; RV32-NEXT:    ppaire.b a2, a5, a4
+; RV32-NEXT:    pack a1, a1, a3
+; RV32-NEXT:    pack a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaire_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 48
+; RV64-NEXT:    srli a3, a1, 48
+; RV64-NEXT:    srli a4, a0, 32
+; RV64-NEXT:    srli a5, a1, 32
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    ppaire.b a3, a5, a4
+; RV64-NEXT:    srli a4, a0, 16
+; RV64-NEXT:    srli a5, a1, 16
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ppaire.b a1, a5, a4
+; RV64-NEXT:    ppaire.h a2, a3, a2
+; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppairo_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppairo_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a4, a1, 24
+; RV32-NEXT:    srli a5, a3, 24
+; RV32-NEXT:    srli a1, a1, 8
+; RV32-NEXT:    srli a3, a3, 8
+; RV32-NEXT:    ppaire.b a4, a5, a4
+; RV32-NEXT:    ppaire.b a1, a3, a1
+; RV32-NEXT:    srli a3, a0, 24
+; RV32-NEXT:    srli a5, a2, 24
+; RV32-NEXT:    srli a0, a0, 8
+; RV32-NEXT:    srli a2, a2, 8
+; RV32-NEXT:    ppaire.b a3, a5, a3
+; RV32-NEXT:    ppaire.b a0, a2, a0
+; RV32-NEXT:    pack a1, a1, a4
+; RV32-NEXT:    pack a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairo_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 56
+; RV64-NEXT:    srli a3, a1, 56
+; RV64-NEXT:    srli a4, a0, 40
+; RV64-NEXT:    srli a5, a1, 40
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    ppaire.b a3, a5, a4
+; RV64-NEXT:    srli a4, a0, 24
+; RV64-NEXT:    srli a5, a1, 24
+; RV64-NEXT:    srli a0, a0, 8
+; RV64-NEXT:    srli a1, a1, 8
+; RV64-NEXT:    ppaire.b a4, a5, a4
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ppaire.h a1, a3, a2
+; RV64-NEXT:    ppaire.h a0, a0, a4
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppaireo_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppaireo_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a4, a1, 24
+; RV32-NEXT:    srli a5, a3, 16
+; RV32-NEXT:    ppaire.b a4, a5, a4
+; RV32-NEXT:    srli a1, a1, 8
+; RV32-NEXT:    ppaire.b a1, a3, a1
+; RV32-NEXT:    srli a3, a0, 24
+; RV32-NEXT:    srli a5, a2, 16
+; RV32-NEXT:    srli a0, a0, 8
+; RV32-NEXT:    ppaire.b a3, a5, a3
+; RV32-NEXT:    ppaire.b a0, a2, a0
+; RV32-NEXT:    pack a1, a1, a4
+; RV32-NEXT:    pack a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaireo_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 56
+; RV64-NEXT:    srli a3, a1, 48
+; RV64-NEXT:    srli a4, a0, 40
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    srli a3, a1, 32
+; RV64-NEXT:    ppaire.b a3, a3, a4
+; RV64-NEXT:    srli a4, a0, 24
+; RV64-NEXT:    srli a5, a1, 16
+; RV64-NEXT:    srli a0, a0, 8
+; RV64-NEXT:    ppaire.b a4, a5, a4
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ppaire.h a1, a3, a2
+; RV64-NEXT:    ppaire.h a0, a0, a4
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppairoe_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppairoe_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a4, a1, 16
+; RV32-NEXT:    srli a5, a3, 24
+; RV32-NEXT:    ppaire.b a4, a5, a4
+; RV32-NEXT:    srli a3, a3, 8
+; RV32-NEXT:    ppaire.b a1, a3, a1
+; RV32-NEXT:    srli a3, a0, 16
+; RV32-NEXT:    srli a5, a2, 24
+; RV32-NEXT:    srli a2, a2, 8
+; RV32-NEXT:    ppaire.b a3, a5, a3
+; RV32-NEXT:    ppaire.b a0, a2, a0
+; RV32-NEXT:    pack a1, a1, a4
+; RV32-NEXT:    pack a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairoe_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 48
+; RV64-NEXT:    srli a3, a1, 56
+; RV64-NEXT:    srli a4, a0, 32
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    srli a3, a1, 40
+; RV64-NEXT:    ppaire.b a3, a3, a4
+; RV64-NEXT:    srli a4, a0, 16
+; RV64-NEXT:    srli a5, a1, 24
+; RV64-NEXT:    srli a1, a1, 8
+; RV64-NEXT:    ppaire.b a4, a5, a4
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ppaire.h a1, a3, a2
+; RV64-NEXT:    ppaire.h a0, a0, a4
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 9, i32 0, i32 11, i32 2, i32 13, i32 4, i32 15, i32 6>
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_ppaire_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppaire_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pack a1, a3, a1
+; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaire_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a1, 32
+; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    ppaire.h a1, a3, a2
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_ppairo_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppairo_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a1, a1, 16
+; RV32-NEXT:    srli a3, a3, 16
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    srli a2, a2, 16
+; RV32-NEXT:    pack a1, a3, a1
+; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairo_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 48
+; RV64-NEXT:    srli a3, a1, 48
+; RV64-NEXT:    srli a0, a0, 16
+; RV64-NEXT:    srli a1, a1, 16
+; RV64-NEXT:    ppaire.h a2, a3, a2
+; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_ppaireo_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppaireo_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a1, a1, 16
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    pack a1, a3, a1
+; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaireo_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 48
+; RV64-NEXT:    srli a3, a1, 32
+; RV64-NEXT:    srli a0, a0, 16
+; RV64-NEXT:    ppaire.h a2, a3, a2
+; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_ppairoe_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppairoe_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a3, a3, 16
+; RV32-NEXT:    srli a2, a2, 16
+; RV32-NEXT:    pack a1, a3, a1
+; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairoe_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a1, 48
+; RV64-NEXT:    srli a1, a1, 16
+; RV64-NEXT:    ppaire.h a2, a3, a2
+; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    pack a0, a0, a2
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 5, i32 0, i32 7, i32 2>
+  ret <4 x i16> %res
+}
+
+; The tests below use a single operand for both the even-lane and odd-lane
+; groups (the other operand is either poison or simply unreferenced by the
+; mask), rather than splitting the groups across V1 and V2.
+
+define <8 x i8> @test_ppair_v1_used_twice_v8i8(<8 x i8> %a) {
+; RV32-LABEL: test_ppair_v1_used_twice_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a2, a1, 16
+; RV32-NEXT:    srli a3, a1, 24
+; RV32-NEXT:    srli a4, a1, 8
+; RV32-NEXT:    ppaire.b a2, a3, a2
+; RV32-NEXT:    ppaire.b a1, a4, a1
+; RV32-NEXT:    srli a3, a0, 16
+; RV32-NEXT:    srli a4, a0, 24
+; RV32-NEXT:    srli a5, a0, 8
+; RV32-NEXT:    ppaire.b a3, a4, a3
+; RV32-NEXT:    ppaire.b a0, a5, a0
+; RV32-NEXT:    pack a1, a1, a2
+; RV32-NEXT:    pack a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppair_v1_used_twice_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a1, a0, 48
+; RV64-NEXT:    srli a2, a0, 56
+; RV64-NEXT:    srli a3, a0, 32
+; RV64-NEXT:    srli a4, a0, 40
+; RV64-NEXT:    ppaire.b a1, a2, a1
+; RV64-NEXT:    ppaire.b a2, a4, a3
+; RV64-NEXT:    srli a3, a0, 16
+; RV64-NEXT:    srli a4, a0, 24
+; RV64-NEXT:    srli a5, a0, 8
+; RV64-NEXT:    ppaire.b a3, a4, a3
+; RV64-NEXT:    ppaire.b a0, a5, a0
+; RV64-NEXT:    ppaire.h a1, a2, a1
+; RV64-NEXT:    ppaire.h a0, a0, a3
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppair_v2_used_twice_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppair_v2_used_twice_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a3, 16
+; RV32-NEXT:    srli a1, a3, 24
+; RV32-NEXT:    srli a4, a3, 8
+; RV32-NEXT:    ppaire.b a0, a1, a0
+; RV32-NEXT:    ppaire.b a1, a4, a3
+; RV32-NEXT:    srli a3, a2, 16
+; RV32-NEXT:    srli a4, a2, 24
+; RV32-NEXT:    srli a5, a2, 8
+; RV32-NEXT:    ppaire.b a3, a4, a3
+; RV32-NEXT:    ppaire.b a2, a5, a2
+; RV32-NEXT:    pack a1, a1, a0
+; RV32-NEXT:    pack a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppair_v2_used_twice_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a1, 48
+; RV64-NEXT:    srli a2, a1, 56
+; RV64-NEXT:    srli a3, a1, 32
+; RV64-NEXT:    srli a4, a1, 40
+; RV64-NEXT:    ppaire.b a0, a2, a0
+; RV64-NEXT:    ppaire.b a2, a4, a3
+; RV64-NEXT:    srli a3, a1, 16
+; RV64-NEXT:    srli a4, a1, 24
+; RV64-NEXT:    srli a5, a1, 8
+; RV64-NEXT:    ppaire.b a3, a4, a3
+; RV64-NEXT:    ppaire.b a1, a5, a1
+; RV64-NEXT:    ppaire.h a0, a2, a0
+; RV64-NEXT:    ppaire.h a1, a1, a3
+; RV64-NEXT:    pack a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  ret <8 x i8> %res
+}
