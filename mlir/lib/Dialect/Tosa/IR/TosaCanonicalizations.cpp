@@ -1263,7 +1263,8 @@ struct CancellingBlockScaledCastsOptimization
           castOp, "inner input type must match outer output type");
 
     const Type innerOutputElemType = innerOutputTy.getElementType();
-    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    const bool isLosslessCast =
+        isa<Float32Type, BFloat16Type>(innerOutputElemType);
     if (!isLosslessCast)
       return rewriter.notifyMatchFailure(
           castOp, "avoid cancelling casts that should be lossy");
