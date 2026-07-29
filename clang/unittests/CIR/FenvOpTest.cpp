@@ -63,11 +63,16 @@ protected:
 
 TEST_F(CIRFenvOpTest, MemoryEffects) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
-    cir.func @f(%a: !cir.float, %b: !cir.float) {
+    !s32i = !cir.int<s, 32>
+    cir.func @f(%a: !cir.float, %b: !cir.float, %c: !cir.float) {
       %0 = cir.fadd %a, %b : !cir.float
       %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<>}
       %2 = cir.sqrt %a : !cir.float {fenv = #cir.fenv<>}
       %3 = cir.pow %a, %b : !cir.float {fenv = #cir.fenv<>}
+      %4 = cir.fma %a, %b, %c : !cir.float
+      %5 = cir.fma %a, %b, %c : !cir.float {fenv = #cir.fenv<>}
+      %6 = cir.lround %a : !cir.float -> !s32i
+      %7 = cir.lround %a : !cir.float -> !s32i {fenv = #cir.fenv<>}
       cir.return
     }
   )CIR");
@@ -87,6 +92,20 @@ TEST_F(CIRFenvOpTest, MemoryEffects) {
   SmallVector<cir::PowOp> powOps = findOps<cir::PowOp>(*module);
   ASSERT_EQ(powOps.size(), 1u);
   expectFenvReadAndWrite(powOps[0]);
+
+  SmallVector<cir::FMAOp> fmaOps = findOps<cir::FMAOp>(*module);
+  ASSERT_EQ(fmaOps.size(), 2u);
+  EXPECT_TRUE(getEffects(fmaOps[0]).empty());
+  EXPECT_TRUE(isMemoryEffectFree(fmaOps[0]));
+  expectFenvReadAndWrite(fmaOps[1]);
+  EXPECT_FALSE(isMemoryEffectFree(fmaOps[1]));
+
+  SmallVector<cir::LroundOp> lroundOps = findOps<cir::LroundOp>(*module);
+  ASSERT_EQ(lroundOps.size(), 2u);
+  EXPECT_TRUE(getEffects(lroundOps[0]).empty());
+  EXPECT_TRUE(isMemoryEffectFree(lroundOps[0]));
+  expectFenvReadAndWrite(lroundOps[1]);
+  EXPECT_FALSE(isMemoryEffectFree(lroundOps[1]));
 }
 
 TEST_F(CIRFenvOpTest, Speculatability) {
