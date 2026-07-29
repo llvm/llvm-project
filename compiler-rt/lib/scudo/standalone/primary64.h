@@ -86,7 +86,7 @@ public:
   }
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
-  static bool conditionVariableEnabled() {
+  static constexpr bool conditionVariableEnabled() {
     return Config::hasConditionVariableT();
   }
 
@@ -180,13 +180,13 @@ private:
     HybridMutex MMLock ACQUIRED_BEFORE(FLLock);
     // `RegionBeg` is initialized before thread creation and won't be changed.
     uptr RegionBeg = 0;
-    u32 RandState GUARDED_BY(MMLock) = 0;
     BlocksInfo FreeListInfo GUARDED_BY(FLLock);
     PagesInfo MemMapInfo GUARDED_BY(MMLock);
     ReleaseToOsInfo ReleaseInfo GUARDED_BY(MMLock) = {};
     bool Exhausted GUARDED_BY(MMLock) = false;
     bool IsPopulatingFreeList GUARDED_BY(FLLock) = false;
     u16 NumWaiting GUARDED_BY(FLLock) = 0;
+    u32 RandState GUARDED_BY(MMLock) = 0;
   };
   struct RegionInfo : UnpaddedRegionInfo {
     char Padding[SCUDO_CACHE_LINE_SIZE -
@@ -194,25 +194,43 @@ private:
   };
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
-  class SCOPED_CAPABILITY ScopedFLLock {
+  template <bool ConditionVariableEnabled = false>
+  class SCOPED_CAPABILITY ScopedFLLockBase {
   public:
-    ScopedFLLock(HybridMutex &M, RegionInfo *Region) ACQUIRE(M)
+    ScopedFLLockBase(HybridMutex &M, UNUSED RegionInfo *Region) ACQUIRE(M)
+        : Mutex(M) {
+      Mutex.lock();
+    }
+    ~ScopedFLLockBase() RELEASE() { Mutex.unlock(); }
+
+  private:
+    HybridMutex &Mutex;
+
+    ScopedFLLockBase(const ScopedFLLockBase &) = delete;
+    void operator=(const ScopedFLLockBase &) = delete;
+  };
+
+  template <> class SCOPED_CAPABILITY ScopedFLLockBase<true> {
+  public:
+    ScopedFLLockBase(HybridMutex &M, RegionInfo *Region) ACQUIRE(M)
         : Mutex(M), Region(Region) {
       Mutex.lock();
     }
-    ~ScopedFLLock() RELEASE() {
-      if (conditionVariableEnabled() && Region->NumWaiting > 0)
+    ~ScopedFLLockBase() RELEASE() {
+      if (Region->NumWaiting > 0)
         Region->FLLockCV.notifyAll(Mutex);
       Mutex.unlock();
     }
 
   private:
     HybridMutex &Mutex;
-    RegionInfo *Region = nullptr;
+    RegionInfo *Region;
 
-    ScopedFLLock(const ScopedFLLock &) = delete;
-    void operator=(const ScopedFLLock &) = delete;
+    ScopedFLLockBase(const ScopedFLLockBase &) = delete;
+    void operator=(const ScopedFLLockBase &) = delete;
   };
+
+  using ScopedFLLock = ScopedFLLockBase<conditionVariableEnabled()>;
 
   RegionInfo *getRegionInfo(uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
@@ -382,7 +400,7 @@ void SizeClassAllocator64<Config>::init(s32 ReleaseToOsInterval)
     shuffle(RegionInfoArray, NumClasses, &Seed);
   }
 
-  if (SCUDO_DEBUG) {
+  if constexpr (SCUDO_DEBUG && conditionVariableEnabled()) {
     // The binding should be done after region shuffling so that it won't bind
     // the FLLock from the wrong region.
     for (uptr I = 0; I < NumClasses; I++)
@@ -504,7 +522,7 @@ u16 SizeClassAllocator64<Config>::popBlocks(
 
   bool ReportRegionExhausted = false;
 
-  if (conditionVariableEnabled()) {
+  if constexpr (conditionVariableEnabled()) {
     PopCount = popBlocksWithCV(SizeClassAllocator, ClassId, Region, ToArray,
                                MaxBlockCount, ReportRegionExhausted);
   } else {
@@ -1090,7 +1108,7 @@ template <typename Config>
 void SizeClassAllocator64<Config>::enable(bool IsChild)
     NO_THREAD_SAFETY_ANALYSIS {
   auto *BatchRegion = getRegionInfo(SizeClassMap::BatchClassId);
-  if (conditionVariableEnabled()) {
+  if constexpr (conditionVariableEnabled()) {
     if (IsChild) {
       BatchRegion->NumWaiting = 0;
       BatchRegion->IsPopulatingFreeList = false;
@@ -1105,7 +1123,7 @@ void SizeClassAllocator64<Config>::enable(bool IsChild)
     if (I == SizeClassMap::BatchClassId)
       continue;
     auto *Region = getRegionInfo(I);
-    if (conditionVariableEnabled()) {
+    if constexpr (conditionVariableEnabled()) {
       if (IsChild) {
         Region->NumWaiting = 0;
         Region->IsPopulatingFreeList = false;
