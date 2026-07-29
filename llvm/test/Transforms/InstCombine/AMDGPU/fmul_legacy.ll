@@ -108,6 +108,46 @@ define float @test_finite_assumed(float %x, float %y) {
   ret float %call
 }
 
+; In IEEE mode subnormals are not logical zeros. A value known to be strictly
+; positive (greater than 0.0) may be subnormal but is not a logical zero, so
+; the fold fires.
+define float @test_subnormal_ieee_allows_fold(float %x, float %y) #0 {
+; CHECK-LABEL: @test_subnormal_ieee_allows_fold(
+; CHECK-NEXT:    [[IS_POS_X:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[IS_POS_Y:%.*]] = fcmp ogt float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS_X]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS_Y]])
+; CHECK-NEXT:    [[CALL:%.*]] = fmul nnan float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %is.pos.x = fcmp ogt float %x, 0.0
+  %is.pos.y = fcmp ogt float %y, 0.0
+  call void @llvm.assume(i1 %is.pos.x)
+  call void @llvm.assume(i1 %is.pos.y)
+  %call = call float @llvm.amdgcn.fmul.legacy(float %x, float %y)
+  ret float %call
+}
+
+; In preserve-sign mode, a value known to be strictly positive may still be
+; subnormal, which is treated as a logical zero. The fold is blocked because
+; the legacy zero clause could fire when subnormals are flushed to zero.
+define float @test_subnormal_flush_blocks_fold(float %x, float %y) #1 {
+; CHECK-LABEL: @test_subnormal_flush_blocks_fold(
+; CHECK-NEXT:    [[IS_POS_X:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[IS_POS_Y:%.*]] = fcmp ogt float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS_X]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS_Y]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %is.pos.x = fcmp ogt float %x, 0.0
+  %is.pos.y = fcmp ogt float %y, 0.0
+  call void @llvm.assume(i1 %is.pos.x)
+  call void @llvm.assume(i1 %is.pos.y)
+  %call = call float @llvm.amdgcn.fmul.legacy(float %x, float %y)
+  ret float %call
+}
+
 define float @test_poison_var(float %x) {
 ; CHECK-LABEL: @test_poison_var(
 ; CHECK-NEXT:    ret float poison
@@ -127,3 +167,6 @@ define float @test_var_poison(float %x) {
 declare float @llvm.amdgcn.fmul.legacy(float, float)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)
+
+attributes #0 = { denormal_fpenv(float: ieee) }
+attributes #1 = { denormal_fpenv(float: preservesign) }

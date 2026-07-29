@@ -429,14 +429,16 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
   // infinity, gives +0.0. If we can prove we don't have one of the special
   // cases then we can use a normal multiply instead.
   SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
-  KnownFPClass Known0 = computeKnownFPClass(Op0, fcZero | fcInf | fcNan, SQ);
+  KnownFPClass Known0 =
+      computeKnownFPClass(Op0, fcZero | fcSubnormal | fcInf | fcNan, SQ);
   DenormalMode Mode = I.getFunction()->getDenormalMode(APFloat::IEEEsingle());
 
   // Bail early if Op0 may be zero and nsz is not set -- Op1 cannot help.
   if (!Known0.isKnownNeverLogicalZero(Mode) && !I.hasNoSignedZeros())
     return false;
 
-  KnownFPClass Known1 = computeKnownFPClass(Op1, fcZero | fcInf | fcNan, SQ);
+  KnownFPClass Known1 =
+      computeKnownFPClass(Op1, fcZero | fcSubnormal | fcInf | fcNan, SQ);
 
   // Simplify if both operands are known non-zero.
   if (Known0.isKnownNeverLogicalZero(Mode) &&
