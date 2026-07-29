@@ -150,7 +150,7 @@ export CXX=clang++
 set -ex
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang${extra_man_page_projects}" \
-               -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;${extra_man_page_runtimes}" \
+               -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind${extra_man_page_runtimes}" \
                -DCMAKE_BUILD_TYPE=Release \
                -DLLVM_BUILD_DOCS=ON \
                $sphinx_flag \
