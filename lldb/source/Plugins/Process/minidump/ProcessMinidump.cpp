@@ -77,7 +77,7 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
   SectionList *sect_list = module_sp->GetSectionList();
   if (sect_list == nullptr)
     return;
-  SectionSP sect_sp = sect_list->FindSectionByName(ConstString(".text"));
+  SectionSP sect_sp = sect_list->FindSectionByName(".text");
   if (!sect_sp)
     return;
   constexpr size_t kMDGUIDSize = 16;
@@ -208,17 +208,23 @@ Status ProcessMinidump::DoLoadCore() {
 
   m_thread_list = m_minidump_parser->GetThreads();
   auto exception_stream_it = m_minidump_parser->GetExceptionStreams();
-  for (auto exception_stream : exception_stream_it) {
+  for (auto exception_stream_or_err : exception_stream_it) {
     // If we can't read an exception stream skip it
     // We should probably serve a warning
-    if (!exception_stream)
+    if (!exception_stream_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process),
+                     exception_stream_or_err.takeError(),
+                     "failed to read exception stream: {0}");
       continue;
+    }
+    const llvm::minidump::ExceptionStream &exception_stream =
+        *exception_stream_or_err;
 
     if (!m_exceptions_by_tid
-             .try_emplace(exception_stream->ThreadId, exception_stream.get())
+             .try_emplace(exception_stream.ThreadId, exception_stream)
              .second) {
       return Status::FromErrorStringWithFormatv(
-          "Duplicate exception stream for tid {0}", exception_stream->ThreadId);
+          "Duplicate exception stream for tid {0}", exception_stream.ThreadId);
     }
   }
 

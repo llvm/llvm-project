@@ -22,7 +22,6 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
@@ -82,9 +81,9 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
-
 void addMemoryAllocationOpt(mlir::PassManager &pm);
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
@@ -116,6 +115,10 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm, llvm::raw_ostream &output);
 
 /// Use inliner extension point callback to register the default inliner pass.
 void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
+
+/// Register the passes used in Flang's MLIR pass pipeline
+/// e.g. --mlir-print-ir-before=<pass> and similar.
+void registerFlangPipelinePasses();
 
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.

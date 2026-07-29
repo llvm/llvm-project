@@ -76,9 +76,8 @@ ScriptedFrameProvider::CreateInstance(
                                      thread.shared_from_this()))
     return nullptr;
 
-  auto obj_or_err = interface_sp->CreatePluginObject(
-      scripted_metadata->GetClassName(), input_frames,
-      scripted_metadata->GetArgsSP());
+  auto obj_or_err =
+      interface_sp->CreatePluginObject(*scripted_metadata, input_frames);
   if (!obj_or_err)
     return obj_or_err.takeError();
 

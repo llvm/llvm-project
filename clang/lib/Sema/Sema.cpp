@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SemaAPINotesInternal.h"
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -69,7 +70,6 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -227,6 +227,10 @@ public:
   }
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Mapping, StringRef Str) override {
+    // The pragma changed diagnostic severities; drop any cached analysis
+    // warning policies derived from the previous state.
+    S->AnalysisWarnings.clearPolicyCache();
+
     // If one of the analysis-based diagnostics was enabled while processing
     // a function, we want to note it in the analysis-based warnings so they
     // can be run at the end of the function body even if the analysis warnings
@@ -375,6 +379,8 @@ void Sema::Initialize() {
   // name mangling. And the name mangling uses BuiltinVaListDecl.
   if (Context.getTargetInfo().hasBuiltinMSVaList())
     (void)Context.getBuiltinMSVaListDecl();
+  if (Context.getTargetInfo().hasBuiltinZOSVaList())
+    (void)Context.getBuiltinZOSVaListDecl();
   (void)Context.getBuiltinVaListDecl();
 
   if (SemaConsumer *SC = dyn_cast<SemaConsumer>(&Consumer))
@@ -586,6 +592,12 @@ void Sema::Initialize() {
       PushOnScopeChains(Context.getBuiltinMSVaListDecl(), TUScope);
   }
 
+  if (Context.getTargetInfo().hasBuiltinZOSVaList()) {
+    DeclarationName ZOSVaList = &Context.Idents.get("__builtin_zos_va_list");
+    if (IdResolver.begin(ZOSVaList) == IdResolver.end())
+      PushOnScopeChains(Context.getBuiltinZOSVaListDecl(), TUScope);
+  }
+
   DeclarationName BuiltinVaList = &Context.Idents.get("__builtin_va_list");
   if (IdResolver.begin(BuiltinVaList) == IdResolver.end())
     PushOnScopeChains(Context.getBuiltinVaListDecl(), TUScope);
@@ -686,12 +698,12 @@ void Sema::PrintStats() const {
 void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
                                                QualType SrcType,
                                                SourceLocation Loc) {
-  std::optional<NullabilityKind> ExprNullability = SrcType->getNullability();
+  NullabilityKindOrNone ExprNullability = SrcType->getNullability();
   if (!ExprNullability || (*ExprNullability != NullabilityKind::Nullable &&
                            *ExprNullability != NullabilityKind::NullableResult))
     return;
 
-  std::optional<NullabilityKind> TypeNullability = DstType->getNullability();
+  NullabilityKindOrNone TypeNullability = DstType->getNullability();
   if (!TypeNullability || *TypeNullability != NullabilityKind::NonNull)
     return;
 
@@ -1184,11 +1196,26 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+void Sema::getSortedUnusedLocalTypedefNameCandidates(
+    SmallVectorImpl<const TypedefNameDecl *> &Sorted) const {
+  // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
+  // by source location for a deterministic order.
+  Sorted.assign(UnusedLocalTypedefNameCandidates.begin(),
+                UnusedLocalTypedefNameCandidates.end());
+  llvm::sort(Sorted,
+             [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+               return LHS->getLocation().getRawEncoding() <
+                      RHS->getLocation().getRawEncoding();
+             });
+}
+
 void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   if (ExternalSource)
     ExternalSource->ReadUnusedLocalTypedefNameCandidates(
         UnusedLocalTypedefNameCandidates);
-  for (const TypedefNameDecl *TD : UnusedLocalTypedefNameCandidates) {
+  SmallVector<const TypedefNameDecl *, 4> Sorted;
+  getSortedUnusedLocalTypedefNameCandidates(Sorted);
+  for (const TypedefNameDecl *TD : Sorted) {
     if (TD->isReferenced())
       continue;
     Diag(TD->getLocation(), diag::warn_unused_local_typedef)
@@ -1305,6 +1332,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAttribute();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
+  DiagnoseUnusedAPINotesSelectors();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
@@ -1706,14 +1734,15 @@ DeclContext *Sema::getFunctionLevelDeclContext(bool AllowLambda) const {
   DeclContext *DC = CurContext;
 
   while (true) {
-    if (isa<BlockDecl>(DC) || isa<EnumDecl>(DC) || isa<CapturedDecl>(DC) ||
-        isa<RequiresExprBodyDecl>(DC)) {
+    if (isa<BlockDecl, EnumDecl, CapturedDecl, RequiresExprBodyDecl,
+            CXXExpansionStmtDecl>(DC)) {
       DC = DC->getParent();
     } else if (!AllowLambda && isa<CXXMethodDecl>(DC) &&
                cast<CXXMethodDecl>(DC)->getOverloadedOperator() == OO_Call &&
                cast<CXXRecordDecl>(DC->getParent())->isLambda()) {
       DC = DC->getParent()->getParent();
-    } else break;
+    } else
+      break;
   }
 
   return DC;
@@ -2103,13 +2132,40 @@ void Sema::emitDeferredDiags() {
     ExternalSource->ReadDeclsToCheckForDeferredDiags(
         DeclsToCheckForDeferredDiags);
 
+  // For each implicit-H+D-explicit-inst function with deferred errors but no
+  // organic device caller, drop the diagnostics and mark for a trap body.
+  auto ClassifyImplicitHDExplicitInst = [&]() {
+    if (!LangOpts.CUDAIsDevice)
+      return;
+    for (auto &Pair : DeviceDeferredDiags) {
+      const FunctionDecl *FD = Pair.first;
+      if (!SemaCUDA::isImplicitHDExplicitInstantiation(FD))
+        continue;
+      if (CUDA().DeviceKnownEmittedFns.count(FD))
+        continue;
+      bool HasError =
+          llvm::any_of(Pair.second, [&](const PartialDiagnosticAt &PDAt) {
+            return getDiagnostics().getDiagnosticLevel(PDAt.second.getDiagID(),
+                                                       PDAt.first) >=
+                   DiagnosticsEngine::Error;
+          });
+      if (!HasError)
+        continue;
+      Pair.second.clear();
+      Context.CUDADeviceInvalidFuncs.insert(FD->getCanonicalDecl());
+    }
+  };
+
   if ((DeviceDeferredDiags.empty() && !LangOpts.OpenMP) ||
-      DeclsToCheckForDeferredDiags.empty())
+      DeclsToCheckForDeferredDiags.empty()) {
+    ClassifyImplicitHDExplicitInst();
     return;
+  }
 
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
+  ClassifyImplicitHDExplicitInst();
   DDE.emitCollectedDiags();
 }
 

@@ -70,11 +70,6 @@ static TypeIndex getTrueType(TypeIndex &TI) {
   return TI;
 }
 
-static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
-#define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-};
-
 // Return the type name pointed by the type index. It uses the kind to query
 // the associated name for the record type.
 static StringRef getRecordName(LazyRandomTypeCollection &Types, TypeIndex TI) {
@@ -410,7 +405,7 @@ void LVNamespaceDeduction::init() {
       };
       Header();
       for (const StringRef &Item : Container)
-        dbgs() << formatv("'{0}'\n", Item.str().c_str());
+        dbgs() << formatv("'{0}'\n", Item);
     };
 
     Print(DeducedScopes, "Deducted Scopes");
@@ -422,7 +417,7 @@ void LVNamespaceDeduction::init() {
 LVScope *LVNamespaceDeduction::get(LVStringRefs Components) {
   LLVM_DEBUG({
     for (const StringRef &Component : Components)
-      dbgs() << formatv("'{0}'\n", Component.str().c_str());
+      dbgs() << formatv("'{0}'\n", Component);
   });
 
   if (Components.empty())
@@ -457,8 +452,7 @@ LVScope *LVNamespaceDeduction::get(StringRef ScopedName, bool CheckScope) {
       return Iter == IdentifiedNamespaces.end();
     });
 
-  LLVM_DEBUG(
-      { dbgs() << formatv("ScopedName: '{0}'\n", ScopedName.str().c_str()); });
+  LLVM_DEBUG({ dbgs() << formatv("ScopedName: '{0}'\n", ScopedName); });
 
   return get(Components);
 }
@@ -1801,7 +1795,7 @@ void LVLogicalVisitor::printTypeBegin(CVType &Record, TypeIndex TI,
   W.getOStream() << " (" << HexNumber(TI.getIndex()) << ")";
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("TypeLeafKind", unsigned(Record.kind()), ArrayRef(LeafTypeNames));
+  W.printEnum("TypeLeafKind", unsigned(Record.kind()), getTypeLeafNames());
   printTypeIndex("TI", TI, StreamIdx);
   W.startLine() << "Element: " << HexNumber(Element->getOffset()) << " "
                 << Element->getName() << "\n";
@@ -1820,7 +1814,7 @@ void LVLogicalVisitor::printMemberBegin(CVMemberRecord &Record, TypeIndex TI,
   W.getOStream() << " (" << HexNumber(TI.getIndex()) << ")";
   W.getOStream() << " {\n";
   W.indent();
-  W.printEnum("TypeLeafKind", unsigned(Record.Kind), ArrayRef(LeafTypeNames));
+  W.printEnum("TypeLeafKind", unsigned(Record.Kind), getTypeLeafNames());
   printTypeIndex("TI", TI, StreamIdx);
   W.startLine() << "Element: " << HexNumber(Element->getOffset()) << " "
                 << Element->getName() << "\n";
@@ -3456,7 +3450,7 @@ void LVLogicalVisitor::printRecords(raw_ostream &OS) const {
         OS << "\n";
       }
     };
-    OS << format("%20s", Name.str().c_str());
+    OS << formatv("{0,20}", Name);
     NewLine();
   };
 

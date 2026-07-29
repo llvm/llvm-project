@@ -170,6 +170,10 @@ uptr internal_close(fd_t fd) {
   return close(fd);
 }
 
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return -1;  // Not supported.
+}
+
 uptr internal_open(const char *filename, int flags) {
   return open(filename, flags);
 }
@@ -609,7 +613,13 @@ static uptr ApproximateOSVersionViaKernelVersion(VersStr vers) {
   u16 os_major = kernel_major - offset;
 
   const char *format = "%d.0";
-  if (TARGET_OS_OSX) {
+  if (kernel_major >= 27) {
+    // with kernel major 27 <=> OSes 27.0, OS versions are aligned with kernel
+    os_major = kernel_major;
+  } else if (kernel_major >= 25) {
+    // with kernel_major 25 <=> OSes 26.0, OS versions are aligned
+    os_major = kernel_major + 1;
+  } else if (TARGET_OS_OSX) {
     if (os_major >= 16) {  // macOS 11+
       os_major -= 5;
     } else {  // macOS 10.15 and below
@@ -666,6 +676,24 @@ static void MapToMacos(u16 *major, u16 *minor) {
   if (TARGET_OS_OSX)
     return;
 
+  // All supported platforms (including DriverKit) have
+  // aligned version numbers in macOS 27+
+  if (*major >= 27)
+    return;
+
+#  if TARGET_OS_DRIVERKIT
+  // Driverkit 25.0+ aligns with macOS 26+
+  if (*major >= 25) {
+    *major += 1;
+    return;
+  }
+#  else
+  // macOS 26 and later have aligned version strings.
+  if (*major >= 26)
+    return;
+#  endif
+
+  // Below are mappings for pre-macOS-25-aligned releases
   if (TARGET_OS_IOS || TARGET_OS_TV)
     *major += 2;
   else if (TARGET_OS_WATCH)
@@ -1529,7 +1557,7 @@ void DumpProcessMap() {
   Printf("End of module map.\n");
 }
 
-void CheckNoDeepBind(const char *filename, int flag) {
+void OnDlOpen(const char* filename, int flag) {
   // Do nothing.
 }
 

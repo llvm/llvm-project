@@ -1,15 +1,16 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1101 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1102 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1103 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1150 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1151 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1152 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1153 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1170 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1171 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1172 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.00-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.01-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.02-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.03-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.50-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.51-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.52-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.53-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.54-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.70-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.71-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgpu11.72-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV %s
 
 typedef unsigned int uint;

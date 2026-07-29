@@ -11,19 +11,19 @@ define void @formal_argument_mix_sve(
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY1]](<vscale x 4 x s32>), [[COPY2]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z2
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x f32>) = G_CONCAT_VECTORS [[COPY1]](<vscale x 4 x f32>), [[COPY2]](<vscale x 4 x f32>)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x p0>) = G_CONCAT_VECTORS [[BITCAST]](<vscale x 2 x p0>), [[BITCAST1]](<vscale x 2 x p0>), [[BITCAST2]](<vscale x 2 x p0>), [[BITCAST3]](<vscale x 2 x p0>)
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 8 x i16> %0, <vscale x 8 x float> %1, <vscale x 16 x i8> %2, <vscale x 8 x ptr> %3
@@ -38,8 +38,8 @@ define void @formal_argument_mix_sve_double(
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $d1, $z0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(f64) = COPY $d1
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 8 x i16> %0, double %1
 ) {
@@ -51,10 +51,10 @@ define void @formal_argument_mix_sve_int_double(
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $d0, $w0, $z1, $z2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z2
   ; CHECK-NEXT:   RET_ReallyLR
     double %0, <vscale x 8 x i16> %1, i32 %2,  <vscale x 8 x i16> %3
 ) {
@@ -70,14 +70,14 @@ define void @formal_argument_nxv2i64_8(
   ; CHECK: bb.1 (%ir-block.8):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2, <vscale x 2 x i64> %3,
     <vscale x 2 x i64> %4, <vscale x 2 x i64> %5, <vscale x 2 x i64> %6, <vscale x 2 x i64> %7
@@ -90,14 +90,14 @@ define void @formal_argument_nxv2f64_8(
   ; CHECK: bb.1 (%ir-block.8):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z7
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 2 x double> %0, <vscale x 2 x double> %1, <vscale x 2 x double> %2, <vscale x 2 x double> %3,
     <vscale x 2 x double> %4, <vscale x 2 x double> %5, <vscale x 2 x double> %6, <vscale x 2 x double> %7
@@ -131,14 +131,14 @@ define void @formal_argument_nxv4i32_8(
   ; CHECK: bb.1 (%ir-block.8):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z7
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, <vscale x 4 x i32> %3,
     <vscale x 4 x i32> %4, <vscale x 4 x i32> %5, <vscale x 4 x i32> %6, <vscale x 4 x i32> %7
@@ -151,14 +151,14 @@ define void @formal_argument_nxv4f32_8(
   ; CHECK: bb.1 (%ir-block.8):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z7
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 4 x float> %0, <vscale x 4 x float> %1, <vscale x 4 x float> %2, <vscale x 4 x float> %3,
     <vscale x 4 x float> %4, <vscale x 4 x float> %5, <vscale x 4 x float> %6, <vscale x 4 x float> %7
@@ -171,18 +171,18 @@ define void @formal_argument_nxv4i64_4(<vscale x 4 x i64> %0, <vscale x 4 x i64>
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 4 x s64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x s64>), [[COPY1]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 4 x s64>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 2 x s64>), [[COPY3]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 4 x s64>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 2 x s64>), [[COPY5]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 4 x s64>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 2 x s64>), [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 4 x i64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x i64>), [[COPY1]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 4 x i64>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 2 x i64>), [[COPY3]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 4 x i64>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 2 x i64>), [[COPY5]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 4 x i64>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 2 x i64>), [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -192,25 +192,25 @@ define void @formal_argument_nxv4p0_4(<vscale x 4 x ptr> %0, <vscale x 4 x ptr> 
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY1]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY1]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 4 x p0>) = G_CONCAT_VECTORS [[BITCAST]](<vscale x 2 x p0>), [[BITCAST1]](<vscale x 2 x p0>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY2]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY3]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY2]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY3]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 4 x p0>) = G_CONCAT_VECTORS [[BITCAST2]](<vscale x 2 x p0>), [[BITCAST3]](<vscale x 2 x p0>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 4 x p0>) = G_CONCAT_VECTORS [[BITCAST4]](<vscale x 2 x p0>), [[BITCAST5]](<vscale x 2 x p0>)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST7:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST7:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 4 x p0>) = G_CONCAT_VECTORS [[BITCAST6]](<vscale x 2 x p0>), [[BITCAST7]](<vscale x 2 x p0>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
@@ -222,14 +222,14 @@ define void @formal_argument_nxv8i16_8(
   ; CHECK: bb.1 (%ir-block.8):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z7
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2, <vscale x 8 x i16> %3,
     <vscale x 8 x i16> %4, <vscale x 8 x i16> %5, <vscale x 8 x i16> %6, <vscale x 8 x i16> %7
@@ -242,18 +242,18 @@ define void @formal_argument_nxv8i32_4(<vscale x 8 x i32> %0, <vscale x 8 x i32>
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x s32>), [[COPY1]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 4 x s32>), [[COPY3]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x s32>), [[COPY5]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 4 x s32>), [[COPY7]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x i32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x i32>), [[COPY1]](<vscale x 4 x i32>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x i32>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 4 x i32>), [[COPY3]](<vscale x 4 x i32>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z5
+  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 8 x i32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x i32>), [[COPY5]](<vscale x 4 x i32>)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 8 x i32>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 4 x i32>), [[COPY7]](<vscale x 4 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -263,18 +263,18 @@ define void @formal_argument_nxv8f32_4(<vscale x 8 x float> %0, <vscale x 8 x fl
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x s32>), [[COPY1]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 4 x s32>), [[COPY3]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x s32>), [[COPY5]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 8 x s32>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 4 x s32>), [[COPY7]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x f32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x f32>), [[COPY1]](<vscale x 4 x f32>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x f32>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 4 x f32>), [[COPY3]](<vscale x 4 x f32>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z5
+  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 8 x f32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x f32>), [[COPY5]](<vscale x 4 x f32>)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 8 x f32>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 4 x f32>), [[COPY7]](<vscale x 4 x f32>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -284,16 +284,16 @@ define void @formal_argument_nxv8i64_2(<vscale x 8 x i64> %0, <vscale x 8 x i64>
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x s64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x s64>), [[COPY1]](<vscale x 2 x s64>), [[COPY2]](<vscale x 2 x s64>), [[COPY3]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 2 x s64>), [[COPY5]](<vscale x 2 x s64>), [[COPY6]](<vscale x 2 x s64>), [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x i64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x i64>), [[COPY1]](<vscale x 2 x i64>), [[COPY2]](<vscale x 2 x i64>), [[COPY3]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x i64>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 2 x i64>), [[COPY5]](<vscale x 2 x i64>), [[COPY6]](<vscale x 2 x i64>), [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -303,16 +303,16 @@ define void @formal_argument_nxv8f64_2(<vscale x 8 x double> %0, <vscale x 8 x d
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x s64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x s64>), [[COPY1]](<vscale x 2 x s64>), [[COPY2]](<vscale x 2 x s64>), [[COPY3]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 2 x s64>), [[COPY5]](<vscale x 2 x s64>), [[COPY6]](<vscale x 2 x s64>), [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x f64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x f64>), [[COPY1]](<vscale x 2 x f64>), [[COPY2]](<vscale x 2 x f64>), [[COPY3]](<vscale x 2 x f64>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x f64>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x f64>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 2 x f64>), [[COPY5]](<vscale x 2 x f64>), [[COPY6]](<vscale x 2 x f64>), [[COPY7]](<vscale x 2 x f64>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -322,23 +322,23 @@ define void @formal_argument_nxv8p0_2(<vscale x 8 x ptr> %0, <vscale x 8 x ptr> 
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY1]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY2]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY3]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY1]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY2]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY3]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 8 x p0>) = G_CONCAT_VECTORS [[BITCAST]](<vscale x 2 x p0>), [[BITCAST1]](<vscale x 2 x p0>), [[BITCAST2]](<vscale x 2 x p0>), [[BITCAST3]](<vscale x 2 x p0>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST7:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST7:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 8 x p0>) = G_CONCAT_VECTORS [[BITCAST4]](<vscale x 2 x p0>), [[BITCAST5]](<vscale x 2 x p0>), [[BITCAST6]](<vscale x 2 x p0>), [[BITCAST7]](<vscale x 2 x p0>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
@@ -351,14 +351,14 @@ define void @formal_argument_nxv16i8_8(
   ; CHECK: bb.1 (%ir-block.8):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z7
   ; CHECK-NEXT:   RET_ReallyLR
     <vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2, <vscale x 16 x i8> %3,
     <vscale x 16 x i8> %4, <vscale x 16 x i8> %5, <vscale x 16 x i8> %6, <vscale x 16 x i8> %7
@@ -371,18 +371,18 @@ define void @formal_argument_nxv16i16_4(<vscale x 16 x i16> %0, <vscale x 16 x i
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x s16>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x s16>), [[COPY1]](<vscale x 8 x s16>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 16 x s16>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 8 x s16>), [[COPY3]](<vscale x 8 x s16>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z5
-  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 16 x s16>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 8 x s16>), [[COPY5]](<vscale x 8 x s16>)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 16 x s16>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 8 x s16>), [[COPY7]](<vscale x 8 x s16>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x i16>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x i16>), [[COPY1]](<vscale x 8 x i16>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 16 x i16>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 8 x i16>), [[COPY3]](<vscale x 8 x i16>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z5
+  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 16 x i16>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 8 x i16>), [[COPY5]](<vscale x 8 x i16>)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 16 x i16>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 8 x i16>), [[COPY7]](<vscale x 8 x i16>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -392,16 +392,16 @@ define void @formal_argument_nxv16i32_2(<vscale x 16 x i32> %0, <vscale x 16 x i
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x s32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x s32>), [[COPY1]](<vscale x 4 x s32>), [[COPY2]](<vscale x 4 x s32>), [[COPY3]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 16 x s32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x s32>), [[COPY5]](<vscale x 4 x s32>), [[COPY6]](<vscale x 4 x s32>), [[COPY7]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x i32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x i32>), [[COPY1]](<vscale x 4 x i32>), [[COPY2]](<vscale x 4 x i32>), [[COPY3]](<vscale x 4 x i32>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 16 x i32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x i32>), [[COPY5]](<vscale x 4 x i32>), [[COPY6]](<vscale x 4 x i32>), [[COPY7]](<vscale x 4 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -411,16 +411,16 @@ define void @formal_argument_nxv16f32_2(<vscale x 16 x float> %0, <vscale x 16 x
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x s32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x s32>), [[COPY1]](<vscale x 4 x s32>), [[COPY2]](<vscale x 4 x s32>), [[COPY3]](<vscale x 4 x s32>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 16 x s32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x s32>), [[COPY5]](<vscale x 4 x s32>), [[COPY6]](<vscale x 4 x s32>), [[COPY7]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x f32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x f32>), [[COPY1]](<vscale x 4 x f32>), [[COPY2]](<vscale x 4 x f32>), [[COPY3]](<vscale x 4 x f32>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 16 x f32>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 4 x f32>), [[COPY5]](<vscale x 4 x f32>), [[COPY6]](<vscale x 4 x f32>), [[COPY7]](<vscale x 4 x f32>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -430,15 +430,15 @@ define void @formal_argument_nxv16i64_1(<vscale x 16 x i64> %0) {
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x s64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x s64>), [[COPY1]](<vscale x 2 x s64>), [[COPY2]](<vscale x 2 x s64>), [[COPY3]](<vscale x 2 x s64>), [[COPY4]](<vscale x 2 x s64>), [[COPY5]](<vscale x 2 x s64>), [[COPY6]](<vscale x 2 x s64>), [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x i64>) = G_CONCAT_VECTORS [[COPY]](<vscale x 2 x i64>), [[COPY1]](<vscale x 2 x i64>), [[COPY2]](<vscale x 2 x i64>), [[COPY3]](<vscale x 2 x i64>), [[COPY4]](<vscale x 2 x i64>), [[COPY5]](<vscale x 2 x i64>), [[COPY6]](<vscale x 2 x i64>), [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -448,22 +448,22 @@ define void @formal_argument_nxv16p0_1(<vscale x 16 x ptr> %0) {
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $z7
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY1]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY2]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY3]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x s64>)
-  ; CHECK-NEXT:   [[BITCAST7:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $z7
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY1]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY2]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY3]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY4]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY5]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST6:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY6]](<vscale x 2 x i64>)
+  ; CHECK-NEXT:   [[BITCAST7:%[0-9]+]]:_(<vscale x 2 x p0>) = G_BITCAST [[COPY7]](<vscale x 2 x i64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 16 x p0>) = G_CONCAT_VECTORS [[BITCAST]](<vscale x 2 x p0>), [[BITCAST1]](<vscale x 2 x p0>), [[BITCAST2]](<vscale x 2 x p0>), [[BITCAST3]](<vscale x 2 x p0>), [[BITCAST4]](<vscale x 2 x p0>), [[BITCAST5]](<vscale x 2 x p0>), [[BITCAST6]](<vscale x 2 x p0>), [[BITCAST7]](<vscale x 2 x p0>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
@@ -476,18 +476,18 @@ define void @formal_argument_nxv32i8_4(<vscale x 32 x i8> %0, <vscale x 32 x i8>
   ; CHECK: bb.1 (%ir-block.4):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x s8>) = G_CONCAT_VECTORS [[COPY]](<vscale x 16 x s8>), [[COPY1]](<vscale x 16 x s8>)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 32 x s8>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 16 x s8>), [[COPY3]](<vscale x 16 x s8>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z5
-  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 32 x s8>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 16 x s8>), [[COPY5]](<vscale x 16 x s8>)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 32 x s8>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 16 x s8>), [[COPY7]](<vscale x 16 x s8>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x i8>) = G_CONCAT_VECTORS [[COPY]](<vscale x 16 x i8>), [[COPY1]](<vscale x 16 x i8>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 32 x i8>) = G_CONCAT_VECTORS [[COPY2]](<vscale x 16 x i8>), [[COPY3]](<vscale x 16 x i8>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z5
+  ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<vscale x 32 x i8>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 16 x i8>), [[COPY5]](<vscale x 16 x i8>)
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS3:%[0-9]+]]:_(<vscale x 32 x i8>) = G_CONCAT_VECTORS [[COPY6]](<vscale x 16 x i8>), [[COPY7]](<vscale x 16 x i8>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -497,16 +497,16 @@ define void @formal_argument_nxv32i16_2(<vscale x 32 x i16> %0, <vscale x 32 x i
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x s16>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x s16>), [[COPY1]](<vscale x 8 x s16>), [[COPY2]](<vscale x 8 x s16>), [[COPY3]](<vscale x 8 x s16>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 32 x s16>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 8 x s16>), [[COPY5]](<vscale x 8 x s16>), [[COPY6]](<vscale x 8 x s16>), [[COPY7]](<vscale x 8 x s16>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x i16>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x i16>), [[COPY1]](<vscale x 8 x i16>), [[COPY2]](<vscale x 8 x i16>), [[COPY3]](<vscale x 8 x i16>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 32 x i16>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 8 x i16>), [[COPY5]](<vscale x 8 x i16>), [[COPY6]](<vscale x 8 x i16>), [[COPY7]](<vscale x 8 x i16>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -516,15 +516,15 @@ define void @formal_argument_nxv32i32_1(<vscale x 32 x i32> %0) {
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x s32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x s32>), [[COPY1]](<vscale x 4 x s32>), [[COPY2]](<vscale x 4 x s32>), [[COPY3]](<vscale x 4 x s32>), [[COPY4]](<vscale x 4 x s32>), [[COPY5]](<vscale x 4 x s32>), [[COPY6]](<vscale x 4 x s32>), [[COPY7]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x i32>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x i32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x i32>), [[COPY1]](<vscale x 4 x i32>), [[COPY2]](<vscale x 4 x i32>), [[COPY3]](<vscale x 4 x i32>), [[COPY4]](<vscale x 4 x i32>), [[COPY5]](<vscale x 4 x i32>), [[COPY6]](<vscale x 4 x i32>), [[COPY7]](<vscale x 4 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -534,15 +534,15 @@ define void @formal_argument_nxv32f32_1(<vscale x 32 x float> %0) {
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x s32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x s32>), [[COPY1]](<vscale x 4 x s32>), [[COPY2]](<vscale x 4 x s32>), [[COPY3]](<vscale x 4 x s32>), [[COPY4]](<vscale x 4 x s32>), [[COPY5]](<vscale x 4 x s32>), [[COPY6]](<vscale x 4 x s32>), [[COPY7]](<vscale x 4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 4 x f32>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 32 x f32>) = G_CONCAT_VECTORS [[COPY]](<vscale x 4 x f32>), [[COPY1]](<vscale x 4 x f32>), [[COPY2]](<vscale x 4 x f32>), [[COPY3]](<vscale x 4 x f32>), [[COPY4]](<vscale x 4 x f32>), [[COPY5]](<vscale x 4 x f32>), [[COPY6]](<vscale x 4 x f32>), [[COPY7]](<vscale x 4 x f32>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -554,16 +554,16 @@ define void @formal_argument_nxv64i8_2(<vscale x 64 x i8> %0, <vscale x 64 x i8>
   ; CHECK: bb.1 (%ir-block.2):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 64 x s8>) = G_CONCAT_VECTORS [[COPY]](<vscale x 16 x s8>), [[COPY1]](<vscale x 16 x s8>), [[COPY2]](<vscale x 16 x s8>), [[COPY3]](<vscale x 16 x s8>)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 64 x s8>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 16 x s8>), [[COPY5]](<vscale x 16 x s8>), [[COPY6]](<vscale x 16 x s8>), [[COPY7]](<vscale x 16 x s8>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 64 x i8>) = G_CONCAT_VECTORS [[COPY]](<vscale x 16 x i8>), [[COPY1]](<vscale x 16 x i8>), [[COPY2]](<vscale x 16 x i8>), [[COPY3]](<vscale x 16 x i8>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 16 x i8>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<vscale x 64 x i8>) = G_CONCAT_VECTORS [[COPY4]](<vscale x 16 x i8>), [[COPY5]](<vscale x 16 x i8>), [[COPY6]](<vscale x 16 x i8>), [[COPY7]](<vscale x 16 x i8>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }
@@ -573,15 +573,15 @@ define void @formal_argument_nxv64i16_1(<vscale x 64 x i16> %0) {
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   liveins: $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z4
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z5
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $z7
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 64 x s16>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x s16>), [[COPY1]](<vscale x 8 x s16>), [[COPY2]](<vscale x 8 x s16>), [[COPY3]](<vscale x 8 x s16>), [[COPY4]](<vscale x 8 x s16>), [[COPY5]](<vscale x 8 x s16>), [[COPY6]](<vscale x 8 x s16>), [[COPY7]](<vscale x 8 x s16>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z3
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z4
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(<vscale x 8 x i16>) = COPY $z7
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<vscale x 64 x i16>) = G_CONCAT_VECTORS [[COPY]](<vscale x 8 x i16>), [[COPY1]](<vscale x 8 x i16>), [[COPY2]](<vscale x 8 x i16>), [[COPY3]](<vscale x 8 x i16>), [[COPY4]](<vscale x 8 x i16>), [[COPY5]](<vscale x 8 x i16>), [[COPY6]](<vscale x 8 x i16>), [[COPY7]](<vscale x 8 x i16>)
   ; CHECK-NEXT:   RET_ReallyLR
   ret void
 }

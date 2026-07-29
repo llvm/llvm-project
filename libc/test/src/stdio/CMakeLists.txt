@@ -24,6 +24,25 @@ add_libc_test(
 )
 
 add_libc_test(
+  rewind_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    rewind_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.CPP.scope
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.stdio.fread
+    libc.src.stdio.rewind
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   ungetc_test
   SUITE
     libc_stdio_unittests
@@ -156,6 +175,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.printf_core.printf_config
     libc.include.inttypes
     ${wchar_deps}
   COMPILE_OPTIONS
@@ -289,6 +309,7 @@ if(LLVM_LIBC_FULL_BUILD)
   # In fullbuild mode, fscanf's tests use the internal FILE for other functions.
   list(APPEND fscanf_test_deps
        libc.src.stdio.fclose
+       libc.src.stdio.feof
        libc.src.stdio.ferror
        libc.src.stdio.fopen
        libc.src.stdio.fwrite
@@ -305,6 +326,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     SRCS
       fscanf_test.cpp
     DEPENDS
+      libc.hdr.stdio_macros
       libc.src.stdio.fscanf
       ${fscanf_test_deps}
       libc.src.__support.CPP.string_view
@@ -419,6 +441,7 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    libc.src.__support.CPP.scope
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.fclose
@@ -447,6 +470,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       remove_test.cpp
     DEPENDS
+      libc.hdr.sys_stat_macros
       libc.include.unistd
       libc.src.errno.errno
       libc.src.fcntl.open
@@ -464,6 +488,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
+      libc.hdr.sys_stat_macros
       libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.rename
@@ -480,6 +505,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       fdopen_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
@@ -499,6 +526,7 @@ add_libc_test(
     fgetc_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -519,6 +547,7 @@ add_libc_test(
     fgetc_unlocked_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.ferror
@@ -543,6 +572,7 @@ add_libc_test(
     fgets_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -581,6 +611,5 @@ if(LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 
-add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 add_subdirectory(testdata)

@@ -1,8 +1,8 @@
-; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-v1 -sve-tail-folding=disabled < %s | FileCheck %s --check-prefix=CHECK-EPILOG
-; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-v2 < %s | FileCheck %s --check-prefix=CHECK-EPILOG-V2
-; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 \
 ; RUN:   -mcpu=cortex-x2 < %s | FileCheck %s --check-prefix=CHECK-NO-EPILOG
 
 target triple = "aarch64-unknown-linux-gnu"

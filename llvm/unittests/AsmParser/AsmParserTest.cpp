@@ -88,6 +88,52 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   ASSERT_TRUE(isa<ConstantFP>(V));
   EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(3.5));
 
+  V = parseConstantValue("double 0x13.5p-52", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isDoubleTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(0x13.5p-52));
+
+  V = parseConstantValue("fp128 1.0e-4932", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isDenormal());
+
+  V = parseConstantValue("fp128 1.1897314953572317650857593266280070162e4932",
+                         Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(
+      APFloat::getLargest(APFloat::IEEEquad())));
+
+  V = parseConstantValue("float f0xabcdef01", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFloatTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(-0x1.9bde02p-40));
+
+  V = parseConstantValue("fp128 f0x80000000000000000000000000000000", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isNegZero());
+
+  V = parseConstantValue("fp128 -inf", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isNegInfinity());
+
+  const fltSemantics &Float = APFloatBase::IEEEsingle();
+  V = parseConstantValue("float +nan(0x1)", Error, M);
+  ASSERT_TRUE(V);
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(
+      cast<ConstantFP>(V)->isExactlyValue(APFloat::getNaN(Float, false, 1)));
+  EXPECT_TRUE(!cast<ConstantFP>(V)->getValue().isSignaling());
+
   V = parseConstantValue("i32 42", Error, M);
   ASSERT_TRUE(V);
   EXPECT_TRUE(V->getType()->isIntegerTy());
@@ -135,13 +181,46 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_EQ(Error.getMessage(), "expected type");
 
   EXPECT_FALSE(parseConstantValue("i32 3.25", Error, M));
-  EXPECT_EQ(Error.getMessage(), "floating point constant invalid for type");
+  EXPECT_EQ(Error.getMessage(), "floating-point constant invalid for type");
 
   EXPECT_FALSE(parseConstantValue("ptr @foo", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected a constant value");
 
   EXPECT_FALSE(parseConstantValue("i32 3, ", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected end of string");
+
+  EXPECT_FALSE(parseConstantValue("double 1.0e999999999", Error, M));
+  EXPECT_EQ(Error.getMessage(), "floating-point constant overflowed type");
+
+  EXPECT_FALSE(parseConstantValue("double 1.0e-999999999", Error, M));
+  EXPECT_EQ(Error.getMessage(), "floating-point constant underflowed type");
+
+  EXPECT_FALSE(parseConstantValue("double 0x.25p-5", Error, M));
+  EXPECT_EQ(Error.getMessage(), "expected value token");
+
+  EXPECT_FALSE(parseConstantValue("double f0x0", Error, M));
+  EXPECT_EQ(Error.getMessage(),
+            "float hex literal has incorrect number of bits");
+
+  EXPECT_FALSE(parseConstantValue("double f0x0123456789abcdef0", Error, M));
+  EXPECT_EQ(Error.getMessage(),
+            "float hex literal has incorrect number of bits");
+
+  EXPECT_FALSE(parseConstantValue("float 0x3FBCC2794DBD00E1", Error, M));
+  EXPECT_EQ(Error.getMessage(), "floating point constant invalid for type");
+
+  EXPECT_FALSE(parseConstantValue("x86_fp80 0x3FBCC2794DBD00E1", Error, M));
+  EXPECT_EQ(Error.getMessage(),
+            "floating point constant does not have type 'x86_fp80'");
+
+  EXPECT_FALSE(parseConstantValue("float +nan(0x1", Error, M));
+  EXPECT_EQ(Error.getMessage(), "unclosed nan literal");
+
+  EXPECT_FALSE(parseConstantValue("float +nan(payload)", Error, M));
+  EXPECT_EQ(Error.getMessage(), "bad payload format for nan literal");
+
+  EXPECT_FALSE(parseConstantValue("float 0xz", Error, M));
+  EXPECT_EQ(Error.getMessage(), "expected value token");
 }
 
 TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {

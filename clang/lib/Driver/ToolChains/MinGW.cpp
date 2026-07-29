@@ -263,9 +263,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   if (C.getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -477,11 +476,26 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
                          const llvm::Triple &T, std::string &SubdirName) {
   llvm::SmallVector<llvm::SmallString<32>, 4> Subdirs;
   Subdirs.emplace_back(LiteralTriple.str());
+  // On ARM64EC targets, also try native aarch64 sysroot, which may contain
+  // support for both targets.
+  if (LiteralTriple.isWindowsArm64EC()) {
+    llvm::Triple NativeTriple(LiteralTriple);
+    NativeTriple.setArchName("aarch64");
+    Subdirs.emplace_back(NativeTriple.str());
+  }
   Subdirs.emplace_back(T.str());
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32ucrt";
+  if (T.isWindowsArm64EC()) {
+    llvm::Triple NativeTriple(T);
+    NativeTriple.setArchName("aarch64");
+    Subdirs.emplace_back(NativeTriple.str());
+
+    Subdirs.emplace_back("aarch64-w64-mingw32");
+    Subdirs.emplace_back("aarch64-w64-mingw32ucrt");
+  }
   StringRef ClangRoot = llvm::sys::path::parent_path(D.Dir);
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
@@ -559,6 +573,8 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
       getDriver().SysRoot.size())
     getFilePaths().push_back(Base + "lib");
 
+  loadMultilibsFromYAML(Args, D);
+
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, D.getPreferredLinker())
           .equals_insensitive("lld");
@@ -574,6 +590,10 @@ Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
     if (!Compiler)
       Compiler.reset(new tools::gcc::Compiler(*this));
     return Compiler.get();
+  case Action::ObjcopyJobClass:
+    if (!Objcopy)
+      Objcopy.reset(new tools::ARM64XObjcopy(*this));
+    return Objcopy.get();
   default:
     return ToolChain::getTool(AC);
   }
@@ -625,8 +645,9 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
   return llvm::ExceptionHandling::DwarfCFI;
 }
 
-SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask toolchains::MinGW::getSupportedSanitizers(
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -709,6 +730,21 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+
   addSystemInclude(DriverArgs, CC1Args,
                    Base + SubdirName + llvm::sys::path::get_separator() +
                        "include");
@@ -728,7 +764,7 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void toolchains::MinGW::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = DriverArgs.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none") {

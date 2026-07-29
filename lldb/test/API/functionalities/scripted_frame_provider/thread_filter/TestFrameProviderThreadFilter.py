@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # multithreaded C++ inferior; wasm has no threads or exceptions
 class FrameProviderThreadFilterTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -59,6 +60,11 @@ class FrameProviderThreadFilterTestCase(TestBase):
             )
             self.assertTrue(error.Success(), f"Should register {cls}: {error}")
 
+    @skipIf(
+        oslist=["linux"],
+        archs=["arm$"],
+        bugnumber="github.com/llvm/llvm-project/issues/191855",
+    )
     @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/191222")
     def test_bt_provider_star_with_thread_filter(self):
         """

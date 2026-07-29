@@ -63,41 +63,36 @@ public:
 namespace sps_ci {
 
 ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_SimpleNativeMemoryMap_reserve_sps_wrapper,
+    orc_rt_ci_sps_SimpleNativeMemoryMap_reserve,
     SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize),
     WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::reserve))
 
-ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper,
-    SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
-    WrapperFunction::handleWithAsyncMethod(
-        &SimpleNativeMemoryMap::releaseMultiple))
+ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple,
+                   SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
+                   WrapperFunction::handleWithAsyncMethod(
+                       &SimpleNativeMemoryMap::releaseMultiple))
 
 ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_SimpleNativeMemoryMap_initialize_sps_wrapper,
+    orc_rt_ci_sps_SimpleNativeMemoryMap_initialize,
     SPSExpected<SPSExecutorAddr>(SPSExecutorAddr,
                                  SPSSimpleNativeMemoryMapInitializeRequest),
     WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::initialize))
 
-ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper,
-    SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
-    WrapperFunction::handleWithAsyncMethod(
-        &SimpleNativeMemoryMap::deinitializeMultiple))
+ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple,
+                   SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>),
+                   WrapperFunction::handleWithAsyncMethod(
+                       &SimpleNativeMemoryMap::deinitializeMultiple))
 
 static std::pair<const char *, const void *>
-    orc_rt_sps_ci_SimpleNativeMemoryMap_sps_interface[] = {
+    orc_rt_ci_SimpleNativeMemoryMap_sps_interface[] = {
+        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve),
+        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple),
+        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_initialize),
         ORC_RT_SYMTAB_PAIR(
-            orc_rt_sps_ci_SimpleNativeMemoryMap_reserve_sps_wrapper),
-        ORC_RT_SYMTAB_PAIR(
-            orc_rt_sps_ci_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper),
-        ORC_RT_SYMTAB_PAIR(
-            orc_rt_sps_ci_SimpleNativeMemoryMap_initialize_sps_wrapper),
-        ORC_RT_SYMTAB_PAIR(
-            orc_rt_sps_ci_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper)};
+            orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple)};
 
 Error addSimpleNativeMemoryMap(SimpleSymbolTable &ST) {
-  return ST.addUnique(orc_rt_sps_ci_SimpleNativeMemoryMap_sps_interface);
+  return ST.addUnique(orc_rt_ci_SimpleNativeMemoryMap_sps_interface);
 }
 
 } // namespace sps_ci

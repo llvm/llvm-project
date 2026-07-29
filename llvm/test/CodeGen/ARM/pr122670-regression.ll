@@ -8,8 +8,8 @@
 define i8 @baz(ptr %ptr, i32 %arg) {
 ; CHECK-LABEL: baz:
 ; CHECK:       @ %bb.0: @ %bb
-; CHECK-NEXT:    add r1, r1, r1
-; CHECK-NEXT:    and r1, r1, #2
+; CHECK-NEXT:    mov r2, #2
+; CHECK-NEXT:    and r1, r2, r1, lsl #1
 ; CHECK-NEXT:    ldr r0, [r0, r1, lsl #2]
 ; CHECK-NEXT:    bx lr
 bb:

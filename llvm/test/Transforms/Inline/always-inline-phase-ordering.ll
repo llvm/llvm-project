@@ -1,4 +1,4 @@
-; RUN: opt --Os -pass-remarks=inline -S < %s 2>&1 | FileCheck %s
+; RUN: opt -O2 -pass-remarks=inline -S < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64e-apple-macosx13"
 
@@ -118,7 +118,7 @@ bb:
 }
 
 attributes #0 = { optsize "frame-pointer"="non-leaf" }
-attributes #1 = { optsize "target-cpu"="apple-m1" }
+attributes #1 = { optsize }
 attributes #2 = { optsize alwaysinline }
 
 !llvm.module.flags = !{!0, !1, !30, !31, !32, !36, !37}

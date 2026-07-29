@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -692,7 +693,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-      isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+      isa<ConstantPointerNull>(RHS) &&
       !NullPointerIsDefined(I.getFunction(),
                             RHS->getType()->getPointerAddressSpace())) {
     // For most address spaces, an allocation can't be placed at null, but null
@@ -814,14 +815,35 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    if (Base.Ptr && CanFold(Base.LHSNW & Base.RHSNW) && !Base.isExpensive()) {
+    if (Base.Ptr && !Base.isExpensive()) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Type *IdxTy = DL.getIndexType(GEPLHS->getType());
-      Value *L =
-          EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, /*RewriteGEP=*/true);
-      Value *R =
-          EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy, /*RewriteGEP=*/true);
-      return NewICmp(Base.LHSNW & Base.RHSNW, L, R);
+      bool DoFold = CanFold(Base.LHSNW & Base.RHSNW);
+
+      if (!DoFold && Base.Ptr->getType()->isPointerTy()) {
+        // Without the flags, we can still fold if the offsets are constant and
+        // they cross the base's alignment boundary the same number of times, so
+        // either both arguments will wrap, or none of them will.
+        unsigned BW = DL.getIndexTypeSizeInBits(GEPLHS->getType());
+        APInt Alignment = APInt(BW, Base.Ptr->getPointerAlignment(DL).value());
+        APInt LOff(BW, 0);
+        APInt ROff(BW, 0);
+        if (GEPLHS->stripAndAccumulateConstantOffsets(
+                DL, LOff, /*AllowNonInbounds=*/true) == Base.Ptr &&
+            RHS->stripAndAccumulateConstantOffsets(
+                DL, ROff, /*AllowNonInbounds=*/true) == Base.Ptr)
+          DoFold =
+              APIntOps::RoundingSDiv(LOff, Alignment, APInt::Rounding::DOWN) ==
+              APIntOps::RoundingSDiv(ROff, Alignment, APInt::Rounding::DOWN);
+      }
+
+      if (DoFold) {
+        Type *IdxTy = DL.getIndexType(GEPLHS->getType());
+        Value *L = EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy,
+                                  /*RewriteGEP=*/true);
+        Value *R = EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy,
+                                  /*RewriteGEP=*/true);
+        return NewICmp(Base.LHSNW & Base.RHSNW, L, R);
+      }
     }
   }
 
@@ -2187,12 +2209,48 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
   Type *MulTy = Mul->getType();
   Value *X = Mul->getOperand(0);
 
-  // If there's no overflow:
-  // X * X == 0 --> X == 0
-  // X * X != 0 --> X != 0
-  if (Cmp.isEquality() && C.isZero() && X == Mul->getOperand(1) &&
-      (Mul->hasNoUnsignedWrap() || Mul->hasNoSignedWrap()))
-    return new ICmpInst(Pred, X, ConstantInt::getNullValue(MulTy));
+  // If comparing a square with a constant, try simplifying to comparing square
+  // roots.
+  if (X == Mul->getOperand(1) && !Cmp.isSigned()) {
+    APInt R = C.sqrtFloor();
+    bool IsSqr = C == R * R;
+
+    // X * X eq/ne C
+    if (Cmp.isEquality() &&
+        (Mul->hasNoUnsignedWrap() || (Mul->hasNoSignedWrap() && C.isZero()))) {
+
+      // If constant is not a square, eq/ne is false/true respectively
+      if (!IsSqr)
+        return replaceInstUsesWith(
+            Cmp,
+            ConstantInt::getBool(Cmp.getType(), Pred == ICmpInst::ICMP_NE));
+
+      return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+    }
+
+    // If the multiply does not wrap
+    // X * X pred C --> X pred R
+    if (Mul->hasNoUnsignedWrap()) {
+
+      if (IsSqr)
+        return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+
+      // If C is not a square, we use floor/ceil of sqrt(C).
+      //
+      // If LT or LE, we need R to be an overestimate of sqrt(C),
+      // then use the strict predicate (LT->LT, LE->LT).
+      //
+      // If GT or GE, we need R to be an underestimate of sqrt(C),
+      // then use the strict predicate (GT->GT, GE->GT).
+      //
+      // R is already an underestimate of sqrt(C) due to sqrtFloor.
+      if (ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred))
+        ++R;
+
+      return new ICmpInst(Cmp.getStrictPredicate(), X,
+                          ConstantInt::get(MulTy, R));
+    }
+  }
 
   const APInt *MulC;
   if (!match(Mul->getOperand(1), m_APInt(MulC)))
@@ -2813,8 +2871,15 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   // (x /u C2) <u C.  Simply casting the operands and result won't
   // work. :(  The if statement below tests that condition and bails
   // if it finds it.
-  if (!Cmp.isEquality() && DivIsSigned != Cmp.isSigned())
-    return nullptr;
+  // However, when the divisor is a positive constant and the dividend is
+  // known non-negative, sdiv is equivalent to udiv, so we can lower
+  // DivIsSigned and proceed through the unsigned path.
+  if (!Cmp.isEquality() && DivIsSigned != Cmp.isSigned()) {
+    if (!DivIsSigned || !C2->isStrictlyPositive() ||
+        !isKnownNonNegative(X, SQ.getWithInstruction(&Cmp)))
+      return nullptr;
+    DivIsSigned = false;
+  }
 
   // The ProdOV computation fails on divide by 0 and divide by -1. Cases with
   // INT_MIN will also fail if the divisor is 1. Although folds of all these
@@ -3178,7 +3243,9 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
 
   if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
       C.isNonNegative() && (C - *C2).isNonNegative() &&
-      computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
+      computeConstantRange(X, /*ForSigned=*/true, SQ.getWithInstruction(&Cmp))
+          .add(*C2)
+          .isAllNonNegative())
     return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
                         ConstantInt::get(Ty, C - *C2));
 
@@ -3523,10 +3590,9 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         // Fold the icmp based on the value of C
         // If C is M copies of an iK sized bit pattern,
         // then:
-        //   =>  %E = extractelement <N x iK> %vec, i32 Elem
+        //   =>  %E = extractelement <N x iK> %vec, i64 Elem
         //       icmp <pred> iK %SplatVal, <pattern>
-        Value *Elem = Builder.getInt32(Mask[0]);
-        Value *Extract = Builder.CreateExtractElement(Vec, Elem);
+        Value *Extract = Builder.CreateExtractElement(Vec, Mask[0]);
         Value *NewC = ConstantInt::get(EltTy, C->trunc(EltTy->getBitWidth()));
         return new ICmpInst(Pred, Extract, NewC);
       }
@@ -4317,12 +4383,16 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 
   switch (LHSI->getOpcode()) {
   case Instruction::IntToPtr:
-    // icmp pred inttoptr(X), null -> icmp pred X, 0
-    if (RHSC->isNullValue() &&
-        DL.getIntPtrType(RHSC->getType()) == LHSI->getOperand(0)->getType())
-      return new ICmpInst(
-          I.getPredicate(), LHSI->getOperand(0),
-          Constant::getNullValue(LHSI->getOperand(0)->getType()));
+    // icmp pred inttoptr(X), null -> icmp pred X, null pointer value
+    if (isa<ConstantPointerNull>(RHSC)) {
+      Type *IntPtrTy = DL.getIntPtrType(RHSC->getType());
+      if (IntPtrTy == LHSI->getOperand(0)->getType()) {
+        APInt NullPtrValue =
+            DL.getNullPtrValue(RHSC->getType()->getPointerAddressSpace());
+        return new ICmpInst(I.getPredicate(), LHSI->getOperand(0),
+                            Constant::getIntegerValue(IntPtrTy, NullPtrValue));
+      }
+    }
     break;
 
   case Instruction::Load:
@@ -4931,7 +5001,7 @@ Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
   if (MulHadOtherUses)
     Builder.SetInsertPoint(Mul);
 
-  CallInst *Call = Builder.CreateIntrinsic(
+  Value *Call = Builder.CreateIntrinsic(
       Div->getOpcode() == Instruction::UDiv ? Intrinsic::umul_with_overflow
                                             : Intrinsic::smul_with_overflow,
       X->getType(), {X, Y}, /*FMFSource=*/nullptr, "mul");
@@ -5882,7 +5952,7 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
 
   if (A) {
     Type *Ty = A->getType();
-    CallInst *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
+    Value *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
     return CheckIs ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop,
                                   ConstantInt::get(Ty, 2))
                    : new ICmpInst(ICmpInst::ICMP_UGT, CtPop,
@@ -6467,6 +6537,7 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
                         SimplifiedOp1 ? SimplifiedOp1 : ICmp.getOperand(1));
 
   auto *CastOp0 = dyn_cast<CastInst>(ICmp.getOperand(0));
+  Value *Op1 = ICmp.getOperand(1);
   if (!CastOp0)
     return nullptr;
   if (!isa<Constant>(ICmp.getOperand(1)) && !isa<CastInst>(ICmp.getOperand(1)))
@@ -6479,24 +6550,29 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   // Turn icmp (ptrtoint x), (ptrtoint/c) into a compare of the input if the
   // integer type is the same size as the pointer type.
   auto CompatibleSizes = [&](Type *PtrTy, Type *IntTy) {
-    if (isa<VectorType>(PtrTy)) {
-      PtrTy = cast<VectorType>(PtrTy)->getElementType();
-      IntTy = cast<VectorType>(IntTy)->getElementType();
-    }
-    return DL.getPointerTypeSizeInBits(PtrTy) == IntTy->getIntegerBitWidth();
+    unsigned IntWidth = IntTy->getScalarType()->getIntegerBitWidth();
+    unsigned IndexWidth = DL.getAddressSizeInBits(PtrTy);
+    unsigned PtrWidth = DL.getPointerTypeSizeInBits(PtrTy);
+    // For ptrtoint/inttoptr, we must check that IntWidth == IndexWidth and also
+    // IndexWidth == PtrWidth to (not) handle non-integral pointers.
+    return IntWidth == IndexWidth && IndexWidth == PtrWidth;
   };
-  if (CastOp0->getOpcode() == Instruction::PtrToInt &&
-      CompatibleSizes(SrcTy, DestTy)) {
+  if (isa<PtrToIntInst, PtrToAddrInst>(CastOp0)) {
+    bool HasPtrToInt = isa<PtrToIntInst>(CastOp0);
     Value *NewOp1 = nullptr;
-    if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
-      Value *PtrSrc = PtrToIntOp1->getOperand(0);
-      if (PtrSrc->getType() == Op0Src->getType())
-        NewOp1 = PtrToIntOp1->getOperand(0);
-    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
+    if (auto *PtrToIntOp1 = dyn_cast<PtrToIntOperator>(Op1)) {
+      NewOp1 = PtrToIntOp1->getOperand(0);
+      HasPtrToInt = true;
+    } else if (auto *PtrToAddrOp1 = dyn_cast<PtrToAddrOperator>(Op1)) {
+      NewOp1 = PtrToAddrOp1->getOperand(0);
+    } else if (auto *RHSC = dyn_cast<Constant>(Op1)) {
       NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
 
-    if (NewOp1)
+    // For ptrtoaddr, IntWidth == IndexWidth is implied and we don't need to
+    // check PtrWidth.
+    if ((!HasPtrToInt || CompatibleSizes(SrcTy, DestTy)) &&
+        (NewOp1 && NewOp1->getType() == Op0Src->getType()))
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
@@ -6504,11 +6580,11 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   if (CastOp0->getOpcode() == Instruction::IntToPtr &&
       CompatibleSizes(DestTy, SrcTy)) {
     Value *NewOp1 = nullptr;
-    if (auto *IntToPtrOp1 = dyn_cast<IntToPtrInst>(ICmp.getOperand(1))) {
+    if (auto *IntToPtrOp1 = dyn_cast<IntToPtrInst>(Op1)) {
       Value *IntSrc = IntToPtrOp1->getOperand(0);
       if (IntSrc->getType() == Op0Src->getType())
         NewOp1 = IntToPtrOp1->getOperand(0);
-    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
+    } else if (auto *RHSC = dyn_cast<Constant>(Op1)) {
       NewOp1 = ConstantFoldConstant(ConstantExpr::getPtrToInt(RHSC, SrcTy), DL);
     }
 
@@ -6725,7 +6801,7 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     MulA = Builder.CreateZExt(A, MulType);
   if (WidthB < MulWidth)
     MulB = Builder.CreateZExt(B, MulType);
-  CallInst *Call =
+  Value *Call =
       Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, MulType,
                               {MulA, MulB}, /*FMFSource=*/nullptr, "umul");
   IC.addToWorklist(MulInstr);
@@ -7698,6 +7774,34 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
     }
   }
 
+  // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
+  //   -> icmp X, (add nsw/nuw Y, K >> L)
+  // We use AShr for nsw and LShr for nuw to safely peel off the shift.
+  Value *X;
+  uint64_t ShAmt;
+  if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+      !CxtI.isSigned()) {
+    if (ShAmt >= X->getType()->getScalarSizeInBits())
+      return nullptr;
+    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                           ShiftSemantics::Unsigned, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                      ShiftSemantics::Unsigned);
+      return new ICmpInst(Pred, X, NewOp1);
+    }
+  }
+
+  if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+      !CxtI.isUnsigned()) {
+    if (ShAmt >= X->getType()->getScalarSizeInBits())
+      return nullptr;
+    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                           ShiftSemantics::Signed, &CxtI)) {
+      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                      ShiftSemantics::Signed);
+      return new ICmpInst(Pred, X, NewOp1);
+    }
+  }
   return nullptr;
 }
 
@@ -7785,13 +7889,34 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithZero(I))
     return Res;
 
+  Value *X;
+  const APInt *C;
+  if (I.getPredicate() == ICmpInst::ICMP_UGT &&
+      match(Op0, m_UMax(m_Value(X), m_APInt(C))) &&
+      match(Op1, m_Not(m_Specific(X)))) {
+    if (C->isNonNegative())
+      return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                          Constant::getNullValue(X->getType()));
+    return new ICmpInst(ICmpInst::ICMP_UGT, X,
+                        ConstantInt::get(X->getType(), ~*C));
+  }
+
+  if (I.getPredicate() == ICmpInst::ICMP_ULT &&
+      match(Op0, m_UMax(m_Value(X), m_APInt(C))) &&
+      match(Op1, m_Not(m_Specific(X)))) {
+    if (C->isNonNegative())
+      return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                          Constant::getAllOnesValue(X->getType()));
+    return new ICmpInst(ICmpInst::ICMP_ULT, X,
+                        ConstantInt::get(X->getType(), ~*C));
+  }
+
   // FIXME: We only do this after checking for min/max to prevent infinite
   // looping caused by a reverse canonicalization of these patterns for min/max.
   // FIXME: The organization of folds is a mess. These would naturally go into
   // canonicalizeCmpWithConstant(), but we can't move all of the above folds
   // down here after the min/max restriction.
   ICmpInst::Predicate Pred = I.getPredicate();
-  const APInt *C;
   if (match(Op1, m_APInt(C))) {
     // For i32: x >u 2147483647 -> x <s 0  -> true if sign bit set
     if (Pred == ICmpInst::ICMP_UGT && C->isMaxSignedValue()) {
@@ -8415,15 +8540,32 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 
 // Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
 // Patterns include:
-//    fptrunc(x) <  C  -->  x <  ext(C)
-//    fptrunc(x) <= C  -->  x <= ext(C)
-//    fptrunc(x) >  C  -->  x >  ext(C)
-//    fptrunc(x) >= C  -->  x >= ext(C)
+//    fptrunc(x) <  C       -->  x <  ext(C)
+//    fptrunc(x) <= C       -->  x <= ext(C)
+//    fptrunc(x) >  C       -->  x >  ext(C)
+//    fptrunc(x) >= C       -->  x >= ext(C)
+//    fptrunc(x) ord/uno C  -->  x ord/uno 0
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
                                     const Constant &C) {
   FCmpInst::Predicate Pred = I.getPredicate();
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+
+  const APFloat *CValue;
+  // TODO: support vec
+  if (!match(&C, m_APFloat(CValue)))
+    return nullptr;
+
+  // Handle ord/uno
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    assert(!CValue->isNaN() &&
+           "X ord/uno NaN should be folded away by simplifyFCmpInst()");
+    return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                        ConstantFP::getZero(DestType), "", &I);
+  }
+
+  // Handle <, >, <=, >=
   bool RoundDown = false;
 
   if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
@@ -8433,10 +8575,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
            Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
     RoundDown = false;
   else
-    return nullptr;
-
-  const APFloat *CValue;
-  if (!match(&C, m_APFloat(CValue)))
     return nullptr;
 
   if (CValue->isNaN() || CValue->isInfinity())
@@ -8457,7 +8595,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
 
   APFloat NextCValue = NextValue(*CValue, RoundDown);
 
-  Type *DestType = FPTrunc.getOperand(0)->getType();
   const fltSemantics &DestFltSema =
       DestType->getScalarType()->getFltSemantics();
 
@@ -8765,6 +8902,73 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   return nullptr;
 }
 
+/// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
+/// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN
+/// float when the uitofp casts are exact and C is in the valid range.
+///
+/// Since exact uitofp means distinct integers map to distinct floats, the only
+/// values fabs(uitofp(a) - uitofp(b)) can take are {0.0, 1.0, 2.0, ...}.
+/// There are no values in the open interval (0, 1), so:
+///   fabs(...) <  C  where 0 < C <= 1.0  -->  a == b  (strict lt: C=1.0 ok)
+//    fabs(..) >= C where C >= 1.0 -> a != b
+///
+/// The same logic applies to sitofp.
+static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *FAbsArg;
+  if (!match(I.getOperand(0), m_FAbs(m_Value(FAbsArg))))
+    return nullptr;
+
+  const APFloat *C;
+  if (!match(I.getOperand(1), PatternMatch::m_FiniteNonZero(C)))
+    return nullptr;
+
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool IsStrictLt = Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT;
+  bool IsLe = Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE;
+  bool IsStrictGt = Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT;
+  bool IsGe = Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE;
+  if (!IsStrictLt && !IsStrictGt && !IsGe)
+    return nullptr;
+
+  APFloat One = APFloat::getOne(C->getSemantics());
+  APFloat::cmpResult Cmp = C->compare(One);
+
+  // For strict-lt (olt/ult): C must be in (0, 1.0] -- C == 1.0 is fine since
+  //   the next possible value after 0.0 is 1.0, and < 1.0 excludes it.
+  if (IsStrictLt && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsGe && Cmp == APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsLe && Cmp != APFloat::cmpGreaterThan)
+    return nullptr;
+  if (IsStrictGt && Cmp != APFloat::cmpLessThan)
+    return nullptr;
+
+  // Match: fsub(uitofp(A), uitofp(B)) where both casts are uitofp or sitofp
+  Value *A, *B;
+  bool IsSigned;
+  if (match(FAbsArg, m_FSub(m_UIToFP(m_Value(A)), m_UIToFP(m_Value(B))))) {
+    IsSigned = false;
+  } else if (match(FAbsArg,
+                   m_FSub(m_SIToFP(m_Value(A)), m_SIToFP(m_Value(B))))) {
+    IsSigned = true;
+  } else {
+    return nullptr;
+  }
+
+  // A and B must have the same integer type
+  if (A->getType() != B->getType())
+    return nullptr;
+
+  Type *FPTy = FAbsArg->getType();
+  if (!IC.canBeCastedExactlyIntToFP(A, FPTy, IsSigned, &I) ||
+      !IC.canBeCastedExactlyIntToFP(B, FPTy, IsSigned, &I))
+    return nullptr;
+  ICmpInst::Predicate ResultPred =
+      IsStrictLt || IsLe ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+  return new ICmpInst(ResultPred, A, B);
+}
+
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
                                              InstCombinerImpl &IC) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
@@ -8782,7 +8986,7 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
     }
   }
 
-  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred)) {
+  if ((FloorX || CeilX) && FCmpInst::isCommutative(Pred) && LHS->hasOneUse()) {
     // fcmp pred floor(x), x => fcmp pred trunc(x), x
     // fcmp pred  ceil(x), x => fcmp pred trunc(x), x
     // where pred is oeq, one, ord, ueq, une, uno.
@@ -9015,6 +9219,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
       match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X)))) &&
+      X->getType()->isIntOrIntVectorTy() &&
       !F.getDenormalMode(Op1->getType()->getScalarType()->getFltSemantics())
            .inputsMayBeZero()) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;
@@ -9078,6 +9283,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
     return R;
 
+  if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
+    return R;
+
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
     return R;
 
@@ -9102,6 +9310,12 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp X, (fadd Y, 0.0) --> fcmp X, Y
   if (match(Op1, m_FAdd(m_Value(Y), m_AnyZeroFP())))
     return new FCmpInst(Pred, Op0, Y, "", &I);
+
+  // fcmp ord/uno (fptrunc X), (fptrunc Y) -> fcmp ord/uno X, Y
+  if ((Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) &&
+      match(Op0, m_FPTrunc(m_Value(X))) && match(Op1, m_FPTrunc(m_Value(Y))) &&
+      X->getType() == Y->getType())
+    return new FCmpInst(Pred, X, Y, "", &I);
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
     // fcmp (fpext X), (fpext Y) -> fcmp X, Y

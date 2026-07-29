@@ -29,13 +29,16 @@ ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "DialectAlreadyLoadedError",
     "Operation",
     "Operand",
     "Result",
     "Region",
     "Type",
     "Attribute",
+    "Pure",
     "result",
+    "infer_result",
     "operand",
     "attribute",
 ]
@@ -43,6 +46,10 @@ __all__ = [
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
+
+
+class DialectAlreadyLoadedError(RuntimeError):
+    """Raised when a dialect is loaded more than once in the current context."""
 
 
 def construct_instance(origin, args):
@@ -128,23 +135,28 @@ class FieldSpecifier:
 
 def result(
     *,
-    infer_type: bool = False,
     default_factory: Optional[Callable[[], Any]] = None,
     kw_only: bool = False,
 ) -> Result:
     """
     A field specifier for `Result` definitions.
     """
-    if infer_type and default_factory:
-        raise ValueError(
-            "a result field cannot have both infer_type and default_factory"
-        )
 
     return FieldSpecifier(
         type_=Result,
-        infer_type=infer_type,
         default_factory=default_factory,
         kw_only=kw_only,
+    )
+
+
+def infer_result() -> Result:
+    """
+    A field specifier for `Result` definitions with type inference enabled.
+    """
+
+    return FieldSpecifier(
+        type_=Result,
+        infer_type=True,
     )
 
 
@@ -894,12 +906,12 @@ class Dialect(ir.Dialect):
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32]
+        cst: Result[i32] = infer_result()
 
     class AddOp(MyInt.Operation, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32]
+        res: Result[i32] = infer_result()
     ```
     """
 
@@ -950,18 +962,11 @@ class Dialect(ir.Dialect):
         return m
 
     @classmethod
-    def load(
-        cls,
-        *,
-        reload: bool = False,
-    ) -> None:
-        if hasattr(cls, "_mlir_module") and not reload:
-            if cls._mlir_module.context is not ir.Context.current:
-                raise RuntimeError(
-                    "This dialect was loaded in a different context. "
-                    "Please set reload=True to reload the dialect in the current context."
-                )
-            return
+    def load(cls) -> None:
+        if ir.Context.current.is_dialect_loaded(cls.DIALECT_NAMESPACE):
+            raise DialectAlreadyLoadedError(
+                f"Dialect '{cls.DIALECT_NAMESPACE}' has already been loaded in the current context."
+            )
 
         cls._mlir_module = cls._emit_module()
         pm = PassManager()
@@ -973,16 +978,37 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             op._attach_traits()
 
-        _cext.globals._register_dialect_impl(cls.DIALECT_NAMESPACE, cls, replace=reload)
+        _cext.globals._register_dialect_impl(cls.DIALECT_NAMESPACE, cls, replace=True)
 
+        # typeids for dynamic types and attributes are context-dependent,
+        # so we need to register them for every MLIR context.
         for type_ in cls.types:
             typeid = ir.DynamicType.lookup_typeid(type_.type_name)
-            _cext.register_type_caster(typeid, replace=reload)(type_)
+            _cext.register_type_caster(typeid, replace=True)(type_)
 
         for attr in cls.attributes:
             typeid = ir.DynamicAttr.lookup_typeid(attr.attr_name)
-            _cext.register_type_caster(typeid, replace=reload)(attr)
+            _cext.register_type_caster(typeid, replace=True)(attr)
 
         for op in cls.operations:
-            _cext.register_operation(cls, replace=reload)(op)
-            _cext.register_op_adaptor(op, replace=reload)(op.Adaptor)
+            _cext.register_operation(cls, replace=True)(op)
+            _cext.register_op_adaptor(op, replace=True)(op.Adaptor)
+
+
+class Pure:
+    """Always speculatable operation that does not touch memory."""
+
+    class NoMemoryEffect(ir.MemoryEffectsOpInterface):
+        @staticmethod
+        def get_effects(op, effects):
+            pass
+
+    class AlwaysSpeculatable(ir.ConditionallySpeculatable):
+        @staticmethod
+        def get_speculatability(op):
+            return ir.Speculatability.Speculatable
+
+    @staticmethod
+    def attach(op_name):
+        Pure.NoMemoryEffect.attach(op_name)
+        Pure.AlwaysSpeculatable.attach(op_name)

@@ -83,24 +83,25 @@ public:
   // display purposes
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
 
+  virtual void *GetImplementation() { return nullptr; }
+
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> UniquePointer;
 
 protected:
   lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx);
+  CreateChildValueObjectFromExpression(llvm::StringRef name,
+                                       llvm::StringRef expression,
+                                       const ExecutionContext &exe_ctx);
 
   lldb::ValueObjectSP
-  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
-                               const ExecutionContext &exe_ctx,
-                               CompilerType type, bool do_deref = true);
+  CreateChildValueObjectFromAddress(llvm::StringRef name, uint64_t address,
+                                    const ExecutionContext &exe_ctx,
+                                    CompilerType type, bool do_deref = true);
 
-  lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
-                                                const DataExtractor &data,
-                                                const ExecutionContext &exe_ctx,
-                                                CompilerType type);
+  lldb::ValueObjectSP CreateChildValueObjectFromData(
+      llvm::StringRef name, const DataExtractor &data,
+      const ExecutionContext &exe_ctx, CompilerType type);
 
 private:
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
@@ -469,6 +470,8 @@ public:
     lldb::ValueObjectSP GetSyntheticValue() override;
 
     ConstString GetSyntheticTypeName() override;
+
+    void *GetImplementation() override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 

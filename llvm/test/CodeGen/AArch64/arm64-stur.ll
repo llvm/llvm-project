@@ -77,8 +77,9 @@ declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 define void @unaligned(ptr %p, <4 x i32> %v) nounwind {
 ; CHECK-LABEL: unaligned:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-NEXT:    stp d0, d1, [x0]
+; CHECK-NEXT:    add x8, x0, #8
+; CHECK-NEXT:    st1.d { v0 }[1], [x8]
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store <4 x i32> %v, ptr %p, align 4
   ret void

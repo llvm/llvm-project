@@ -1,32 +1,36 @@
 // RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DVARIANT \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS -DVARIANT \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 
@@ -539,7 +543,7 @@ void nocrash_on_locint_offset(void *addr, void* from, struct S s) {
 void nocrash_on_empty_struct_memcpy(void) {
   struct {} a[10];
   __builtin_memcpy(&a[2], a, 2); // no-crash
-#if !defined(_WIN32)
+#if !defined(_WIN32) || defined(__MINGW32__)
   // expected-warning@-2 {{'memcpy' will always overflow; destination buffer has size 0, but size argument is 2}}
   // expected-warning@-3 {{Memory copy function overflows the destination buffer}}
 #endif

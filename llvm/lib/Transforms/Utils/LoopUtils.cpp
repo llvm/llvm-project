@@ -353,6 +353,18 @@ bool llvm::hasDisableLICMTransformsHint(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopDisableLICM);
 }
 
+StringRef llvm::getLoopVectorizeKindPrefix(const Loop *L) {
+  bool IsVectorBody = getBooleanLoopAttribute(L, "llvm.loop.vectorize.body");
+  bool IsEpilogue = getBooleanLoopAttribute(L, "llvm.loop.vectorize.epilogue");
+  if (IsVectorBody && IsEpilogue)
+    return "vectorized epilogue ";
+  if (IsVectorBody)
+    return "vectorized ";
+  if (IsEpilogue)
+    return "epilogue ";
+  return "";
+}
+
 TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
@@ -429,6 +441,9 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+    return TM_SuppressedByUser;
+
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 
@@ -586,7 +601,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
   } else {
-    assert(L->hasNoExitBlocks() &&
+    assert((!LI || LI->hasNoExitBlocks(*L)) &&
            "Loop should have either zero or one exit blocks.");
 
     Builder.SetInsertPoint(OldTerm);
@@ -926,13 +941,14 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // historically assume that llvm::getLoopEstimatedTripCount always returns a
   // positive count or std::nullopt.  Thus, return std::nullopt when
   // llvm.loop.estimated_trip_count is 0.
-  if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
+  if (std::optional<unsigned> TC =
+          getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
                       << "count of " << *TC
                       << (*TC == 0 ? " (returning std::nullopt)" : "")
                       << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : std::optional(*TC);
+    return *TC == 0 ? std::nullopt : TC;
   }
 
   // Estimate the trip count from latch branch weights.
@@ -1097,6 +1113,8 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::Xor:
     return Intrinsic::vector_reduce_xor;
   case RecurKind::FMulAdd:
+  case RecurKind::FAddChainWithSubs:
+  case RecurKind::FSub:
   case RecurKind::FAdd:
     return Intrinsic::vector_reduce_fadd;
   case RecurKind::FMul:
@@ -1165,6 +1183,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
     return Instruction::ICmp;
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1186,6 +1206,10 @@ Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
     return Intrinsic::vector_reduce_or;
   case Instruction::Xor:
     return Intrinsic::vector_reduce_xor;
+  case Instruction::FAdd:
+    return Intrinsic::vector_reduce_fadd;
+  case Instruction::FMul:
+    return Intrinsic::vector_reduce_fmul;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -1256,6 +1280,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMax;
   case Intrinsic::vector_reduce_fmin:
     return RecurKind::FMin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return RecurKind::FMaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return RecurKind::FMinimum;
   default:
     return RecurKind::None;
   }
@@ -1297,6 +1325,10 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
   CmpInst::Predicate Pred = getMinMaxReductionPredicate(RK);
   Value *Cmp = Builder.CreateCmp(Pred, Left, Right, "rdx.minmax.cmp");
   Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
+  // This select is synthesized fresh, not lowered from an existing branch, so
+  // it carries no real profile. Mark its weights as explicitly unknown.
+  if (auto *SI = dyn_cast<SelectInst>(Select))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   return Select;
 }
 
@@ -1323,6 +1355,67 @@ Value *llvm::getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
   }
 
   return Result;
+}
+
+Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
+                                    unsigned RdxOpcode, Value *Acc,
+                                    DominatorTree *DT, LoopInfo *LI) {
+  auto *VTy = cast<VectorType>(Vec->getType());
+  Type *EltTy = VTy->getElementType();
+  Function *F = Builder.GetInsertBlock()->getParent();
+
+  const DataLayout &DL = F->getDataLayout();
+  Type *IdxTy = DL.getIndexType(EltTy->getContext(), 0);
+  unsigned MinElts = VTy->getElementCount().getKnownMinValue();
+  Value *NumElts = Builder.CreateVScale(IdxTy);
+  NumElts = Builder.CreateMul(NumElts, ConstantInt::get(IdxTy, MinElts));
+
+  BasicBlock *EntryBB = Builder.GetInsertBlock();
+  BasicBlock *LoopBB = BasicBlock::Create(F->getContext(), "rdx.loop", F);
+  BasicBlock *ExitBB = SplitBlock(EntryBB, Builder.GetInsertPoint(), DT, LI,
+                                  nullptr, "rdx.exit");
+
+  EntryBB->getTerminator()->eraseFromParent();
+  Builder.SetInsertPoint(EntryBB);
+  Builder.CreateBr(LoopBB);
+
+  Builder.SetInsertPoint(LoopBB);
+  PHINode *IV = Builder.CreatePHI(IdxTy, 2, "rdx.iv");
+  PHINode *AccPhi = Builder.CreatePHI(EltTy, 2, "rdx.acc");
+  IV->addIncoming(ConstantInt::get(IdxTy, 0), EntryBB);
+  AccPhi->addIncoming(Acc, EntryBB);
+
+  Value *Elt = Builder.CreateExtractElement(Vec, IV);
+  Value *Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, AccPhi,
+                                   Elt, "rdx.op");
+
+  Value *NextIV =
+      Builder.CreateNUWAdd(IV, ConstantInt::get(IdxTy, 1), "rdx.next");
+  IV->addIncoming(NextIV, LoopBB);
+  AccPhi->addIncoming(Res, LoopBB);
+
+  Value *Done = Builder.CreateICmpEQ(NextIV, NumElts, "rdx.done");
+  Builder.CreateCondBr(Done, ExitBB, LoopBB);
+
+  // SplitBlock above updated DT/LI for EntryBB -> ExitBB. Now update
+  // for replacing that edge with EntryBB -> LoopBB -> {ExitBB, LoopBB}.
+  if (DT)
+    DT->applyUpdates({{DominatorTree::Insert, EntryBB, LoopBB},
+                      {DominatorTree::Insert, LoopBB, LoopBB},
+                      {DominatorTree::Insert, LoopBB, ExitBB},
+                      {DominatorTree::Delete, EntryBB, ExitBB}});
+
+  if (LI) {
+    Loop *NewLoop = LI->AllocateLoop();
+    if (Loop *ParentLoop = LI->getLoopFor(EntryBB))
+      ParentLoop->addChildLoop(NewLoop);
+    else
+      LI->addTopLevelLoop(NewLoop);
+    NewLoop->addBasicBlockToLoop(LoopBB, *LI);
+  }
+
+  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  return Res;
 }
 
 // Helper to generate a log2 shuffle reduction.
@@ -1446,7 +1539,7 @@ Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
   case Intrinsic::vector_reduce_fminimum: {
     bool PropagatesNaN = RdxID == Intrinsic::vector_reduce_fminimum ||
                          RdxID == Intrinsic::vector_reduce_fmaximum;
-    const fltSemantics &Semantics = Ty->getFltSemantics();
+    const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
     return (!Flags.noNaNs() && !PropagatesNaN)
                ? ConstantFP::getQNaN(Ty, Negative)
            : !Flags.noInfs()
@@ -1493,6 +1586,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMaximumNum:
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
+  case RecurKind::FAddChainWithSubs:
+  case RecurKind::FSub:
   case RecurKind::FAdd:
     return Builder.CreateFAddReduce(getIdentity(), Src);
   case RecurKind::FMul:
@@ -1733,7 +1828,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 SmallVector<WeakTrackingVH, 16> &DeadInsts) {
   // Check a pre-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
-         "Indvars did not preserve LCSSA!");
+         "Caller did not preserve LCSSA!");
 
   SmallVector<BasicBlock*, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
@@ -2164,24 +2259,6 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-namespace {
-/// Rewriter to replace SCEVPtrToIntExpr with SCEVPtrToAddrExpr when the result
-/// type matches the pointer address type. This allows expressions mixing
-/// ptrtoint and ptrtoaddr to simplify properly.
-struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
-  const DataLayout &DL;
-  SCEVPtrToAddrRewriter(ScalarEvolution &SE, const DataLayout &DL)
-      : SCEVRewriteVisitor(SE), DL(DL) {}
-
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    const SCEV *Op = visit(E->getOperand());
-    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
-      return SE.getPtrToAddrExpr(Op);
-    return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
-  }
-};
-} // namespace
-
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
@@ -2193,31 +2270,39 @@ Value *llvm::addDiffRuntimeChecks(
   Value *MemoryRuntimeCheck = nullptr;
 
   auto &SE = *Expander.getSE();
-  const DataLayout &DL = Loc->getDataLayout();
-  SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+  // Cache of (VF * IC * AccessSize) - 1, shared across checks with matching
+  // type and IC*AccessSize to avoid emitting duplicate runtime computations.
+  DenseMap<std::pair<Type *, unsigned>, Value *> ThresholdCache;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+    assert(IC * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
-    // Compute VF * IC * AccessSize.
-    auto *VFTimesICTimesSize =
-        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AccessSize));
-    const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
-    const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
-    Value *Diff = Expander.expandCodeFor(
-        SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
+    unsigned ICTimesAccessSize = IC * AccessSize;
+    Value *One = ConstantInt::get(Ty, 1);
+    Value *&ThresholdMinusOne = ThresholdCache[{Ty, ICTimesAccessSize}];
+    if (!ThresholdMinusOne) {
+      Value *VFTimesICTimesSize =
+          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                               ConstantInt::get(Ty, ICTimesAccessSize));
+      ThresholdMinusOne = ChkBuilder.CreateSub(VFTimesICTimesSize, One);
+    }
+    Value *Diff =
+        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, ThresholdMinusOne});
     if (IsConflict)
       continue;
 
-    IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are safe).
+    IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
+                                          ThresholdMinusOne, "diff.check");
+    SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

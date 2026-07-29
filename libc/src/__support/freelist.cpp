@@ -1,9 +1,14 @@
-//===-- Implementation for freelist ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation for freelist.
+///
 //===----------------------------------------------------------------------===//
 
 #include "freelist.h"
@@ -12,8 +17,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 void FreeList::push(Node *node) {
   if (begin_) {
-    LIBC_ASSERT(Block::from_usable_space(node)->outer_size() ==
-                    begin_->block()->outer_size() &&
+    LIBC_ASSERT(BlockRef::from_usable_space(node).outer_size() ==
+                    begin_->block().outer_size() &&
                 "freelist entries must have the same size");
     // Since the list is circular, insert the node immediately before begin_.
     node->prev = begin_->prev;
@@ -27,15 +32,17 @@ void FreeList::push(Node *node) {
 
 void FreeList::remove(Node *node) {
   LIBC_ASSERT(begin_ && "cannot remove from empty list");
-  if (node == node->next) {
+  Node *next = node->next;
+  if (node == next) {
     LIBC_ASSERT(node == begin_ &&
                 "a self-referential node must be the only element");
     begin_ = nullptr;
   } else {
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
+    Node *prev = node->prev;
+    prev->next = next;
+    next->prev = prev;
     if (begin_ == node)
-      begin_ = node->next;
+      begin_ = next;
   }
 }
 

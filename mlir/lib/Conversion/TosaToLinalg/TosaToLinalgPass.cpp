@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassOptions.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -98,14 +99,19 @@ void mlir::tosa::addTosaToLinalgPasses(
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass(
       {options.aggressiveReduceConstant}));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  if (!attachTargetOptions) {
-    attachTargetOptions = TosaAttachTargetOptions();
-    attachTargetOptions->profiles = {"pro_int", "pro_fp"};
-    // TODO: populate with all the extensions that the tosa->linalg conversion
-    // supports
-    attachTargetOptions->extensions = {"doubleround"};
+  // tosa-attach-target writes a tosa.target_env module attribute, schedule it
+  // only when the caller actually needs one. Callers that opt out of both no
+  // longer get a tosa.target_env attribute they did not ask for.
+  if (validationOptions || attachTargetOptions) {
+    if (!attachTargetOptions) {
+      attachTargetOptions = TosaAttachTargetOptions();
+      attachTargetOptions->profiles = {"pro_int", "pro_fp"};
+      // TODO: populate with all the extensions that the tosa->linalg
+      // conversion supports
+      attachTargetOptions->extensions = {"doubleround"};
+    }
+    pm.addPass(tosa::createTosaAttachTarget(*attachTargetOptions));
   }
-  pm.addPass(tosa::createTosaAttachTarget(*attachTargetOptions));
   if (validationOptions)
     pm.addPass(tosa::createTosaValidation(*validationOptions));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
@@ -115,18 +121,33 @@ void mlir::tosa::addTosaToLinalgPasses(
 // Pipeline registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// Options controlling the registered `tosa-to-linalg-pipeline`.
+struct TosaToLinalgPipelineOptions
+    : public PassPipelineOptions<TosaToLinalgPipelineOptions> {
+  PassOptions::Option<bool> validation{
+      *this, "validation",
+      llvm::cl::desc("Run tosa-attach-target and tosa-validate as part of the "
+                     "pipeline."),
+      llvm::cl::init(true)};
+};
+} // namespace
+
 void mlir::tosa::registerTosaToLinalgPipelines() {
-  PassPipelineRegistration<>(
+  PassPipelineRegistration<TosaToLinalgPipelineOptions>(
       "tosa-to-linalg-pipeline",
       "The default pipeline for converting TOSA operators to the equivalent "
       "operations using the tensor operations in LinAlg as well as LinAlg "
       "named operations.",
-      [](OpPassManager &pm) {
+      [](OpPassManager &pm, const TosaToLinalgPipelineOptions &pipelineOpts) {
         TosaToLinalgOptions tosaToLinalgOptions;
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
-        TosaValidationOptions validationOptions;
-        validationOptions.strictOpSpecAlignment = false;
-        validationOptions.allowInvalidOpDatatypeCombinations = false;
+        std::optional<TosaValidationOptions> validationOptions;
+        if (pipelineOpts.validation) {
+          validationOptions = TosaValidationOptions{
+              /*strictOpSpecAlignment=*/false,
+              /*allowInvalidOpDatatypeCombinations=*/false};
+        }
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,
                                     validationOptions);

@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -force-vector-width=1 -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -force-vector-width=1 -tail-folding-policy=dont-fold-tail \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \

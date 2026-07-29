@@ -309,3 +309,16 @@ void foo() {
 void brokenDeducedVarDecl() {
    auto* x = some_func(nullptr);
 }
+
+// CHECK:     FunctionDecl {{.*}} test_stmt_recovery
+// CHECK-NEXT:|-ParmVarDecl {{.*}} a
+// CHECK-NEXT:`-CompoundStmt
+// CHECK-NEXT:  |-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:  | `-DeclRefExpr {{.*}} 'a'
+// CHECK-NEXT:  `-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:    `-DeclRefExpr {{.*}} 'a'
+// DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
+void test_stmt_recovery(int a) {
+  a = unresolved;
+  a < unresolved;
+}
