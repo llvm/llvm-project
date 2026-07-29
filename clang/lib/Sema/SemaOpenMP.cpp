@@ -7842,17 +7842,21 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
   return std::make_pair(FD, cast<Expr>(DRE));
 }
 
-/// Check prefer_type fr()/attr() arguments in an OMPInteropInfo for validity.
-/// Returns true if all arguments are valid; emits a diagnostic and returns
-/// false on the first invalid argument.
+/// Validate prefer_type fr() and attr() arguments in an OMPInteropInfo.
+/// fr() must be a string literal or constant integer expression.
+/// attr() must be a string literal starting with "ompx_" and containing no commas.
+/// Returns true if valid; emits diagnostic and returns false on first error.
 static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
+  auto isDependent = [](const Expr *E) {
+    return E->isValueDependent() || E->isTypeDependent() ||
+           E->isInstantiationDependent() ||
+           E->containsUnexpandedParameterPack();
+  };
   for (const OMPInteropPref &P : Info.Prefs) {
     const Expr *E = P.Fr;
     if (!E) {
       assert(Info.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
-    } else if (!E->isValueDependent() && !E->isTypeDependent() &&
-               !E->isInstantiationDependent() &&
-               !E->containsUnexpandedParameterPack()) {
+    } else if (!isDependent(E)) {
       if (!E->isIntegerConstantExpr(S.getASTContext()) &&
           !isa<StringLiteral>(E)) {
         S.Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
@@ -7860,22 +7864,22 @@ static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
       }
     }
     for (const Expr *A : P.Attrs) {
-      if (A->isValueDependent() || A->isTypeDependent() ||
-          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
+      if (isDependent(A))
         continue;
       const auto *SL = dyn_cast<StringLiteral>(A);
       if (!SL) {
         S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
         return false;
       }
-      if (!SL->getString().starts_with("ompx_")) {
+      StringRef Str = SL->getString();
+      if (!Str.starts_with("ompx_")) {
         S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
-            << SL->getString();
+            << Str;
         return false;
       }
-      if (SL->getString().contains(',')) {
+      if (Str.contains(',')) {
         S.Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
-            << SL->getString();
+            << Str;
         return false;
       }
     }

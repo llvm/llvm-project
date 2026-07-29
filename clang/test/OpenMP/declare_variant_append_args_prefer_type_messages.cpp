@@ -30,6 +30,21 @@ void qux_v1(float *A, omp_interop_t IOp);
   append_args(interop(prefer_type({attr("ompx_a,b")}), target))
 void qux_attr_comma(float *A) {}
 
+// Edge cases for attr() and fr().
+void edge_v1(float *A, omp_interop_t IOp);
+
+// expected-error@+2 {{attr() argument 'ompx_a,b,c' must not contain a comma}}
+#pragma omp declare variant(edge_v1) match(construct={dispatch}) \
+  append_args(interop(prefer_type({attr("ompx_a,b,c")}), target))
+void edge_attr_multi_commas(float *A) {}
+
+void edge_v2(float *A, omp_interop_t IOp);
+
+// expected-error@+2 {{attr() argument '' must start with the 'ompx_' prefix}}
+#pragma omp declare variant(edge_v2) match(construct={dispatch}) \
+  append_args(interop(prefer_type({attr("")}), target))
+void edge_attr_empty(float *A) {}
+
 // Valid cases -- no diagnostics expected.
 void valid_v1(float *A, omp_interop_t IOp);
 
@@ -48,6 +63,30 @@ void valid_v3(float *A, omp_interop_t IOp);
 #pragma omp declare variant(valid_v3) match(construct={dispatch}) \
   append_args(interop(prefer_type({attr("ompx_myattr")}), target))
 void valid_attr(float *A) {}
+
+void valid_v4(float *A, omp_interop_t IOp);
+
+#pragma omp declare variant(valid_v4) match(construct={dispatch}) \
+  append_args(interop(prefer_type({attr("ompx_prop")}), target))
+void valid_attr_only(float *A) {}
+
+void valid_v5(float *A, omp_interop_t IOp);
+
+#pragma omp declare variant(valid_v5) match(construct={dispatch}) \
+  append_args(interop(prefer_type({fr(1), attr("ompx_prop")}), target))
+void valid_combined(float *A) {}
+
+void valid_v6(float *A, omp_interop_t IOp);
+
+#pragma omp declare variant(valid_v6) match(construct={dispatch}) \
+  append_args(interop(prefer_type({attr("ompx_")}), target))
+void valid_attr_prefix_only(float *A) {}
+
+void valid_v7(float *A, omp_interop_t IOp);
+
+#pragma omp declare variant(valid_v7) match(construct={dispatch}) \
+  append_args(interop(prefer_type({fr("")}), target))
+void valid_fr_empty_string(float *A) {}
 
 // Template case: fr() argument becomes invalid at instantiation.
 template <typename T>
