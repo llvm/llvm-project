@@ -112,8 +112,7 @@ float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
   return vfmsq_f16(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfma_lane_f16(
-// CIR-LABEL: @test_vfma_lane_f16(
+// ALL-LABEL: @test_vfma_lane_f16(
 float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
                                 float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.f16>
@@ -135,8 +134,7 @@ float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
   return vfma_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfmaq_lane_f16(
-// CIR-LABEL: @test_vfmaq_lane_f16(
+// ALL-LABEL: @test_vfmaq_lane_f16(
 float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
                                  float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.f16>
@@ -158,8 +156,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
   return vfmaq_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfma_laneq_f16(
-// CIR-LABEL: @test_vfma_laneq_f16(
+// ALL-LABEL: @test_vfma_laneq_f16(
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
                                  float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.f16>
@@ -181,8 +178,7 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
   return vfma_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfmaq_laneq_f16(
-// CIR-LABEL: @test_vfmaq_laneq_f16(
+// ALL-LABEL: @test_vfmaq_laneq_f16(
 float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
                                   float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.f16>
@@ -204,52 +200,49 @@ float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
   return vfmaq_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfma_n_f16(
-// CIR-LABEL: @test_vfma_n_f16(
+// ALL-LABEL: @test_vfma_n_f16(
 float16x4_t test_vfma_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 // CIR: {{%.*}} = cir.vec.create({{.*}}) : !cir.vector<4 x !cir.f16>
 // CIR: cir.call @vfma_f16(%{{.*}}, %{{.*}}, %{{.*}}) :
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], half {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[SPLAT:%.*]] = insertelement <4 x half> {{.*}}, half [[C]], i{{32|64}} 3
-// LLVM-DAG:  [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// LLVM-DAG:  [[B_I:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
-// LLVM-DAG:  [[C_I:%.*]] = bitcast <4 x half> [[SPLAT]] to <4 x i16>
-// LLVM-DAG:  [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
-// LLVM-DAG:  [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
-// LLVM-DAG:  [[C_BYTES:%.*]] = bitcast <4 x i16> [[C_I]] to <8 x i8>
-// LLVM-DAG:  [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
-// LLVM-DAG:  [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
-// LLVM-DAG:  [[C_CAST:%.*]] = bitcast <8 x i8> [[C_BYTES]] to <4 x half>
-// LLVM:      [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[B_CAST]], <4 x half> [[C_CAST]], <4 x half> [[A_CAST]])
+// LLVM:      [[SPLAT:%.*]] = insertelement <4 x half> {{.*}}, half [[C]], i{{32|64}} 3
+// LLVM-NEXT: [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
+// LLVM-NEXT: [[B_I:%.*]] = bitcast <4 x half> [[B]] to <4 x i16>
+// LLVM-NEXT: [[C_I:%.*]] = bitcast <4 x half> [[SPLAT]] to <4 x i16>
+// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
+// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
+// LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <4 x i16> [[C_I]] to <8 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
+// LLVM-NEXT: [[C_CAST:%.*]] = bitcast <8 x i8> [[C_BYTES]] to <4 x half>
+// LLVM-NEXT: [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[B_CAST]], <4 x half> [[C_CAST]], <4 x half> [[A_CAST]])
 // LLVM:      ret <4 x half> [[FMA]]
   return vfma_n_f16(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfmaq_n_f16(
-// CIR-LABEL: @test_vfmaq_n_f16(
+// ALL-LABEL: @test_vfmaq_n_f16(
 float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CIR: {{%.*}} = cir.vec.create({{.*}}) : !cir.vector<8 x !cir.f16>
 // CIR: cir.call @vfmaq_f16(%{{.*}}, %{{.*}}, %{{.*}}) :
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], half {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[SPLAT:%.*]] = insertelement <8 x half> {{.*}}, half [[C]], i{{32|64}} 7
-// LLVM-DAG:  [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// LLVM-DAG:  [[B_I:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
-// LLVM-DAG:  [[C_I:%.*]] = bitcast <8 x half> [[SPLAT]] to <8 x i16>
-// LLVM-DAG:  [[A_BYTES:%.*]] = bitcast <8 x i16> [[A_I]] to <16 x i8>
-// LLVM-DAG:  [[B_BYTES:%.*]] = bitcast <8 x i16> [[B_I]] to <16 x i8>
-// LLVM-DAG:  [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
-// LLVM-DAG:  [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <8 x half>
-// LLVM-DAG:  [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <8 x half>
-// LLVM-DAG:  [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
-// LLVM:      [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B_CAST]], <8 x half> [[C_CAST]], <8 x half> [[A_CAST]])
+// LLVM:      [[SPLAT:%.*]] = insertelement <8 x half> {{.*}}, half [[C]], i{{32|64}} 7
+// LLVM-NEXT: [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
+// LLVM-NEXT: [[B_I:%.*]] = bitcast <8 x half> [[B]] to <8 x i16>
+// LLVM-NEXT: [[C_I:%.*]] = bitcast <8 x half> [[SPLAT]] to <8 x i16>
+// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <8 x i16> [[A_I]] to <16 x i8>
+// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <8 x i16> [[B_I]] to <16 x i8>
+// LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <8 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <8 x half>
+// LLVM-NEXT: [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
+// LLVM-NEXT: [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B_CAST]], <8 x half> [[C_CAST]], <8 x half> [[A_CAST]])
 // LLVM:      ret <8 x half> [[FMA]]
   return vfmaq_n_f16(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfmah_lane_f16(
-// CIR-LABEL: @test_vfmah_lane_f16(
+// ALL-LABEL: @test_vfmah_lane_f16(
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<4 x !cir.f16>
 // CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
@@ -261,8 +254,7 @@ float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
   return vfmah_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfmah_laneq_f16(
-// CIR-LABEL: @test_vfmah_laneq_f16(
+// ALL-LABEL: @test_vfmah_laneq_f16(
 float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<8 x !cir.f16>
 // CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
@@ -274,8 +266,7 @@ float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
   return vfmah_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfms_lane_f16(
-// CIR-LABEL: @test_vfms_lane_f16(
+// ALL-LABEL: @test_vfms_lane_f16(
 float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b,
                                 float16x4_t c) {
 // CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
@@ -303,8 +294,7 @@ float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b,
   return vfms_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfmsq_lane_f16(
-// CIR-LABEL: @test_vfmsq_lane_f16(
+// ALL-LABEL: @test_vfmsq_lane_f16(
 float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b,
                                  float16x4_t c) {
 // CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
@@ -332,8 +322,7 @@ float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b,
   return vfmsq_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfms_laneq_f16(
-// CIR-LABEL: @test_vfms_laneq_f16(
+// ALL-LABEL: @test_vfms_laneq_f16(
 float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b,
                                  float16x8_t c) {
 // CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
@@ -345,24 +334,23 @@ float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b,
 // CIR: cir.call_llvm_intrinsic "fma" [[LANE]], [[NEG_CAST]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[FNEG:%.*]] = fneg <4 x half> [[B]]
-// LLVM-DAG:  [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// LLVM-DAG:  [[B_I:%.*]] = bitcast <4 x half> [[FNEG]] to <4 x i16>
-// LLVM-DAG:  [[C_I:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
-// LLVM-DAG:  [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
-// LLVM-DAG:  [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
-// LLVM-DAG:  [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
-// LLVM-DAG:  [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
-// LLVM-DAG:  [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
-// LLVM-DAG:  [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
-// LLVM-DAG:  [[LANE:%.*]] = shufflevector <8 x half> [[C_CAST]], <8 x half> {{.*}}, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// LLVM:      [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[B_CAST]], <4 x half> [[A_CAST]])
+// LLVM:      [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
+// LLVM-NEXT: [[FNEG:%.*]] = fneg <4 x half> [[B]]
+// LLVM-NEXT: [[B_I:%.*]] = bitcast <4 x half> [[FNEG]] to <4 x i16>
+// LLVM-NEXT: [[C_I:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
+// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
+// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
+// LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
+// LLVM-NEXT: [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
+// LLVM-NEXT: [[LANE:%.*]] = shufflevector <8 x half> [[C_CAST]], <8 x half> {{.*}}, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+// LLVM-NEXT: [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[B_CAST]], <4 x half> [[A_CAST]])
 // LLVM:      ret <4 x half> [[FMA]]
   return vfms_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfmsq_laneq_f16(
-// CIR-LABEL: @test_vfmsq_laneq_f16(
+// ALL-LABEL: @test_vfmsq_laneq_f16(
 float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b,
                                   float16x8_t c) {
 // CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
@@ -374,72 +362,69 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b,
 // CIR: cir.call_llvm_intrinsic "fma" [[LANE]], [[NEG_CAST]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[FNEG:%.*]] = fneg <8 x half> [[B]]
-// LLVM-DAG:  [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// LLVM-DAG:  [[B_I:%.*]] = bitcast <8 x half> [[FNEG]] to <8 x i16>
-// LLVM-DAG:  [[C_I:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
-// LLVM-DAG:  [[A_BYTES:%.*]] = bitcast <8 x i16> [[A_I]] to <16 x i8>
-// LLVM-DAG:  [[B_BYTES:%.*]] = bitcast <8 x i16> [[B_I]] to <16 x i8>
-// LLVM-DAG:  [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
-// LLVM-DAG:  [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <8 x half>
-// LLVM-DAG:  [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <8 x half>
-// LLVM-DAG:  [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
-// LLVM-DAG:  [[LANE:%.*]] = shufflevector <8 x half> [[C_CAST]], <8 x half> {{.*}}, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// LLVM:      [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[B_CAST]], <8 x half> [[A_CAST]])
+// LLVM:      [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
+// LLVM-NEXT: [[FNEG:%.*]] = fneg <8 x half> [[B]]
+// LLVM-NEXT: [[B_I:%.*]] = bitcast <8 x half> [[FNEG]] to <8 x i16>
+// LLVM-NEXT: [[C_I:%.*]] = bitcast <8 x half> [[C]] to <8 x i16>
+// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <8 x i16> [[A_I]] to <16 x i8>
+// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <8 x i16> [[B_I]] to <16 x i8>
+// LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <8 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <8 x half>
+// LLVM-NEXT: [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
+// LLVM-NEXT: [[LANE:%.*]] = shufflevector <8 x half> [[C_CAST]], <8 x half> {{.*}}, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+// LLVM-NEXT: [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[B_CAST]], <8 x half> [[A_CAST]])
 // LLVM:      ret <8 x half> [[FMA]]
   return vfmsq_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfms_n_f16(
-// CIR-LABEL: @test_vfms_n_f16(
+// ALL-LABEL: @test_vfms_n_f16(
 float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 // CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
 // CIR: {{%.*}} = cir.vec.create({{.*}}) : !cir.vector<4 x !cir.f16>
 // CIR: cir.call @vfma_f16(%{{.*}}, [[FNEG]], %{{.*}}) :
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], half {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[FNEG:%.*]] = fneg <4 x half> [[B]]
-// LLVM-DAG:  [[SPLAT:%.*]] = insertelement <4 x half> {{.*}}, half [[C]], i{{32|64}} 3
-// LLVM-DAG:  [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
-// LLVM-DAG:  [[B_I:%.*]] = bitcast <4 x half> [[FNEG]] to <4 x i16>
-// LLVM-DAG:  [[C_I:%.*]] = bitcast <4 x half> [[SPLAT]] to <4 x i16>
-// LLVM-DAG:  [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
-// LLVM-DAG:  [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
-// LLVM-DAG:  [[C_BYTES:%.*]] = bitcast <4 x i16> [[C_I]] to <8 x i8>
-// LLVM-DAG:  [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
-// LLVM-DAG:  [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
-// LLVM-DAG:  [[C_CAST:%.*]] = bitcast <8 x i8> [[C_BYTES]] to <4 x half>
-// LLVM:      [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[B_CAST]], <4 x half> [[C_CAST]], <4 x half> [[A_CAST]])
+// LLVM:      [[FNEG:%.*]] = fneg <4 x half> [[B]]
+// LLVM:      [[SPLAT:%.*]] = insertelement <4 x half> {{.*}}, half [[C]], i{{32|64}} 3
+// LLVM-NEXT: [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
+// LLVM-NEXT: [[B_I:%.*]] = bitcast <4 x half> [[FNEG]] to <4 x i16>
+// LLVM-NEXT: [[C_I:%.*]] = bitcast <4 x half> [[SPLAT]] to <4 x i16>
+// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
+// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
+// LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <4 x i16> [[C_I]] to <8 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
+// LLVM-NEXT: [[C_CAST:%.*]] = bitcast <8 x i8> [[C_BYTES]] to <4 x half>
+// LLVM-NEXT: [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[B_CAST]], <4 x half> [[C_CAST]], <4 x half> [[A_CAST]])
 // LLVM:      ret <4 x half> [[FMA]]
   return vfms_n_f16(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfmsq_n_f16(
-// CIR-LABEL: @test_vfmsq_n_f16(
+// ALL-LABEL: @test_vfmsq_n_f16(
 float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
 // CIR: {{%.*}} = cir.vec.create({{.*}}) : !cir.vector<8 x !cir.f16>
 // CIR: cir.call @vfmaq_f16(%{{.*}}, [[FNEG]], %{{.*}}) :
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], half {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[FNEG:%.*]] = fneg <8 x half> [[B]]
-// LLVM-DAG:  [[SPLAT:%.*]] = insertelement <8 x half> {{.*}}, half [[C]], i{{32|64}} 7
-// LLVM-DAG:  [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
-// LLVM-DAG:  [[B_I:%.*]] = bitcast <8 x half> [[FNEG]] to <8 x i16>
-// LLVM-DAG:  [[C_I:%.*]] = bitcast <8 x half> [[SPLAT]] to <8 x i16>
-// LLVM-DAG:  [[A_BYTES:%.*]] = bitcast <8 x i16> [[A_I]] to <16 x i8>
-// LLVM-DAG:  [[B_BYTES:%.*]] = bitcast <8 x i16> [[B_I]] to <16 x i8>
-// LLVM-DAG:  [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
-// LLVM-DAG:  [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <8 x half>
-// LLVM-DAG:  [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <8 x half>
-// LLVM-DAG:  [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
-// LLVM:      [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B_CAST]], <8 x half> [[C_CAST]], <8 x half> [[A_CAST]])
+// LLVM:      [[FNEG:%.*]] = fneg <8 x half> [[B]]
+// LLVM:      [[SPLAT:%.*]] = insertelement <8 x half> {{.*}}, half [[C]], i{{32|64}} 7
+// LLVM-NEXT: [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
+// LLVM-NEXT: [[B_I:%.*]] = bitcast <8 x half> [[FNEG]] to <8 x i16>
+// LLVM-NEXT: [[C_I:%.*]] = bitcast <8 x half> [[SPLAT]] to <8 x i16>
+// LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <8 x i16> [[A_I]] to <16 x i8>
+// LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <8 x i16> [[B_I]] to <16 x i8>
+// LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <8 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <8 x half>
+// LLVM-NEXT: [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
+// LLVM-NEXT: [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B_CAST]], <8 x half> [[C_CAST]], <8 x half> [[A_CAST]])
 // LLVM:      ret <8 x half> [[FMA]]
   return vfmsq_n_f16(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfmsh_lane_f16(
-// CIR-LABEL: @test_vfmsh_lane_f16(
+// ALL-LABEL: @test_vfmsh_lane_f16(
 float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: [[CONV:%.*]] = cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
 // CIR: [[FNEG:%.*]] = cir.fneg [[CONV]] : !cir.float
@@ -450,17 +435,16 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: cir.call_llvm_intrinsic "fma" [[NEG_ARG]], [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[LANE:%.*]] = extractelement <4 x half> [[C]], i{{32|64}} 3
-// LLVM-DAG:  [[CONV:%.*]] = fpext half [[B]] to float
-// LLVM-DAG:  [[FNEG:%.*]] = fneg float [[CONV]]
-// LLVM-DAG:  [[NEG:%.*]] = fptrunc float [[FNEG]] to half
-// LLVM:      [[FMA:%.*]] = call half @llvm.fma.f16(half [[NEG]], half [[LANE]], half [[A]])
+// LLVM:      [[CONV:%.*]] = fpext half [[B]] to float
+// LLVM-NEXT: [[FNEG:%.*]] = fneg float [[CONV]]
+// LLVM-NEXT: [[NEG:%.*]] = fptrunc float [[FNEG]] to half
+// LLVM-NEXT: [[LANE:%.*]] = extractelement <4 x half> [[C]], i{{32|64}} 3
+// LLVM-NEXT: [[FMA:%.*]] = call half @llvm.fma.f16(half [[NEG]], half [[LANE]], half [[A]])
 // LLVM:      ret half [[FMA]]
   return vfmsh_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfmsh_laneq_f16(
-// CIR-LABEL: @test_vfmsh_laneq_f16(
+// ALL-LABEL: @test_vfmsh_laneq_f16(
 float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // CIR: [[CONV:%.*]] = cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
 // CIR: [[FNEG:%.*]] = cir.fneg [[CONV]] : !cir.float
@@ -471,11 +455,11 @@ float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // CIR: cir.call_llvm_intrinsic "fma" [[NEG_ARG]], [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
-// LLVM-DAG:  [[LANE:%.*]] = extractelement <8 x half> [[C]], i{{32|64}} 7
-// LLVM-DAG:  [[CONV:%.*]] = fpext half [[B]] to float
-// LLVM-DAG:  [[FNEG:%.*]] = fneg float [[CONV]]
-// LLVM-DAG:  [[NEG:%.*]] = fptrunc float [[FNEG]] to half
-// LLVM:      [[FMA:%.*]] = call half @llvm.fma.f16(half [[NEG]], half [[LANE]], half [[A]])
+// LLVM:      [[CONV:%.*]] = fpext half [[B]] to float
+// LLVM-NEXT: [[FNEG:%.*]] = fneg float [[CONV]]
+// LLVM-NEXT: [[NEG:%.*]] = fptrunc float [[FNEG]] to half
+// LLVM-NEXT: [[LANE:%.*]] = extractelement <8 x half> [[C]], i{{32|64}} 7
+// LLVM-NEXT: [[FMA:%.*]] = call half @llvm.fma.f16(half [[NEG]], half [[LANE]], half [[A]])
 // LLVM:      ret half [[FMA]]
   return vfmsh_laneq_f16(a, b, c, 7);
 }
