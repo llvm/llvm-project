@@ -374,7 +374,7 @@ struct VectorContractToPackedTypeDotProduct
               contractOp, "The store/write operation of contract operation is "
                           "before the pair contract operation");
 
-        if (!(dyn_cast<arith::ConstantOp>(accReadOp0))) {
+        if (!isa<arith::ConstantOp>(accReadOp0)) {
           // Shuffle the accumulators of the contract operations.
           LogicalResult readShuffle = shuffleAfterReadLikeOp(
               rewriter, accReadOp0, accReadOp1, contractOp, pairContractOp,

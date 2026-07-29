@@ -415,7 +415,7 @@ struct VectorContractBF16ToFMA
       Operation *accReadOp1 =
           traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
-      if (!(dyn_cast<arith::ConstantOp>(accReadOp0))) {
+      if (!isa<arith::ConstantOp>(accReadOp0)) {
         // Shuffle the accumulators of the contract operations.
         LogicalResult readShuffle =
             shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,

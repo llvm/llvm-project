@@ -174,19 +174,21 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
   while (true) {
     // Case 1: Value defined by an operation
     if (Operation *defOp = v.getDefiningOp()) {
-      if (isa<vector::TransferReadOp, vector::LoadOp, arith::ConstantOp>(defOp))
+      if (isa<vector::TransferReadOp, vector::LoadOp, arith::ConstantOp>(
+              defOp)) {
+
+        if (auto constOp = dyn_cast<arith::ConstantOp>(defOp)) {
+          Attribute value = constOp.getValue();
+
+          if (auto intAttr = dyn_cast<IntegerAttr>(value))
+            return intAttr.getValue().isZero() ? defOp : nullptr;
+
+          if (auto floatAttr = dyn_cast<FloatAttr>(value))
+            return floatAttr.getValue().isZero() ? defOp : nullptr;
+
+          return nullptr;
+        }
         return defOp;
-
-      if (isa<arith::ConstantOp>(defOp)) {
-        Attribute value = (dyn_cast<arith::ConstantOp>(defOp)).getValue();
-
-        if ((dyn_cast<IntegerAttr>(value)).getValue().isZero())
-          return defOp;
-
-        if ((dyn_cast<FloatAttr>(value)).getValue().isZero())
-          return defOp;
-
-        return nullptr;
       }
 
       return nullptr;
@@ -320,12 +322,13 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
 
 // This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
-LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Value valA,
-                                       Value valB, int64_t nonUnitDimAcc,
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
+                                       Value contractARes, Value contractBRes,
+                                       int64_t nonUnitDimAcc,
                                        VectorType accTy) {
 
-  Value vecA = contractionUsersAfterYield(valA);
-  Value vecB = contractionUsersAfterYield(valB);
+  Value vecA = contractionUsersAfterYield(contractARes);
+  Value vecB = contractionUsersAfterYield(contractBRes);
 
   if (!vecA || !vecB)
     return failure();

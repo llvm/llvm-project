@@ -52,8 +52,9 @@ struct MoveAccumulatorForContractLoop
 
     if (!accReadOp || !resultWriteOp)
       return rewriter.notifyMatchFailure(
-          contractOp, "Read/write from/to acc matrix is not by "
-                      "transfer_read/load/transfer_write/store ops.");
+          contractOp, "Read from acc matrix is not by "
+                      "transfer_read/load/constant_zero or multiple users of "
+                      "contract operation.");
 
     if (dyn_cast<arith::ConstantOp>(accReadOp))
       return rewriter.notifyMatchFailure(
@@ -77,11 +78,9 @@ struct MoveAccumulatorForContractLoop
     Location loc = accReadOp->getLoc();
     Type elemTy = vecTy.getElementType();
 
-    Value zeroScalar = arith::ConstantOp::create(rewriter, loc, elemTy,
-                                                 rewriter.getZeroAttr(elemTy));
-
-    Value zeroVec =
-        vector::BroadcastOp::create(rewriter, loc, vecTy, zeroScalar);
+    Value zeroVec = arith::ConstantOp::create(
+        rewriter, loc,
+        DenseElementsAttr::get(vecTy, rewriter.getZeroAttr(elemTy)));
 
     accValue.replaceAllUsesWith(zeroVec);
 
@@ -95,11 +94,11 @@ struct MoveAccumulatorForContractLoop
     if (llvm::isa<FloatType>(elemTy)) {
       addition =
           arith::AddFOp::create(rewriter, locUser, contractValue, accValue);
-    }
-
-    if (llvm::isa<IntegerType>(elemTy)) {
+    } else if (llvm::isa<IntegerType>(elemTy)) {
       addition =
           arith::AddIOp::create(rewriter, locUser, contractValue, accValue);
+    } else {
+      llvm_unreachable("expected floating-point or integer element type");
     }
 
     resultWriteOp->replaceUsesOfWith(contractValue, addition);

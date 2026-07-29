@@ -63,9 +63,9 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
 
 // Shuffles vectors produced by vector.contraction ops into a flat layout
 // before they are written to memory.
-LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Value valA,
-                                       Value valB, int64_t nonUnitDimAcc,
-                                       VectorType accTy);
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
+                                       Value contractARes, Value contractBRes,
+                                       int64_t nonUnitDimAcc, VectorType accTy);
 
 } // namespace x86
 } // namespace mlir
