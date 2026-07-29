@@ -737,6 +737,28 @@ static bool ioExprReferencesVolatile(const A &expr) {
   return false;
 }
 
+/// Return true if \p symbol may share storage with another symbol via
+/// EQUIVALENCE, COMMON, POINTER/TARGET, ASSOCIATE, or dummy-argument aliasing.
+static bool
+ioSymbolMayBeStorageAssociated(const Fortran::semantics::Symbol &symbol) {
+  const Fortran::semantics::Symbol &ultimate = symbol.GetUltimate();
+  return Fortran::semantics::IsPointer(ultimate) ||
+         Fortran::semantics::IsDummy(ultimate) ||
+         ultimate.attrs().test(Fortran::semantics::Attr::TARGET) ||
+         Fortran::semantics::FindEquivalenceSet(ultimate) ||
+         Fortran::semantics::FindCommonBlockContaining(ultimate) ||
+         ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>();
+}
+
+template <typename A>
+static bool ioExprReferencesStorageAssociatedSymbol(const A &expr) {
+  for (const Fortran::semantics::SymbolRef &ref :
+       Fortran::evaluate::CollectSymbols(expr))
+    if (ioSymbolMayBeStorageAssociated(*ref))
+      return true;
+  return false;
+}
+
 namespace {
 struct CollapsedImpliedDo {
   Fortran::lower::SomeExpr section;
@@ -769,6 +791,12 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
   if (!loopSym)
     return std::nullopt;
 
+  // The transform updates the loop variable once rather than per iteration, so
+  // it is invalid when the loop variable can alias an io item through storage
+  // or argument association, which the symbol comparisons below cannot detect.
+  if (ioSymbolMayBeStorageAssociated(*loopSym))
+    return std::nullopt;
+
   std::optional<Fortran::evaluate::DataRef> dataRef =
       Fortran::evaluate::ExtractDataRef(*leaf);
   if (!dataRef)
@@ -792,6 +820,9 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
       (stepExpr && ioExprReferencesSymbol(*stepExpr, *loopSym)))
     return std::nullopt;
 
+  // lower and step are re-evaluated when rebuilding the loop variable's final
+  // value, so an impure or volatile call in a bound could run a different 
+  // number of times than in the source loop.
   Fortran::evaluate::FoldingContext &foldingContext =
       converter.getFoldingContext();
   if (Fortran::evaluate::FindImpureCall(foldingContext, *lowerExpr) ||
@@ -876,10 +907,13 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
       if (ioExprReferencesVolatile(subExpr))
         return std::nullopt;
 
-      // For input, a retained subscript is re-evaluated on every iteration of
-      // the equivalent loop
+      // For input, a retained subscript is re-evaluated each iteration and sees
+      // earlier stores, but the collapsed section evaluates it once; bail if it
+      // may reference the array being read, directly or via an associated
+      // symbol.
       if (isInput &&
-          ioExprReferencesSymbol(subExpr, arrayRef->base().GetLastSymbol()))
+          (ioExprReferencesSymbol(subExpr, arrayRef->base().GetLastSymbol()) ||
+           ioExprReferencesStorageAssociatedSymbol(subExpr)))
         return std::nullopt;
 
       newSubscripts.push_back(sub);

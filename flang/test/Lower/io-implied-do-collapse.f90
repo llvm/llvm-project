@@ -234,3 +234,56 @@ subroutine read_alias_subscript(b, n)
   ! CHECK: fir.call @_FortranAioInputDescriptor
   read(10) (b(b(1,1), i), i=1,n)
 end subroutine
+
+! Loop variable is EQUIVALENCEd to an element of the array being written.
+! CHECK-LABEL: func @_QPwrite_equiv_loopvar(
+subroutine write_equiv_loopvar()
+  integer :: a(8), i
+  equivalence (i, a(4))
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,8)
+end subroutine
+
+! Loop variable is a POINTER associated to an element of the array.
+! CHECK-LABEL: func @_QPwrite_pointer_loopvar(
+subroutine write_pointer_loopvar()
+  integer, target :: a(8)
+  integer, pointer :: i
+  i => a(4)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,8)
+end subroutine
+
+! Loop variable is an ASSOCIATE construct entity aliasing an element.
+! CHECK-LABEL: func @_QPwrite_associate_loopvar(
+subroutine write_associate_loopvar(a)
+  integer :: a(8)
+  associate (i => a(4))
+    ! CHECK: fir.do_loop
+    ! CHECK: fir.call @_FortranAioOutputDescriptor
+    write(10) (a(i), i=1,8)
+  end associate
+end subroutine
+
+! Loop variable is a dummy argument that may be argument associated with the
+! array (e.g. call sub(b, b(4))).
+! CHECK-LABEL: func @_QPwrite_dummy_loopvar(
+subroutine write_dummy_loopvar(a, i)
+  integer :: a(8), i
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,8)
+end subroutine
+
+! Input: a retained subscript that is a dummy argument may be argument
+! associated with an element being read, so it must not be collapsed.
+! CHECK-LABEL: func @_QPread_dummy_subscript(
+subroutine read_dummy_subscript(a, k, n)
+  integer :: n
+  integer :: a(10, n), k
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioInputDescriptor
+  read(10) (a(k, i), i=1,n)
+end subroutine
