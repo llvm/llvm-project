@@ -65,7 +65,7 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   if (SII.isTRANS(MI))
     return InstructionFlavor::TRANS;
 
-  if (SII.isVALU(MI, /*AllowLDSDMA=*/true))
+  if (SII.isVALU(MI, /*AllowLDSDMA=*/false))
     return InstructionFlavor::SingleCycleVALU;
 
   if (SII.isDS(MI))

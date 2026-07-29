@@ -2593,8 +2593,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI, /*AllowLDSDMA=*/true) && !TII->isMFMAorWMMA(MI) &&
-           !TII->isTRANS(MI) && !TII->isLDSDMA(MI)) {
+           TII->isVALU(MI, /*AllowLDSDMA=*/false) && !TII->isMFMAorWMMA(MI) &&
+           !TII->isTRANS(MI)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.

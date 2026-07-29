@@ -66,7 +66,7 @@ public:
   enum DelayType { VALU, TRANS, SALU, OTHER };
 
   // Get the delay type for a MachineInstr.
-  DelayType getDelayType(const MachineInstr &MI) {
+  DelayType getDelayType(const MachineInstr &MI, bool AllowLDSDMA) {
     // Non-F64 TRANS instructions use a separate delay type.
     if (SIInstrInfo::isTRANS(MI) &&
         !AMDGPU::isDPMACCInstruction(MI.getOpcode()))
@@ -74,7 +74,7 @@ public:
     // WMMA XDL ops are treated the same as TRANS.
     if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
+    if (SIInstrInfo::isVALU(MI, AllowLDSDMA))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
@@ -372,7 +372,11 @@ public:
         continue;
       }
 
-      DelayType Type = getDelayType(MI);
+      // LDSDMA is VALU-tagged but only behaves like VALU for operand-use delay
+      // checks (e.g. v_readfirstlane -> tensor_load_to_lds). It must not
+      // publish or advance VALU delay state on its defs.
+      DelayType ProducerType = getDelayType(MI, /*AllowLDSDMA=*/false);
+      DelayType ConsumerType = getDelayType(MI, /*AllowLDSDMA=*/true);
 
       if (instructionWaitsForSGPRWrites(MI)) {
         auto It = State.find(LastSGPRFromVALU);
@@ -388,7 +392,7 @@ public:
         // Forget about all outstanding VALU delays.
         // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
-      } else if (Type != OTHER) {
+      } else if (ConsumerType != OTHER) {
         DelayInfo Delay;
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
@@ -408,7 +412,7 @@ public:
           }
         }
 
-        if (SII->isVALU(MI.getOpcode(), /*AllowLDSDMA=*/true)) {
+        if (ProducerType == VALU) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {
@@ -425,13 +429,13 @@ public:
         }
       }
 
-      if (Type != OTHER) {
+      if (ProducerType != OTHER) {
         // TODO: Scan implicit defs too?
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
           for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
-            State[Unit] = DelayInfo(Type, Latency);
+            State[Unit] = DelayInfo(ProducerType, Latency);
         }
       }
 
@@ -442,7 +446,7 @@ public:
       // TODO: In wave64 mode, double the number of cycles for VALU and VMEM
       // instructions on the assumption that they will usually have to be issued
       // twice?
-      State.advance(Type, Cycles);
+      State.advance(ProducerType, Cycles);
 
       LLVM_DEBUG(dbgs() << "  State after " << MI; State.dump(TRI););
     }

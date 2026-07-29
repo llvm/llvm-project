@@ -1447,7 +1447,7 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
   if (!Wait.hasWait())
     return Reg;
 
-  if (Context->TII.isVALU(MI, /*AllowLDSDMA=*/true))
+  if (Context->TII.isVALU(MI, /*AllowLDSDMA=*/false))
     return Reg32;
 
   // If hi/lo16 mixed events
