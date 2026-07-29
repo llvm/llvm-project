@@ -19737,19 +19737,16 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   }
 
-  // A VGPR "as memory" indexed load/store with a register index expands (on
-  // movrel subtargets) to an M0-relative move. Add an implicit-def of $m0: it
-  // records that the eventual move clobbers M0, and - because an instruction
-  // defining a physical register is not hoisted/sunk - keeps a divergent access
-  // pinned inside its waterfall loop. AMDGPUAssignIdxToM0 removes this when it
-  // writes M0 for real.
+  // A VGPR "as memory" indexed load/store with a register index expands to an
+  // M0-relative move, which clobbers M0 whether it indexes with movrel or with
+  // the VGPR indexing mode. Add an implicit-def of $m0: it records that, and -
+  // because an instruction defining a physical register is not hoisted/sunk -
+  // keeps a divergent access pinned inside its waterfall loop.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
-    if (getSubtarget()->hasMovrel()) {
-      MachineOperand &IdxOp = LdStIdx->getIdxOp();
-      if (IdxOp.isReg())
-        MI.addOperand(MachineOperand::CreateReg(AMDGPU::M0, /*isDef=*/true,
-                                                /*isImp=*/true));
-    }
+    MachineOperand &IdxOp = LdStIdx->getIdxOp();
+    if (IdxOp.isReg())
+      MI.addOperand(MachineOperand::CreateReg(AMDGPU::M0, /*isDef=*/true,
+                                              /*isImp=*/true));
     return;
   }
 

@@ -49,6 +49,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -181,10 +182,11 @@ private:
   bool runOnMachineInstr(MachineInstr &MI);
 
   /// Lower a VGPR "as memory" (address space 13) indexed load/store pseudo
-  /// (V_LOAD_IDX_B<N> / V_STORE_IDX_B<N>) into a sequence of M0-relative moves
-  /// (v_movrels_b32 for loads, v_movreld_b32 for stores) over the wave's vector
-  /// registers. M0 must already hold the dword index (see AMDGPUAssignIdxToM0).
-  /// This replaces the pseudo, which is erased.
+  /// (V_LOAD_IDX_B<N> / V_STORE_IDX_B<N>) into a sequence of indexed moves over
+  /// the wave's vector registers: v_movrels_b32 / v_movreld_b32 where the
+  /// subtarget has movrel, and v_mov_b32 wrapped in s_set_gpr_idx_on/off where
+  /// it indexes with the VGPR indexing mode. This replaces the pseudo, which is
+  /// erased.
   void lowerLoadStoreIdx(MachineInstr &MI);
 
   /// Compute the mode for a single \p MI given \p Ops operands
@@ -395,9 +397,9 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
   const bool IsStore = LdSt.mayStore();
 
-  // $data is operand 0 of both the load (def) and store (use) pseudos; M0
-  // already holds the dword index (see AMDGPUAssignIdxToM0).
+  // $data is operand 0 of both the load (def) and store (use) pseudos.
   Register Data = LdSt.getDataOp().getReg();
+  MachineOperand &IdxOp = LdSt.getIdxOp();
   unsigned Offset = LdSt.getOffsetOp().getImm();
   unsigned NumDwords = LdSt.getBitWidth() / 32;
 
@@ -414,8 +416,32 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
          "out of bounds VGPR 'as memory' (address space 13) access");
 #endif
 
-  unsigned Opcode =
-      IsStore ? AMDGPU::V_MOVRELD_B32_e32 : AMDGPU::V_MOVRELS_B32_e32;
+  // Subtargets with movrel take the index from M0, which AMDGPUAssignIdxToM0
+  // has already copied it into. The rest have no movrel and index with the VGPR
+  // indexing mode instead: s_set_gpr_idx_on enables it for one operand of the
+  // moves that follow, reading the index straight out of the SGPR holding it,
+  // so no copy is needed there.
+  const bool UseGPRIdxMode = ST->useVGPRIndexMode();
+
+  MachineInstr *SetOn = nullptr;
+  if (UseGPRIdxMode) {
+    SetOn = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
+                .add(IdxOp)
+                .addImm(IsStore ? AMDGPU::VGPRIndexMode::DST_ENABLE
+                                : AMDGPU::VGPRIndexMode::SRC0_ENABLE)
+                .getInstr();
+    SetOn->getOperand(3).setIsUndef();
+  } else {
+    assert(IdxOp.isReg() && IdxOp.getReg() == AMDGPU::M0 &&
+           "movrel index should have been copied into M0");
+  }
+
+  unsigned Opcode;
+  if (UseGPRIdxMode)
+    Opcode = IsStore ? AMDGPU::V_MOV_B32_indirect_write
+                     : AMDGPU::V_MOV_B32_indirect_read;
+  else
+    Opcode = IsStore ? AMDGPU::V_MOVRELD_B32_e32 : AMDGPU::V_MOVRELS_B32_e32;
 
   // The dword index is (M0 + $offset). Fold $offset into the base register so
   // each dword i reads/writes VGPR($offset + i) relative to M0. Mask the offset
@@ -443,6 +469,14 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
     // to encode them. This is a no-op on movrel-only (<=256 VGPR) subtargets.
     if (ST->has1024AddressableVGPRs())
       runOnMachineInstr(*Mov);
+  }
+
+  // Keep the mode switch and the moves it applies to together, so nothing is
+  // scheduled or spilled in between while indexing is enabled.
+  if (SetOn) {
+    MachineInstr *SetOff =
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
+    finalizeBundle(BB, SetOn->getIterator(), std::next(SetOff->getIterator()));
   }
 
   MI.eraseFromParent();
