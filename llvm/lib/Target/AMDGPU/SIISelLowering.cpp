@@ -19388,7 +19388,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     APInt IndexMask =
         APInt::getLowBitsSet(32, Log2_32_Ceil(NumAddressableVGPRs));
 
-    unsigned IndexOpIdx = 0, BitOffOpIdx = 0;
+    unsigned IndexOpIdx, BitOffOpIdx = 0;
     switch (N->getOpcode()) {
     case AMDGPUISD::REG_LOAD:
       IndexOpIdx = 1;
