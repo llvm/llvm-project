@@ -4275,6 +4275,7 @@ void test_cyclic_cfg(int n) {
 
 namespace member_capture_by_param {
 struct S {
+  S(int *p [[clang::lifetime_capture_by(c)]], int *&c);
   void cap(int *p [[clang::lifetime_capture_by(c)]], int *&c);
   void cap_const(int *p [[clang::lifetime_capture_by(c)]], int *&c) const;
   static void cap_static(int *p [[clang::lifetime_capture_by(c)]], int *&c);
@@ -4295,9 +4296,10 @@ void cap_ns(int *p [[clang::lifetime_capture_by(c)]], int *&c);
 } // namespace ns
 
 void test_member_capture_by() {
-  S s;
   int i;
   int *c;
+  S s_ctor(&i, c);
+  S s;
   s.cap(&i, c);
   s.cap_const(&i, c);
   S::cap_static(&i, c);
