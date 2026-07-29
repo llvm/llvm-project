@@ -52,9 +52,7 @@ define <vscale x 4 x i32> @signed_wide_add_nxv4i32_nxv4i16(<vscale x 4 x i32> %a
 ;
 ; CHECK-SVE2-LABEL: signed_wide_add_nxv4i32_nxv4i16:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    ptrue p0.s
-; CHECK-SVE2-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-SVE2-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-SVE2-NEXT:    saddwb z0.s, z0.s, z1.h
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i16> %input to <vscale x 4 x i32>
@@ -71,8 +69,7 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv4i32_nxv4i16(<vscale x 4 x i32> 
 ;
 ; CHECK-SVE2-LABEL: unsigned_wide_add_nxv4i32_nxv4i16:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-SVE2-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-SVE2-NEXT:    uaddwb z0.s, z0.s, z1.h
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i16> %input to <vscale x 4 x i32>

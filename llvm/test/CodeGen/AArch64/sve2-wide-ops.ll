@@ -7,9 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 8 x i16> @add_nxv8i16_sext_nxv8i8(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: add_nxv8i16_sext_nxv8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    saddwb z0.h, z0.h, z1.b
 ; CHECK-NEXT:    ret
   %b.ext = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
   %r = add <vscale x 8 x i16> %a, %b.ext
@@ -19,9 +17,7 @@ define <vscale x 8 x i16> @add_nxv8i16_sext_nxv8i8(<vscale x 8 x i16> %a, <vscal
 define <vscale x 4 x i32> @add_nxv4i32_sext_nxv4i16(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: add_nxv4i32_sext_nxv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    saddwb z0.s, z0.s, z1.h
 ; CHECK-NEXT:    ret
   %b.ext = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
   %r = add <vscale x 4 x i32> %a, %b.ext
@@ -36,9 +32,7 @@ define <vscale x 2 x i64> @add_nxv2i64_sext_nxv2i32(<vscale x 2 x i64> %a, <vsca
 ;
 ; SME-LABEL: add_nxv2i64_sext_nxv2i32:
 ; SME:       // %bb.0:
-; SME-NEXT:    ptrue p0.d
-; SME-NEXT:    sxtw z1.d, p0/m, z1.d
-; SME-NEXT:    add z0.d, z0.d, z1.d
+; SME-NEXT:    saddwb z0.d, z0.d, z1.s
 ; SME-NEXT:    ret
   %b.ext = sext <vscale x 2 x i32> %b to <vscale x 2 x i64>
   %r = add <vscale x 2 x i64> %a, %b.ext
@@ -48,8 +42,7 @@ define <vscale x 2 x i64> @add_nxv2i64_sext_nxv2i32(<vscale x 2 x i64> %a, <vsca
 define <vscale x 8 x i16> @add_nxv8i16_zext_nxv8i8(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: add_nxv8i16_zext_nxv8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    uaddwb z0.h, z0.h, z1.b
 ; CHECK-NEXT:    ret
   %b.ext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
   %r = add <vscale x 8 x i16> %a, %b.ext
@@ -59,8 +52,7 @@ define <vscale x 8 x i16> @add_nxv8i16_zext_nxv8i8(<vscale x 8 x i16> %a, <vscal
 define <vscale x 4 x i32> @add_nxv4i32_zext_nxv4i16(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: add_nxv4i32_zext_nxv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    uaddwb z0.s, z0.s, z1.h
 ; CHECK-NEXT:    ret
   %b.ext = zext <vscale x 4 x i16> %b to <vscale x 4 x i32>
   %r = add <vscale x 4 x i32> %a, %b.ext
@@ -75,8 +67,7 @@ define <vscale x 2 x i64> @add_nxv2i64_zext_nxv2i32(<vscale x 2 x i64> %a, <vsca
 ;
 ; SME-LABEL: add_nxv2i64_zext_nxv2i32:
 ; SME:       // %bb.0:
-; SME-NEXT:    and z1.d, z1.d, #0xffffffff
-; SME-NEXT:    add z0.d, z0.d, z1.d
+; SME-NEXT:    uaddwb z0.d, z0.d, z1.s
 ; SME-NEXT:    ret
   %b.ext = zext <vscale x 2 x i32> %b to <vscale x 2 x i64>
   %r = add <vscale x 2 x i64> %a, %b.ext
