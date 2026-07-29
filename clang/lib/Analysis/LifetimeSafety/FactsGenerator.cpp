@@ -1016,6 +1016,9 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
                                              ArrayRef<const Expr *> Args) {
   if (Args.empty())
     return;
+  // FIXME: Add support for capture_by on constructors.
+  if (isa<CXXConstructorDecl>(FD))
+    return;
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
   bool HasImplicitThisParam =
       Method && Method->isImplicitObjectMemberFunction() &&
@@ -1045,9 +1048,6 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
           CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
           CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
-        continue;
-      if (CapturingArgIdx == LifetimeCaptureByAttr::This &&
-          isa<CXXConstructorDecl>(FD))
         continue;
       const Expr *CapturedByArg =
           (CapturingArgIdx == LifetimeCaptureByAttr::This)
