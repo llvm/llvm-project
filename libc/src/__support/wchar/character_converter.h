@@ -215,12 +215,12 @@ LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop_wchar() {
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
   ErrorOr<char32_t> Result = pop_utf32();
   if (!Result)
-    return Result.error();
+    return Error(Result.error());
   return static_cast<wchar_t>(*Result);
 #elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
   ErrorOr<char16_t> Result = pop_utf16();
   if (!Result)
-    return Result.error();
+    return Error(Result.error());
   return static_cast<wchar_t>(*Result);
 #else
   return Error(-1);
