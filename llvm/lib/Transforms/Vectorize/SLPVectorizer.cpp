@@ -607,6 +607,9 @@ class InstructionsState {
   Instruction *AltOp = nullptr;
   /// Wether the instruction state represents copyable instructions.
   bool HasCopyables = false;
+  /// Index of the operand modeling the copyable values: the addend for
+  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  unsigned CopyableOpIdx = 0;
 
 public:
   Instruction *getMainOp() const {
@@ -721,7 +724,10 @@ public:
   InstructionsState() = delete;
   InstructionsState(Instruction *MainOp, Instruction *AltOp,
                     bool HasCopyables = false)
-      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables) {}
+      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
+        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
+                          ? 2
+                          : 0) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   /// Checks if the value is a copyable element.
@@ -827,6 +833,18 @@ public:
   bool areInstructionsWithCopyableElements() const {
     assert(valid() && "InstructionsState is invalid.");
     return HasCopyables;
+  }
+
+  /// Returns the index of the operand the copyable value is modeled in.
+  unsigned getCopyableOpIdx() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return CopyableOpIdx;
+  }
+
+  /// Sets the index of the operand the copyable value is modeled in.
+  void setCopyableOpIdx(unsigned Idx) {
+    assert((Idx == 0 || Idx == 2) && "Unexpected copyable operand index.");
+    CopyableOpIdx = Idx;
   }
 };
 
@@ -11460,9 +11478,12 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    // fmuladd(0.0, -0.0, V) == V.
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
       Type *Ty = MainOp->getType();
+      // fmuladd(V, 1.0, -0.0) == V.
+      if (S.getCopyableOpIdx() == 0)
+        return {V, ConstantFP::get(Ty, 1.0), ConstantFP::getNegativeZero(Ty)};
+      // fmuladd(0.0, -0.0, V) == V.
       return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
     }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
@@ -11985,7 +12006,7 @@ public:
         return OrigS;
       return S;
     }
-    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    // fmuladd is the only 3-operand copyable.
     assert((Operands.size() == 2 ||
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
@@ -12038,8 +12059,9 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
-    // is checked below and may legitimately hold many instructions.
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; the
+    // copyable operand is checked below and may legitimately hold many
+    // instructions.
     if (Operands.size() == 2 &&
         count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
@@ -12076,10 +12098,16 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    // Check the addend for fmuladd, first operand otherwise.
-    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
-                                           : Operands.back()))
-      return OrigS;
+    // Check the operand holding the copyable values.
+    if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
+      if (Operands.size() == 2)
+        return OrigS;
+      // Retry with the copyable modeled as the first multiplicand.
+      S.setCopyableOpIdx(0);
+      Operands = buildOperands(S, VL);
+      if (!CheckOperand(Operands[S.getCopyableOpIdx()]))
+        return OrigS;
+    }
 
     return S;
   }
