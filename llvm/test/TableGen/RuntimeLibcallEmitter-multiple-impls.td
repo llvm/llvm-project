@@ -2,10 +2,8 @@
 // RUN: count 0 < %t.err
 
 // Check behavior of libcall emission when multiple RuntimeLibcallImpl
-// implementations provide the same RuntimeLibcall. This table records which
-// implementations are available, not which one is selected, so all of the
-// implementations are emitted; selection of the preferred one is a separate
-// concern handled by LibcallLoweringInfo. No diagnostic is emitted.
+// implementations provide the same RuntimeLibcall. This table records
+// all available implementations, not which one is selected.
 
 include "llvm/IR/RuntimeLibcallsImpl.td"
 
