@@ -15,4 +15,4 @@ def TestTarget : Target {
 
 // CHECK-DAG: 81 register-info-emitter - Number of explicit register classes
 // CHECK-DAG: 440 register-info-emitter - Number of synthesized register classes
-// CHECK-DAG: 190 register-info-emitter - Number of register pressure sets
+// CHECK-DAG: 188 register-info-emitter - Number of register pressure sets

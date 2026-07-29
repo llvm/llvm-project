@@ -280,10 +280,10 @@ TEST(InProcessControllerAccessTest, DisconnectDrainsPendingCalls) {
 
 // Wrapper function that echoes ArgBytes back as the result. Used to exercise
 // the controller-initiated wrapper-call path without pulling in SPS.
-static void echoWrapper(orc_rt_SessionRef S, uint64_t CallId,
-                        orc_rt_WrapperFunctionReturn Return,
-                        orc_rt_WrapperFunctionBuffer ArgBytes) {
-  Return(S, CallId, ArgBytes);
+static void echoWrapper(orc_rt_SessionRef S,
+                        orc_rt_WrapperFunctionBuffer ArgBytes,
+                        orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
+  Return(S, ArgBytes, CallId);
 }
 
 TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {

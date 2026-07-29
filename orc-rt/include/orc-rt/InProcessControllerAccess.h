@@ -112,8 +112,8 @@ public:
   void callController(OnControllerCallReturn OnComplete,
                       orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override;
-  void sendWrapperResult(uint64_t CallId,
-                         WrapperFunctionBuffer ResultBytes) override;
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                         uint64_t CallId) override;
 
 private:
   uint64_t registerPendingHandler(OnControllerCallReturn OnComplete);

@@ -84,7 +84,9 @@ static bool containsUnreachable(const Loop &L,
   SmallVector<const Instruction *, 16> Worklist(Roots);
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
-    Visited.insert(I);
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     if (isa<PHINode>(I))
       continue;
@@ -290,34 +292,35 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   if (Phi->getNumIncomingValues() != 2)
     return false;
 
-  for (unsigned Idx = 0; Idx != 2; ++Idx) {
-    Value *FoundStep = Phi->getIncomingValue(Idx);
-    Value *FoundStart = Phi->getIncomingValue(!Idx);
+  // Step comes from the loop latch, start comes from the other incoming value.
+  int LatchIdx = Phi->getBasicBlockIndex(L.getLoopLatch());
+  if (LatchIdx < 0)
+    return false;
+  Value *FoundStep = Phi->getIncomingValue(LatchIdx);
+  Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
-    Instruction *TV, *FV;
-    if (!match(FoundStep,
-               m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
-      continue;
+  Instruction *TV, *FV;
+  if (!match(FoundStep,
+             m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
+    return false;
 
-    // For a conditional recurrence, both the true and false values of the
-    // select must ultimately end up in the same recurrent BinOp.
-    BinaryOperator *FoundBO = digRecurrence(TV, BOWithConstOpToMatch);
-    BinaryOperator *AltBO = digRecurrence(FV, BOWithConstOpToMatch);
-    if (!FoundBO || FoundBO != AltBO)
-      return false;
+  // For a conditional recurrence, both the true and false values of the
+  // select must ultimately end up in the same recurrent BinOp.
+  BinaryOperator *FoundBO = digRecurrence(TV, BOWithConstOpToMatch);
+  BinaryOperator *AltBO = digRecurrence(FV, BOWithConstOpToMatch);
+  if (!FoundBO || FoundBO != AltBO)
+    return false;
 
-    if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
-      LLVM_DEBUG(dbgs() << "HashRecognize: Unable to match single BinaryOp "
-                           "with constant in conditional recurrence\n");
-      return false;
-    }
-
-    BO = FoundBO;
-    Start = FoundStart;
-    Step = FoundStep;
-    return true;
+  if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
+    LLVM_DEBUG(dbgs() << "HashRecognize: Unable to match single BinaryOp "
+                         "with constant in conditional recurrence\n");
+    return false;
   }
-  return false;
+
+  BO = FoundBO;
+  Start = FoundStart;
+  Step = FoundStep;
+  return true;
 }
 
 /// Iterates over all the phis in \p LoopLatch, and attempts to extract a
@@ -462,6 +465,7 @@ HashRecognize::genBarrettConstants(const PolynomialInfo &Info) {
 static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
                                      const PHINode *P2, const Loop &L) {
   SmallVector<const Instruction *> Worklist;
+  SmallPtrSet<const Instruction *, 16> Visited;
 
   // matchConditionalRecurrence has already ensured that the SelectInst's
   // condition is an Instruction.
@@ -469,6 +473,9 @@ static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
 
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
+    // Skip this instruction if we have already visited it before.
+    if (!Visited.insert(I).second)
+      continue;
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))
@@ -512,7 +519,8 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   BasicBlock *Latch = L.getLoopLatch();
   BasicBlock *Exit = L.getExitBlock();
   const PHINode *IndVar = L.getCanonicalInductionVariable();
-  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
+  if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1 ||
+      !L.getLatchCmpInst())
     return "Loop not in canonical form";
   unsigned TC = SE.getSmallConstantTripCount(&L);
   if (!TC)
