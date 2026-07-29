@@ -89,6 +89,10 @@ std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
 size_t ProcessWasm::ReadGlobal(uint32_t index, void *buf, size_t size,
                                Status &error) {
   // The protocol asks for a global relative to a frame, so a read needs one.
+  // FIXME: A global belongs to a module instance rather than to a frame, so the
+  // frame is only a proxy for the instance and the module the address names is
+  // ignored. A global in an instance with no active frame cannot be read at
+  // all. See https://github.com/llvm/llvm-project/issues/212833.
   ThreadSP thread = GetThreadList().GetSelectedThread();
   StackFrameSP frame =
       thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
