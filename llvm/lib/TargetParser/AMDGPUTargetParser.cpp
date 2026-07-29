@@ -165,7 +165,13 @@ bool AMDGPU::isCPUValidForSubArch(Triple::SubArchType SubArch, GPUKind AK) {
   // A legacy triple without a subarch accepts any known GPU.
   if (SubArch == Triple::NoSubArch)
     return true;
-  return isSubArchCompatible(getSubArch(AK), SubArch);
+
+  // Reject the dummy "generic" targets
+  Triple::SubArchType GPUSubArch = getSubArch(AK);
+  if (GPUSubArch == Triple::NoSubArch)
+    return false;
+
+  return isSubArchCompatible(GPUSubArch, SubArch);
 }
 
 bool AMDGPU::isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU) {
