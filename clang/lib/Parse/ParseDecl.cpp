@@ -5086,8 +5086,28 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
           // parsing now for non-anonymous records; anonymous struct/union
           // fields are handled as part of the enclosing record instead.
           if (RD && !RD->isAnonymousStructOrUnion()) {
+            // Attributes on this record's fields are late-parsed here, after
+            // the record's body has been parsed and its scope exited. Re-enter
+            // the record and restore its members to the current scope so name
+            // lookup in the attribute arguments can resolve sibling fields.
+            std::optional<ParseScope> RecordReentryScope;
+            if (!getLangOpts().CPlusPlus) {
+              RecordReentryScope.emplace(this,
+                                         Scope::ClassScope | Scope::DeclScope);
+              Actions.EnterDeclaratorContext(getCurScope(), RD);
+              for (Decl *D : RD->decls()) {
+                if (auto *ND = dyn_cast<NamedDecl>(D)) {
+                  if (ND->getDeclName())
+                    Actions.PushOnScopeChains(ND, getCurScope(),
+                                              /*AddToContext=*/false);
+                }
+              }
+            }
+
             Actions.ProcessLateParsedTypeAttributes(
                 RD, ParseLateParsedTypeAttributeCallback);
+            if (RecordReentryScope)
+              Actions.ExitDeclaratorContext(getCurScope());
           }
         } else {
           DiagnoseCountAttributedTypeInUnnamedAnon(DS, *this);
