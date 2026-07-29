@@ -1020,13 +1020,12 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   if (isa<CXXConstructorDecl>(FD))
     return;
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-  bool HasImplicitThisParam =
-      Method && Method->isImplicitObjectMemberFunction() &&
-      !isa<CXXConstructorDecl>(FD);
+  bool IsInstance =
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
   auto getArgCaptureBy =
-      [FD, HasImplicitThisParam](unsigned I) -> LifetimeCaptureByAttr * {
+      [FD, IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
     const ParmVarDecl *PVD = nullptr;
-    if (HasImplicitThisParam) {
+    if (IsInstance) {
       // FIXME: Add support for I == 0 i.e. capture_by on function declarations
       if (I > 0 && I - 1 < FD->getNumParams())
         PVD = FD->getParamDecl(I - 1);
