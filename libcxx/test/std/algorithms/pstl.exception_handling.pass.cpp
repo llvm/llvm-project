@@ -283,6 +283,18 @@ int main(int, char**) {
       }
 
       {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // adjacent_find(first, last)
+        assert_non_throwing([=, &policy] { (void)std::adjacent_find(policy, std::move(first1), std::move(last1)); });
+
+        // adjacent_find(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::adjacent_find(policy, std::move(first1), std::move(last1), pred);
+        });
+      }
+
+      {
         // move(first, last, dest)
         assert_non_throwing([=, &policy] {
           (void)std::move(policy, std::move(first1), std::move(last1), std::move(dest));

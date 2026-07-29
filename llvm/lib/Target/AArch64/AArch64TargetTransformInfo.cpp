@@ -714,7 +714,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
-    if (any_of(ValidMinMaxTys, equal_to(LT.second)))
+    if (is_contained(ValidMinMaxTys, LT.second))
       return LT.first;
     break;
   }
@@ -751,7 +751,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // need to extend the type, as it uses shr(qadd(shl, shl)).
     unsigned Instrs =
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
-    if (any_of(ValidSatTys, equal_to(LT.second)))
+    if (is_contained(ValidSatTys, LT.second))
       return LT.first * Instrs;
 
     TypeSize TS = getDataLayout().getTypeSizeInBits(RetTy);
@@ -768,7 +768,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      MVT::v2i64,   MVT::nxv16i8, MVT::nxv8i16,
                                      MVT::nxv4i32, MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, equal_to(LT.second)))
+    if (is_contained(ValidAbsTys, LT.second))
       return LT.first;
     break;
   }
@@ -776,7 +776,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
                                      MVT::v4i32, MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    if (any_of(ValidAbsTys, equal_to(LT.second)) &&
+    if (is_contained(ValidAbsTys, LT.second) &&
         LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
       return LT.first;
     break;
@@ -5037,9 +5037,8 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
       static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
       auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, equal_to(LT.second)) ||
-          (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, equal_to(LT.second))))
+      if (is_contained(ValidMinMaxTys, LT.second) ||
+          (ST->hasFullFP16() && is_contained(ValidFP16MinMaxTys, LT.second)))
         return LT.first;
     }
 

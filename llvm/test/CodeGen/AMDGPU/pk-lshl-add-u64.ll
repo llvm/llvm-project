@@ -248,3 +248,118 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2s_shift2_5(<2 x i64> %v, <2 x i64> 
   store <2 x i64> %add, ptr poison
   ret void
 }
+
+define <2 x i64> @pk_lshl_add_u64_v1_sgpr_splat(<2 x i64> %v, i64 inreg %a) {
+; GFX1251-LABEL: pk_lshl_add_u64_v1_sgpr_splat:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_mov_b32 s2, 1
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s2
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[4:5], s[0:3]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %s1 = insertelement <2 x i64> poison, i64 %a, i32 0
+  %s2 = insertelement <2 x i64> %s1, i64 %a, i32 1
+  %shl = shl <2 x i64> %v, <i64 1, i64 1>
+  %add = add <2 x i64> %shl, %s2
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @pk_lshl_add_u64_v1_vgpr_splat(<2 x i64> %v, i64  %a) {
+; GFX1251-LABEL: pk_lshl_add_u64_v1_vgpr_splat:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_mov_b32 s0, 1
+; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
+; GFX1251-NEXT:    v_dual_mov_b32 v8, s0 :: v_dual_mov_b32 v9, s0
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[8:9], v[4:7]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %s1 = insertelement <2 x i64> poison, i64 %a, i32 0
+  %s2 = insertelement <2 x i64> %s1, i64 %a, i32 1
+  %shl = shl <2 x i64> %v, <i64 1, i64 1>
+  %add = add <2 x i64> %shl, %s2
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @pk_lshl_add_u64_sgpr_splat_v1(i64 inreg %v, <2 x i64> %a) {
+; GFX1251-LABEL: pk_lshl_add_u64_sgpr_splat_v1:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_lshl_b64 s[0:1], s[0:1], 1
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], s[0:3], v[0:3]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %s1 = insertelement <2 x i64> poison, i64 %v, i32 0
+  %s2 = insertelement <2 x i64> %s1, i64 %v, i32 1
+  %shl = shl <2 x i64> %s2, <i64 1, i64 1>
+  %add = add <2 x i64> %shl, %a
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @pk_lshl_add_u64_v_sgpr_splat_v(<2 x i64> %v, i64 inreg %s, <2 x i64> %a) {
+; GFX1251-LABEL: pk_lshl_add_u64_v_sgpr_splat_v:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_lshlrev_b64_e32 v[2:3], s0, v[2:3]
+; GFX1251-NEXT:    v_lshlrev_b64_e32 v[0:1], s0, v[0:1]
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %s1 = insertelement <2 x i64> poison, i64 %s, i32 0
+  %s2 = insertelement <2 x i64> %s1, i64 %s, i32 1
+  %shl = shl <2 x i64> %v, %s2
+  %add = add <2 x i64> %shl, %a
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @pk_lshl_add_u64_v1_splat_imm_100(<2 x i64> %v) {
+; GFX1251-LABEL: pk_lshl_add_u64_v1_splat_imm_100:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_mov_b32 s0, 1
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s0
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[4:5], 0x64
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %shl = shl <2 x i64> %v, <i64 1, i64 1>
+  %add = add <2 x i64> %shl, <i64 100, i64 100>
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @pk_lshl_add_u64_v1_splat_imm_4(<2 x i64> %v) {
+; GFX1251-LABEL: pk_lshl_add_u64_v1_splat_imm_4:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_mov_b32 s0, 1
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s0
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[4:5], 4
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %shl = shl <2 x i64> %v, <i64 1, i64 1>
+  %add = add <2 x i64> %shl, <i64 4, i64 4>
+  ret <2 x i64> %add
+}
+
+define <2 x i64> @pk_lshl_add_u64_v1_imm_1_2(<2 x i64> %v) {
+; GFX1251-LABEL: pk_lshl_add_u64_v1_imm_1_2:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_mov_b32 s0, 1
+; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], 1
+; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], 2
+; GFX1251-NEXT:    v_dual_mov_b32 v8, s0 :: v_dual_mov_b32 v9, s0
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[8:9], v[4:7]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+  %shl = shl <2 x i64> %v, <i64 1, i64 1>
+  %add = add <2 x i64> %shl, <i64 1, i64 2>
+  ret <2 x i64> %add
+}

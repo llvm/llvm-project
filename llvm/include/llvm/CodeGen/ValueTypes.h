@@ -595,6 +595,8 @@ namespace llvm {
     LLVM_ABI TypeSize getExtendedSizeInBits() const LLVM_READONLY;
   };
 
+  inline bool operator==(MVT::SimpleValueType SVT, EVT VT) { return VT == SVT; }
+
   inline raw_ostream &operator<<(raw_ostream &OS, const EVT &V) {
     V.print(OS);
     return OS;
