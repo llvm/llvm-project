@@ -313,6 +313,14 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
     return nullptr;
 
   ValueObjectSP some = m_some;
+
+  // This frontend hides the `some` level so `x.some.a` becomes `x.a`.
+  // A clone is a ValueObjectCast, which stands in for its parent
+  // rather than nesting under it, so the children hang off the
+  // Optional directly.
+  if (ValueObjectSP transparent_sp = some->Clone(ConstString()))
+    some = transparent_sp;
+
   if (some->HasSyntheticValue())
     some = some->GetSyntheticValue();
 
