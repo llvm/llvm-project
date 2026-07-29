@@ -1705,7 +1705,7 @@ std::optional<int64_t> llvm::getPtrStride(
       PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap, Predicates);
   if (!StrideScev)
     return std::nullopt;
-  const APInt *APStride = nullptr;
+  const APInt *APStride;
   if (!match(StrideScev, m_scev_APInt(APStride)))
     return std::nullopt;
 
@@ -2823,8 +2823,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (Stride->isZero())
         return true;
 
-      auto *SE = PSE->getSE();
-      return SE->isKnownPositive(SE->getAbsExpr(Stride, false));
+      return PSE->getSE()->isKnownNonZero(Stride);
     };
     if (Seen.insert({Ptr, AccessTy}).second || !IsSafeReadWrite()) {
       ++NumReads;
