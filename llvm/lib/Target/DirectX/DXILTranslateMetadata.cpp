@@ -535,6 +535,13 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
   emitValidatorVersionMD(M, MMDI);
   emitShaderModelVersionMD(M, MMDI);
   emitDXILVersionTupleMD(M, MMDI);
+
+  // !llvm.ident is a frontend responsibility (Clang/DXC/LDC emits it).
+  // Warn if the frontend forgot to emit it; do not synthesize one here.
+  if (!M.getNamedMetadata("llvm.ident"))
+    reportError(M, "missing !llvm.ident metadata; frontend should emit it",
+                DS_Warning);
+
   NamedMDNode *NamedResourceMD = emitResourceMetadata(M, DRM, DRTM);
   auto *ResourceMD =
       (NamedResourceMD != nullptr) ? NamedResourceMD->getOperand(0) : nullptr;
