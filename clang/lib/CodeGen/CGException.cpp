@@ -265,8 +265,14 @@ const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {
 
 static llvm::FunctionCallee getPersonalityFn(CodeGenModule &CGM,
                                              const EHPersonality &Personality) {
-  return CGM.CreateRuntimeFunction(llvm::FunctionType::get(CGM.Int32Ty, true),
-                                   Personality.PersonalityFn,
+  llvm::FunctionType *FTy;
+
+  if (Personality.isWasmPersonality()) {
+    FTy = llvm::FunctionType::get(CGM.Int32Ty, {CGM.VoidPtrTy}, false);
+  } else {
+    FTy = llvm::FunctionType::get(CGM.Int32Ty, true);
+  }
+  return CGM.CreateRuntimeFunction(FTy, Personality.PersonalityFn,
                                    llvm::AttributeList(), /*Local=*/true);
 }
 

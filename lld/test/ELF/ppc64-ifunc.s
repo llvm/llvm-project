@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
-# RUN: ld.lld -z nosort-thunks %t.o -o %t
+# RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
@@ -9,7 +9,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 ## IRELATIVE relocs relocating NOBITS .plt do not cause --check-dynamic-relocations errors.
-# RUN: ld.lld -z nosort-thunks %t.o -o %t --apply-dynamic-relocs --check-dynamic-relocations
+# RUN: ld.lld %t.o -o %t --apply-dynamic-relocs --check-dynamic-relocations
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SECTIONS %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
@@ -28,28 +28,28 @@
 # CHECK: <_start>:
 # CHECK-NEXT:                 addis 2, 12, 2
 # CHECK-NEXT:                 addi 2, 2, -32636
-# CHECK-NEXT: 1001021c:       bl 0x10010240
+# CHECK-NEXT: 1001021c:       bl 0x10010254
 # CHECK-NEXT:                 ld 2, 24(1)
-# CHECK-NEXT: 10010224:       bl 0x10010254
+# CHECK-NEXT: 10010224:       bl 0x10010240
 # CHECK-NEXT:                 ld 2, 24(1)
 # CHECK-NEXT:                 addis 3, 2, -2
 # CHECK-NEXT:                 addi 3, 3, 32720
 # CHECK-NEXT:                 addis 3, 2, -2
 # CHECK-NEXT:                 addi 3, 3, 32752
 
-# .plt[1] - .TOC. = 0x100302a0+8 - 0x10028298 = (1<<16) - 32752
-# CHECK: <__plt_ifunc2>:
-# CHECK-NEXT:     std 2, 24(1)
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32752(12)
-# CHECK-NEXT:     mtctr 12
-# CHECK-NEXT:     bctr
-
 # .plt[2] - .TOC. = 0x100302a0+16 - 0x10028298 = (1<<16) - 32744
 # CHECK: <__plt_ifunc3>:
 # CHECK-NEXT:     std 2, 24(1)
 # CHECK-NEXT:     addis 12, 2, 1
 # CHECK-NEXT:     ld 12, -32744(12)
+# CHECK-NEXT:     mtctr 12
+# CHECK-NEXT:     bctr
+
+# .plt[1] - .TOC. = 0x100302a0+8 - 0x10028298 = (1<<16) - 32752
+# CHECK: <__plt_ifunc2>:
+# CHECK-NEXT:     std 2, 24(1)
+# CHECK-NEXT:     addis 12, 2, 1
+# CHECK-NEXT:     ld 12, -32752(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 # CHECK-EMPTY:

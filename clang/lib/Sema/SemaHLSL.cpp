@@ -2987,19 +2987,14 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
          "expected DeclRefExpr or MemberExpr");
 
-  // has a definition -> add to stack to be scanned
-  const FunctionDecl *FDWithBody = nullptr;
-  if (FD->hasBody(FDWithBody)) {
-    if (!WasAlreadyScannedInCurrentStage(FDWithBody))
-      DeclsToScan.push_back(FDWithBody);
-    return;
-  }
-
-  // no body -> diagnose availability
-  const AvailabilityAttr *AA = FindAvailabilityAttr(FD);
-  if (AA)
+  if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
     CheckDeclAvailability(
         FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+
+  // has a definition -> add to stack to be scanned
+  const FunctionDecl *FDWithBody = nullptr;
+  if (FD->hasBody(FDWithBody) && !WasAlreadyScannedInCurrentStage(FDWithBody))
+    DeclsToScan.push_back(FDWithBody);
 }
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(

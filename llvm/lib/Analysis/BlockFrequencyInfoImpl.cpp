@@ -824,7 +824,7 @@ void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {
   LLVM_DEBUG(dbgs() << "adjust-loop-header-mass:\n");
   for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
     auto &HeaderNode = Loop.Nodes[H];
-    auto &BackedgeMass = Loop.BackedgeMass[Loop.getHeaderIndex(HeaderNode)];
+    auto &BackedgeMass = Loop.BackedgeMass[H];
     LLVM_DEBUG(dbgs() << " - Add back edge mass for node "
                       << getBlockName(HeaderNode) << ": " << BackedgeMass
                       << "\n");
