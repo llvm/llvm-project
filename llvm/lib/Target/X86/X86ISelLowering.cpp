@@ -757,7 +757,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG , MVT::f32, Custom);
 
     if (UseX87)
-      setOperationAction(ISD::UNDEF, MVT::f64, Expand);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f64, Expand);
 
     // Use ANDPS and ORPS to simulate FCOPYSIGN.
     if (UseX87)
@@ -782,7 +782,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::f32, &X86::RFP32RegClass);
 
     for (auto VT : { MVT::f32, MVT::f64 }) {
-      setOperationAction(ISD::UNDEF,     VT, Expand);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Expand);
       setOperationAction(ISD::FCOPYSIGN, VT, Expand);
 
       // Always expand sin/cos functions even though x87 has an instruction.
@@ -837,7 +837,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // f80 always uses X87.
   if (UseX87) {
     addRegisterClass(MVT::f80, &X86::RFP80RegClass);
-    setOperationAction(ISD::UNDEF,     MVT::f80, Expand);
+    setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::f80, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::f80, Expand);
     {
       APFloat TmpFlt = APFloat::getZero(APFloat::x87DoubleExtended());
@@ -3997,7 +3997,7 @@ static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if the value of any element in Mask is the zero sentinel value.
 static bool isAnyZero(ArrayRef<int> Mask) {
-  return llvm::any_of(Mask, equal_to(SM_SentinelZero));
+  return llvm::is_contained(Mask, SM_SentinelZero);
 }
 
 /// Return true if Val is undef or if its value falls within the

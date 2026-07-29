@@ -1847,6 +1847,18 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
         !symbol.has<AssocEntityDetails>() && !symbol.has<MiscDetails>()) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (&symbol != found) {
+          // Don't "adjust" a name that resolution already bound to a construct
+          // entity declared within this region: a DO CONCURRENT or FORALL
+          // index-name (Forall scope) or an entity declared in a nested BLOCK
+          // construct (BlockConstruct scope). currScope() here does not descend
+          // into those construct scopes, so FindSymbol instead resolves to a
+          // like-named variable in an enclosing scope. Rebinding to it would
+          // make the construct entity alias the enclosing variable and, e.g.,
+          // trip the DO-variable redefinition check when that enclosing
+          // variable is an active DO index.
+          if (DoesScopeContain(&currScope(), symbol)) {
+            return;
+          }
           // adjust the symbol within the region
           // TODO: why didn't name resolution set the right name originally?
           name.symbol = found;
@@ -2499,22 +2511,20 @@ void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   // The DEFAULT clause may also be used on METADIRECTIVE. In that case
   // there is nothing to do.
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
-  if (auto *dsa{std::get_if<DataSharingAttribute>(&x.u)}) {
-    if (!dirContext_.empty()) {
-      switch (*dsa) {
-      case DataSharingAttribute::Private:
-        SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
-        break;
-      case DataSharingAttribute::Firstprivate:
-        SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
-        break;
-      case DataSharingAttribute::Shared:
-        SetContextDefaultDSA(Symbol::Flag::OmpShared);
-        break;
-      case DataSharingAttribute::None:
-        SetContextDefaultDSA(Symbol::Flag::OmpNone);
-        break;
-      }
+  if (!dirContext_.empty()) {
+    switch (x.v) {
+    case DataSharingAttribute::Private:
+      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+      break;
+    case DataSharingAttribute::Firstprivate:
+      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+      break;
+    case DataSharingAttribute::Shared:
+      SetContextDefaultDSA(Symbol::Flag::OmpShared);
+      break;
+    case DataSharingAttribute::None:
+      SetContextDefaultDSA(Symbol::Flag::OmpNone);
+      break;
     }
   }
 }

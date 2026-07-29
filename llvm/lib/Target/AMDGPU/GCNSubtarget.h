@@ -391,11 +391,6 @@ public:
     return HasGFX11Insts && !hasGFX1250Insts();
   }
 
-  // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX1250Insts();
-  }
-
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
   }
@@ -906,10 +901,6 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
-
-  bool supportsWave32() const { return getGeneration() >= GFX10; }
-
-  bool supportsWave64() const { return !hasGFX1250Insts() || HasGFX13Insts; }
 
   bool isWave32() const { return getWavefrontSize() == 32; }
 

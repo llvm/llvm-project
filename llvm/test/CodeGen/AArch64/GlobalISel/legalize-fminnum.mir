@@ -86,20 +86,20 @@ body:             |
     ; CHECK-LABEL: name: s128_libcall
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s128) = COPY $q0
-    ; CHECK-NEXT: %b:_(s128) = COPY $q1
+    ; CHECK-NEXT: %a:_(f128) = COPY $q0
+    ; CHECK-NEXT: %b:_(f128) = COPY $q1
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: $q0 = COPY %a(s128)
-    ; CHECK-NEXT: $q1 = COPY %b(s128)
+    ; CHECK-NEXT: $q0 = COPY %a(f128)
+    ; CHECK-NEXT: $q1 = COPY %b(f128)
     ; CHECK-NEXT: BL &fminl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: %minnum:_(s128) = COPY $q0
-    ; CHECK-NEXT: $q0 = COPY %minnum(s128)
+    ; CHECK-NEXT: %minnum:_(f128) = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY %minnum(f128)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %a:_(s128) = COPY $q0
-    %b:_(s128) = COPY $q1
-    %minnum:_(s128) = G_FMINNUM %a, %b
-    $q0 = COPY %minnum(s128)
+    %a:_(f128) = COPY $q0
+    %b:_(f128) = COPY $q1
+    %minnum:_(f128) = G_FMINNUM %a, %b
+    $q0 = COPY %minnum(f128)
     RET_ReallyLR implicit $q0
 
 ...

@@ -1238,9 +1238,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(cast<CXXMethodDecl>(FD)),
-        /*IssuingExpr=*/nullptr);
+    const Loan *L =
+        FactMgr.getLoanMgr().createPlaceholderLoan(cast<CXXMethodDecl>(FD));
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
@@ -1248,8 +1247,7 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     OriginList *List = getOriginsList(*PVD);
     if (!List)
       continue;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(PVD), /*IssuingExpr=*/nullptr);
+    const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(PVD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

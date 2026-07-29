@@ -1016,8 +1016,9 @@ void LayoutInfoPropagation::visitConvertLayoutOp(
   // TODO: fix if one of the layouts is a slice layout
   auto targetLayoutAttr =
       dyn_cast<xegpu::LayoutAttr>(convert.getTargetLayoutAttr());
+  // input_layout is optional, so it may be null.
   auto inputLayoutAttr =
-      dyn_cast<xegpu::LayoutAttr>(convert.getInputLayoutAttr());
+      dyn_cast_if_present<xegpu::LayoutAttr>(convert.getInputLayoutAttr());
 
   // The result's propagated layout is authoritative for the converted value.
   // Fill the lane_layout / lane_data / order parameters the target_layout is
@@ -1053,7 +1054,7 @@ void LayoutInfoPropagation::visitConvertLayoutOp(
     }
   }
 
-  xegpu::DistributeLayoutAttr anchorLayout = convert.getInputLayoutAttr();
+  xegpu::DistributeLayoutAttr anchorLayout = convert.getEffectiveInputLayout();
   LayoutInfo convertLayout = makeLayoutInfo(anchorLayout);
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(convertLayout));
@@ -1670,6 +1671,10 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   if (auto producerConvert =
           vectorValue.getDefiningOp<xegpu::ConvertLayoutOp>();
       producerConvert && vectorValue.hasOneUse()) {
+    // Pin the effective input before retargeting target, else an omitted
+    // input_layout would follow target and make the conversion a no-op.
+    producerConvert.setInputLayoutAttr(
+        producerConvert.getEffectiveInputLayout());
     producerConvert.setTargetLayoutAttr(consumerLayout);
     return success();
   }

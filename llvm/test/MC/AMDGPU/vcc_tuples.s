@@ -14,7 +14,7 @@
 // RUN: not llvm-mc -triple=amdgpu11.00 -show-encoding %s -filetype=null 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgpu11.00 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu11.00 -disassemble -show-encoding | FileCheck --check-prefixes=GFX11 %s
 // RUN: llvm-mc -triple=amdgpu12.00 -show-encoding %s | FileCheck -check-prefixes=GFX12 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1250 -disassemble -show-encoding | FileCheck --check-prefixes=GFX12 %s
+// RUN: llvm-mc -triple=amdgpu12.00 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -disassemble -show-encoding | FileCheck --check-prefixes=GFX12 %s
 // RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | FileCheck -check-prefixes=GFX12 %s
 // RUN: llvm-mc -triple=amdgpu12.50 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -disassemble -show-encoding | FileCheck --check-prefixes=GFX12 %s
 

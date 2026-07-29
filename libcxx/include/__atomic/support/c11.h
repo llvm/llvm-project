@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ATOMIC_SUPPORT_C11_H
 #define _LIBCPP___ATOMIC_SUPPORT_C11_H
 
+#include <__atomic/clear_padding.h>
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -36,7 +37,10 @@ struct __cxx_atomic_base_impl {
   __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
   }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {}
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
+      : __a_value(std::__clear_padding_if_needed(__value)) {}
+
   _Atomic(_Tp) __a_value;
 };
 
@@ -52,21 +56,25 @@ _LIBCPP_HIDE_FROM_ABI inline void __cxx_atomic_signal_fence(memory_order __order
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val) _NOEXCEPT {
+  std::__clear_padding_if_needed(__val);
   __c11_atomic_init(std::addressof(__a->__a_value), __val);
 }
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val) _NOEXCEPT {
+  std::__clear_padding_if_needed(__val);
   __c11_atomic_init(std::addressof(__a->__a_value), __val);
 }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_store(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  std::__clear_padding_if_needed(__val);
   __c11_atomic_store(std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
 }
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_store(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  std::__clear_padding_if_needed(__val);
   __c11_atomic_store(std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
 }
 
@@ -102,12 +110,14 @@ __cxx_atomic_load_inplace(__cxx_atomic_base_impl<_Tp> const* __a, _Tp* __dst, me
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __value, memory_order __order) _NOEXCEPT {
+  std::__clear_padding_if_needed(__value);
   return __c11_atomic_exchange(
       std::addressof(__a->__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
 }
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_order __order) _NOEXCEPT {
+  std::__clear_padding_if_needed(__value);
   return __c11_atomic_exchange(
       std::addressof(__a->__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
 }
@@ -126,23 +136,34 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     _Tp __value,
     memory_order __success,
     memory_order __failure) _NOEXCEPT {
-  return __c11_atomic_compare_exchange_strong(
-      std::addressof(__a->__a_value),
+  return std::__atomic_cas_with_clear_padding(
       __expected,
       __value,
-      static_cast<__memory_order_underlying_t>(__success),
-      static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+      // Use always_inline since Clang fails to inline the lambda, even when the memory order is a constant
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
+        return __c11_atomic_compare_exchange_strong(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            __value_maybe_padding_cleared,
+            static_cast<__memory_order_underlying_t>(__success),
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
+      });
 }
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
     _NOEXCEPT {
-  return __c11_atomic_compare_exchange_strong(
-      std::addressof(__a->__a_value),
+  return std::__atomic_cas_with_clear_padding(
       __expected,
       __value,
-      static_cast<__memory_order_underlying_t>(__success),
-      static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
+        return __c11_atomic_compare_exchange_strong(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            __value_maybe_padding_cleared,
+            static_cast<__memory_order_underlying_t>(__success),
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
+      });
 }
 
 template <class _Tp>
@@ -152,23 +173,34 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     _Tp __value,
     memory_order __success,
     memory_order __failure) _NOEXCEPT {
-  return __c11_atomic_compare_exchange_weak(
-      std::addressof(__a->__a_value),
+  return std::__atomic_cas_with_clear_padding(
       __expected,
       __value,
-      static_cast<__memory_order_underlying_t>(__success),
-      static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
+        return __c11_atomic_compare_exchange_weak(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            __value_maybe_padding_cleared,
+            static_cast<__memory_order_underlying_t>(__success),
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
+      });
 }
+
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
     _NOEXCEPT {
-  return __c11_atomic_compare_exchange_weak(
-      std::addressof(__a->__a_value),
+  return std::__atomic_cas_with_clear_padding(
       __expected,
       __value,
-      static_cast<__memory_order_underlying_t>(__success),
-      static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
+      [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) _LIBCPP_ALWAYS_INLINE {
+        return __c11_atomic_compare_exchange_weak(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            __value_maybe_padding_cleared,
+            static_cast<__memory_order_underlying_t>(__success),
+            static_cast<__memory_order_underlying_t>(std::__to_failure_order(__failure)));
+      });
 }
 
 template <class _Tp>

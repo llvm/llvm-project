@@ -1627,7 +1627,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // LoopInfo should not be valid, confirm that.
   if (UnrollVerifyLoopInfo)
-    LI->verify(*DT);
+    LI->verify();
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
@@ -1729,7 +1729,7 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
       RecurKind::FMaximumNum, RecurKind::FMulAdd};
   // Skip unsupported reductions, including sub, any-of and find-last.
   // TODO: Handle sub, any-of and find-last reductions.
-  if (!any_of(ValidRKs, equal_to(RK)))
+  if (!is_contained(ValidRKs, RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())

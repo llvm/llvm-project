@@ -160,16 +160,17 @@ offloading::getOffloadEntryArray(Module &M) {
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
     DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
-    appendToCompilerUsed(M, DummyEntry);
+    appendToUsed(M, DummyEntry);
   } else if (Triple.isOSBinFormatMachO()) {
     // Mach-O needs a dummy variable in the section (like ELF) to ensure the
-    // linker provides the section boundary symbols.
+    // linker provides the section boundary symbols. Mark it used so the
+    // section survives dead-stripping.
     auto *DummyEntry = new GlobalVariable(
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
     DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
-    appendToCompilerUsed(M, DummyEntry);
+    appendToUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a
     // single section. The order of entries in this section will be sorted

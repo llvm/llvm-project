@@ -312,6 +312,32 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   ];
 }
 
+def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
+  let summary = "Place array allocations on the stack or the heap by policy.";
+  let description = [{
+    Unified array allocation placement. Converts fir.alloca to fir.allocmem and
+    fir.allocmem to fir.alloca based on tunable byte-size thresholds, a
+    per-function stack budget, and whether the allocation is a user variable or
+    a compiler temporary. Heap-to-stack conversions are only performed where the
+    allocation is provably freed on all paths through the function.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::arith::ArithDialect"
+  ];
+  let options = [
+    Option<"stackArrays", "stack-arrays", "bool", /*default=*/"false",
+           "Place all array allocations on the stack (-fstack-arrays); "
+           "otherwise use the size/kind-based placement policy.">,
+    Option<"smallArrayThresholdBytes", "small-array-threshold", "std::size_t",
+           /*default=*/"64",
+           "Constant-size arrays up to this many bytes are considered small.">,
+    Option<"totalStackLimitBytes", "total-stack-limit", "std::size_t",
+           /*default=*/"4194304",
+           "Per-function budget (bytes) for small arrays placed on the stack.">
+  ];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because it inserts global constants
 def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt", "mlir::ModuleOp"> {
   let summary = "Convert constant function arguments to global constants.";
@@ -556,9 +582,12 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
     Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
            "Treat host module globals as unified memory (-gpu=mem:unified): "
            "register every plain host module global that is mirrored in the "
-           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
-           "time and HMM/ATS handles migration.">
+           "time and HMM/ATS handles migration.">,
+    Option<"priority", "priority", "int32_t", /*default=*/"0",
+           "Priority for the CUDA Fortran global constructor in "
+           "llvm.mlir.global_ctors.">
   ];
 }
 
