@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -468,6 +469,12 @@ static cl::opt<int> ClDebugMin("asan-debug-min", cl::desc("Debug min inst"),
 
 static cl::opt<int> ClDebugMax("asan-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
+
+static cl::opt<std::string> ClGlobalsMetadataSection(
+    "asan-globals-metadata-section",
+    cl::desc("Emit global variable descriptions in a named section for "
+             "baremetal/linker-script targets"),
+    cl::init(""));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -1016,6 +1023,9 @@ private:
                             ArrayRef<GlobalVariable *> ExtendedGlobals,
                             ArrayRef<Constant *> MetadataInitializers,
                             const std::string &UniqueModuleId);
+  void InstrumentGlobalsMetadataSection(
+      IRBuilder<> &IRB, ArrayRef<GlobalVariable *> ExtendedGlobals,
+      ArrayRef<Constant *> MetadataInitializers, StringRef SectionName);
   void InstrumentGlobalsMachO(IRBuilder<> &IRB,
                               ArrayRef<GlobalVariable *> ExtendedGlobals,
                               ArrayRef<Constant *> MetadataInitializers);
@@ -2535,6 +2545,26 @@ void ModuleAddressSanitizer::instrumentGlobalsELF(
   }
 }
 
+void ModuleAddressSanitizer::InstrumentGlobalsMetadataSection(
+    IRBuilder<> &IRB, ArrayRef<GlobalVariable *> ExtendedGlobals,
+    ArrayRef<Constant *> MetadataInitializers, StringRef SectionName) {
+  auto MetadataGlobals = llvm::to_vector_of<GlobalValue *>(llvm::map_range(
+      llvm::zip_equal(ExtendedGlobals, MetadataInitializers), [&](auto &&Pair) {
+        auto [G, Initializer] = Pair;
+        GlobalVariable *Metadata =
+            CreateMetadataGlobal(Initializer, G->getName());
+        MDNode *MD = MDNode::get(M.getContext(), ValueAsMetadata::get(G));
+        Metadata->setMetadata(LLVMContext::MD_associated, MD);
+        Metadata->setSection(SectionName);
+        return Metadata;
+      }));
+
+  // Update llvm.compiler.used, adding the new metadata globals. This is
+  // needed so that during LTO these variables stay alive.
+  if (!MetadataGlobals.empty())
+    appendToCompilerUsed(M, MetadataGlobals);
+}
+
 void ModuleAddressSanitizer::InstrumentGlobalsMachO(
     IRBuilder<> &IRB, ArrayRef<GlobalVariable *> ExtendedGlobals,
     ArrayRef<Constant *> MetadataInitializers) {
@@ -2781,7 +2811,14 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
   }
   appendToCompilerUsed(M, ArrayRef<GlobalValue *>(GlobalsToAddToUsedList));
 
-  if (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) {
+  std::string ELFUniqueModuleId =
+      (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) ? getUniqueModuleId(&M)
+                                                        : "";
+
+  if (!ClGlobalsMetadataSection.empty()) {
+    InstrumentGlobalsMetadataSection(IRB, NewGlobals, Initializers,
+                                     ClGlobalsMetadataSection);
+  } else if (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) {
     // Use COMDAT and register globals even if n == 0 to ensure that (a) the
     // linkage unit will only have one module constructor, and (b) the register
     // function will be called. The module destructor is not created when n ==
