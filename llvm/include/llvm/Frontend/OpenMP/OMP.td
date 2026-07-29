@@ -819,6 +819,7 @@ def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let isPure = true;
 }
 def OMP_DeclareSimd : Directive<[Spelling<"declare simd", 1, 52>,
                                  Spelling<"declare_simd", 60>]> {
@@ -836,6 +837,7 @@ def OMP_DeclareSimd : Directive<[Spelling<"declare simd", 1, 52>,
   ];
   let association = AS_Declaration;
   let category = CA_Declarative;
+  let isPure = true;
 }
 def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
                                    Spelling<"declare_target", 60>]> {
@@ -851,6 +853,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let isPure = true;
 }
 def OMP_DeclareVariant : Directive<[Spelling<"declare variant", 1, 52>,
                                     Spelling<"declare_variant", 60>]> {
@@ -864,6 +867,7 @@ def OMP_DeclareVariant : Directive<[Spelling<"declare variant", 1, 52>,
   let association = AS_Declaration;
   let category = CA_Declarative;
   let languages = [L_C];
+  let isPure = true;
 }
 def OMP_Depobj : Directive<[Spelling<"depobj">]> {
   let allowedClauses = [
