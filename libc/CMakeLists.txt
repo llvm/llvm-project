@@ -90,6 +90,8 @@ endif()
 
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
+set(LIBC_HERMETIC_TEST_LINK_LIBRARIES_DEFAULT "" CACHE STRING
+    "Common link libraries for all hermetic tests.")
 
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
@@ -152,6 +154,11 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
+option(LLVM_LIBC_INCLUDE_STARTUP "Build LLVM libc startup objects" ON)
+option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
+       "Link hermetic tests against LLVM libc's own startup object"
+       ${LLVM_LIBC_INCLUDE_STARTUP})
+option(LLVM_LIBC_ENABLE_MINOR_VARIANT "Build LLVM libc as a minor variant overlay" OFF)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
@@ -429,7 +436,7 @@ add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 
-if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_INCLUDE_STARTUP AND NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
   # The startup system can potentially depend on the library components so add
   # it after the library implementation directories.
   add_subdirectory(startup)

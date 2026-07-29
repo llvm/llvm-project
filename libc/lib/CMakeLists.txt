@@ -1,11 +1,17 @@
 set(libc_archive_targets "")
 set(libc_archive_names "")
 set(libc_archive_entrypoint_lists "")
+set(LLVM_LIBC_SUBARCHIVE_NAME "" CACHE STRING
+    "Optional archive name to use for the libc archive output.")
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND libc_archive_names c m mvec)
   list(APPEND libc_archive_targets libc libm libmvec)
   list(APPEND libc_archive_entrypoint_lists
        TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
+  if(LLVM_LIBC_SUBARCHIVE_NAME)
+    list(REMOVE_AT libc_archive_names 0)
+    list(INSERT libc_archive_names 0 "${LLVM_LIBC_SUBARCHIVE_NAME}")
+  endif()
 else()
   list(APPEND libc_archive_names llvmlibc)
   list(APPEND libc_archive_targets libc)
