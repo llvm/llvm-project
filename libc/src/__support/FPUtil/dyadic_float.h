@@ -472,10 +472,9 @@ template <size_t Bits> struct DyadicFloat {
       // exponents coming in to this function _shouldn't_ be that large). The
       // result should always end up as a positive size_t.
       size_t exp = -static_cast<size_t>(exponent);
-      size_t limit = static_cast<size_t>(cpp::numeric_limits<MantissaType>::digits);
+      size_t limit =
+          static_cast<size_t>(cpp::numeric_limits<MantissaType>::digits);
       size_t shift = exp < limit ? exp : limit;
-      new_mant >>= shift;
-
       new_mant >>= shift;
     }
 
