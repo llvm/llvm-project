@@ -11,6 +11,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Section.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -77,6 +78,20 @@ using namespace lldb;
 using namespace lldb_private;
 
 static std::atomic<user_id_t> g_value_obj_uid{0};
+
+// Clamp a read of an immutable-after-load section to the end of that section,
+// so it doesn't spill into neighbouring bytes that must be read live.
+static uint64_t AdjustPointeeRead(const Address &resolved_addr,
+                                  uint64_t requested_bytes) {
+  SectionSP section_sp = resolved_addr.GetSection();
+  if (!section_sp || !section_sp->IsImmutableAfterLoad())
+    return requested_bytes;
+  addr_t section_size = section_sp->GetByteSize();
+  addr_t off_in_section = resolved_addr.GetOffset();
+  if (off_in_section >= section_size)
+    return requested_bytes;
+  return std::min<uint64_t>(requested_bytes, section_size - off_in_section);
+}
 
 // FIXME: this will return true for vector types whose elements
 // are floats. Audit all usages of this function and call
@@ -746,10 +761,14 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         ExecutionContext exe_ctx(GetExecutionContextRef());
         Target *target = exe_ctx.GetTargetPtr();
         if (target) {
-          heap_buf_ptr->SetByteSize(bytes);
+          SectionSP section_sp = so_addr.GetSection();
+          bool force_live = !section_sp || !section_sp->IsImmutableAfterLoad();
+          uint64_t read_bytes = AdjustPointeeRead(so_addr, bytes);
+          heap_buf_ptr->SetByteSize(read_bytes);
           size_t bytes_read = target->ReadMemory(
-              so_addr, heap_buf_ptr->GetBytes(), bytes, error, true);
+              so_addr, heap_buf_ptr->GetBytes(), read_bytes, error, force_live);
           if (error.Success()) {
+            heap_buf_ptr->SetByteSize(bytes_read);
             data.SetData(data_sp);
             return bytes_read;
           }
@@ -759,13 +778,17 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
     case eAddressTypeLoad: {
       ExecutionContext exe_ctx(GetExecutionContextRef());
       if (Target *target = exe_ctx.GetTargetPtr()) {
-        heap_buf_ptr->SetByteSize(bytes);
         Address target_addr;
         target_addr.SetLoadAddress(addr + offset, target);
+        SectionSP section_sp = target_addr.GetSection();
+        bool force_live = !section_sp || !section_sp->IsImmutableAfterLoad();
+        uint64_t read_bytes = AdjustPointeeRead(target_addr, bytes);
+        heap_buf_ptr->SetByteSize(read_bytes);
         size_t bytes_read =
-            target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
-                               error, /*force_live_memory=*/true);
+            target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(),
+                               read_bytes, error, force_live);
         if (error.Success() || bytes_read > 0) {
+          heap_buf_ptr->SetByteSize(bytes_read);
           data.SetData(data_sp);
           return bytes_read;
         }

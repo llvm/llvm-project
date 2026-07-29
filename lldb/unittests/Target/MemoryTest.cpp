@@ -922,3 +922,198 @@ LoadCommands:
             12u);
   EXPECT_TRUE(short_error.Fail());
 }
+
+namespace {
+/// A target+process plus a module with one immutable and one writable section,
+/// both loaded at their file addresses and holding identical bytes
+/// (kImmutableCString), so a read reveals which of the two it came from.
+struct ImmutableAndWritableModule {
+  DebuggerSP debugger_sp;
+  TargetSP target_sp;
+  ProcessSP process_sp;
+  SectionSP immutable_sp;
+  SectionSP writable_sp;
+};
+} // namespace
+
+static const char kImmutableCString[] = "hello from func_e";
+
+// One immutable (__TEXT,__cstring) and one writable (__DATA,__data) section,
+// both holding kImmutableCString.
+static constexpr const char *kMachOImmutableAndWritableYaml = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           2
+  sizeofcmds:      392
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             0x19
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0x100000000
+    vmsize:          0x1000
+    fileoff:         0
+    filesize:        0x1000
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __cstring
+        segname:         __TEXT
+        addr:            0x100000F58
+        size:            18
+        offset:          0xF58
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         68656C6C6F2066726F6D2066756E635F6500
+  - cmd:             0x19
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          0x100001000
+    vmsize:          0x1000
+    fileoff:         0x1000
+    filesize:        0x1000
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100001000
+        size:            18
+        offset:          0x1000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         68656C6C6F2066726F6D2066756E635F6500
+...
+)";
+
+static ImmutableAndWritableModule CreateImmutableAndWritableModule(
+    const ArchSpec &arch = ArchSpec("x86_64-apple-macosx-"),
+    llvm::StringRef yaml = kMachOImmutableAndWritableYaml,
+    const char *immutable_section = "__cstring",
+    const char *writable_section = "__data") {
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  ImmutableAndWritableModule fixture;
+  fixture.debugger_sp = Debugger::CreateInstance();
+  ArchSpec arch_copy = arch;
+  fixture.target_sp = CreateTarget(fixture.debugger_sp, arch_copy);
+  fixture.process_sp = CreateProcess(fixture.target_sp);
+  if (!fixture.debugger_sp || !fixture.target_sp || !fixture.process_sp) {
+    ADD_FAILURE() << "could not create target/process";
+    return fixture;
+  }
+
+  auto expected_file = TestFile::fromYaml(yaml);
+  if (!expected_file) {
+    ADD_FAILURE() << llvm::toString(expected_file.takeError());
+    return fixture;
+  }
+  ModuleSP module_sp = std::make_shared<Module>(expected_file->moduleSpec());
+  fixture.target_sp->GetImages().Append(module_sp, /*notify=*/false);
+
+  SectionList *sections = module_sp->GetSectionList();
+  if (!sections) {
+    ADD_FAILURE() << "no section list";
+    return fixture;
+  }
+  SectionSP immutable_sp =
+      sections->FindSectionByName(ConstString(immutable_section));
+  SectionSP writable_sp =
+      sections->FindSectionByName(ConstString(writable_section));
+  if (!immutable_sp || !writable_sp) {
+    ADD_FAILURE() << "could not find " << immutable_section << " / "
+                  << writable_section;
+    return fixture;
+  }
+
+  // Load at the file addresses so a load address resolves back to the section,
+  // which the file-cache path requires.
+  if (!fixture.target_sp->SetSectionLoadAddress(
+          immutable_sp, immutable_sp->GetFileAddress()) ||
+      !fixture.target_sp->SetSectionLoadAddress(
+          writable_sp, writable_sp->GetFileAddress())) {
+    ADD_FAILURE() << "could not load the test sections";
+    return fixture;
+  }
+
+  fixture.immutable_sp = immutable_sp;
+  fixture.writable_sp = writable_sp;
+  return fixture;
+}
+
+// Target::ReadMemory serves an immutable read-only section from the host object
+// file, a writable one is still read live.
+static void CheckImmutableSectionServedFromFile(const ArchSpec &arch,
+                                                llvm::StringRef yaml,
+                                                const char *immutable_section,
+                                                const char *writable_section) {
+  ImmutableAndWritableModule fixture = CreateImmutableAndWritableModule(
+      arch, yaml, immutable_section, writable_section);
+  ASSERT_TRUE(fixture.immutable_sp) << immutable_section;
+  ASSERT_TRUE(fixture.writable_sp) << writable_section;
+  ASSERT_TRUE(fixture.immutable_sp->IsImmutableAfterLoad());
+  ASSERT_FALSE(fixture.writable_sp->IsImmutableAfterLoad());
+  TargetSP target_sp = fixture.target_sp;
+  SectionSP immutable_sp = fixture.immutable_sp;
+  SectionSP writable_sp = fixture.writable_sp;
+
+  // Live reads succeed and return 'B', so the decision is observable.
+  DummyProcess *process = static_cast<DummyProcess *>(fixture.process_sp.get());
+  process->SetMaxReadSize(4096);
+  process->SetFiller('B');
+
+  const size_t len = sizeof(kImmutableCString); // includes the trailing NUL
+  Status error;
+
+  // Immutable section: must come from the file, not the 'B' filler.
+  {
+    char buf[64] = {};
+    Address addr;
+    ASSERT_TRUE(
+        target_sp->ResolveLoadAddress(immutable_sp->GetFileAddress(), addr));
+    size_t n = target_sp->ReadMemory(addr, buf, len, error,
+                                     /*force_live_memory=*/false);
+    ASSERT_TRUE(error.Success()) << error.AsCString();
+    EXPECT_EQ(n, len);
+    EXPECT_STREQ(buf, kImmutableCString);
+  }
+
+  // Writable section, same bytes on disk: read live, so we see the filler.
+  {
+    char buf[64] = {};
+    Address addr;
+    ASSERT_TRUE(
+        target_sp->ResolveLoadAddress(writable_sp->GetFileAddress(), addr));
+    size_t n = target_sp->ReadMemory(addr, buf, len, error,
+                                     /*force_live_memory=*/false);
+    ASSERT_TRUE(error.Success()) << error.AsCString();
+    EXPECT_EQ(n, len);
+    EXPECT_EQ(buf[0], 'B');
+  }
+}
+
+TEST_F(MemoryTest, TestReadImmutableSectionFromFileCacheMachO) {
+  SubsystemRAII<ObjectFileMachO> subsystems;
+  CheckImmutableSectionServedFromFile(ArchSpec("x86_64-apple-macosx-"),
+                                      kMachOImmutableAndWritableYaml,
+                                      "__cstring", "__data");
+}
