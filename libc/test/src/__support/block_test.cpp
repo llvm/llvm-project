@@ -422,7 +422,9 @@ TEST(LlvmLibcBlockTest, AllocateAlreadyAligned) {
 TEST(LlvmLibcBlockTest, AllocateNeedsAlignment) {
   constexpr size_t kN = 1024;
 
-  array<byte, kN> bytes;
+  // overalign (larger than block alignment) the start address to avoid user
+  // payload falling in super-aligned address
+  alignas(BlockRef::MIN_ALIGN * 4) array<byte, kN> bytes;
   auto result = BlockRef::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockRef block = *result;
@@ -459,7 +461,9 @@ TEST(LlvmLibcBlockTest, AllocateNeedsAlignment) {
 TEST(LlvmLibcBlockTest, PreviousBlockMergedIfNotFirst) {
   constexpr size_t kN = 1024;
 
-  array<byte, kN> bytes;
+  // overalign (larger than block alignment) the start address to avoid user
+  // payload falling in super-aligned address
+  alignas(BlockRef::MIN_ALIGN * 4) array<byte, kN> bytes;
   auto result = BlockRef::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockRef block = *result;
@@ -497,7 +501,9 @@ TEST(LlvmLibcBlockTest, CanRemergeBlockAllocations) {
   // This is the same setup as with the `AllocateNeedsAlignment` test case.
   constexpr size_t kN = 1024;
 
-  array<byte, kN> bytes;
+  // overalign (larger than block alignment) the start address to avoid user
+  // payload falling in super-aligned address
+  alignas(BlockRef::MIN_ALIGN * 4) array<byte, kN> bytes;
   auto result = BlockRef::init(bytes);
   ASSERT_TRUE(result.has_value());
   BlockRef block = *result;
