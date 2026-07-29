@@ -34548,14 +34548,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FMA: {
     if (N->getValueType(0) == MVT::bf16) {
       // AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
-      // soft-promoted-half type, so scalar ops would otherwise be promoted to f32.
-      // Instead widen each operand to a v8bf16 vector, perform the legal packed
-      // operation, and extract the low element afterwards.
+      // soft-promoted-half type, so scalar ops would otherwise be promoted to
+      // f32. Instead widen each operand to a v8bf16 vector, perform the legal
+      // packed operation, and extract the low element afterwards.
       assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
       SmallVector<SDValue, 3> VecOps;
       for (const SDValue &Op : N->ops()) {
         SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
-        SDValue VecF16 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, AsF16);
+        SDValue VecF16 =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, AsF16);
         VecOps.push_back(DAG.getBitcast(MVT::v8bf16, VecF16));
       }
       SDValue Vec =
