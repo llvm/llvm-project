@@ -1179,6 +1179,9 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 class LLVM_ABI_FOR_TEST VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
+  /// True if the MD_prof metadata is estimated, see setProfile.
+  bool EstimatedProfile = false;
+
 public:
   VPIRMetadata() = default;
 
@@ -1212,6 +1215,12 @@ public:
       Metadata.emplace_back(Kind, Node);
   }
 
+  /// Copy the MD_prof metadata of \p From, including whether it is estimated.
+  void copyProfileFrom(const VPIRMetadata &From) {
+    if (MDNode *BW = From.getMetadata(LLVMContext::MD_prof))
+      setProfile(BW, From.EstimatedProfile);
+  }
+
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
@@ -1219,6 +1228,8 @@ public:
   /// Remove metadata of kind \p Kind, if present.
   void eraseMetadata(unsigned Kind) {
     erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
+    if (Kind == LLVMContext::MD_prof)
+      EstimatedProfile = false;
   }
 
   /// Get metadata of kind \p Kind. Returns nullptr if not found.
@@ -1226,6 +1237,18 @@ public:
     auto It =
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
+  }
+
+  /// Returns true if the MD_prof metadata is estimated, see setProfile.
+  bool hasEstimatedProfile() const { return EstimatedProfile; }
+
+  /// Set the MD_prof metadata to \p Node. If \p IsEstimated is true, the
+  /// weights are estimated from static heuristics rather than taken from the
+  /// original IR's profile data; they must only be used for cost modeling and
+  /// are not applied to the generated IR, see applyMetadata.
+  void setProfile(MDNode *Node, bool IsEstimated) {
+    setMetadata(LLVMContext::MD_prof, Node);
+    EstimatedProfile = IsEstimated;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

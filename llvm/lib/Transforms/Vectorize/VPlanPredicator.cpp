@@ -427,6 +427,12 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
   DenseMap<const VPBasicBlock *, BranchProbability> Probabilities =
       vputils::computeBlockProbabilities(Blocks);
+  // A composed probability is only as trustworthy as its least trustworthy
+  // input, so treat all of them as estimated if any of the branches is.
+  bool IsEstimated = any_of(Blocks, [](const VPBasicBlock *VPBB) {
+    auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
+    return Term && Term->hasEstimatedProfile();
+  });
 
   VPPredicator Predicator(Plan);
   for (VPBasicBlock *VPBB : Blocks) {
@@ -448,7 +454,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
       if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
         VPI->addMask(BlockMask);
         if (Weights && VPI->isMasked())
-          VPI->setMetadata(LLVMContext::MD_prof, Weights);
+          VPI->setProfile(Weights, IsEstimated);
       }
     }
   }

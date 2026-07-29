@@ -1031,6 +1031,10 @@ public:
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB);
 
+  /// Returns the BranchProbabilityInfo retained by the BlockFrequencyInfo for
+  /// the function, or nullptr if unavailable.
+  const BranchProbabilityInfo *getBPI() { return getBFI().getBPI(); }
+
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
   bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
@@ -5611,8 +5615,18 @@ void VPCostContext::invalidateWideningDecision(Instruction *I,
                          LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
-uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
-  return CM.getPredBlockCostDivisor(CostKind, BB);
+uint64_t
+VPCostContext::getPredBlockCostDivisor(const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  // The branch weights of the guarding branch-on-mask describe how often the
+  // predicated block is entered, relative to the loop header.
+  BranchProbability Prob = vputils::getRegionEntryProbability(Region);
+  if (Prob.isUnknown() || Prob.isZero())
+    return 1;
+  // Round the reciprocal of Prob to nearest.
+  uint64_t Numerator = Prob.getNumerator();
+  return (BranchProbability::getDenominator() + Numerator / 2) / Numerator;
 }
 
 bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
@@ -6604,9 +6618,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // Create initial base VPlan0, to serve as common starting point for all
   // candidates built later for specific VF ranges.
-  auto VPlan0 = VPlanTransforms::buildVPlan0(OrigLoop, *LI,
-                                             Legal->getWidestInductionType(),
-                                             PSE, LVer ? &*LVer : nullptr);
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(), PSE, CM.getBPI(),
+      LVer ? &*LVer : nullptr);
 
   VPDominatorTree VPDT(*VPlan0);
   if (const LoopAccessInfo *LAI = Legal->getLAI())

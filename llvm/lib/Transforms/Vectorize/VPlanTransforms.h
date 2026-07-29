@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class InductionDescriptor;
 class Instruction;
 class Loop;
@@ -139,9 +140,15 @@ struct VPlanTransforms {
   ///    \   |
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
+  ///
+  /// The branch weights of the loop's conditional branches are recorded on the
+  /// branch recipes created for them. If \p BPI is non-null, branches without
+  /// profile data get estimated weights, see VPIRMetadata::setProfile.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+              PredicatedScalarEvolution &PSE,
+              const BranchProbabilityInfo *BPI = nullptr,
+              LoopVersioning *LVer = nullptr);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and

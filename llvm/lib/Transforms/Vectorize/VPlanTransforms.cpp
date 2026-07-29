@@ -488,9 +488,8 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     BranchProbability Prob1 = vputils::getRegionEntryProbability(Region1);
     BranchProbability Prob2 = vputils::getRegionEntryProbability(Region2);
     if (!Prob1.isUnknown() && !Prob2.isUnknown() && Prob2 < Prob1)
-      Region2->getEntryBranchOnMask()->setMetadata(
-          LLVMContext::MD_prof,
-          Region1->getEntryBranchOnMask()->getMetadata(LLVMContext::MD_prof));
+      Region2->getEntryBranchOnMask()->copyProfileFrom(
+          *Region1->getEntryBranchOnMask());
 
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
@@ -561,10 +560,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->getDebugLoc());
   // Move the predicated recipes's branch weights onto the guarding
   // branch-on-mask.
-  if (MDNode *BW = RecipeWithoutMask->getMetadata(LLVMContext::MD_prof)) {
-    BOMRecipe->setMetadata(LLVMContext::MD_prof, BW);
-    RecipeWithoutMask->eraseMetadata(LLVMContext::MD_prof);
-  }
+  BOMRecipe->copyProfileFrom(*RecipeWithoutMask);
+  RecipeWithoutMask->eraseMetadata(LLVMContext::MD_prof);
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
   auto *Exiting = Plan.createVPBasicBlock(Twine(RegionName) + ".continue");
