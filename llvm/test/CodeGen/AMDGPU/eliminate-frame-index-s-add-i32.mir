@@ -2039,3 +2039,52 @@ body:             |
     S_ENDPGM 0
 ...
 
+---
+name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg_commuted
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+  isEntryFunction: true
+  argumentInfo:
+    privateSegmentWaveByteOffset: { reg: '$sgpr34' }
+body:             |
+  bb.0:
+    ; MUBUFW64-LABEL: name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg_commuted
+    ; MUBUFW64: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr34
+    ; MUBUFW64-NEXT: {{  $}}
+    ; MUBUFW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; MUBUFW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; MUBUFW64-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $sgpr34, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW64-NEXT: renamable $sgpr4 = S_MOV_B32 4, implicit-def $sgpr5
+    ; MUBUFW64-NEXT: S_ENDPGM 0
+    ;
+    ; MUBUFW32-LABEL: name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg_commuted
+    ; MUBUFW32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr34
+    ; MUBUFW32-NEXT: {{  $}}
+    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $sgpr34, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $sgpr4 = S_MOV_B32 4, implicit-def $sgpr5
+    ; MUBUFW32-NEXT: S_ENDPGM 0
+    ;
+    ; FLATSCRW64-LABEL: name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg_commuted
+    ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW64-NEXT: renamable $sgpr4 = S_MOV_B32 4, implicit-def $sgpr5
+    ; FLATSCRW64-NEXT: S_ENDPGM 0
+    ;
+    ; FLATSCRW32-LABEL: name: s_add_i32__kernel__fi_offset0__inline_imm_dead_scc_subreg_commuted
+    ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW32-NEXT: renamable $sgpr4 = S_MOV_B32 4, implicit-def $sgpr5
+    ; FLATSCRW32-NEXT: S_ENDPGM 0
+    renamable $sgpr4 = S_ADD_I32 4, %stack.0, implicit-def dead $scc, implicit-def $sgpr5
+    S_ENDPGM 0
+...
+
