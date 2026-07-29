@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOWERMEMINTRINSICS_H
 #define LLVM_TRANSFORMS_UTILS_LOWERMEMINTRINSICS_H
 
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
@@ -55,6 +56,7 @@ LLVM_ABI void expandMemCpyAsLoop(MemCpyInst *MemCpy,
                                  const TargetTransformInfo &TTI,
                                  ScalarEvolution *SE = nullptr);
 
+LLVM_ABI void emitBoundedMaskedMemcpy(MemTransferInst *MemCpy, unsigned VF);
 /// Expand \p MemMove as a loop. \p MemMove is not deleted. Returns true if the
 /// memmove was lowered.
 LLVM_ABI bool expandMemMoveAsLoop(MemMoveInst *MemMove,
