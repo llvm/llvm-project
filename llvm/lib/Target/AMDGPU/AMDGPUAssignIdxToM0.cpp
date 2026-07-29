@@ -51,14 +51,9 @@ static bool assignIdxToM0(MachineFunction &MF) {
 
       assert(!MI.isBundled());
 
-      // Remove the implicit-def $m0 that instruction selection added (to pin a
-      // divergent access inside its waterfall loop); M0 is written for real
-      // below.
-      int DefIdx = MI.findRegisterDefOperandIdx(AMDGPU::M0, /*TRI=*/nullptr);
-      assert(DefIdx >= 0);
-      MI.removeOperand(DefIdx);
-
-      // Add a copy from the index register to M0 and rewrite MI to read M0.
+      // Add a copy from the index register to M0 and rewrite MI to read M0. The
+      // pseudo goes on declaring that it writes M0: it stands for the whole
+      // sequence, and this copy is the write it describes.
       // No kill flag is set on the M0 use: kill flags are deprecated and are a
       // no-op on the reserved M0 register.
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::M0)

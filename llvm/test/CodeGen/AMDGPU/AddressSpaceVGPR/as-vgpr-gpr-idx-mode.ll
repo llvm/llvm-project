@@ -60,40 +60,40 @@ define i32 @load_i32_divergent(ptr addrspace(13) %p) {
 ; GFX9-SDAG-LABEL: load_i32_divergent:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 2, v0
+; GFX9-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-SDAG-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
-; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX9-SDAG-NEXT:    s_nop 1
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v1
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v0
 ; GFX9-SDAG-NEXT:    s_and_saveexec_b64 vcc, vcc
-; GFX9-SDAG-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v0
-; GFX9-SDAG-NEXT:    s_set_gpr_idx_off
-; GFX9-SDAG-NEXT:    ; implicit-def: $vgpr1
+; GFX9-SDAG-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-SDAG-NEXT:    s_xor_b64 exec, exec, vcc
 ; GFX9-SDAG-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX9-SDAG-NEXT:  ; %bb.2:
 ; GFX9-SDAG-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-SDAG-NEXT:    s_set_gpr_idx_off
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: load_i32_divergent:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 2, v0
+; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX9-GISEL-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
-; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-GISEL-NEXT:    s_nop 1
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s4, gpr_idx(SRC0)
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v0
-; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
-; GFX9-GISEL-NEXT:    ; implicit-def: $vgpr1
+; GFX9-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-GISEL-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX9-GISEL-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX9-GISEL-NEXT:  ; %bb.2:
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_on s4, gpr_idx(SRC0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, v0
+; GFX9-GISEL-NEXT:    s_set_gpr_idx_off
 ; GFX9-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = load i32, ptr addrspace(13) %p, align 4
