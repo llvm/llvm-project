@@ -21,7 +21,7 @@ define void @stride1_may_not_return(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<%loop>
+; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
