@@ -1,10 +1,12 @@
-## Test that llvm-nm --print-armap prints both the standard archive map and
-## the z/OS-specific attribute map for GOFF archives.
+## Test that llvm-nm --print-armap prints the archive map for GOFF archives,
+## including inline z/OS attribute flags on each symbol line.
 ##
-## All 8 combinations of the 3 attribute bits are exercised in this test:
+## All 8 combinations of the 3 known attribute bits are exercised, plus two
+## symbols with unknown bits set to cover the '?' flag:
 ##   bit 2 (0x4): 64-bit  (AMODE == ESD_AMODE_64)
 ##   bit 1 (0x2): XPLink  (LinkageType == ESD_LT_XPLink)
 ##   bit 0 (0x1): WSA     (parent ED namespace == ESD_NS_Parts)
+##   bit 3+      : unknown, printed as '?'
 ##
 ## The archive is generated directly using generate_zos_archive.py.
 
@@ -20,7 +22,9 @@
 # RUN:   --symtab "sym100:0:4"           \
 # RUN:   --symtab "sym101:0:5"           \
 # RUN:   --symtab "sym110:0:6"           \
-# RUN:   --symtab "sym111:0:7"
+# RUN:   --symtab "sym111:0:7"           \
+# RUN:   --symtab "symunk:0:8"           \
+# RUN:   --symtab "symall:0:15"
 
 # RUN: llvm-nm --print-armap %t.dir/test.a | FileCheck %s
 
@@ -34,3 +38,5 @@
 # CHECK-NEXT: sym101 in test.o (flags: 0x00000005 [64-bit + WSA])
 # CHECK-NEXT: sym110 in test.o (flags: 0x00000006 [64-bit + XPLink])
 # CHECK-NEXT: sym111 in test.o (flags: 0x00000007 [64-bit + XPLink + WSA])
+# CHECK-NEXT: symunk in test.o (flags: 0x00000008 [?])
+# CHECK-NEXT: symall in test.o (flags: 0x0000000f [64-bit + XPLink + WSA + ?])
