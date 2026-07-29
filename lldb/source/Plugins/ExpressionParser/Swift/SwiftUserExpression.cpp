@@ -237,7 +237,7 @@ bool SwiftUserExpression::ScanContext(DiagnosticManager &diagnostic_manager,
   innermost_block->AppendVariables(/*can_create*/
                                    true,
                                    /*get_parent_variables*/ true,
-                                   /*stop_if_block_is_inlined_function*/ false,
+                                   /*stop_if_block_is_inlined_function*/ true,
                                    /*filter*/
                                    [&](Variable *var) {
                                      if (!variable_list.Empty())
