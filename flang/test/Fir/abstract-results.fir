@@ -133,6 +133,51 @@ func.func private @arrayfunc_callee_declare(%n : index) -> !fir.array<?xf32> {
   // FUNC-BOX: return
 }
 
+// Test a callee whose result local storage was promoted to the heap (a
+// fir.allocmem with a matching fir.freemem, e.g. by the allocation placement
+// pass). The promoted storage and its deallocation must be removed, and the
+// caller-owned result buffer argument must never be freed.
+
+func.func private @_QPbar(!fir.ref<i32>)
+
+// FUNC-REF-LABEL:  func @arrayfunc_callee_heap(
+// FUNC-REF-SAME:   %[[buffer:.*]]: !fir.ref<!fir.array<?xf32>>, %[[n:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+// FUNC-BOX-LABEL:  func @arrayfunc_callee_heap(
+// FUNC-BOX-SAME:   %[[box:.*]]: !fir.box<!fir.array<?xf32>>, %[[n:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+func.func @arrayfunc_callee_heap(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) -> !fir.array<?xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.load %1 : !fir.ref<i32>
+  %3 = fir.convert %2 : (i32) -> index
+  %4 = arith.maxsi %3, %c0 : index
+  %5 = fir.allocmem !fir.array<?xf32>, %4 {bindc_name = "test", uniq_name = "_QFtestEtest"}
+  %6 = fir.convert %5 : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+  %7 = fir.shape %4 : (index) -> !fir.shape<1>
+  %8 = fir.declare %6(%7) {uniq_name = "_QFtestEtest"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+  fir.call @_QPbar(%1) fastmath<contract> : (!fir.ref<i32>) -> ()
+  %9 = fir.load %8 : !fir.ref<!fir.array<?xf32>>
+  fir.freemem %5 : !fir.heap<!fir.array<?xf32>>
+  return %9 : !fir.array<?xf32>
+
+  // The promoted heap storage and its deallocation are removed, and the result
+  // buffer argument is used directly and never freed.
+  // FUNC-REF-NOT: fir.allocmem
+  // FUNC-REF-NOT: fir.freemem
+  // FUNC-REF: fir.declare %[[buffer]](%{{.*}}) {uniq_name = "_QFtestEtest"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+  // FUNC-REF: fir.call @_QPbar
+  // FUNC-REF-NOT: fir.freemem
+  // FUNC-REF: return
+
+  // FUNC-BOX: %[[buffer:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+  // FUNC-BOX-NOT: fir.allocmem
+  // FUNC-BOX-NOT: fir.freemem
+  // FUNC-BOX: fir.declare %[[buffer]](%{{.*}}) {uniq_name = "_QFtestEtest"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+  // FUNC-BOX: fir.call @_QPbar
+  // FUNC-BOX-NOT: fir.freemem
+  // FUNC-BOX: return
+}
+
 // ------------------------ Test caller rewrite --------------------------------
 
 // FUNC-REF-LABEL: func @call_arrayfunc() {
