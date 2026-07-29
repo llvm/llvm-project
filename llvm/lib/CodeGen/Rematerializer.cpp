@@ -682,12 +682,9 @@ void Rematerializer::extendToNewUsers(RegisterIdx RegIdx,
   const LaneBitmask FullLaneMask = MRI.getMaxLaneMaskForVReg(DefReg);
   const bool ShouldTrackSubReg = MRI.shouldTrackSubRegLiveness(DefReg);
 
-  // When subreg liveness tracking is required but no subrange exists yet (e.g.,
-  // the interval was computed with only a def of the entire register),
-  // initialize subranges from the main range before extending them. This must
-  // happen even if every new user reads the full mask, because other existing
-  // users of the register may read individual subregs and later passes
-  // (VirtRegRewriter) expect subranges to exist.
+  // Seed subranges from the main range when subreg liveness is tracked but no
+  // subrange exists yet. VirtRegRewriter later requires subranges even when a
+  // new user reads the full mask, because other users may read subregs.
   if (!LI.hasSubRanges() && ShouldTrackSubReg)
     LI.createSubRangeFrom(LIS.getVNInfoAllocator(), FullLaneMask, LI);
 

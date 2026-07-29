@@ -426,8 +426,9 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   // Bake the per-function SGPR budget into the operands so the late-evaluated
   // MCExpr stays arithmetic. The trap reservation in particular is implicit on
   // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
-  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
-  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  AMDGPU::GPUKind Kind = STM.getTargetID().getGPUKind();
+  unsigned SGPRTotal = AMDGPU::getTotalNumSGPRs(Kind);
+  unsigned SGPRGranule = AMDGPU::getSGPRAllocGranule(Kind);
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
@@ -1416,29 +1417,14 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
-
-  unsigned LDSAlignShift = 8;
-  switch (getLdsDwGranularity(STM)) {
-  case 512:
-  case 320:
-    LDSAlignShift = 11;
-    break;
-  case 128:
-    LDSAlignShift = 9;
-    break;
-  case 64:
-    LDSAlignShift = 8;
-    break;
-  default:
-    llvm_unreachable("invald LDS block size");
-  }
-
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
   ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
 
   ProgInfo.LDSSize = MFI->getLDSSize();
+
+  unsigned LDSGranularityBytes = getLdsDwGranularity(STM) * 4;
   ProgInfo.LDSBlocks =
-      alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
+      alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {

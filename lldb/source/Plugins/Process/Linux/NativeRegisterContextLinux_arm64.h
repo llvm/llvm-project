@@ -16,6 +16,8 @@
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
+#include "llvm/ADT/BitmaskEnum.h"
+
 #include <asm/ptrace.h>
 
 namespace lldb_private {
@@ -79,36 +81,58 @@ protected:
   lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) override;
 
 private:
-  enum RegisterSetType : uint32_t {
-    GPR, // General purpose registers.
-    SVE, // Used for SVE registers in streaming or non-streaming mode.
-    FPR, // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE
-         // that is in non-streaming mode.
-    // Pointer authentication registers are read only, so not included here.
-    MTE,  // Memory tagging control registers.
-    TLS,  // Thread local storage registers.
-    SME,  // ZA only, because SVCR and SVG are pseudo registers.
-    SME2, // ZT only.
-    FPMR, // Floating point mode control registers.
-    GCS,  // Guarded Control Stack registers.
-    POE,  // Permission Overlay registers.
+  // Bit mask enum used to refer to the types of registers we support. Currently
+  // used for tracking cache validity and ReadAll/WriteAllRegister data. Will
+  // be used for much more in future.
+  enum class RegisterSetType : uint32_t {
+    // General purpose registers.
+    GPR = 1 << 0,
+    // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE that
+    // is in non-streaming mode.
+    FPR = 1 << 1,
+    // Used for SVE registers in streaming or non-streaming mode.
+    SVE = 1 << 2,
+    // Only the ptrace header for SVE.
+    SVE_HEADER = 1 << 3,
+    // Pointer authentication mask registers.
+    PAC = 1 << 4,
+    // Memory tagging control registers.
+    MTE = 1 << 5,
+    // Thread local storage registers.
+    TLS = 1 << 6,
+    // ZA only, because SVCR and SVG are pseudo registers.
+    ZA = 1 << 7,
+    // Only the ptrace header for ZA.
+    ZA_HEADER = 1 << 8,
+    // ZT only.
+    ZT = 1 << 9,
+    // Floating point mode control registers.
+    FPMR = 1 << 10,
+    // Guarded Control Stack registers.
+    GCS = 1 << 11,
+    // Permission Overlay registers.
+    POE = 1 << 12,
+    LLVM_MARK_AS_BITMASK_ENUM(POE),
   };
 
-  bool m_gpr_is_valid;
-  bool m_fpu_is_valid;
-  bool m_sve_buffer_is_valid;
-  bool m_mte_ctrl_is_valid;
-  bool m_zt_buffer_is_valid;
-  bool m_fpmr_is_valid;
+  RegisterSetType m_validity = static_cast<RegisterSetType>(0);
 
-  bool m_sve_header_is_valid;
-  bool m_za_buffer_is_valid;
-  bool m_za_header_is_valid;
-  bool m_pac_mask_is_valid;
-  bool m_tls_is_valid;
+  void MakeValid(RegisterSetType set) { m_validity |= set; }
+
+  [[nodiscard]] bool IsValid(RegisterSetType set) const {
+    return any(m_validity & set);
+  }
+
+  template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
+    static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
+    m_validity &= ~(first | ... | rest);
+  }
+
+  Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
+                          const RegisterSetType set,
+                          std::function<Status()> writer);
+
   size_t m_tls_size = 0;
-  bool m_gcs_is_valid;
-  bool m_poe_is_valid;
 
   /// 64-bit general purpose registers.
   struct user_pt_regs m_gpr_arm64{};

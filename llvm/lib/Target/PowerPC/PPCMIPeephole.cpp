@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -161,6 +162,7 @@ public:
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -883,6 +885,8 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
+            if (!MRI->constrainRegClass(ShiftOp1, &PPC::VRRCRegClass))
+              llvm_unreachable("Can't fail because vrrc is subset of vsrc");
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);

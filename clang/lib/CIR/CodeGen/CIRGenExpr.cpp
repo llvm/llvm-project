@@ -406,15 +406,22 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
     if (dst.isExtVectorElt())
       return emitStoreThroughExtVectorComponentLValue(src, dst);
 
+    if (dst.isMatrixElt()) {
+      cgm.errorNYI("emitStoreThroughLValue: !dst.isSimple() && isMatrixElt");
+      return;
+    }
+
+    if (dst.isMatrixRow()) {
+      cgm.errorNYI("emitStoreThroughLValue: !dst.isSimple() && isMatrixRow");
+      return;
+    }
+
     assert(dst.isBitField() && "Unknown LValue type");
     emitStoreThroughBitfieldLValue(src, dst);
     return;
-
-    cgm.errorNYI(dst.getPointer().getLoc(),
-                 "emitStoreThroughLValue: non-simple lvalue");
-    return;
   }
 
+  assert(!cir::MissingFeatures::objCLifetime());
   assert(!cir::MissingFeatures::opLoadStoreObjC());
 
   assert(src.isScalar() && "Can't emit an aggregate store with this method");

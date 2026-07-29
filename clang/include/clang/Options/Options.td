@@ -2507,8 +2507,7 @@ def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<
 defm fast_math : BoolFOption<"fast-math",
   LangOpts<"FastMath">, Default<hlsl.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
-          "Allow aggressive, lossy floating-point optimizations",
-          [cl_fast_relaxed_math.KeyPath]>,
+          "Allow aggressive, lossy floating-point optimizations">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
 defm math_errno : BoolFOption<"math-errno",
   LangOpts<"MathErrno">, DefaultFalse,
@@ -3459,6 +3458,11 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
+def clangir_enable_call_conv_lowering : Flag<["-"], "clangir-enable-call-conv-lowering">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable calling-convention lowering pass (x86_64 only)">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
   HelpText<"Enable C/C++ library based optimizations (with options)">,
@@ -4297,11 +4301,11 @@ def fno_openmp_target_new_runtime : Flag<["-"], "fno-openmp-target-new-runtime">
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
-  Visibility<[ClangOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Assert common GPU usage patterns to enable OpenMP runtime optimizations">;
 def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
-  Visibility<[ClangOption]>;
+  Visibility<[ClangOption, FlangOption]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -6606,6 +6610,14 @@ def print_libgcc_file_name : Flag<["-", "--"], "print-libgcc-file-name">,
   HelpText<"Print the library path for the currently used compiler runtime "
            "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">,
   Visibility<[ClangOption, CLOption]>;
+def print_cxx_stdlib : Flag<["-", "--"], "print-cxx-stdlib">,
+  HelpText<"Print the C++ standard library selected by the driver">,
+  Visibility<[ClangOption]>;
+def print_cxx_stdlib_include_dirs :
+    Flag<["-", "--"], "print-cxx-stdlib-include-dirs">,
+  HelpText<"Print the C++ standard library include directories selected by "
+           "the driver">,
+  Visibility<[ClangOption]>;
 def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_flags : Flag<["-", "--"], "print-multi-flags-experimental">,
@@ -9923,6 +9935,9 @@ def dxc_gis : DXCFlag<"Gis">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def dxc_Qpdb_in_private : DXCFlag<"Qpdb_in_private">,
+                          Flags<[HelpHidden]>,
+                          HelpText<"Store PDB in private user data">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
 def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;

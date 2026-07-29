@@ -505,12 +505,9 @@ add_libc_test(
     libc.hdr.types.wchar_t
 )
 
-if(LLVM_LIBC_FULL_BUILD)
-
+if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
   add_libc_test(
     _Exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -522,8 +519,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -535,8 +530,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     atexit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -550,8 +543,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     at_quick_exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -565,8 +556,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     abort_test
-    # The EXPECT_DEATH test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -580,8 +569,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     quick_exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -590,21 +577,21 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.include.stdlib
       libc.src.stdlib.quick_exit
   )
+endif()
 
-  # Only baremetal and GPU has an in-tree 'malloc' implementation.
-  if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
+# Only baremetal and GPU has an in-tree 'malloc' implementation.
+if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
       NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    add_libc_test(
-      malloc_test
-      HERMETIC_TEST_ONLY
-      SUITE
-        libc-stdlib-tests
-      SRCS
-        malloc_test.cpp
-      DEPENDS
-        libc.include.stdlib
-        libc.src.stdlib.malloc
-        libc.src.stdlib.free
-    )
-  endif()
+  add_libc_test(
+    malloc_test
+    HERMETIC_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      malloc_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib.malloc
+      libc.src.stdlib.free
+  )
 endif()

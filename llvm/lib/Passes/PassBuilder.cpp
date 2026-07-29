@@ -165,6 +165,7 @@
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
@@ -2863,7 +2864,7 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
 
 LLVM_ATTRIBUTE_NOINLINE static void printPassNameList(StringTable PassNames,
                                                       raw_ostream &OS) {
-  for (StringRef PassName : drop_begin(PassNames))
+  for (StringRef PassName : PassNames)
     OS << "  " << PassName << '\n';
 }
 
@@ -2871,7 +2872,6 @@ LLVM_ATTRIBUTE_NOINLINE static void
 printPassNameListWithParams(StringTable PassNames, raw_ostream &OS) {
   auto I = PassNames.begin();
   auto End = PassNames.end();
-  ++I;
   while (I != End) {
     StringRef Name = *I;
     ++I;

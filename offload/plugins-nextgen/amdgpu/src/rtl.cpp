@@ -3313,7 +3313,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WAVEFRONT_SIZE, TmpUInt2);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Wavefront Size", TmpUInt2);
+      Info.add("Number of Lanes", TmpUInt2, "", DeviceInfo::NUM_LANES);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)

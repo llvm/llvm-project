@@ -558,6 +558,7 @@ namespace {
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitMHISTOGRAM(SDNode *N);
     SDValue visitPARTIAL_REDUCE_MLA(SDNode *N);
+    SDValue visitLOOP_DEPENDENCE_MASK(SDNode *N);
     SDValue visitVPGATHER(SDNode *N);
     SDValue visitVPSCATTER(SDNode *N);
     SDValue visitVP_STRIDED_LOAD(SDNode *N);
@@ -2116,6 +2117,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return visitPARTIAL_REDUCE_MLA(N);
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+                                return visitLOOP_DEPENDENCE_MASK(N);
   case ISD::VECTOR_COMPRESS:    return visitVECTOR_COMPRESS(N);
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
@@ -12703,15 +12707,17 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
 }
 
 static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
-                                         SDValue RHS, const SDNodeFlags Flags,
+                                         SDValue RHS,
+                                         const SDNodeFlags SelectFlags,
+                                         const SDNodeFlags CmpFlags,
                                          const TargetLowering &TLI) {
   EVT VT = LHS.getValueType();
   if (!VT.isFloatingPoint())
     return false;
 
-  return Flags.hasNoSignedZeros() &&
+  return SelectFlags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
-         (Flags.hasNoNaNs() ||
+         (SelectFlags.hasNoNaNs() || CmpFlags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
 }
 
@@ -12720,7 +12726,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        ISD::CondCode CC,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
-  EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT);
+
+  // We have checked nnan and nsz as pre-conditions for the transform.
+  SDNodeFlags Flags = SDNodeFlags::NoNaNs | SDNodeFlags::NoSignedZeros;
+
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -12733,11 +12743,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
     // expanded in terms of it.
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS, Flags);
 
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
     return SDValue();
   }
   case ISD::SETOGT:
@@ -12748,11 +12758,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETUGE: {
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
     if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS, Flags);
 
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
     return SDValue();
   }
   default:
@@ -13465,7 +13475,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // select (fcmp gt x, y), x, y -> fmaxnum x, y
     //
     // This is OK if we don't care what happens if either operand is a NaN.
-    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, TLI))
+    if (N0.hasOneUse() &&
+        isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, N0->getFlags(), TLI))
       if (SDValue FMinMax =
               combineMinNumMaxNum(DL, VT, Cond0, Cond1, N1, N2, CC))
         return FMinMax;
@@ -14240,6 +14251,19 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
                : DAG.getNode(NewOpcode, DL, AccVT, Acc, UnextOp1, Constant);
 }
 
+SDValue DAGCombiner::visitLOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  unsigned LaneOffset = N->getConstantOperandVal(3);
+
+  // The first lane is always active, so v1i1 => true.
+  if (LaneOffset == 0 &&
+      VT.getVectorElementCount() == ElementCount::getFixed(1))
+    return DAG.getBoolConstant(true, DL, VT, VT);
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
   auto *SLD = cast<VPStridedLoadSDNode>(N);
   EVT EltVT = SLD->getValueType(0).getVectorElementType();
@@ -14514,7 +14538,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // NaN.
     //
     if (N0.hasOneUse() &&
-        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(), TLI)) {
+        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(),
+                                     N0->getFlags(), TLI)) {
       if (SDValue FMinMax = combineMinNumMaxNum(DL, VT, LHS, RHS, N1, N2, CC))
         return FMinMax;
     }
@@ -25286,7 +25311,12 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         return CanonicalizeBuildVector(Ops, /*FreezeUndef=*/true);
 
       // BUILD_VECTOR - insert unused operands and build new BUILD_VECTOR.
-      if (CurVec.getOpcode() == ISD::BUILD_VECTOR && CurVec.hasOneUse()) {
+      // A multi-use base is allowed when the target prefers build_vector
+      // sources: rebuilding only re-references the base's scalar operands, and
+      // it un-shares the base so each vector is built independently.
+      if (CurVec.getOpcode() == ISD::BUILD_VECTOR &&
+          (CurVec.hasOneUse() ||
+           TLI.aggressivelyPreferBuildVectorSources(VT))) {
         for (unsigned I = 0; I != NumElts; ++I)
           AddBuildVectorOp(Ops, CurVec.getOperand(I), I);
         return CanonicalizeBuildVector(Ops);
