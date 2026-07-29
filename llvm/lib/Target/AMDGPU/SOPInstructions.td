@@ -2148,7 +2148,7 @@ def : GCNPat<
 }
 
 // v2i64 shl is legal, we need a way to select scalar code
-let SubtargetPredicate = HasPackedU64Ops in {
+let SubtargetPredicate = HasAnyPackedU64Ops in {
 def : GCNPat<
   (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
   (v2i64 (REG_SEQUENCE SReg_128,

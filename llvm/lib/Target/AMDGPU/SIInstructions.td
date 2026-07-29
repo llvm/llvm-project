@@ -2405,7 +2405,7 @@ def : GCNPat <
   (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
                 !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
 > {
-  let SubtargetPredicate = HasPackedFP64Ops;
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -3904,7 +3904,7 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
     (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64SingleSGPROps]);
   }
 }
 
