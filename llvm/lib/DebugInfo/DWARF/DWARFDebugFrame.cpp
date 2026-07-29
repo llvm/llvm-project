@@ -199,7 +199,7 @@ DWARFDebugFrame::~DWARFDebugFrame() = default;
   errs() << "\n";
 }
 
-Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
+Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
   uint64_t Offset = 0;
   DenseMap<uint64_t, CIE *> CIEs;
 
@@ -383,6 +383,15 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       Entries.emplace_back(new FDE(IsDWARF64, StartOffset, Length, CIEPointer,
                                    InitialLocation, AddressRange, Cie,
                                    LSDAAddress, Arch));
+    }
+
+    // Optionally skip the CFI instruction program without decoding it.
+    if (!ParseCFIProgram) {
+      // Record where this entry's CFI instructions begin so they can be parsed
+      // on demand later.
+      Entries.back()->setCFIStartOffset(Offset);
+      Offset = EndStructureOffset;
+      continue;
     }
 
     if (Error E =

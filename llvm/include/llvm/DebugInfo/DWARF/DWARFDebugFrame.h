@@ -72,6 +72,21 @@ public:
   const CFIProgram &cfis() const { return CFIs; }
   CFIProgram &cfis() { return CFIs; }
 
+  /// Section offset at which this entry's CFI instructions begin. Recorded by
+  /// parse() even when the CFI program itself is not parsed, so the program can
+  /// be parsed on demand later via cfis().parse(Data, ..., getEndOffset()).
+  uint64_t getCFIStartOffset() const { return CFIStartOffset; }
+  void setCFIStartOffset(uint64_t O) { CFIStartOffset = O; }
+
+  /// Section offset one past the end of this entry (exclusive end of its CFI
+  /// instructions).
+  uint64_t getEndOffset() const {
+    // End is Offset plus the size of the initial length field plus Length.
+    // The initial length field is 4 bytes in DWARF32 and 12 bytes in DWARF64
+    // (a 0xffffffff escape marker followed by an 8-byte length).
+    return Offset + (IsDWARF64 ? 12 : 4) + Length;
+  }
+
   /// Dump the instructions in this CFI fragment
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const = 0;
 
@@ -85,6 +100,9 @@ protected:
 
   /// Entry length as specified in DWARF.
   const uint64_t Length;
+
+  /// Section offset at which this entry's CFI instructions begin.
+  uint64_t CFIStartOffset = 0;
 
   CFIProgram CFIs;
 };
@@ -218,7 +236,13 @@ public:
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole
   /// frame section contents to be parsed.
-  LLVM_ABI Error parse(DWARFDataExtractor Data);
+  ///
+  /// If \p ParseCFIProgram is false, the CFI instruction program of each entry
+  /// is not decoded; each entry still records where its instructions begin (see
+  /// FrameEntry::getCFIStartOffset()) so callers can parse individual programs
+  /// on demand. This avoids materializing every entry's instructions when only
+  /// a subset (or none) is needed, which can be a large memory saving.
+  LLVM_ABI Error parse(DWARFDataExtractor Data, bool ParseCFIProgram = true);
 
   /// Return whether the section has any entries.
   bool empty() const { return Entries.empty(); }
