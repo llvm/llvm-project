@@ -168,8 +168,9 @@ public:
   AMDGPULowerIdxOpsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
+    // This is required lowering, not an optimization: nothing else expands the
+    // sub-dword pseudos, and AMDGPULowerVGPREncoding cannot lower them. It
+    // therefore must not be skipped for optnone functions.
     return LowerIdxOps(MF).run(MF);
   }
 
