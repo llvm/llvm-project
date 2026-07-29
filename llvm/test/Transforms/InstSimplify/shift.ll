@@ -409,3 +409,88 @@ define i8 @shl_nsw_nuw_6_do_nothing(i8 %x) {
   %y = shl nsw nuw i8 %x, 6
   ret i8 %y
 }
+
+; shift amount is a nonzero constant -> poison
+define i32 @lshr_exact_undef_by_const_nonzero() {
+; CHECK-LABEL: @lshr_exact_undef_by_const_nonzero(
+; CHECK-NEXT:    ret i32 0
+;
+  %r = lshr exact i32 undef, 1
+  ret i32 %r
+}
+
+define i32 @ashr_exact_undef_by_const_nonzero() {
+; CHECK-LABEL: @ashr_exact_undef_by_const_nonzero(
+; CHECK-NEXT:    ret i32 0
+;
+  %r = ashr exact i32 undef, 1
+  ret i32 %r
+}
+
+; shift amount is a literal 0 -> undef (no bit is shifted out)
+define i32 @lshr_exact_undef_by_const_zero() {
+; CHECK-LABEL: @lshr_exact_undef_by_const_zero(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = lshr exact i32 undef, 0
+  ret i32 %r
+}
+
+define i32 @ashr_exact_undef_by_const_zero() {
+; CHECK-LABEL: @ashr_exact_undef_by_const_zero(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = ashr exact i32 undef, 0
+  ret i32 %r
+}
+
+; shift amount is known to be 0 (but not a literal) -> undef
+define i32 @lshr_exact_undef_by_known_zero(i32 range(i32 0, 1) %a) {
+; CHECK-LABEL: @lshr_exact_undef_by_known_zero(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = lshr exact i32 undef, %a
+  ret i32 %r
+}
+
+define i32 @ashr_exact_undef_by_known_zero(i32 range(i32 0, 1) %a) {
+; CHECK-LABEL: @ashr_exact_undef_by_known_zero(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = ashr exact i32 undef, %a
+  ret i32 %r
+}
+
+; shift amount is known to be nonzero -> poison
+define i32 @lshr_exact_undef_by_known_nonzero(i32 range(i32 1, 10) %a) {
+; CHECK-LABEL: @lshr_exact_undef_by_known_nonzero(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = lshr exact i32 undef, %a
+  ret i32 %r
+}
+
+define i32 @ashr_exact_undef_by_known_nonzero(i32 range(i32 1, 10) %a) {
+; CHECK-LABEL: @ashr_exact_undef_by_known_nonzero(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = ashr exact i32 undef, %a
+  ret i32 %r
+}
+
+; shift amount is unknown (may be 0) -> undef, not poison
+define i32 @lshr_exact_undef_by_unknown(i32 %a) {
+; CHECK-LABEL: @lshr_exact_undef_by_unknown(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = lshr exact i32 undef, %a
+  ret i32 %r
+}
+
+define i32 @ashr_exact_undef_by_unknown(i32 %a) {
+; CHECK-LABEL: @ashr_exact_undef_by_unknown(
+; CHECK-NEXT:    ret i32 undef
+;
+  %r = ashr exact i32 undef, %a
+  ret i32 %r
+}
