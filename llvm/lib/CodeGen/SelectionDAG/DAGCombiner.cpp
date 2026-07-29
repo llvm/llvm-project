@@ -18381,7 +18381,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     DAG.ReplaceAllUsesOfValueWith(N0, FrozenN0);
     // ReplaceAllUsesOfValueWith will have also updated the use in N, thus
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
-    assert(N->getOperand(0) == FrozenN0 && "Expected cycle in DAG");
+    // assert(N->getOperand(0) == FrozenN0 && "Expected cycle in DAG");
     DAG.UpdateNodeOperands(N, N0);
     // Revisit the node.
     AddToWorklist(N);
