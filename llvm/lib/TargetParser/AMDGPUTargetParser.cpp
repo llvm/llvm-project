@@ -49,10 +49,10 @@ const GPUInfo *getAMDGPUInfo(GPUKind AK) {
 
 // Reverse map: SubArch -> GPUKind, indexed by (SubArch - FirstAMDGPUSubArch).
 // Subarches with no GPU (incl. the NoSubArch pseudo targets) map to GK_NONE.
-constexpr auto AMDGPUSubArchToGPUKind = [] {
-  constexpr unsigned N =
-      Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch + 1;
-  std::array<GPUKind, N> Map{};
+constexpr unsigned NumAMDGPUSubArches =
+    Triple::LastAMDGPUSubArch - Triple::FirstAMDGPUSubArch + 1;
+constexpr std::array<GPUKind, NumAMDGPUSubArches> AMDGPUSubArchToGPUKind = [] {
+  std::array<GPUKind, NumAMDGPUSubArches> Map{};
 
   for (unsigned I = 0; I < std::size(AMDGPUGPUTable); ++I) {
     Triple::SubArchType SubArch = AMDGPUGPUTable[I].SubArch;
