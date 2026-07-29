@@ -122,84 +122,73 @@ declare dso_local i32 @sink(i32 noundef) local_unnamed_addr
 define dso_local i32 @regpressure(i32 noundef %a0, i32 noundef %a1, i32 noundef %a2, i32 noundef %a3, i32 noundef %a4, i32 noundef %a5, i32 noundef %a6, i32 noundef %a7, i32 noundef %s0, i32 noundef %s1, i32 noundef %s2, i32 noundef %s3, i32 noundef %s4, i32 noundef %s5, i32 noundef %s6, i32 noundef %s7, i32 noundef %s8, i32 noundef %s9, i32 noundef %s10, i32 noundef %s11) local_unnamed_addr nounwind {
 ; CHECK-LABEL: regpressure:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    c.addi16sp sp, -80
-; CHECK-NEXT:    c.swsp ra, 76(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s0, 72(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s1, 68(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s2, 64(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s3, 60(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s4, 56(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s5, 52(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s6, 48(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s7, 44(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s8, 40(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s9, 36(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s10, 32(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp s11, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.addi16sp sp, -64
+; CHECK-NEXT:    c.swsp ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s11, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    c.mv s0, a7
 ; CHECK-NEXT:    c.mv s1, a6
 ; CHECK-NEXT:    c.mv s2, a5
 ; CHECK-NEXT:    c.mv s3, a4
-; CHECK-NEXT:    c.swsp a3, 24(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp a2, 20(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.swsp a1, 16(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.lwsp a1, 124(sp)
-; CHECK-NEXT:    c.swsp a1, 8(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.lwsp a1, 120(sp)
-; CHECK-NEXT:    c.swsp a1, 4(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.lwsp a1, 116(sp)
-; CHECK-NEXT:    c.swsp a1, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.lwsp a1, 112(sp)
-; CHECK-NEXT:    c.swsp a1, 0(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    c.lwsp s11, 108(sp)
-; CHECK-NEXT:    c.lwsp s4, 104(sp)
-; CHECK-NEXT:    c.lwsp s5, 100(sp)
-; CHECK-NEXT:    c.lwsp s6, 96(sp)
-; CHECK-NEXT:    c.lwsp s9, 92(sp)
-; CHECK-NEXT:    c.lwsp s7, 88(sp)
-; CHECK-NEXT:    c.lwsp s8, 84(sp)
-; CHECK-NEXT:    c.lwsp s10, 80(sp)
+; CHECK-NEXT:    c.mv s4, a3
+; CHECK-NEXT:    c.mv s5, a2
+; CHECK-NEXT:    c.mv s6, a1
+; CHECK-NEXT:    c.lwsp s8, 80(sp)
+; CHECK-NEXT:    c.lwsp s10, 76(sp)
+; CHECK-NEXT:    c.lwsp s11, 72(sp)
+; CHECK-NEXT:    c.lwsp s9, 68(sp)
+; CHECK-NEXT:    c.lwsp s7, 64(sp)
 ; CHECK-NEXT:    call sink
 ; CHECK-NEXT:    c.add s2, s3
 ; CHECK-NEXT:    c.add s0, s1
 ; CHECK-NEXT:    c.add s0, s2
-; CHECK-NEXT:    c.add s7, s8
-; CHECK-NEXT:    c.add s0, s10
-; CHECK-NEXT:    c.add s6, s9
+; CHECK-NEXT:    c.add s9, s11
 ; CHECK-NEXT:    c.add s0, s7
-; CHECK-NEXT:    c.add s5, s6
-; CHECK-NEXT:    c.add s0, s5
-; CHECK-NEXT:    c.add s4, s11
-; CHECK-NEXT:    c.lwsp a1, 8(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp a2, 4(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.add s8, s10
+; CHECK-NEXT:    c.add s0, s9
+; CHECK-NEXT:    c.lwsp a1, 84(sp)
+; CHECK-NEXT:    c.add s8, a1
+; CHECK-NEXT:    c.add s0, s8
+; CHECK-NEXT:    c.lwsp a1, 92(sp)
+; CHECK-NEXT:    c.lwsp a2, 88(sp)
 ; CHECK-NEXT:    c.add a1, a2
-; CHECK-NEXT:    c.lwsp a2, 0(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.add s4, a2
+; CHECK-NEXT:    c.lwsp a2, 108(sp)
+; CHECK-NEXT:    c.lwsp a3, 104(sp)
+; CHECK-NEXT:    c.add a2, a3
+; CHECK-NEXT:    c.lwsp a3, 96(sp)
+; CHECK-NEXT:    c.add a1, a3
+; CHECK-NEXT:    c.add a0, a2
+; CHECK-NEXT:    c.lwsp a2, 100(sp)
+; CHECK-NEXT:    c.add a1, a2
+; CHECK-NEXT:    c.add a0, s6
+; CHECK-NEXT:    c.add a1, s0
+; CHECK-NEXT:    c.add a0, s5
 ; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    c.lwsp a1, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.add s4, a1
-; CHECK-NEXT:    c.lwsp a1, 16(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    c.add s0, s4
-; CHECK-NEXT:    c.lwsp a1, 20(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    c.add a0, s0
-; CHECK-NEXT:    c.lwsp a1, 24(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    c.lwsp ra, 76(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s0, 72(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s1, 68(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s2, 64(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s3, 60(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s4, 56(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s5, 52(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s6, 48(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s7, 44(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s8, 40(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s9, 36(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s10, 32(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.lwsp s11, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    c.addi16sp sp, 80
+; CHECK-NEXT:    c.add a0, s4
+; CHECK-NEXT:    c.lwsp ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 64
 ; CHECK-NEXT:    c.jr ra
 entry:
   %call = tail call i32 @sink(i32 noundef %a0)
