@@ -28,15 +28,17 @@ define <vscale x 16 x i8> @uabs_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8
   ret <vscale x 16 x i8> %uabs
 }
 
-; TODO: This case could be lowered to a sabal[bt] pair.
 define <vscale x 8 x i16> @sabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
-; CHECK-LABEL: sabs_nxv16i8_wide_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    sabd z1.b, p0/m, z1.b, z2.b
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    uadalp z0.h, p0/m, z1.b
-; CHECK-NEXT:    ret
+; SVE2-LABEL: sabs_nxv16i8_wide_add:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    sabalb z0.h, z1.b, z2.b
+; SVE2-NEXT:    sabalt z0.h, z1.b, z2.b
+; SVE2-NEXT:    ret
+;
+; SVE2p3-LABEL: sabs_nxv16i8_wide_add:
+; SVE2p3:       // %bb.0:
+; SVE2p3-NEXT:    sabal z0.h, z1.b, z2.b
+; SVE2p3-NEXT:    ret
   %smax = tail call <vscale x 16 x i8> @llvm.smax(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %smin = tail call <vscale x 16 x i8> @llvm.smin(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %sabs = sub <vscale x 16 x i8> %smax, %smin
@@ -45,15 +47,17 @@ define <vscale x 8 x i16> @sabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscal
   ret <vscale x 8 x i16> %reduce
 }
 
-; TODO: This case could be lowered to a sabal[bt] pair.
 define <vscale x 4 x i32> @sabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
-; CHECK-LABEL: sabs_nxv8i16_wide_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    sabd z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    uaddwb z0.s, z0.s, z1.h
-; CHECK-NEXT:    uaddwt z0.s, z0.s, z1.h
-; CHECK-NEXT:    ret
+; SVE2-LABEL: sabs_nxv8i16_wide_add:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    sabalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    sabalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    ret
+;
+; SVE2p3-LABEL: sabs_nxv8i16_wide_add:
+; SVE2p3:       // %bb.0:
+; SVE2p3-NEXT:    sabal z0.s, z1.h, z2.h
+; SVE2p3-NEXT:    ret
   %smax = tail call <vscale x 8 x i16> @llvm.smax(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   %smin = tail call <vscale x 8 x i16> @llvm.smin(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   %sabs = sub <vscale x 8 x i16> %smax, %smin
@@ -62,15 +66,17 @@ define <vscale x 4 x i32> @sabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscal
   ret <vscale x 4 x i32> %reduce
 }
 
-; TODO: This case could be lowered to a sabal[bt] pair.
 define <vscale x 2 x i64> @sabs_nxv4i32_wide_add(<vscale x 2 x i64> %acc, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: sabs_nxv4i32_wide_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sabd z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    uaddwb z0.d, z0.d, z1.s
-; CHECK-NEXT:    uaddwt z0.d, z0.d, z1.s
-; CHECK-NEXT:    ret
+; SVE2-LABEL: sabs_nxv4i32_wide_add:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    sabalb z0.d, z1.s, z2.s
+; SVE2-NEXT:    sabalt z0.d, z1.s, z2.s
+; SVE2-NEXT:    ret
+;
+; SVE2p3-LABEL: sabs_nxv4i32_wide_add:
+; SVE2p3:       // %bb.0:
+; SVE2p3-NEXT:    sabal z0.d, z1.s, z2.s
+; SVE2p3-NEXT:    ret
   %smax = tail call <vscale x 4 x i32> @llvm.smax(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %smin = tail call <vscale x 4 x i32> @llvm.smin(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %sabs = sub <vscale x 4 x i32> %smax, %smin
@@ -117,15 +123,17 @@ define <16 x i8> @uabs_v16i8(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %uabs
 }
 
-; TODO: This case could be lowered to a uabal[bt] pair.
 define <vscale x 8 x i16> @uabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
-; CHECK-LABEL: uabs_nxv16i8_wide_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    uabd z1.b, p0/m, z1.b, z2.b
-; CHECK-NEXT:    uaddwb z0.h, z0.h, z1.b
-; CHECK-NEXT:    uaddwt z0.h, z0.h, z1.b
-; CHECK-NEXT:    ret
+; SVE2-LABEL: uabs_nxv16i8_wide_add:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    uabalb z0.h, z1.b, z2.b
+; SVE2-NEXT:    uabalt z0.h, z1.b, z2.b
+; SVE2-NEXT:    ret
+;
+; SVE2p3-LABEL: uabs_nxv16i8_wide_add:
+; SVE2p3:       // %bb.0:
+; SVE2p3-NEXT:    uabal z0.h, z1.b, z2.b
+; SVE2p3-NEXT:    ret
   %umax = tail call <vscale x 16 x i8> @llvm.umax(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %umin = tail call <vscale x 16 x i8> @llvm.umin(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %uabs = sub <vscale x 16 x i8> %umax, %umin
@@ -134,15 +142,17 @@ define <vscale x 8 x i16> @uabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscal
   ret <vscale x 8 x i16> %reduce
 }
 
-; TODO: This case could be lowered to a uabal[bt] pair.
 define <vscale x 4 x i32> @uabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
-; CHECK-LABEL: uabs_nxv8i16_wide_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    uabd z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    uadalp z0.s, p0/m, z1.h
-; CHECK-NEXT:    ret
+; SVE2-LABEL: uabs_nxv8i16_wide_add:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    uabalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    uabalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    ret
+;
+; SVE2p3-LABEL: uabs_nxv8i16_wide_add:
+; SVE2p3:       // %bb.0:
+; SVE2p3-NEXT:    uabal z0.s, z1.h, z2.h
+; SVE2p3-NEXT:    ret
   %umax = tail call <vscale x 8 x i16> @llvm.umax(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   %umin = tail call <vscale x 8 x i16> @llvm.umin(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   %uabs = sub <vscale x 8 x i16> %umax, %umin
@@ -151,15 +161,17 @@ define <vscale x 4 x i32> @uabs_nxv8i16_wide_add(<vscale x 4 x i32> %acc, <vscal
   ret <vscale x 4 x i32> %reduce
 }
 
-; TODO: This case could be lowered to a uabal[bt] pair.
 define <vscale x 2 x i64> @uabs_nxv4i32_wide_add(<vscale x 2 x i64> %acc, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: uabs_nxv4i32_wide_add:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    uabd z1.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    uaddwb z0.d, z0.d, z1.s
-; CHECK-NEXT:    uaddwt z0.d, z0.d, z1.s
-; CHECK-NEXT:    ret
+; SVE2-LABEL: uabs_nxv4i32_wide_add:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    uabalb z0.d, z1.s, z2.s
+; SVE2-NEXT:    uabalt z0.d, z1.s, z2.s
+; SVE2-NEXT:    ret
+;
+; SVE2p3-LABEL: uabs_nxv4i32_wide_add:
+; SVE2p3:       // %bb.0:
+; SVE2p3-NEXT:    uabal z0.d, z1.s, z2.s
+; SVE2p3-NEXT:    ret
   %umax = tail call <vscale x 4 x i32> @llvm.umax(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %umin = tail call <vscale x 4 x i32> @llvm.umin(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %uabs = sub <vscale x 4 x i32> %umax, %umin
@@ -184,6 +196,3 @@ define <4 x i32> @uabs_v16i8_dot(<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b) {
   %dot = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc, <16 x i32> %ext)
   ret <4 x i32> %dot
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; SVE2: {{.*}}
-; SVE2p3: {{.*}}
