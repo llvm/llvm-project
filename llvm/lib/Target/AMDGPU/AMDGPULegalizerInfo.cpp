@@ -560,10 +560,18 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 }
 
 // Whether the VGPR ("as memory") lowering handles a MemSize-bit access
-// producing a ValSize-bit value. Whole-dword and 8-/16-bit, the latter
-// including extending loads into a 16- or 32-bit value.
-static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
+// producing a ValSize-bit value at this alignment: whole-dword when dword
+// aligned, and 8-/16-bit when naturally aligned, including extending loads.
+//
+// A sub-dword access is a bit-field extract from the dword containing it, so it
+// must not straddle a dword boundary; natural alignment guarantees that. A
+// whole-dword access indexes by pointer >> 2, so an under-aligned one would
+// silently reach the containing dword.
+static bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
+                                     Align Alignment) {
   if (MemSize == 8 || MemSize == 16) {
+    if (Alignment < Align(MemSize / 8))
+      return false;
     if (ValSize == MemSize)
       return true;
     if (ValSize > MemSize && (ValSize == 16 || ValSize == 32))
@@ -571,6 +579,8 @@ static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
     return false;
   }
   if (MemSize != ValSize)
+    return false;
+  if (Alignment < Align(4))
     return false;
   return AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
 }
@@ -3538,18 +3548,14 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   // and the normalized value with integer types rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
-  // Alignment is checked here rather than in the size predicate: it is a
-  // property of the address, not the size. A whole-dword access indexes by
-  // pointer >> 2, so an under-aligned one would silently reach the containing
-  // dword; the sub-dword path below computes a bit offset instead.
-  if (!isVGPRLoadStoreSizeSupported(MemSize, ValSize) ||
-      (MemSize >= 32 && MMO.getAlign() < Align(4))) {
+  // Diagnose an unsupported access rather than failing to legalize.
+  if (!isVGPRLoadStoreSupported(MemSize, ValSize, MMO.getAlign())) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword and 8-/16-bit loads and stores are "
-        "implemented",
+        "dword-aligned whole-dword and naturally aligned 8-/16-bit loads and "
+        "stores are implemented",
         MI.getDebugLoc()));
     if (!IsStore)
       B.buildUndef(ValReg);
