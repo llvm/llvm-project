@@ -2675,7 +2675,7 @@ public:
 
   void visitPtrToInt(PtrToIntInst &I) {
     unsigned BitWidth = I.getType()->getScalarSizeInBits();
-    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+    return visitUnOp(I, [this, BitWidth](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
       Ctx.exposeProvenance(V.asPointer().provenance());
