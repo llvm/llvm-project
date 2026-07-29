@@ -1060,7 +1060,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasVOP3PInsts())
     FPOpActions.clampMaxNumElementsStrict(0, F16, 2);
 
-  FPOpActions.scalarize(0).clampScalar(0, ST.has16BitInsts() ? F16 : F32, F64);
+  FPOpActions.scalarize(0);
+  if (!ST.has16BitInsts())
+    FPOpActions.minScalar(0, F32);
 
   TrigActions
     .scalarize(0)
