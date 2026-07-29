@@ -3191,7 +3191,7 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
         Call->Arguments.size() > 4
             ? Call->Arguments[3]
             : (IsUntyped ? GR->buildConstantInt(1, MIRBuilder, SizeTy,
-                                                /*EmitIR=*/false)
+                                                /*EmitIR=*/true)
                          : buildConstantIntReg32(1, MIRBuilder, GR));
 
     auto MIB = MIRBuilder
@@ -3211,7 +3211,7 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
         report_fatal_error("Could not deduce the element type of an untyped "
                            "async copy pointer argument");
       MIB.addUse(GR->buildConstantInt(ElemBytes, MIRBuilder, SizeTy,
-                                      /*EmitIR=*/false));
+                                      /*EmitIR=*/true));
     }
     MIB.addUse(NumElemReg).addUse(StrideReg).addUse(EventReg);
     if (NewType)
