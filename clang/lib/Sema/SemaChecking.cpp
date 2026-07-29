@@ -41,6 +41,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -54,7 +55,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"

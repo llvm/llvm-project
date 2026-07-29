@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/StackFrameRecognizer.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 
@@ -179,6 +181,13 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
     return StackFrameRecognizerSP();
   Address start_addr = symbol->GetAddress();
   Address current_addr = frame->GetFrameCodeAddress();
+
+  // The symbol's start address may fall inside a non-executable function
+  // header (as on WebAssembly), which no frame's PC can equal. Compare against
+  // the first instruction instead.
+  if (TargetSP target_sp = frame->CalculateTarget())
+    if (Architecture *arch = target_sp->GetArchitecturePlugin())
+      start_addr = arch->SkipFunctionHeader(start_addr);
 
   for (const auto &entry : m_recognizers) {
     if (!entry.enabled)

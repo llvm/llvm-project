@@ -30,7 +30,8 @@ define void @scale_rows(ptr noalias %A, ptr noalias %scale, i64 %N, i64 %M) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[SCALE]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x float> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <4 x float>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    br i1 [[CMP_INNER]], label %[[INNER_PH1:.*]], label %[[VECTOR_LATCH]]
 ; CHECK:       [[INNER_PH1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -217,7 +218,8 @@ define void @stride1_double_load(ptr noalias %A, ptr noalias %scale, i64 %N, i64
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[SCALE]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP0]], <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <4 x double>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    br i1 [[CMP_INNER]], label %[[INNER_PH1:.*]], label %[[VECTOR_LATCH]]
 ; CHECK:       [[INNER_PH1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]

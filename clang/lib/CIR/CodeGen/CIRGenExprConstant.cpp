@@ -156,12 +156,68 @@ public:
   }
 };
 
-mlir::Attribute updateBitfieldInit(CIRGenModule &cgm, cir::IntAttr existingVal,
+llvm::APInt bitfieldStorageToAPInt(mlir::Attribute attr, unsigned storageSize,
+                                   bool isBigEndian) {
+  // An empty attribute is just zero of the correct size.
+  if (!attr)
+    return llvm::APInt(storageSize, 0);
+  // An int type is just the value held in the attribute.
+  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr))
+    return intAttr.getValue();
+
+  // Else we are in the array case, we have to create the big APInt, and fill it
+  // up.
+  llvm::APInt result(storageSize, 0);
+  auto elts = mlir::cast<mlir::ArrayAttr>(
+      mlir::cast<cir::ConstArrayAttr>(attr).getElts());
+
+  unsigned numBytes = elts.size();
+  for (unsigned i = 0; i != numBytes; ++i) {
+    unsigned byteIdx = isBigEndian ? numBytes - 1 - i : i;
+    llvm::APInt byte =
+        mlir::cast<cir::IntAttr>(elts[i]).getValue().zextOrTrunc(8);
+    result.insertBits(byte, byteIdx * 8);
+  }
+  return result;
+}
+
+mlir::Attribute apIntToBitfieldStorage(CIRGenModule &cgm,
+                                       mlir::Type storageType,
+                                       const llvm::APInt &value,
+                                       bool isBigEndian) {
+  // If we'ere an int, just return the new value.
+  if (mlir::isa<cir::IntTypeInterface>(storageType))
+    return cir::IntAttr::get(storageType, value);
+
+  // Array of bytes case, fill up an array.
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  auto arrayTy = mlir::cast<cir::ArrayType>(storageType);
+
+  unsigned numBytes = arrayTy.getSize();
+  cir::IntType byteTy = builder.getUInt8Ty();
+  llvm::SmallVector<mlir::Attribute, 8> bytes(numBytes);
+
+  for (unsigned i = 0; i != numBytes; ++i) {
+    unsigned byteIdx = isBigEndian ? numBytes - 1 - i : i;
+    bytes[i] = cir::IntAttr::get(byteTy, value.extractBits(8, byteIdx * 8));
+  }
+  return cir::ConstArrayAttr::get(
+      arrayTy, mlir::ArrayAttr::get(builder.getContext(), bytes));
+}
+
+// Bitfields are lowered to either an integer type, or a series of bytes, see
+// getBitfieldStorageType. Because of this, we have to figure out how to store
+// this init value in those. Do this by converting the current value in the
+// 'storage' type to an APInt so we can do our masking correctly, then convert
+// back.  The int path is trivial (getValue/create a new one with the new
+// value).  The array type requires breaking it up into its constituent values.
+mlir::Attribute updateBitfieldInit(CIRGenModule &cgm,
+                                   mlir::Attribute existingVal,
                                    cir::IntAttr newVal, bool isSigned,
                                    const CIRGenBitFieldInfo &bfInfo) {
-  llvm::APInt result(bfInfo.storageSize, 0);
-  if (existingVal)
-    result = existingVal.getValue();
+  bool isBigEndian = cgm.getDataLayout().isBigEndian();
+  llvm::APInt result =
+      bitfieldStorageToAPInt(existingVal, bfInfo.storageSize, isBigEndian);
 
   llvm::APInt curValue = newVal.getValue();
   // Make sure we truncate (or properly extend) the existing value for the
@@ -175,18 +231,16 @@ mlir::Attribute updateBitfieldInit(CIRGenModule &cgm, cir::IntAttr existingVal,
   // Extend to the full storage size so we can shift/mask.
   curValue = curValue.zext(bfInfo.storageSize);
 
-  unsigned offset = bfInfo.offset;
-  if (cgm.getDataLayout().isBigEndian())
-    offset = bfInfo.storageSize - bfInfo.size - offset;
-
-  curValue = curValue.shl(offset);
+  // bfInfo.offset is already adjusted for endianness, so no endian-changes need
+  // to happen here.
+  curValue = curValue.shl(bfInfo.offset);
   llvm::APInt mask(bfInfo.storageSize, 0);
-  mask.setBits(offset, offset + bfInfo.size);
+  mask.setBits(bfInfo.offset, bfInfo.offset + bfInfo.size);
 
   result &= ~mask;
   result |= curValue;
 
-  return cir::IntAttr::get(bfInfo.storageType, result);
+  return apIntToBitfieldStorage(cgm, bfInfo.storageType, result, isBigEndian);
 }
 
 mlir::Attribute
@@ -204,7 +258,7 @@ setBitfieldInit(CIRGenModule &cgm, const CIRGenRecordLayout &cirLayout,
   }
 
   return updateBitfieldInit(
-      cgm, dyn_cast_if_present<cir::IntAttr>(existingVal), intAttr,
+      cgm, existingVal, intAttr,
       field->getType()->isSignedIntegerOrEnumerationType(), info);
 }
 
@@ -1044,7 +1098,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
                                     : layout.getBaseSubobjectCIRType());
   auto recordTy = mlir::cast<cir::RecordType>(ty);
 
-  unsigned numElements = recordTy.getNumElements();
+  unsigned numElements = rd->isUnion() ? 1 : recordTy.getNumElements();
   SmallVector<mlir::Attribute> elements(numElements);
 
   auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
@@ -1255,9 +1309,10 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
     cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
   }
 
-  if (destType->isBitIntType()) {
-    cgm.errorNYI("emitForMemory: _BitInt type");
-  }
+  // CIR represents source types as literally as possible.  Some types, such as
+  // bool and _BitInt(N), are kept at their literal width here and expanded to
+  // their wider "in memory" types during lowering to the LLVM dialect, so the
+  // constant is already in the right form and needs no adjustment.
 
   return c;
 }
@@ -1415,11 +1470,17 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
     const auto *destClass = mpt->getMostRecentCXXRecordDecl();
-    if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
-      assert(!cir::MissingFeatures::noUniqueAddressLayout());
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate: no_unique_address field");
-      return {};
+
+    // Empty [[no_unique_address]] fields have no CIR field index; represent the
+    // pointer-to-data-member by its concrete byte offset.
+    if (cgm.isEmptyFieldForMemberPointer(fieldDecl)) {
+      const ASTContext &astContext = cgm.getASTContext();
+      CharUnits offset =
+          astContext.getMemberPointerPathAdjustment(value) +
+          astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl));
+      return cir::DataMemberOffsetAttr::get(cirTy, offset.getQuantity());
     }
+
     std::optional<llvm::SmallVector<int32_t>> path =
         cgm.buildMemberPath(destClass, fieldDecl);
     if (!path)

@@ -16,7 +16,6 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"

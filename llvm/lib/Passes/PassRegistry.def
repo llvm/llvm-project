@@ -63,6 +63,7 @@ MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("check-debugify", NewPMCheckDebugifyPass())
 MODULE_PASS("constmerge", ConstantMergePass())
+MODULE_PASS("copyprof-module", ModuleCopyProfPass())
 MODULE_PASS("coro-cleanup", CoroCleanupPass())
 MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("lower-comment-string", LowerCommentStringPass())
@@ -433,6 +434,8 @@ FUNCTION_PASS("codegenprepare", CodeGenPreparePass(*TM))
 FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(*TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("constraint-elimination", ConstraintEliminationPass())
+FUNCTION_PASS("copyprof", CopyProfPass())
+FUNCTION_PASS("copyprof-stores", CopyProfStoresPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())
 FUNCTION_PASS("correlated-propagation", CorrelatedValuePropagationPass())
 FUNCTION_PASS("count-visits", CountVisitsPass())
@@ -643,7 +646,7 @@ FUNCTION_PASS_WITH_PARAMS(
     parseLoopUnrollOptions,
     "O0;O1;O2;O3;full-unroll-max=N;no-partial;partial;no-peeling;peeling;"
     "no-profile-peeling;profile-peeling;no-runtime;runtime;no-upperbound;"
-    "upperbound")
+    "upperbound;prepare-for-lto")
 FUNCTION_PASS_WITH_PARAMS(
     "loop-vectorize", "LoopVectorizePass",
     [](LoopVectorizeOptions Opts) { return LoopVectorizePass(Opts); },

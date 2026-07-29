@@ -201,7 +201,10 @@ private:
     auto fields = sliceOp.getFields();
     if (fields.empty())
       return std::nullopt;
-    return fir::getIntIfConstant(fields.front());
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(fields.front()))
+      return constant->trySExtValue();
+    return std::nullopt;
   }
 
   unsigned getRankFromEmbox(fir::EmboxOp embox) const {

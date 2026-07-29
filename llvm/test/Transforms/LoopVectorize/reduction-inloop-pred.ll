@@ -667,16 +667,14 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i1> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = and <4 x i1> [[TMP10]], [[TMP3]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
-; CHECK-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x float> [[TMP9]], <4 x float> [[PREDPHI]]
-; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP3]], <4 x float> [[PREDPHI2]], <4 x float> [[VEC_PHI]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[TMP7]], <4 x float> [[VEC_PHI]]
+; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP5]], <4 x float> [[TMP9]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]

@@ -8,6 +8,7 @@
 
 #include "../lldb-python.h"
 
+#include "lldb/API/SBDebugger.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
@@ -62,6 +63,21 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBEvent to lldb_private::Event.");
 
+  return nullptr;
+}
+
+template <>
+CommandReturnObject *
+ScriptedPythonInterface::ExtractValueFromPythonObject<CommandReturnObject *>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBCommandReturnObject *sb_cmd_retobj =
+          reinterpret_cast<lldb::SBCommandReturnObject *>(
+              python::LLDBSWIGPython_CastPyObjectToSBCommandReturnObject(
+                  p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBCommandReturnObject(*sb_cmd_retobj);
+  error =
+      Status::FromErrorString("couldn't cast lldb::SBCommandReturnObject to "
+                              "lldb_private::CommandReturnObject.");
   return nullptr;
 }
 
@@ -379,4 +395,40 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
   }
 
   return static_cast<ValueType>(unmasked | flags);
+}
+
+template <>
+lldb::DebuggerSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DebuggerSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBDebugger *sb_dbg = reinterpret_cast<lldb::SBDebugger *>(
+          python::LLDBSWIGPython_CastPyObjectToSBDebugger(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBDebugger(*sb_dbg);
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBDebugger to lldb::DebuggerSP.");
+  return {};
+}
+
+template <>
+std::vector<std::string>
+ScriptedPythonInterface::ExtractValueFromPythonObject<std::vector<std::string>>(
+    python::PythonObject &p, Status &error) {
+  std::vector<std::string> result;
+  python::PythonList list(python::PyRefType::Borrowed, p.get());
+  if (!list.IsValid()) {
+    error = Status::FromErrorString(
+        "couldn't extract std::vector<std::string>: not a Python list.");
+    return result;
+  }
+
+  const uint32_t size = list.GetSize();
+  result.reserve(size);
+  for (uint32_t i = 0; i < size; ++i) {
+    python::PythonString item(python::PyRefType::Borrowed,
+                              list.GetItemAtIndex(i).get());
+    if (!item.IsValid())
+      continue;
+    result.push_back(item.GetString().str());
+  }
+  return result;
 }

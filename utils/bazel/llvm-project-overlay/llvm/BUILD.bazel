@@ -851,22 +851,19 @@ cc_binary(
 
 cc_binary(
     name = "llvm-min-tblgen",
-    srcs = [
+    srcs = glob(["utils/TableGen/Basic/*.h"]) + [
+        "utils/TableGen/Basic/AMDGPUTargetDefEmitter.cpp",
         "utils/TableGen/Basic/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
-        "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
-        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
-        "utils/TableGen/Basic/SDNodeProperties.h",
-        "utils/TableGen/Basic/SequenceToOffsetTable.h",
         "utils/TableGen/Basic/TableGen.cpp",
-        "utils/TableGen/Basic/TableGen.h",
         "utils/TableGen/Basic/VTEmitter.cpp",
         "utils/TableGen/llvm-min-tblgen.cpp",
     ],
@@ -1617,6 +1614,28 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AMDGPUTargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/AMDGPUTargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPU.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "R600TargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/R600.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
@@ -1660,8 +1679,10 @@ cc_library(
         "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64FeatPriorities.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/AMDGPUTargetParserDef.inc",
         "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
+        "include/llvm/TargetParser/R600TargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
     ]),

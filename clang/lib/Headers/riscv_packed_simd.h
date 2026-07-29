@@ -134,14 +134,13 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
                                         7);                                    \
   }
 
-#if __riscv_xlen == 64
 #define __packed_narrow_even2(name, rty, ty, sty)                              \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2);              \
+    return __builtin_convertvector(__rs1, rty);                                \
   }
 #define __packed_narrow_even4(name, rty, ty, sty)                              \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2, 4, 6);        \
+    return __builtin_convertvector(__rs1, rty);                                \
   }
 #define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
@@ -151,24 +150,6 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 1, 3, 5, 7);        \
   }
-#else
-#define __packed_narrow_even2(name, rty, ty, sty)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(__rs1, rty);                                \
-  }
-#define __packed_narrow_even4(name, rty, ty, sty)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(__rs1, rty);                                \
-  }
-#define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(((uty)__rs1) >> 16, rty);                   \
-  }
-#define __packed_narrow_odd4(name, rty, ty, sty, uty)                          \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(((uty)__rs1) >> 8, rty);                    \
-  }
-#endif
 
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
@@ -689,6 +670,16 @@ __packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
 /* Packed Saturating Absolute Value (64-bit) */
 __packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
 __packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+
+/* Packed "Q-format" Multiplication (32-bit) */
+__packed_binary_builtin(pmulq_i16x2, int16x2_t, __builtin_riscv_pmulq_i16x2)
+__packed_binary_builtin(pmulqr_i16x2, int16x2_t, __builtin_riscv_pmulqr_i16x2)
+
+/* Packed "Q-format" Multiplication (64-bit) */
+__packed_binary_builtin(pmulq_i16x4, int16x4_t, __builtin_riscv_pmulq_i16x4)
+__packed_binary_builtin(pmulqr_i16x4, int16x4_t, __builtin_riscv_pmulqr_i16x4)
+__packed_binary_builtin(pmulq_i32x2, int32x2_t, __builtin_riscv_pmulq_i32x2)
+__packed_binary_builtin(pmulqr_i32x2, int32x2_t, __builtin_riscv_pmulqr_i32x2)
 
 /* Reinterpret Casts, Packed <-> Scalar (32-bit) */
 __packed_reinterpret(u8x4_u32, uint32_t, uint8x4_t)
