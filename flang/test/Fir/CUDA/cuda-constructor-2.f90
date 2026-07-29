@@ -43,8 +43,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // NOUNIFIED-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // NOUNIFIED-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
 // NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
-// Device and constant globals already live in device memory, so they are not
-// statically registered as device-resident under -gpu=mem:unified.
 // UNIFIED: cuf.register_variable_static @_QMmtestsEn("_QMmtestsEn", 20) {deviceResident}
 // CHECK-NOT: fir.call @_FortranACUFInitModule
 
