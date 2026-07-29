@@ -165,6 +165,8 @@ static cl::opt<int> HotFuncCutoffForICP(
     "hot-func-cutoff-for-icp", cl::Hidden, cl::init(-1),
     cl::desc("A count is hot for indirect call promotion if it exceeds "
              "the minimum count to reach this percentile of total counts."
+             "Note that this percentile is specified as "
+             "percentile * 10000 = HotFuncCutoffForICP."
              "Default value -1 means that if the flag is unspecified then "
              "the value of ProfileSummaryCutoffHot will be used instead."));
 namespace {

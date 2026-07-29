@@ -4,17 +4,21 @@
 
 ; ICP has its own cutoff threshold for hotness that can be tuned.
 
+;; Cutoff of 200000 (20%) has a cutoff count of 14. The profile count of the VP metadata for %call reaches 14
+;; so it is promoted. The profile count of the VP metadata for %call2 is 5 and does not reach 14,
+;; so it is not promoted.
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func4 with count 5 out of 14
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 4 out of 9
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func3 with count 3 out of 5
+; PASS-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func4 with count 3 out of 5
+; PASS-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func2 with count 1 out of 2
 
-; FAIL-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func4
-; FAIL-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func2
-; FAIL-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func3
+;; Cutoff of 100000 (10%) has a cutoff count of 15. Neither of the profile counts of %call and %call2
+;; reaches 15 so nothing is promoted.
+; FAIL-REMARK-NOT: Promote indirect call
 
-; If ICP does not specify "-hot-func-cutoff-for-icp", then it falls back to the default ProfileSummaryCutoffHot value,
-; and will promote "%call2" as well.
-
+;; If ICP does not specify "-hot-func-cutoff-for-icp", then it falls back to the default ProfileSummaryCutoffHot value,
+;; and both "%call" and "%call2" will be promoted.
 ; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func4 with count 5 out of 14
 ; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func2 with count 4 out of 9
 ; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func3 with count 3 out of 5
