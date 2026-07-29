@@ -59,7 +59,7 @@ func.func @ext_array_coor_reverse_slice(%arg0: !fir.ref<!fir.array<10xi32>>) {
 
 // -----
 
-// Unknown step: cannot prove nsw or nuw.
+// Unknown step: may be negative, so drop nuw; nsw still holds for in-bounds indexing.
 
 func.func @ext_array_coor_unknown_step(%arg0: !fir.ref<!fir.array<?xi32>>, %step: i64, %idx: i64) {
   %extent = arith.constant 10 : i64
@@ -72,11 +72,11 @@ func.func @ext_array_coor_unknown_step(%arg0: !fir.ref<!fir.array<?xi32>>, %step
 
 // CHECK-LABEL: llvm.func @ext_array_coor_unknown_step(
 // CHECK:         %[[IDX:.*]] = llvm.sub %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
-// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %{{.*}} : i64
+// CHECK:         %[[DIFF0:.*]] = llvm.mul %[[IDX]], %{{.*}} overflow<nsw> : i64
 // CHECK:         %[[ADJ:.*]] = llvm.sub %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
-// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] : i64
-// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %{{.*}} : i64
-// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %{{.*}} : i64
+// CHECK:         %[[DIFF1:.*]] = llvm.add %[[DIFF0]], %[[ADJ]] overflow<nsw> : i64
+// CHECK:         %[[STRIDE:.*]] = llvm.mul %[[DIFF1]], %{{.*}} overflow<nsw> : i64
+// CHECK:         %[[OFFSET:.*]] = llvm.add %[[STRIDE]], %{{.*}} overflow<nsw> : i64
 
 // -----
 

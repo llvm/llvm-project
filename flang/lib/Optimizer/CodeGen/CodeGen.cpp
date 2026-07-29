@@ -3076,19 +3076,14 @@ struct XArrayCoorOpConversion
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
       // Wrap flags from the pre-cast step (keeps constants recognizable).
-      // Positive: nsw|nuw. Negative: nsw (result may be < 0). Zero/unknown:
-      // none.
+      // Known positive: nsw|nuw. Else drop nuw (product may be < 0); keep nsw.
       mlir::LLVM::IntegerOverflowFlags indexFlags = addMulFlags;
       if (normalSlice) {
         mlir::Value stepOperand = operands[sliceOffset + 2];
         if (std::optional<llvm::APInt> stepCst =
-                fir::getIntIfConstant(stepOperand)) {
-          if (stepCst->isZero())
-            indexFlags = mlir::LLVM::IntegerOverflowFlags::none;
-          else if (stepCst->isNegative())
-            indexFlags = nsw;
-        } else {
-          indexFlags = mlir::LLVM::IntegerOverflowFlags::none;
+                fir::getIntIfConstant(stepOperand);
+            !stepCst || !stepCst->isStrictlyPositive()) {
+          indexFlags = nsw;
         }
       }
       auto idx =
