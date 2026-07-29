@@ -1132,31 +1132,9 @@ CXXBindTemporaryExpr *CXXBindTemporaryExpr::Create(const ASTContext &C,
   return new (C) CXXBindTemporaryExpr(Temp, SubExpr);
 }
 
-static void disableCopyElision(Expr *E) {
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
-    E = EWC->getSubExpr();
-  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-    E = BTE->getSubExpr();
-  if (auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
-    if (CCE->isElidable())
-      CCE->setElidable(false);
-  }
-}
-
-static Expr *stripTemporaryBinding(Expr *E) {
-  if (!E) return nullptr;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
-    return stripTemporaryBinding(EWC->getSubExpr());
-  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-    return stripTemporaryBinding(BTE->getSubExpr());
-  return E;
-}
-
 CoroutineSuspendParameterBypassExpr *
 CoroutineSuspendParameterBypassExpr::Create(const ASTContext &C, Expr *SubExpr,
                                             Expr *MoveExpr) {
-  disableCopyElision(MoveExpr);
-  MoveExpr = stripTemporaryBinding(MoveExpr);
   return new (C) CoroutineSuspendParameterBypassExpr(SubExpr, MoveExpr);
 }
 

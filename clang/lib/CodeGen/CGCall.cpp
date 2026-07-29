@@ -5840,17 +5840,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             Address Addr = Builder.CreateStructGEP(ArgMemory,
                                                    ArgInfo.getInAllocaFieldIndex());
             AggValueSlot Slot = AggValueSlot::forAddr(
-                Addr, I->Ty.getQualifiers(),
-                AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
-                AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+                Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
+                AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+                AggValueSlot::DoesNotOverlap);
             EmitAggExpr(I->getMoveExpr(), Slot);
           } else {
             RawAddress Addr =
                 CreateMemTempWithoutCast(info_it->type, "inalloca.indirect.tmp");
             AggValueSlot Slot = AggValueSlot::forAddr(
-                Addr, I->Ty.getQualifiers(),
-                AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
-                AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+                Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
+                AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+                AggValueSlot::DoesNotOverlap);
             EmitAggExpr(I->getMoveExpr(), Slot);
             Address ArgSlot = Builder.CreateStructGEP(
                 ArgMemory, ArgInfo.getInAllocaFieldIndex());

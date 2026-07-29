@@ -6273,6 +6273,17 @@ static bool isWin32InAllocaRecord(ASTContext &Context, QualType Ty) {
 
   return true;
 }
+static void disableCopyElision(Expr *E) {
+  if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
+    E = EWC->getSubExpr();
+  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = BTE->getSubExpr();
+  if (auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
+    if (CCE->isElidable())
+      CCE->setElidable(false);
+  }
+}
+
 static ExprResult InitializeAndBypassArg(Sema &S, const InitializedEntity &Entity,
                                          Expr *Arg, bool NeedsBypass,
                                          bool IsListInitialization,
@@ -6294,6 +6305,10 @@ static ExprResult InitializeAndBypassArg(Sema &S, const InitializedEntity &Entit
 
   Expr *Result = ArgE.getAs<Expr>();
   if (NeedsBypass) {
+    bool IsAggregate =
+        Arg->getType()->isRecordType() || Arg->getType()->isAnyComplexType();
+    if (IsAggregate)
+      disableCopyElision(Result);
     Result = CoroutineSuspendParameterBypassExpr::Create(S.Context, PreBypassArg, Result);
   }
   return Result;
