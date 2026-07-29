@@ -18,14 +18,40 @@ class AMDGPUArchFeature<string spelling> {
 }
 
 // R600-only.
-def FEATURE_FMA : AMDGPUArchFeature<"FEATURE_FMA">;
+def R600_FEATURE_FMA : AMDGPUArchFeature<"R600_FEATURE_FMA">;
 
-// Marks a Processor/ProcessorModel record as a canonical TargetParser GPU.
-class AMDGPUGPUInfo {
+// AMDGCN.
+def FEATURE_FAST_FMA_F32       : AMDGPUArchFeature<"FEATURE_FAST_FMA_F32">;
+def FEATURE_FAST_DENORMAL_F32  : AMDGPUArchFeature<"FEATURE_FAST_DENORMAL_F32">;
+def FEATURE_WAVE32             : AMDGPUArchFeature<"FEATURE_WAVE32">;
+def FEATURE_XNACK              : AMDGPUArchFeature<"FEATURE_XNACK">;
+def FEATURE_SRAMECC            : AMDGPUArchFeature<"FEATURE_SRAMECC">;
+def FEATURE_WGP                : AMDGPUArchFeature<"FEATURE_WGP">;
+def FEATURE_XNACK_ON_OFF_MODES : AMDGPUArchFeature<"FEATURE_XNACK_ON_OFF_MODES">;
+def FEATURE_SGPR_INIT_BUG      : AMDGPUArchFeature<"FEATURE_SGPR_INIT_BUG">;
+
+// Marks a Processor/ProcessorModel record as a canonical GPU.
+//
+// \p isa is the ISA version [major, minor, stepping]. Empty for R600 (no AMDGCN
+// ISA version); required for AMDGCN GPUs. Not derivable from the name.
+class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
+
+  list<int> IsaVersion = isa;
+
+  // List of targets which are compatible with this target. This
+  // should be used for a "gfxN-generic" targets only, and empty for
+  // individual GPUs.
+  list<Processor> CoveredGPUs = [];
 }
 
 // An R600 processor that is also a canonical TargetParser GPU.
 class R600ProcessorModel<string n, ProcessorItineraries pi,
                          list<SubtargetFeature> f>
     : Processor<n, pi, f>, AMDGPUGPUInfo;
+
+// A gfx6+ processor that is also a canonical TargetParser GPU. \p isa
+// is the ISA version [major, minor, stepping].
+class AMDGPUProcessorModel<string n, SchedMachineModel m,
+                           list<SubtargetFeature> f, list<int> isa>
+    : ProcessorModel<n, m, f>, AMDGPUGPUInfo<isa>;

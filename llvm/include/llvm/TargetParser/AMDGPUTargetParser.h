@@ -36,11 +36,12 @@ enum GPUKind : uint32_t {
   GK_NONE = 0,
 
 #define R600_GPU(NAME, ENUM, FEATURES) ENUM,
-#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
-#include "AMDGPUTargetParser.def"
+#include "llvm/TargetParser/R600TargetParserDef.inc"
+#define AMDGPU_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 
-  GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
-  GK_AMDGCN_GENERIC_LAST = GK_GFX13_GENERIC,
+  GK_AMDGPU_GENERIC_FIRST = GK_GFX9_GENERIC,
+  GK_AMDGPU_GENERIC_LAST = GK_GFX13_GENERIC,
 };
 
 /// Instruction set architecture version.
@@ -58,33 +59,39 @@ struct IsaVersion {
 
 // This isn't comprehensive for now, just things that are needed from the
 // frontend driver.
+enum R600FeatureKind : uint32_t {
+  R600_FEATURE_NONE = 0,
+
+  // Has fma instructions.
+  R600_FEATURE_FMA = 1 << 0,
+};
+
+// GFX6+ features. This isn't comprehensive for now, just things that are needed
+// from the frontend driver.
 enum ArchFeatureKind : uint32_t {
   FEATURE_NONE = 0,
 
-  // This feature only exists for r600, and is implied true for amdgcn.
-  FEATURE_FMA = 1 << 0,
-
   // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 1,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 2,
+  FEATURE_FAST_FMA_F32 = 1 << 0,
+  FEATURE_FAST_DENORMAL_F32 = 1 << 1,
 
   // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 3,
+  FEATURE_WAVE32 = 1 << 2,
 
   // Xnack is available.
-  FEATURE_XNACK = 1 << 4,
+  FEATURE_XNACK = 1 << 3,
 
   // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 5,
+  FEATURE_SRAMECC = 1 << 4,
 
   // WGP mode is supported.
-  FEATURE_WGP = 1 << 6,
+  FEATURE_WGP = 1 << 5,
 
   // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 7,
+  FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
 
   // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 8
+  FEATURE_SGPR_INIT_BUG = 1 << 7
 };
 
 enum FeatureError : uint32_t {
@@ -135,7 +142,7 @@ LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
 LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
-LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
+LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 
 /// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
 /// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)

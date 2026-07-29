@@ -877,16 +877,23 @@ add_header_macro(
   sys/types.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__off_t
+    .llvm-libc-types.__off64_t
+    .llvm-libc-types.__uint64_t
     .llvm-libc-types.blkcnt_t
     .llvm-libc-types.blksize_t
+    .llvm-libc-types.caddr_t
     .llvm-libc-types.clockid_t
     .llvm-libc-types.dev_t
     .llvm-libc-types.gid_t
+    .llvm-libc-types.id_t
+    .llvm-libc-types.ino64_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
     .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
+    .llvm-libc-types.off64_t
     .llvm-libc-types.off_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.pthread_attr_t
@@ -901,9 +908,17 @@ add_header_macro(
     .llvm-libc-types.suseconds_t
     .llvm-libc-types.time_t
     .llvm-libc-types.u_char
+    .llvm-libc-types.u_int
+    .llvm-libc-types.u_int16_t
     .llvm-libc-types.u_int32_t
+    .llvm-libc-types.u_int8_t
+    .llvm-libc-types.u_long
+    .llvm-libc-types.u_short
     .llvm-libc-types.uid_t
     .llvm-libc-types.uint
+    .llvm-libc-types.ulong
+    .llvm-libc-types.useconds_t
+    .llvm-libc-types.ushort
 )
 
 add_header_macro(
