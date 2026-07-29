@@ -297,6 +297,9 @@ public:
                               MachineBasicBlock::instr_iterator &MBBI,
                               const TargetInstrInfo *TII) const override;
 
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
+  unsigned getStackProbeSize(const MachineFunction &MF, Align StackAlign) const;
+
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
@@ -494,6 +497,7 @@ private:
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;

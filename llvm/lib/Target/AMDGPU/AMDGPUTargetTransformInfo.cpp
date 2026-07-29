@@ -283,26 +283,6 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
-const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
-    // Codegen control options which don't matter.
-    AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
-    AMDGPU::FeatureUnalignedScratchAccess, AMDGPU::FeatureUnalignedAccessMode,
-
-    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
-
-    // Property of the kernel/environment which can't actually differ.
-    AMDGPU::FeatureSGPRInitBug, AMDGPU::FeatureXNACK,
-    AMDGPU::FeatureXNACKOnOffModes, AMDGPU::FeatureSupportsXNACK,
-    AMDGPU::FeatureTrapHandler,
-
-    // The default assumption needs to be ecc is enabled, but no directly
-    // exposed operations depend on it, so it can be safely inlined.
-    AMDGPU::FeatureSRAMECC,
-
-    // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32, AMDGPU::FeatureHalfRate64Ops};
-
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
@@ -508,7 +488,8 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
   }
 }
 
-unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -955,7 +936,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       InstRate = getFullRateInstrCost();
 
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
-    if (any_of(ValidSatTys, equal_to(LT.second)))
+    if (is_contained(ValidSatTys, LT.second))
       NElts = 1;
     break;
   }
@@ -1046,6 +1027,10 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
+      // Inserts of booleans are free.
+      // TODO: Extracts are free too.
+      if (EltSize == 1 && Opcode == Instruction::InsertElement)
+        return TargetTransformInfo::TCC_Free;
       // Extract element sequences of consecutive i8 values that match a
       // register size are free most likely. It is not possible to know
       // if this extract is part of a consecutive sequence so this may
@@ -1569,12 +1554,7 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
   const GCNSubtarget *CalleeST
     = static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Callee));
 
-  const FeatureBitset &CallerBits = CallerST->getFeatureBits();
-  const FeatureBitset &CalleeBits = CalleeST->getFeatureBits();
-
-  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
-  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
+  if (!BaseT::areInlineCompatible(Caller, Callee))
     return false;
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
@@ -1594,7 +1574,14 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
     if (Callee->size() == 1)
       return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
-    return BBSize <= InlineMaxBB;
+    if (BBSize > InlineMaxBB) {
+      LLVM_DEBUG(dbgs() << "AMDGPU inline max-BB rejected inlining "
+                        << Callee->getName() << " into " << Caller->getName()
+                        << ": caller BBs=" << Caller->size() << ", callee BBs="
+                        << Callee->size() << ", combined BBs=" << BBSize
+                        << ", max BBs=" << InlineMaxBB << '\n');
+      return false;
+    }
   }
 
   return true;
@@ -1770,6 +1757,12 @@ GCNTTIImpl::getTypeLegalizationCost(Type *Ty) const {
   return Cost;
 }
 
+unsigned GCNTTIImpl::getCacheLineSize() const {
+  if (ST->hasVmemPrefInsts() || ST->hasSmemPrefetchInsts())
+    return ST->getDataCacheLineSize();
+  return 0;
+}
+
 unsigned GCNTTIImpl::getPrefetchDistance() const {
   return ST->hasPrefetch() ? 128 : 0;
 }
@@ -1781,7 +1774,7 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
 void GCNTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  SmallVector<unsigned> MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  SmallVector<unsigned> MaxNumWorkgroups = AMDGPU::getMaxNumWorkGroups(F);
   LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
   LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
   LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});

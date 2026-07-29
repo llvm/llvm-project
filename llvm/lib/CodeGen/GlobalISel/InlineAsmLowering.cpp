@@ -219,7 +219,7 @@ static bool buildAnyextOrCopy(Register Dst, Register Src,
                            "destination register class\n");
       return false;
     }
-    Src = MIRBuilder.buildAnyExt(LLT::scalar(DstSize), Src).getReg(0);
+    Src = MIRBuilder.buildAnyExt(LLT::integer(DstSize), Src).getReg(0);
   }
 
   MIRBuilder.buildCopy(Dst, Src);
@@ -551,11 +551,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       unsigned NumRegs = OpInfo.Regs.size();
       ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
-      assert(NumRegs == SourceRegs.size() &&
-             "Expected the number of input registers to match the number of "
-             "source registers");
-
-      if (NumRegs > 1) {
+      if (NumRegs != 1 || SourceRegs.size() != 1) {
         LLVM_DEBUG(dbgs() << "Input operands with multiple input registers are "
                              "not supported yet\n");
         return false;
@@ -640,11 +636,9 @@ bool InlineAsmLowering::lowerInlineAsm(
       if (ResTy.isScalar() && ResTy.getSizeInBits() < SrcSize) {
         // First copy the non-typed virtual register into a generic virtual
         // register
-        Register Tmp1Reg =
-            MRI->createGenericVirtualRegister(LLT::scalar(SrcSize));
-        MIRBuilder.buildCopy(Tmp1Reg, SrcReg);
+        auto Copy = MIRBuilder.buildCopy(LLT::integer(SrcSize), SrcReg);
         // Need to truncate the result of the register
-        MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
+        MIRBuilder.buildTrunc(ResRegs[i], Copy);
       } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
       } else {

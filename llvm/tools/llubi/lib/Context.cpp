@@ -83,66 +83,97 @@ bool Context::initGlobalValues() {
       return false;
 
     store(*Obj, 0, *InitVal, GV.getValueType());
+    resetNoncacheableConstantBuffer();
   }
   return true;
 }
 
-std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
+MaterializedConstant Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
-    return AnyValue::getPoisonValue(*this, C->getType());
+    return MaterializedConstant(AnyValue::getPoisonValue(*this, C->getType()),
+                                /*Cacheable=*/true);
+
+  if (isa<UndefValue>(C)) {
+    // We treat undef as a freshly freeze poison.
+    auto Value = AnyValue::getPoisonValue(*this, C->getType());
+    freeze(Value, C->getType());
+    return MaterializedConstant(std::move(Value), /*Cacheable=*/false);
+  }
 
   if (isa<ConstantAggregateZero>(C))
-    return AnyValue::getNullValue(*this, C->getType());
+    return MaterializedConstant(AnyValue::getNullValue(*this, C->getType()),
+                                /*Cacheable=*/true);
 
   if (isa<ConstantPointerNull>(C))
-    return AnyValue::getNullValue(*this, C->getType());
+    return MaterializedConstant(AnyValue::getNullValue(*this, C->getType()),
+                                /*Cacheable=*/true);
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     if (auto *VecTy = dyn_cast<VectorType>(CI->getType()))
-      return std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
-                                   AnyValue(CI->getValue()));
-    return CI->getValue();
+      return MaterializedConstant(
+          std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
+                                AnyValue(CI->getValue())),
+          /*Cacheable=*/true);
+    return MaterializedConstant(CI->getValue(), /*Cacheable=*/true);
   }
 
   if (auto *CFP = dyn_cast<ConstantFP>(C)) {
     if (auto *VecTy = dyn_cast<VectorType>(CFP->getType()))
-      return std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
-                                   AnyValue(CFP->getValue()));
-    return CFP->getValue();
+      return MaterializedConstant(
+          std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
+                                AnyValue(CFP->getValue())),
+          /*Cacheable=*/true);
+    return MaterializedConstant(CFP->getValue(), /*Cacheable=*/true);
+  }
+
+  if (auto *CB = dyn_cast<ConstantByte>(C)) {
+    if (auto *VecTy = dyn_cast<VectorType>(CB->getType()))
+      return MaterializedConstant(
+          std::vector<AnyValue>(
+              getEVL(VecTy->getElementCount()),
+              AnyValue(ByteValue(CB->getValue(), DL.isLittleEndian()))),
+          /*Cacheable=*/true);
+    return MaterializedConstant(ByteValue(CB->getValue(), DL.isLittleEndian()),
+                                /*Cacheable=*/true);
   }
 
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CDS->getNumElements());
+    bool Cacheable = true;
     for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
-      const AnyValue *Elt = getConstantValue(CDS->getElementAsConstant(I));
+      auto Elt = getConstantValue(CDS->getElementAsConstant(I));
       if (!Elt)
         return std::nullopt;
+      Cacheable &= Elt->isCacheable();
       Elts.push_back(*Elt);
     }
-    return std::move(Elts);
+    return MaterializedConstant(std::move(Elts), Cacheable);
   }
 
   if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CA->getNumOperands());
+    bool Cacheable = true;
     for (uint32_t I = 0, E = CA->getNumOperands(); I != E; ++I) {
-      const AnyValue *Elt = getConstantValue(CA->getOperand(I));
+      auto Elt = getConstantValue(CA->getOperand(I));
       if (!Elt)
         return std::nullopt;
+      Cacheable &= Elt->isCacheable();
       Elts.push_back(*Elt);
     }
-    return std::move(Elts);
+    return MaterializedConstant(std::move(Elts), Cacheable);
   }
 
   if (auto *BA = dyn_cast<BlockAddress>(C))
-    return BlockAddrMap.at(BA->getBasicBlock());
+    return MaterializedConstant(BlockAddrMap.at(BA->getBasicBlock()),
+                                /*Cacheable=*/true);
 
   if (auto *GV = dyn_cast<GlobalVariable>(C))
-    return GlobalAddrMap.at(GV);
+    return MaterializedConstant(GlobalAddrMap.at(GV), /*Cacheable=*/true);
 
   if (auto *F = dyn_cast<Function>(C))
-    return FuncAddrMap.at(F);
+    return MaterializedConstant(FuncAddrMap.at(F), /*Cacheable=*/true);
 
   if (auto *CE = dyn_cast<ConstantExpr>(C))
     return evaluateConstantExpression(CE);
@@ -150,69 +181,77 @@ std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
   return std::nullopt;
 }
 
-std::optional<AnyValue> Context::evaluateConstantExpression(ConstantExpr *CE) {
+MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
   unsigned Opc = CE->getOpcode();
   switch (Opc) {
   case Instruction::Trunc: {
-    const AnyValue *Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
     if (Src->isPoison())
-      return AnyValue::poison();
+      return MaterializedConstant(AnyValue::poison(), Src->isCacheable());
     unsigned BitWidth = CE->getType()->getScalarSizeInBits();
     if (Src->isInteger())
-      return AnyValue(Src->asInteger().trunc(BitWidth));
+      return MaterializedConstant(Src->asInteger().trunc(BitWidth),
+                                  Src->isCacheable());
     std::vector<AnyValue> Vec = Src->asAggregate();
     for (auto &V : Vec) {
       if (V.isInteger())
         V = V.asInteger().trunc(BitWidth);
     }
-    return AnyValue(std::move(Vec));
+    return MaterializedConstant(std::move(Vec), Src->isCacheable());
   }
   case Instruction::BitCast: {
     Constant *SrcOp = CE->getOperand(0);
-    const AnyValue *Src = getConstantValue(SrcOp);
+    const auto *Src = getConstantValue(SrcOp);
     if (!Src)
       return std::nullopt;
     SmallVector<Byte> Bytes;
     Bytes.resize(getEffectiveTypeStoreSize(CE->getType()), Byte::concrete(0));
     toBytes(*Src, SrcOp->getType(), Bytes);
-    return fromBytes(Bytes, CE->getType());
+    return MaterializedConstant(fromBytes(Bytes, CE->getType()),
+                                Src->isCacheable());
   }
   case Instruction::InsertElement: {
-    const AnyValue *Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
-    const AnyValue *Val = getConstantValue(CE->getOperand(1));
+    const auto *Val = getConstantValue(CE->getOperand(1));
     if (!Val)
       return std::nullopt;
-    const AnyValue *Idx = getConstantValue(CE->getOperand(2));
+    const auto *Idx = getConstantValue(CE->getOperand(2));
     if (!Idx)
       return std::nullopt;
     auto &SrcVec = Src->asAggregate();
+    bool Cacheable =
+        Src->isCacheable() && Val->isCacheable() && Idx->isCacheable();
     if (Idx->isPoison() || Idx->asInteger().uge(SrcVec.size()))
-      return AnyValue::getPoisonValue(*this, CE->getType());
+      return MaterializedConstant(
+          AnyValue::getPoisonValue(*this, CE->getType()), Cacheable);
     std::vector<AnyValue> ResVec = SrcVec;
     ResVec[Idx->asInteger().getZExtValue()] = *Val;
-    return AnyValue(std::move(ResVec));
+    return MaterializedConstant(std::move(ResVec), Cacheable);
   }
   case Instruction::ExtractElement: {
-    const AnyValue *Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
-    const AnyValue *Idx = getConstantValue(CE->getOperand(1));
+    const auto *Idx = getConstantValue(CE->getOperand(1));
     if (!Idx)
       return std::nullopt;
     auto &SrcVec = Src->asAggregate();
+    bool Cacheable = Src->isCacheable() && Idx->isCacheable();
     if (Idx->isPoison() || Idx->asInteger().uge(SrcVec.size()))
-      return AnyValue::getPoisonValue(*this, CE->getType());
-    return SrcVec[Idx->asInteger().getZExtValue()];
+      return MaterializedConstant(
+          AnyValue::getPoisonValue(*this, CE->getType()), Cacheable);
+    return MaterializedConstant(SrcVec[Idx->asInteger().getZExtValue()],
+                                Cacheable);
   }
   case Instruction::ShuffleVector: {
-    const AnyValue *LHS = getConstantValue(CE->getOperand(0));
+    const auto *LHS = getConstantValue(CE->getOperand(0));
     if (!LHS)
       return std::nullopt;
-    const AnyValue *RHS = getConstantValue(CE->getOperand(1));
+    const auto *RHS = getConstantValue(CE->getOperand(1));
     if (!RHS)
       return std::nullopt;
     auto &LHSVec = LHS->asAggregate();
@@ -230,58 +269,91 @@ std::optional<AnyValue> Context::evaluateConstantExpression(ConstantExpr *CE) {
     for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
       for (int Idx : CE->getShuffleMask()) {
         if (Idx == PoisonMaskElem)
-          Res.push_back(AnyValue::poison());
+          Res.push_back(
+              AnyValue::getPoisonValue(*this, CE->getType()->getScalarType()));
         else if (Idx < static_cast<int>(Size))
           Res.push_back(LHSVec[Idx]);
         else
           Res.push_back(RHSVec[Idx - Size]);
       }
     }
-    return AnyValue(std::move(Res));
+    return MaterializedConstant(std::move(Res),
+                                LHS->isCacheable() && RHS->isCacheable());
   }
   case Instruction::GetElementPtr: {
     // Temporary variable for reference to poison values when the subexpression
     // cannot be evaluated. As the reference will be consumed immediately, we
     // don't need to store them into a list.
     AnyValue PoisonValue;
+    bool Cacheable = true;
     AnyValue Res =
         computeGEP(*cast<GEPOperator>(CE), [&](Value *V) -> const AnyValue & {
-          const AnyValue *Val = getConstantValue(cast<Constant>(V));
-          if (Val)
+          const auto *Val = getConstantValue(cast<Constant>(V));
+          if (Val) {
+            Cacheable &= Val->isCacheable();
             return *Val;
+          }
           PoisonValue = AnyValue::getPoisonValue(*this, V->getType());
           return PoisonValue;
         });
     if (!PoisonValue.isNone())
       return std::nullopt;
-    return std::move(Res);
+    return MaterializedConstant(std::move(Res), Cacheable);
   }
-  case Instruction::PtrToAddr: {
-    const AnyValue *Src = getConstantValue(CE->getOperand(0));
+  case Instruction::PtrToAddr:
+  case Instruction::PtrToInt: {
+    const auto *Src = getConstantValue(CE->getOperand(0));
+    if (!Src)
+      return std::nullopt;
+    bool Cacheable = Opc == Instruction::PtrToAddr && Src->isCacheable();
+    if (Src->isPoison())
+      return MaterializedConstant(AnyValue::poison(), Cacheable);
+    unsigned BitWidth = CE->getType()->getScalarSizeInBits();
+    if (Src->isPointer()) {
+      if (Opc == Instruction::PtrToInt)
+        exposeProvenance(Src->asPointer().provenance());
+      return MaterializedConstant(Src->asPointer().address().trunc(BitWidth),
+                                  Cacheable);
+    }
+    std::vector<AnyValue> Vec = Src->asAggregate();
+    for (auto &V : Vec) {
+      if (V.isPointer()) {
+        if (Opc == Instruction::PtrToInt)
+          exposeProvenance(V.asPointer().provenance());
+        V = V.asPointer().address().trunc(BitWidth);
+      }
+    }
+    return MaterializedConstant(std::move(Vec), Cacheable);
+  }
+  case Instruction::IntToPtr: {
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
     if (Src->isPoison())
-      return AnyValue::poison();
-    unsigned BitWidth = CE->getType()->getScalarSizeInBits();
-    if (Src->isPointer())
-      return Src->asPointer().address().trunc(BitWidth);
+      return MaterializedConstant(AnyValue::poison(), /*Cacheable=*/false);
+    unsigned BitWidth =
+        DL.getPointerSizeInBits(CE->getType()->getPointerAddressSpace());
+    if (Src->isInteger())
+      return MaterializedConstant(
+          Pointer(getWildcardProvenance(),
+                  Src->asInteger().zextOrTrunc(BitWidth)),
+          /*Cacheable=*/false);
     std::vector<AnyValue> Vec = Src->asAggregate();
     for (auto &V : Vec) {
-      if (V.isPointer())
-        V = V.asPointer().address().trunc(BitWidth);
+      if (V.isInteger())
+        V = Pointer(getWildcardProvenance(),
+                    V.asInteger().zextOrTrunc(BitWidth));
     }
-    return AnyValue(std::move(Vec));
+    return MaterializedConstant(std::move(Vec), /*Cacheable=*/false);
   }
-  case Instruction::PtrToInt:
-  case Instruction::IntToPtr:
   case Instruction::AddrSpaceCast:
     return std::nullopt;
   default:
     assert(Instruction::isBinaryOp(Opc) && "Must be binary operator?");
-    const AnyValue *LHS = getConstantValue(CE->getOperand(0));
+    const auto *LHS = getConstantValue(CE->getOperand(0));
     if (!LHS)
       return std::nullopt;
-    const AnyValue *RHS = getConstantValue(CE->getOperand(1));
+    const auto *RHS = getConstantValue(CE->getOperand(1));
     if (!RHS)
       return std::nullopt;
 
@@ -310,6 +382,8 @@ std::optional<AnyValue> Context::evaluateConstantExpression(ConstantExpr *CE) {
       }
     };
 
+    bool Cacheable = LHS->isCacheable() && RHS->isCacheable();
+
     if (CE->getType()->isVectorTy()) {
       auto &LHSVec = LHS->asAggregate();
       auto &RHSVec = RHS->asAggregate();
@@ -317,23 +391,34 @@ std::optional<AnyValue> Context::evaluateConstantExpression(ConstantExpr *CE) {
       ResVec.reserve(LHSVec.size());
       for (const auto &[ScalarLHS, ScalarRHS] : zip(LHSVec, RHSVec))
         ResVec.push_back(ScalarEval(ScalarLHS, ScalarRHS));
-      return std::move(ResVec);
+      return MaterializedConstant(std::move(ResVec), Cacheable);
     }
 
-    return ScalarEval(*LHS, *RHS);
+    return MaterializedConstant(ScalarEval(*LHS, *RHS), Cacheable);
   }
 }
 
-const AnyValue *Context::getConstantValue(Constant *C) {
+const MaterializedConstant *Context::getConstantValue(Constant *C) {
   auto It = ConstCache.find(C);
   if (It != ConstCache.end())
     return &It->second;
 
-  std::optional<AnyValue> Val = getConstantValueImpl(C);
-  if (!Val)
+  MaterializedConstant Val = getConstantValueImpl(C);
+  if (Val.isNone())
     return nullptr;
+  if (!Val.isCacheable()) {
+    assert(NoncacheableConstCount <= 1024 && "Unbounded temporary buffer.");
+    ++NoncacheableConstCount;
+    return new (NoncacheableConstBuffer.Allocate())
+        MaterializedConstant(std::move(Val));
+  }
 
-  return &ConstCache.emplace(C, std::move(*Val)).first->second;
+  return &ConstCache.emplace(C, std::move(Val)).first->second;
+}
+
+void Context::resetNoncacheableConstantBuffer() {
+  NoncacheableConstBuffer.DestroyAll();
+  NoncacheableConstCount = 0;
 }
 
 APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {
@@ -366,7 +451,14 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
   uint32_t NumWords = APInt::getNumWords(NumBitsToExtract);
   constexpr uint32_t WordBits = APInt::APINT_BITS_PER_WORD;
-  SmallVector<APInt::WordType> RawBits(NumWords);
+  SmallVector<APInt::WordType> RawBits;
+  bool IsByteType = Ty->isByteTy();
+  // LogicalBytes is always little-endian.
+  std::vector<Byte> LogicalBytes;
+  if (IsByteType)
+    LogicalBytes.resize(divideCeil(NumBitsToExtract, 8));
+  else
+    RawBits.resize(NumWords);
   bool IsTagValid = Ty->isPointerTy();
   SmallVector<APInt::WordType> RawTagBits;
   if (Ty->isPointerTy())
@@ -387,7 +479,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
 
     uint32_t Mask = (1U << NumBitsInByte) - 1;
     // If any of the bits in the byte is poison, the whole value is poison.
-    if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask) {
+    if (!IsByteType &&
+        (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask)) {
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
       OffsetInBits = NewOffsetInBits;
@@ -399,21 +492,33 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
 
-      if (getEffectiveUndefValueBehavior() ==
-          UndefValueBehavior::NonDeterministic) {
+      if (!IsByteType && getEffectiveUndefValueBehavior() ==
+                             UndefValueBehavior::NonDeterministic) {
         // We don't use std::uniform_int_distribution here because it produces
         // different results across different library implementations. Instead,
         // we directly use the low bits from Rng.
         RandomBits = static_cast<uint8_t>(Rng());
       }
     }
+
+    if (IsByteType) {
+      // FIXME: Currently we treat undef bits as poison bits in the byte value,
+      // because keeping undef bits reintroduces undef SSA values.
+      // It should be fixed by completely removing undef bits from the memory.
+      LogicalByte.poisonBits(~LogicalByte.ConcreteMask);
+      LogicalBytes[I / 8] = LogicalByte;
+      continue;
+    }
+
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
                          Mask;
     RawBits[I / WordBits] |= static_cast<APInt::WordType>(ActualBits)
                              << (I % WordBits);
     if (IsTagValid) {
-      if ((LogicalByte.TagMask & LogicalByte.ConcreteMask & Mask) == Mask) {
+      assert((LogicalByte.TagMask & LogicalByte.ConcreteMask) ==
+             LogicalByte.TagMask);
+      if ((LogicalByte.TagMask & Mask) == Mask) {
         uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
         RawTagBits[I / WordBits] |= static_cast<APInt::WordType>(ActualTagBits)
                                     << (I % WordBits);
@@ -422,7 +527,20 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       }
     }
   }
+
   OffsetInBits = NewOffsetInBits;
+
+  if (IsByteType) {
+    assert(!CheckPaddingBits &&
+           "Non-vector-element cases should be handled by the fast path.");
+    if (NumBits & 7) {
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
+      LogicalBytes.back().zeroBits(Mask);
+    }
+    if (DL.isBigEndian())
+      std::reverse(LogicalBytes.begin(), LogicalBytes.end());
+    return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian());
+  }
 
   APInt Bits(NumBitsToExtract, RawBits);
 
@@ -457,6 +575,27 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy())
     return fromBytes(ConstBytesView(Bytes, DL), Ty, /*OffsetInBits=*/0,
                      /*CheckPaddingBits=*/true, ContainsUndefinedBits);
+  if (Ty->isByteTy()) {
+    unsigned BitWidth = Ty->getByteBitWidth();
+    if (BitWidth & 7) {
+      if (!(DL.isLittleEndian() ? Bytes.back() : Bytes.front())
+               .areHighBitsZExtd(BitWidth & 7)) {
+        if (ContainsUndefinedBits)
+          *ContainsUndefinedBits = true;
+        return ByteValue::poison(BitWidth, DL.isLittleEndian());
+      }
+    }
+    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian());
+    bool HasUndefinedBits = false;
+    for (Byte &V : Res.mutableBytes()) {
+      if (V.ConcreteMask != 255)
+        HasUndefinedBits = true;
+      V.poisonBits(~V.ConcreteMask);
+    }
+    if (ContainsUndefinedBits)
+      *ContainsUndefinedBits = HasUndefinedBits;
+    return AnyValue(std::move(Res));
+  }
 
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     Type *ElemTy = VecTy->getElementType();
@@ -585,6 +724,27 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
     WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
                            : AddressBits,
               &Tag);
+  } else if (Ty->isByteTy()) {
+    assert(!PaddingBits &&
+           "Non-vector-element cases should be handled by the fast path.");
+    auto &ByteVal = Val.asByte();
+    ConstBytesView SrcBytes(ByteVal.bytes(), DL);
+    for (uint32_t I = 0, E = static_cast<uint32_t>(SrcBytes.size()); I != E;
+         ++I) {
+      uint32_t NumBitsInByte = std::min(8U, NumBits - I * 8);
+      uint32_t BitsStart = OffsetInBits + I * 8;
+      uint32_t BitsEnd = BitsStart + NumBitsInByte - 1;
+
+      Bytes[BitsStart / 8].writeByte(
+          static_cast<uint8_t>(((1U << NumBitsInByte) - 1) << (BitsStart % 8)),
+          SrcBytes[I].shl(BitsStart % 8));
+      // If it is a cross-byte access, write the remaining bits to the next
+      // byte.
+      if (((BitsStart ^ BitsEnd) & ~7) != 0)
+        Bytes[BitsEnd / 8].writeByte(
+            static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
+            SrcBytes[I].lshr(8 - (BitsStart % 8)));
+    }
   } else {
     llvm_unreachable("Unsupported scalar type.");
   }
@@ -597,6 +757,13 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy()) {
     toBytes(Val, Ty, /*OffsetInBits=*/0, MutableBytesView(Bytes, DL),
             /*PaddingBits=*/true);
+    return;
+  }
+  if (Ty->isByteTy()) {
+    auto &ByteVal = Val.asByte();
+    ArrayRef<Byte> SrcBytes = ByteVal.bytes();
+    assert(Bytes.size() == SrcBytes.size() && "Mismatched byte array.");
+    copy(SrcBytes, Bytes.begin());
     return;
   }
 
@@ -705,6 +872,18 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
       Val = AnyValue(Pointer(RandomVal));
     else
       llvm_unreachable("Unsupported scalar type for poison value");
+    return;
+  }
+  if (Val.isByte()) {
+    for (Byte &V : Val.asMutableByte().mutableBytes()) {
+      if (V.ConcreteMask == 255)
+        continue;
+      uint8_t OldMask = V.ConcreteMask;
+      V.ConcreteMask = 255;
+      V.Value &= OldMask;
+      if (mayUseNonDeterminism())
+        V.Value |= (Rng() & 255) & ~OldMask;
+    }
     return;
   }
   if (Val.isAggregate()) {

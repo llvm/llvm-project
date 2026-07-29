@@ -18,9 +18,9 @@ define void @simple_copy(ptr %dest, ptr %p, ptr %dest2, ptr %dest3) {
 ; DEFAULT-NEXT:    store float [[L0]], ptr [[DEST2]], align 4
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <2 x i32> <i32 1, i32 2>
 ; DEFAULT-NEXT:    store <2 x float> [[TMP1]], ptr [[D1]], align 2
-; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP0]], i32 3
+; DEFAULT-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP0]], i64 3
 ; DEFAULT-NEXT:    store float [[TMP2]], ptr [[D3]], align 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP0]], i32 7
+; DEFAULT-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP0]], i64 7
 ; DEFAULT-NEXT:    store float [[TMP3]], ptr [[D7]], align 2
 ; DEFAULT-NEXT:    ret void
 ;

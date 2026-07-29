@@ -1284,6 +1284,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // Loop over the PHI nodes in the original block, setting incoming values.
   for (PHINode *PN : OrigPHINode) {
     if (CompletelyUnroll) {
+      // The RAUW below disconnects the original PHI from its users.
+      // Invalidate cached SCEVs while the def-use chain is still intact.
+      if (SE)
+        SE->forgetValue(PN);
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       PN->eraseFromParent();
     } else if (ULO.Count > 1) {
@@ -1623,7 +1627,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // LoopInfo should not be valid, confirm that.
   if (UnrollVerifyLoopInfo)
-    LI->verify(*DT);
+    LI->verify();
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
@@ -1715,10 +1719,17 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions.
-  // TODO: Handle any-of and find-last reductions.
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK))
+  static const auto ValidRKs = {
+      RecurKind::Add,         RecurKind::Mul,      RecurKind::Or,
+      RecurKind::And,         RecurKind::Xor,      RecurKind::SMin,
+      RecurKind::SMax,        RecurKind::UMin,     RecurKind::UMax,
+      RecurKind::FAdd,        RecurKind::FMul,     RecurKind::FMin,
+      RecurKind::FMax,        RecurKind::FMinNum,  RecurKind::FMaxNum,
+      RecurKind::FMinimum,    RecurKind::FMaximum, RecurKind::FMinimumNum,
+      RecurKind::FMaximumNum, RecurKind::FMulAdd};
+  // Skip unsupported reductions, including sub, any-of and find-last.
+  // TODO: Handle sub, any-of and find-last reductions.
+  if (!is_contained(ValidRKs, RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
@@ -1727,18 +1738,21 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
 
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch)
+    return std::nullopt;
+  Instruction *LatchInst =
+      cast<Instruction>(Phi.getIncomingValueForBlock(Latch));
   // Don't unroll reductions with constant ops; those can be folded to a
-  // single induction update.
-  if (any_of(cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()))
-                 ->operands(),
-             IsaPred<Constant>))
+  // single induction update. For calls (e.g. fmuladd or min/max
+  // intrinsics), the called function is itself a Constant operand and is
+  // not a reduction operand, so restrict the check to the argument list.
+  auto Ops = isa<CallBase>(LatchInst) ? cast<CallBase>(LatchInst)->args()
+                                      : LatchInst->operands();
+  if (any_of(Ops, IsaPred<Constant>))
     return std::nullopt;
 
-  BasicBlock *Latch = L->getLoopLatch();
-  if (!Latch ||
-      !is_contained(
-          cast<Instruction>(Phi.getIncomingValueForBlock(Latch))->operands(),
-          &Phi))
+  if (!is_contained(LatchInst->operands(), &Phi))
     return std::nullopt;
 
   return RdxDesc;

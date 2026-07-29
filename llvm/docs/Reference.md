@@ -2,16 +2,12 @@
 
 LLVM and API reference documentation.
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
 
 HowToUseAttributes
 CommandGuide/index
-CommandGuide/llvm-reduce
 OptBisect
 SymbolizerMarkupFormat
 PDB/index
@@ -27,7 +23,6 @@ MIRLangRef
 GlobalISel/index
 ConvergentOperations
 TestingGuide
-TestSuiteGuide
 GwpAsan
 XRay
 XRayExample
@@ -54,8 +49,8 @@ ConvergenceAndUniformity
 MLGO
 ContentAddressableStorage
 CIBestPractices
+GitHubActionsRunners
 AIToolPolicy
-CalleeTypeMetadata
 CallGraphSection
 InterfaceExportAnnotations
 PCSectionsMetadata
@@ -147,7 +142,6 @@ XRayFDRFormat
 
 {doc}`TestSuiteGuide`
 :   Describes how to compile and run the test-suite benchmarks.
-
 
 {doc}`GwpAsan`
 :   A sampled heap memory error detection toolkit designed for production use.
@@ -241,3 +235,7 @@ XRayFDRFormat
 {doc}`CIBestPractices`
 :   A list of guidelines and best practices to use when working on LLVM's
     CI systems.
+
+{doc}`GitHubActionsRunners`
+:   A reference for LLVM's GitHub Actions runner pools and their
+    platform-specific constraints.

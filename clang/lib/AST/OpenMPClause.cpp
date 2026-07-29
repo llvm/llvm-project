@@ -1954,36 +1954,48 @@ OMPContainsClause *OMPContainsClause::CreateEmpty(const ASTContext &C,
 OMPNumTeamsClause *OMPNumTeamsClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPNumTeamsClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPNumTeamsClause *Clause =
       new (Mem) OMPNumTeamsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
                                                   unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPNumTeamsClause(N);
 }
 
 OMPThreadLimitClause *OMPThreadLimitClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPThreadLimitClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPThreadLimitClause *Clause =
       new (Mem) OMPThreadLimitClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPThreadLimitClause(N);
 }
 
@@ -2366,19 +2378,17 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
-    OS << "num_teams(";
-    // Handle lower-bound:upper-bound syntax when there are exactly 2
-    // expressions
-    if (Node->varlist_size() == 2) {
-      llvm::interleave(
-          Node->varlist(), OS,
-          [&](const auto *Expr) { Expr->printPretty(OS, nullptr, Policy, 0); },
-          ":");
+    OS << "num_teams";
+    if (Node->getModifier() != OMPC_NUMTEAMS_unknown) {
+      OS << "(";
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << "dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << ")";
+      VisitOMPClauseList(Node, ':');
     } else {
-      // For single expression or other cases, use comma-separated list
-      llvm::interleaveComma(Node->varlist(), OS, [&](const auto *Expr) {
-        Expr->printPretty(OS, nullptr, Policy, 0);
-      });
+      VisitOMPClauseList(Node, '(');
     }
     OS << ")";
   }
@@ -2387,7 +2397,14 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
 void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "thread_limit";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getModifier() == OMPC_THREADLIMIT_dims) {
+      OS << "(dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
+      VisitOMPClauseList(Node, ':');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }

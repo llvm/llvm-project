@@ -705,7 +705,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Type,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
+                         SanitizerKind::Thread),
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
@@ -781,6 +781,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
         << "-ffixed-x18";
+  }
+
+  if ((Kinds & SanitizerKind::ShadowCallStack) &&
+      TC.getTriple().getArch() == llvm::Triple::hexagon &&
+      !Args.hasArg(options::OPT_ffixed_r19) && DiagnoseErrors) {
+    D.Diag(diag::err_drv_argument_only_allowed_with)
+        << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
+        << "-ffixed-r19";
   }
 
   // Report error if there are non-trapping sanitizers that require

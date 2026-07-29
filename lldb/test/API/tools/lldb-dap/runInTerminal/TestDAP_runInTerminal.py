@@ -66,7 +66,6 @@ def read_pipe_message(pipe):
 
 
 @skipIfBuildType(["debug"])
-@skipIfWindows  # https://github.com/llvm/llvm-project/issues/198763
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -131,6 +130,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn(program, request["arguments"]["args"])
         self.assertIn("foobar", request["arguments"]["args"])
         self.assertIn("FOO", request["arguments"]["env"])
+        if sys.platform == "win32":
+            self.assertIn("_NO_DEBUG_HEAP", request["arguments"]["env"])
 
         breakpoint_line = line_number(source, "// breakpoint")
 
@@ -151,6 +152,10 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         # We verify we were able to set the environment
         env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
+
+        if sys.platform == "win32":
+            env = self.dap_server.request_evaluate("nodebugheap")["body"]["result"]
+            self.assertIn('"1"', env)
 
         self.continue_to_exit()
 

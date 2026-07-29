@@ -243,6 +243,43 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+option(COMPILER_RT_USE_LIBC_MATH
+      "Use LLVM libc math routines for floating-point builtins" OFF)
+
+# Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
+# <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
+macro(use_libc_builtin list_var name)
+  list(REMOVE_ITEM ${list_var} ${name}.c)
+  list(APPEND ${list_var} ${name}.cpp)
+endmacro()
+
+if(COMPILER_RT_USE_LIBC_MATH)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+  endif()
+
+  get_target_property(_libc_include_dirs llvm-libc-common-utilities
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${_libc_include_dirs})
+  add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  use_libc_builtin(GENERIC_SOURCES    adddf3)
+  use_libc_builtin(GENERIC_SOURCES    addsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+  use_libc_builtin(GENERIC_SOURCES    divdf3)
+  use_libc_builtin(GENERIC_SOURCES    divsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES divtf3)
+  use_libc_builtin(GENERIC_SOURCES    muldf3)
+  use_libc_builtin(GENERIC_SOURCES    mulsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES multf3)
+  use_libc_builtin(GENERIC_SOURCES    negdf2)
+  use_libc_builtin(GENERIC_SOURCES    negsf2)
+  use_libc_builtin(GENERIC_SOURCES    subdf3)
+  use_libc_builtin(GENERIC_SOURCES    subsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES subtf3)
+endif()
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
@@ -466,6 +503,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
 
   if(implicit_it_flag)
     set(assembly_files
+      arm/addsf3.S
       arm/mulsf3.S
       arm/divsf3.S
       arm/adddf3.S
@@ -537,9 +575,9 @@ set(arm_sync_SOURCES
 set(thumb1_base_SOURCES
   arm/divsi3.S
   arm/udivsi3.S
-  arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
 set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
@@ -548,6 +586,7 @@ set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatun
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/addsf3fast.S
     arm/thumb1/cmpdf2.S
     arm/thumb1/cmpsf2.S
     arm/thumb1/gedf2.S
@@ -559,6 +598,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
+  set_special_properties(arm/thumb1/addsf3fast.S
+    SUPERSEDES addsf3.c subsf3.c PROVIDES addsf3 subsf3)
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
   set_special_properties(arm/thumb1/cmpsf2.S
@@ -567,6 +608,7 @@ else()
   # Other Thumb1 assembly implementations which do not fall under the
   # COMPILER_RT_ARM_OPTIMIZED_FP umbrella
   set(thumb1_base_SOURCES
+    arm/thumb1/addsf3.S
     arm/comparesf2.S
     ${thumb1_base_SOURCES}
   )
@@ -803,6 +845,7 @@ if (APPLE)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
+set(amdgpu_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})

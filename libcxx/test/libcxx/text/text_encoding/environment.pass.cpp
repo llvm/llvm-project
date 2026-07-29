@@ -14,6 +14,7 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: windows, android
 // UNSUPPORTED: availability-te-environment-missing
+// UNSUPPORTED: LLVM-LIBC-FIXME
 
 // std::text_encoding::environment()
 

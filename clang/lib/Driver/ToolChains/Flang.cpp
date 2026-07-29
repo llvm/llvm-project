@@ -87,7 +87,7 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 ///  -Ofast
 ///  -O4
 ///  -O3
-/// For all other cases, loop versioning is is disabled.
+/// For all other cases, loop versioning is disabled.
 ///
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///
@@ -136,6 +136,8 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_fenumeration_type,
+                   options::OPT_fno_enumeration_type,
                    options::OPT_fopenacc_default_none_scalars_strict,
                    options::OPT_fno_openacc_default_none_scalars_strict,
                    options::OPT_fopenacc_multiple_names_in_routine,
@@ -238,6 +240,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
+  Args.addOptInFlag(CmdArgs, options::OPT_freal_sum_reassociation,
+                    options::OPT_fno_real_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -603,9 +607,8 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAArch64TargetArgs(Args, CmdArgs);
     break;
-
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAMDGPUTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
     break;
@@ -737,10 +740,33 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     }
   }
 
+  // When in OpenMP offloading mode, forward assumptions information about
+  // thread and team counts in the target device. The host needs to know about
+  // this to prevent the SPMD to SPMD-no-loop promotion being done differently
+  // for host and device on the same target region.
+  if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
+                   options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
+  if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
+                   options::OPT_fno_openmp_assume_threads_oversubscription,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+
   if (IsOpenMPDevice) {
     // -fopenmp-is-target-device is passed along to tell the frontend that it is
     // generating code for a device, so that only the relevant code is emitted.
     CmdArgs.push_back("-fopenmp-is-target-device");
+
+    // -fopenmp-target-fast implies -fopenmp-assume-no-thread-state and
+    // -fopenmp-assume-no-nested-parallelism, and forces -O3 unless an
+    // explicit optimization level was requested.
+    bool TargetFastUsed =
+        Args.hasFlag(options::OPT_fopenmp_target_fast,
+                     options::OPT_fno_openmp_target_fast, false);
+
+    if (TargetFastUsed && !Args.hasArg(options::OPT_O_Group))
+      CmdArgs.push_back("-O3");
 
     // When in OpenMP offloading mode, enable debugging on the device.
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
@@ -748,20 +774,18 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
                      options::OPT_fno_openmp_target_debug, /*Default=*/false))
       CmdArgs.push_back("-fopenmp-target-debug");
 
-    // When in OpenMP offloading mode, forward assumptions information about
-    // thread and team counts in the device.
-    if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
-                     options::OPT_fno_openmp_assume_teams_oversubscription,
-                     /*Default=*/false))
-      CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
-    if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
-                     options::OPT_fno_openmp_assume_threads_oversubscription,
-                     /*Default=*/false))
-      CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
-    if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+    // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
+    if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
+                     options::OPT_fno_openmp_assume_no_thread_state,
+                     /*Default=*/TargetFastUsed))
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
-    if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+
+    // Handle -fopenmp-assume-no-nested-parallelism (implied by target-fast)
+    if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
+                     options::OPT_fno_openmp_assume_no_nested_parallelism,
+                     /*Default=*/TargetFastUsed))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+
     if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                       true))
       CmdArgs.push_back("-nogpulib");
@@ -1022,6 +1046,11 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
         A->render(Args, CmdArgs);
     }
   }
+
+  //-fpseudo-probe-for-profiling
+  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
+                   options::OPT_fno_pseudo_probe_for_profiling, false))
+    CmdArgs.push_back("-fpseudo-probe-for-profiling");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

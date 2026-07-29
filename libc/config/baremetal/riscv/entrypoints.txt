@@ -251,6 +251,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.malloc
+    libc.src.stdlib.malloc_usable_size
     libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -321,6 +322,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -665,6 +670,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -824,6 +830,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -871,6 +878,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
@@ -964,6 +972,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 

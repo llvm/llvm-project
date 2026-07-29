@@ -287,6 +287,17 @@ if(LLVM_BUILD_INSTRUMENTED)
         message(STATUS "CSSPGO of flang is not supported")
       else()
         add_dependencies(clang-bootstrap-deps generate-flang-profdata)
+        # When clang drives the bootstrap PGO, clang's generate-profdata is
+        # also a bootstrap provider, so both pipelines run concurrently and
+        # clean/regenerate the same shared profraw dirs, racing each other's
+        # merge. Order flang after clang to remove the race. generate-profdata
+        # already runs in this case, so this adds no extra work; when flang
+        # drives the bootstrap (provider is generate-flang-profdata) the guard
+        # keeps it a no-op.
+        if(TARGET generate-profdata AND
+           "${PGO_OPT_PROFDATA_PROVIDER}" STREQUAL "generate-profdata")
+          add_dependencies(generate-flang-profdata generate-profdata)
+        endif()
       endif()
     endif()
   endif()

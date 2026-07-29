@@ -17,11 +17,13 @@
 #include "NVPTX.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -29,6 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -44,6 +47,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 // The ptx syntax and format is very different from that usually seem in a .s
@@ -188,6 +192,29 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
+  void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
+                         raw_ostream &O) const;
+  void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI) const;
+
+  /// Should a .noreturn directive be emitted for \p V, which is either a
+  /// function or a call site?
+  template <typename T> bool shouldEmitPTXNoReturn(const T &V) const {
+    static_assert(std::is_same_v<Function, T> || std::is_base_of_v<CallBase, T>,
+                  "expected a function or a call site");
+
+    const auto &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+    if (!NTM.getSubtargetImpl()->hasNoReturn())
+      return false;
+
+    if (!V.doesNotReturn() || !V.getFunctionType()->getReturnType()->isVoidTy())
+      return false;
+
+    if constexpr (std::is_same_v<Function, T>)
+      return !isKernelFunction(V);
+    else
+      return true;
+  }
+
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
@@ -227,6 +254,10 @@ private:
 
   void emitPTXGlobalVariable(const GlobalVariable *GVar, raw_ostream &O,
                              const NVPTXSubtarget &STI);
+  void emitPTXGlobalVariableDefinition(const GlobalVariable *GVar,
+                                       raw_ostream &O,
+                                       const NVPTXSubtarget &STI,
+                                       bool EmitInitializer);
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
   std::string getPTXFundamentalTypeStr(Type *Ty, bool = true) const;
   void printScalarConstant(const Constant *CPV, raw_ostream &O);

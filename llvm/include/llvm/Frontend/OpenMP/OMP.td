@@ -21,9 +21,10 @@ def OpenMP : DirectiveLanguage {
   let cppNamespace = "omp"; // final namespace will be llvm::omp
   let directivePrefix = "OMPD_";
   let clausePrefix = "OMPC_";
+  let loopModifierPrefix = "OMPLM_";
   let makeEnumAvailableInNamespace = true;
   let enableBitmaskEnumInNamespace = true;
-  let clauseEnumSetClass = "OmpClauseSet";
+  let clauseEnumSetClass = "llvm::omp::ClauseSet";
   let flangClauseBaseClass = "OmpClause";
 }
 
@@ -66,6 +67,7 @@ def OMPC_Allocator : Clause<[Spelling<"allocator">]> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_Apply : Clause<[Spelling<"apply">]> {
+  let flangClass = "OmpApplyClause";
 }
 def OMPC_AppendArgs : Clause<[Spelling<"append_args">]> {
   let flangClass = "OmpAppendArgsClause";
@@ -145,12 +147,18 @@ def OMPC_Counts : Clause<[Spelling<"counts">]> {
   let clangClass = "OMPCountsClause";
 }
 def OMPC_Default : Clause<[Spelling<"default">]> {
+  // This is for default DSA.
+  // For the "otherwise" clause, use OMPC_DefaultVariant.
   let clangClass = "OMPDefaultClause";
   let flangClass = "OmpDefaultClause";
 }
 def OMPC_DefaultMap : Clause<[Spelling<"defaultmap">]> {
   let clangClass = "OMPDefaultmapClause";
   let flangClass = "OmpDefaultmapClause";
+}
+def OMPC_DefaultVariant : Clause<[Spelling<"default">]> {
+  let name = "default_variant";
+  let flangClass = "OmpDefaultVariantClause";
 }
 def OMPC_Depend : Clause<[Spelling<"depend">]> {
   let clangClass = "OMPDependClause";
@@ -920,15 +928,6 @@ def OMP_Do : Directive<[Spelling<"do">]> {
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
-def OMP_EndDo : Directive<[Spelling<"end do">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Do.leafConstructs;
-  let association = OMP_Do.association;
-  let category = OMP_Do.category;
-  let languages = OMP_Do.languages;
-}
 def OMP_Error : Directive<[Spelling<"error">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_At, 51>,
@@ -947,6 +946,9 @@ def OMP_Flatten : Directive<[Spelling<"flatten">]> {
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Flattened,
+  ];
 }
 def OMP_Flush : Directive<[Spelling<"flush">]> {
   let allowedOnceClauses = [
@@ -990,19 +992,31 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let languages = [L_C, L_Fortran];
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Depth, 61>,
     VersionedClause<OMPC_LoopRange, 60>,
   ];
   let association = AS_LoopSeq;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Fused,
+  ];
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Permutation>,
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Interchanged,
+  ];
 }
 def OMP_interop : Directive<[Spelling<"interop">]> {
   let allowedClauses = [
@@ -1048,15 +1062,21 @@ def OMP_Metadirective : Directive<[Spelling<"metadirective">]> {
     VersionedClause<OMPC_When>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_Default, 50, 51>,
+    VersionedClause<OMPC_DefaultVariant, 50, 51>,
     VersionedClause<OMPC_Otherwise, 52>,
   ];
   let association = AS_None;
   let category = CA_Meta;
 }
 def OMP_Nothing : Directive<[Spelling<"nothing">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let association = AS_None;
   let category = CA_Utility;
+  let allowedLoopModifiers = [
+    LM_Identity,
+  ];
 }
 def OMP_Ordered : Directive<[Spelling<"ordered">]> {
   let allowedClauses = [
@@ -1106,8 +1126,14 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   let category = CA_Informational;
 }
 def OMP_Reverse : Directive<[Spelling<"reverse">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Reversed,
+  ];
 }
 def OMP_Scan : Directive<[Spelling<"scan">]> {
   let allowedOnceClauses = [
@@ -1130,15 +1156,6 @@ def OMP_Scope : Directive<[Spelling<"scope">]> {
   let association = AS_Block;
   let category = CA_Executable;
 }
-def OMP_EndScope : Directive<[Spelling<"end scope">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Scope.leafConstructs;
-  let association = OMP_Scope.association;
-  let category = OMP_Scope.category;
-  let languages = [L_Fortran];
-}
 def OMP_Section : Directive<[Spelling<"section">]> {
   let association = AS_Separating;
   let category = CA_Subsidiary;
@@ -1156,15 +1173,6 @@ def OMP_Sections : Directive<[Spelling<"sections">]> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
-}
-def OMP_EndSections : Directive<[Spelling<"end sections">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Sections.leafConstructs;
-  let association = OMP_Sections.association;
-  let category = OMP_Sections.category;
-  let languages = [L_Fortran];
 }
 def OMP_Simd : Directive<[Spelling<"simd">]> {
   let allowedClauses = [
@@ -1198,18 +1206,6 @@ def OMP_Single : Directive<[Spelling<"single">]> {
   ];
   let association = AS_Block;
   let category = CA_Executable;
-}
-def OMP_EndSingle : Directive<[Spelling<"end single">]> {
-  let allowedClauses = [
-    VersionedClause<OMPC_CopyPrivate>,
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Single.leafConstructs;
-  let association = OMP_Single.association;
-  let category = OMP_Single.category;
-  let languages = [L_Fortran];
 }
 def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [
@@ -1421,6 +1417,9 @@ def OMP_ThreadPrivate : Directive<[Spelling<"threadprivate">]> {
   let category = CA_Declarative;
 }
 def OMP_Tile : Directive<[Spelling<"tile">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
@@ -1429,15 +1428,29 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Grid,
+    LM_Intratile,
+  ];
 }
 def OMP_Stripe : Directive<[Spelling<"stripe">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 60>,
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Grid,
+    LM_Offsets,
+  ];
 }
 def OMP_Split : Directive<[Spelling<"split">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Counts, 60>,
   ];
@@ -1446,6 +1459,9 @@ def OMP_Split : Directive<[Spelling<"split">]> {
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Split,
+  ];
 }
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
   let isDefault = true;
@@ -1453,12 +1469,18 @@ def OMP_Unknown : Directive<[Spelling<"unknown">]> {
   let category = CA_Utility;
 }
 def OMP_Unroll : Directive<[Spelling<"unroll">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let allowedLoopModifiers = [
+    LM_Unrolled,
+  ];
 }
 def OMP_Workshare : Directive<[Spelling<"workshare">]> {
   let allowedOnceClauses = [
@@ -1468,31 +1490,15 @@ def OMP_Workshare : Directive<[Spelling<"workshare">]> {
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
-def OMP_EndWorkshare : Directive<[Spelling<"end workshare">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_Workshare.leafConstructs;
-  let association = OMP_Workshare.association;
-  let category = OMP_Workshare.category;
-  let languages = [L_Fortran];
-}
 def OMP_Workdistribute : Directive<[Spelling<"workdistribute">]> {
   let association = AS_Block;
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
-def OMP_EndWorkdistribute : Directive<[Spelling<"end workdistribute">]> {
-  let leafConstructs = OMP_Workdistribute.leafConstructs;
-  let association = OMP_Workdistribute.association;
-  let category = OMP_Workdistribute.category;
-  let languages = [L_Fortran];
-}
 
 //===----------------------------------------------------------------------===//
 // Definitions of OpenMP compound directives
-// Sorted alphabetically wrt directive spelling, except "end xyz" immediately
-// follows "xyz".
+// Sorted alphabetically wrt directive spelling.
 //===----------------------------------------------------------------------===//
 
 def OMP_DistributeParallelDo : Directive<[Spelling<"distribute parallel do">]> {
@@ -1665,15 +1671,6 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
   ];
   let leafConstructs = [OMP_Do, OMP_Simd];
   let category = CA_Executable;
-  let languages = [L_Fortran];
-}
-def OMP_EndDoSimd : Directive<[Spelling<"end do simd">]> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = OMP_DoSimd.leafConstructs;
-  let association = OMP_DoSimd.association;
-  let category = OMP_DoSimd.category;
   let languages = [L_Fortran];
 }
 def OMP_ForSimd : Directive<[Spelling<"for simd">]> {
