@@ -3368,6 +3368,15 @@ instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
                                                        IntrinsicInst &II) {
+  // Fold umin(umin(umin(umin(A, B), 1),
+  //                umin(umin(C, D), 1)),
+  //           1)
+  // into
+  //      umin(umin(umin(A, B),
+  //                umin(C, D)),
+  //           1),
+  // removing two redundant boolean umins when predication is equal across all
+  // umins.
   Value *Pg = II.getOperand(0);
   auto getUMinOpFromBooleanUMin = [&Pg](Value *UMin) -> IntrinsicInst * {
     Value *LHS;
