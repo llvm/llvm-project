@@ -15038,10 +15038,10 @@ static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
 /// if there are no finalization statements.
 /// Note: Loops with non-arithmetic loop variables (e.g., iterators) are skipped
 /// because finalization only applies to integer/floating-point counters.
-static Stmt *buildLoopFinalization(
-    ASTContext &Context,
-    ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
-    ArrayRef<Stmt *> LoopStmts) {
+static Stmt *
+buildLoopFinalization(ASTContext &Context,
+                      ArrayRef<OMPLoopBasedDirective::HelperExprs> LoopHelpers,
+                      ArrayRef<Stmt *> LoopStmts) {
   assert(LoopHelpers.size() == LoopStmts.size() &&
          "LoopHelpers and LoopStmts must have the same size");
   SmallVector<Stmt *, 8> FinalizationStmts;
@@ -15055,8 +15055,9 @@ static Stmt *buildLoopFinalization(
     if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
       if (auto *InitDeclStmt = dyn_cast_or_null<DeclStmt>(For->getInit())) {
         if (InitDeclStmt->isSingleDecl()) {
-          if (auto *InitVar = dyn_cast<VarDecl>(InitDeclStmt->getSingleDecl())) {
-            // Skip finalization if loop variable is not arithmetic (e.g., iterator).
+          if (auto *InitVar =
+                  dyn_cast<VarDecl>(InitDeclStmt->getSingleDecl())) {
+            // Skip finalization if loop variable is not arithmetic.
             if (!InitVar->getType()->isArithmeticType())
               continue;
           }
@@ -15344,10 +15345,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                  AStmt, Inner,
-                                  buildPreInits(Context, PreInits),
-                                  buildLoopFinalization(Context, LoopHelpers, LoopStmts));
+  return OMPTileDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers, LoopStmts));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
