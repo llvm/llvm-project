@@ -254,6 +254,10 @@ void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
     return;
   }
 
+  if (E->getType().getAddressSpace() == LangAS::hlsl_constant)
+    if (CGF.CGM.getHLSLRuntime().emitBufferCopy(CGF, E, LV, Dest))
+      return;
+
   EmitFinalDestCopy(E->getType(), LV);
 }
 
@@ -726,6 +730,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
         Builder.CreatePHI(element->getType(), 2, "arrayinit.cur");
     currentElement->addIncoming(element, entryBB);
 
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
     // Emit the actual filler expression.
     {
       // C++1z [class.temporary]p5:
@@ -756,6 +763,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
     Builder.CreateCondBr(done, endBB, bodyBB);
     currentElement->addIncoming(nextElement, Builder.GetInsertBlock());
+
+    if (CGF.CGM.shouldEmitConvergenceTokens())
+      CGF.ConvergenceTokenStack.pop_back();
 
     CGF.EmitBlock(endBB);
   }
@@ -868,7 +878,44 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     break;
   }
 
-  case CK_DerivedToBase:
+  case CK_DerivedToBase: {
+    assert(CGF.getLangOpts().HLSL &&
+           "Derived/Base casts in EmitAggExpr are only supported in HLSL");
+
+    // Create a temporary for the derived record, switch it out with the current
+    // Dest slot, and emit the derived value.
+    QualType DerivedTy = E->getSubExpr()->getType();
+    RawAddress DerivedAddr = CGF.CreateMemTempWithoutCast(DerivedTy);
+    AggValueSlot DerivedTmpSlot = AggValueSlot::forAddr(
+        DerivedAddr, DerivedTy.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+
+    AggValueSlot DestBaseSlot = Dest;
+    Dest = DerivedTmpSlot;
+
+    Visit(E->getSubExpr());
+
+    // Perform derived-to-base address conversion to get the address
+    // of the base record within the derived record. In HLSL this should
+    // always be same as the derived because of single inheritance, but let's
+    // do it properly.
+    Address BaseAddrInDerived = CGF.GetAddressOfBaseClass(
+        DerivedTmpSlot.getAddress(), DerivedTy->castAsCXXRecordDecl(),
+        E->path_begin(), E->path_end(),
+        /*NullCheckValue=*/false, E->getExprLoc());
+
+    AggValueSlot SrcBaseSlot = AggValueSlot::forAddr(
+        BaseAddrInDerived, E->getType().getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+
+    // Copy the base class to the original destination slot and restore it.
+    EmitCopy(E->getType(), DestBaseSlot, SrcBaseSlot);
+    Dest = DestBaseSlot;
+    break;
+  }
+
   case CK_BaseToDerived:
   case CK_UncheckedDerivedToBase: {
     llvm_unreachable("cannot perform hierarchy conversion in EmitAggExpr: "
@@ -966,6 +1013,10 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     [[fallthrough]];
 
   case CK_HLSLArrayRValue:
+    if (CGF.getLangOpts().HLSL &&
+        E->getSubExpr()->getType()->isHLSLResourceRecordArray())
+      if (CGF.CGM.getHLSLRuntime().emitGlobalResourceArray(CGF, E, Dest))
+        break;
     Visit(E->getSubExpr());
     break;
   case CK_HLSLAggregateSplatCast: {
@@ -1998,6 +2049,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
   llvm::Value *element =
       Builder.CreateInBoundsGEP(llvmElementType, begin, index);
 
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.push_back(CGF.emitConvergenceLoopToken(bodyBB));
+
   // Prepare for a cleanup.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   EHScopeStack::stable_iterator cleanup;
@@ -2044,6 +2098,9 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
       "arrayinit.done");
   llvm::BasicBlock *endBB = CGF.createBasicBlock("arrayinit.end");
   Builder.CreateCondBr(done, endBB, bodyBB);
+
+  if (CGF.CGM.shouldEmitConvergenceTokens())
+    CGF.ConvergenceTokenStack.pop_back();
 
   CGF.EmitBlock(endBB);
 
@@ -2265,7 +2322,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
               Record->hasTrivialMoveAssignment() ||
-              Record->hasAttr<TrivialABIAttr>() || Record->isUnion()) &&
+              Record->hasAttr<TrivialABIAttr>() || Record->isUnion() ||
+              // HLSL uses aggregate-copy for user-defined record types.
+              (getLangOpts().HLSL && !Record->isHLSLBuiltinRecord())) &&
              "Trying to aggregate-copy a type without a trivial copy/move "
              "constructor or assignment operator");
       // Ignore empty classes in C++.
@@ -2286,9 +2345,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
-    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
-      return;
+  assert(Ty.getAddressSpace() != LangAS::hlsl_constant &&
+         "copies of aggregates in hlsl_constant address space should be "
+         "handled earlier by the HLSL runtime");
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is

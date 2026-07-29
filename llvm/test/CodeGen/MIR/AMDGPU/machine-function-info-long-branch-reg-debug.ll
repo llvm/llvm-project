@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
 
 ; Test that debug instructions do not change long branch reserved serialized through
 ; MIR.
@@ -49,6 +49,7 @@
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
+; CHECK-NEXT: minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @uniform_long_forward_branch_debug(ptr addrspace(1) %arg, i32 %arg1) #0 !dbg !5 {
   bb0:

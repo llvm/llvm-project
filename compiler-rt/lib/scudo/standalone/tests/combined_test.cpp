@@ -21,25 +21,19 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdio>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <thread>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
 static constexpr scudo::uptr MinAlignLog = FIRST_32_SECOND_64(3U, 4U);
-
-// Fuchsia complains that the function is not used.
-UNUSED static void disableDebuggerdMaybe() {
-#if SCUDO_ANDROID
-  // Disable the debuggerd signal handler on Android, without this we can end
-  // up spending a significant amount of time creating tombstones.
-  signal(SIGSEGV, SIG_DFL);
-#endif
-}
 
 template <class AllocatorT>
 bool isPrimaryAllocation(scudo::uptr Size, scudo::uptr Alignment) {
@@ -58,23 +52,13 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   Size = scudo::roundUp(Size, MinAlignment);
   if (Allocator->useMemoryTaggingTestOnly()) {
-    EXPECT_DEATH(
-        {
-          disableDebuggerdMaybe();
-          reinterpret_cast<char *>(P)[-1] = 'A';
-        },
-        "");
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[-1] = 'A', "");
   }
   if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
           ? Allocator->useMemoryTaggingTestOnly()
           : Alignment == MinAlignment &&
                 AllocatorT::SecondaryT::getGuardPageSize() > 0) {
-    EXPECT_DEATH(
-        {
-          disableDebuggerdMaybe();
-          reinterpret_cast<char *>(P)[Size] = 'A';
-        },
-        "");
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[Size] = 'A', "");
   }
 }
 
@@ -523,6 +507,39 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
   Allocator->deallocate(P, Origin);
 }
 
+// Verify that a realloc that shrinks retags all of the extra size
+// so it will fault it touched.
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateDecreasingTagged) {
+  auto *Allocator = this->Allocator.get();
+  if (!Allocator->useMemoryTaggingTestOnly()) {
+    TEST_SKIP("Requires MTE");
+  }
+
+  const scudo::uptr GranuleSize = scudo::archMemoryTagGranuleSize();
+  // Get the largest value that fits in the primary.
+  scudo::uptr Size =
+      TypeParam::Primary::SizeClassMap::MaxSize - scudo::Chunk::getHeaderSize();
+  EXPECT_TRUE(
+      isPrimaryAllocation<TestAllocator<TypeParam>>(Size, 1U << MinAlignLog));
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  memset(P, 'Z', Size);
+
+  // Shrink three granule sizes to verify that extra space will fail.
+  EXPECT_GT(Size, GranuleSize * 3);
+  scudo::uptr NewSize = scudo::roundDown(Size - GranuleSize * 3, GranuleSize);
+  void *NewP = Allocator->reallocate(P, NewSize);
+  EXPECT_NE(NewP, nullptr);
+  EXPECT_EQ(P, NewP);
+  memset(NewP, 'Y', NewSize);
+
+  // Check that accessing the entire allocation after new size causes a crash.
+  for (size_t I = NewSize; I < Size; I++) {
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(NewP)[I] = 'A', "");
+  }
+  Allocator->deallocate(P, Origin);
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   auto *Allocator = this->Allocator.get();
   // Allocates a bunch of chunks, then iterate over all the chunks, ensuring
@@ -556,17 +573,15 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
     const scudo::uptr Size = 1U << SizeLog;
     if (!Allocator->useMemoryTaggingTestOnly())
       continue;
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
-          disableDebuggerdMaybe();
           void *P = Allocator->allocate(Size, Origin);
           Allocator->deallocate(P, Origin);
           reinterpret_cast<char *>(P)[0] = 'A';
         },
         "");
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
-          disableDebuggerdMaybe();
           void *P = Allocator->allocate(Size, Origin);
           Allocator->deallocate(P, Origin);
           reinterpret_cast<char *>(P)[Size - 1] = 'A';
@@ -584,7 +599,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
       break;
 
     // Verify that a double free results in a chunk state error.
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
           // Allocate from primary
           void *P = Allocator->allocate(Size, Origin);
@@ -602,7 +617,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
   if (Allocator->useMemoryTaggingTestOnly()) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
-    EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 'A', "");
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 'A', "");
     scudo::ScopedDisableMemoryTagChecks NoTagChecks;
     Allocator->disableMemoryTagging();
     reinterpret_cast<char *>(P)[2048] = 'A';
@@ -739,7 +754,7 @@ TEST(ScudoCombinedDeathTest, SKIP_ON_FUCHSIA(testSEGV)) {
   ASSERT_TRUE(ReservedMemory.create(/*Addr=*/0U, Size, "testSEGV"));
   void *P = reinterpret_cast<void *>(ReservedMemory.getBase());
   ASSERT_NE(P, nullptr);
-  EXPECT_DEATH(memset(P, 0xaa, Size), "");
+  SCUDO_EXPECT_DEATH(memset(P, 0xaa, Size), "");
   ReservedMemory.release();
 }
 
@@ -790,28 +805,28 @@ TEST(ScudoCombinedDeathTest, DeathCombined) {
   EXPECT_NE(P, nullptr);
 
   // Invalid sized deallocation.
-  EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size + 8U), "");
+  SCUDO_EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size + 8U), "");
 
   // Misaligned pointer. Potentially unused if EXPECT_DEATH isn't available.
   UNUSED void *MisalignedP =
       reinterpret_cast<void *>(reinterpret_cast<scudo::uptr>(P) | 1U);
-  EXPECT_DEATH(Allocator->deallocateSized(MisalignedP, Origin, Size), "");
-  EXPECT_DEATH(Allocator->reallocate(MisalignedP, Size * 2U), "");
+  SCUDO_EXPECT_DEATH(Allocator->deallocateSized(MisalignedP, Origin, Size), "");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(MisalignedP, Size * 2U), "");
 
   // Header corruption.
   scudo::u64 *H =
       reinterpret_cast<scudo::u64 *>(scudo::Chunk::getAtomicHeader(P));
   *H ^= 0x42U;
-  EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size), "");
+  SCUDO_EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size), "");
   *H ^= 0x420042U;
-  EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size), "");
+  SCUDO_EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size), "");
   *H ^= 0x420000U;
 
   // Invalid chunk state.
   Allocator->deallocateSized(P, Origin, Size);
-  EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size), "");
-  EXPECT_DEATH(Allocator->reallocate(P, Size * 2U), "");
-  EXPECT_DEATH(Allocator->getUsableSize(P), "");
+  SCUDO_EXPECT_DEATH(Allocator->deallocateSized(P, Origin, Size), "");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(P, Size * 2U), "");
+  SCUDO_EXPECT_DEATH(Allocator->getUsableSize(P), "");
 }
 
 // Verify that when a region gets full, the allocator will still manage to
@@ -957,82 +972,49 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferDefaultDisabled) {
   // The RingBuffer is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  EXPECT_EQ(0u, Allocator->getRingBufferSize());
-  EXPECT_EQ(nullptr, Allocator->getRingBufferAddress());
+  EXPECT_FALSE(Allocator->getRingBufferEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto RingBufferSize = Allocator->getRingBufferSize();
-  ASSERT_GT(RingBufferSize, 0u);
-  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
+  const void *RingBufferAddress = Allocator->getRingBufferAddressTestOnly();
   EXPECT_NE(nullptr, RingBufferAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  ASSERT_EQ(RingBufferSize, Allocator->getRingBufferSize());
-  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddressTestOnly());
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferEnabled) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto RingBufferSize = Allocator->getRingBufferSize();
-  ASSERT_GT(RingBufferSize, 0u);
-  EXPECT_EQ(Allocator->getRingBufferAddress()[RingBufferSize - 1], '\0');
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto *RingBufferAddress = Allocator->getRingBufferAddress();
-  EXPECT_NE(RingBufferAddress, nullptr);
-  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotDefaultDisabled) {
   // The StackDepot is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  EXPECT_EQ(0u, Allocator->getStackDepotSize());
-  EXPECT_EQ(nullptr, Allocator->getStackDepotAddress());
+  EXPECT_FALSE(Allocator->getStackDepotEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto StackDepotSize = Allocator->getStackDepotSize();
-  EXPECT_GT(StackDepotSize, 0u);
-  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_TRUE(Allocator->getStackDepotEnabledTestOnly());
+  const void *StackDepotAddress = Allocator->getStackDepotAddressTestOnly();
   EXPECT_NE(nullptr, StackDepotAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  EXPECT_EQ(StackDepotSize, Allocator->getStackDepotSize());
-  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto StackDepotSize = Allocator->getStackDepotSize();
-  EXPECT_GT(StackDepotSize, 0u);
-  EXPECT_EQ(Allocator->getStackDepotAddress()[StackDepotSize - 1], '\0');
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto *StackDepotAddress = Allocator->getStackDepotAddress();
-  EXPECT_NE(StackDepotAddress, nullptr);
-  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+  EXPECT_TRUE(Allocator->getStackDepotEnabledTestOnly());
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddressTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
@@ -1052,6 +1034,31 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
   EXPECT_EQ(Depot->at(RingPosPtr), 1u);
   EXPECT_EQ(Depot->at(RingPosPtr + 1), 2u);
   EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
+}
+
+TEST(ScudoCombinedTest, StackDepotSpecifics) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+
+  scudo::uptr TabBytes = sizeof(scudo::atomic_u32) * 1024;
+
+  // Test buffer too small for the base structure
+  EXPECT_FALSE(Depot->isValid(sizeof(scudo::StackDepot) - 1));
+  // Test buffer too small for the hash table
+  EXPECT_FALSE(Depot->isValid(sizeof(scudo::StackDepot) + TabBytes - 1));
+
+  // Test duplicate insert
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Hash1 = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::u32 Hash2 = Depot->insert(&Stack[0], &Stack[3]);
+  EXPECT_EQ(Hash1, Hash2);
+
+  // Test disable/enable
+  Depot->disable();
+  Depot->enable();
 }
 
 #if SCUDO_CAN_USE_PRIMARY64
@@ -1583,15 +1590,20 @@ struct TestInitSizeTSDExclusiveConfig : public TestInitSizeConfig {
   template <class A> using TSDRegistryT = scudo::TSDRegistryExT<A>;
 };
 
+struct TestInitSizeLargeTSDSharedConfig : public TestInitSizeConfig {
+  template <class A>
+  using TSDRegistryT = scudo::TSDRegistrySharedT<A, 512U, 1U>;
+};
+
 template <class AllocatorT> void RunStress() {
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   // This test is designed to try and have many threads trying to initialize
   // the TSD at the same time. Make sure this doesn't crash.
   std::atomic_bool StartRunning = false;
-  std::vector<std::thread *> threads;
+  std::vector<std::thread *> Threads;
   for (size_t I = 0; I < 16; I++) {
-    threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
+    Threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
       while (!StartRunning.load())
         ;
 
@@ -1605,10 +1617,11 @@ template <class AllocatorT> void RunStress() {
 
   StartRunning = true;
 
-  for (auto *thread : threads) {
-    thread->join();
-    delete thread;
+  for (auto *Thread : Threads) {
+    Thread->join();
+    delete Thread;
   }
+  Allocator->unmapTestOnly();
 }
 
 TEST(ScudoCombinedTest, StressThreadInitTSDShared) {
@@ -1623,6 +1636,105 @@ TEST(ScudoCombinedTest, StressThreadInitTSDExclusive) {
   // Run the stress test a few times.
   for (size_t I = 0; I < 10; I++)
     RunStress<AllocatorT>();
+}
+
+TEST(ScudoCombinedTest, StressThreadTSDSharedSetTSDs) {
+  using AllocatorT = scudo::Allocator<TestInitSizeLargeTSDSharedConfig>;
+  for (size_t Runs = 0; Runs < 100; Runs++) {
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+    // Try to have many threads being created and allocating while increasing
+    // the number of TSDs.
+    const size_t kNumThreads = 4;
+    std::atomic_size_t NumRunning = 0;
+    std::atomic_bool StopRunning = false;
+    std::vector<std::thread *> Threads;
+    for (size_t I = 0; I < kNumThreads; I++) {
+      Threads.emplace_back(
+          new std::thread([&Allocator, &NumRunning, &StopRunning]() {
+            NumRunning++;
+            while (!StopRunning.load()) {
+              std::thread Thread([&Allocator]() {
+                void *Ptr = Allocator->allocate(10, Origin);
+                EXPECT_TRUE(Ptr != nullptr);
+                // Make sure this value is not optimized away.
+                asm volatile("" : : "r,m"(Ptr) : "memory");
+                Allocator->deallocate(Ptr, Origin);
+              });
+              Thread.join();
+            }
+          }));
+    }
+
+    while (NumRunning.load() != kNumThreads)
+      ;
+
+    // Increase the number of TSDs while threads are being created and
+    // allocating.
+    for (scudo::sptr I = 2; I < 512; I++) {
+      EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxTSDsCount, I));
+    }
+    StopRunning = true;
+
+    for (auto *Thread : Threads) {
+      Thread->join();
+      delete Thread;
+    }
+    Allocator->unmapTestOnly();
+  }
+}
+
+TEST(ScudoCombinedTest, StressThreadTSDSharedMultiThreadSetTSDs) {
+  using AllocatorT = scudo::Allocator<TestInitSizeLargeTSDSharedConfig>;
+  for (size_t Runs = 0; Runs < 10; Runs++) {
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+    // Try to have many threads being created and allocating while increasing
+    // the number of TSDs.
+    const size_t kNumThreads = 4;
+    std::atomic_size_t NumRunning = 0;
+    std::atomic_bool StopRunning = false;
+    std::vector<std::thread *> Threads;
+    for (size_t I = 0; I < kNumThreads; I++) {
+      Threads.emplace_back(
+          new std::thread([&Allocator, &NumRunning, &StopRunning]() {
+            NumRunning++;
+            while (!StopRunning.load()) {
+              std::thread Thread([&Allocator]() {
+                void *Ptr = Allocator->allocate(10, Origin);
+                EXPECT_TRUE(Ptr != nullptr);
+                // Make sure this value is not optimized away.
+                asm volatile("" : : "r,m"(Ptr) : "memory");
+                Allocator->deallocate(Ptr, Origin);
+              });
+              Thread.join();
+            }
+          }));
+    }
+
+    while (NumRunning.load() != kNumThreads)
+      ;
+
+    std::vector<std::thread *> SetThreads;
+    // Create 10 threads running at once to keep the total threads from
+    // getting too high and causing problems.
+    for (scudo::sptr I = 2; I < 12; I++) {
+      SetThreads.emplace_back(new std::thread([&Allocator, I]() {
+        Allocator->setOption(scudo::Option::MaxTSDsCount, I);
+      }));
+    }
+    StopRunning = true;
+    for (auto *Thread : SetThreads) {
+      Thread->join();
+      delete Thread;
+    }
+
+    for (auto *Thread : Threads) {
+      Thread->join();
+      delete Thread;
+    }
+    Allocator->unmapTestOnly();
+  }
 }
 
 struct TestMatchConfig {
@@ -1668,7 +1780,7 @@ TEST(ScudoCombinedDeathTest, DeallocateAlignNotPowerOfTwo) {
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       Allocator->deallocateAligned(Ptr, scudo::Chunk::Origin::Memalign, 9),
       "alignment must be a power of two");
   Allocator->deallocateAligned(Ptr, scudo::Chunk::Origin::Memalign, 32);
@@ -1682,26 +1794,26 @@ TEST(ScudoCombinedDeathTest, TypeMismatch) {
 
   void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Malloc);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::New),
-               "deallocating.*\\(malloc vs new\\)");
-  EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::NewArray),
-               "deallocating.*\\(malloc vs new\\[\\]\\)");
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::New),
+                     "deallocating.*\\(malloc vs new\\)");
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::NewArray),
+                     "deallocating.*\\(malloc vs new\\[\\]\\)");
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc);
 
   Ptr = Allocator->allocate(10, scudo::Chunk::Origin::New);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc),
-               "deallocating.*\\(new vs malloc\\)");
-  EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::NewArray),
-               "deallocating.*\\(new vs new\\[\\]\\)");
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc),
+                     "deallocating.*\\(new vs malloc\\)");
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::NewArray),
+                     "deallocating.*\\(new vs new\\[\\]\\)");
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::New);
 
   Ptr = Allocator->allocate(10, scudo::Chunk::Origin::NewArray);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc),
-               "deallocating.*\\(new\\[\\] vs malloc\\)");
-  EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::New),
-               "deallocating.*\\(new\\[\\] vs new\\)");
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc),
+                     "deallocating.*\\(new\\[\\] vs malloc\\)");
+  SCUDO_EXPECT_DEATH(Allocator->deallocate(Ptr, scudo::Chunk::Origin::New),
+                     "deallocating.*\\(new\\[\\] vs new\\)");
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::NewArray);
 }
 
@@ -1713,20 +1825,20 @@ TEST(ScudoCombinedDeathTest, ReallocTypeMismatch) {
 
   void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::New);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->reallocate(Ptr, 1000000),
-               "reallocating.*\\(new vs malloc\\)");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(Ptr, 1000000),
+                     "reallocating.*\\(new vs malloc\\)");
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::New);
 
   Ptr = Allocator->allocate(10, scudo::Chunk::Origin::NewArray);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->reallocate(Ptr, 1000000),
-               "reallocating.*\\(new\\[\\] vs malloc\\)");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(Ptr, 1000000),
+                     "reallocating.*\\(new\\[\\] vs malloc\\)");
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::NewArray);
 
   Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->reallocate(Ptr, 1000000),
-               "reallocating.*\\(aligned malloc vs malloc\\)");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(Ptr, 1000000),
+                     "reallocating.*\\(aligned malloc vs malloc\\)");
   Allocator->deallocateAligned(Ptr, scudo::Chunk::Origin::Memalign, 32);
 }
 
@@ -1738,8 +1850,8 @@ TEST(ScudoCombinedDeathTest, AlignTypeMismatch) {
 
   void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->reallocate(Ptr, 1000),
-               "reallocating.*\\(aligned malloc vs malloc\\)");
+  SCUDO_EXPECT_DEATH(Allocator->reallocate(Ptr, 1000),
+                     "reallocating.*\\(aligned malloc vs malloc\\)");
   // Aligned allocate with non-aligned deallocate is okay.
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc);
 }
@@ -1769,16 +1881,17 @@ TEST(ScudoCombinedDeathTest, SizeMismatch) {
 
   void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Malloc);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 1000000),
       "invalid sized delete when deallocating.*\\(1000000 vs 10\\)");
   Allocator->deallocate(Ptr, scudo::Chunk::Origin::Malloc);
 
   Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(Allocator->deallocateSizedAligned(
-                   Ptr, scudo::Chunk::Origin::Malloc, 1000000, 32),
-               "invalid sized delete when deallocating.*\\(1000000 vs 10\\)");
+  SCUDO_EXPECT_DEATH(
+      Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc,
+                                        1000000, 32),
+      "invalid sized delete when deallocating.*\\(1000000 vs 10\\)");
   Allocator->deallocateAligned(Ptr, scudo::Chunk::Origin::Malloc, 32);
 }
 
@@ -1794,14 +1907,14 @@ TEST(ScudoCombinedDeathTest, SizeNotExactUsableMismatch) {
 
   void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Malloc);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 1000000),
       "invalid sized delete when deallocating.*\\(1000000 vs 10 or .*\\)");
   Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 10);
 
   Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
   EXPECT_TRUE(Ptr != nullptr);
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc,
                                         1000000, 32),
       "invalid sized delete when deallocating.*\\(1000000 vs 10 or .*\\)");
@@ -1851,12 +1964,13 @@ TEST(ScudoCombinedDeathTest, AlignMismatch) {
   }
 
   scudo::uptr Alignment = 2 * scudo::getPageSizeCached();
-  EXPECT_DEATH(Allocator->deallocateAligned(
-                   AlignedPtr, scudo::Chunk::Origin::Malloc, Alignment),
-               "invalid aligned delete when deallocating");
-  EXPECT_DEATH(Allocator->deallocateSizedAligned(
-                   AlignedPtr, scudo::Chunk::Origin::Malloc, 10, Alignment),
-               "invalid aligned delete when deallocating");
+  SCUDO_EXPECT_DEATH(Allocator->deallocateAligned(
+                         AlignedPtr, scudo::Chunk::Origin::Malloc, Alignment),
+                     "invalid aligned delete when deallocating");
+  SCUDO_EXPECT_DEATH(
+      Allocator->deallocateSizedAligned(
+          AlignedPtr, scudo::Chunk::Origin::Malloc, 10, Alignment),
+      "invalid aligned delete when deallocating");
 
   Allocator->deallocateAligned(AlignedPtr, scudo::Chunk::Origin::Malloc, 32);
 }
@@ -2046,3 +2160,79 @@ TEST(ScudoCombinedTest, VerifyAllBoolTrueConfig) {
   EXPECT_NE(Stats.find("EnableRandomOffset: true"), std::string::npos);
   EXPECT_NE(Stats.find("EnableContiguousRegions: true"), std::string::npos);
 }
+
+#if SCUDO_LINUX
+SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
+  // Android has a small max maps, but this test is not flaky there.
+  if (!SCUDO_ANDROID) {
+    long MaxMapCount = 0;
+    // If the file can't be accessed, we proceed with the test.
+    std::ifstream Stream("/proc/sys/vm/max_map_count");
+    if (Stream.good()) {
+      Stream >> MaxMapCount;
+      if (MaxMapCount < 200000)
+        TEST_SKIP(
+            "Test might fail when running with fewer than 200000 max maps");
+    }
+  }
+
+  auto *Allocator = this->Allocator.get();
+  std::atomic_bool Stop(false);
+
+  // Create threads that simply allocate and free different sizes.
+  std::vector<std::thread *> Threads;
+  for (size_t N = 0; N < 5; N++) {
+    std::thread *T = new std::thread([&Stop, Allocator] {
+      while (!Stop) {
+        for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
+          const scudo::uptr Size = 1UL << SizeLog;
+          void *P = Allocator->allocate(Size, Origin);
+          if (P) {
+            // Make sure this value is not optimized away.
+            asm volatile("" : : "r,m"(P) : "memory");
+            Allocator->deallocateSized(P, Origin, Size);
+          }
+        }
+      }
+    });
+    Threads.push_back(T);
+  }
+
+  // Create a thread to fork and allocate.
+  for (size_t N = 0; N < 50; N++) {
+    // We need to disable the allocator before fork to ensure no other thread
+    // holds allocator locks during fork.
+    Allocator->disable();
+    pid_t Pid = fork();
+    if (Pid == 0) {
+      // Child process: enable the allocator and allocate.
+      Allocator->enable();
+      for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
+        const scudo::uptr Size = 1UL << SizeLog;
+        void *P = Allocator->allocate(Size, Origin);
+        if (P) {
+          // Make sure this value is not optimized away.
+          asm volatile("" : : "r,m"(P) : "memory");
+          // Make sure we can touch all of the allocation.
+          memset(P, 0x32, Size);
+          Allocator->deallocateSized(P, Origin, Size);
+        }
+      }
+      _exit(10);
+    }
+    // Parent process: enable the allocator and wait for child.
+    Allocator->enable();
+    EXPECT_NE(-1, Pid);
+    int Status;
+    EXPECT_EQ(Pid, waitpid(Pid, &Status, 0));
+    EXPECT_FALSE(WIFSIGNALED(Status));
+    EXPECT_EQ(10, WEXITSTATUS(Status));
+  }
+
+  Stop = true;
+  for (auto Thread : Threads) {
+    Thread->join();
+    delete Thread;
+  }
+}
+#endif

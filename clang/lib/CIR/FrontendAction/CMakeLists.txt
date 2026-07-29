@@ -1,5 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  ipo
+  Linker
   Support
   )
 

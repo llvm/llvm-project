@@ -23,5 +23,5 @@ end
 ! CHECK: cuf.alloc !fir.array<10xi32> {bindc_name = "u", data_attr = #cuf.cuda<unified>, uniq_name = "_QFEu"} -> !fir.ref<!fir.array<10xi32>>
 
 ! CHECK-NOT: fir.global internal @_QFEa {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {{{$}}
-! CHECK: fir.global internal @_QFEb : !fir.array<10xi32> {{{$}}
+! CHECK: fir.global internal @_QFEb {alignment = 64 : i64} : !fir.array<10xi32> {{{$}}
 ! CHECK-NOT: fir.global internal @_QFEu {data_attr = #cuf.cuda<unified>}

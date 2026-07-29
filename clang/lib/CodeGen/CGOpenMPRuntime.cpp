@@ -546,6 +546,12 @@ enum OpenMPSchedType {
   /// dist_schedule types
   OMP_dist_sch_static_chunked = 91,
   OMP_dist_sch_static = 92,
+  /// Fused distribute+for static schedule (entityId = team*nthreads + tid,
+  /// num_entities = nteams*nthreads). One for_static_init call, no
+  /// surrounding distribute_static_init. Matches
+  /// kmp_sched_distr_static_chunk_sched_static_chunkone in the device RTL
+  /// (openmp/device/include/DeviceTypes.h).
+  OMP_dist_sch_static_chunked_sch_static_chunkone = 93,
   /// Support for OpenMP 4.5 monotonic and nonmonotonic schedule modifiers.
   /// Set if the monotonic schedule modifier was present.
   OMP_sch_modifier_monotonic = (1 << 29),
@@ -1850,6 +1856,9 @@ void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
       CodeGenVTables VTables = CGM.getVTables();
       llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
       assert(VTablesAddr && "Expected non-null VTable address");
+      // Must set VTables to weak since we're emitting them in multiple TUs now
+      if (VTablesAddr->hasExternalLinkage())
+        VTablesAddr->setLinkage(llvm::GlobalValue::WeakODRLinkage);
       CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
       // Emit VTable for all the fields containing dynamic CXXRecord
       for (const FieldDecl *Field : CXXRecord->fields()) {
@@ -2070,7 +2079,10 @@ Address CGOpenMPRuntime::emitThreadIDAddress(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntime::getCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getName({Prefix, "var"});
-  return OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
+  llvm::GlobalVariable *GV =
+      OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
+  CGM.setDSOLocal(GV);
+  return GV;
 }
 
 namespace {
@@ -2630,7 +2642,8 @@ static int addMonoNonMonoModifier(CodeGenModule &CGM, OpenMPSchedType Schedule,
           Schedule == OMP_sch_static_balanced_chunked ||
           Schedule == OMP_ord_static_chunked || Schedule == OMP_ord_static ||
           Schedule == OMP_dist_sch_static_chunked ||
-          Schedule == OMP_dist_sch_static))
+          Schedule == OMP_dist_sch_static ||
+          Schedule == OMP_dist_sch_static_chunked_sch_static_chunkone))
       Modifier = OMP_sch_modifier_nonmonotonic;
   }
   return Schedule | Modifier;
@@ -2692,7 +2705,8 @@ static void emitForStaticInitCall(
          Schedule == OMP_sch_static_balanced_chunked ||
          Schedule == OMP_ord_static || Schedule == OMP_ord_static_chunked ||
          Schedule == OMP_dist_sch_static ||
-         Schedule == OMP_dist_sch_static_chunked);
+         Schedule == OMP_dist_sch_static_chunked ||
+         Schedule == OMP_dist_sch_static_chunked_sch_static_chunkone);
 
   // Call __kmpc_for_static_init(
   //          ident_t *loc, kmp_int32 tid, kmp_int32 schedtype,
@@ -2710,7 +2724,8 @@ static void emitForStaticInitCall(
     assert((Schedule == OMP_sch_static_chunked ||
             Schedule == OMP_sch_static_balanced_chunked ||
             Schedule == OMP_ord_static_chunked ||
-            Schedule == OMP_dist_sch_static_chunked) &&
+            Schedule == OMP_dist_sch_static_chunked ||
+            Schedule == OMP_dist_sch_static_chunked_sch_static_chunkone) &&
            "expected static chunked schedule");
   }
   llvm::Value *Args[] = {
@@ -2733,8 +2748,11 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                         OpenMPDirectiveKind DKind,
                                         const OpenMPScheduleTy &ScheduleKind,
                                         const StaticRTInput &Values) {
-  OpenMPSchedType ScheduleNum = getRuntimeSchedule(
-      ScheduleKind.Schedule, Values.Chunk != nullptr, Values.Ordered);
+  OpenMPSchedType ScheduleNum =
+      ScheduleKind.UseFusedDistChunkSchedule
+          ? OMP_dist_sch_static_chunked_sch_static_chunkone
+          : getRuntimeSchedule(ScheduleKind.Schedule, Values.Chunk != nullptr,
+                               Values.Ordered);
   assert((isOpenMPWorksharingDirective(DKind) || (DKind == OMPD_loop)) &&
          "Expected loop-based or sections-based directive.");
   llvm::Value *UpdatedLocation = emitUpdateLocation(CGF, Loc,
@@ -4602,9 +4620,9 @@ void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
                             Args);
 }
 
-void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
-                                       OpenMPDependClauseKind NewDepKind,
-                                       SourceLocation Loc) {
+void CGOpenMPRuntime::emitUpdateDependObjectsClause(
+    CodeGenFunction &CGF, LValue DepobjLVal, OpenMPDependClauseKind NewDepKind,
+    SourceLocation Loc) {
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
@@ -10984,7 +11002,8 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGroupMem, HasNoWait, DynCGroupMemFallback);
+        DynCGroupMem, HasNoWait, /*StrictBlocksAndThreads=*/IsBare,
+        DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
@@ -11293,7 +11312,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
       return true;
   }
 
-  // Do not to emit function if it is not marked as declare target.
+  // Do not emit function if it is not marked as declare target.
   return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
          AlreadyEmittedTargetDecls.count(VD) == 0;
 }
@@ -11323,7 +11342,7 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
     }
   }
 
-  // Do not to emit variable if it is not marked as declare target.
+  // Do not emit variable if it is not marked as declare target.
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
           cast<VarDecl>(GD.getDecl()));
@@ -11503,7 +11522,7 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
     return true;
 
   const auto *D = cast<FunctionDecl>(GD.getDecl());
-  // Do not to emit function if it is marked as declare target as it was already
+  // Do not emit function if it is marked as declare target as it was already
   // emitted.
   if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(D)) {
     if (D->hasBody() && AlreadyEmittedTargetDecls.count(D) == 0) {

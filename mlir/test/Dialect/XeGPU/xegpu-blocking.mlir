@@ -252,8 +252,10 @@ gpu.module @test_kernel   {
     %0 = xegpu.create_nd_tdesc %a : memref<512x32xf32> -> !xegpu.tensor_desc<32x128xf32, #l>
     %1 = xegpu.load_nd %0[0, 0] {layout = #l}: !xegpu.tensor_desc<32x128xf32, #l> -> vector<32x128xf32>
 
-    // CHECK: vector.multi_reduction <add>, {{.*}}, [[INIT:%[0-9A-Za-z]+]] [1] : vector<16x16xf32> to vector<16xf32>
-    // CHECK-COUNT-1: vector.multi_reduction <add>, {{.*}}, [[INIT]] [1] : vector<16x16xf32> to vector<16xf32>
+    // CHECK-COUNT-7: arith.addf {{.*}} : vector<16x16xf32>
+    // CHECK: vector.multi_reduction <add>, {{.*}} [1] : vector<16x16xf32> to vector<16xf32>
+    // CHECK-COUNT-7: arith.addf {{.*}} : vector<16x16xf32>
+    // CHECK: vector.multi_reduction <add>, {{.*}} [1] : vector<16x16xf32> to vector<16xf32>
 
     %2 = vector.multi_reduction <add>, %1, %acc [1]: vector<32x128xf32> to vector<32xf32>
     %3 = xegpu.create_nd_tdesc %b : memref<512xf32> -> !xegpu.tensor_desc<32xf32, #r>
@@ -422,7 +424,7 @@ gpu.module @test_kernel {
     %a_tdesc = xegpu.create_nd_tdesc %arg0 : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #a>
     %a = xegpu.load_nd %a_tdesc[0, 0] {layout = #a}: !xegpu.tensor_desc<16x16xf16, #a> -> vector<16x16xf16>
     %a_reduce = vector.multi_reduction <add>, %a, %acc [0, 1] : vector<16x16xf16> to f16
-    %13 = xegpu.convert_layout %a_reduce <{input_layout = #xegpu.slice<#a, dims = [0, 1]>, target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
+    %13 = xegpu.convert_layout %a_reduce <{target_layout = #xegpu.slice<#a, dims = [0, 1]>}> : f16
     memref.store %13, %arg1[%c0] : memref<4xf16>
     gpu.return
   }
@@ -461,19 +463,19 @@ gpu.module @test_kernel {
   //CHECK: gpu.func @convert_layout([[arg0:%.+]]: vector<8x32x2xf16>) -> vector<8x32x2xf16> {
   //CHECK: [[cst:%.+]] = arith.constant dense<0.000000e+00> : vector<8x32x2xf16>
   //CHECK: [[e0:%.+]] = vector.extract_strided_slice [[arg0]] {offsets = [0, 0, 0], sizes = [4, 32, 2], strides = [1, 1, 1]} : vector<8x32x2xf16> to vector<4x32x2xf16>
-  //CHECK: [[e1:%.+]] = vector.extract_strided_slice [[arg0]] {offsets = [4, 0, 0], sizes = [4, 32, 2], strides = [1, 1, 1]} : vector<8x32x2xf16> to vector<4x32x2xf16>
   //CHECK: [[c0:%.+]] = xegpu.convert_layout [[e0]] <{input_layout = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 2]>, target_layout = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>}> : vector<4x32x2xf16>
-  //CHECK: [[c1:%.+]] = xegpu.convert_layout [[e1]] <{input_layout = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 2]>, target_layout = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>}> : vector<4x32x2xf16>
   //CHECK: [[e2:%.+]] = vector.extract_strided_slice [[c0]] {offsets = [0, 0, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
+  //CHECK: [[e3:%.+]] = vector.extract_strided_slice [[c0]] {offsets = [0, 16, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
+  //CHECK: [[e1:%.+]] = vector.extract_strided_slice [[arg0]] {offsets = [4, 0, 0], sizes = [4, 32, 2], strides = [1, 1, 1]} : vector<8x32x2xf16> to vector<4x32x2xf16>
+  //CHECK: [[c1:%.+]] = xegpu.convert_layout [[e1]] <{input_layout = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 2]>, target_layout = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>}> : vector<4x32x2xf16>
+  //CHECK: [[e4:%.+]] = vector.extract_strided_slice [[c1]] {offsets = [0, 0, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
+  //CHECK: [[e5:%.+]] = vector.extract_strided_slice [[c1]] {offsets = [0, 16, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
   //CHECK: [[m0:%.+]] = math.exp [[e2]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>} : vector<4x16x2xf16>
   //CHECK: [[i0:%.+]] = vector.insert_strided_slice [[m0]], [[cst]] {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<4x16x2xf16> into vector<8x32x2xf16>
-  //CHECK: [[e3:%.+]] = vector.extract_strided_slice [[c0]] {offsets = [0, 16, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
   //CHECK: [[m1:%.+]] = math.exp [[e3]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>} : vector<4x16x2xf16>
   //CHECK: [[i1:%.+]] = vector.insert_strided_slice [[m1]], [[i0]] {offsets = [0, 16, 0], strides = [1, 1, 1]} : vector<4x16x2xf16> into vector<8x32x2xf16>
-  //CHECK: [[e4:%.+]] = vector.extract_strided_slice [[c1]] {offsets = [0, 0, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
   //CHECK: [[m2:%.+]] = math.exp [[e4]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>} : vector<4x16x2xf16>
   //CHECK: [[i2:%.+]] = vector.insert_strided_slice [[m2]], [[i1]] {offsets = [4, 0, 0], strides = [1, 1, 1]} : vector<4x16x2xf16> into vector<8x32x2xf16>
-  //CHECK: [[e5:%.+]] = vector.extract_strided_slice [[c1]] {offsets = [0, 16, 0], sizes = [4, 16, 2], strides = [1, 1, 1]} : vector<4x32x2xf16> to vector<4x16x2xf16>
   //CHECK: [[m3:%.+]] = math.exp [[e5]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>} : vector<4x16x2xf16>
   //CHECK: [[i3:%.+]] = vector.insert_strided_slice [[m3]], [[i2]] {offsets = [4, 16, 0], strides = [1, 1, 1]} : vector<4x16x2xf16> into vector<8x32x2xf16>
   //CHECK: gpu.return [[i3]] : vector<8x32x2xf16>
@@ -481,8 +483,51 @@ gpu.module @test_kernel {
   gpu.func @convert_layout(%B: vector<8x32x2xf16>) -> vector<8x32x2xf16> {
     %b = xegpu.convert_layout %B <{input_layout = #lb, target_layout = #b}> : vector<8x32x2xf16>
     %e = math.exp %b : vector<8x32x2xf16>
-    %anchor = xegpu.convert_layout %e <{input_layout = #b, target_layout = #b}> : vector<8x32x2xf16>
+    %anchor = xegpu.convert_layout %e <{target_layout = #b}> : vector<8x32x2xf16>
     gpu.return %e : vector<8x32x2xf16>
+  }
+}
+
+// -----
+
+// Test regrouping when input and target inst_data differ ([8, 16] vs [8, 64]).
+#in = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+#tgt = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 4]>
+
+gpu.module @test_kernel {
+  //CHECK-LABEL: gpu.func @convert_layout_regroup
+  //CHECK-SAME: ([[arg0:%.+]]: vector<16x64xbf16>)
+  //CHECK: vector.extract_strided_slice [[arg0]] {offsets = [0, 0], sizes = [8, 16]
+  //CHECK: math.exp {{.*}} : vector<8x16xbf16>
+  //CHECK-NOT: vector.extract_strided_slice [[arg0]] {{.*}}sizes = [8, 64]
+  //CHECK: vector.insert_strided_slice {{.*}} : vector<8x16xbf16> into vector<8x64xbf16>
+  //CHECK: xegpu.convert_layout {{.*}} : vector<8x64xbf16>
+  //CHECK: vector.insert_strided_slice {{.*}} : vector<8x64xbf16> into vector<16x64xbf16>
+  gpu.func @convert_layout_regroup(%a: vector<16x64xbf16>) -> vector<16x64xbf16> {
+    %p = math.exp %a {layout_result_0 = #in} : vector<16x64xbf16>
+    %0 = xegpu.convert_layout %p <{input_layout = #in, target_layout = #tgt}> : vector<16x64xbf16>
+    gpu.return %0 : vector<16x64xbf16>
+  }
+}
+
+// -----
+
+// Test regrouping when input and target inst_data differ ([8, 64] vs [8, 16]).
+#in = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 4]>
+#tgt = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+
+gpu.module @test_kernel {
+  //CHECK-LABEL: gpu.func @convert_layout_regroup_swapped
+  //CHECK-SAME: ([[arg0:%.+]]: vector<16x64xbf16>)
+  //CHECK: vector.extract_strided_slice [[arg0]] {offsets = [0, 0], sizes = [8, 64], strides = [1, 1]} : vector<16x64xbf16> to vector<8x64xbf16>
+  //CHECK-NOT: vector.extract_strided_slice [[arg0]] {{.*}}sizes = [8, 16]
+  //CHECK: [[cvt:%.+]] = xegpu.convert_layout {{.*}} : vector<8x64xbf16>
+  //CHECK: vector.extract_strided_slice [[cvt]] {{.*}}sizes = [8, 16]{{.*}} : vector<8x64xbf16> to vector<8x16xbf16>
+  //CHECK: vector.insert_strided_slice {{.*}} : vector<8x16xbf16> into vector<16x64xbf16>
+  gpu.func @convert_layout_regroup_swapped(%a: vector<16x64xbf16>) -> vector<16x64xbf16> {
+    %p = math.exp %a {layout_result_0 = #in} : vector<16x64xbf16>
+    %0 = xegpu.convert_layout %p <{input_layout = #in, target_layout = #tgt}> : vector<16x64xbf16>
+    gpu.return %0 : vector<16x64xbf16>
   }
 }
 
@@ -736,7 +781,7 @@ gpu.module @test_kernel {
       //CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<1x16xf8E8M0FNU>
       %sb = xegpu.load_nd %scale_b_tdesc[%c0, %c0] {layout = #l2_scale}: !xegpu.tensor_desc<2x32xf8E8M0FNU, #l2_scale> -> vector<2x32xf8E8M0FNU>
       //CHECK-COUNT-8: xegpu.dpas_mx {{.*}}
-      %c = xegpu.dpas_mx %a, %b, %arg2 scale_a = %sa scale_b = %sb {layout_a=#l1, layout_b = #l2, layout_cd = #l3, layout_a_scale = #l1_scale, layout_b_scale = #l2_scale, layout_result_0 = #l3}: vector<16x64xf4E2M1FN>, vector<64x32xf4E2M1FN>, vector<16x32xf32>, vector<16x2xf8E8M0FNU>, vector<2x32xf8E8M0FNU> -> vector<16x32xf32>
+      %c = xegpu.dpas_mx %a, %b, %arg2 scale_a = %sa scale_b = %sb {layout_a=#l1, layout_b = #l2, layout_cd = #l3, layout_a_scale = #l1_scale, layout_b_scale = #l2_scale, layout_result_0 = #l3}: (vector<16x64xf4E2M1FN>, vector<64x32xf4E2M1FN>, vector<16x32xf32>, vector<16x2xf8E8M0FNU>, vector<2x32xf8E8M0FNU>) -> vector<16x32xf32>
       scf.yield %c : vector<16x32xf32>
     } {layout_result_0 = #l3}
     //CHECK-COUNT-4: xegpu.store_nd {{.*}} : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
@@ -745,3 +790,99 @@ gpu.module @test_kernel {
   }
 }
 
+// -----
+// Test 3D batch dimension unrolling for dpas, load_nd, store_nd
+#a_3d = #xegpu.layout<inst_data = [1, 8, 16]>
+#b_3d = #xegpu.layout<inst_data = [1, 16, 16]>
+#c_3d = #xegpu.layout<inst_data = [1, 8, 16]>
+gpu.module @test_kernel {
+  // CHECK-LABEL: func @gemm_3d_batch_blocking
+  gpu.func @gemm_3d_batch_blocking(%A: memref<4x8x32xf16>, %B: memref<4x32x16xf16>, %C: memref<4x8x16xf32>) {
+    %c0 = arith.constant 0 : index
+    %c_tdesc = xegpu.create_nd_tdesc %C : memref<4x8x16xf32> -> !xegpu.tensor_desc<4x8x16xf32, #c_3d>
+    // CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<1x8x16xf32>
+    %c_init = xegpu.load_nd %c_tdesc[0, 0, 0] {layout = #c_3d}: !xegpu.tensor_desc<4x8x16xf32, #c_3d> -> vector<4x8x16xf32>
+    %a_tdesc = xegpu.create_nd_tdesc %A : memref<4x8x32xf16> -> !xegpu.tensor_desc<4x8x32xf16, #a_3d>
+    %b_tdesc = xegpu.create_nd_tdesc %B : memref<4x32x16xf16> -> !xegpu.tensor_desc<4x32x16xf16, #b_3d>
+    // CHECK-COUNT-8: xegpu.load_nd {{.*}} -> vector<1x8x16xf16>
+    %a = xegpu.load_nd %a_tdesc[0, 0, 0] {layout = #a_3d}: !xegpu.tensor_desc<4x8x32xf16, #a_3d> -> vector<4x8x32xf16>
+    // CHECK-COUNT-8: xegpu.load_nd {{.*}} -> vector<1x16x16xf16>
+    %b = xegpu.load_nd %b_tdesc[0, 0, 0] {layout = #b_3d}: !xegpu.tensor_desc<4x32x16xf16, #b_3d> -> vector<4x32x16xf16>
+    // CHECK-COUNT-8: xegpu.dpas {{.*}} : vector<1x8x16xf16>, vector<1x16x16xf16>, vector<1x8x16xf32> -> vector<1x8x16xf32>
+    %d = xegpu.dpas %a, %b, %c_init {layout_a = #a_3d, layout_b = #b_3d, layout_cd = #c_3d}
+      : vector<4x8x32xf16>, vector<4x32x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
+    // CHECK-COUNT-4: xegpu.store_nd {{.*}} : vector<1x8x16xf32>, !xegpu.tensor_desc<1x8x16xf32>
+    xegpu.store_nd %d, %c_tdesc[0, 0, 0] {layout = #c_3d}: vector<4x8x16xf32>, !xegpu.tensor_desc<4x8x16xf32, #c_3d>
+    gpu.return
+  }
+}
+
+// -----
+// Test 3D batch dimension unrolling for dpas_mx with scale_a and scale_b
+#a_3d_mx = #xegpu.layout<inst_data = [1, 8, 64]>
+#b_3d_mx = #xegpu.layout<inst_data = [1, 64, 16]>
+#c_3d_mx = #xegpu.layout<inst_data = [1, 8, 16]>
+#sa_3d = #xegpu.layout<inst_data = [1, 8, 2]>
+#sb_3d = #xegpu.layout<inst_data = [1, 2, 16]>
+gpu.module @test_kernel {
+  // CHECK-LABEL: func @dpas_mx_3d_batch_blocking
+  gpu.func @dpas_mx_3d_batch_blocking(%A: memref<2x16x64xf4E2M1FN>, %B: memref<2x64x32xf4E2M1FN>, %C: memref<2x16x32xf32>, %SA: memref<2x16x2xf8E8M0FNU>, %SB: memref<2x2x32xf8E8M0FNU>) {
+    %c0 = arith.constant 0 : index
+    %c_tdesc = xegpu.create_nd_tdesc %C : memref<2x16x32xf32> -> !xegpu.tensor_desc<2x16x32xf32, #c_3d_mx>
+    // CHECK-COUNT-8: xegpu.load_nd {{.*}} -> vector<1x8x16xf32>
+    %c_init = xegpu.load_nd %c_tdesc[0, 0, 0] {layout = #c_3d_mx}: !xegpu.tensor_desc<2x16x32xf32, #c_3d_mx> -> vector<2x16x32xf32>
+    %a_tdesc = xegpu.create_nd_tdesc %A : memref<2x16x64xf4E2M1FN> -> !xegpu.tensor_desc<2x16x64xf4E2M1FN, #a_3d_mx>
+    %b_tdesc = xegpu.create_nd_tdesc %B : memref<2x64x32xf4E2M1FN> -> !xegpu.tensor_desc<2x64x32xf4E2M1FN, #b_3d_mx>
+    %sa_tdesc = xegpu.create_nd_tdesc %SA : memref<2x16x2xf8E8M0FNU> -> !xegpu.tensor_desc<2x16x2xf8E8M0FNU, #sa_3d>
+    %sb_tdesc = xegpu.create_nd_tdesc %SB : memref<2x2x32xf8E8M0FNU> -> !xegpu.tensor_desc<2x2x32xf8E8M0FNU, #sb_3d>
+    // CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<1x8x64xf4E2M1FN>
+    %a = xegpu.load_nd %a_tdesc[0, 0, 0] {layout = #a_3d_mx}: !xegpu.tensor_desc<2x16x64xf4E2M1FN, #a_3d_mx> -> vector<2x16x64xf4E2M1FN>
+    // CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<1x64x16xf4E2M1FN>
+    %b = xegpu.load_nd %b_tdesc[0, 0, 0] {layout = #b_3d_mx}: !xegpu.tensor_desc<2x64x32xf4E2M1FN, #b_3d_mx> -> vector<2x64x32xf4E2M1FN>
+    // CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<1x8x2xf8E8M0FNU>
+    %sa = xegpu.load_nd %sa_tdesc[0, 0, 0] {layout = #sa_3d}: !xegpu.tensor_desc<2x16x2xf8E8M0FNU, #sa_3d> -> vector<2x16x2xf8E8M0FNU>
+    // CHECK-COUNT-4: xegpu.load_nd {{.*}} -> vector<1x2x16xf8E8M0FNU>
+    %sb = xegpu.load_nd %sb_tdesc[0, 0, 0] {layout = #sb_3d}: !xegpu.tensor_desc<2x2x32xf8E8M0FNU, #sb_3d> -> vector<2x2x32xf8E8M0FNU>
+    // dpas_mx: [2,16,64] x [2,64,32] -> [2,16,32] with scales [2,16,2] and [2,2,32]
+    // unrolled: batch=2, M=16/8=2, K=64/64=1, N=32/16=2 -> 2*2*2=8 results (with k-reduction)
+    // CHECK-COUNT-8: xegpu.dpas_mx {{.*}} : (vector<1x8x64xf4E2M1FN>, vector<1x64x16xf4E2M1FN>, vector<1x8x16xf32>, vector<1x8x2xf8E8M0FNU>, vector<1x2x16xf8E8M0FNU>) -> vector<1x8x16xf32>
+    %d = xegpu.dpas_mx %a, %b, %c_init scale_a = %sa scale_b = %sb
+          {layout_a = #a_3d_mx, layout_b = #b_3d_mx, layout_cd = #c_3d_mx,
+           layout_a_scale = #sa_3d, layout_b_scale = #sb_3d}
+        : (vector<2x16x64xf4E2M1FN>, vector<2x64x32xf4E2M1FN>,
+           vector<2x16x32xf32>,
+           vector<2x16x2xf8E8M0FNU>, vector<2x2x32xf8E8M0FNU>)
+        -> vector<2x16x32xf32>
+    // CHECK-COUNT-8: xegpu.store_nd {{.*}} : vector<1x8x16xf32>, !xegpu.tensor_desc<1x8x16xf32>
+    xegpu.store_nd %d, %c_tdesc[0, 0, 0] {layout = #c_3d_mx}: vector<2x16x32xf32>, !xegpu.tensor_desc<2x16x32xf32, #c_3d_mx>
+    gpu.return
+  }
+}
+
+// -----
+// Test that an scf.if whose results expand 1:N during blocking is legalized.
+#if_a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+gpu.module @test_kernel {
+  // CHECK-LABEL: func @if_one_to_n_results
+  gpu.func @if_one_to_n_results(%c: i1, %p: i64) {
+    %c0 = arith.constant 0 : index
+    // CHECK: scf.if
+    // CHECK-COUNT-8: vector<8x16xf32>
+    %r:2 = scf.if %c -> (vector<16x64xf32>, vector<16xf32>) {
+      %a = arith.constant dense<1.0> : vector<16x64xf32>
+      %b = arith.constant dense<1.0> : vector<16xf32>
+      scf.yield %a, %b : vector<16x64xf32>, vector<16xf32>
+    } else {
+      %a = arith.constant dense<0.0> : vector<16x64xf32>
+      %b = arith.constant dense<0.0> : vector<16xf32>
+      scf.yield %a, %b : vector<16x64xf32>, vector<16xf32>
+    }
+    %bc = vector.broadcast %r#1 : vector<16xf32> to vector<64x16xf32>
+    %tp = vector.transpose %bc, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+    %add = arith.addf %r#0, %tp : vector<16x64xf32>
+    %tr = arith.truncf %add : vector<16x64xf32> to vector<16x64xf16>
+    %td = xegpu.create_nd_tdesc %p, shape:[16, 64], strides:[64, 1] : i64 -> !xegpu.tensor_desc<16x64xf16, #if_a>
+    xegpu.store_nd %tr, %td[%c0, %c0] <{layout = #if_a}> : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16, #if_a>
+    gpu.return
+  }
+}

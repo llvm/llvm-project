@@ -16,8 +16,8 @@ namespace llvm {
 class StackFrameLayoutAnalysisPass
     : public RequiredPassInfoMixin<StackFrameLayoutAnalysisPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

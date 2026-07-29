@@ -58,10 +58,11 @@ protected:
   GsymDataExtractor FileEntryData;
   StringTable StrTab;
 
-  GsymReader(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
+  LLVM_ABI GsymReader(std::unique_ptr<MemoryBuffer> Buffer,
+                      llvm::endianness Endian);
 
 public:
-  LLVM_ABI GsymReader(GsymReader &&RHS) = default;
+  GsymReader(GsymReader &&RHS) = default;
   virtual ~GsymReader() = default;
 
   bool isLittleEndian() const { return Endian == llvm::endianness::little; }
@@ -364,31 +365,31 @@ protected:
   ///
   /// \param Offset The byte offset where GlobalData entries begin.
   /// \returns Error on failure.
-  llvm::Error parseGlobalDataEntries(uint64_t Offset);
+  LLVM_ABI llvm::Error parseGlobalDataEntries(uint64_t Offset);
 
   /// Parse address offsets section bytes into AddrOffsets.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error parseAddrOffsets(StringRef Bytes);
+  LLVM_ABI llvm::Error parseAddrOffsets(StringRef Bytes);
 
   /// Set address info offsets section bytes into AddrInfoOffsetsData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
+  LLVM_ABI llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
 
   /// Set string table section bytes into StrTab.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error setStringTableData(StringRef Bytes);
+  LLVM_ABI llvm::Error setStringTableData(StringRef Bytes);
 
   /// Set file table section bytes into FileEntryData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error setFileTableData(StringRef Bytes);
+  LLVM_ABI llvm::Error setFileTableData(StringRef Bytes);
 
   /// Get an appropriate address info offsets array.
   ///

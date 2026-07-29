@@ -5145,8 +5145,12 @@ def : ARMPat<(ARMcmpZ GPR:$src, (ineg GPR:$rhs)),
              (CMNrr GPR:$src, GPR:$rhs)>;
 def : ARMPat<(ARMcmpZ GPR:$src, (ineg so_reg_imm:$rhs)),
              (CMNrsi GPR:$src, so_reg_imm:$rhs)>;
+def : ARMPat<(ARMcmpZ (ineg GPR:$Rn), so_reg_imm:$ShiftedRm),
+             (CMNrsi GPR:$Rn, so_reg_imm:$ShiftedRm)>;
 def : ARMPat<(ARMcmpZ GPRnopc:$src, (ineg so_reg_reg:$rhs)),
              (CMNrsr GPRnopc:$src, so_reg_reg:$rhs)>;
+def : ARMPat<(ARMcmpZ (ineg GPRnopc:$Rn), so_reg_reg:$ShiftedRm),
+             (CMNrsr GPRnopc:$Rn, so_reg_reg:$ShiftedRm)>;
 
 // Note that TST/TEQ don't set all the same flags that CMP does!
 defm TST  : AI1_cmp_irs<0b1000, "tst",
@@ -6037,7 +6041,7 @@ def MSRbanked : ABI<0b0001, (outs), (ins banked_reg:$banked, GPRnopc:$Rn),
 def win__chkstk : SDNode<"ARMISD::WIN__CHKSTK", SDTNone,
                       [SDNPHasChain, SDNPSideEffect]>;
 
-let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP], hasNoSchedulingInfo = 1 in
+let usesCustomInserter = 1, Uses = [R4], Defs = [R4, R12, LR, SP, CPSR], hasNoSchedulingInfo = 1 in
   def WIN__CHKSTK : PseudoInst<(outs), (ins), NoItinerary, [(win__chkstk)]>;
 
 // Windows' divide by zero check
@@ -6224,6 +6228,17 @@ def : ARMPat<(ARMWrapperJT tjumptable:$dst),
              (LEApcrelJT tjumptable:$dst)>;
 
 // TODO: add,sub,and, 3-instr forms?
+
+
+// Exception Handling
+def ARMLocalRecover : SDNode<"ISD::LOCAL_RECOVER",
+                             SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<1>]>>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (MOVi32imm mcsym:$sym)>,
+            Requires<[IsARM, UseMovt]>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (LDRLIT_ga_abs mcsym:$sym)>,
+            Requires<[IsARM, DontUseMovt]>;
+
 
 // Tail calls. These patterns also apply to Thumb mode.
 // Regular indirect tail call
@@ -6729,4 +6744,10 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
+// C++ Exception / SEH Pseudo Instructions
+let isTerminator = 1, isReturn = 1, isBarrier = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def CLEANUPRET : PseudoInst<(outs), (ins), NoItinerary, [(cleanupret bb)]>, Sched<[]>;
+  def CATCHRET : PseudoInst<(outs), (ins arm_br_target:$dst, arm_br_target:$src), NoItinerary, [(catchret bb:$dst, bb:$src)]>, Sched<[]>;
 }

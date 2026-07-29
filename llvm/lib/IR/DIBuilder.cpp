@@ -33,7 +33,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &RTs = CUNode->getRetainedTypes())
       AllRetainTypes.assign(RTs.begin(), RTs.end());
     if (const auto &GVs = CUNode->getGlobalVariables())
-      AllGVs.assign(GVs.begin(), GVs.end());
+      Globals.assign(GVs.begin(), GVs.end());
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
@@ -56,20 +56,19 @@ void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
   if (PN == SubprogramTrackedNodes.end())
     return;
 
-  SmallVector<Metadata *, 16> RetainedNodes;
-  for (MDNode *N : PN->second) {
+  SetVector<Metadata *> RetainedNodes;
+  for (MDNode *N : llvm::concat<MDNode *>(SP->getRetainedNodes(), PN->second)) {
     // If the tracked node N was temporary, and the DIBuilder user replaced it
     // with a node that does not belong to SP or is non-local, do not add N to
     // SP's retainedNodes list.
     DILocalScope *Scope = dyn_cast_or_null<DILocalScope>(
         DISubprogram::getRawRetainedNodeScope(N));
-    if (!Scope || Scope->getSubprogram() != SP)
-      continue;
-
-    RetainedNodes.push_back(N);
+    if (Scope && Scope->getSubprogram() == SP)
+      RetainedNodes.insert(N);
   }
 
-  SP->replaceRetainedNodes(MDTuple::get(VMContext, RetainedNodes));
+  SP->replaceRetainedNodes(
+      MDTuple::get(VMContext, RetainedNodes.getArrayRef()));
 }
 
 void DIBuilder::finalize() {
@@ -103,8 +102,8 @@ void DIBuilder::finalize() {
     if (auto *SP = dyn_cast<DISubprogram>(N))
       finalizeSubprogram(SP);
 
-  if (!AllGVs.empty())
-    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
+  if (!Globals.empty())
+    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, Globals));
 
   if (!ImportedModules.empty())
     CUNode->replaceImportedEntities(MDTuple::get(
@@ -619,7 +618,7 @@ DICompositeType *DIBuilder::createClassType(
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
     unsigned RunTimeLang, DIType *VTableHolder, MDNode *TemplateParams,
-    StringRef UniqueIdentifier) {
+    StringRef UniqueIdentifier, DINodeArray Annotations) {
   assert((!Context || isa<DIScope>(Context)) &&
          "createClassType should be called with a valid Context");
 
@@ -627,7 +626,8 @@ DICompositeType *DIBuilder::createClassType(
       VMContext, dwarf::DW_TAG_class_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits,
       OffsetInBits, Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt,
-      VTableHolder, cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);
+      VTableHolder, cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier,
+      nullptr, nullptr, nullptr, nullptr, nullptr, Annotations);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
@@ -639,13 +639,13 @@ DICompositeType *DIBuilder::createStructType(
     Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
     DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
-    uint32_t NumExtraInhabitants) {
+    uint32_t NumExtraInhabitants, DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt, VTableHolder,
       nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
-      nullptr, Specification, NumExtraInhabitants);
+      Annotations, Specification, NumExtraInhabitants);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
@@ -657,13 +657,13 @@ DICompositeType *DIBuilder::createStructType(
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
     DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
-    uint32_t NumExtraInhabitants) {
+    uint32_t NumExtraInhabitants, DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt, VTableHolder,
       nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
-      nullptr, Specification, NumExtraInhabitants);
+      Annotations, Specification, NumExtraInhabitants);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
@@ -673,12 +673,14 @@ DICompositeType *DIBuilder::createStructType(
 DICompositeType *DIBuilder::createUnionType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
-    DINodeArray Elements, unsigned RunTimeLang, StringRef UniqueIdentifier) {
+    DINodeArray Elements, unsigned RunTimeLang, StringRef UniqueIdentifier,
+    DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_union_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
       Elements, RunTimeLang, /*EnumKind=*/std::nullopt, nullptr, nullptr,
-      UniqueIdentifier);
+      UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
+      Annotations);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Scope))
     getSubprogramNodesTrackingVector(Scope).emplace_back(R);
@@ -958,7 +960,10 @@ DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
   if (!Expr)
     Expr = createExpression();
   auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
-  AllGVs.push_back(N);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(N);
+  else
+    Globals.push_back(N);
   return N;
 }
 
@@ -1147,10 +1152,10 @@ DILexicalBlock *DIBuilder::createLexicalBlock(DIScope *Scope, DIFile *File,
                                      File, Line, Col);
 }
 
-DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     BasicBlock *InsertAtEnd) {
-  // If this block already has a terminator then insert this intrinsic before
+  // If this block already has a terminator then insert this record before
   // the terminator. Otherwise, put it at the end of the block.
   Instruction *InsertBefore = InsertAtEnd->getTerminatorOrNull();
   return insertDeclare(Storage, VarInfo, Expr, DL,
@@ -1158,7 +1163,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     : InsertAtEnd->end());
 }
 
-DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+DbgRecord *DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
                                       DILocalVariable *SrcVar,
                                       DIExpression *ValExpr, Value *Addr,
                                       DIExpression *AddrExpr,
@@ -1189,18 +1194,16 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
 }
 
-DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
-                                              DILocalVariable *VarInfo,
-                                              DIExpression *Expr,
-                                              const DILocation *DL,
-                                              InsertPosition InsertPt) {
+DbgRecord *DIBuilder::insertDbgValue(Value *Val, DILocalVariable *VarInfo,
+                                     DIExpression *Expr, const DILocation *DL,
+                                     InsertPosition InsertPt) {
   DbgVariableRecord *DVR =
       DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
   insertDbgVariableRecord(DVR, InsertPt);
   return DVR;
 }
 
-DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     InsertPosition InsertPt) {
   assert(VarInfo && "empty or invalid DILocalVariable* passed to dbg.declare");
@@ -1215,7 +1218,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return DVR;
 }
 
-DbgInstPtr DIBuilder::insertDeclareValue(Value *Storage,
+DbgRecord *DIBuilder::insertDeclareValue(Value *Storage,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,
@@ -1270,7 +1273,7 @@ Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
   return B.CreateCall(IntrinsicFn, Args);
 }
 
-DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
+DbgRecord *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
                                   InsertPosition InsertPt) {
   assert(LabelInfo && "empty or invalid DILabel* passed to dbg.label");
   assert(DL && "Expected debug loc");

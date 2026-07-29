@@ -41,6 +41,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -61,6 +62,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 
 #include <cstdint>
 #include <memory>
@@ -1819,23 +1821,35 @@ llvm::Error AppleObjCRuntimeV2::SharedCacheImageHeaders::UpdateIfNeeded() {
   constexpr lldb::addr_t metadata_size =
       sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
 
-  Status error;
+  /// Sanity check: m_count and m_entsize are external input, guard against
+  /// invalid values using an arbitrary 1GB maximum size.
+  const size_t memory_needed = static_cast<size_t>(m_count) * m_entsize;
+  if (memory_needed > 1024 * 1024 * 1024)
+    return llvm::createStringError(
+        "SharedCacheImageHeaders require too much memory");
+
   const lldb::addr_t first_header_addr = m_headerInfoRWs_ptr + metadata_size;
-  DataBufferHeap header_buffer(m_entsize, '\0');
-  lldb::offset_t cursor = 0;
-  for (uint32_t i = 0; i < m_count; i++) {
-    const lldb::addr_t header_addr = first_header_addr + (i * m_entsize);
-    process->ReadMemory(header_addr, header_buffer.GetBytes(), m_entsize,
-                        error);
-    if (error.Fail())
+
+  llvm::SmallVector<Range<addr_t, size_t>> mem_ranges =
+      llvm::to_vector(llvm::map_range(llvm::seq(m_count), [&](uint32_t i) {
+        return Range<addr_t, size_t>(first_header_addr + (i * m_entsize),
+                                     m_entsize);
+      }));
+
+  llvm::SmallVector<uint8_t, 0> buffer(memory_needed, 0);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process->ReadMemoryRanges(mem_ranges, buffer);
+
+  for (auto [i, header_data] : llvm::enumerate(read_results)) {
+    if (header_data.size() != m_entsize)
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Failed to read memory from inferior when "
                                      "populating SharedCacheImageHeaders");
 
-    DataExtractor header_extractor(header_buffer.GetBytes(), m_entsize,
+    DataExtractor header_extractor(header_data.data(), m_entsize,
                                    process->GetByteOrder(),
                                    process->GetAddressByteSize());
-    cursor = 0;
+    lldb::offset_t cursor = 0;
     bool is_loaded = false;
     if (m_entsize == 4) {
       uint32_t header = header_extractor.GetU32_unchecked(&cursor);
@@ -2245,7 +2259,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   if (class_buffer_addr != LLDB_INVALID_ADDRESS) {
     arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_addr;
-    arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_byte_size;
+    arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_len;
   }
 
   // Only dump the runtime classes from the expression evaluation if the log is
@@ -2626,13 +2640,12 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
         SectionList *section_list = objc_module_sp->GetSectionList();
 
         if (section_list) {
-          SectionSP text_segment_sp(
-              section_list->FindSectionByName(ConstString("__TEXT")));
+          SectionSP text_segment_sp(section_list->FindSectionByName("__TEXT"));
 
           if (text_segment_sp) {
             SectionSP objc_opt_section_sp(
                 text_segment_sp->GetChildren().FindSectionByName(
-                    ConstString("__objc_opt_ro")));
+                    "__objc_opt_ro"));
 
             if (objc_opt_section_sp) {
               return objc_opt_section_sp->GetLoadBaseAddress(
@@ -3091,16 +3104,16 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorLegacy::IsPossibleTaggedPointer(
   return (ptr & 1);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
     lldb::addr_t ptr) {
   if (!IsPossibleTaggedPointer(ptr))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uint32_t foundation_version = m_runtime.GetFoundationVersion();
 
   if (foundation_version == LLDB_INVALID_MODULE_VERSION)
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uint64_t class_bits = (ptr & 0xE) >> 1;
   ConstString name;
@@ -3129,7 +3142,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       name = g_NSDate;
       break;
     default:
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     }
   } else {
     switch (class_bits) {
@@ -3146,12 +3159,12 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       name = g_NSDateTS;
       break;
     default:
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     }
   }
 
   lldb::addr_t unobfuscated = ptr ^ m_runtime.GetTaggedPointerObfuscator();
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(name, unobfuscated));
+  return std::make_unique<ClassDescriptorV2Tagged>(name, unobfuscated);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
@@ -3178,14 +3191,14 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
   return (ptr & m_objc_debug_taggedpointer_mask) != 0;
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_slot_shift) &
                    m_objc_debug_taggedpointer_slot_mask;
@@ -3212,7 +3225,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
       }
     }
     if (!actual_class_descriptor_sp)
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     m_cache[slot] = actual_class_descriptor_sp;
   }
 
@@ -3222,8 +3235,8 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
   int64_t data_payload_signed =
       ((int64_t)(unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
-      actual_class_descriptor_sp, data_payload, data_payload_signed));
+  return std::make_unique<ClassDescriptorV2Tagged>(
+      actual_class_descriptor_sp, data_payload, data_payload_signed);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::TaggedPointerVendorExtended(
@@ -3271,14 +3284,14 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorExtended::
           m_objc_debug_taggedpointer_ext_mask);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   if (!IsPossibleExtendedTaggedPointer(unobfuscated))
     return this->TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(ptr);
@@ -3301,7 +3314,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
     if (!actual_class_descriptor_sp)
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     m_ext_cache[slot] = actual_class_descriptor_sp;
   }
 
@@ -3313,8 +3326,8 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
                  << m_objc_debug_taggedpointer_ext_payload_lshift) >>
        m_objc_debug_taggedpointer_ext_payload_rshift);
 
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
-      actual_class_descriptor_sp, data_payload, data_payload_signed));
+  return std::make_unique<ClassDescriptorV2Tagged>(
+      actual_class_descriptor_sp, data_payload, data_payload_signed);
 }
 
 AppleObjCRuntimeV2::NonPointerISACache::NonPointerISACache(
@@ -3629,6 +3642,7 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
+      ConstString(module.GetFilename()), symbols,
+      Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

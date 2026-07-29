@@ -8,41 +8,40 @@
 
 #include "file.h"
 
+#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
 #include "hdr/stdio_macros.h"
+#include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
-#include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/lseek.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
-
-#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
-#include <sys/stat.h>         // For S_IS*, S_IF*, and S_IR* flags.
-#include <sys/syscall.h>      // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
 
 FileIOResult linux_file_write(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_write, lf->get_fd(), data, size);
-  if (ret < 0) {
-    return {0, -ret};
+  auto ret = linux_syscalls::write(lf->get_fd(), data, size);
+  if (!ret) {
+    return {0, ret.error()};
   }
-  return ret;
+  return static_cast<size_t>(ret.value());
 }
 
 FileIOResult linux_file_read(File *f, void *buf, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_read, lf->get_fd(), buf, size);
-  if (ret < 0) {
-    return {0, -ret};
+  auto ret = linux_syscalls::read(lf->get_fd(), buf, size);
+  if (!ret) {
+    return {0, ret.error()};
   }
-  return ret;
+  return static_cast<size_t>(ret.value());
 }
 
 ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
@@ -53,9 +52,9 @@ ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
 int linux_file_close(File *f) {
   File::remove_file(f);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, lf->get_fd());
-  if (ret < 0) {
-    return -ret;
+  auto ret = linux_syscalls::close(lf->get_fd());
+  if (!ret) {
+    return ret.error();
   }
   delete lf;
   return 0;
@@ -68,7 +67,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
     // return {nullptr, EINVAL};
     return Error(EINVAL);
   }
-  long open_flags = 0;
+  int open_flags = 0;
   if (modeflags & ModeFlags(File::OpenMode::APPEND)) {
     open_flags = O_CREAT | O_APPEND;
     if (modeflags & ModeFlags(File::OpenMode::PLUS))
@@ -89,21 +88,12 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   }
 
   // File created will have 0666 permissions.
-  constexpr long OPEN_MODE =
+  constexpr mode_t OPEN_MODE =
       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, open_flags, OPEN_MODE);
-#elif defined(SYS_openat)
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path,
-                                             open_flags, OPEN_MODE);
-#else
-#error "open and openat syscalls not available."
-#endif
-
-  if (fd < 0)
-    return Error(-fd);
+  ErrorOr<int> fd = linux_syscalls::open(path, open_flags, OPEN_MODE);
+  if (!fd)
+    return Error(fd.error());
 
   uint8_t *buffer;
   {
@@ -113,8 +103,8 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
       return Error(ENOMEM);
   }
   AllocChecker ac;
-  auto *file = new (ac)
-      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
+  auto *file = new (ac) LinuxFile(fd.value(), buffer, File::DEFAULT_BUFFER_SIZE,
+                                  _IOFBF, true, modeflags);
   if (!ac)
     return Error(ENOMEM);
   File::add_file(file);
@@ -128,7 +118,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
     return Error(EINVAL);
   }
 
-  auto result = internal::fcntl(fd, F_GETFL);
+  auto result = linux_syscalls::fcntl(fd, F_GETFL);
   if (!result.has_value()) {
     return Error(EBADF);
   }
@@ -146,8 +136,8 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
       !(fd_flags & O_APPEND)) {
     do_seek = true;
-    if (!internal::fcntl(fd, F_SETFL,
-                         reinterpret_cast<void *>(fd_flags | O_APPEND))
+    if (!linux_syscalls::fcntl(fd, F_SETFL,
+                               reinterpret_cast<void *>(fd_flags | O_APPEND))
              .has_value()) {
       return Error(EBADF);
     }

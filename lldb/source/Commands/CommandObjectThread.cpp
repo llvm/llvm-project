@@ -359,7 +359,7 @@ protected:
 
         // Get provider metadata for header.
         if (provider_id == 0) {
-          strm.Printf(": Base Unwinder ===\n");
+          strm.PutCString(": Base Unwinder ===\n");
         } else {
           // Find the descriptor in the provider chain.
           const auto &provider_chain = thread->GetProviderChainIds();
@@ -380,7 +380,7 @@ protected:
           if (provider_priority.has_value()) {
             strm.Printf(" (priority: %u)", *provider_priority);
           }
-          strm.Printf(" ===\n");
+          strm.PutCString(" ===\n");
 
           if (!provider_desc.empty()) {
             strm.Printf("Description: %s\n", provider_desc.c_str());
@@ -401,7 +401,7 @@ protected:
             selected_frame_marker);
 
         if (num_frames == 0) {
-          strm.Printf("(No frames available)\n");
+          strm.PutCString("(No frames available)\n");
         }
       }
 
@@ -745,9 +745,10 @@ protected:
           thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
           new_plan_status, m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {
+      ScriptedMetadata scripted_metadata(m_class_options.GetName(),
+                                         m_class_options.GetStructuredData());
       new_plan_sp = thread->QueueThreadPlanForStepScripted(
-          abort_other_plans, m_class_options.GetName().c_str(),
-          m_class_options.GetStructuredData(), bool_stop_other_threads,
+          abort_other_plans, scripted_metadata, bool_stop_other_threads,
           new_plan_status);
     } else {
       result.AppendError("step type is not supported");
@@ -1068,7 +1069,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = &GetTarget();
+    Target *target = GetTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
@@ -1632,7 +1633,7 @@ public:
         return false;
       }
     } else
-      strm.Printf("(no siginfo)\n");
+      strm.PutCString("(no siginfo)\n");
     strm.PutChar('\n');
 
     return true;

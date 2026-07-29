@@ -1333,21 +1333,19 @@ public:
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
-  LLVM_ABI SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                             SDValue Src, SDValue Size, Align Alignment,
-                             bool isVol, bool AlwaysInline, const CallInst *CI,
-                             std::optional<bool> OverrideTailCall,
-                             MachinePointerInfo DstPtrInfo,
-                             MachinePointerInfo SrcPtrInfo,
-                             const AAMDNodes &AAInfo = AAMDNodes(),
-                             BatchAAResults *BatchAA = nullptr);
+  LLVM_ABI SDValue getMemcpy(
+      SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
+      Align DstAlign, Align SrcAlign, bool isVol, bool AlwaysInline,
+      const CallInst *CI, std::optional<bool> OverrideTailCall,
+      MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
+      const AAMDNodes &AAInfo = AAMDNodes(), BatchAAResults *BatchAA = nullptr);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
   LLVM_ABI SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                              SDValue Src, SDValue Size, Align Alignment,
-                              bool isVol, const CallInst *CI,
+                              SDValue Src, SDValue Size, Align DstAlign,
+                              Align SrcAlign, bool isVol, const CallInst *CI,
                               std::optional<bool> OverrideTailCall,
                               MachinePointerInfo DstPtrInfo,
                               MachinePointerInfo SrcPtrInfo,
@@ -1518,6 +1516,13 @@ public:
 
   /// Create a MERGE_VALUES node from the given operands.
   LLVM_ABI SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
+
+  /// Return poison values for each of \p ResultTypes, substituting \p Chain
+  /// for any result of type MVT::Other, merged into a single MERGE_VALUES
+  /// node. Used to salvage a chain when an operation cannot be lowered due
+  /// to an error, and the program will be discarded.
+  LLVM_ABI SDValue getErrorMergeValues(ArrayRef<EVT> ResultTypes, SDValue Chain,
+                                       const SDLoc &dl);
 
   /// Loads are not normal binary operators: their result type is not
   /// determined by their operands, and they produce a value AND a token chain.
@@ -2755,8 +2760,8 @@ public:
   ///
   ///      partial_reduce_umls acc, lhs, rhs
   /// <=> -partial_reduce_umla -acc, lhs, rhs
-  SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL, SDValue Acc,
-                              SDValue LHS, SDValue RHS);
+  LLVM_ABI SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                       SDValue Acc, SDValue LHS, SDValue RHS);
 
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations

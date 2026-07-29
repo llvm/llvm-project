@@ -63,7 +63,8 @@ class SelectionDAG;
 class SMSchedule;
 class SwingSchedulerDAG;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
@@ -1915,7 +1916,8 @@ public:
                                    SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
-  unsigned defaultDefLatency(const MCSchedModel &SchedModel,
+  unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
+                             const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
   /// Return true if this opcode has high latency to its result.
@@ -2416,16 +2418,6 @@ private:
 template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
   using RegInfo = DenseMapInfo<Register>;
   using SubRegInfo = DenseMapInfo<unsigned>;
-
-  static inline TargetInstrInfo::RegSubRegPair getEmptyKey() {
-    return TargetInstrInfo::RegSubRegPair(RegInfo::getEmptyKey(),
-                                          SubRegInfo::getEmptyKey());
-  }
-
-  static inline TargetInstrInfo::RegSubRegPair getTombstoneKey() {
-    return TargetInstrInfo::RegSubRegPair(RegInfo::getTombstoneKey(),
-                                          SubRegInfo::getTombstoneKey());
-  }
 
   /// Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.

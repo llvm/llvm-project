@@ -1,3 +1,9 @@
+if(LIBC_TARGET_OS_IS_LINUX OR LIBC_TARGET_OS_IS_DARWIN)
+  set(LIBC_TEST_SUBPROCESS_TESTS 1)
+else()
+  set(LIBC_TEST_SUBPROCESS_TESTS 0)
+endif()
+
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
@@ -18,6 +24,26 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${compile_flags}
       ${config_flags}
       ${arch_flags})
+  libc_add_definition(compile_options
+                      "LIBC_TEST_FLOAT_RANGE_COUNT=${LIBC_TEST_FLOAT_RANGE_COUNT}")
+
+  libc_add_definition(compile_options
+                      "LIBC_TEST_SUBPROCESS_TESTS=${LIBC_TEST_SUBPROCESS_TESTS}")
+
+  if(LIBC_TEST_SUBPROCESS_TESTS)
+    # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
+    # will make those tests no-op to reduce the overall test time.
+    if(LIBC_TEST_SKIP_DEATH_TESTS)
+      if(LIBC_CMAKE_VERBOSE_LOGGING)
+        message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+      endif()
+      list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
+    endif()
+  endif()
+
+  if(CMAKE_CROSSCOMPILING_EMULATOR)
+    list(APPEND compile_options "-DLIBC_TEST_UNDER_EMULATOR")
+  endif()
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -44,7 +70,12 @@ function(_get_common_test_compile_options output_var c_test flags)
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
     endif()
-    list(APPEND compile_options "-Wconversion")
+    if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.0.0"))
+      list(APPEND compile_options "-Wconversion")
+    else()
+      list(APPEND compile_options "-Wno-type-limits")
+      list(APPEND compile_options "-Wno-attributes")
+    endif()
     # FIXME: convert to -Wsign-conversion
     list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
@@ -65,6 +96,10 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wnewline-eof")
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wthread-safety")
+    endif()
+
+    if(LIBC_COMPILER_HAS_STDC_FENV_ACCESS)
+      list(APPEND compile_options "-DLIBC_COMPILER_HAS_STDC_FENV_ACCESS")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -757,6 +792,26 @@ function(add_libc_hermetic test_name)
       libc.src.strings.bcmp
       libc.src.strings.bzero
   )
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
+    list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
+  endif()
+
+  # Syscalls used by death tests.
+  if(LIBC_TEST_SUBPROCESS_TESTS)
+    list(APPEND fq_deps_list
+        libc.src.poll.poll
+        libc.src.signal.kill
+        libc.src.stdio.fflush
+        libc.src.stdio.stderr
+        libc.src.stdio.stdout
+        libc.src.stdlib.exit
+        libc.src.string.strsignal
+        libc.src.sys.wait.waitpid
+        libc.src.unistd.close
+        libc.src.unistd.fork
+        libc.src.unistd.pipe
+    )
+  endif()
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building
@@ -884,15 +939,6 @@ function(add_libc_hermetic test_name)
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
                    ${fq_deps_list})
-  # TODO: currently the dependency chain is broken such that getauxval cannot properly
-  # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
-    target_link_libraries(
-      ${fq_build_target_name}
-      PRIVATE
-        libc.src.sys.auxv.getauxval
-    )
-  endif()
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if (LIBC_TEST_CMD)
@@ -985,6 +1031,7 @@ function(add_libc_test test_name)
       ${test_name}.__hermetic__
       LINK_LIBRARIES
         LibcTest.hermetic
+        LibcDeathTestExecutors.hermetic
       ${LIBC_TEST_UNPARSED_ARGUMENTS}
     )
     get_fq_target_name(${test_name} fq_test_name)

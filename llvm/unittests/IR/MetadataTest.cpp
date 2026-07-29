@@ -2919,6 +2919,7 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(DWOId, N->getDWOId());
   EXPECT_EQ(SysRoot, N->getSysRoot());
   EXPECT_EQ(SDK, N->getSDK());
+  EXPECT_EQ(0u, N->getDialect());
 
   TempDICompileUnit Temp = N->clone();
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, Temp->getTag());
@@ -2937,11 +2938,43 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(SysRoot, Temp->getSysRoot());
   EXPECT_EQ(SDK, Temp->getSDK());
+  EXPECT_EQ(0u, Temp->getDialect());
 
   auto *TempAddress = Temp.get();
   auto *Clone = MDNode::replaceWithPermanent(std::move(Temp));
   EXPECT_TRUE(Clone->isDistinct());
   EXPECT_EQ(TempAddress, Clone);
+}
+
+TEST_F(DICompileUnitTest, getWithDialect) {
+  unsigned SourceLanguage = 1;
+  DIFile *File = getFile();
+  StringRef Producer = "some producer";
+  bool IsOptimized = false;
+  StringRef Flags = "flag after flag";
+  unsigned RuntimeVersion = 2;
+  StringRef SplitDebugFilename = "another/file";
+  auto EmissionKind = DICompileUnit::FullDebug;
+  MDTuple *EnumTypes = getTuple();
+  MDTuple *RetainedTypes = getTuple();
+  MDTuple *GlobalVariables = getTuple();
+  MDTuple *ImportedEntities = getTuple();
+  uint64_t DWOId = 0x10000000c0ffee;
+  MDTuple *Macros = getTuple();
+  StringRef SysRoot = "/";
+  StringRef SDK = "TestSDK";
+  uint16_t Dialect = dwarf::DW_LLVM_LANG_DIALECT_simt;
+  auto *N = DICompileUnit::getDistinct(
+      Context, DISourceLanguageName(SourceLanguage, Dialect), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities, Macros,
+      DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
+      SysRoot, SDK);
+
+  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_simt, N->getDialect());
+
+  TempDICompileUnit Temp = N->clone();
+  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_simt, Temp->getDialect());
 }
 
 TEST_F(DICompileUnitTest, replaceArrays) {
@@ -4236,6 +4269,7 @@ TEST_F(DIExpressionTest, isValid) {
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
+  EXPECT_VALID(dwarf::DW_OP_constu, 5, dwarf::DW_OP_swap);
   EXPECT_VALID(dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
@@ -4250,6 +4284,7 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus, 0);
   EXPECT_INVALID(dwarf::DW_OP_plus_uconst);
+  EXPECT_INVALID(dwarf::DW_OP_swap);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus_uconst, 3);
@@ -5182,24 +5217,13 @@ TEST_F(FunctionAttachmentTest, Verifier) {
   EXPECT_FALSE(verifyFunction(*F));
 }
 
-TEST_F(FunctionAttachmentTest, RealEntryCount) {
+TEST_F(FunctionAttachmentTest, EntryCount) {
   Function *F = getFunction("foo");
   EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(12304, Function::PCT_Real);
+  F->setEntryCount(12304);
   auto Count = F->getEntryCount();
   EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(12304u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Real, Count->getType());
-}
-
-TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
-  Function *F = getFunction("bar");
-  EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(123, Function::PCT_Synthetic);
-  auto Count = F->getEntryCount(true /*allow synthetic*/);
-  EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(123u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
+  EXPECT_EQ(12304u, *Count);
 }
 
 TEST_F(FunctionAttachmentTest, SubprogramAttachment) {

@@ -1120,6 +1120,21 @@ bool HasConstant(const Expr<SomeType> &);
 // Predicate: Does an expression contain a component
 bool HasStructureComponent(const Expr<SomeType> &expr);
 
+// Predicate: does an expression contain a procedure reference?
+bool HasProcedureRef(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a VOLATILE or ASYNCHRONOUS symbol?
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
+
+// Can a scalar real RHS expression in an assignment be rewritten as a split
+// sum expression tree?
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+
+// Try to rewrite a scalar real sum as a split sum expression tree.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
@@ -1377,6 +1392,15 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
+// True for a whole reference to a managed or unified array: a whole array
+// variable, or a whole array component that itself has the attribute (a%b where
+// b is managed). An array section, an array element, a component of a managed
+// object and a computed value are all false.
+template <typename A> inline bool IsWholeManagedArray(const A &expr) {
+  const Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return expr.Rank() > 0 && sym && IsCUDAManagedOrUnifiedSymbol(*sym);
+}
+
 // Check if any of the symbols part of the lhs or rhs expression has a CUDA
 // device attribute.
 template <typename A, typename B>
@@ -1388,18 +1412,35 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
-      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
-    return true; // Managed arrays initialization is performed on the device.
+  // CUDA Fortran Programming Guide 3.4.1: an assignment involving managed or
+  // unified data is a copy when the managed side is a whole variable or array,
+  // and is done on the host when it is a section. The host can read and write
+  // managed data directly, and copying section by section in a loop is slow.
+  bool wholeLhs{IsWholeManagedArray(lhs)};
+  bool wholeRhs{IsWholeManagedArray(rhs)};
+
+  if (wholeLhs && rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Initializing a whole managed array is done on the device.
   }
 
-  // Cases where no explicit data transfer is needed:
-  // - Both sides involve only managed/unified symbols (host-accessible).
-  // - LHS is host-only and RHS has only managed/unified symbols.
-  // - LHS is managed/unified and RHS is host-only.
-  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+  // Assignments done on the host, with no copy:
+  // - A whole allocatable left-hand side: the assignment may reallocate it,
+  //   which is done on the host.
+  // - No managed operand is a whole array: they are all sections or elements,
+  //   which the host can read and write in place.
+  // - An expression involving managed data assigned to a managed or host
+  //   left-hand side: evaluating it on the host avoids a temporary.
+  // - A managed left-hand side assigned from host-only data.
+  if ((IsAllocatableDesignator(lhs) &&
+          (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+          !(wholeLhs || wholeRhs)) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
-          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
+          !wholeRhs) ||
+      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) &&
+          (lhsNbManagedSymbols >= 1 || !HasCUDADeviceAttrs(lhs))) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
@@ -1409,6 +1450,9 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1570,6 +1614,11 @@ std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 // How many ancestors does have a derived type have?
 std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
 
 } // namespace Fortran::evaluate
 

@@ -26,7 +26,7 @@
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
-; CHECK-NEXT:   experimental-xrivosvizip         - 'XRivosVizip' (Rivos Vector Register Zips).
+; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
 ; CHECK-NEXT:   experimental-y                   - 'Y' ('Base Y' (CHERI)).
@@ -36,11 +36,22 @@
 ; CHECK-NEXT:   experimental-zvabd               - 'Zvabd' (Vector Absolute Difference).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
 ; CHECK-NEXT:   experimental-zvdot4a8i           - 'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers).
+; CHECK-NEXT:   experimental-zvfbdota32f         - 'Zvfbdota32f' (FP32 batched dot-product extension).
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
+; CHECK-NEXT:   experimental-zvfqwbdota8f        - 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfqwdota8f         - 'Zvfqwdota8f' (OCP FP8 Dot-Product).
+; CHECK-NEXT:   experimental-zvfwbdota16bf       - 'Zvfwbdota16bf' (BF16 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfwdota16bf        - 'Zvfwdota16bf' (BF16 Dot-Product).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
+; CHECK-NEXT:   experimental-zvqwbdota16i        - 'Zvqwbdota16i' (16-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvqwbdota8i         - 'Zvqwbdota8i' (8-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvqwdota16i         - 'Zvqwdota16i' (16-bit Integer Dot-Product).
+; CHECK-NEXT:   experimental-zvqwdota8i          - 'Zvqwdota8i' (8-bit Integer Dot-Product).
 ; CHECK-NEXT:   experimental-zvvfmm              - 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate).
 ; CHECK-NEXT:   experimental-zvvmm               - 'Zvvmm' (Integer Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
+; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
@@ -57,9 +68,16 @@
 ; CHECK-NEXT:   fusion-lui-addi                  - Enable LUI+ADDI macro fusion.
 ; CHECK-NEXT:   fusion-lui-load                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   fusion-mul-add                   - Enable MUL+ADD macrofusion.
+; CHECK-NEXT:   fusion-qc-e-li-load-store        - Enable QC.E.LI + Load/Store macrofusion.
 ; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
+; CHECK-NEXT:   fusion-xqci-mov-longlogical      - Enable MOV + long accumulate macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-alu           - Enable MOVIMM + ALU operations macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-jump          - Enable MOVIMM + Jump macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-ldst          - Enable MOVIMM + long Load/Store macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-longlogical   - Enable MOVIMM + long accumulate macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-mul           - Enable MOVIMM + multiply macrofusion.
 ; CHECK-NEXT:   fusion-zexth                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
 ; CHECK-NEXT:   fusion-zextw                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
@@ -254,6 +272,7 @@
 ; CHECK-NEXT:   xsifivecdiscarddlone             - 'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction).
 ; CHECK-NEXT:   xsifivecflushdlone               - 'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction).
 ; CHECK-NEXT:   xsmtvdot                         - 'XSMTVDot' (SpacemiT Vector Dot Product Extension).
+; CHECK-NEXT:   xsmtvdotii                       - 'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0).
 ; CHECK-NEXT:   xtheadba                         - 'XTHeadBa' (T-Head address calculation instructions).
 ; CHECK-NEXT:   xtheadbb                         - 'XTHeadBb' (T-Head basic bit-manipulation instructions).
 ; CHECK-NEXT:   xtheadbs                         - 'XTHeadBs' (T-Head single-bit instructions).
@@ -318,7 +337,7 @@
 ; CHECK-NEXT:   zihintpause                      - 'Zihintpause' (Pause Hint).
 ; CHECK-NEXT:   zihpm                            - 'Zihpm' (Hardware Performance Counters).
 ; CHECK-NEXT:   zilsd                            - 'Zilsd' (Load/Store Pair Instructions).
-; CHECK-NEXT:   zilsd-4byte-align                - Allow 4-byte alignment for Zilsd LD/SD instructions.
+; CHECK-NEXT:   zilsd-word-align                 - Allow 4-byte alignment for Zilsd LD/SD instructions.
 ; CHECK-NEXT:   zimop                            - 'Zimop' (May-Be-Operations).
 ; CHECK-NEXT:   zk                               - 'Zk' (Standard scalar cryptography extension).
 ; CHECK-NEXT:   zkn                              - 'Zkn' (NIST Algorithm Suite).

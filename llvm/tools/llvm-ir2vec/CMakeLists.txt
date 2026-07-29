@@ -1,10 +1,16 @@
 set(LLVM_LINK_COMPONENTS
+  Analysis
+  Core
+  Support
+
   # IR reading (used by llvm-ir2vec.cpp directly)
   IRReader
 
   # Machine IR components (for -mode=mir)
+  CodeGen
   MIRParser
   MC
+  Target
 
   # Target initialization (required for MIR parsing)
   AllTargetsAsmParsers
@@ -15,6 +21,7 @@ set(LLVM_LINK_COMPONENTS
 )
 
 # Build the utility libraries first
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 add_subdirectory(lib)
 
 # Main executable
@@ -37,4 +44,5 @@ set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS False CACHE INTERNAL "")
 if(LLVM_IR2VEC_ENABLE_PYTHON_BINDINGS)
   add_subdirectory(Bindings)
   set(LLVM_IR2VEC_TEST_PYTHON_BINDINGS True CACHE INTERNAL "" FORCE)
+  add_dependencies(llvm-ir2vec ir2vec ir2vec-python-staging)
 endif()

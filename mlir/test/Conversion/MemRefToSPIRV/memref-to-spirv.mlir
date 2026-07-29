@@ -544,6 +544,91 @@ module attributes {
 
 // -----
 
+// Check memref.copy lowering to spirv.CopyMemory.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy
+func.func @copy() {
+  // CHECK: %[[SRC:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: %[[DST:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: spirv.CopyMemory "Function" %[[DST]], "Function" %[[SRC]]{{.*}} : !spirv.array<4 x f32>
+  %0 = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+  %1 = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+  memref.copy %0, %1 : memref<4xf32, #spirv.storage_class<Function>> to memref<4xf32, #spirv.storage_class<Function>>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check memref.copy is not lowered when either operand is in Image storage
+// class, since spirv.CopyMemory does not apply to image memory.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [
+    Shader,
+    Image1D,
+    StorageImageExtendedFormats
+  ], [
+    SPV_KHR_storage_buffer_storage_class
+  ]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy_image
+// CHECK: memref.copy
+func.func @copy_image(%arg0: memref<4xf32, #spirv.storage_class<Image>>, %arg1: memref<4xf32, #spirv.storage_class<Image>>) {
+  memref.copy %arg0, %arg1 : memref<4xf32, #spirv.storage_class<Image>> to memref<4xf32, #spirv.storage_class<Image>>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check memref.copy is not lowered for dynamically shaped memrefs, since
+// spirv.CopyMemory requires the copied type to have a fixed size.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy_dynamic_shape
+// CHECK: memref.copy
+func.func @copy_dynamic_shape(%arg0: memref<?xf32, #spirv.storage_class<StorageBuffer>>, %arg1: memref<?xf32, #spirv.storage_class<StorageBuffer>>) {
+  memref.copy %arg0, %arg1 : memref<?xf32, #spirv.storage_class<StorageBuffer>> to memref<?xf32, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check memref.copy is not lowered for dynamically shaped memrefs under the
+// Kernel addressing model either, since the converted pointer only refers to
+// a single element and does not carry the dynamic extent.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy_dynamic_shape_kernel
+// CHECK: memref.copy
+func.func @copy_dynamic_shape_kernel(%arg0: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>, %arg1: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) {
+  memref.copy %arg0, %arg1 : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, #spirv.storage_class<CrossWorkgroup>>
+  return
+}
+
+} // end module
+
+// -----
+
 // Check Image Support.
 
 // CHECK: #[[$COLMAJMAP:.*]] = affine_map<(d0, d1) -> (d1, d0)>

@@ -251,11 +251,12 @@ public:
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a function.\n");
+              locked_stream.PutCString(
+                  "error: unable to generate a function.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -485,18 +486,18 @@ protected:
                     }
                   } else {
                     LockedStreamFile locked_stream = error_sp->Lock();
-                    locked_stream.Printf("error: invalid type name.\n");
+                    locked_stream.PutCString("error: invalid type name.\n");
                     break;
                   }
                 }
               }
             } else {
               LockedStreamFile locked_stream = error_sp->Lock();
-              locked_stream.Printf("error: unable to generate a class.\n");
+              locked_stream.PutCString("error: unable to generate a class.\n");
             }
           } else {
             LockedStreamFile locked_stream = error_sp->Lock();
-            locked_stream.Printf("error: no script interpreter.\n");
+            locked_stream.PutCString("error: no script interpreter.\n");
           }
         } else {
           LockedStreamFile locked_stream = error_sp->Lock();
@@ -2259,8 +2260,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     // name-based lookup here to try to prevent conflicts.
     FormattersMatchCandidate candidate_type(type_name, nullptr, TypeImpl(),
                                             FormattersMatchCandidate::Flags());
-    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
-                             false)) {
+    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter)) {
       if (error)
         *error = Status::FromErrorStringWithFormatv(
             "cannot add synthetic for type {0} when "
@@ -2401,8 +2401,7 @@ private:
       FormattersMatchCandidate candidate_type(
           type_name, nullptr, TypeImpl(), FormattersMatchCandidate::Flags());
       lldb::SyntheticChildrenSP entry;
-      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
-                               false)) {
+      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth)) {
         if (error)
           *error = Status::FromErrorStringWithFormatv(
               "cannot add filter for type {0} when "
@@ -2764,7 +2763,8 @@ public:
 protected:
   void DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
-    Target *target = &GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresFrame");
     Thread *thread = GetDefaultThread();
     if (!thread) {
       result.AppendError("no default thread");

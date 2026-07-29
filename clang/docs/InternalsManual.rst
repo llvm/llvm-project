@@ -692,7 +692,7 @@ deterministic manner. This enables features such as implicitly discovered,
 explicitly built modules.
 
 ..
-  TODO: Create and link corresponding section in Modules.rst.
+  TODO: Create and link corresponding section in Modules.md.
 
 Adding new Command Line Option
 ------------------------------
@@ -901,11 +901,11 @@ command line:
       PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
       HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
       DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-      MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+      TABLE_INDEX)                                                               \
     PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
                                   SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
                                   IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
-                                  MERGER, TABLE_INDEX)
+                                  TABLE_INDEX)
   #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
@@ -921,10 +921,10 @@ command line:
       PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
       HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
       DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-      MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+      TABLE_INDEX)                                                               \
     GENERATE_OPTION_WITH_MARSHALLING(                                            \
         Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-        IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+        IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, TABLE_INDEX)
   #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
@@ -1056,10 +1056,6 @@ comma-separated string values and elements of the array within
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
     MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
-
-..
-  Intentionally omitting MarshallingInfoBitfieldFlag. It's adding some
-  complexity to the marshalling infrastructure and might be removed.
 
 It is also possible to define relationships between options.
 
@@ -3336,8 +3332,8 @@ are similar.
      shouldn't impact your testing.
 
 #. Introduce an AST node for your new expression.  This starts with declaring
-   the node in ``include/Basic/StmtNodes.td`` and creating a new class for your
-   expression in the appropriate ``include/AST/Expr*.h`` header.  It's best to
+   the node in ``include/clang/Basic/StmtNodes.td`` and creating a new class for your
+   expression in the appropriate ``include/clang/AST/Expr*.h`` header.  It's best to
    look at the class for a similar expression to get ideas, and there are some
    specific things to watch for:
 

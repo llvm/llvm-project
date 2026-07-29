@@ -40,10 +40,12 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
+        pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
         update_tests=opts.update_tests,
+        maxIndividualTestTime=opts.maxIndividualTestTime,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -68,18 +70,6 @@ def main(builtin_params={}):
         print(" ".join(sorted(features)))
         sys.exit(0)
 
-    # Command line overrides configuration for maxIndividualTestTime.
-    if opts.maxIndividualTestTime is not None:  # `not None` is important (default: 0)
-        if opts.maxIndividualTestTime != lit_config.maxIndividualTestTime:
-            lit_config.note(
-                (
-                    "The test suite configuration requested an individual"
-                    " test timeout of {0} seconds but a timeout of {1} seconds was"
-                    " requested on the command line. Forcing timeout to be {1}"
-                    " seconds."
-                ).format(lit_config.maxIndividualTestTime, opts.maxIndividualTestTime)
-            )
-            lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
 
     determine_order(discovered_tests, opts.order)
 
@@ -138,7 +128,7 @@ def main(builtin_params={}):
     )
 
     if opts.time_tests:
-        print_histogram(discovered_tests)
+        print_histogram(discovered_tests, opts.time_tests)
 
     print_results(discovered_tests, elapsed, opts)
 
@@ -289,6 +279,8 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         error = "warning: reached maximum number of test failures"
     except lit.run.TimeoutError:
         error = "warning: reached timeout"
+    except lit.run.WorkerCrashError as e:
+        lit_config.error(f"a worker process crashed: {e}")
 
     display.clear(interrupted)
     if error:
@@ -326,12 +318,12 @@ def execute_in_tmp_dir(run, lit_config):
                 )
 
 
-def print_histogram(tests):
+def print_histogram(tests, slowest_limit):
     test_times = [
         (t.getFullName(), t.result.elapsed) for t in tests if t.result.elapsed
     ]
     if test_times:
-        lit.util.printHistogram(test_times, title="Tests")
+        lit.util.printHistogram(test_times, slowest_limit, title="Tests")
 
 
 def print_results(tests, elapsed, opts):

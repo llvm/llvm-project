@@ -21,8 +21,9 @@ void test() {
   // CHECK-NEXT: |   |   | `-DeclRefExpr {{.+}} '<builtin fn type>' Function {{.+}} '__builtin_arm_irg' 'void *(void *, unsigned long)'
   // CHECK-NEXT: |   |   |-ImplicitCastExpr {{.+}} 'struct A *' <LValueToRValue>
   // CHECK-NEXT: |   |   | `-DeclRefExpr {{.+}} 'struct A *' lvalue Var {{.+}} 'ptr_a' 'struct A *'
-  // CHECK-NEXT: |   |   `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
-  // CHECK-NEXT: |   |     `-DeclRefExpr {{.+}} 'unsigned int' lvalue Var {{.+}} 'uval' 'unsigned int'
+  // CHECK-NEXT: |   |   `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+  // CHECK-NEXT: |   |     `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
+  // CHECK-NEXT: |   |       `-DeclRefExpr {{.+}} 'unsigned int' lvalue Var {{.+}} 'uval' 'unsigned int'
 
   ptr_a = __arm_mte_increment_tag(ptr_a, 5);
   // CHECK-NEXT: |   |-BinaryOperator {{.+}} 'struct A *' '='
@@ -43,8 +44,9 @@ void test() {
   // CHECK-NEXT: |   |     | `-DeclRefExpr {{.+}} '<builtin fn type>' Function {{.+}} '__builtin_arm_gmi' 'unsigned long (void *, unsigned long)'
   // CHECK-NEXT: |   |     |-ImplicitCastExpr {{.+}} 'struct A *' <LValueToRValue>
   // CHECK-NEXT: |   |     | `-DeclRefExpr {{.+}} 'struct A *' lvalue Var {{.+}} 'ptr_a' 'struct A *'
-  // CHECK-NEXT: |   |     `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
-  // CHECK-NEXT: |   |       `-DeclRefExpr {{.+}} 'unsigned int' lvalue Var {{.+}} 'uval' 'unsigned int'
+  // CHECK-NEXT: |   |     `-ImplicitCastExpr {{.+}} 'unsigned long' <IntegralCast>
+  // CHECK-NEXT: |   |       `-ImplicitCastExpr {{.+}} 'unsigned int' <LValueToRValue>
+  // CHECK-NEXT: |   |         `-DeclRefExpr {{.+}} 'unsigned int' lvalue Var {{.+}} 'uval' 'unsigned int'
 
   ptr_a = __arm_mte_get_tag(ptr_a);
   // CHECK-NEXT: |   |-BinaryOperator {{.+}} 'struct A *' '='

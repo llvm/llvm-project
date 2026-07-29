@@ -21,6 +21,7 @@
 #include <__concepts/movable.h>
 #include <__concepts/predicate.h>
 #include <__concepts/primary_template.h>
+#include <__concepts/referenceable.h>
 #include <__concepts/regular.h>
 #include <__concepts/relation.h>
 #include <__concepts/same_as.h>
@@ -40,7 +41,6 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>

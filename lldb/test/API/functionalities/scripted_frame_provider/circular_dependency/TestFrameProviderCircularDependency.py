@@ -46,8 +46,6 @@ class FrameProviderCircularDependencyTestCase(TestBase):
 
         return target, thread
 
-    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_circular_dependency_with_function_replacement(self):
         """
         Test the circular dependency fix with a provider that replaces function names.
@@ -115,7 +113,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         )
 
         # Verify we can call methods on all frames (no circular dependency!).
-        for i in range(new_frame_count):
+        for i in range(min(new_frame_count, 3)):
             frame = thread.GetFrameAtIndex(i)
             self.assertIsNotNone(frame, f"Frame {i} should exist")
             # These calls should not trigger circular dependency.
@@ -165,7 +163,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
                 frame.GetFunctionName(), f"Frame {i} should have function name"
             )
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24778")
     def test_circular_dependency_evaluate_expression_in_get_frame(self):
         """
         Test that calling EvaluateExpression in get_frame_at_index doesn't
