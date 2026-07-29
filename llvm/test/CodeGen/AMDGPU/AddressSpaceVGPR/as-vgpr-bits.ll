@@ -2,13 +2,18 @@
 ; RUN: llc -global-isel=0 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1200 -o - %s | FileCheck %s --check-prefixes=GFX12,GFX12-SDAG
 ; RUN: llc -global-isel=1 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1200 -o - %s | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
 
-; Also compile for a wave64 movrel subtarget. The expansion itself is subtarget
-; independent - AMDGPULowerIdxOps consults no subtarget predicate - and the
-; sub-dword code is the same there modulo register allocation, so only compile
-; and verify rather than checking the output a second time. What differs is the
-; waterfall around a divergent access, which uses a 64-bit exec mask.
+; Also compile for two further movrel subtargets. The expansion itself is
+; subtarget independent - AMDGPULowerIdxOps consults no subtarget predicate - and
+; the sub-dword code is the same on both modulo register allocation, so only
+; compile and verify rather than checking the output again. gfx942 differs in
+; using a 64-bit exec mask for the waterfall around a divergent access, and
+; gfx1250 in having more than 256 addressable VGPRs. The effects of the latter on
+; the dword index are checked in as-vgpr-index-demanded-bits.ll, whose entry
+; functions also cover the S_SET_VGPR_MSB encoding.
 ; RUN: llc -global-isel=0 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx942 -filetype=null %s
 ; RUN: llc -global-isel=1 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx942 -filetype=null %s
+; RUN: llc -global-isel=0 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1250 -filetype=null %s
+; RUN: llc -global-isel=1 -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1250 -filetype=null %s
 
 ; End-to-end lowering of sub-dword (8/16-bit) accesses of the VGPR "as memory"
 ; address space (13). A load reads the containing dword with an M0-relative
