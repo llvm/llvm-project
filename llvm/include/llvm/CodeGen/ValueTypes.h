@@ -177,10 +177,20 @@ namespace llvm {
       return isSimple() ? V.isVector() : isExtendedVector();
     }
 
+    /// Return true if this is a vector with matching element type.
+    bool isVectorOf(EVT EltVT) const {
+      return isVector() && getVectorElementType() == EltVT;
+    }
+
     /// Return true if this is a vector type where the runtime
     /// length is machine dependent
     bool isScalableVector() const {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
+    }
+
+    /// Return true if this is a scalable vector with matching element type.
+    bool isScalableVectorOf(EVT EltVT) const {
+      return isScalableVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if this is a vector value type.
@@ -189,6 +199,11 @@ namespace llvm {
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
                         : isExtendedFixedLengthVector();
+    }
+
+    /// Return true if this is a fixed length vector with matching element type.
+    bool isFixedLengthVectorOf(EVT EltVT) const {
+      return isFixedLengthVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if the type is a scalable type.
@@ -579,6 +594,8 @@ namespace llvm {
     LLVM_ABI ElementCount getExtendedVectorElementCount() const LLVM_READONLY;
     LLVM_ABI TypeSize getExtendedSizeInBits() const LLVM_READONLY;
   };
+
+  inline bool operator==(MVT::SimpleValueType SVT, EVT VT) { return VT == SVT; }
 
   inline raw_ostream &operator<<(raw_ostream &OS, const EVT &V) {
     V.print(OS);

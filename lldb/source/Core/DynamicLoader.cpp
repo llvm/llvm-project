@@ -151,14 +151,12 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
   return sections;
 }
 
-ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
+ModuleSP DynamicLoader::FindModuleViaTarget(const ModuleSpec &spec) {
+  ModuleSpec module_spec(spec);
   Target &target = m_process->GetTarget();
-  ModuleSpec module_spec(file, target.GetArchitecture());
-  if (UUID uuid = m_process->FindModuleUUID(file.GetPath())) {
-    // Process may be able to augment the module_spec with UUID, e.g. ELF core.
-    module_spec.GetUUID() = uuid;
-  }
-
+  // The process may be able to augment the module_spec with a UUID.
+  if (!module_spec.GetUUID().IsValid())
+    m_process->FindModuleUUID(module_spec);
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
@@ -173,7 +171,10 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
                                             bool base_addr_is_offset) {
-  ModuleSP module_sp = FindModuleViaTarget(file);
+  Target &target = m_process->GetTarget();
+  ModuleSpec module_spec(file, target.GetArchitecture());
+  module_spec.SetLoadAddress(base_addr);
+  ModuleSP module_sp = FindModuleViaTarget(module_spec);
   // We have a core file, try to load the image from memory if we didn't find
   // the module.
   if (!module_sp && !m_process->IsLiveDebugSession()) {
@@ -355,7 +356,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   } else {
     if (force_symbol_search) {
       lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
-      s->Printf("Unable to find file");
+      s->PutCString("Unable to find file");
       if (!name.empty())
         s->Printf(" %s", name.str().c_str());
       if (uuid.IsValid())
@@ -366,7 +367,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
         else
           s->Printf(" at address 0x%" PRIx64, value);
       }
-      s->Printf("\n");
+      s->PutCString("\n");
     }
     LLDB_LOGF(log,
               "Unable to find binary %s with UUID %s and load it at "

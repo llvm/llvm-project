@@ -81,10 +81,12 @@ bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
 bool objdump::IsOtool;
+bool objdump::UseMemberSyntax;
 bool objdump::SymbolicOperands;
 std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
+static std::string ArchiveMemberFilter;
 static std::string ThumbTripleName;
 
 static StringRef ordinalName(const object::MachOObjectFile *, int);
@@ -2311,6 +2313,18 @@ static void printCPUType(uint32_t cputype, uint32_t cpusubtype) {
       outs() << "    cputype CPU_TYPE_ARM\n";
       outs() << "    cpusubtype CPU_SUBTYPE_ARM_V7S\n";
       break;
+    case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8M_MAIN\n";
+      break;
+    case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8M_BASE\n";
+      break;
+    case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8_1M_MAIN\n";
+      break;
     default:
       printUnknownCPUType(cputype, cpusubtype);
       break;
@@ -2533,6 +2547,18 @@ static bool ValidateArchFlags() {
   return true;
 }
 
+static bool skipArchiveMember(const object::Archive::Child &C,
+                              StringRef Filename) {
+  if (ArchiveMemberFilter.empty())
+    return false;
+  Expected<StringRef> NameOrErr = C.getName();
+  if (!NameOrErr) {
+    reportError(NameOrErr.takeError(), Filename);
+    return true;
+  }
+  return *NameOrErr != ArchiveMemberFilter;
+}
+
 // ParseInputMachO() parses the named Mach-O file in Filename and handles the
 // -arch flags selecting just those slices as specified by them and also parses
 // archive files.  Then for each individual Mach-O file ProcessMachO() is
@@ -2540,6 +2566,19 @@ static bool ValidateArchFlags() {
 void objdump::parseInputMachO(StringRef Filename) {
   if (!ValidateArchFlags())
     return;
+
+  // In otool mode, support archive(member) syntax: if the filename ends
+  // with ')' and contains '(', split it into the archive path and member
+  // name. The -m option disables this parsing.
+  ArchiveMemberFilter.clear();
+  if (IsOtool && UseMemberSyntax && !Filename.empty() &&
+      Filename.back() == ')') {
+    auto Pos = Filename.rfind('(');
+    if (Pos != StringRef::npos && Pos > 0) {
+      ArchiveMemberFilter = Filename.substr(Pos + 1).drop_back().str();
+      Filename = Filename.substr(0, Pos);
+    }
+  }
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
@@ -2559,8 +2598,12 @@ void objdump::parseInputMachO(StringRef Filename) {
 
     Error Err = Error::success();
     unsigned I = -1;
+    bool FoundMember = false;
     for (auto &C : A->children(Err)) {
       ++I;
+      if (skipArchiveMember(C, Filename))
+        continue;
+      FoundMember = true;
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
         if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -2575,10 +2618,18 @@ void objdump::parseInputMachO(StringRef Filename) {
     }
     if (Err)
       reportError(std::move(Err), Filename);
+    if (!FoundMember && !ArchiveMemberFilter.empty())
+      reportError(Filename, "archive does not contain a member named: " +
+                                ArchiveMemberFilter);
     return;
   }
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
     parseInputMachO(UB);
+    return;
+  }
+  if (!ArchiveMemberFilter.empty()) {
+    reportError(Filename, "not an archive (cannot extract member: " +
+                              ArchiveMemberFilter + ")");
     return;
   }
   if (ObjectFile *O = dyn_cast<ObjectFile>(&Bin)) {
@@ -2640,8 +2691,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                   ArchiveMemberOffsets, ArchitectureName);
             Error Err = Error::success();
             unsigned I = -1;
+            bool FoundMember = false;
             for (auto &C : A->children(Err)) {
               ++I;
+              if (skipArchiveMember(C, Filename))
+                continue;
+              FoundMember = true;
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
                 if (Error E =
@@ -2656,6 +2711,10 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
             }
             if (Err)
               reportError(std::move(Err), Filename);
+            if (!FoundMember && !ArchiveMemberFilter.empty())
+              reportError(Filename,
+                          "archive does not contain a member named: " +
+                              ArchiveMemberFilter);
           } else {
             consumeError(AOrErr.takeError());
             reportError(Filename,
@@ -2675,8 +2734,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
     return;
   }
   // No architecture flags were specified so if this contains a slice that
-  // matches the host architecture dump only that.
-  if (!ArchAll) {
+  // matches the host architecture dump only that. For otool -a dump all
+  // architectures to match classic otool behaviour.
+  if (!ArchAll && !(IsOtool && ArchiveHeaders)) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                 E = UB->end_objects();
           I != E; ++I) {
@@ -2701,8 +2761,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                 ArchiveMemberOffsets);
           Error Err = Error::success();
           unsigned I = -1;
+          bool FoundMember = false;
           for (auto &C : A->children(Err)) {
             ++I;
+            if (skipArchiveMember(C, Filename))
+              continue;
+            FoundMember = true;
             Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
             if (!ChildOrErr) {
               if (Error E =
@@ -2716,6 +2780,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           }
           if (Err)
             reportError(std::move(Err), Filename);
+          if (!FoundMember && !ArchiveMemberFilter.empty())
+            reportError(Filename, "archive does not contain a member named: " +
+                                      ArchiveMemberFilter);
         } else {
           consumeError(AOrErr.takeError());
           reportError(Filename, "Mach-O universal file for architecture " +
@@ -2754,8 +2821,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                             ArchitectureName);
       Error Err = Error::success();
       unsigned I = -1;
+      bool FoundMember = false;
       for (auto &C : A->children(Err)) {
         ++I;
+        if (skipArchiveMember(C, Filename))
+          continue;
+        FoundMember = true;
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr) {
           if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -2770,6 +2841,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
       }
       if (Err)
         reportError(std::move(Err), Filename);
+      if (!FoundMember && !ArchiveMemberFilter.empty())
+        reportError(Filename, "archive does not contain a member named: " +
+                                  ArchiveMemberFilter);
     } else {
       consumeError(AOrErr.takeError());
       reportError(Filename, "Mach-O universal file for architecture " +
@@ -7327,7 +7401,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *AsmInfo, *MRI, *STI);
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
@@ -7381,8 +7455,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbSTI.reset(ThumbTarget->createMCSubtargetInfo(ThumbTriple, MachOMCPU,
                                                       FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
-    ThumbCtx.reset(new MCContext(ThumbTriple, ThumbAsmInfo.get(),
-                                 ThumbMRI.get(), ThumbSTI.get()));
+    ThumbCtx.reset(
+        new MCContext(ThumbTriple, *ThumbAsmInfo, *ThumbMRI, *ThumbSTI));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();
@@ -8372,6 +8446,15 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
       case MachO::CPU_SUBTYPE_ARM_V7S:
         outs() << "        V7S";
         break;
+      case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+        outs() << "       V8M_MAIN";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+        outs() << "       V8M_BASE";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+        outs() << "       V8_1M_MAIN";
+        break;
       default:
         outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
         break;
@@ -8608,6 +8691,23 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
   outs() << "\n";
 }
 
+static void PrintLoadCommand(uint32_t Cmd, uint32_t CmdSize, bool IsSizeCorrect,
+                             unsigned LabelWidth) {
+  outs() << right_justify("cmd", LabelWidth) << ' ';
+  switch (Cmd) {
+#define HANDLE_LOAD_COMMAND(Name, Value, Struct)                               \
+  case MachO::Name:                                                            \
+    outs() << #Name;                                                           \
+    break;
+#include "llvm/BinaryFormat/MachO.def"
+  default:
+    outs() << format("?(0x%08" PRIx32 ")", Cmd);
+  }
+  outs() << '\n'
+         << right_justify("cmdsize", LabelWidth) << ' ' << CmdSize
+         << (IsSizeCorrect ? "\n" : " Incorrect size\n");
+}
+
 static void PrintSegmentCommand(uint32_t cmd, uint32_t cmdsize,
                                 StringRef SegName, uint64_t vmaddr,
                                 uint64_t vmsize, uint64_t fileoff,
@@ -8617,21 +8717,16 @@ static void PrintSegmentCommand(uint32_t cmd, uint32_t cmdsize,
                                 bool verbose) {
   uint64_t expected_cmdsize;
   if (cmd == MachO::LC_SEGMENT) {
-    outs() << "      cmd LC_SEGMENT\n";
     expected_cmdsize = nsects;
     expected_cmdsize *= sizeof(struct MachO::section);
     expected_cmdsize += sizeof(struct MachO::segment_command);
   } else {
-    outs() << "      cmd LC_SEGMENT_64\n";
     expected_cmdsize = nsects;
     expected_cmdsize *= sizeof(struct MachO::section_64);
     expected_cmdsize += sizeof(struct MachO::segment_command_64);
   }
-  outs() << "  cmdsize " << cmdsize;
-  if (cmdsize != expected_cmdsize)
-    outs() << " Inconsistent size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(cmd, cmdsize, cmdsize == expected_cmdsize,
+                   /*LabelWidth=*/9);
   outs() << "  segname " << SegName << "\n";
   if (cmd == MachO::LC_SEGMENT_64) {
     outs() << "   vmaddr " << format("0x%016" PRIx64, vmaddr) << "\n";
@@ -8849,12 +8944,9 @@ static void PrintSection(const char *sectname, const char *segname,
 
 static void PrintSymtabLoadCommand(MachO::symtab_command st, bool Is64Bit,
                                    uint32_t object_size) {
-  outs() << "     cmd LC_SYMTAB\n";
-  outs() << " cmdsize " << st.cmdsize;
-  if (st.cmdsize != sizeof(struct MachO::symtab_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(st.cmd, st.cmdsize,
+                   st.cmdsize == sizeof(struct MachO::symtab_command),
+                   /*LabelWidth=*/8);
   outs() << "  symoff " << st.symoff;
   if (st.symoff > object_size)
     outs() << " (past end of file)\n";
@@ -8896,12 +8988,9 @@ static void PrintSymtabLoadCommand(MachO::symtab_command st, bool Is64Bit,
 static void PrintDysymtabLoadCommand(MachO::dysymtab_command dyst,
                                      uint32_t nsyms, uint32_t object_size,
                                      bool Is64Bit) {
-  outs() << "            cmd LC_DYSYMTAB\n";
-  outs() << "        cmdsize " << dyst.cmdsize;
-  if (dyst.cmdsize != sizeof(struct MachO::dysymtab_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(dyst.cmd, dyst.cmdsize,
+                   dyst.cmdsize == sizeof(struct MachO::dysymtab_command),
+                   /*LabelWidth=*/15);
   outs() << "      ilocalsym " << dyst.ilocalsym;
   if (dyst.ilocalsym > nsyms)
     outs() << " (greater than the number of symbols)\n";
@@ -9028,15 +9117,9 @@ static void PrintDysymtabLoadCommand(MachO::dysymtab_command dyst,
 
 static void PrintDyldInfoLoadCommand(MachO::dyld_info_command dc,
                                      uint32_t object_size) {
-  if (dc.cmd == MachO::LC_DYLD_INFO)
-    outs() << "            cmd LC_DYLD_INFO\n";
-  else
-    outs() << "            cmd LC_DYLD_INFO_ONLY\n";
-  outs() << "        cmdsize " << dc.cmdsize;
-  if (dc.cmdsize != sizeof(struct MachO::dyld_info_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(dc.cmd, dc.cmdsize,
+                   dc.cmdsize == sizeof(struct MachO::dyld_info_command),
+                   /*LabelWidth=*/15);
   outs() << "     rebase_off " << dc.rebase_off;
   if (dc.rebase_off > object_size)
     outs() << " (past end of file)\n";
@@ -9102,19 +9185,9 @@ static void PrintDyldInfoLoadCommand(MachO::dyld_info_command dc,
 
 static void PrintDyldLoadCommand(MachO::dylinker_command dyld,
                                  const char *Ptr) {
-  if (dyld.cmd == MachO::LC_ID_DYLINKER)
-    outs() << "          cmd LC_ID_DYLINKER\n";
-  else if (dyld.cmd == MachO::LC_LOAD_DYLINKER)
-    outs() << "          cmd LC_LOAD_DYLINKER\n";
-  else if (dyld.cmd == MachO::LC_DYLD_ENVIRONMENT)
-    outs() << "          cmd LC_DYLD_ENVIRONMENT\n";
-  else
-    outs() << "          cmd ?(" << dyld.cmd << ")\n";
-  outs() << "      cmdsize " << dyld.cmdsize;
-  if (dyld.cmdsize < sizeof(struct MachO::dylinker_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(dyld.cmd, dyld.cmdsize,
+                   dyld.cmdsize >= sizeof(struct MachO::dylinker_command),
+                   /*LabelWidth=*/13);
   if (dyld.name >= dyld.cmdsize)
     outs() << "         name ?(bad offset " << dyld.name << ")\n";
   else {
@@ -9124,12 +9197,9 @@ static void PrintDyldLoadCommand(MachO::dylinker_command dyld,
 }
 
 static void PrintUuidLoadCommand(MachO::uuid_command uuid) {
-  outs() << "     cmd LC_UUID\n";
-  outs() << " cmdsize " << uuid.cmdsize;
-  if (uuid.cmdsize != sizeof(struct MachO::uuid_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(uuid.cmd, uuid.cmdsize,
+                   uuid.cmdsize == sizeof(struct MachO::uuid_command),
+                   /*LabelWidth=*/8);
   outs() << "    uuid ";
   for (int i = 0; i < 16; ++i) {
     outs() << format("%02" PRIX32, uuid.uuid[i]);
@@ -9140,12 +9210,9 @@ static void PrintUuidLoadCommand(MachO::uuid_command uuid) {
 }
 
 static void PrintRpathLoadCommand(MachO::rpath_command rpath, const char *Ptr) {
-  outs() << "          cmd LC_RPATH\n";
-  outs() << "      cmdsize " << rpath.cmdsize;
-  if (rpath.cmdsize < sizeof(struct MachO::rpath_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(rpath.cmd, rpath.cmdsize,
+                   rpath.cmdsize >= sizeof(struct MachO::rpath_command),
+                   /*LabelWidth=*/13);
   if (rpath.path >= rpath.cmdsize)
     outs() << "         path ?(bad offset " << rpath.path << ")\n";
   else {
@@ -9155,30 +9222,9 @@ static void PrintRpathLoadCommand(MachO::rpath_command rpath, const char *Ptr) {
 }
 
 static void PrintVersionMinLoadCommand(MachO::version_min_command vd) {
-  StringRef LoadCmdName;
-  switch (vd.cmd) {
-  case MachO::LC_VERSION_MIN_MACOSX:
-    LoadCmdName = "LC_VERSION_MIN_MACOSX";
-    break;
-  case MachO::LC_VERSION_MIN_IPHONEOS:
-    LoadCmdName = "LC_VERSION_MIN_IPHONEOS";
-    break;
-  case MachO::LC_VERSION_MIN_TVOS:
-    LoadCmdName = "LC_VERSION_MIN_TVOS";
-    break;
-  case MachO::LC_VERSION_MIN_WATCHOS:
-    LoadCmdName = "LC_VERSION_MIN_WATCHOS";
-    break;
-  default:
-    llvm_unreachable("Unknown version min load command");
-  }
-
-  outs() << "      cmd " << LoadCmdName << '\n';
-  outs() << "  cmdsize " << vd.cmdsize;
-  if (vd.cmdsize != sizeof(struct MachO::version_min_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(vd.cmd, vd.cmdsize,
+                   vd.cmdsize == sizeof(struct MachO::version_min_command),
+                   /*LabelWidth=*/9);
   outs() << "  version "
          << MachOObjectFile::getVersionMinMajor(vd, false) << "."
          << MachOObjectFile::getVersionMinMinor(vd, false);
@@ -9200,12 +9246,9 @@ static void PrintVersionMinLoadCommand(MachO::version_min_command vd) {
 }
 
 static void PrintNoteLoadCommand(MachO::note_command Nt) {
-  outs() << "       cmd LC_NOTE\n";
-  outs() << "   cmdsize " << Nt.cmdsize;
-  if (Nt.cmdsize != sizeof(struct MachO::note_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(Nt.cmd, Nt.cmdsize,
+                   Nt.cmdsize == sizeof(struct MachO::note_command),
+                   /*LabelWidth=*/10);
   const char *d = Nt.data_owner;
   outs() << "data_owner " << format("%.16s\n", d);
   outs() << "    offset " << Nt.offset << "\n";
@@ -9226,14 +9269,11 @@ static void PrintBuildToolVersion(MachO::build_tool_version bv, bool verbose) {
 static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
                                          MachO::build_version_command bd,
                                          bool verbose) {
-  outs() << "       cmd LC_BUILD_VERSION\n";
-  outs() << "   cmdsize " << bd.cmdsize;
-  if (bd.cmdsize !=
-      sizeof(struct MachO::build_version_command) +
-          bd.ntools * sizeof(struct MachO::build_tool_version))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(bd.cmd, bd.cmdsize,
+                   bd.cmdsize ==
+                       sizeof(struct MachO::build_version_command) +
+                           bd.ntools * sizeof(struct MachO::build_tool_version),
+                   /*LabelWidth=*/10);
   outs() << "  platform ";
   if (verbose)
     outs() << MachOObjectFile::getBuildPlatform(bd.platform);
@@ -9255,12 +9295,9 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
 }
 
 static void PrintSourceVersionCommand(MachO::source_version_command sd) {
-  outs() << "      cmd LC_SOURCE_VERSION\n";
-  outs() << "  cmdsize " << sd.cmdsize;
-  if (sd.cmdsize != sizeof(struct MachO::source_version_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(sd.cmd, sd.cmdsize,
+                   sd.cmdsize == sizeof(struct MachO::source_version_command),
+                   /*LabelWidth=*/9);
   uint64_t a = (sd.version >> 40) & 0xffffff;
   uint64_t b = (sd.version >> 30) & 0x3ff;
   uint64_t c = (sd.version >> 20) & 0x3ff;
@@ -9277,24 +9314,18 @@ static void PrintSourceVersionCommand(MachO::source_version_command sd) {
 }
 
 static void PrintEntryPointCommand(MachO::entry_point_command ep) {
-  outs() << "       cmd LC_MAIN\n";
-  outs() << "   cmdsize " << ep.cmdsize;
-  if (ep.cmdsize != sizeof(struct MachO::entry_point_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(ep.cmd, ep.cmdsize,
+                   ep.cmdsize == sizeof(struct MachO::entry_point_command),
+                   /*LabelWidth=*/10);
   outs() << "  entryoff " << ep.entryoff << "\n";
   outs() << " stacksize " << ep.stacksize << "\n";
 }
 
 static void PrintEncryptionInfoCommand(MachO::encryption_info_command ec,
                                        uint32_t object_size) {
-  outs() << "          cmd LC_ENCRYPTION_INFO\n";
-  outs() << "      cmdsize " << ec.cmdsize;
-  if (ec.cmdsize != sizeof(struct MachO::encryption_info_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(ec.cmd, ec.cmdsize,
+                   ec.cmdsize == sizeof(struct MachO::encryption_info_command),
+                   /*LabelWidth=*/13);
   outs() << "     cryptoff " << ec.cryptoff;
   if (ec.cryptoff > object_size)
     outs() << " (past end of file)\n";
@@ -9310,12 +9341,10 @@ static void PrintEncryptionInfoCommand(MachO::encryption_info_command ec,
 
 static void PrintEncryptionInfoCommand64(MachO::encryption_info_command_64 ec,
                                          uint32_t object_size) {
-  outs() << "          cmd LC_ENCRYPTION_INFO_64\n";
-  outs() << "      cmdsize " << ec.cmdsize;
-  if (ec.cmdsize != sizeof(struct MachO::encryption_info_command_64))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(ec.cmd, ec.cmdsize,
+                   ec.cmdsize ==
+                       sizeof(struct MachO::encryption_info_command_64),
+                   /*LabelWidth=*/13);
   outs() << "     cryptoff " << ec.cryptoff;
   if (ec.cryptoff > object_size)
     outs() << " (past end of file)\n";
@@ -9332,12 +9361,9 @@ static void PrintEncryptionInfoCommand64(MachO::encryption_info_command_64 ec,
 
 static void PrintLinkerOptionCommand(MachO::linker_option_command lo,
                                      const char *Ptr) {
-  outs() << "     cmd LC_LINKER_OPTION\n";
-  outs() << " cmdsize " << lo.cmdsize;
-  if (lo.cmdsize < sizeof(struct MachO::linker_option_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(lo.cmd, lo.cmdsize,
+                   lo.cmdsize >= sizeof(struct MachO::linker_option_command),
+                   /*LabelWidth=*/8);
   outs() << "   count " << lo.count << "\n";
   const char *string = Ptr + sizeof(struct MachO::linker_option_command);
   uint32_t left = lo.cmdsize - sizeof(struct MachO::linker_option_command);
@@ -9363,12 +9389,9 @@ static void PrintLinkerOptionCommand(MachO::linker_option_command lo,
 
 static void PrintSubFrameworkCommand(MachO::sub_framework_command sub,
                                      const char *Ptr) {
-  outs() << "          cmd LC_SUB_FRAMEWORK\n";
-  outs() << "      cmdsize " << sub.cmdsize;
-  if (sub.cmdsize < sizeof(struct MachO::sub_framework_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(sub.cmd, sub.cmdsize,
+                   sub.cmdsize >= sizeof(struct MachO::sub_framework_command),
+                   /*LabelWidth=*/13);
   if (sub.umbrella < sub.cmdsize) {
     const char *P = Ptr + sub.umbrella;
     outs() << "     umbrella " << P << " (offset " << sub.umbrella << ")\n";
@@ -9379,12 +9402,9 @@ static void PrintSubFrameworkCommand(MachO::sub_framework_command sub,
 
 static void PrintSubUmbrellaCommand(MachO::sub_umbrella_command sub,
                                     const char *Ptr) {
-  outs() << "          cmd LC_SUB_UMBRELLA\n";
-  outs() << "      cmdsize " << sub.cmdsize;
-  if (sub.cmdsize < sizeof(struct MachO::sub_umbrella_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(sub.cmd, sub.cmdsize,
+                   sub.cmdsize >= sizeof(struct MachO::sub_umbrella_command),
+                   /*LabelWidth=*/13);
   if (sub.sub_umbrella < sub.cmdsize) {
     const char *P = Ptr + sub.sub_umbrella;
     outs() << " sub_umbrella " << P << " (offset " << sub.sub_umbrella << ")\n";
@@ -9395,12 +9415,9 @@ static void PrintSubUmbrellaCommand(MachO::sub_umbrella_command sub,
 
 static void PrintSubLibraryCommand(MachO::sub_library_command sub,
                                    const char *Ptr) {
-  outs() << "          cmd LC_SUB_LIBRARY\n";
-  outs() << "      cmdsize " << sub.cmdsize;
-  if (sub.cmdsize < sizeof(struct MachO::sub_library_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(sub.cmd, sub.cmdsize,
+                   sub.cmdsize >= sizeof(struct MachO::sub_library_command),
+                   /*LabelWidth=*/13);
   if (sub.sub_library < sub.cmdsize) {
     const char *P = Ptr + sub.sub_library;
     outs() << "  sub_library " << P << " (offset " << sub.sub_library << ")\n";
@@ -9411,12 +9428,9 @@ static void PrintSubLibraryCommand(MachO::sub_library_command sub,
 
 static void PrintSubClientCommand(MachO::sub_client_command sub,
                                   const char *Ptr) {
-  outs() << "          cmd LC_SUB_CLIENT\n";
-  outs() << "      cmdsize " << sub.cmdsize;
-  if (sub.cmdsize < sizeof(struct MachO::sub_client_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(sub.cmd, sub.cmdsize,
+                   sub.cmdsize >= sizeof(struct MachO::sub_client_command),
+                   /*LabelWidth=*/13);
   if (sub.client < sub.cmdsize) {
     const char *P = Ptr + sub.client;
     outs() << "       client " << P << " (offset " << sub.client << ")\n";
@@ -9426,12 +9440,9 @@ static void PrintSubClientCommand(MachO::sub_client_command sub,
 }
 
 static void PrintRoutinesCommand(MachO::routines_command r) {
-  outs() << "          cmd LC_ROUTINES\n";
-  outs() << "      cmdsize " << r.cmdsize;
-  if (r.cmdsize != sizeof(struct MachO::routines_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(r.cmd, r.cmdsize,
+                   r.cmdsize == sizeof(struct MachO::routines_command),
+                   /*LabelWidth=*/13);
   outs() << " init_address " << format("0x%08" PRIx32, r.init_address) << "\n";
   outs() << "  init_module " << r.init_module << "\n";
   outs() << "    reserved1 " << r.reserved1 << "\n";
@@ -9443,12 +9454,9 @@ static void PrintRoutinesCommand(MachO::routines_command r) {
 }
 
 static void PrintRoutinesCommand64(MachO::routines_command_64 r) {
-  outs() << "          cmd LC_ROUTINES_64\n";
-  outs() << "      cmdsize " << r.cmdsize;
-  if (r.cmdsize != sizeof(struct MachO::routines_command_64))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(r.cmd, r.cmdsize,
+                   r.cmdsize == sizeof(struct MachO::routines_command_64),
+                   /*LabelWidth=*/13);
   outs() << " init_address " << format("0x%016" PRIx64, r.init_address) << "\n";
   outs() << "  init_module " << r.init_module << "\n";
   outs() << "    reserved1 " << r.reserved1 << "\n";
@@ -9700,17 +9708,10 @@ static void Print_arm_thread_state64_t(MachO::arm_thread_state64_t &cpu64) {
 
 static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
                                bool isLittleEndian, uint32_t cputype) {
-  if (t.cmd == MachO::LC_THREAD)
-    outs() << "        cmd LC_THREAD\n";
-  else if (t.cmd == MachO::LC_UNIXTHREAD)
-    outs() << "        cmd LC_UNIXTHREAD\n";
-  else
-    outs() << "        cmd " << t.cmd << " (unknown)\n";
-  outs() << "    cmdsize " << t.cmdsize;
-  if (t.cmdsize < sizeof(struct MachO::thread_command) + 2 * sizeof(uint32_t))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(t.cmd, t.cmdsize,
+                   t.cmdsize >= sizeof(struct MachO::thread_command) +
+                                    2 * sizeof(uint32_t),
+                   /*LabelWidth=*/11);
 
   const char *begin = Ptr + sizeof(struct MachO::thread_command);
   const char *end = Ptr + t.cmdsize;
@@ -10076,25 +10077,9 @@ static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
 }
 
 static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
-  if (dl.cmd == MachO::LC_ID_DYLIB)
-    outs() << "          cmd LC_ID_DYLIB\n";
-  else if (dl.cmd == MachO::LC_LOAD_DYLIB)
-    outs() << "          cmd LC_LOAD_DYLIB\n";
-  else if (dl.cmd == MachO::LC_LOAD_WEAK_DYLIB)
-    outs() << "          cmd LC_LOAD_WEAK_DYLIB\n";
-  else if (dl.cmd == MachO::LC_REEXPORT_DYLIB)
-    outs() << "          cmd LC_REEXPORT_DYLIB\n";
-  else if (dl.cmd == MachO::LC_LAZY_LOAD_DYLIB)
-    outs() << "          cmd LC_LAZY_LOAD_DYLIB\n";
-  else if (dl.cmd == MachO::LC_LOAD_UPWARD_DYLIB)
-    outs() << "          cmd LC_LOAD_UPWARD_DYLIB\n";
-  else
-    outs() << "          cmd " << dl.cmd << " (unknown)\n";
-  outs() << "      cmdsize " << dl.cmdsize;
-  if (dl.cmdsize < sizeof(struct MachO::dylib_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(dl.cmd, dl.cmdsize,
+                   dl.cmdsize >= sizeof(struct MachO::dylib_command),
+                   /*LabelWidth=*/13);
   if (dl.dylib.name < dl.cmdsize) {
     const char *P = Ptr + dl.dylib.name;
     outs() << "         name " << P << " (offset " << dl.dylib.name << ")\n";
@@ -10122,31 +10107,9 @@ static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
 
 static void PrintLinkEditDataCommand(MachO::linkedit_data_command ld,
                                      uint32_t object_size) {
-  if (ld.cmd == MachO::LC_CODE_SIGNATURE)
-    outs() << "      cmd LC_CODE_SIGNATURE\n";
-  else if (ld.cmd == MachO::LC_SEGMENT_SPLIT_INFO)
-    outs() << "      cmd LC_SEGMENT_SPLIT_INFO\n";
-  else if (ld.cmd == MachO::LC_FUNCTION_STARTS)
-    outs() << "      cmd LC_FUNCTION_STARTS\n";
-  else if (ld.cmd == MachO::LC_DATA_IN_CODE)
-    outs() << "      cmd LC_DATA_IN_CODE\n";
-  else if (ld.cmd == MachO::LC_DYLIB_CODE_SIGN_DRS)
-    outs() << "      cmd LC_DYLIB_CODE_SIGN_DRS\n";
-  else if (ld.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT)
-    outs() << "      cmd LC_LINKER_OPTIMIZATION_HINT\n";
-  else if (ld.cmd == MachO::LC_DYLD_EXPORTS_TRIE)
-    outs() << "      cmd LC_DYLD_EXPORTS_TRIE\n";
-  else if (ld.cmd == MachO::LC_DYLD_CHAINED_FIXUPS)
-    outs() << "      cmd LC_DYLD_CHAINED_FIXUPS\n";
-  else if (ld.cmd == MachO::LC_ATOM_INFO)
-    outs() << "      cmd LC_ATOM_INFO\n";
-  else
-    outs() << "      cmd " << ld.cmd << " (?)\n";
-  outs() << "  cmdsize " << ld.cmdsize;
-  if (ld.cmdsize != sizeof(struct MachO::linkedit_data_command))
-    outs() << " Incorrect size\n";
-  else
-    outs() << "\n";
+  PrintLoadCommand(ld.cmd, ld.cmdsize,
+                   ld.cmdsize == sizeof(struct MachO::linkedit_data_command),
+                   /*LabelWidth=*/8);
   outs() << "  dataoff " << ld.dataoff;
   if (ld.dataoff > object_size)
     outs() << " (past end of file)\n";
@@ -10291,9 +10254,8 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
           Obj->getLinkeditDataLoadCommand(Command);
       PrintLinkEditDataCommand(Ld, Buf.size());
     } else {
-      outs() << "      cmd ?(" << format("0x%08" PRIx32, Command.C.cmd)
-             << ")\n";
-      outs() << "  cmdsize " << Command.C.cmdsize << "\n";
+      PrintLoadCommand(Command.C.cmd, Command.C.cmdsize, true,
+                       /*LabelWidth=*/9);
       // TODO: get and print the raw bytes of the load command.
     }
     // TODO: print all the other kinds of load commands.

@@ -23,6 +23,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
@@ -98,14 +99,19 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
-  // Treat all globals in explicit sections as small, except for the standard
-  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
-  // together small and large sections, resulting in small references to large
-  // data sections. The code model attribute overrides this above.
-  if (GV->hasSection()) {
-    StringRef Name = GV->getSection();
-    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
-           IsPrefix(Name, ".lrodata");
+  // Treat all globals in user-defined sections as small, except for the
+  // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
+  // of linking together small and large sections, resulting in small
+  // references to large data sections. The code model attribute overrides this
+  // above.
+  if (GV->hasSection() || GV->hasImplicitSection()) {
+    StringRef SectionName =
+        TargetLoweringObjectFile::getCustomSectionName(GV, *this);
+    if (!SectionName.empty()) {
+      return IsPrefix(SectionName, ".lbss") ||
+             IsPrefix(SectionName, ".ldata") ||
+             IsPrefix(SectionName, ".lrodata");
+    }
   }
 
   // Respect large data threshold for medium and large code models.
@@ -142,23 +148,6 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;
-}
-
-/// Reset the target options based on the function's attributes.
-/// setFunctionAttributes should have made the raw attribute value consistent
-/// with the command line flag if used.
-//
-// FIXME: This function needs to go away for a number of reasons:
-// a) global state on the TargetMachine is terrible in general,
-// b) these target options should be passed only on the function
-//    and not on the TargetMachine (via TargetOptions) at all.
-void TargetMachine::resetTargetOptions(const Function &F) const {
-#define RESET_OPTION(X, Y)                                              \
-  do {                                                                  \
-    Options.X = F.getFnAttribute(Y).getValueAsBool();     \
-  } while (0)
-
-  RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,
@@ -327,4 +316,17 @@ std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
   if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
     Version.consumeInteger(10, Ret.second);
   return Ret;
+}
+
+const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,
+                                                         StringRef FS) {
+  if (CPU.empty() && FS.empty())
+    return *STI;
+  SmallString<128> Key = CPU;
+  Key += '/';
+  Key += FS;
+  auto &Entry = MCSubtargetMap[Key];
+  if (!Entry)
+    Entry.reset(getTarget().createMCSubtargetInfo(getTargetTriple(), CPU, FS));
+  return *Entry;
 }

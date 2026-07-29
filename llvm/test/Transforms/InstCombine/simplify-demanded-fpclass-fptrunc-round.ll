@@ -41,7 +41,7 @@ define nofpclass(inf norm sub zero qnan) half @ret_only_snan__fptrunc(float %x) 
 define nofpclass(inf norm sub zero snan) half @ret_only_qnan__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
   ret half %result
@@ -50,7 +50,7 @@ define nofpclass(inf norm sub zero snan) half @ret_only_qnan__fptrunc(float %x) 
 define nofpclass(inf norm sub zero) half @ret_only_nan__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
   ret half %result
@@ -69,7 +69,7 @@ define nofpclass(nan norm sub zero) half @ret_only_inf__fptrunc(float %x) {
 define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) half @ret_only_ninf__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %result = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
   ret half %result
@@ -78,7 +78,7 @@ define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__fptrunc(float %x) 
 define nofpclass(nan ninf norm sub zero) half @ret_only_pinf__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) half @ret_only_pinf__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half +inf
 ;
   %result = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
   ret half %result
@@ -97,7 +97,7 @@ define nofpclass(inf nan norm sub) half @ret_only_zero__fptrunc(float %x) {
 define nofpclass(inf nan norm sub nzero) half @ret_only_pzero__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) half @ret_only_pzero__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
   %result = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
   ret half %result
@@ -106,7 +106,7 @@ define nofpclass(inf nan norm sub nzero) half @ret_only_pzero__fptrunc(float %x)
 define nofpclass(inf nan norm sub pzero) half @ret_only_nzero__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) half @ret_only_nzero__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH8000
+; CHECK-NEXT:    ret half -0.000000e+00
 ;
   %result = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
   ret half %result
@@ -418,7 +418,7 @@ define nofpclass(inf nan norm pzero psub) half @ret_only_nsub_nzero__fptrunc(flo
 define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 ; CHECK-LABEL: define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float 0x7FF0000000000000, metadata !"round.downward")
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float +inf, metadata !"round.downward")
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %inf = call float @returns_inf_f32()
@@ -430,7 +430,7 @@ define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 define nofpclass(pinf) half @ret_no_pinf__fptrunc__inf() {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_no_pinf__fptrunc__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float 0xFFF0000000000000, metadata !"round.downward")
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan half @llvm.fptrunc.round.f16.f32(float -inf, metadata !"round.downward")
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %inf = call float @returns_inf_f32()

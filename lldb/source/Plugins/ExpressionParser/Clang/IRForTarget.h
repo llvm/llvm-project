@@ -382,14 +382,11 @@ private:
   /// expression and places them before FirstEntryInstruction.  These
   /// instructions replace the constant uses, so UnfoldConstant calls itself
   /// recursively for those.
-  ///
-  /// \return
-  ///     True on success; false otherwise
-  static bool UnfoldConstant(llvm::Constant *old_constant,
-                             llvm::Function *llvm_function,
-                             FunctionValueCache &value_maker,
-                             FunctionValueCache &entry_instruction_finder,
-                             lldb_private::Stream &error_stream);
+  static llvm::Error
+  UnfoldConstant(llvm::Constant *old_constant, llvm::Function *llvm_function,
+                 FunctionValueCache &value_maker,
+                 FunctionValueCache &entry_instruction_finder,
+                 lldb_private::Stream &error_stream);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRFORTARGET_H

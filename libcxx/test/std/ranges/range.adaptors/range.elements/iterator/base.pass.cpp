@@ -22,10 +22,9 @@
 
 // Test Noexcept
 template <class T>
-concept IsBaseNoexcept =
-    requires {
-      { std::declval<T>().base() } noexcept;
-    };
+concept IsBaseNoexcept = requires {
+  { std::declval<T>().base() } noexcept;
+};
 
 using BaseView     = std::ranges::subrange<std::tuple<int>*>;
 using ElementsIter = std::ranges::iterator_t<std::ranges::elements_view<BaseView, 0>>;

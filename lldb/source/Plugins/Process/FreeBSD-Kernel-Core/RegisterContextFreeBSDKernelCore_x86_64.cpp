@@ -58,6 +58,9 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     llvm::support::ulittle64_t rip;
   } pcb;
 
+  constexpr unsigned short CODE_SEL = 4 << 3;
+  constexpr unsigned short DATA_SEL = 5 << 3;
+
 #if defined(__FreeBSD__) && defined(__amd64__)
   static_assert(offsetof(struct pcb, pcb_r15) == offsetof(decltype(pcb), r15));
   static_assert(offsetof(struct pcb, pcb_r14) == offsetof(decltype(pcb), r14));
@@ -90,9 +93,13 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     REG(rsp);
     REG(rbx);
     REG(rip);
-
 #undef REG
-
+  case lldb_cs_x86_64:
+    value.SetUInt(CODE_SEL, reg_info->byte_size);
+    break;
+  case lldb_ss_x86_64:
+    value.SetUInt(DATA_SEL, reg_info->byte_size);
+    break;
   default:
     return false;
   }

@@ -124,8 +124,8 @@ public:
       SubRegRange &ARange = A->Range.get(M);
       SubRegRange &BRange = B->Range.get(M);
 
-      if (Range.Offset != (uint16_t)-1 && ARange.Offset != (uint16_t)-1 &&
-          BRange.Offset == (uint16_t)-1) {
+      if (Range.Offset != (uint32_t)-1 && ARange.Offset != (uint32_t)-1 &&
+          BRange.Offset == (uint32_t)-1) {
         BRange.Offset = Range.Offset + ARange.Offset;
         BRange.Size = ARange.Size;
       }
@@ -135,8 +135,8 @@ public:
     SubRegRange &Range = this->Range.get(DefaultMode);
     SubRegRange &ARange = A->Range.get(DefaultMode);
     SubRegRange &BRange = B->Range.get(DefaultMode);
-    if (Range.Offset != (uint16_t)-1 && ARange.Offset != (uint16_t)-1 &&
-        BRange.Offset == (uint16_t)-1) {
+    if (Range.Offset != (uint32_t)-1 && ARange.Offset != (uint32_t)-1 &&
+        BRange.Offset == (uint32_t)-1) {
       BRange.Offset = Range.Offset + ARange.Offset;
       BRange.Size = ARange.Size;
     }
@@ -205,6 +205,11 @@ public:
   // Add this as a super-register to all sub-registers after the sub-register
   // graph has been built.
   void computeSuperRegs(CodeGenRegBank &);
+
+  // Diagnose an explicit SubRegIndex whose declared size makes a sub-register
+  // extend past the register that contains it (an oversized lane mask that
+  // silently corrupts sub-register liveness and spilling). See the definition.
+  void checkSubRegIndexSizes(CodeGenRegBank &) const;
 
   const SubRegMap &getSubRegs() const {
     assert(SubRegsComplete && "Must precompute sub-registers");
@@ -374,6 +379,7 @@ public:
   uint8_t AllocationPriority;
   bool GlobalPriority;
   uint8_t TSFlags;
+  uint8_t SpillStackID;
   /// Contains the combination of the lane masks of all subregisters.
   LaneBitmask LaneMask;
   /// True if there are at least 2 subregisters which do not interfere.
@@ -445,6 +451,15 @@ public:
                              CodeGenRegisterClass *SubRC) {
     SubClassWithSubReg[SubIdx] = SubRC;
   }
+
+  /// Checks if there are any super-register classes for this SubIdx of this
+  /// class.
+  bool hasAnySuperRegClasses(const CodeGenSubRegIndex *SubIdx) const;
+
+  /// Checks if there is a super-register class for this SubIdx of this
+  /// class containing RC register class.
+  bool hasSuperRegClass(const CodeGenSubRegIndex *SubIdx,
+                        const CodeGenRegisterClass *RC) const;
 
   // getSuperRegClasses - Returns a bit vector of all register classes
   // containing only SubIdx super-registers of this class.

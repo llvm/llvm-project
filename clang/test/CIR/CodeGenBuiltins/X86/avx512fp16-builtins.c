@@ -73,10 +73,10 @@ _Float16 test_mm512_reduce_add_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_add_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // LLVM-LABEL: test_mm512_reduce_add_ph
-  // LLVM: call half @llvm.vector.reduce.fadd.v32f16(half 0xH8000, <32 x half> %{{.*}})
+  // LLVM: call half @llvm.vector.reduce.fadd.v32f16(half -0.000000e+00, <32 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm512_reduce_add_ph
-  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fadd.v32f16(half 0xH8000, <32 x half> %{{.*}})
+  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fadd.v32f16(half -0.000000e+00, <32 x half> %{{.*}})
   return _mm512_reduce_add_ph(__W);
 }
 
@@ -88,10 +88,10 @@ _Float16 test_mm512_reduce_mul_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_mul_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // LLVM-LABEL: test_mm512_reduce_mul_ph
-  // LLVM: call half @llvm.vector.reduce.fmul.v32f16(half 0xH3C00, <32 x half> %{{.*}})
+  // LLVM: call half @llvm.vector.reduce.fmul.v32f16(half 1.000000e+00, <32 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm512_reduce_mul_ph
-  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fmul.v32f16(half 0xH3C00, <32 x half> %{{.*}})
+  // OGCG: call reassoc {{.*}}half @llvm.vector.reduce.fmul.v32f16(half 1.000000e+00, <32 x half> %{{.*}})
   return _mm512_reduce_mul_ph(__W);
 }
 

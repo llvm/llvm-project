@@ -119,6 +119,23 @@ define i64 @ctpop_x_and_negx_nz(i64 %x) {
   ret i64 %cnt
 }
 
+; issue #128152
+define i1 @ctpop_assume_eq_1_extra_use(i32 %x) {
+; CHECK-LABEL: @ctpop_assume_eq_1_extra_use(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CTPOP]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
+  %cond = icmp eq i32 %ctpop, 1
+  %ext = zext i1 %cond to i8
+  call void @llvm.assume(i1 %cond)
+  %res = icmp eq i32 %x, 0
+  ret i1 %res
+}
+
 define <2 x i32> @ctpop_shl1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl1_vec(
 ; CHECK-NEXT:    ret <2 x i32> splat (i32 1)

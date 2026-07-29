@@ -30,6 +30,8 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+extern cl::opt<uint32_t> PreferredLandingPadLabel;
+
 static cl::opt<bool> UsePseudoMovImm(
     "riscv-use-rematerializable-movimm", cl::Hidden,
     cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
@@ -1082,7 +1084,7 @@ static unsigned getSegInstNF(unsigned Intrinsic) {
   }
 }
 
-static bool isApplicableToPLI(int Val) {
+static bool isApplicableToPLIOrPLUI(int Val) {
   // Check if the immediate is packed i8 or i10
   int16_t Bit31To16 = Val >> 16;
   int16_t Bit15To0 = Val;
@@ -1091,7 +1093,8 @@ static bool isApplicableToPLI(int Val) {
   if (Bit31To16 != Bit15To0)
     return false;
 
-  return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
+  return isInt<10>(Bit15To0) || isShiftedInt<10, 6>(Bit15To0) ||
+         Bit15To8 == Bit7To0;
 }
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
@@ -1133,17 +1136,32 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     else if (!isInt<16>(Imm) && isUInt<16>(Imm) &&
              isInt<12>(SignExtend64<16>(Imm)) && hasAllHUsers(Node))
       Imm = SignExtend64<16>(Imm);
-    // If the upper 32-bits are not used try to convert this into a simm32 by
-    // sign extending bit 32.
-    else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
-      Imm = SignExtend64<32>(Imm);
 
-    if (VT == MVT::i64 && Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
-        hasAllWUsers(Node)) {
-      // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
-      // can simply copy lower 32 bits to higher 32 bits to make it able to
-      // rematerialize to PLI_B or PLI_H
-      Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+    // If the upper XLen-16 bits are not used, the lower 2 bytes are the same,
+    // and we can't use li, convert to an xlen splat so we can use pli.b.
+    if (Subtarget->hasStdExtP() && !isInt<12>(Imm) &&
+        (Imm & 0xff) == ((Imm >> 8) & 0xff) && hasAllHUsers(Node)) {
+      // Splat the lower 16 bits to XLen. Sign extend for RV32.
+      uint64_t Splat = Imm & 0xffff;
+      Splat = (Splat << 16) | Splat;
+      if (VT == MVT::i64)
+        Imm = Splat << 32 | Splat;
+      else
+        Imm = SignExtend64<32>(Splat);
+    } else {
+      // If the upper 32-bits are not used try to convert this into a simm32 by
+      // sign extending bit 32.
+      if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
+        Imm = SignExtend64<32>(Imm);
+
+      if (VT == MVT::i64 && !isInt<12>(Imm) && !isShiftedInt<20, 12>(Imm) &&
+          Subtarget->hasStdExtP() && isApplicableToPLIOrPLUI(Imm) &&
+          hasAllWUsers(Node)) {
+        // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers,
+        // we can simply copy lower 32 bits to higher 32 bits to make it able to
+        // rematerialize to PLI_B or PLI_H
+        Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+      }
     }
 
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
@@ -1221,11 +1239,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::BuildGPRPair:
-  case RISCVISD::BuildPairF64: {
+  case RISCVISD::BuildPairF64:
+  case RISCVISD::BuildPairGPRVec: {
     if (Opcode == RISCVISD::BuildPairF64 && !Subtarget->hasStdExtZdinx())
       break;
 
-    assert((!Subtarget->is64Bit() || Opcode == RISCVISD::BuildGPRPair) &&
+    assert((!Subtarget->is64Bit() || Opcode != RISCVISD::BuildPairF64) &&
            "BuildPairF64 only handled here on rv32i_zdinx");
 
     SDValue N =
@@ -1234,9 +1253,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::SplitGPRPair:
-  case RISCVISD::SplitF64: {
+  case RISCVISD::SplitF64:
+  case RISCVISD::SplitGPRVec: {
     if (Subtarget->hasStdExtZdinx() || Opcode != RISCVISD::SplitF64) {
-      assert((!Subtarget->is64Bit() || Opcode == RISCVISD::SplitGPRPair) &&
+      assert((!Subtarget->is64Bit() || Opcode != RISCVISD::SplitF64) &&
              "SplitF64 only handled here on rv32i_zdinx");
 
       if (!SDValue(Node, 0).use_empty()) {
@@ -1255,9 +1275,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-
-    assert(Opcode != RISCVISD::SplitGPRPair &&
-           "SplitGPRPair should already be handled");
 
     if (!Subtarget->hasStdExtZfa())
       break;
@@ -1875,6 +1892,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
   case RISCVISD::WMULSU:
+  case RISCVISD::WADD:
+  case RISCVISD::WSUB:
   case RISCVISD::WADDU:
   case RISCVISD::WSUBU: {
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
@@ -1892,6 +1911,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
     case RISCVISD::WMULSU:
       Opc = RISCV::WMULSU;
+      break;
+    case RISCVISD::WADD:
+      Opc = RISCV::WADD;
+      break;
+    case RISCVISD::WSUB:
+      Opc = RISCV::WSUB;
       break;
     case RISCVISD::WADDU:
       Opc = RISCV::WADDU;
@@ -2057,13 +2082,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Fall through to regular ADDD selection.
     [[fallthrough]];
   case RISCVISD::SUBD:
-  case RISCVISD::PPAIRE_DB:
   case RISCVISD::WADDAU:
-  case RISCVISD::WSUBAU: {
-    assert(!Subtarget->is64Bit() && "Unexpected opcode");
-    assert(
-        (Node->getOpcode() != RISCVISD::PPAIRE_DB || Subtarget->hasStdExtP()) &&
-        "Unexpected opcode");
+  case RISCVISD::WSUBAU:
+  case RISCVISD::WADDA:
+  case RISCVISD::WSUBA: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
 
     SDValue Op0Lo = Node->getOperand(0);
     SDValue Op0Hi = Node->getOperand(1);
@@ -2079,10 +2103,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue Op1Hi = Node->getOperand(3);
 
     MachineSDNode *New;
-    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU) {
-      // WADDAU/WSUBAU: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are
-      // the two 32-bit values.
-      unsigned Opc = Opcode == RISCVISD::WADDAU ? RISCV::WADDAU : RISCV::WSUBAU;
+    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU ||
+        Opcode == RISCVISD::WADDA || Opcode == RISCVISD::WSUBA) {
+      // Widening accumulate: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi
+      // are the two 32-bit values.
+      unsigned Opc;
+      switch (Opcode) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      case RISCVISD::WADDAU:
+        Opc = RISCV::WADDAU;
+        break;
+      case RISCVISD::WSUBAU:
+        Opc = RISCV::WSUBAU;
+        break;
+      case RISCVISD::WADDA:
+        Opc = RISCV::WADDA;
+        break;
+      case RISCVISD::WSUBA:
+        Opc = RISCV::WSUBA;
+        break;
+      }
       New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1Lo, Op1Hi);
     } else {
       SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
@@ -2096,9 +2137,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         break;
       case RISCVISD::SUBD:
         Opc = RISCV::SUBD;
-        break;
-      case RISCVISD::PPAIRE_DB:
-        Opc = RISCV::PPAIRE_DB;
         break;
       }
       New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);
@@ -2939,47 +2977,59 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SPLAT_VECTOR: {
     if (!Subtarget->hasStdExtP())
       break;
-    auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0));
-    if (!ConstNode)
-      break;
+    if (auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0))) {
+      bool IsDoubleWide = Subtarget->isPExtPackedDoubleType(VT);
 
-    if (ConstNode->isZero()) {
-      SDValue New =
-          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
-      ReplaceNode(Node, New.getNode());
-      return;
-    }
+      if (ConstNode->isZero()) {
+        MCPhysReg X0Reg = IsDoubleWide ? RISCV::X0_Pair : RISCV::X0;
+        SDValue New =
+            CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, X0Reg, VT);
+        ReplaceNode(Node, New.getNode());
+        return;
+      }
 
-    unsigned EltSize = VT.getVectorElementType().getSizeInBits();
-    APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+      unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+      APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
 
-    // Find the smallest splat.
-    if (Val.getBitWidth() > 16 && Val.isSplat(16))
-      Val = Val.trunc(16);
-    if (Val.getBitWidth() > 8 && Val.isSplat(8))
-      Val = Val.trunc(8);
+      // Use LI for all ones since it can be compressed to c.li.
+      if (Val.isAllOnes() && !IsDoubleWide) {
+        SDNode *NewNode = CurDAG->getMachineNode(
+            RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+            CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+        ReplaceNode(Node, NewNode);
+        return;
+      }
 
-    EltSize = Val.getBitWidth();
-    int64_t Imm = Val.getSExtValue();
+      // Find the smallest splat.
+      if (Val.getBitWidth() > 16 && Val.isSplat(16))
+        Val = Val.trunc(16);
+      if (Val.getBitWidth() > 8 && Val.isSplat(8))
+        Val = Val.trunc(8);
 
-    unsigned Opc = 0;
-    if (EltSize == 8) {
-      Opc = RISCV::PLI_B;
-    } else if (isInt<10>(Imm)) {
-      Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
-    } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
-      Opc = RISCV::PLUI_H;
-      Imm = Imm >> 6;
-    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
-      Opc = RISCV::PLUI_W;
-      Imm = Imm >> 22;
-    }
+      EltSize = Val.getBitWidth();
+      int64_t Imm = Val.getSExtValue();
 
-    if (Opc) {
-      SDNode *NewNode = CurDAG->getMachineNode(
-          Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
-      ReplaceNode(Node, NewNode);
-      return;
+      unsigned Opc = 0;
+      if (EltSize == 8) {
+        Opc = IsDoubleWide ? RISCV::PLI_DB : RISCV::PLI_B;
+      } else if (EltSize == 16 && isInt<10>(Imm)) {
+        Opc = IsDoubleWide ? RISCV::PLI_DH : RISCV::PLI_H;
+      } else if (!IsDoubleWide && EltSize == 32 && isInt<10>(Imm)) {
+        Opc = RISCV::PLI_W;
+      } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
+        Opc = IsDoubleWide ? RISCV::PLUI_DH : RISCV::PLUI_H;
+        Imm = Imm >> 6;
+      } else if (!IsDoubleWide && EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
+        Opc = RISCV::PLUI_W;
+        Imm = Imm >> 22;
+      }
+
+      if (Opc) {
+        SDNode *NewNode = CurDAG->getMachineNode(
+            Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
+        ReplaceNode(Node, NewNode);
+        return;
+      }
     }
 
     break;
@@ -3064,9 +3114,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::EXTRACT_SUBVECTOR:
   case RISCVISD::TUPLE_EXTRACT: {
+    if (Subtarget->hasStdExtP())
+      break;
+
     SDValue V = Node->getOperand(0);
     auto Idx = Node->getConstantOperandVal(1);
     MVT InVT = V.getSimpleValueType();
+
     SDLoc DL(V);
 
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
@@ -3174,6 +3228,41 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->setNodeMemRefs(Load, {Ld->getMemOperand()});
     // Replace the splat with the vlse.
     ReplaceNode(Node, Load);
+    return;
+  }
+  case RISCVISD::LPAD_CALL:
+  case RISCVISD::LPAD_CALL_INDIRECT: {
+    bool IsIndirect = Opcode == RISCVISD::LPAD_CALL_INDIRECT;
+    unsigned PseudoOpc = IsIndirect ? RISCV::PseudoCALLIndirectLpadAlign
+                                    : RISCV::PseudoCALLLpadAlign;
+
+    uint32_t LpadLabel = 0;
+    if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
+      if (!isUInt<20>(PreferredLandingPadLabel))
+        report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit "
+                           "in unsigned 20-bits");
+      LpadLabel = PreferredLandingPadLabel;
+    }
+
+    // Preserve the argument-register and register-mask operands, between
+    // Callee and the optional glue, so the pseudo call still reports its
+    // call-preserved mask to the register allocator.
+    SmallVector<SDValue, 8> Ops;
+    Ops.push_back(Node->getOperand(1));
+    Ops.push_back(CurDAG->getTargetConstant(LpadLabel, DL, XLenVT));
+
+    unsigned NumOps = Node->getNumOperands();
+    bool HasGlue = Node->getGluedNode() != nullptr;
+    unsigned RegOperandsEnd = HasGlue ? NumOps - 1 : NumOps;
+    for (unsigned I = 2; I != RegOperandsEnd; ++I)
+      Ops.push_back(Node->getOperand(I));
+
+    Ops.push_back(Node->getOperand(0));
+    if (HasGlue)
+      Ops.push_back(Node->getOperand(NumOps - 1));
+
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(PseudoOpc, DL, Node->getVTList(), Ops));
     return;
   }
   case ISD::PREFETCH:
@@ -3498,6 +3587,77 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
   return true;
+}
+
+/// Similar to SelectAddrRegImm, except that the offset is a 26-bit signed
+/// immediate. This is used by the Qualcomm Xqcilo large offset load/store
+/// instructions (qc.e.lw/qc.e.sw), whose offset field is 26 bits wide.
+/// Only matches offsets that do not fit a 12-bit signed immediate, so that
+/// offsets in the simm12 range keep using the shorter (and possibly
+/// compressible) standard load/store instructions.
+bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
+                                           SDValue &Offset) {
+
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    // Fold a 26-bit (but not 12-bit) signed offset directly into the
+    // load/store.
+    if (isInt<26>(CVal) && !isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
+
+  // The offset is just outside the 26-bit range. Split off a small (simm12)
+  // adjustment with a plain ADDI and fold the remaining 26-bit offset into the
+  // load/store. A plain ADDI is used (rather than the wide
+  // qc.e.addi/qc.e.addai) because the adjustment fits simm12: this keeps it a
+  // short, compressible (c.addi) instruction and is available without Xqcilia.
+  //
+  // Skip the split if the address is used other than as a foldable load/store
+  // base. `isWorthFoldingAdd()` returns true when every user of the add node is
+  // a scalar load/store using it as an address operand. If it return false, it
+  // means that some use consumes the add result as a value (e.g. it feeds
+  // another add, is a stored value, is used in arithmetic) and that use forces
+  // the add to be materialized into a register.
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)) &&
+      isWorthFoldingAdd(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (!isInt<26>(CVal)) {
+      // check if lw in lui + add + lw combination can be compressed.
+      // The check here purely based on the immediate value and hopes that
+      // register allocator would assign a register from a GPRC set so that the
+      // instruction can get compressed.
+      bool IsLwCompressable = isShiftedUInt<5, 2>(CVal & ((1 << 12) - 1));
+
+      int64_t Imm26 = CVal < 0 ? minIntN(26) : maxIntN(26);
+      int64_t Adj = CVal - Imm26;
+      // If Adj fits within 6-bits, then both combinations will take 8 bytes
+      // however c.addi + qc.e.lw/sw will take 1 less cycle. Also, if lw is not
+      // compressable then both combination would take 10 bytes but again
+      // addi + qc.e.lw/sw will take 1 less cycle.
+      if (isInt<6>(Adj) || (isInt<12>(Adj) && !IsLwCompressable)) {
+        Base = SDValue(CurDAG->getMachineNode(
+                           RISCV::ADDI, DL, VT, Addr.getOperand(0),
+                           CurDAG->getSignedTargetConstant(Adj, DL, VT)),
+                       0);
+        Offset = CurDAG->getSignedTargetConstant(Imm26, DL, VT);
+        return true;
+      }
+    }
+  }
+
+  // Don't match: let the standard addressing modes handle it.
+  return false;
 }
 
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.

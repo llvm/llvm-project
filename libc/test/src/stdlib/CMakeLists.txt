@@ -360,8 +360,9 @@ add_libc_test(
     libc-stdlib-tests
   SRCS
     qsort_r_test.cpp
+  HDRS
+    QsortReentrantTest.h
   DEPENDS
-    libc.hdr.types.size_t
     libc.src.stdlib.qsort_r
 )
 
@@ -377,6 +378,39 @@ add_libc_test(
 )
 
 add_libc_test(
+  realpath_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    realpath_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.func.free
+    libc.hdr.limits_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.utility
+    libc.src.__support.fixedvector
+    libc.src.__support.libc_assert
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.path
+    libc.src.fcntl.openat
+    libc.src.stdlib.realpath
+    libc.src.string.strdup
+    libc.src.sys.random.getrandom
+    libc.src.sys.stat.mkdirat
+    libc.src.unistd.chdir
+    libc.src.unistd.close
+    libc.src.unistd.getcwd
+    libc.src.unistd.getpid
+    libc.src.unistd.unlinkat
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   memalignment_test
   SUITE
     libc-stdlib-tests
@@ -389,6 +423,27 @@ add_libc_test(
 )
 
 add_libc_test(
+  mkstemp_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mkstemp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.signal_macros
+    libc.src.string.strlen
+    libc.src.stdlib.mkstemp
+    libc.src.string.strdup
+    libc.src.unistd.access
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   mbtowc_test
   SUITE
     libc-stdlib-tests
@@ -398,6 +453,18 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.src.stdlib.mbtowc
     libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mblen_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mblen_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.stdlib.mblen
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -438,12 +505,9 @@ add_libc_test(
     libc.hdr.types.wchar_t
 )
 
-if(LLVM_LIBC_FULL_BUILD)
-
+if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
   add_libc_test(
     _Exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -455,8 +519,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -468,8 +530,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     atexit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -483,8 +543,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     at_quick_exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -498,8 +556,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     abort_test
-    # The EXPECT_DEATH test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -513,8 +569,6 @@ if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
     quick_exit_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS
@@ -523,21 +577,21 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.include.stdlib
       libc.src.stdlib.quick_exit
   )
+endif()
 
-  # Only baremetal and GPU has an in-tree 'malloc' implementation.
-  if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
+# Only baremetal and GPU has an in-tree 'malloc' implementation.
+if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
       NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    add_libc_test(
-      malloc_test
-      HERMETIC_TEST_ONLY
-      SUITE
-        libc-stdlib-tests
-      SRCS
-        malloc_test.cpp
-      DEPENDS
-        libc.include.stdlib
-        libc.src.stdlib.malloc
-        libc.src.stdlib.free
-    )
-  endif()
+  add_libc_test(
+    malloc_test
+    HERMETIC_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      malloc_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.src.stdlib.malloc
+      libc.src.stdlib.free
+  )
 endif()

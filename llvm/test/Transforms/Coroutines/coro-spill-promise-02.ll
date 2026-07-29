@@ -12,7 +12,7 @@ define ptr @f() presplitcoroutine {
 entry:
   %data = alloca i32, align 4
   %__promise = alloca %"class.task::promise_type", align 64
-  %id = call token @llvm.coro.id(i32 0, ptr %__promise, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr %__promise, ptr @f, ptr null)
   call void @consume2(ptr %__promise)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
@@ -55,7 +55,7 @@ declare void @free(ptr)
 ; CHECK-LABEL: define ptr @f() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[__PROMISE:%.*]] = alloca %"class.task::promise_type", align 64
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    call void @consume2(ptr [[__PROMISE]])
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 128)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
@@ -71,7 +71,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.resume(
+; CHECK-LABEL: define internal void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 64 dereferenceable(128) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[DATA_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
@@ -83,7 +83,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.destroy(
+; CHECK-LABEL: define internal void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 64 dereferenceable(128) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
@@ -91,7 +91,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.cleanup(
+; CHECK-LABEL: define internal void @f.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 64 dereferenceable(128) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    call void @free(ptr null)

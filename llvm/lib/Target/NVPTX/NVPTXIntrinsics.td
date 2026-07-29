@@ -2262,6 +2262,21 @@ let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
             (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
 }
 
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach src_type = ["e4m3x2", "e5m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      foreach satfinite = ["", "_satfinite"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+        defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
+        defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+
+        def : Pat<(intrin i16:$a, i16:$b),
+                  (inst $a, $b, mode)>;
+      }
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
+
 let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_s2f6x2_rn_satfinite_scale_n2_ue8m0 f32:$a, f32:$b, i16:$scale),
             (CVT_s2f6x2_f32_sf_scale $a, $b, $scale, CvtRN)>;
@@ -2317,6 +2332,20 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
   }
 }
 
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach src_type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      foreach satfinite = ["", "_satfinite"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+        defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
+        defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+        def : Pat<(intrin i16:$a, i16:$b),
+                  (inst $a, $b, mode)>;
+      }
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
+
 let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
             (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>;
@@ -2339,6 +2368,18 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
     }
   }
 }
+
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach relu = ["", "_relu"] in {
+    foreach satfinite = ["", "_satfinite"] in {
+      defvar intrin = !cast<Intrinsic>("int_nvvm_e2m1x2_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+      defvar inst = !cast<NVPTXInst>("CVT_bf16x2_e2m1x2_scale");
+      defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+      def : Pat<(intrin i16:$a, i16:$b),
+                (inst $a, $b, mode)>;
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
 
 let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_ue8m0x2_rz f32:$a, f32:$b),
@@ -2439,22 +2480,6 @@ def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$
 //-----------------------------------
 // Atomic Functions
 //-----------------------------------
-
-multiclass F_ATOMIC_2_INTRINSIC<RegTyInfo t, string sem_str, string as_str, string op_str,
-                      SDPatternOperator op, list<Predicate> preds> {
-  defvar asm_str = "atom" # sem_str # as_str # "." # op_str;
-  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def r : BasicNVPTXInst<(outs t.RC:$dst), (ins ADDR:$addr, t.RC:$b),
-      asm_str,
-      [(set t.Ty:$dst, (op addr:$addr, t.Ty:$b))]>,
-    Requires<preds>;
-    if t.SupportsImm then
-      def i : BasicNVPTXInst<(outs t.RC:$dst), (ins ADDR:$addr, t.Imm:$b),
-        asm_str,
-        [(set t.Ty:$dst, (op addr:$addr, (t.Ty t.ImmNode:$b)))]>,
-      Requires<preds>;
-  }
-}
 
 class AtomicSDNodeXForm<SDNode atomic> {
   SDNodeXForm GetSem = SDNodeXForm<atomic, [{
@@ -2597,117 +2622,6 @@ foreach t = [I16RT, I32RT, I64RT] in {
      : F_ATOMIC_3<t, "cas.b"#t.Size, atomic_cmp_swap_pat, atomic_cmp_swap>;
 }
 
-// Support for scoped atomic operations.  Matches
-// int_nvvm_atomic_{op}_{space}_{type}_{scope}
-// and converts it into the appropriate instruction.
-// NOTE: not all possible combinations are implemented
-//  'space' is limited to generic as it's the only one needed to support CUDA.
-//  'scope' = 'gpu' is default and is handled by regular atomic instructions.
-
-// Define instruction variants for all addressing modes.
-
-// Constructs intrinsic name and instruction asm strings.
-multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
-                       string ScopeStr, string SpaceStr,
-                       RegTyInfo t, list<Predicate> Preds> {
-  defm "" : F_ATOMIC_2_INTRINSIC<t,
-                       as_str = !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
-                       sem_str = !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
-                       op_str = OpStr # "." # TypeStr,
-                       op = !cast<Intrinsic>(
-                              "int_nvvm_atomic_" # OpStr
-                              # "_" # SpaceStr # "_" # IntTypeStr
-                              # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
-                       preds = Preds>;
-}
-
-// Constructs variants for different scopes of atomic op.
-multiclass ATOM2S_impl<string OpStr, string IntTypeStr, string TypeStr,
-                       RegTyInfo t, list<Predicate> Preds> {
-   // .gpu scope is default and is currently covered by existing
-   // atomics w/o explicitly specified scope.
-  foreach scope = ["cta", "sys"] in {
-    // For now we only need variants for generic space pointers.
-    foreach space = ["gen"] in {
-      defm _#scope#space : ATOM2N_impl<OpStr, IntTypeStr, TypeStr, scope, space,
-                         t, !listconcat(Preds, [hasAtomScope])>;
-    }
-  }
-}
-
-multiclass F_ATOMIC_3_INTRINSIC_PATTERN<RegTyInfo t, string OpStr, string InstructionName> {
-  foreach scope = ["cta", "sys"] in {
-    foreach space = ["gen"] in {
-      defvar intrinsic = !cast<SDPatternOperator>("int_nvvm_atomic_" # OpStr # "_" # space # "_i_" # scope);
-      def : Pat<(t.Ty (intrinsic addr:$addr, t.Ty:$b, t.Ty:$c)),
-            (!cast<Instruction>(InstructionName # "_rr") ADDR:$addr, t.Ty:$b, t.Ty:$c, Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
-
-      def : Pat<(t.Ty (intrinsic addr:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c)),
-            (!cast<Instruction>(InstructionName # "_ir") ADDR:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c, Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
-
-      def : Pat<(t.Ty (intrinsic addr:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c))),
-            (!cast<Instruction>(InstructionName # "_ri") ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
-
-      def : Pat<(t.Ty (intrinsic addr:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c))),
-            (!cast<Instruction>(InstructionName # "_ii") ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
-    }
-  }
-}
-
-// atom.add
-multiclass ATOM2_add_impl<string OpStr> {
-  defm _s32  : ATOM2S_impl<OpStr, "i", "s32", I32RT, []>;
-  defm _u32  : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
-  defm _u64  : ATOM2S_impl<OpStr, "i", "u64", I64RT, []>;
-  defm _bf16 : ATOM2S_impl<OpStr, "f", "bf16", BF16RT, [hasSM<90>, hasPTX<78>]>;
-  defm _f16  : ATOM2S_impl<OpStr, "f", "f16", F16RT, []>;
-  defm _f32  : ATOM2S_impl<OpStr, "f", "f32", F32RT, []>;
-  defm _f64  : ATOM2S_impl<OpStr, "f", "f64", F64RT, []>;
-}
-
-// atom.{and,or,xor}
-multiclass ATOM2_bitwise_impl<string OpStr> {
-  defm _b32 : ATOM2S_impl<OpStr, "i", "b32", I32RT, []>;
-  defm _b64 : ATOM2S_impl<OpStr, "i", "b64", I64RT, [hasAtomBitwise64]>;
-}
-
-// atom.exch
-multiclass ATOM2_exch_impl<string OpStr> {
-  defm _b32 : ATOM2S_impl<OpStr, "i", "b32", I32RT, []>;
-  defm _b64 : ATOM2S_impl<OpStr, "i", "b64", I64RT, []>;
-}
-
-// atom.{min,max}
-multiclass ATOM2_minmax_impl<string OpStr> {
-  defm _s32 : ATOM2S_impl<OpStr, "i", "s32", I32RT, []>;
-  defm _u32 : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
-  defm _s64 : ATOM2S_impl<OpStr, "i", "s64", I64RT, [hasAtomMinMax64]>;
-  defm _u64 : ATOM2S_impl<OpStr, "i", "u64", I64RT, [hasAtomMinMax64]>;
-}
-
-// atom.{inc,dec}
-multiclass ATOM2_incdec_impl<string OpStr> {
-  defm _u32 : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
-}
-
-// atom.cas
-multiclass ATOM3_cas_impl<string OpStr> {
-  defm _b16 : F_ATOMIC_3_INTRINSIC_PATTERN<I16RT, OpStr, "INT_PTX_ATOM_CAS_16">;
-  defm _b32 : F_ATOMIC_3_INTRINSIC_PATTERN<I32RT, OpStr, "INT_PTX_ATOM_CAS_32">;
-  defm _b64 : F_ATOMIC_3_INTRINSIC_PATTERN<I64RT, OpStr, "INT_PTX_ATOM_CAS_64">;
-}
-
-defm INT_PTX_SATOM_ADD  : ATOM2_add_impl<"add">;
-defm INT_PTX_SATOM_AND  : ATOM2_bitwise_impl<"and">;
-defm INT_PTX_SATOM_CAS  : ATOM3_cas_impl<"cas">;
-defm INT_PTX_SATOM_DEC  : ATOM2_incdec_impl<"dec">;
-defm INT_PTX_SATOM_EXCH : ATOM2_exch_impl<"exch">;
-defm INT_PTX_SATOM_INC  : ATOM2_incdec_impl<"inc">;
-defm INT_PTX_SATOM_MAX  : ATOM2_minmax_impl<"max">;
-defm INT_PTX_SATOM_MIN  : ATOM2_minmax_impl<"min">;
-defm INT_PTX_SATOM_OR   : ATOM2_bitwise_impl<"or">;
-defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
-
 // atom.*.b128
 
 let mayLoad = true, mayStore = true, hasSideEffects = true,
@@ -2835,31 +2749,61 @@ def LD_GLOBAL_NC_v4i32 : VLDG_G_ELE_V4<B32>;
 def LD_GLOBAL_NC_v4i64 : VLDG_G_ELE_V4<B64>;
 def LD_GLOBAL_NC_v8i32 : VLDG_G_ELE_V8<B32>;
 
-multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-             "cvta." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-              "cvta." # Str # ".u64">, Requires<Preds>;
+class addrspacecast_spaces<NVPTXAddressSpace src_space,
+                           NVPTXAddressSpace dst_space> :
+  PatFrag<(ops node:$a), (addrspacecast node:$a),
+    "const auto *ASC = cast<AddrSpaceCastSDNode>(N);" #
+      "return ASC->getSrcAddressSpace() == " # src_space.Enum #
+         " && ASC->getDestAddressSpace() == " # dst_space.Enum # ";">;
+
+
+multiclass CvtaFromInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                         bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<as, AddrSpaceGeneric>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+                "cvta" # as.Suffix # ".u64",
+                [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i64 (asc_pat i32:$src)),
+              (!cast<Instruction>(NAME # "_64") (CVT_u64_u32 $src, CvtNONE))>;
+  }
 }
 
-multiclass G_TO_NG<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-            "cvta.to." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-            "cvta.to." # Str # ".u64">, Requires<Preds>;
+multiclass CvtaToInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                       bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<AddrSpaceGeneric, as>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta.to" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+              "cvta.to" # as.Suffix # ".u64",
+              [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i32 (asc_pat i64:$src)),
+              (CVT_u32_u64 (!cast<Instruction>(NAME # "_64") $src), CvtNONE)>;
+  }
 }
 
-foreach space = ["local", "shared", "global", "const", "param"] in {
-  defm cvta_#space : NG_TO_G<space>;
-  defm cvta_to_#space : G_TO_NG<space>;
+multiclass CvtaInsts<NVPTXAddressSpace as, list<Predicate> preds = [],
+                     bit supports_32 = true> {
+  defm _ # as.Name : CvtaFromInsts<as, preds, supports_32>;
+  defm _to_ # as.Name : CvtaToInsts<as, preds, supports_32>;
 }
 
-defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
-defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
+foreach as = [AddrSpaceLocal, AddrSpaceShared, AddrSpaceGlobal, AddrSpaceConst] in
+  defm cvta : CvtaInsts<as>;
+
+defm cvta : CvtaInsts<AddrSpaceParam, [hasPTX<77>, hasSM<70>]>;
+defm cvta : CvtaInsts<AddrSpaceSharedCluster, [hasClusters], supports_32=false>;
 
 
 // nvvm.move intrinsicc
@@ -5631,6 +5575,17 @@ defset list<WMMA_INSTR> STMATRIXs = {
   } // transposed
 } // defset
 
+// movmatrix
+let isConvergent = true in {
+def MOVMATRIX_SYNC_ALIGNED_M8N8_TRANS_B16
+  : BasicNVPTXInst<(outs B32:$dst),
+              (ins B32:$src),
+              "movmatrix.sync.aligned.m8n8.trans.b16",
+              [(set B32:$dst,
+                (int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16 B32:$src))]>,
+    Requires<[hasSM<75>, hasPTX<78>]>;
+} // isConvergent = true
+
 // Constructing non-flat DAGs is still a pain. I can't !subst a dag node with a
 // dag, so the ptx.version must be appended *after* foreach replaces 'ins' with
 // the instruction record.
@@ -5844,7 +5799,10 @@ class TCGEN05_LDST_REGINFO<int Veclen> {
   list<NVPTXRegClass> regs = !listsplat(B32, Veclen);
   // generate list of regnames for load/store operands
   list<string> reg_names = !foreach(x, !range(0, Veclen), "r" # x);
-  string regstring = "{{" # !interleave(!foreach(n, !range(0, Veclen), "$r" # n), ", ") # "}}";
+  string regstring = "{{" #
+                      !interleave(
+                        !foreach(n, !range(0, Veclen), "$r" # n), ", ") #
+                     "}}";
   dag Ins = !dag(ins, regs, reg_names);
   dag Outs = !dag(outs, regs, reg_names);
 }
@@ -5860,7 +5818,8 @@ class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
 
   let InOperandList = !con((ins B32:$taddr),
-                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)));
+                           !if(!eq(Shape, "16x32bx2"),
+                                  (ins i64imm:$offset), (ins)));
   let OutOperandList = Info.Outs;
   let AsmString = "tcgen05.ld.sync.aligned"
                   # "." # Shape
@@ -5884,7 +5843,8 @@ class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
 
   let InOperandList = !con((ins B32:$taddr),
-                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)),
+                           !if(!eq(Shape, "16x32bx2"),
+                                  (ins i64imm:$offset), (ins)),
                            Info.Ins);
   let OutOperandList = (outs);
   let AsmString = "tcgen05.st.sync.aligned"
@@ -6029,6 +5989,126 @@ let Predicates = [hasSM<100>, hasPTX<86>] in {
     BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
               "st.bulk.shared::cta",
               [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
+}
+
+//
+// Asynchronous store instructions
+//
+
+def SDTAsyncStoreMbarrierB128 : SDTypeProfile<0, 4,
+  [SDTCisPtrTy<0>, SDTCisVT<1, i64>, SDTCisVT<2, i64>, SDTCisPtrTy<3>]>;
+def st_async_mbarrier_b128 :
+  SDNode<"NVPTXISD::ST_ASYNC_MBARRIER_B128", SDTAsyncStoreMbarrierB128,
+         [SDNPHasChain, SDNPMayStore]>;
+
+class ST_ASYNC_MBARRIER<string type, NVPTXRegClass reg> :
+  BasicNVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value, ADDR:$mbar),
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes." # type>;
+
+def ST_ASYNC_MBARRIER_B128 :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, B64:$value0, B64:$value1, ADDR:$mbar),
+    "{{\n\t"
+    ".reg .b128 %in_128;\n\t"
+    "mov.b128 %in_128, {$value0, $value1};\n\t"
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes.b128 \t[$dest_addr], %in_128, [$mbar];\n\t"
+    "}}">;
+
+let Predicates = [hasSM<90>, hasPTX<81>] in {
+  foreach size = ["32", "64"] in {
+    defvar valueType = !cast<ValueType>("i" # size);
+    defvar reg = !cast<NVPTXRegClass>("B" # size);
+
+    def : Pat<(int_nvvm_st_async
+                 addr:$dest_addr, valueType:$value, addr:$mbar),
+              (ST_ASYNC_MBARRIER<"b" # size, reg>
+                 addr:$dest_addr, $value, addr:$mbar)>;
+  }
+}
+
+let Predicates = [hasSM<90>, hasPTX<92>] in {
+  def : Pat<(st_async_mbarrier_b128
+               addr:$dest_addr, i64:$value0, i64:$value1, addr:$mbar),
+            (ST_ASYNC_MBARRIER_B128
+               addr:$dest_addr, $value0, $value1, addr:$mbar)>;
+}
+
+def SDTAsyncStoreRelease : SDTypeProfile<0, 3,
+  [SDTCisPtrTy<0>, SDTCisVT<2, i1>]>;
+def SDTAsyncStoreMMIO : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+
+class StAsyncReleaseNode<string variant, string type, SDTypeProfile sdt> :
+  SDNode<"NVPTXISD::ST_ASYNC_" # variant # "_" # type,
+         sdt,
+         [SDNPHasChain, SDNPMayStore]>;
+
+def MultimemFlag : Operand<i1> {
+  let PrintMethod = "printMultimem";
+}
+
+class ST_ASYNC_SYS<string type, NVPTXRegClass reg> :
+  BasicFlagsNVPTXInst<(outs), (ins ADDR:$dest_addr, reg:$value),
+                      (ins MultimemFlag:$is_multimem),
+    "${is_multimem}st.async.release.sys.global." # type>;
+
+class ST_ASYNC_GPU<string type, NVPTXRegClass reg> :
+  BasicFlagsNVPTXInst<(outs), (ins ADDR:$dest_addr, reg:$value),
+                      (ins MultimemFlag:$is_multimem),
+    "${is_multimem}st.async.release.gpu.global." # type>;
+
+class ST_ASYNC_MMIO_SYS<string type, NVPTXRegClass reg> :
+  BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, reg:$value),
+    "st.async.mmio.release.sys.global." # type>;
+
+class ST_ASYNC_RELEASE_B8_BODY<string instr_prefix, string prefix> {
+  // The minimum supported register size to pass in arguments is 16-bits, so 
+  // the 8-bit value is passed in using a 16-bit register and truncated to 
+  // 8-bits with a cvt instruction.
+  string body =
+    "{{ \n\t"
+    ".reg .b8 \t%st_async_val; \n\t"
+    "cvt.u8.u16 \t%st_async_val, $value; \n\t" #
+    prefix # instr_prefix # ".b8\t [$dest_addr], %st_async_val; \n\t"
+    "}}";
+}
+
+def ST_ASYNC_SYS_B8 :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, B16:$value, MultimemFlag:$is_multimem),
+    ST_ASYNC_RELEASE_B8_BODY<"st.async.release.sys.global", "${is_multimem}">.body>;
+def ST_ASYNC_GPU_B8 :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, B16:$value, MultimemFlag:$is_multimem),
+    ST_ASYNC_RELEASE_B8_BODY<"st.async.release.gpu.global", "${is_multimem}">.body>;
+def ST_ASYNC_MMIO_SYS_B8 :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, B16:$value),
+    ST_ASYNC_RELEASE_B8_BODY<"st.async.mmio.release.sys.global", "">.body>;
+
+
+let Predicates = [hasSM<100>, hasPTX<87>] in {
+  foreach rti = [I16RT, I32RT, I64RT] in {
+    def : Pat<(int_nvvm_st_async_sys
+                 addr:$dest_addr, rti.Ty:$value, timm:$is_multimem),
+              (ST_ASYNC_SYS<rti.PtxType, rti.RC>
+                 addr:$dest_addr, $value, $is_multimem)>;
+    def : Pat<(int_nvvm_st_async_gpu
+                 addr:$dest_addr, rti.Ty:$value, timm:$is_multimem),
+              (ST_ASYNC_GPU<rti.PtxType, rti.RC>
+                 addr:$dest_addr, $value, $is_multimem)>;
+    def : Pat<(int_nvvm_st_async_mmio_sys
+                 addr:$dest_addr, rti.Ty:$value),
+              (ST_ASYNC_MMIO_SYS<rti.PtxType, rti.RC>
+                 addr:$dest_addr, $value)>;
+  }
+
+  def : Pat<(StAsyncReleaseNode<"SYS", "B8", SDTAsyncStoreRelease>
+               addr:$dest_addr, i16:$value, timm:$is_multimem),
+            (ST_ASYNC_SYS_B8 addr:$dest_addr, $value, $is_multimem)>;
+  def : Pat<(StAsyncReleaseNode<"GPU", "B8", SDTAsyncStoreRelease>
+               addr:$dest_addr, i16:$value, timm:$is_multimem),
+            (ST_ASYNC_GPU_B8 addr:$dest_addr, $value, $is_multimem)>;
+  def : Pat<(StAsyncReleaseNode<"MMIO_SYS", "B8", SDTAsyncStoreMMIO>
+               addr:$dest_addr, i16:$value),
+            (ST_ASYNC_MMIO_SYS_B8 addr:$dest_addr, $value)>;
 }
 
 //

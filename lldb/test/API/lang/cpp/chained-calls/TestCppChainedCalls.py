@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TestCppChainedCalls(TestBase):
     def test_with_run_command(self):
         self.build()
