@@ -1022,8 +1022,8 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
   bool IsInstance =
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
-  auto getArgCaptureBy =
-      [FD, IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
+  auto getArgCaptureBy = [FD,
+                          IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
     const ParmVarDecl *PVD = nullptr;
     if (IsInstance) {
       // FIXME: Add support for I == 0 i.e. capture_by on function declarations

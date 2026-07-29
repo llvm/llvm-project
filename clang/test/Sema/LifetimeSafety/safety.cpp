@@ -4301,63 +4301,63 @@ void test_member_capture_by() {
   {
     int i;
     S s;
-    s.cap(&i, c1); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c1); // expected-note {{later used here}}
+    s.cap(&i, c1);  // expected-warning {{local variable 'i' does not live long enough}}
+  }                 // expected-note {{local variable 'i' is destroyed here}}
+  use(c1);          // expected-note {{later used here}}
 
   int *c2;
   {
     int i;
     S s;
-    s.cap_const(&i, c2); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c2); // expected-note {{later used here}}
+    s.cap_const(&i, c2);  // expected-warning {{local variable 'i' does not live long enough}}
+  }                       // expected-note {{local variable 'i' is destroyed here}}
+  use(c2);                // expected-note {{later used here}}
 
   int *c3;
   {
     int i;
-    S::cap_static(&i, c3); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c3); // expected-note {{later used here}}
+    S::cap_static(&i, c3);  // expected-warning {{local variable 'i' does not live long enough}}
+  }                         // expected-note {{local variable 'i' is destroyed here}}
+  use(c3);                  // expected-note {{later used here}}
 
   int *c4;
   {
     int i;
     S s;
     s.cap_template(&i, c4); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c4); // expected-note {{later used here}}
+  }                         // expected-note {{local variable 'i' is destroyed here}}
+  use(c4);                  // expected-note {{later used here}}
 
   int *c5;
   {
     int i;
     S s;
     s.cap_overload(&i, c5); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c5); // expected-note {{later used here}}
+  }                         // expected-note {{local variable 'i' is destroyed here}}
+  use(c5);                  // expected-note {{later used here}}
 
   int *c6, *c7;
   {
     int i;
     S s;
-    s.cap_multi(&i, c6, c7); // expected-warning 2{{local variable 'i' does not live long enough}}
-  } // expected-note 2{{local variable 'i' is destroyed here}}
-  use(c6); // expected-note {{later used here}}
-  use(c7); // expected-note {{later used here}}
+    s.cap_multi(&i, c6, c7);  // expected-warning 2{{local variable 'i' does not live long enough}}
+  }                           // expected-note 2{{local variable 'i' is destroyed here}}
+  use(c6);                    // expected-note {{later used here}}
+  use(c7);                    // expected-note {{later used here}}
 
   int *c8;
   {
     int i;
     S s;
-    s.cap_reordered(c8, &i); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c8); // expected-note {{later used here}}
+    s.cap_reordered(c8, &i);  // expected-warning {{local variable 'i' does not live long enough}}
+  }                           // expected-note {{local variable 'i' is destroyed here}}
+  use(c8);                    // expected-note {{later used here}}
 
   int *c9;
   {
     int i;
     ns::cap_ns(&i, c9); // expected-warning {{local variable 'i' does not live long enough}}
-  } // expected-note {{local variable 'i' is destroyed here}}
-  use(c9); // expected-note {{later used here}}
+  }                     // expected-note {{local variable 'i' is destroyed here}}
+  use(c9);              // expected-note {{later used here}}
 }
 } // namespace member_capture_by_param
