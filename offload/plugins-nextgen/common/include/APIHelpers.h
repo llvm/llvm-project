@@ -21,7 +21,6 @@
 // to check if linker could find the symbol. For symbols loaded using dlsym we
 // call name##_loaded function. The name##_loaded function will be nullptr if
 // external library was linked directly.
-#ifndef WIN32
 #define API_HELPER_OPTIONAL(return_type, name, ...)                            \
   namespace dlwrap {                                                           \
   bool name##_loaded() __attribute__((weak));                                  \
@@ -29,26 +28,16 @@
   extern "C" return_type name(__VA_ARGS__) __attribute__((weak));              \
   template <> inline bool api_helper::canCall<name>() {                        \
     if (name == nullptr)                                                       \
-      /* Not loaded weak symbol */                                             \
+      /* Not loaded weak symbol, only possible on Linux */                     \
       return false;                                                            \
     /* If symbol wasn't dlwrapped, i.e name##_loaded == nullptr and is not     \
      * nullptr, it means the symbol was linked directly, so we can call it */  \
     if (dlwrap::name##_loaded == nullptr)                                      \
       return true;                                                             \
-    /* Symbol is not nullptr and it was dlwrapped */                           \
+    /* Symbol is not nullptr and it was dlwrapped, all symbols on Windows go   \
+     * here*/                                                                  \
     return dlwrap::name##_loaded();                                            \
   }
-#else
-#define API_HELPER_OPTIONAL(return_type, name, ...)                            \
-  namespace dlwrap {                                                           \
-  bool name##_loaded() __attribute__((weak));                                  \
-  }                                                                            \
-  extern "C" return_type name(__VA_ARGS__) __attribute__((weak));              \
-  template <> inline bool api_helper::canCall<name>() {                        \
-    /* Windows has no direct linking, so all symbols go through dlwrap */      \
-    return dlwrap::name##_loaded();                                            \
-  }
-#endif
 
 namespace api_helper {
 
