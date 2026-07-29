@@ -3766,7 +3766,7 @@ bool isPacked64BitInst(unsigned Opc) {
   }
 }
 
-bool isPackedFP32or64BitInst(unsigned Opc) {
+bool isSingleSGPRReadInst(unsigned Opc) {
   return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
 }
 

@@ -1289,11 +1289,11 @@ LTOKind AMDGPUToolChain::getLTOMode(const ArgList &Args,
 
 static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
   // Arch-specific check - only report as supported if arch has xnack+
+  if (!TT.isAMDGCN())
+    return false;
   llvm::StringRef Processor = getProcessorFromTargetID(TT, TargetID);
-  auto ProcKind = TT.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Processor)
-                                : llvm::AMDGPU::parseArchR600(Processor);
-  auto Features = TT.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
-                                : llvm::AMDGPU::getArchAttrR600(ProcKind);
+  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
+  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
 
   // If processor has xnack but doesn't support on/off modes, xnack is always on
   bool XnackAlwaysOn = (Features & llvm::AMDGPU::FEATURE_XNACK) &&

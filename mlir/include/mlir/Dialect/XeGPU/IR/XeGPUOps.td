@@ -1227,8 +1227,9 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
       Arguments:
       - `source`: The input vector whose data is to be redistributed. The source and
       result types must match.
-      - `input_layout`: The layout attribute describing the current distribution of `source`
-      across subgroups and/or lanes.
+      - `input_layout`: [optional] The layout attribute describing the current distribution
+      of `source` across subgroups and/or lanes. When omitted, it defaults to `target_layout`,
+      i.e. the source is assumed to already be in the target distribution.
       - `target_layout`: The layout attribute describing the desired distribution of the result
       across subgroups and/or lanes.
 
@@ -1241,7 +1242,7 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
         ```
     }];
     let arguments = (ins XeGPU_VectorOrScalarType: $source,
-                         DistributeLayoutAttr: $input_layout,
+                         OptionalAttr<DistributeLayoutAttr>: $input_layout,
                          DistributeLayoutAttr: $target_layout);
     let results = (outs XeGPU_VectorOrScalarType: $result);
     let assemblyFormat = [{
@@ -1254,6 +1255,13 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
 
       void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
         setTargetLayoutAttr(anchorLayout);
+      }
+
+      /// Returns `input_layout` if set, otherwise `target_layout`.
+      xegpu::DistributeLayoutAttr getEffectiveInputLayout() {
+        if (auto layout = getInputLayoutAttr())
+          return layout;
+        return getTargetLayoutAttr();
       }
 
     }];

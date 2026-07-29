@@ -3132,6 +3132,26 @@ llvm.func @default_func_attrs_call() {
 // -----
 
 llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @default_func_attrs_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {default_func_attrs={key="value", justKey}} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
 
 // CHECK-LABEL: @builtin_call
 // CHECK: call void @f() #[[ATTRS:[0-9]+]]
