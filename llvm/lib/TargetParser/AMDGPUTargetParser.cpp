@@ -461,9 +461,9 @@ fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   // feature bitset; a dual-mode GPU has neither wave bit set.
   const bool IsNullGPU = T.getSubArch() == Triple::NoSubArch && GPU.empty();
   const bool TargetHasWave32 =
-      Info && Info->Features.test(FEATURE_WAVEFRONTSIZE32);
+      Info && Info->Features.test(FEAT_WAVEFRONTSIZE32);
   const bool TargetHasWave64 =
-      Info && Info->Features.test(FEATURE_WAVEFRONTSIZE64);
+      Info && Info->Features.test(FEAT_WAVEFRONTSIZE64);
 
   auto Wave32Itr = Features.find("wavefrontsize32");
   auto Wave64Itr = Features.find("wavefrontsize64");
