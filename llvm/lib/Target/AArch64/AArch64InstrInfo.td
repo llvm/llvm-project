@@ -9311,33 +9311,6 @@ def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))
           (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
 }
 
-// Fmul fold + FP_to_int conversions bitcast kept in SIMD/FP register
-multiclass FmulToFPToIntFPRPats<SDPatternOperator OpN, string INST> {
-  def : Pat<(f32 (bitconvert (i32 (OpN (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
-      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
-  def : Pat<(f64 (bitconvert (i64 (OpN (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
-      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
-}
-
-let Predicates = [HasNEON] in {
-  defm : FmulToFPToIntFPRPats<any_fp_to_sint, "FCVTZS">;
-  defm : FmulToFPToIntFPRPats<any_fp_to_uint, "FCVTZU">;
-  defm : FmulToFPToIntFPRPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
-  defm : FmulToFPToIntFPRPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
-}
-
-multiclass FmulToFPToIntSatFPRPats<SDPatternOperator OpN, string INST> {
-  def : Pat<(f32 (bitconvert (i32 (OpN (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale), i32)))),
-      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
-  def : Pat<(f64 (bitconvert (i64 (OpN (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale), i64)))),
-      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
-}
-
-let Predicates = [HasNEON] in {
-  defm : FmulToFPToIntSatFPRPats<fp_to_sint_sat, "FCVTZS">;
-  defm : FmulToFPToIntSatFPRPats<fp_to_uint_sat, "FCVTZU">;
-}
-
 multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOperand RC, ComplexPattern fixedpoint> {
   // fptosi(fadd(x, x)) -> FCVTZS_shift x, 1
   def : Pat<(IVT (fp_to_sint (FVT (fadd RC:$Vn, RC:$Vn)))),
