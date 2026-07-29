@@ -179,9 +179,9 @@ std::string fixIncludes(const AnalysisResults &Results,
 
   llvm::DenseMap<unsigned, std::string> InsertionsByOffset;
   for (auto &[Spelled, _] : Results.Missing) {
-    auto Insertion = HeaderIncludes.insert(StringRef{Spelled}.trim("\"<>"),
-                                           Spelled.starts_with('<'),
-                                           tooling::IncludeDirective::Include);
+    auto Insertion = HeaderIncludes.insert(
+        StringRef{Spelled}.trim("\"<>"), !Spelled.empty() && Spelled[0] == '<',
+        tooling::IncludeDirective::Include);
     if (Insertion) {
       InsertionsByOffset[Insertion->getOffset()] +=
           Insertion->getReplacementText();
