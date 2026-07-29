@@ -2646,7 +2646,7 @@ bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
                                     const Value *Offset) {
   if (!Base->getType()->isByteTy())
     return false;
-  if (!Val->getType()->isSingleValueType())
+  if (!Val->getType()->isSingleValueType() || Val->getType()->isTargetExtTy())
     return false;
   if (!Offset->getType()->isIntegerTy(32))
     return false;
@@ -2668,7 +2668,7 @@ BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
 
 bool BitExtractInst::isValidOperands(const Type *Ty, const Value *Src,
                                      const Value *Offset) {
-  if (!Ty->isSingleValueType())
+  if (!Ty->isSingleValueType() || Src->getType()->isTargetExtTy())
     return false;
   if (!Src->getType()->isByteTy())
     return false;
