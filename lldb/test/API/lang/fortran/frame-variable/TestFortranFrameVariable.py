@@ -1,7 +1,6 @@
 """
-Tests that the frame variable command works 
+Tests that the frame variable command works
 """
-
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
@@ -14,7 +13,7 @@ class FortranTestFrameVariable(TestBase):
         """Tests if frame variable outputs the expected results"""
         self.build()
         self.main_source_file = lldb.SBFileSpec("frame.f90")
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "! Breakpoint here", self.main_source_file
         )
 
@@ -22,6 +21,10 @@ class FortranTestFrameVariable(TestBase):
 
         self.expect("frame variable num_real", substrs=["(REAL) num_real = 2.718"])
 
-        self.expect("frame variable num_logical", substrs=["(LOGICAL) num_logical = true"])
+        self.expect(
+            "frame variable num_logical", substrs=["(LOGICAL) num_logical = true"]
+        )
 
-        self.expect("frame variable num_complex", substrs=["(COMPLEX) num_complex = (1.3, 2.6)"])
+        self.expect(
+            "frame variable num_complex", substrs=["(COMPLEX) num_complex = (1.3, 2.6)"]
+        )

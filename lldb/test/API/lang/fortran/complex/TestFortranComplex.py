@@ -1,7 +1,6 @@
 """
-Tests that the complex intrinsic type with different byte sizes works as expected 
+Tests that the complex intrinsic type with different byte sizes works as expected
 """
-
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
@@ -14,7 +13,7 @@ class FortranTestComplex(TestBase):
         """Tests if complex return the correct name, kind and value."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("complex.f90")
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "! Breakpoint here", self.main_source_file
         )
 

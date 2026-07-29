@@ -1,7 +1,6 @@
 """
-Tests that the logical intrinsic type with different byte sizes works as expected 
+Tests that the logical intrinsic type with different byte sizes works as expected
 """
-
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
@@ -14,7 +13,7 @@ class FortranTestLogicals(TestBase):
         """Tests if logicals return the correct name, kind and value."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("logical.f90")
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "! Breakpoint here", self.main_source_file
         )
 
@@ -31,7 +30,7 @@ class FortranTestLogicals(TestBase):
         self.assertEqual(bool_two.GetTypeName(), "LOGICAL(KIND=2)")
         self.assertEqual(bool_two.GetByteSize(), 2)
         self.assertEqual(bool_two.GetValue(), "false")
-        
+
         bool_four = frame.FindVariable("bool_four")
         self.assertSuccess(bool_four.GetError(), "Failed to fetch bool_four")
         self.assertEqual(bool_four.GetTypeName(), "LOGICAL")
