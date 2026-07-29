@@ -13301,6 +13301,15 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
   RAUWUpdateListener Listener(*this, UI, UE);
   while (UI != UE) {
     SDNode *User = UI->getUser();
+    
+    if (User == To.getNode()) {
+      do {
+        ++UI;
+      } while (UI != UE && UI->getUser() == User);
+      continue;
+    }
+
+
     bool UserRemovedFromCSEMaps = false;
 
     // A user can appear in a use list multiple times, and when this
