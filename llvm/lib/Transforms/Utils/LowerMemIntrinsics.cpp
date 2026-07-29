@@ -1591,3 +1591,23 @@ void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
         /*AtomicElementSize=*/AtomicMemcpy->getElementSizeInBytes());
   }
 }
+void llvm::emitBoundedMaskedMemcpy(MemTransferInst *MemCpy, unsigned VF) {
+  IRBuilder<> Builder(MemCpy);
+  Value *Dst = MemCpy->getRawDest();
+  Value *Src = MemCpy->getRawSource();
+  Value *Size = MemCpy->getLength();
+
+  // Lane i is active iff i < Size. Expressed as a lane-indexed mask rather than
+  // a bitcast from an integer bit pattern, which would be endian-dependent.
+  Type *MaskVecTy = FixedVectorType::get(Builder.getInt1Ty(), VF);
+  Value *Mask = Builder.CreateIntrinsic(
+      Intrinsic::get_active_lane_mask, {MaskVecTy, Size->getType()},
+      {ConstantInt::get(Size->getType(), 0), Size});
+
+  Type *DataVecTy = FixedVectorType::get(Builder.getInt8Ty(), VF);
+  Align DstAlign = MemCpy->getDestAlign().valueOrOne();
+  Align SrcAlign = MemCpy->getSourceAlign().valueOrOne();
+  Value *Loaded = Builder.CreateMaskedLoad(DataVecTy, Src, SrcAlign, Mask,
+                                           nullptr, "masked.copy");
+  Builder.CreateMaskedStore(Loaded, Dst, DstAlign, Mask);
+}

@@ -27,6 +27,7 @@ class MemCpyInst;
 class MemMoveInst;
 class MemSetInst;
 class MemSetPatternInst;
+class MemTransferInst;
 class ScalarEvolution;
 class TargetTransformInfo;
 class Value;
@@ -54,7 +55,13 @@ LLVM_ABI void createMemCpyLoopKnownSize(
 LLVM_ABI void expandMemCpyAsLoop(MemCpyInst *MemCpy,
                                  const TargetTransformInfo &TTI,
                                  ScalarEvolution *SE = nullptr);
-
+/// \p VF is the vectorization factor: the number of i8 lanes in the masked
+/// operations. Lane i is active iff i is less than the transfer length, so
+/// exactly the requested bytes are read and written and nothing beyond them.
+/// \p VF must be a power of two and at least the maximum possible length of
+/// the transfer; the caller is responsible for establishing that bound and
+/// for checking that masked load/store of <VF x i8> is legal on the target.
+LLVM_ABI void emitBoundedMaskedMemcpy(MemTransferInst *MemCpy, unsigned VF);
 /// Expand \p MemMove as a loop. \p MemMove is not deleted. Returns true if the
 /// memmove was lowered.
 LLVM_ABI bool expandMemMoveAsLoop(MemMoveInst *MemMove,
