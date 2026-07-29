@@ -141,7 +141,7 @@ struct __optional_destruct_base<_Tp, true> {
   }
 };
 
-template <class _Tp>
+template <class _Tp, bool>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   using __base _LIBCPP_NODEBUG = __optional_destruct_base<_Tp>;
   using value_type             = _Tp;
@@ -425,6 +425,11 @@ public:
 private:
   static_assert(!is_same_v<remove_cv_t<_Tp>, in_place_t>, "instantiation of optional with in_place_t is ill-formed");
   static_assert(!is_same_v<remove_cv_t<_Tp>, nullopt_t>, "instantiation of optional with nullopt_t is ill-formed");
+#  if _LIBCPP_STD_VER >= 26
+  static_assert(!is_rvalue_reference_v<_Tp>, "instantiation of optional with an rvalue reference type is ill-formed");
+#  else
+  static_assert(!is_reference_v<_Tp>, "instantiation of optional with a reference type is ill-formed");
+#  endif
   static_assert(is_destructible_v<_Tp>, "instantiation of optional with a non-destructible type is ill-formed");
   static_assert(!is_array_v<_Tp>, "instantiation of optional with an array type is ill-formed");
 
@@ -746,15 +751,6 @@ public:
 #  endif // _LIBCPP_STD_VER >= 23
 
   using __base::reset;
-};
-
-template <class _Tp>
-class optional<_Tp&&> {
-#  if _LIBCPP_STD_VER >= 26
-  static_assert(false, "instantiation of optional with an rvalue reference type is ill-formed");
-#  else
-  static_assert(false, "instantiation of optional with a reference type is ill-formed");
-#  endif
 };
 
 _LIBCPP_END_NAMESPACE_STD

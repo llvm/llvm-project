@@ -25,8 +25,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class optional;
 
+#  if _LIBCPP_STD_VER >= 26
 template <class _Tp>
 class optional<_Tp&>;
+#  endif
 
 template <class _Tp>
 optional(_Tp) -> optional<_Tp>;

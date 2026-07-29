@@ -63,6 +63,9 @@ inline constexpr bool __is_std_optional_v = false;
 template <class _Tp>
 inline constexpr bool __is_std_optional_v<optional<_Tp>> = true;
 
+template <class _Tp, bool = is_reference<_Tp>::value>
+struct __optional_storage_base;
+
 #  if _LIBCPP_STD_VER < 26
 template <class _Tp>
 inline constexpr bool __is_valid_optional_contained_type = is_object_v<_Tp>;
