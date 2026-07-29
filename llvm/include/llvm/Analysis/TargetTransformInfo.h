@@ -191,6 +191,7 @@ enum class VectorInstrContext : uint8_t {
   Load,  ///< The value being inserted comes from a load (InsertElement only).
   Store, ///< The extracted value is stored (ExtractElement only).
   BinaryOp, ///< One of the operands is a binary op.
+  SplatOp,  ///< The value's user supports a scalar splat operand
 };
 
 class IntrinsicCostAttributes {
@@ -1518,6 +1519,10 @@ public:
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
                                                      const Value *Y);
 
+  /// Return true if a vector instruction with opcode \p Opcode can lower to a
+  /// target instruction able to splat operand \p Operand.
+  LLVM_ABI bool canSplatOperand(unsigned Opcode, int Operand) const;
+
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
   /// From Agner Fog's guides, reciprocal throughput is "the average number of
@@ -1568,7 +1573,8 @@ public:
       ArrayRef<int> Mask = {},
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const;
+      const Instruction *CxtI = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///

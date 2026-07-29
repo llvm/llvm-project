@@ -33,13 +33,16 @@ namespace llvm::slpvectorizer {
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for
 /// insert subvector pattern.
-InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
-                               TargetTransformInfo::ShuffleKind Kind,
-                               VectorType *Tp, ArrayRef<int> Mask = {},
-                               TargetTransformInfo::TargetCostKind CostKind =
-                                   TargetTransformInfo::TCK_RecipThroughput,
-                               int Index = 0, VectorType *SubTp = nullptr,
-                               ArrayRef<const Value *> Args = {});
+InstructionCost
+getShuffleCost(const TargetTransformInfo &TTI,
+               TargetTransformInfo::ShuffleKind Kind, VectorType *Tp,
+               ArrayRef<int> Mask = {},
+               TargetTransformInfo::TargetCostKind CostKind =
+                   TargetTransformInfo::TCK_RecipThroughput,
+               int Index = 0, VectorType *SubTp = nullptr,
+               ArrayRef<const Value *> Args = {},
+               TargetTransformInfo::VectorInstrContext VIC =
+                   TargetTransformInfo::VectorInstrContext::None);
 
 /// Calculate the scalar and the vector costs from vectorizing set of GEPs.
 std::pair<InstructionCost, InstructionCost>

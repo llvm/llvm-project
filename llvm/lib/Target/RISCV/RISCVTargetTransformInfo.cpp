@@ -999,6 +999,17 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                SubTp);
 }
 
+InstructionCost RISCVTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  if (VIC == TTI::VectorInstrContext::SplatOp)
+    return TTI::TCC_Free;
+  return getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args,
+                        CxtI);
+}
+
 static unsigned isM1OrSmaller(MVT VT) {
   RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
   return (LMUL == RISCVVType::VLMUL::LMUL_F8 ||
@@ -2560,6 +2571,12 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
       Opcode != Instruction::InsertElement)
     return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
                                      VIC);
+
+  // Scalar splat operand can be folded for vector ops that support splatting
+  // the scalar operand, so the explicit insertelement is free in this context.
+  if (Opcode == Instruction::InsertElement &&
+      VIC == TTI::VectorInstrContext::SplatOp)
+    return TTI::TCC_Free;
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);

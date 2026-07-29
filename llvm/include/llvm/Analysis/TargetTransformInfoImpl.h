@@ -784,6 +784,16 @@ public:
     return 1;
   }
 
+  virtual InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args,
+                 const Instruction *CxtI, TTI::VectorInstrContext VIC) const {
+    (void)VIC;
+    return getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+                          Args, CxtI);
+  }
+
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, TTI::CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
@@ -1141,6 +1151,10 @@ public:
   virtual bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                            ElementCount VF) const {
     return true;
+  }
+
+  virtual bool canSplatOperand(unsigned Opcode, int Operand) const {
+    return false;
   }
 
   virtual bool isElementTypeLegalForScalableVector(Type *Ty) const {

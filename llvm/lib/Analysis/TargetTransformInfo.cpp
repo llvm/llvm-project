@@ -1009,6 +1009,10 @@ TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
   return OpInfoX.mergeWith(getOperandInfo(Y));
 }
 
+bool TargetTransformInfo::canSplatOperand(unsigned Opcode, int Operand) const {
+  return TTIImpl->canSplatOperand(Opcode, Operand);
+}
+
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
@@ -1046,14 +1050,15 @@ InstructionCost TargetTransformInfo::getAltInstrCost(
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy, ArrayRef<int> Mask,
     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
   InstructionCost Cost = TTIImpl->getShuffleCost(
-      Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args, CxtI);
+      Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args, CxtI, VIC);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
