@@ -136,6 +136,11 @@ private:
   /// Read relocations from a given RELR section.
   void readDynamicRelrRelocations(BinarySection &Section);
 
+  /// Process relative dynamic relocations targeting code. This happens in code
+  /// using indirect goto.
+  void handleRelativeDynamicRelocation(uint64_t RelOffset,
+                                       uint64_t ReferencedAddress);
+
   /// Print relocation information.
   void printRelocationInfo(const RelocationRef &Rel, StringRef SymbolName,
                            uint64_t SymbolAddress, uint64_t Addend,
@@ -274,6 +279,12 @@ private:
   /// Adjust function sizes and set proper maximum size values after the whole
   /// symbol table has been processed.
   void adjustFunctionBoundaries(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
+
+  /// Promote unmarked executable regions after CFI-bounded functions into
+  /// separate BinaryFunction objects (__BOLT_FDE_FUNC* or named symbols
+  /// whose FDE range matches their size).
+  void
+  splitUnmarkedTailFunctions(DenseMap<uint64_t, MarkerSymType> &MarkerSyms);
 
   /// Make .eh_frame section relocatable.
   void relocateEHFrameSection();

@@ -933,7 +933,8 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
         ranges.emplace_back(std::move(base_addr), range.HighPC - range.LowPC);
     }
   } else {
-    LLDB_LOG_ERROR(log, die_ranges.takeError(), "DIE({1:x}): {0}", die.GetID());
+    LLDB_LOG_ERRORV(log, die_ranges.takeError(), "DIE({1:x}): {0}",
+                    die.GetID());
   }
   if (ranges.empty())
     return nullptr;
@@ -3368,8 +3369,8 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
         ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
                              function_die.GetFirstChild(), function_file_addr);
     } else {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                     "{1:x}: {0}", dwarf_cu->GetOffset());
+      LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                      "{1:x}: {0}", dwarf_cu->GetOffset());
     }
   }
 
@@ -3405,8 +3406,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         if (!ranges->empty())
           func_lo_pc = ranges->begin()->LowPC;
       } else {
-        LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                       "DIE({1:x}): {0}", function_die.GetID());
+        LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                        "DIE({1:x}): {0}", function_die.GetID());
       }
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
         const size_t num_variables =

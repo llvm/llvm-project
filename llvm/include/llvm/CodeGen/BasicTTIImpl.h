@@ -667,9 +667,10 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
-    // there.
-    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
+    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
+    // small code model allows a 4GB span of text + data, which might not fit
+    // in the 32-bit offsets relative lookup tables generate.
+    if (TargetTriple.isAArch64())
       return false;
 
     return true;
@@ -680,6 +681,21 @@ public:
     EVT VT = TLI->getValueType(DL, Ty);
     return TLI->isTypeLegal(VT) &&
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
+  }
+
+  bool haveFastClmul(IntegerType *Ty) const override {
+    // FIXME: clmul should really be Promote for any bitwidth under the largest
+    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
+    // around that shortcoming.
+    const DataLayout &DL = thisT()->DL;
+    IntegerType *IndexTy =
+        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
+    if (Ty->getBitWidth() > IndexTy->getBitWidth())
+      return false;
+
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, IndexTy);
+    return TLI->isOperationLegalOrCustom(ISD::CLMUL, VT);
   }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
@@ -843,6 +859,10 @@ public:
     return BaseT::simplifyDemandedVectorEltsIntrinsic(
         IC, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
         SimplifyAndSetOp);
+  }
+
+  InstructionCost getBranchMispredictPenalty() const override {
+    return getST()->getMispredictionPenalty();
   }
 
   std::optional<unsigned>

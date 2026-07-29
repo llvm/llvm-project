@@ -1196,7 +1196,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       }
 
       SVal InitVal;
-      if (Init->getType()->isArrayType()) {
+      if (Field->getType()->isArrayType()) {
         // Handle arrays of trivial type. We can represent this with a
         // primitive load/copy from the base array region.
         const ArraySubscriptExpr *ASE;
@@ -1716,6 +1716,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::CXXExpansionStmtPatternClass:
+    case Stmt::CXXExpansionStmtInstantiationClass:
+    case Stmt::CXXExpansionSelectExprClass:
     case Stmt::OMPCanonicalLoopClass:
     case Stmt::OMPParallelDirectiveClass:
     case Stmt::OMPSimdDirectiveClass:
@@ -2661,7 +2664,6 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
 
   DefinedSVal V = X.castAs<DefinedSVal>();
 
-  ProgramStateRef StTrue, StFalse;
   return State->assume(V);
 }
 

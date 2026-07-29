@@ -12,7 +12,7 @@ program test
   !$omp end parallel
 end program test
 
-! CHECK: omp.declare_reduction @add_reduction_byref_rec__QFTt :
+! CHECK: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*rec__QFTt}}" :
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca [[TY:.*]]
 ! CHECK:   omp.yield(%[[ALLOCA]] : !fir.ref<[[TY]]>)
 ! CHECK: } init {

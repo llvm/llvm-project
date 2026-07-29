@@ -87,8 +87,9 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
 static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
     return false;
-  // The first square bracket is part of an ObjC array literal
-  if (Tok.Previous && Tok.Previous->is(tok::at))
+  // The first square bracket belongs to an ObjC array literal or malformed
+  // nested-bracket input.
+  if (Tok.Previous && Tok.Previous->isOneOf(tok::at, tok::l_square))
     return false;
   const FormatToken *AttrTok = Tok.Next->Next;
   if (!AttrTok)
@@ -449,7 +450,7 @@ private:
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.

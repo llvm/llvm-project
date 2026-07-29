@@ -501,7 +501,7 @@ mlir:vectorops:
 coroutines:
   - changed-files:
     - any-glob-to-any-file:
-      - clang/docs/DebuggingCoroutines.rst
+      - clang/docs/DebuggingCoroutines.md
       - clang/lib/Sema/SemaCoroutine.cpp
       - clang/lib/CodeGen/CGCoroutine.cpp
       - clang/test/CodeGenCoroutines/**
@@ -832,7 +832,7 @@ llvm:ir:
     - any-glob-to-any-file:
       - llvm/lib/IR/**
       - llvm/include/llvm/IR/**
-      - llvm/docs/LangRef.rst
+      - llvm/docs/LangRef.md
       - llvm/unittests/IR/**
 
 llvm:SandboxIR:

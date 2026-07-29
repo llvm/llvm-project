@@ -584,6 +584,17 @@ private:
       DiagSuppressionMapping;
 
 public:
+  /// Returns a cache key representing the diagnostic state at \p Loc.
+  const void *getDiagStateKeyForLoc(SourceLocation Loc) const {
+    return GetDiagStateForLoc(Loc);
+  }
+
+  /// True if an active diagnostic suppression mapping makes severity dependent
+  /// on the file path.
+  bool hasDiagSuppressionMapping() const {
+    return static_cast<bool>(DiagSuppressionMapping);
+  }
+
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
                              DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
@@ -1877,7 +1888,8 @@ void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
-llvm::SmallString<16> DisplayCodePointForDiagnostic(llvm::UTF32 CodePoint);
+SmallString<16> EscapeSingleCodepointForDiagnostic(StringRef Str);
+SmallString<16> EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

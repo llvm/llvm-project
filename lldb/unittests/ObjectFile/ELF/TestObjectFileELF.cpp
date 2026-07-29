@@ -96,11 +96,11 @@ Symbols:
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 
-  auto bss_sp = list->FindSectionByName(ConstString(".bss"));
+  auto bss_sp = list->FindSectionByName(".bss");
   ASSERT_NE(nullptr, bss_sp);
-  auto data_sp = list->FindSectionByName(ConstString(".data"));
+  auto data_sp = list->FindSectionByName(".data");
   ASSERT_NE(nullptr, data_sp);
-  auto text_sp = list->FindSectionByName(ConstString(".text"));
+  auto text_sp = list->FindSectionByName(".text");
   ASSERT_NE(nullptr, text_sp);
 
   const Symbol *X = module_sp->FindFirstSymbolWithNameAndType(ConstString("X"),
@@ -310,7 +310,7 @@ Sections:
   EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, arch.GetCore());
   EXPECT_EQ(model.name, arch.GetClangTargetCPU());
   bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
-  EXPECT_EQ(is_gcn ? llvm::Triple::amdgcn : llvm::Triple::r600,
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
             arch.GetTriple().getArch());
   EXPECT_EQ(llvm::Triple::AMD, arch.GetTriple().getVendor());
   EXPECT_EQ(llvm::Triple::AMDHSA, arch.GetTriple().getOS());

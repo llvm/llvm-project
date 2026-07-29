@@ -437,7 +437,7 @@ void FormatEntity::Entry::Dump(Stream &s, int depth) const {
   if (number != 0)
     s.Printf("number = %" PRIu64 " (0x%" PRIx64 "), ", number, number);
   if (deref)
-    s.Printf("deref = true, ");
+    s.PutCString("deref = true, ");
   s.EOL();
   for (const auto &children : children_stack) {
     for (const auto &child : children)
@@ -461,7 +461,7 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
       if (script_interpreter->RunScriptFormatKeyword(script_function_name, t,
                                                      script_output, error) &&
           error.Success()) {
-        s.Printf("%s", script_output.c_str());
+        s.PutCString(script_output.c_str());
         return true;
       } else {
         s.Printf("<error: %s>", error.AsCString());
@@ -2049,12 +2049,12 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
           Address pc;
           pc.SetLoadAddress(pc_loadaddr, m_exe_ctx->GetTargetPtr());
           if (pc == *m_addr) {
-            s.Printf("-> ");
+            s.PutCString("-> ");
             return true;
           }
         }
       }
-      s.Printf("   ");
+      s.PutCString("   ");
       return true;
     }
     return false;

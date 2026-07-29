@@ -706,6 +706,16 @@ def FormatTypesMatchOptionalOp : TEST_Op<"format_types_match_optional", [
   }];
 }
 
+def FormatOptionalOperandTypeOp
+    : TEST_Op<"format_optional_operand_type"> {
+  let arguments = (ins Optional<AnyType>:$optional);
+  let assemblyFormat = [{
+    (`(` $optional^ `)`)?
+    (`:` type($optional)^)?
+    attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
 //===----------------------------------------------------------------------===//

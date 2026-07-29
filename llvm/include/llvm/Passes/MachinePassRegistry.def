@@ -46,6 +46,8 @@ MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
                           MachineOptimizationRemarkEmitterAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-register-class-info",
+                          MachineRegisterClassAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-regions", MachineRegionInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
@@ -247,7 +249,7 @@ DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
 DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
-DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
+DUMMY_MACHINE_FUNCTION_PASS("prolog-epilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)
 DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
