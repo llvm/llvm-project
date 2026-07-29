@@ -30,6 +30,7 @@
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -498,11 +499,14 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
     return nullptr;
   auto &[type, die] = *pair;
 
+  // Whether this descriptor describes an aggregate rather than a primitive.
+  // It decides how a missing DW_AT_alignment is read below.
   bool is_enum = false;
   if (!llvm::isa<swift::reflection::BuiltinTypeRef>(TR) &&
       !TypeSystemSwiftTypeRef::IsBuiltinType(type)) {
     if (die.Tag() == llvm::dwarf::DW_TAG_structure_type) {
       auto child = die.GetFirstChild();
+      // From the non-builtin types, only enums have a builtin type descriptor.
       if (child.Tag() != llvm::dwarf::DW_TAG_variant_part)
         return nullptr;
       is_enum = true;
@@ -515,21 +519,35 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
   if (byte_size == LLDB_INVALID_ADDRESS)
     return nullptr;
 
-  // Enums with DWARF byte_size 0 are an LLVM artifact: the compiler
-  // can't emit unsized types, so an unsubstituted generic enum's size
-  // is emitted as 0.  If we're here this must be a payload-carrying
-  // enum, and such an enum is never 0 bytes, even if its payload is
-  // size 0. Decline to synthesize a fixed descriptor so reflection
-  // instead derives the layout dynamically from the payloads.
-  if (is_enum && byte_size == 0)
+  // The compiler emits DW_AT_alignment whenever it knows a type's alignment, so
+  // a missing attribute means the alignment is unknown. It does not mean the
+  // natural alignment for the type, which is the usual DWARF reading: that
+  // convention only works for a consumer that can recompute the natural
+  // alignment itself, and an aggregate's alignment is the maximum over its
+  // members, which cannot be recovered here without reimplementing Swift's
+  // type layout.
+  auto maybe_alignment =
+      die.GetAttributeValueAsOptionalUnsigned(llvm::dwarf::DW_AT_alignment);
+
+  bool is_unsubustituted_enum = !maybe_alignment && is_enum;
+  // If we don't know the alignment there are two cases:
+  // - This is a builtin type, encoded as a DW_TAG_base_type, whose alignment
+  // matches its size.
+  // - This is an unsubstituted enum, in which case we can't procude a builtin
+  // descriptor since we can't know the alignment.
+  if (is_unsubustituted_enum)
     return nullptr;
 
-  auto alignment = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment,
-                                                   byte_size ? byte_size : 8);
+  uint64_t alignment = maybe_alignment.value_or(byte_size);
+  if (alignment == 0) {
+    assert(false && "Unexpected 0 alignment!");
+    return nullptr;
+  }
 
-  // TODO: this seems simple to calculate but maybe we should encode the stride
-  // in DWARF? That's what reflection metadata does.
-  unsigned stride = ((byte_size + alignment - 1) & ~(alignment - 1));
+  // Clamping to 1 matches how reflection lowers a zero-sized type; see the
+  // stride computation in TypeLowering.cpp. Leaving it at 0 would make
+  // distinct elements of a zero-sized type share an address.
+  unsigned stride = std::max<unsigned>(llvm::alignTo(byte_size, alignment), 1);
 
   auto num_extra_inhabitants = die.GetAttributeValueAsUnsigned(
       llvm::dwarf::DW_AT_LLVM_num_extra_inhabitants, 0);
