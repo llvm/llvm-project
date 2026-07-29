@@ -96,12 +96,10 @@ __set_intersection(
     _Compare&& __comp,
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
-  _LIBCPP_CONSTEXPR std::__identity __proj;
   bool __prev_may_be_equal = false;
 
   while (__first2 != __last2) {
-    _InForwardIter1 __first1_next =
-        std::__lower_bound_onesided<_AlgPolicy>(__first1, __last1, *__first2, __comp, __proj);
+    _InForwardIter1 __first1_next = std::__lower_bound_onesided<_AlgPolicy>(__first1, __last1, *__first2, __comp);
     std::swap(__first1_next, __first1);
     // keeping in mind that a==b iff !(a<b) && !(b<a):
     // if we can't advance __first1, that means !(*__first1 < *_first2), therefore __may_be_equal==true
@@ -110,8 +108,7 @@ __set_intersection(
     if (__first1 == __last1)
       break;
 
-    _InForwardIter2 __first2_next =
-        std::__lower_bound_onesided<_AlgPolicy>(__first2, __last2, *__first1, __comp, __proj);
+    _InForwardIter2 __first2_next = std::__lower_bound_onesided<_AlgPolicy>(__first2, __last2, *__first1, __comp);
     std::swap(__first2_next, __first2);
     std::__set_intersection_add_output_if_equal(
         __first2 == __first2_next, __first1, __first2, __result, __prev_may_be_equal);

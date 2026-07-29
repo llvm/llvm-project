@@ -100,6 +100,25 @@ public:
         cir::CUDADeviceVarKind::Variable,
     });
   }
+
+  void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var,
+                          bool isExtern) {
+    auto &builder = cgm.getBuilder();
+
+    var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
+                 cir::CUDAVarRegistrationInfoAttr::get(
+                     builder.getContext(),
+                     getDeviceSideName(cast<NamedDecl>(vd)),
+                     cir::CUDADeviceVarKind::Surface, isExtern,
+                     /*isConstant=*/false,
+                     /*isManaged=*/false));
+
+    deviceVars.push_back({
+        var,
+        vd,
+        cir::CUDADeviceVarKind::Surface,
+    });
+  }
 };
 
 } // namespace
@@ -458,12 +477,15 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
       registerDeviceVar(vd, var, !vd->hasDefinition(),
                         vd->hasAttr<CUDAConstantAttr>());
     }
-  } else if (vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
-             vd->getType()->isCUDADeviceBuiltinTextureType()) {
-    // Builtin surfaces and textures and their template arguments are
-    // also registered with CUDA runtime.
+  } else if (vd->getType()->isCUDADeviceBuiltinSurfaceType()) {
+    // Builtin surfaces and their template arguments are also registered
+    // with CUDA runtime.
+    if (!vd->hasExternalStorage())
+      registerDeviceSurf(vd, var, !vd->hasDefinition());
+
+  } else if (vd->getType()->isCUDADeviceBuiltinTextureType()) {
     cgm.errorNYI(vd->getSourceRange(),
-                 "handleVarRegistration: Surface and Texture registration");
+                 "handleVarRegistration: Texture registration");
   }
 }
 

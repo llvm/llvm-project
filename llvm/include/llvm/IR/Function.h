@@ -291,51 +291,25 @@ public:
     }
   }
 
-  enum ProfileCountType { PCT_Real, PCT_Synthetic };
-
-  /// Class to represent profile counts.
-  ///
-  /// This class represents both real and synthetic profile counts.
-  class ProfileCount {
-  private:
-    uint64_t Count = 0;
-    ProfileCountType PCT = PCT_Real;
-
-  public:
-    ProfileCount(uint64_t Count, ProfileCountType PCT)
-        : Count(Count), PCT(PCT) {}
-    uint64_t getCount() const { return Count; }
-    ProfileCountType getType() const { return PCT; }
-    bool isSynthetic() const { return PCT == PCT_Synthetic; }
-  };
-
   /// Set the entry count for this function.
   ///
   /// Entry count is the number of times this function was executed based on
   /// pgo data. \p Imports points to a set of GUIDs that needs to
   /// be imported by the function for sample PGO, to enable the same inlines as
   /// the profiled optimized binary.
-  void setEntryCount(ProfileCount Count,
-                     const DenseSet<GlobalValue::GUID> *Imports = nullptr);
-
-  /// A convenience wrapper for setting entry count
-  void setEntryCount(uint64_t Count, ProfileCountType Type = PCT_Real,
+  void setEntryCount(uint64_t Count,
                      const DenseSet<GlobalValue::GUID> *Imports = nullptr);
 
   /// Get the entry count for this function.
   ///
   /// Entry count is the number of times the function was executed.
-  /// When AllowSynthetic is false, only pgo_data will be returned.
-  std::optional<ProfileCount> getEntryCount(bool AllowSynthetic = false) const;
+  std::optional<uint64_t> getEntryCount() const;
 
   /// Return true if the function is annotated with profile data.
   ///
   /// Presence of entry counts from a profile run implies the function has
-  /// profile annotations. If IncludeSynthetic is false, only return true
-  /// when the profile data is real.
-  bool hasProfileData(bool IncludeSynthetic = false) const {
-    return getEntryCount(IncludeSynthetic).has_value();
-  }
+  /// profile annotations.
+  bool hasProfileData() const { return getEntryCount().has_value(); }
 
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
@@ -657,6 +631,9 @@ public:
   void setDoesNotRecurse() {
     addFnAttr(Attribute::NoRecurse);
   }
+
+  /// Determine if the function has strict floating point sematics.
+  bool isStrictFP() const { return hasFnAttribute(Attribute::StrictFP); }
 
   /// Determine if the function is required to make forward progress.
   bool mustProgress() const {

@@ -743,6 +743,7 @@ def LLVM_InvokeOp
                    Variadic<LLVM_Type>:$unwindDestOperands,
                    OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                    DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+                   OptionalAttr<DictionaryAttr>:$default_func_attrs,
                    VariadicOfVariadic<LLVM_Type,
                                       "op_bundle_sizes">:$op_bundle_operands,
                    DenseI32ArrayAttr:$op_bundle_sizes,
@@ -2018,6 +2019,11 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       llvm.return
     }
     ```
+
+    The `function_entry_count` attribute models function-level `!prof`
+    entry-count metadata. It stores the entry count, whether the count is real
+    or synthetic, and any trailing import GUID operands in a single
+    `#llvm.function_entry_count` attribute.
   }];
 
   let arguments = (ins
@@ -2034,7 +2040,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<ArrayAttr>:$passthrough,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
-    OptionalAttr<I64Attr>:$function_entry_count,
+    OptionalAttr<LLVM_FunctionEntryCountAttr>:$function_entry_count,
     OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     UnitAttr:$arm_streaming, UnitAttr:$arm_locally_streaming,
@@ -2643,8 +2649,10 @@ def LLVM_ModuleFlagsOp
   let summary = "Information about module properties";
   let description = [{
     Represents the equivalent in MLIR for LLVM's `llvm.module.flags` metadata,
-    which requires a list of metadata triplets. Each triplet entry is described
-    by a `ModuleFlagAttr`.
+    which requires a list of metadata triplets (combining kind, name, value),
+    either specified directly by a `ModuleFlagAttr` or defined by an attribute
+    implementing `ModuleFlagAttrInterface` (which is used to wrap the details
+    of metadata combining, provided other verifications, etc.)
 
     Example:
     ```mlir

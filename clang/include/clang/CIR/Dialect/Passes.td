@@ -195,6 +195,18 @@ def IdiomRecognizer : Pass<"cir-idiom-recognizer", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def LibOpt : Pass<"cir-lib-opt"> {
+  let summary = "Optimize C/C++ library calls";
+  let description = [{
+    This pass applies transformations on C/C++ standard library idioms,
+    such as library function calls and structs raised to CIR operations
+     using the `cir-idiom-recognize` pass.
+  }];
+
+  let constructor = "mlir::createLibOptPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let summary = "Lower CIR function signatures and call sites to match target ABI";
   let description = [{
@@ -227,12 +239,27 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let constructor = "mlir::createCallConvLoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
   let options = [
-    Option<"target", "target", "std::string", /*default=*/"\"\"",
-           "Target whose ABI rules drive classification (currently: test)">,
+    Option<"target", "target", "cir::CallConvTarget",
+           /*default=*/"cir::CallConvTarget::None",
+           "Target whose ABI rules drive classification",
+           [{::llvm::cl::values(
+             clEnumValN(cir::CallConvTarget::Test, "test",
+                        "MLIR test ABI target"),
+             clEnumValN(cir::CallConvTarget::X86_64, "x86_64",
+                        "x86_64 System V")
+           )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",
            "Function attribute name carrying a pre-built FunctionClassification "
            "DictionaryAttr (alternative to target=, used by tests)">,
+    Option<"x86AvxAbiLevel", "x86-avx-abi-level", "llvm::abi::X86AVXABILevel",
+           /*default=*/"llvm::abi::X86AVXABILevel::None",
+           "AVX ABI level for the x86_64 target",
+           [{::llvm::cl::values(
+             clEnumValN(llvm::abi::X86AVXABILevel::None, "none", "No AVX"),
+             clEnumValN(llvm::abi::X86AVXABILevel::AVX, "avx", "AVX"),
+             clEnumValN(llvm::abi::X86AVXABILevel::AVX512, "avx512", "AVX512")
+           )}]>,
   ];
 }
 

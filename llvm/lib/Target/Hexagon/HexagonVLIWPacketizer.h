@@ -22,7 +22,8 @@ class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class HexagonPacketizerList : public VLIWPacketizerList {
   // Vector of instructions assigned to the packet that has just been created.

@@ -748,7 +748,7 @@ getConstantsFromExprList(const SmallVector<AffineExpr, 2> &exprs) {
   return vals;
 }
 
-/// Classifies dimensions in the `linalgOp` used by a convolution
+/// Classifies dimensions in the `indexingMaps` used by a convolution
 /// subcomputation, as captured by `inputExprWalker`. If
 /// `allowEmptyConvolvedDims` is not set this will fail if there is not
 /// at least one convolved dimension pair (output image + filter loop).
@@ -761,18 +761,21 @@ getConstantsFromExprList(const SmallVector<AffineExpr, 2> &exprs) {
 /// - `strides[i]` corresponds to `outputImage[i]`.
 /// - `dilations[i]` corresponds to `filterLoop[i]`.
 /// - Other dimension sets (batch, outputChannel, etc.) are sorted by index.
-static FailureOr<ConvolutionDimensions>
-inferConvolutionDimsImpl(LinalgOp linalgOp,
-                         ConvAccessExprWalker &inputExprWalker,
-                         bool allowEmptyConvolvedDims) {
-  auto filterMap =
-      linalgOp.getMatchingIndexingMap(linalgOp.getDpsInputOperand(1));
-  auto outputMap =
-      linalgOp.getMatchingIndexingMap(linalgOp.getDpsInitOperand(0));
-  llvm::SmallDenseSet<int64_t> filterDims = findPermutationsIndexingOperand(
-      filterMap, linalgOp.getIteratorTypesArray(), par);
-  llvm::SmallDenseSet<int64_t> outputDims = findPermutationsIndexingOperand(
-      outputMap, linalgOp.getIteratorTypesArray(), par);
+///
+/// `nativeStrides` and `nativeDilations`, when non-null, are the op-carried
+/// `strides`/`dilations` attributes and take precedence over the values derived
+/// from the convolution access pattern. They are null for the maps-based
+/// overload.
+static FailureOr<ConvolutionDimensions> inferConvolutionDimsImpl(
+    ArrayRef<AffineMap> indexingMaps, ArrayRef<utils::IteratorType> iterators,
+    ConvAccessExprWalker &inputExprWalker, bool allowEmptyConvolvedDims,
+    DenseIntElementsAttr nativeStrides, DenseIntElementsAttr nativeDilations) {
+  AffineMap filterMap = indexingMaps[1];
+  AffineMap outputMap = indexingMaps.back();
+  llvm::SmallDenseSet<int64_t> filterDims =
+      findPermutationsIndexingOperand(filterMap, iterators, par);
+  llvm::SmallDenseSet<int64_t> outputDims =
+      findPermutationsIndexingOperand(outputMap, iterators, par);
 
   // unConvolvedDims & outputDims - filterDims are the batch iterators.
   llvm::SmallDenseSet<int64_t> batch = inputExprWalker.unConvolvedDims;
@@ -794,8 +797,7 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
   llvm::set_intersect(depth, inputExprWalker.unConvolvedDims);
 
   llvm::SmallDenseSet<int64_t> filterReducedDims =
-      findPermutationsIndexingOperand(filterMap,
-                                      linalgOp.getIteratorTypesArray(), red);
+      findPermutationsIndexingOperand(filterMap, iterators, red);
 
   // convolvedDims & filterReducedDims are the filter loop iterators.
   llvm::SmallDenseSet<int64_t> fl = inputExprWalker.convolvedDims;
@@ -832,7 +834,6 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
     dimensions.filterLoop.push_back(inputExprWalker.convolvedDimMapping[oiDim]);
 
   // Use the op carried strides/dilations attribute if present.
-  auto nativeStrides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
   if (!nativeStrides) {
     SmallVector<AffineExpr, 2> strideExprs;
     for (unsigned oiDim : dimensions.outputImage)
@@ -841,8 +842,6 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
   } else {
     dimensions.strides = llvm::to_vector<2>(nativeStrides.getValues<int64_t>());
   }
-  auto nativeDilations =
-      linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations");
   if (!nativeDilations) {
     SmallVector<AffineExpr, 2> dilationExprs;
     for (unsigned flDim : dimensions.filterLoop)
@@ -896,8 +895,35 @@ mlir::linalg::inferConvolutionDims(LinalgOp linalgOp) {
     (void)inputExprWalker.visit(expr);
   inputExprWalker.clearMultiUseDims(indexingMaps[0]);
 
-  return inferConvolutionDimsImpl(linalgOp, inputExprWalker,
-                                  /*allowEmptyConvolvedDims=*/false);
+  return inferConvolutionDimsImpl(
+      indexingMaps, linalgOp.getIteratorTypesArray(), inputExprWalker,
+      /*allowEmptyConvolvedDims=*/false,
+      linalgOp->getAttrOfType<DenseIntElementsAttr>("strides"),
+      linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations"));
+}
+
+FailureOr<ConvolutionDimensions>
+mlir::linalg::inferConvolutionDims(ArrayRef<AffineMap> indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return failure();
+
+  // Infer iterator types from the output map.
+  FailureOr<SmallVector<utils::IteratorType>> iterators =
+      inferIteratorsFromOutMap(indexingMaps[2]);
+  if (failed(iterators))
+    return failure();
+
+  // Check the input indexing map has the right form.
+  ConvAccessExprWalker inputExprWalker;
+  for (AffineExpr expr : indexingMaps[0].getResults())
+    (void)inputExprWalker.visit(expr);
+  inputExprWalker.clearMultiUseDims(indexingMaps[0]);
+
+  return inferConvolutionDimsImpl(indexingMaps, iterators.value(),
+                                  inputExprWalker,
+                                  /*allowEmptyConvolvedDims=*/false,
+                                  /*nativeStrides=*/nullptr,
+                                  /*nativeDilations=*/nullptr);
 }
 
 namespace mlir::linalg::detail {
@@ -1040,7 +1066,9 @@ mlir::linalg::detail::isConvolutionInterfaceImpl(
 
   if (dimensions) {
     FailureOr<ConvolutionDimensions> res = inferConvolutionDimsImpl(
-        linalgOp, inputExprWalker, allowEmptyConvolvedDims);
+        indexingMaps, iteratorTypes, inputExprWalker, allowEmptyConvolvedDims,
+        linalgOp->getAttrOfType<DenseIntElementsAttr>("strides"),
+        linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations"));
     assert(succeeded(res) && "unexpected failure to infer convolution dims");
     *dimensions = *res;
   }

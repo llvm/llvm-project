@@ -133,20 +133,22 @@ def err_invalid_utf8 : Error<
 def warn_invalid_utf8_in_comment : Extension<
   "invalid UTF-8 in comment">, InGroup<DiagGroup<"invalid-utf8">>;
 def err_character_not_allowed : Error<
-  "unexpected character <U+%0>">;
+  "unexpected character %0">;
 def err_character_not_allowed_identifier : Error<
-  "character <U+%0> not allowed %select{in|at the start of}1 an identifier">;
+  "character %0 not allowed %select{in|at the start of}1 an identifier">;
 def ext_unicode_whitespace : ExtWarn<
-  "treating Unicode character as whitespace">,
-  InGroup<DiagGroup<"unicode-whitespace">>;
+  "treating character %0 as whitespace">,
+  InGroup<DiagGroup<"unicode-whitespace">>, DefaultError;
 def warn_utf8_symbol_homoglyph : Warning<
-  "treating Unicode character <U+%0> as an identifier character rather than "
+  "treating character %0 as an identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 def warn_utf8_symbol_zero_width : Warning<
-  "identifier contains Unicode character <U+%0> that is invisible in "
+  "identifier contains character %0 that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
+defm mathematical_notation : CXX29Compat<
+  "mathematical notation character %0 in an identifier is">;
 def ext_mathematical_notation : ExtWarn<
-  "mathematical notation character <U+%0> in an identifier is a Clang extension">,
+  "mathematical notation character %0 in an identifier is a Clang extension">,
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<
@@ -170,9 +172,11 @@ def err_hex_escape_no_digits : Error<
 def err_invalid_ucn_name : Error<
   "'%0' is not a valid Unicode character name">;
 def note_invalid_ucn_name_loose_matching : Note<
-  "characters names in Unicode escape sequences are sensitive to case and whitespaces">;
+  "character names in Unicode escape sequences are sensitive to case and whitespaces">;
 def note_invalid_ucn_name_candidate : Note<
-  "did you mean %0 ('%2' U+%1)?">;
+  "did you mean %0 (%1)?">;
+def note_invalid_ucn_name_character : Note<
+  "character %0 cannot appear in a Unicode character name">;
 
 def warn_ucn_escape_no_digits : Warning<
   "\\%0 used with no following hex digits; "
@@ -287,6 +291,8 @@ def ext_string_too_long : Extension<"string literal of length %0 exceeds "
   "support">, InGroup<OverlengthStrings>;
 def err_character_too_large : Error<
   "character too large for enclosing character literal type">;
+def err_exec_charset_conversion_failed
+    : Error<"conversion to literal encoding failed: '%0'">;
 def warn_c99_compat_unicode_literal : Warning<
   "unicode literals are incompatible with C99">,
   InGroup<C99Compat>, DefaultIgnore;

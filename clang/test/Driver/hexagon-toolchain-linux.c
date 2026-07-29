@@ -182,6 +182,68 @@
 // CHECK-PIE-RELOCATABLE-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
+// Relocatable (-r) links: no CRT start files, no dynamic linker
+// Partial links must not include crt1.o/crti.o — they define _start which
+// would conflict when the relocatable output is later linked into an executable.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RELOC %s
+// CHECK-RELOC-NOT: "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
+// CHECK-RELOC-NOT: "{{.*}}crt1.o"
+// CHECK-RELOC-NOT: "{{.*}}crti.o"
+
+// Verify that a normal (non-relocatable) link still gets the CRT files.
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RELOC-NORMAL %s
+// CHECK-RELOC-NORMAL: "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
+// CHECK-RELOC-NORMAL: "{{.*}}crt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: -static alone gets PIE by default (see PIE-DEFAULT above),
+// so it must link the self-relocating rcrt1.o, not the plain crt1.o. Plain
+// crt1.o never processes the R_HEX_RELATIVE relocations a static-PIE image
+// needs, and the resulting binary crashes during libc startup.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -static %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// CHECK-STATIC-PIE:      "-static" "-pie"
+// CHECK-STATIC-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+// CHECK-STATIC-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: -static -no-pie must still link the plain, non-relocating
+// crt1.o (a static non-PIE image has no relocations to apply).
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -static -no-pie %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-NO-PIE %s
+// CHECK-STATIC-NO-PIE:      "-static"
+// CHECK-STATIC-NO-PIE-NOT:  "-pie"
+// CHECK-STATIC-NO-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-STATIC-NO-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: a non-static (dynamic) link keeps using crt1.o even though
+// PIE is on by default -- relocation is the dynamic linker's job there, not
+// the CRT's.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-DYNAMIC-PIE %s
+// CHECK-DYNAMIC-PIE:      "-pie"
+// CHECK-DYNAMIC-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-DYNAMIC-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+
+// -----------------------------------------------------------------------------
 // Sanitizer library paths: -fsanitize=memory
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
@@ -204,7 +266,52 @@
 // CHECK-ASAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}asan"
 // CHECK-ASAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
 // -----------------------------------------------------------------------------
-// No sanitizer: no msan/asan library paths
+// Sanitizer library paths: -fsanitize=shadow-call-stack
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS %s
+// CHECK-SCS:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs"
+// CHECK-SCS-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// Library paths: -ffixed-r19 alone must NOT select the scs multilib
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R19-ONLY %s
+// CHECK-R19-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
+// -----------------------------------------------------------------------------
+// Startup object: -fsanitize=shadow-call-stack links the scs crt1.o, not the
+// base crt1.o. Selection is on the multilib in effect, not file presence, so
+// this holds even though the test sysroot ships no usr/lib/scs/crt1.o.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS-CRT %s
+// CHECK-SCS-CRT:     "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs{{/|\\\\}}crt1.o"
+// CHECK-SCS-CRT-NOT: "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// -----------------------------------------------------------------------------
+// Startup object: without the scs multilib, the base crt1.o is used (never the
+// scs one).
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSCS-CRT %s
+// CHECK-NOSCS-CRT:     "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-NOSCS-CRT-NOT: "{{/|\\\\}}scs{{/|\\\\}}crt1.o"
+// -----------------------------------------------------------------------------
+// No sanitizer: no msan/asan/scs library paths
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -213,6 +320,7 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}scs"
 // -----------------------------------------------------------------------------
 // ThinLTO passes LTO options to the linker
 // -----------------------------------------------------------------------------

@@ -17,8 +17,5 @@ from lldbsuite.test import lldbutil
 class TestExprLookupAnonStructTypedef(TestBase):
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
-        )
+        self.build_and_run()
         self.expect_expr("multiply(&s)", result_type="double", result_value="1")

@@ -1139,9 +1139,10 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
     - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
-      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to false.
-      Setting this to true requires every thread in the CTA to reach this same
-      barrier instruction, otherwise the behavior is undefined.
+      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to true,
+      which requires every thread in the CTA to reach this same barrier
+      instruction, otherwise the behavior is undefined. Set it to false to emit
+      the non-`.aligned` form.
 
     Reduction variants of the barrier instruction are modeled by the
     `nvvm.barrier.reduction` op.
@@ -1160,7 +1161,7 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
   let arguments = (ins
       Optional<I32>:$barrierId,
       Optional<I32>:$numberOfThreads,
-      DefaultValuedAttr<BoolAttr, "false">:$aligned);
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
@@ -1187,8 +1188,9 @@ def NVVM_BarrierReductionOp :
       zero to form the i1 value fed into the reduction.
     - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
       underlying `@llvm.nvvm.barrier.cta.red.*` intrinsic family. Defaults to
-      false. Setting this to true requires every thread in the CTA to reach
-      this same barrier instruction, otherwise the behavior is undefined.
+      true, which requires every thread in the CTA to reach this same barrier
+      instruction, otherwise the behavior is undefined. Set it to false to emit
+      the non-`.aligned` form.
 
     The result is the i32 reduction value computed across all threads
     participating in the barrier.
@@ -1200,7 +1202,7 @@ def NVVM_BarrierReductionOp :
       Optional<I32>:$barrierId,
       BarrierReductionAttr:$reductionOp,
       I32:$reductionPredicate,
-      DefaultValuedAttr<BoolAttr, "false">:$aligned);
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
   let results = (outs I32:$res);
 
   let assemblyFormat =
@@ -1215,9 +1217,10 @@ def NVVM_BarrierReductionOp :
   }];
 }
 
-def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
+def NVVM_BarrierArriveOp : NVVM_VoidIntrinsicOp<"barrier.arrive">
 {
-  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
+  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads,
+                       DefaultValuedAttr<BoolAttr, "true">:$aligned);
 
   let description = [{
     Thread that executes this op announces their arrival at the barrier with 
@@ -1226,19 +1229,14 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive">
     The default barrier id is 0 that is similar to `nvvm.barrier` Op. When 
     `barrierId` is not present, the default barrier id is used. 
 
+    The `aligned` attribute, which defaults to `true`, generates the aligned
+    form of the barrier (all threads in the CTA execute the same barrier
+    instruction). When set to `false`, the unaligned form is generated.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
   
   let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
-
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      std::string ptx = "bar.arrive ";
-      if (getBarrierId()) { ptx += "%0, %1;"; } 
-      else { ptx += "0, %0;"; }
-      return ptx;
-    }
-  }];
 }
 
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
@@ -2707,9 +2705,13 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
             [GEOM<8,8,128>, GEOM<16,8,128>, GEOM<16,8,256>],
             ["b1"], [], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> fp8_mma_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["e4m3", "e5m2"], ["e4m3", "e5m2"], ["f16", "f32"], []>.ret;
   list<list<WMMA_REGS>> all_mma_sync_ops = !listconcat(
             tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
-            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
+            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops,
+            fp8_mma_ops);
 
   list<list<WMMA_REGS>> bf16_mma_sp_ops = MMA_OPS<
             [GEOM<16,8,16>, GEOM<16,8,32>],
@@ -3386,9 +3388,9 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     `intOverflowBehavior` is only relevant when the `multiplicandType` attribute
     is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
     in the accumulator. When the attribute is `satfinite`, the accumulator values
-    are clamped in the int32 range on overflow. This is the default behavior.
-    Alternatively, accumulator behavior `wrapped` can also be specified, in
-    which case overflow wraps from one end of the range to the other.
+    are clamped in the int32 range on overflow. Alternatively, accumulator
+    behavior `wrapped` can be specified (this is the default), in which case
+    overflow wraps from one end of the range to the other.
 
     `layoutA` and `layoutB` are required and should generally be set to
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
@@ -3479,9 +3481,16 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   string llvmBuilder = [{
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    // `intOverflowBehavior` is optional and defaults to `wrapped` when omitted.
+    // We initialize it to a concrete value so that the intrinsic selector never
+    // speculatively reads an empty optional's uninitialized payload (benign,
+    // but flagged by Valgrind).
+    std::optional<mlir::NVVM::MMAIntOverflow> intOverflow = mlir::NVVM::MMAIntOverflow::wrapped;
+    if (mlir::NVVM::MMAIntOverflowAttr satAttr = op.getIntOverflowBehaviorAttr())
+      intOverflow = satAttr.getValue();
     auto intId = mlir::NVVM::MmaOp::getIntrinsicID(
         $shape.getM(), $shape.getN(), $shape.getK(),
-        $b1Op, $intOverflowBehavior,
+        $b1Op, intOverflow,
         $layoutA, $layoutB,
         *$multiplicandAPtxType,
         *$multiplicandBPtxType,
@@ -5540,8 +5549,8 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
     Optional<I64>:$offset
   );
 
-  let results = (outs AnyTypeOf<[I32, VectorOfLengthAndType<
-                                  [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$res);
+  let results = (outs VectorOfLengthAndType<
+                        [1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$res);
 
   let assemblyFormat = [{
     $tmemAddr (`,` $offset^)? (`pack` $pack^)? attr-dict `:` type($res)
@@ -5600,11 +5609,9 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
     llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
     auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
 
-    unsigned num = $_resultType->isVectorTy()
-                       ? llvm::cast<llvm::VectorType>($_resultType)
+    unsigned num = llvm::cast<llvm::VectorType>($_resultType)
                              ->getElementCount()
-                             .getFixedValue()
-                       : 1;
+                             .getFixedValue();
 
     auto ID = getTcgen05LdIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -5678,11 +5685,11 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 
     Example:
     ```mlir
-      %data, %redval = nvvm.tcgen05.ld,red %addr, %offset {
+      %data, %redval = nvvm.tcgen05.ld.red %addr, %offset {
         shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
       } : <2xi32>, i32
 
-      %data, %redval = nvvm.tcgen05.ld,red %addr {
+      %data, %redval = nvvm.tcgen05.ld.red %addr {
         shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>,
       } : <2xf32>, f32
     ```
@@ -5719,8 +5726,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
     Tcgen05LdStShapeAttr:$shape,
     // Arguments
     LLVM_PointerTensor:$tmemAddr,
-    AnyTypeOf<[I32, VectorOfLengthAndType<
-                      [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$val,
+    VectorOfLengthAndType<[1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$val,
     Optional<I64>:$offset
   );
 
@@ -5779,10 +5785,9 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
     auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
 
     auto valTy = $val->getType();
-    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
+    uint32_t num = llvm::cast<llvm::VectorType>(valTy)
                                              ->getElementCount()
-                                             .getFixedValue()
-                                       : 1;
+                                             .getFixedValue();
 
     auto ID = getTcgen05StIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -6898,7 +6903,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     TensormapFieldAttr:$field,
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
     Optional<AnyTypeOf<[I64, I32]>>:$new_value,
-    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<5>]>>:$ord,
+    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<4>]>>:$ord,
     OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
   );
 

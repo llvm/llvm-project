@@ -69,7 +69,8 @@ define void @test2(ptr nocapture readonly %d) {
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[PTRINT2]], [[PTRINT]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP2]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], 31
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
