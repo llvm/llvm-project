@@ -36,10 +36,6 @@ void bench(std::string name, Func func, Mod modifier = {}) {
     func(std::type_identity<char>(), state);
   })->Apply(modifier);
 
-  benchmark::RegisterBenchmark(rename(name, "u8string"), [=](benchmark::State& state) {
-    func(std::type_identity<char8_t>(), state);
-  })->Apply(modifier);
-
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   benchmark::RegisterBenchmark(rename(name, "wstring"), [=](benchmark::State& state) {
     func(std::type_identity<wchar_t>(), state);

@@ -3,18 +3,25 @@
 # it requires several inputs that allow customizing its behavior.
 
 name: "[libc++] Run benchmark suite against commit"
+run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}"
 
 permissions:
   contents: read
 
 on:
-  # TODO: Support dispatching only to selected configurations.
   workflow_dispatch:
     inputs:
       commit:
         description: 'The libc++ commit to benchmark'
         required: true
         type: string
+      lnt-machine:
+        description: 'The LNT machine to run the benchmarks on'
+        required: true
+        type: choice
+        options:
+          - macos-26.5-arm64
+          - linux-x86_64
       benchmark-suite-version:
         description: 'The version of the benchmark suite to use (a LLVM monorepo SHA)'
         required: false
@@ -36,19 +43,51 @@ on:
         default: http://lnt.llvm.org
 
 jobs:
+  # Determine which configuration to run based on the `lnt-machine` input.
+  select-machine:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: Select the configuration to benchmark on
+        id: select
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          LNT_MACHINE: ${{ inputs.lnt-machine }}
+        with:
+          script: |
+            const MACHINES = [
+              {
+                'lnt-machine': 'macos-26.5-arm64',
+                runner: ['self-hosted', 'macOS', 'ARM64', '26', '26.5'],
+                cxx: 'clang++',
+                'running-on': 'macos',
+                'xcode-version': '26.5',
+              },
+              {
+                'lnt-machine': 'linux-x86_64',
+                runner: 'llvm-premerge-libcxx-runners',
+                cxx: 'clang++-22',
+                'running-on': 'linux',
+              },
+            ];
+
+            const requested = process.env.LNT_MACHINE;
+            const selected = MACHINES.filter(m => m['lnt-machine'] === requested);
+            if (selected.length === 0) {
+              const known = MACHINES.map(m => m['lnt-machine']).join(', ');
+              core.setFailed(`Unknown LNT machine '${requested}' (known machines: ${known})`);
+              return;
+            }
+
+            core.setOutput('matrix', JSON.stringify(selected));
+
   run-benchmarks:
+    needs:
+      - select-machine
     strategy:
       matrix:
-        include:
-          - lnt-machine: macos-26.5-arm64
-            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cxx: clang++
-            running-on: macos
-            xcode-version: '26.5'
-          - lnt-machine: linux-x86_64
-            runner: llvm-premerge-libcxx-runners
-            cxx: clang++-22
-            running-on: linux
+        include: ${{ fromJSON(needs.select-machine.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.runner }}
     env:
@@ -91,6 +130,7 @@ jobs:
           COMMIT: ${{ inputs.commit }}
           BENCHMARK_SUITE_VERSION: ${{ inputs.benchmark-suite-version }}
           FILTER: ${{ inputs.filter }}
+          LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
           filter_arg=()
           if [ -n "${FILTER}" ]; then
@@ -98,7 +138,7 @@ jobs:
           fi
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
-            --machine ${{ matrix.lnt-machine }}                         \
+            --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
             "${filter_arg[@]}"                                          \
@@ -114,5 +154,5 @@ jobs:
         run: |
           libcxx/utils/ci/lnt/submit-benchmarks             \
             --lnt-url "${LNT_URL}"                          \
-            --test-suite libcxx2                            \
+            --test-suite libcxx                             \
             "${COMMIT}.json"
