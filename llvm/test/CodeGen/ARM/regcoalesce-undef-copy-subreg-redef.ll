@@ -8,8 +8,6 @@
 ; "Instruction is reading nonexistent value" on targets that do not track
 ; subregister liveness (armv8a A-profile has no MVE).
 
-target triple = "armv8a-unknown-linux"
-
 define void @init(i64 %x, i1 %c, ptr %p) {
 ; CHECK-LABEL: init:
 ; CHECK:       @ %bb.0: @ %entry
