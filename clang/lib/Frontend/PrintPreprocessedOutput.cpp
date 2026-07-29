@@ -258,11 +258,11 @@ void PrintPPOutputPPCallbacks::WriteLineInfo(unsigned LineNo,
   // Emit #line directives or GNU line markers depending on what mode we're in.
   if (UseLineDirectives) {
     *OS << "#line" << ' ' << LineNo << ' ' << '"';
-    OS->write_escaped(CurFilename);
+    *OS << CurFilename;
     *OS << '"';
   } else {
     *OS << '#' << ' ' << LineNo << ' ' << '"';
-    OS->write_escaped(CurFilename);
+    *OS << CurFilename;
     *OS << '"';
 
     if (ExtraLen)

@@ -39,6 +39,11 @@ Implemented Papers
 ------------------
 
 - P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
+- P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
+- P3948R1: ``constant_wrapper`` is the only tool needed for passing constant expressions via function arguments (`Github <https://llvm.org/PR189604>`__)
+- P3961R1: Less double indirection in ``function_ref`` (RU-220) (`Github <https://llvm.org/PR189606>`__)
+- P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
+- P0528R3: The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange (`Github <https://llvm.org/PR76180>`__)
 
 Improvements and New Features
 -----------------------------
@@ -60,15 +65,16 @@ Potentially breaking changes
 Announcements About Future Releases
 -----------------------------------
 
+- ``std::allocator`` is trivially default constructible since LLVM 22. In LLVM 23 and LLVM 24, the
+  ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR`` macro was provided as an escape hatch to revert that change.
+  This escape hatch will be removed in LLVM 25 if there is no evidence of it being useful.
+
+- ``bitset::operator[]`` returns ``bool`` since LLVM 22, fixing a conformance bug. In LLVM 23 and LLVM 24, the
+  ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF`` macro was provided as an escape hatch to revert
+  that change. This escape hatch will be removed in LLVM 25 if there is no evidence of it being useful.
 
 ABI Affecting Changes
 ---------------------
-
-- TODO: ``std::allocator`` is trivially default constructible since LLVM 22. In LLVM 23, the ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR``
-  macro was provided as an escape hatch, but it has been removed in LLVM 24 since there was no evidence of it being useful.
-
-- TODO: ``bitset::operator[]`` returns ``bool`` since LLVM 22, fixing a conformance bug. In LLVM 23, the ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``
-  macro was provided as an escape hatch, but it has been removed in LLVM 24 since there was no evidence of it being useful.
 
 Build System Changes
 --------------------

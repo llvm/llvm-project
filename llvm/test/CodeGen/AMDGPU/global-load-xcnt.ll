@@ -75,28 +75,28 @@ define void @test_i8load_v4i8store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 }
 
 define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2) {
-; GCN-SDAG-FAKE16-LABEL: test_v7i16_load_store:
-; GCN-SDAG-FAKE16:       ; %bb.0:
-; GCN-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GCN-SDAG-FAKE16-NEXT:    global_load_b128 v[4:7], v[0:1], off
-; GCN-SDAG-FAKE16-NEXT:    global_load_b128 v[8:11], v[2:3], off
-; GCN-SDAG-FAKE16-NEXT:    v_mov_b64_e32 v[12:13], 0
-; GCN-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GCN-SDAG-FAKE16-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v1, v6, v10
-; GCN-SDAG-FAKE16-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v3, v5, v9
-; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v5, v7, v11
-; GCN-SDAG-FAKE16-NEXT:    v_mov_b64_e32 v[6:7], 12
-; GCN-SDAG-FAKE16-NEXT:    v_mov_b64_e32 v[10:11], 8
-; GCN-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; GCN-SDAG-FAKE16-NEXT:    v_pk_add_u16 v2, v4, v8
-; GCN-SDAG-FAKE16-NEXT:    s_clause 0x2
-; GCN-SDAG-FAKE16-NEXT:    global_store_b16 v[6:7], v5, off
-; GCN-SDAG-FAKE16-NEXT:    global_store_b32 v[10:11], v1, off
-; GCN-SDAG-FAKE16-NEXT:    global_store_b64 v[12:13], v[2:3], off
-; GCN-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GCN-SDAG-LABEL: test_v7i16_load_store:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GCN-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GCN-SDAG-NEXT:    global_load_b128 v[8:11], v[2:3], off
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[12:13], 0
+; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GCN-SDAG-NEXT:    s_wait_xcnt 0x1
+; GCN-SDAG-NEXT:    v_pk_add_u16 v1, v6, v10
+; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-NEXT:    v_pk_add_u16 v3, v5, v9
+; GCN-SDAG-NEXT:    v_pk_add_u16 v5, v7, v11
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[6:7], 12
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[10:11], 8
+; GCN-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GCN-SDAG-NEXT:    v_pk_add_u16 v2, v4, v8
+; GCN-SDAG-NEXT:    s_clause 0x2
+; GCN-SDAG-NEXT:    global_store_b16 v[6:7], v5, off
+; GCN-SDAG-NEXT:    global_store_b32 v[10:11], v1, off
+; GCN-SDAG-NEXT:    global_store_b64 v[12:13], v[2:3], off
+; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GCN-GISEL-FAKE16-LABEL: test_v7i16_load_store:
 ; GCN-GISEL-FAKE16:       ; %bb.0:
@@ -127,29 +127,6 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-GISEL-FAKE16-NEXT:    global_store_b16 v[22:23], v6, off
 ; GCN-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
 ; GCN-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GCN-SDAG-REAL16-LABEL: test_v7i16_load_store:
-; GCN-SDAG-REAL16:       ; %bb.0:
-; GCN-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GCN-SDAG-REAL16-NEXT:    global_load_b128 v[4:7], v[0:1], off
-; GCN-SDAG-REAL16-NEXT:    global_load_b128 v[8:11], v[2:3], off
-; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[2:3], 12
-; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[12:13], 8
-; GCN-SDAG-REAL16-NEXT:    v_mov_b64_e32 v[14:15], 0
-; GCN-SDAG-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v1, v7, v11
-; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v0, v6, v10
-; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v5, v5, v9
-; GCN-SDAG-REAL16-NEXT:    v_pk_add_u16 v4, v4, v8
-; GCN-SDAG-REAL16-NEXT:    s_clause 0x2
-; GCN-SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v1, off
-; GCN-SDAG-REAL16-NEXT:    global_store_b32 v[12:13], v0, off
-; GCN-SDAG-REAL16-NEXT:    global_store_b64 v[14:15], v[4:5], off
-; GCN-SDAG-REAL16-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GCN-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GCN-GISEL-REAL16-LABEL: test_v7i16_load_store:
 ; GCN-GISEL-REAL16:       ; %bb.0:

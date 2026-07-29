@@ -8,7 +8,7 @@
 define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i16_index(<8 x i32> %a, <16 x i32> %b, <8 x float> %c, ptr addrspace(1) %idx.ptr, ptr addrspace(1) %out) {
 ; SDAG-FAKE16-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i16_index:
 ; SDAG-FAKE16:       ; %bb.0:
-; SDAG-FAKE16-NEXT:    global_wb
+; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    global_load_u16 v32, v[32:33], off
@@ -24,7 +24,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i16_index(<8 x i32> %a,
 ;
 ; GISEL-FAKE16-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i16_index:
 ; GISEL-FAKE16:       ; %bb.0:
-; GISEL-FAKE16-NEXT:    global_wb
+; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    global_load_u16 v32, v[32:33], off
@@ -37,7 +37,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i16_index(<8 x i32> %a,
 ;
 ; SDAG-TRUE16-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i16_index:
 ; SDAG-TRUE16:       ; %bb.0:
-; SDAG-TRUE16-NEXT:    global_wb
+; SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; SDAG-TRUE16-NEXT:    v_nop
 ; SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-TRUE16-NEXT:    global_load_u16 v32, v[32:33], off
@@ -50,7 +50,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i16_index(<8 x i32> %a,
 ;
 ; GISEL-TRUE16-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i16_index:
 ; GISEL-TRUE16:       ; %bb.0:
-; GISEL-TRUE16-NEXT:    global_wb
+; GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GISEL-TRUE16-NEXT:    v_nop
 ; GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-TRUE16-NEXT:    global_load_u16 v32, v[32:33], off

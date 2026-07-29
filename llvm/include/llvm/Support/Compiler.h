@@ -238,6 +238,12 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
+#if __has_attribute(warn_unused)
+#define LLVM_ATTRIBUTE_WARN_UNUSED __attribute__((warn_unused))
+#else
+#define LLVM_ATTRIBUTE_WARN_UNUSED
+#endif
+
 // Only enabled for clang:
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99587
 // GCC may produce "warning: 'retain' attribute ignored" (despite

@@ -2669,7 +2669,7 @@ define void @strict_fma_v2_vv(<2 x double> %x, <2 x double> %y, <2 x double> %z,
 define amdgpu_kernel void @fma_v2_s_imm_imm(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-LABEL: fma_v2_s_imm_imm:
 ; GFX1251-SDAG:       ; %bb.0:
-; GFX1251-SDAG-NEXT:    global_wb
+; GFX1251-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1251-SDAG-NEXT:    v_nop
 ; GFX1251-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24 nv
@@ -2688,7 +2688,7 @@ define amdgpu_kernel void @fma_v2_s_imm_imm(ptr addrspace(1) %a) {
 ;
 ; GFX1251-GISEL-LABEL: fma_v2_s_imm_imm:
 ; GFX1251-GISEL:       ; %bb.0:
-; GFX1251-GISEL-NEXT:    global_wb
+; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-GISEL-NEXT:    s_load_b64 s[8:9], s[4:5], 0x24 nv
@@ -2731,7 +2731,7 @@ define amdgpu_kernel void @fma_v2_s_imm_imm(ptr addrspace(1) %a) {
 define amdgpu_kernel void @fma_v2_imm_imm_s(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-LABEL: fma_v2_imm_imm_s:
 ; GFX1251-SDAG:       ; %bb.0:
-; GFX1251-SDAG-NEXT:    global_wb
+; GFX1251-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1251-SDAG-NEXT:    v_nop
 ; GFX1251-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24 nv
@@ -2749,7 +2749,7 @@ define amdgpu_kernel void @fma_v2_imm_imm_s(ptr addrspace(1) %a) {
 ;
 ; GFX1251-GISEL-LABEL: fma_v2_imm_imm_s:
 ; GFX1251-GISEL:       ; %bb.0:
-; GFX1251-GISEL-NEXT:    global_wb
+; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-GISEL-NEXT:    s_load_b64 s[8:9], s[4:5], 0x24 nv

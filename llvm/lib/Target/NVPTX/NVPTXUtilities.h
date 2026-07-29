@@ -28,7 +28,6 @@
 namespace llvm {
 
 class DataLayout;
-class TargetMachine;
 
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
@@ -64,8 +63,6 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
     return 128;
   return size;
 }
-
-bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||

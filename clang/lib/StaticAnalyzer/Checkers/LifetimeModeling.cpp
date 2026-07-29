@@ -47,10 +47,10 @@ static bool isDanglingStackSource(const MemRegion *Source,
     // the warning should be suppressed. When a lifetimebound method
     // is called from a destructor then its return value is not expected
     // to outlive the object being destroyed.
-    for (const StackFrame *DtorSF = CurrentSF; DtorSF;
-         DtorSF = DtorSF->getParent()) {
-      if (isa<CXXDestructorDecl>(DtorSF->getDecl()))
-        return false;
+    if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
+          return isa<CXXDestructorDecl>(Frame.getDecl());
+        })) {
+      return false;
     }
 
     if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
@@ -73,7 +73,7 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
 
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
-  return State->contains<DeallocatedSourceSet>(Region);
+  return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
@@ -85,6 +85,14 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   Set = F.add(Set, Source);
   State = State->set<LifetimeBoundMap>(RetVal, Set);
   return State;
+}
+
+std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  return "the region";
 }
 
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
