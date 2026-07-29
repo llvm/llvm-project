@@ -11,7 +11,7 @@ long double foo(long double a, long double b) {
 
 int bar() { return 1; }
 
-// CHECK: ![[#]] = !{i32 1, !"float-abi", !"doubledouble"}
-// IEEE: ![[#]] = !{i32 1, !"float-abi", !"ieeequad"}
-// LDBL64: ![[#]] = !{i32 1, !"float-abi", !"ieeedouble"}
-// NOLDBL-NOT: ![[#]] = !{i32 1, !"float-abi"
+// CHECK: ![[#]] = !{i32 1, !"long-double-type", !"ppc_fp128"}
+// IEEE: ![[#]] = !{i32 1, !"long-double-type", !"fp128"}
+// LDBL64: ![[#]] = !{i32 1, !"long-double-type", !"double"}
+// NOLDBL-NOT: ![[#]] = !{i32 1, !"long-double-type"

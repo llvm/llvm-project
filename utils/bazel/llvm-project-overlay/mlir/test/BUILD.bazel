@@ -30,10 +30,10 @@ lit_expand_template(
     },
     substitutions = {
         # MLIR_BINARY_DIR is a string-literal substitution: the entire
-        # `"@MLIR_BINARY_DIR@"` (including its surrounding quotes) is replaced
-        # with a Python expression that reads the per-test undeclared outputs
-        # directory at lit-load time.
-        "\"@MLIR_BINARY_DIR@\"": "os.environ[\"TEST_UNDECLARED_OUTPUTS_DIR\"]",
+        # `r"@MLIR_BINARY_DIR@"` (including its surrounding quotes and raw prefix)
+        # is replaced with a Python expression that reads the per-test undeclared
+        # outputs directory at lit-load time.
+        "r\"@MLIR_BINARY_DIR@\"": "os.environ[\"TEST_UNDECLARED_OUTPUTS_DIR\"]",
         "@BUILD_SHARED_LIBS@": "1",
         "@ENABLE_ASSERTIONS@": "1",
         "@ENABLE_SHARED@": "1",
