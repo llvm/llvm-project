@@ -394,8 +394,8 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   if (!got_line && in) {
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
-#ifdef _WIN32
       if (r == nullptr) {
+#ifdef _WIN32
         if (feof(in)) {
           got_line = SplitLineEOF(m_line_buffer);
           break;
