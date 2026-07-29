@@ -22,7 +22,7 @@ struct S3 {
 constexpr; // expected-error {{'constexpr' can only be used in variable declarations}}
 constexpr int V1 = 3;
 constexpr float V2 = 7.0;
-int V3 = (constexpr)3; // expected-error {{type name requires a specifier or qualifier}}
+int V3 = (constexpr)3; // expected-error {{expected expression}}
 
 void f2() {
   constexpr int a = 0;

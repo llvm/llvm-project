@@ -335,7 +335,7 @@ void test24(void) {
   (void)(constexpr int)1;           // expected-error {{type name does not allow constexpr specifier to be specified}}
 }
 
-int a26 = (static)3; // expected-error {{type name requires a specifier or qualifier}}
+int a26 = (static)3; // expected-error {{expected expression}}
 
 typedef int A __attribute__((aligned(64)));
 A *f30(void) {

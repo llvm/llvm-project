@@ -5092,7 +5092,8 @@ private:
     return isTypeIdInParens(isAmbiguous);
   }
 
-  bool isCompoundLiteralStorageClassSpecifier(const Token &Tok) const;
+  bool isCompoundLiteralStorageClassSpecifier() const;
+  bool isCompoundLiteralTypeName();
   void ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS);
 
   /// Finish parsing a C++ unqualified-id that is a template-id of

@@ -2656,7 +2656,7 @@ bool Parser::tryParseOpenMPArrayShapingCastPart() {
   return !ErrorFound;
 }
 
-bool Parser::isCompoundLiteralStorageClassSpecifier(const Token &Tok) const {
+bool Parser::isCompoundLiteralStorageClassSpecifier() const {
   if (!getLangOpts().C23)
     return false;
   switch (Tok.getKind()) {
@@ -2674,10 +2674,21 @@ bool Parser::isCompoundLiteralStorageClassSpecifier(const Token &Tok) const {
   }
 }
 
+bool Parser::isCompoundLiteralTypeName() {
+  if (!isCompoundLiteralStorageClassSpecifier())
+    return false;
+
+  RevertingTentativeParsingAction TPA(*this);
+  do
+    ConsumeToken();
+  while (isCompoundLiteralStorageClassSpecifier());
+  return isTypeIdInParens();
+}
+
 void Parser::ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS) {
   DS.SetRangeStart(Tok.getLocation());
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
-  while (isCompoundLiteralStorageClassSpecifier(Tok)) {
+  while (isCompoundLiteralStorageClassSpecifier()) {
     SourceLocation Loc = Tok.getLocation();
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
@@ -2841,7 +2852,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                                                BridgeKeywordLoc, Ty.get(),
                                                RParenLoc, SubExpr.get());
   } else if (ExprType >= ParenParseOption::CompoundLiteral &&
-             (isCompoundLiteralStorageClassSpecifier(Tok) ||
+             (isCompoundLiteralTypeName() ||
               isTypeIdInParens(isAmbiguousTypeId))) {
 
     // Otherwise, this is a compound literal expression or cast expression.
@@ -2859,7 +2870,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
     }
 
     DeclSpec CompoundDS(AttrFactory);
-    if (isCompoundLiteralStorageClassSpecifier(Tok)) {
+    if (isCompoundLiteralStorageClassSpecifier()) {
       ParseCompoundLiteralStorageClassSpecifiers(CompoundDS);
       CompoundDS.Finish(Actions, Actions.getASTContext().getPrintingPolicy());
     }
