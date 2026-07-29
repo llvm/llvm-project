@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-pointer-arithmetic-on-polymorphic-object
+```{title} clang-tidy - bugprone-pointer-arithmetic-on-polymorphic-object
+```
 
-bugprone-pointer-arithmetic-on-polymorphic-object
-=================================================
+# bugprone-pointer-arithmetic-on-polymorphic-object
 
 Finds pointer arithmetic performed on classes that contain a virtual function.
 
@@ -16,53 +16,50 @@ derived object.
 
 Example:
 
-.. code-block:: c++
+```c++
+struct Base {
+  virtual ~Base();
+  int i;
+};
 
-  struct Base {
-    virtual ~Base();
-    int i;
-  };
+struct Derived : public Base {};
 
-  struct Derived : public Base {};
+void foo(Base* b) {
+  b += 1;
+  // warning: pointer arithmetic on class that declares a virtual function can
+  // result in undefined behavior if the dynamic type differs from the
+  // pointer type
+}
 
-  void foo(Base* b) {
-    b += 1;
-    // warning: pointer arithmetic on class that declares a virtual function can
-    // result in undefined behavior if the dynamic type differs from the
-    // pointer type
-  }
+int bar(const Derived d[]) {
+  return d[1].i; // warning due to pointer arithmetic on polymorphic object
+}
 
-  int bar(const Derived d[]) {
-    return d[1].i; // warning due to pointer arithmetic on polymorphic object
-  }
+// Making Derived final suppresses the warning
+struct FinalDerived final : public Base {};
 
-  // Making Derived final suppresses the warning
-  struct FinalDerived final : public Base {};
+int baz(const FinalDerived d[]) {
+  return d[1].i; // no warning as FinalDerived is final
+}
+```
 
-  int baz(const FinalDerived d[]) {
-    return d[1].i; // no warning as FinalDerived is final
-  }
+## Options
 
-Options
--------
+````{option} IgnoreInheritedVirtualFunctions
+When `true`, objects that only inherit a virtual function are not checked.
+Classes that do not declare a new virtual function are excluded
+by default, as they make up the majority of false positives.
+Default: `false`.
 
-.. option:: IgnoreInheritedVirtualFunctions
+```c++
+void bar(Base b[], Derived d[]) {
+  b += 1; // warning, as Base declares a virtual destructor
+  d += 1; // warning only if IgnoreVirtualDeclarationsOnly is set to false
+}
+```
+````
 
-  When `true`, objects that only inherit a virtual function are not checked.
-  Classes that do not declare a new virtual function are excluded
-  by default, as they make up the majority of false positives.
-  Default: `false`.
-
-  .. code-block:: c++
-
-    void bar(Base b[], Derived d[]) {
-      b += 1; // warning, as Base declares a virtual destructor
-      d += 1; // warning only if IgnoreVirtualDeclarationsOnly is set to false
-    }
-
-References
-----------
+## References
 
 This check corresponds to the SEI Cert rule
-`CTR56-CPP. Do not use pointer arithmetic on polymorphic objects
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/containers-ctr/ctr56-cpp/>`_.
+[CTR56-CPP. Do not use pointer arithmetic on polymorphic objects](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/containers-ctr/ctr56-cpp/).
