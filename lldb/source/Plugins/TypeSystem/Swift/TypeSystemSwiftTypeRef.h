@@ -27,6 +27,7 @@
 #include "clang/Basic/Module.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Threading.h"
 
 namespace swift {
 class DWARFImporterDelegate;
@@ -114,6 +115,12 @@ public:
   SwiftDWARFImporterForClangTypes &GetSwiftDWARFImporterForClangTypes();
   ClangNameImporter *GetNameImporter() const;
   llvm::Triple GetTriple() const;
+  /// Returns true if the module this type system was created for was compiled
+  /// as Embedded Swift. This is deliberately a *per-module* property: one
+  /// target can mix embedded and non-embedded modules, so the answer cannot
+  /// come from the target or from a global setting. The result is cached,
+  /// because computing it walks the module's compile units.
+  bool IsEmbeddedSwift();
   void SetTriple(const SymbolContext &sc, const llvm::Triple triple) override;
   void ClearModuleDependentCaches() override;
   lldb::TargetWP GetTargetWP() const override { return {}; }
@@ -529,6 +536,11 @@ public:
   /// Lookup a type in the debug info.
   lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 
+  /// Lookup a builtin type in the debug info by its mangled name. Unlike
+  /// FindTypeInModule(), this does not need the mangling to have a decl
+  /// context, which some of the special stdlib builtins do not have.
+  lldb::TypeSP FindBuiltinTypeInModule(ConstString mangled_name);
+
   /// Desugar a CompilerType and resolve type aliases by looking up
   /// their types in the debug info.
   CompilerType Canonicalize(CompilerType type);
@@ -696,6 +708,10 @@ protected:
   /// mangled type name.
   mutable llvm::DenseSet<std::pair<const char *, const char *>>
       m_dangerous_types;
+
+  /// Lazily computed cache behind IsEmbeddedSwift().
+  llvm::once_flag m_is_embedded_swift_once_flag;
+  bool m_is_embedded_swift = false;
 
   mutable std::unique_ptr<SwiftDWARFImporterForClangTypes>
       m_dwarf_importer_for_clang_types_up;
