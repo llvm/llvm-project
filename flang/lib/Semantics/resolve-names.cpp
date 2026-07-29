@@ -6145,8 +6145,24 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
           enumerator.t)}) {
-    Walk(*init); // Resolve names in expression before evaluation.
-    if (auto value{EvaluateInt64(context(), *init)}) {
+    std::optional<std::int64_t> value;
+    const parser::Expr &expr{parser::UnwrapRef<parser::Expr>(*init)};
+    if (parser::IsBOZLiteral(*init)) {
+      // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
+      // has the value specified by INT(boz-literal-constant, C_INT).
+      const evaluate::DynamicType cIntType{
+          TypeCategory::Integer, evaluate::CInteger::kind};
+      if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
+        if (auto converted{
+                evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
+          value = evaluate::ToInt64(FoldExpr(std::move(*converted)));
+        }
+      }
+    } else {
+      Walk(*init); // Resolve names in expression before evaluation.
+      value = EvaluateInt64(context(), *init);
+    }
+    if (value) {
       // Cast all init expressions to C_INT so that they can then be
       // safely incremented (see 7.6 Note 2).
       enumerationState_.value = static_cast<int>(*value);
