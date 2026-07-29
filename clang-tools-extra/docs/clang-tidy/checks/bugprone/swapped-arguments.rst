@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-swapped-arguments
+```{title} clang-tidy - bugprone-swapped-arguments
+```
 
-bugprone-swapped-arguments
-==========================
+# bugprone-swapped-arguments
 
 Finds potentially swapped arguments by examining implicit conversions.
 It analyzes the types of the arguments being passed to a function and compares
@@ -9,15 +9,15 @@ them to the expected types of the corresponding parameters. If there is a
 mismatch or an implicit conversion that indicates a potential swap, a warning
 is raised.
 
-.. code-block:: c++
+```c++
+void printNumbers(int a, float b);
 
-  void printNumbers(int a, float b);
-
-  int main() {
-    // Swapped arguments: float passed as int, int as float)
-    printNumbers(10.0f, 5);
-    return 0;
-  }
+int main() {
+  // Swapped arguments: float passed as int, int as float)
+  printNumbers(10.0f, 5);
+  return 0;
+}
+```
 
 Covers a wide range of implicit conversions, including:
 - User-defined conversions
