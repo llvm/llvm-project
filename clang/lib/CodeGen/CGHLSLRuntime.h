@@ -220,54 +220,65 @@ public:
   //===----------------------------------------------------------------------===//
 
 protected:
+  using SemanticSignatures =
+      llvm::SmallVectorImpl<llvm::hlsl::SemanticSignatureElement>;
+
   CodeGenModule &CGM;
 
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B,
                                       const FunctionDecl *FD, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       HLSLAppliedSemanticAttr *Semantic,
-                                      std::optional<unsigned> Index);
+                                      std::optional<unsigned> Index,
+                                      SemanticSignatures &Signature);
 
   void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                const clang::DeclaratorDecl *Decl,
                                HLSLAppliedSemanticAttr *Semantic,
-                               std::optional<unsigned> Index);
+                               std::optional<unsigned> Index,
+                               SemanticSignatures &Signature);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl,
-                                        HLSLAppliedSemanticAttr *Semantic);
+                                        HLSLAppliedSemanticAttr *Semantic,
+                                        SemanticSignatures &Signature);
 
   void handleScalarSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                                  llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
-                                 HLSLAppliedSemanticAttr *Semantic);
+                                 HLSLAppliedSemanticAttr *Semantic,
+                                 SemanticSignatures &Signature);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleStructSemanticLoad(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+      specific_attr_iterator<HLSLAppliedSemanticAttr> end,
+      SemanticSignatures &Signature);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
+      SemanticSignatures &Signature);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
-                     specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> end,
+                     SemanticSignatures &Signature);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr>
   handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                       llvm::Value *Source, const clang::DeclaratorDecl *Decl,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
-                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd);
+                      specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
+                      SemanticSignatures &Signature);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -341,12 +352,14 @@ private:
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic,
-                                        std::optional<unsigned> Index);
+                                        std::optional<unsigned> Index,
+                                        SemanticSignatures &Signature);
   llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
                                     const FunctionDecl *FD, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
                                     HLSLAppliedSemanticAttr *Semantic,
-                                    std::optional<unsigned> Index);
+                                    std::optional<unsigned> Index,
+                                    SemanticSignatures &Signature);
 
   void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                   const clang::DeclaratorDecl *Decl,
@@ -355,11 +368,13 @@ private:
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
-                                 std::optional<unsigned> Index);
+                                 std::optional<unsigned> Index,
+                                 SemanticSignatures &Signature);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,
-                             std::optional<unsigned> Index);
+                             std::optional<unsigned> Index,
+                             SemanticSignatures &Signature);
 
   bool initializeGlobalResourceArray(CodeGenFunction &CGF,
                                      const VarDecl *ArrayDecl,
@@ -370,16 +385,6 @@ private:
   llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
   unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
-
-  // FIXME: #57928, storing these here and reseting them in the entry is not
-  // very nice and is a temporary until we accumulate the signatures as part of
-  // the mentioned issue.
-  unsigned DXILOutputSemanticIndex = 0;
-
-  // Accumulated while lowering an entry point's semantics and consumed when
-  // constructing its signature metadata.
-  llvm::SmallVector<llvm::hlsl::SemanticSignatureElement> InputSignature;
-  llvm::SmallVector<llvm::hlsl::SemanticSignatureElement> OutputSignature;
 };
 
 } // namespace CodeGen
