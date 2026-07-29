@@ -2702,7 +2702,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
       context_.Say(x.source,
           "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
     }
-    if (indirectClause && !enterClause) {
+    if (indirectClause && !enterClause && !toClause) {
       context_.Say(x.source,
           "The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive."_err_en_US);
     }

@@ -4,6 +4,7 @@ add_flang_library(FlangOpenMPTransforms
   AutomapToTargetData.cpp
   DoConcurrentConversion.cpp
   GenericLoopConversion.cpp
+  IndirectCallLookup.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
   LowerWorkdistribute.cpp
