@@ -1291,8 +1291,8 @@ namespace {
 class MemmoveVerifier {
 public:
   explicit MemmoveVerifier(const SCEV &LoadStart, const SCEV &StoreStart,
-                           const DataLayout &DL, ScalarEvolution &SE)
-      : DL(DL),
+                           ScalarEvolution &SE)
+      : DL(SE.getDataLayout()),
         Off(dyn_cast<SCEVConstant>(SE.getMinusSCEV(&StoreStart, &LoadStart))),
         BasePtr(dyn_cast<SCEVUnknown>(SE.getPointerBase(&StoreStart))),
         IsSameObject(Off != nullptr) {}
@@ -1311,6 +1311,7 @@ public:
       return false;
     int64_t LoadSize;
     if (IsMemCpy) {
+      // memcpy is equivalent to a sequence of byte loads and stores
       LoadSize = 1;
     } else {
       LoadSize = DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
@@ -1438,7 +1439,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // If the store is a memcpy instruction, we must check if it will write to
   // the load memory locations. So remove it from the ignored stores.
-  MemmoveVerifier Verifier(*LdStart, *StrStart, *DL, *SE);
+  MemmoveVerifier Verifier(*LdStart, *StrStart, *SE);
   if (IsMemCpy && !Verifier.IsSameObject)
     IgnoredInsts.erase(TheStore);
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
