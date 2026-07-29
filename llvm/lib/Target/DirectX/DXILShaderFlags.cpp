@@ -257,22 +257,41 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
             DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
         if (RTI.isTyped())
           CSF.AtomicInt64OnTypedResource = true;
-        // TODO: Set AtomicInt64OnHeapResource when heap-resource intrinsics
-        // are added.
+        // TODO(https://github.com/llvm/llvm-project/issues/116152): Set
+        // AtomicInt64OnHeapResource when heap-resource intrinsics are added.
       }
       break;
     }
     }
   }
-  // 64-bit atomics on groupshared memory (address space 3).
+  // 64-bit atomics on groupshared memory (address space 3), or on a resource
+  // pointer produced by `llvm.dx.resource.getpointer` (when this analysis runs
+  // before `DXILResourceAccess` has lowered the atomic to the intrinsic form
+  // handled above).
+  auto MarkAtomicI64Pointer = [&](const Value *Ptr, unsigned AddrSpace) {
+    if (AddrSpace == 3) {
+      CSF.AtomicInt64OnGroupShared = true;
+      return;
+    }
+    Ptr = Ptr->stripPointerCasts();
+    while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+      Ptr = GEP->getPointerOperand()->stripPointerCasts();
+    auto *GP = dyn_cast<IntrinsicInst>(Ptr);
+    if (!GP || GP->getIntrinsicID() != Intrinsic::dx_resource_getpointer)
+      return;
+    dxil::ResourceTypeInfo &RTI =
+        DRTM[cast<TargetExtType>(GP->getArgOperand(0)->getType())];
+    if (RTI.isTyped())
+      CSF.AtomicInt64OnTypedResource = true;
+  };
   if (const auto *ARMW = dyn_cast<AtomicRMWInst>(&I)) {
-    if (ARMW->getValOperand()->getType()->isIntegerTy(64) &&
-        ARMW->getPointerAddressSpace() == 3)
-      CSF.AtomicInt64OnGroupShared = true;
+    if (ARMW->getValOperand()->getType()->isIntegerTy(64))
+      MarkAtomicI64Pointer(ARMW->getPointerOperand(),
+                           ARMW->getPointerAddressSpace());
   } else if (const auto *AXCG = dyn_cast<AtomicCmpXchgInst>(&I)) {
-    if (AXCG->getNewValOperand()->getType()->isIntegerTy(64) &&
-        AXCG->getPointerAddressSpace() == 3)
-      CSF.AtomicInt64OnGroupShared = true;
+    if (AXCG->getNewValOperand()->getType()->isIntegerTy(64))
+      MarkAtomicI64Pointer(AXCG->getPointerOperand(),
+                           AXCG->getPointerAddressSpace());
   }
   // Handle call instructions
   if (auto *CI = dyn_cast<CallInst>(&I)) {
