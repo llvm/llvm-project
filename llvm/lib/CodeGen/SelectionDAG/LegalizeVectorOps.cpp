@@ -1278,17 +1278,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
+  case ISD::SMULFIXSAT:
+  case ISD::UMULFIXSAT:
     if (SDValue Expanded = TLI.expandFixedPointMul(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
-    break;
-  case ISD::SMULFIXSAT:
-  case ISD::UMULFIXSAT:
-    // FIXME: We do not expand SMULFIXSAT/UMULFIXSAT here yet, not sure exactly
-    // why. Maybe it results in worse codegen compared to the unroll for some
-    // targets? This should probably be investigated. And if we still prefer to
-    // unroll an explanation could be helpful.
     break;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:

@@ -224,7 +224,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     // Use the largest integer type whose alignment constraints are satisfied.
     VT = MVT::LAST_INTEGER_VALUETYPE;
     if (Op.isFixedDstAlign()) {
-      bool LoadsFromSrc = Op.isMemcpy() && !Op.isMemcpyStrSrc();
+      bool LoadsFromSrc = Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc();
       while (VT != MVT::i8) {
         unsigned VTSize = VT.getSizeInBits() / 8;
         bool DstOk =
@@ -288,7 +288,7 @@ bool TargetLowering::findOptimalMemOpLowering(
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
       unsigned Fast;
-      if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewVTSize < Size &&
           allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
@@ -351,6 +351,15 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     LC1 = (VT == MVT::f32) ? RTLIB::UNE_F32 :
           (VT == MVT::f64) ? RTLIB::UNE_F64 :
           (VT == MVT::f128) ? RTLIB::UNE_F128 : RTLIB::UNE_PPCF128;
+    // Some ABIs (e.g. AEABI) only provide an ordered-equal compare; obtain
+    // not-equal (UNE = !OEQ) by inverting the result of that call.
+    if (getLibcallImpl(LC1) == RTLIB::Unsupported) {
+      LC1 = (VT == MVT::f32)    ? RTLIB::OEQ_F32
+            : (VT == MVT::f64)  ? RTLIB::OEQ_F64
+            : (VT == MVT::f128) ? RTLIB::OEQ_F128
+                                : RTLIB::OEQ_PPCF128;
+      ShouldInvertCC = true;
+    }
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
@@ -8596,14 +8605,21 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   APInt Divisor = CN->getAPIntValue();
 
-  // We depend on the UREM by constant optimization in DAGCombiner that requires
-  // high multiply.
-  if (!isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
+  // The generated half-width UREM is normally optimized using high multiply.
+  // If the wide UREM libcall is unavailable, a legal or custom half-width
+  // UDIVREM can lower it instead.
+  bool CanDecomposeUREMWithoutMulHi =
+      Opcode == ISD::UREM &&
+      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+          RTLIB::Unsupported &&
+      isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
+  if (!CanDecomposeUREMWithoutMulHi &&
+      !isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
       !isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT))
     return false;
 
-  // Don't expand if optimizing for size.
-  if (DAG.shouldOptForSize())
+  // Prefer the smaller libcall when one is available.
+  if (DAG.shouldOptForSize() && !CanDecomposeUREMWithoutMulHi)
     return false;
 
   // Early out for 0 or 1 divisors.
@@ -11254,27 +11270,36 @@ SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
   EVT AddrVT = SourceValue->getValueType(0);
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
 
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), AddrVT);
+
+  // Unsigned compare: Source >= Sink.
+  SDValue SourceAheadOfOrEqualToSink =
+      DAG.getSetCC(DL, CmpVT, SourceValue, SinkValue, ISD::SETUGE);
+
   // Take the difference between the pointers and divided by the element size,
   // to see how many lanes separate them.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, AddrVT, SinkValue, SourceValue);
+
+  // RAW_MASK: Diff = Source >= Sink ? (Source - Sink) : (Sink - Source)
   if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, AddrVT, Diff);
+    Diff = DAG.getSelect(DL, AddrVT, SourceAheadOfOrEqualToSink,
+                         DAG.getNegative(Diff, DL, AddrVT), Diff);
+
   Diff = DAG.getNode(ISD::SDIV, DL, AddrVT, Diff, EltSizeInBytes);
 
   // The pointers do not alias if:
-  //  * Diff <= 0 (WAR_MASK)
-  //  * Diff == 0 (RAW_MASK)
-  EVT CmpVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), AddrVT);
-  SDValue Zero = DAG.getConstant(0, DL, AddrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
+  // - Source >= Sink (WAR_MASK)
+  // - Source == Sink (RAW_MASK)
+  SDValue NoAlias = SourceAheadOfOrEqualToSink;
+  if (IsReadAfterWrite)
+    NoAlias = DAG.getSetCC(DL, CmpVT, SourceValue, SinkValue, ISD::SETEQ);
 
   // The pointers do not alias if:
   // Lane + LaneOffset < Diff (WAR/RAW_MASK)
   SDValue LaneOffset = DAG.getElementCount(DL, AddrVT, LaneOffsetEC);
   SDValue MaskN = DAG.getSelect(
-      DL, AddrVT, Cmp,
+      DL, AddrVT, NoAlias,
       DAG.getConstant(APInt::getMaxValue(AddrVT.getScalarSizeInBits()), DL,
                       AddrVT),
       Diff);
@@ -12875,6 +12900,16 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
 
+  // Select the saturated value when Cond0 <CC> Cond1, keeping it vectorized:
+  // SELECT_CC is scalarized for vector types, so build SETCC + VSELECT there.
+  auto getSaturatingSelect = [&](SDValue Cond0, SDValue Cond1, SDValue Sat,
+                                 SDValue Val, ISD::CondCode CC) {
+    if (VT.isVector())
+      return DAG.getSelect(dl, VT, DAG.getSetCC(dl, BoolVT, Cond0, Cond1, CC),
+                           Sat, Val);
+    return DAG.getSelectCC(dl, Cond0, Cond1, Sat, Val, CC);
+  };
+
   // Get the upper and lower bits of the result.
   SDValue Lo, Hi;
   unsigned LoHiOp = Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
@@ -12925,13 +12960,10 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
     // Saturate to max if ((Hi >> Scale) != 0),
     // which is the same as if (Hi > ((1 << Scale) - 1))
     APInt MaxVal = APInt::getMaxValue(VTSize);
-    SDValue LowMask = DAG.getConstant(APInt::getLowBitsSet(VTSize, Scale),
-                                      dl, VT);
-    Result = DAG.getSelectCC(dl, Hi, LowMask,
-                             DAG.getConstant(MaxVal, dl, VT), Result,
-                             ISD::SETUGT);
-
-    return Result;
+    SDValue LowMask =
+        DAG.getConstant(APInt::getLowBitsSet(VTSize, Scale), dl, VT);
+    return getSaturatingSelect(Hi, LowMask, DAG.getConstant(MaxVal, dl, VT),
+                               Result, ISD::SETUGT);
   }
 
   // Signed overflow happened if the upper (VTSize - Scale + 1) bits (of the
@@ -12947,8 +12979,8 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
     // Saturated to SatMin if wide product is negative, and SatMax if wide
     // product is positive ...
     SDValue Zero = DAG.getConstant(0, dl, VT);
-    SDValue ResultIfOverflow = DAG.getSelectCC(dl, Hi, Zero, SatMin, SatMax,
-                                               ISD::SETLT);
+    SDValue ResultIfOverflow =
+        getSaturatingSelect(Hi, Zero, SatMin, SatMax, ISD::SETLT);
     // ... but only if we overflowed.
     return DAG.getSelect(dl, VT, Overflow, ResultIfOverflow, Result);
   }
@@ -12957,15 +12989,14 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
 
   // Saturate to max if ((Hi >> (Scale - 1)) > 0),
   // which is the same as if (Hi > (1 << (Scale - 1)) - 1)
-  SDValue LowMask = DAG.getConstant(APInt::getLowBitsSet(VTSize, Scale - 1),
-                                    dl, VT);
-  Result = DAG.getSelectCC(dl, Hi, LowMask, SatMax, Result, ISD::SETGT);
+  SDValue LowMask =
+      DAG.getConstant(APInt::getLowBitsSet(VTSize, Scale - 1), dl, VT);
   // Saturate to min if (Hi >> (Scale - 1)) < -1),
   // which is the same as if (HI < (-1 << (Scale - 1))
-  SDValue HighMask =
-      DAG.getConstant(APInt::getHighBitsSet(VTSize, VTSize - Scale + 1),
-                      dl, VT);
-  Result = DAG.getSelectCC(dl, Hi, HighMask, SatMin, Result, ISD::SETLT);
+  SDValue HighMask = DAG.getConstant(
+      APInt::getHighBitsSet(VTSize, VTSize - Scale + 1), dl, VT);
+  Result = getSaturatingSelect(Hi, LowMask, SatMax, Result, ISD::SETGT);
+  Result = getSaturatingSelect(Hi, HighMask, SatMin, Result, ISD::SETLT);
   return Result;
 }
 

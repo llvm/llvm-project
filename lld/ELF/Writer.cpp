@@ -30,6 +30,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -382,6 +383,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 }
 
+static bool retainKeepsInSymtab(Ctx &ctx, const Symbol &sym) {
+  if (sym.hasFlag(USED) && ctx.arg.copyRelocs)
+    return true;
+  return ctx.arg.retainSymbols->contains(sym.getName());
+}
+
 static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
   if (sym.isSection())
     return false;
@@ -414,6 +421,10 @@ static bool shouldKeepInSymtab(Ctx &ctx, const Defined &sym) {
       (ctx.arg.discard == DiscardPolicy::Locals ||
        (sym.section && (sym.section->flags & SHF_MERGE))))
     return false;
+  // If --retain-symbols-file= is specified, keep in .symtab only listed symbols
+  // plus those referenced by emitted relocations.
+  if (LLVM_UNLIKELY(ctx.arg.retainSymbols))
+    return retainKeepsInSymtab(ctx, sym);
   return true;
 }
 
@@ -456,9 +467,24 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
         symsVec[i].push_back(b);
     }
   });
-  for (auto &syms : ArrayRef(symsVec.get(), ctx.objectFiles.size()))
+  for (size_t i = 0, e = ctx.objectFiles.size(); i != e; ++i) {
+    // For -r, synthesize an STT_FILE named after the input file for an input
+    // that contributes local symbols but no STT_FILE, so that its symbols are
+    // not attributed to another file's STT_FILE (matching GNU ld).
+    // --discard-all discards STT_FILE symbols.
+    auto &syms = symsVec[i];
+    if (ctx.arg.relocatable && ctx.arg.discard != DiscardPolicy::All &&
+        !syms.empty() &&
+        llvm::none_of(syms, [](Symbol *s) { return s->isFile(); })) {
+      InputFile *file = ctx.objectFiles[i];
+      ctx.in.symTab->addSymbol(
+          makeDefined(ctx, file, sys::path::filename(file->getName()),
+                      STB_LOCAL, /*stOther=*/0, STT_FILE, /*value=*/0,
+                      /*size=*/0, nullptr));
+    }
     for (Symbol *sym : syms)
       ctx.in.symTab->addSymbol(sym);
+  }
 }
 
 // Create a section symbol for each output section so that we can represent
@@ -1934,6 +1960,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   {
     llvm::TimeTraceScope timeScope("Add symbols to symtabs");
+    if (ctx.in.symTab)
+      ctx.in.symTab->markGlobalPart();
     // Now that we have defined all possible global symbols including linker-
     // synthesized ones. Visit all symbols to give the finishing touches.
     for (Symbol *sym : ctx.symtab->getSymbols()) {
@@ -1941,7 +1969,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         continue;
       if (!ctx.arg.relocatable)
         sym->binding = sym->computeBinding(ctx);
-      if (ctx.in.symTab)
+      if (ctx.in.symTab &&
+          (!ctx.arg.retainSymbols || retainKeepsInSymtab(ctx, *sym)))
         ctx.in.symTab->addSymbol(sym);
 
       // computeBinding might localize a symbol that was considered exported
@@ -1953,7 +1982,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
             addVerneed(ctx, *sym);
       }
     }
-
+    if (ctx.in.symTab && !ctx.arg.relocatable)
+      ctx.in.symTab->maybeAddSttFile();
   }
 
   if (ctx.in.mipsGot)

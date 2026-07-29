@@ -41,7 +41,6 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -888,7 +887,7 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   case TST_##Trait:                                                            \
     return UnaryTransformType::Enum;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   default:
     llvm_unreachable("attempted to parse a non-unary transform builtin");
   }
@@ -1308,7 +1307,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for the transformation?");
     Result = S.BuildUnaryTransformType(
@@ -1651,9 +1650,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       Qs.removeRestrict();
     } else {
       if (T->isArrayType())
-        Diag(Loc, getLangOpts().C23
-                      ? diag::warn_c23_compat_restrict_on_array_of_pointers
-                      : diag::ext_restrict_on_array_of_pointers_c23);
+        DiagCompat(Loc, diag_compat::restrict_on_array_of_pointers);
     }
   }
 
@@ -4890,7 +4887,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // If there already was an problem with the scope, don’t issue another
         // error about the explicit object parameter.
         return SS.isInvalid() ||
-               isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+               isa_and_present<CXXRecordDecl>(
+                   S.computeDeclContext(SS, /*EnteringContext=*/true));
       };
 
       // C++23 [dcl.fct]p6:
@@ -5602,7 +5600,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
          (D.getContext() == clang::DeclaratorContext::Member &&
           D.isStaticMember())) &&
         !IsTypedefName && D.getContext() != DeclaratorContext::TemplateArg &&
-        D.getContext() != DeclaratorContext::TemplateTypeArg) {
+        D.getContext() != DeclaratorContext::TemplateTypeArg &&
+        D.getContext() != DeclaratorContext::TypeName) {
       SourceLocation Loc = D.getBeginLoc();
       SourceRange RemovalRange;
       unsigned I;
@@ -7314,7 +7313,10 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   if (ASIdx != LangAS::Default)
     Pointee = S.Context.getAddrSpaceQualType(
         S.Context.removeAddrSpaceQualType(Pointee), ASIdx);
-  Type = State.getAttributedType(A, Type, S.Context.getPointerType(Pointee));
+
+  QualType Equivalent = S.Context.getQualifiedType(
+      S.Context.getPointerType(Pointee), Type.getQualifiers());
+  Type = State.getAttributedType(A, Type, Equivalent);
   return false;
 }
 
@@ -7353,7 +7355,10 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
   QualType Pointee = QT->getPointeeType();
   Pointee = S.Context.getAddrSpaceQualType(
       S.Context.removeAddrSpaceQualType(Pointee), ASIdx);
-  QT = State.getAttributedType(A, QT, S.Context.getPointerType(Pointee));
+
+  QualType Equivalent = S.Context.getQualifiedType(
+      S.Context.getPointerType(Pointee), QT.getQualifiers());
+  QT = State.getAttributedType(A, QT, Equivalent);
   return false;
 }
 
@@ -9351,6 +9356,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLIsArray:
+    case ParsedAttr::AT_HLSLIsMultiSampled:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those
@@ -9721,16 +9727,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         diagnoseMissingImport(Loc, Suggested, MissingImportKind::Definition,
                               /*Recover*/ TreatAsComplete);
       return !TreatAsComplete;
-    } else if (Def && !TemplateInstCallbacks.empty()) {
-      CodeSynthesisContext TempInst;
-      TempInst.Kind = CodeSynthesisContext::Memoization;
-      TempInst.Template = Def;
-      TempInst.Entity = Def;
-      TempInst.PointOfInstantiation = Loc;
-      atTemplateBegin(TemplateInstCallbacks, *this, TempInst);
-      atTemplateEnd(TemplateInstCallbacks, *this, TempInst);
     }
-
     return false;
   }
 
@@ -9897,7 +9894,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   // cannot have any constexpr constructors or a trivial default constructor,
   // so is non-literal. This is better to diagnose than the resulting absence
   // of constexpr constructors.
-  if (RD->getNumVBases()) {
+  if (!getLangOpts().CPlusPlus26 && RD->getNumVBases()) {
     Diag(RD->getLocation(), diag::note_non_literal_virtual_base)
       << getLiteralDiagFromTagKind(RD->getTagKind()) << RD->getNumVBases();
     for (const auto &I : RD->vbases())

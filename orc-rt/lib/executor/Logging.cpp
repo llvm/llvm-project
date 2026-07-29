@@ -17,7 +17,7 @@
 #include <cctype>
 #include <cstring>
 
-static const char *CategoryNames[] = {"General"};
+static const char *CategoryNames[] = {"General", "ControllerAccess"};
 static_assert(std::size(CategoryNames) == orc_rt_log_Category_Count,
               "CategoryNames array is the wrong size");
 

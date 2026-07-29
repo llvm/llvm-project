@@ -220,9 +220,10 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
-    // If this symbol is actually an acc routine - then it is expected for it
-    // to be offloaded - therefore it is valid.
-    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+    // If this symbol is actually an acc routine or a specialized acc routine -
+    // then it is expected for it to be offloaded - therefore it is valid.
+    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()) ||
+        func->hasAttr(mlir::acc::getSpecializedRoutineAttrName()))
       return true;
 
     // If this symbol is a call to an LLVM intrinsic, then it is likely valid.
