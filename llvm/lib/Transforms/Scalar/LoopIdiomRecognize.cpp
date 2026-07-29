@@ -1306,8 +1306,10 @@ public:
       return false;
     const APInt &OffVal = Off->getAPInt();
     // If null is defined then the base pointer can't be null
-    if (TheLoad.getParent()->getParent()->nullPointerIsDefined() &&
-        isa<ConstantPointerNull>(BasePtr->getValue()))
+    auto *NullBase = dyn_cast<ConstantPointerNull>(BasePtr->getValue());
+    if (NullBase && NullPointerIsDefined(
+                        TheLoad.getParent()->getParent(),
+                        NullBase->getPointerType()->getPointerAddressSpace()))
       return false;
     int64_t LoadSize;
     if (IsMemCpy) {
