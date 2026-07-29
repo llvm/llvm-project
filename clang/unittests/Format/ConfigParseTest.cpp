@@ -650,8 +650,30 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "AlignAfterOpenBracket: AlwaysBreak",
               BreakAfterOpenBracketLoop, true);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket, false);
+  // BlockIndent implies breaking after the open bracket and before the close
+  // bracket of braced lists, function calls/declarations, and if conditions.
+  Style.BreakAfterOpenBracketBracedList = false;
+  Style.BreakAfterOpenBracketFunction = false;
+  Style.BreakAfterOpenBracketIf = false;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
+  Style.BreakBeforeCloseBracketBracedList = false;
+  Style.BreakBeforeCloseBracketFunction = false;
+  Style.BreakBeforeCloseBracketIf = false;
+  Style.BreakBeforeCloseBracketLoop = true;
+  Style.BreakBeforeCloseBracketSwitch = true;
   CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
               true);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketBracedList);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketFunction);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketIf);
+  EXPECT_FALSE(Style.BreakAfterOpenBracketLoop);
+  EXPECT_FALSE(Style.BreakAfterOpenBracketSwitch);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketBracedList);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketFunction);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketIf);
+  EXPECT_FALSE(Style.BreakBeforeCloseBracketLoop);
+  EXPECT_FALSE(Style.BreakBeforeCloseBracketSwitch);
   Style.AlignAfterOpenBracket = false;
   CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket, true);
 
@@ -1145,20 +1167,24 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
   Style.SortIncludes = {};
-  CHECK_PARSE(
-      "SortIncludes: true", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: true", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
               FormatStyle::SortIncludesOptions{});
-  CHECK_PARSE(
-      "SortIncludes: CaseInsensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/true, /*IgnoreExtension=*/false}));
-  CHECK_PARSE(
-      "SortIncludes: CaseSensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/true,
+                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+  CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+  CHECK_PARSE("SortIncludes: Natural", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/true}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
               FormatStyle::SortIncludesOptions{});
 

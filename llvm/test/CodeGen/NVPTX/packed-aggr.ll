@@ -94,13 +94,17 @@ declare void @func()
 ; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func),
 ; CHECK64-SAME: 9, 0};
 
-;; Test that a ptrtoint to an integer narrower than a pointer emits only the
-;; symbol's low bytes via mask(), rather than a full pointer that would overrun
-;; and drop the following field. On a 32-bit target an i32 is already pointer-
-;; sized, so the aligned word path is used instead.
+;; Test that self-referential packed aggregates also use masked relocations
+;; when the aggregate size is not a multiple of the pointer size.
 
-@g = addrspace(1) global i32 0
-@s6 = addrspace(1) global { i32, i32 } { i32 ptrtoint (ptr addrspace(1) @g to i32), i32 305419896 }
-; CHECK32: .global .align 8 .u32 s6[2] = {g, 305419896};
-; CHECK64: .global .align 8 .u8 s6[8] = {
-; CHECK64-SAME: 0xFF(g), 0xFF00(g), 0xFF0000(g), 0xFF000000(g), 120, 86, 52, 18};
+%t6 = type <{ ptr, i8 }>
+@self_packed = addrspace(1) global %t6 <{
+; CHECK32:      .extern .global .align 1 .u8 self_packed[5];
+; CHECK32-NEXT: .visible .global .align 1 .u8 self_packed[5] = {
+; CHECK32-SAME: 0xFF(generic(self_packed)+3), 0xFF00(generic(self_packed)+3), 0xFF0000(generic(self_packed)+3), 0xFF000000(generic(self_packed)+3), 7};
+; CHECK64:      .extern .global .align 1 .u8 self_packed[9];
+; CHECK64-NEXT: .visible .global .align 1 .u8 self_packed[9] = {
+; CHECK64-SAME: 0xFF(generic(self_packed)+3), 0xFF00(generic(self_packed)+3), 0xFF0000(generic(self_packed)+3), 0xFF000000(generic(self_packed)+3),
+; CHECK64-SAME: 0xFF00000000(generic(self_packed)+3), 0xFF0000000000(generic(self_packed)+3), 0xFF000000000000(generic(self_packed)+3), 0xFF00000000000000(generic(self_packed)+3), 7};
+  ptr addrspacecast (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @self_packed, i32 3) to ptr),
+  i8 7 }>, align 1

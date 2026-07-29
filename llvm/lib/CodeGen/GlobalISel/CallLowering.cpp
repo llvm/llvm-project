@@ -453,7 +453,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     if (SrcSize == OrigTy.getSizeInBits())
       B.buildMergeValues(OrigRegs[0], Regs);
     else {
-      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
+      auto Widened = B.buildMergeLikeInstr(LLT::integer(SrcSize), Regs);
       B.buildTrunc(OrigRegs[0], Widened);
     }
 

@@ -18,8 +18,11 @@
 #include "MSP430InstrInfo.h"
 #include "MSP430Subtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
@@ -35,7 +38,7 @@ STATISTIC(NumSplit, "Number of machine basic blocks split");
 STATISTIC(NumExpanded, "Number of branches expanded to long format");
 
 namespace {
-class MSP430BSel : public MachineFunctionPass {
+class MSP430BSelImpl {
 
   typedef SmallVector<int, 16> OffsetVector;
 
@@ -47,8 +50,13 @@ class MSP430BSel : public MachineFunctionPass {
   bool expandBranches(OffsetVector &BlockOffsets);
 
 public:
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+class MSP430BranchSelectLegacyPass : public MachineFunctionPass {
+public:
   static char ID;
-  MSP430BSel() : MachineFunctionPass(ID) {}
+  MSP430BranchSelectLegacyPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -58,8 +66,9 @@ public:
 
   StringRef getPassName() const override { return "MSP430 Branch Selector"; }
 };
-char MSP430BSel::ID = 0;
-}
+
+char MSP430BranchSelectLegacyPass::ID = 0;
+} // namespace
 
 static bool isInRage(int DistanceInBytes) {
   // According to CC430 Family User's Guide, Section 4.5.1.3, branch
@@ -77,8 +86,8 @@ static bool isInRage(int DistanceInBytes) {
 
 /// Measure each basic block, fill the BlockOffsets, and return the size of
 /// the function, starting with BB
-unsigned MSP430BSel::measureFunction(OffsetVector &BlockOffsets,
-                                     MachineBasicBlock *FromBB) {
+unsigned MSP430BSelImpl::measureFunction(OffsetVector &BlockOffsets,
+                                         MachineBasicBlock *FromBB) {
   // Give the blocks of the function a dense, in-order, numbering.
   MF->RenumberBlocks(FromBB);
 
@@ -103,7 +112,7 @@ unsigned MSP430BSel::measureFunction(OffsetVector &BlockOffsets,
 
 /// Do expand branches and split the basic blocks if necessary.
 /// Returns true if made any change.
-bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
+bool MSP430BSelImpl::expandBranches(OffsetVector &BlockOffsets) {
   // For each conditional branch, if the offset to its destination is larger
   // than the offset field allows, transform it into a long branch sequence
   // like this:
@@ -220,7 +229,7 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
   return MadeChange;
 }
 
-bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
+bool MSP430BSelImpl::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   TII = static_cast<const MSP430InstrInfo *>(MF->getSubtarget().getInstrInfo());
 
@@ -228,7 +237,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
   if (!BranchSelectEnabled)
     return false;
 
-  LLVM_DEBUG(dbgs() << "\n********** " << getPassName() << " **********\n");
+  LLVM_DEBUG(dbgs() << "\n********** " << DEBUG_TYPE << " **********\n");
 
   // BlockOffsets - Contains the distance from the beginning of the function to
   // the beginning of each basic block.
@@ -250,7 +259,19 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
   return MadeChange;
 }
 
+bool MSP430BranchSelectLegacyPass::runOnMachineFunction(MachineFunction &MF) {
+  return MSP430BSelImpl().runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+MSP430BranchSelectPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return MSP430BSelImpl().runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+             : PreservedAnalyses::all();
+}
+
 /// Returns an instance of the Branch Selection Pass
-FunctionPass *llvm::createMSP430BranchSelectionPass() {
-  return new MSP430BSel();
+FunctionPass *llvm::createMSP430BranchSelectLegacyPass() {
+  return new MSP430BranchSelectLegacyPass();
 }

@@ -17,7 +17,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CBindingWrapping.h"
 
 using namespace llvm;
@@ -49,11 +48,6 @@ static TargetMachine *unwrap(LLVMTargetMachineRef P) {
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLVMPassBuilderOptions,
                                    LLVMPassBuilderOptionsRef)
 
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
-
 static LLVMErrorRef runPasses(Module *Mod, Function *Fun, const char *Passes,
                               TargetMachine *Machine,
                               LLVMPassBuilderOptions *PassOpts) {
@@ -62,11 +56,6 @@ static LLVMErrorRef runPasses(Module *Mod, Function *Fun, const char *Passes,
 
   PassInstrumentationCallbacks PIC;
   PassBuilder PB(Machine, PassOpts->PTO, std::nullopt, &PIC);
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

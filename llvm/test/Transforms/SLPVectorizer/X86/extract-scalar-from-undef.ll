@@ -4,7 +4,7 @@
 define i64 @foo(i32 %tmp7) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 poison>, i32 [[TMP8:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 poison>, i32 [[TMP8:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i32> [[TMP0]], <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 poison, i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, [[TMP4]]
