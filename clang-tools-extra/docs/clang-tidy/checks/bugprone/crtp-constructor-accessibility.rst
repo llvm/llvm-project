@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-crtp-constructor-accessibility
+```{title} clang-tidy - bugprone-crtp-constructor-accessibility
+```
 
-bugprone-crtp-constructor-accessibility
-=======================================
+# bugprone-crtp-constructor-accessibility
 
 Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
 can be constructed outside itself and the derived class.
@@ -13,15 +13,15 @@ the derived class is its template argument.
 
 Example:
 
-.. code-block:: c++
+```c++
+template <typename T> class CRTP {
+private:
+  CRTP() = default;
+  friend T;
+};
 
-  template <typename T> class CRTP {
-  private:
-    CRTP() = default;
-    friend T;
-  };
-
-  class Derived : CRTP<Derived> {};
+class Derived : CRTP<Derived> {};
+```
 
 Below can be seen some common mistakes that will allow the breaking of the
 idiom.
@@ -31,17 +31,17 @@ it allows users to construct that class on its own.
 
 Example:
 
-.. code-block:: c++
+```c++
+template <typename T> class CRTP {
+public:
+  CRTP() = default;
+};
 
-  template <typename T> class CRTP {
-  public:
-    CRTP() = default;
-  };
+class Good : CRTP<Good> {};
+Good GoodInstance;
 
-  class Good : CRTP<Good> {};
-  Good GoodInstance;
-
-  CRTP<int> BadInstance;
+CRTP<int> BadInstance;
+```
 
 If the constructor is protected, the possibility of an accidental instantiation
 is prevented, however it can fade an error, when a different class is used as
@@ -49,18 +49,18 @@ the template parameter instead of the derived one.
 
 Example:
 
-.. code-block:: c++
+```c++
+template <typename T> class CRTP {
+protected:
+  CRTP() = default;
+};
 
-  template <typename T> class CRTP {
-  protected:
-    CRTP() = default;
-  };
+class Good : CRTP<Good> {};
+Good GoodInstance;
 
-  class Good : CRTP<Good> {};
-  Good GoodInstance;
-
-  class Bad : CRTP<Good> {};
-  Bad BadInstance;
+class Bad : CRTP<Good> {};
+Bad BadInstance;
+```
 
 To ensure that no accidental instantiation happens, the best practice is to
 make the constructor private and declare the derived class as friend. Note
@@ -70,32 +70,29 @@ protected if they are deleted.
 
 Example:
 
-.. code-block:: c++
+```c++
+template <typename T> class CRTP {
+  CRTP() = default;
+  friend T;
+};
 
-  template <typename T> class CRTP {
-    CRTP() = default;
-    friend T;
-  };
+class Good : CRTP<Good> {};
+Good GoodInstance;
 
-  class Good : CRTP<Good> {};
-  Good GoodInstance;
+class Bad : CRTP<Good> {};
+Bad CompileTimeError;
 
-  class Bad : CRTP<Good> {};
-  Bad CompileTimeError;
+CRTP<int> AlsoCompileTimeError;
+```
 
-  CRTP<int> AlsoCompileTimeError;
+## Limitations
 
+- The check is not supported below C++11
 
-Limitations
------------
-
-* The check is not supported below C++11
-
-* The check does not handle when the derived class is passed as a variadic
+- The check does not handle when the derived class is passed as a variadic
   template argument
 
-* Accessible functions that can construct the CRTP, like factory functions
+- Accessible functions that can construct the CRTP, like factory functions
   are not checked
 
 The check also suggests a fix-its in some cases.
-
