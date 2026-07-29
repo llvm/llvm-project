@@ -18,17 +18,17 @@ RWBuffer<int> Out : register(u0);
 
 // CHECK-LABEL: define void @main
 // DXCHECK:  %[[PTR1:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-// DXCHECK:  atomicrmw add ptr %[[PTR1]], i32 1 monotonic
+// DXCHECK:  atomicrmw add ptr %[[PTR1]], i32 1 syncscope("device") monotonic
 // DXCHECK:  %[[PTR2:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-// DXCHECK:  atomicrmw or ptr %[[PTR2]], i32 1 monotonic
+// DXCHECK:  atomicrmw or ptr %[[PTR2]], i32 1 syncscope("device") monotonic
 // DXCHECK:  %[[PTR3:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
-// DXCHECK:  atomicrmw xor ptr %[[PTR3]], i32 1 monotonic
+// DXCHECK:  atomicrmw xor ptr %[[PTR3]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
-// SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 monotonic
+// SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
-// SPVCHECK: atomicrmw or ptr addrspace(11) %[[PTR2]], i32 1 monotonic
+// SPVCHECK: atomicrmw or ptr addrspace(11) %[[PTR2]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR3:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
-// SPVCHECK: atomicrmw xor ptr addrspace(11) %[[PTR3]], i32 1 monotonic
+// SPVCHECK: atomicrmw xor ptr addrspace(11) %[[PTR3]], i32 1 syncscope("device") monotonic
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
