@@ -2000,6 +2000,17 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Check(Value, "wchar_size metadata requires constant integer argument");
   }
 
+  if (ID->getString() == "long-double-type") {
+    Check(MFB == Module::Error,
+          "long-double-type module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "long-double-type metadata requires a string argument");
+    if (Value)
+      Check(Value->getString() == "ppc_fp128" ||
+                Value->getString() == "fp128" || Value->getString() == "double",
+            "invalid long-double-type metadata value", Op);
+  }
+
   if (ID->getString() == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
@@ -3897,6 +3908,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
+  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
+            Call.getFunction()->isStrictFP(),
+        "call site marked strictfp without caller function marked strictfp",
+        Call);
+
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4593,6 +4609,8 @@ void Verifier::visitLoadInst(LoadInst &LI) {
 
     Type *ScalarTy = ElTy;
     if (LI.isElementwise()) {
+      Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise load cannot be sequentially consistent.", &LI);
       auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
       Check(VecTy,
             "atomic elementwise load operand must have fixed vector type!", &LI,
@@ -4728,6 +4746,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   Type *ElTy = RMWI.getOperand(1)->getType();
   Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
+    Check(RMWI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+          "atomicrmw elementwise cannot be sequentially consistent.", &RMWI);
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);

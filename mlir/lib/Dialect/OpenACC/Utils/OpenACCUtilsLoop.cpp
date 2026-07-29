@@ -320,6 +320,7 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
       normalizeIVUses(rewriter, loc, iv, loopOp.getLowerbound()[idx],
                       loopOp.getStep()[idx]);
 
+  setCollapseCountAttr(parallelOp, parallelOp.getNumLoops());
   return parallelOp;
 }
 

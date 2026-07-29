@@ -138,19 +138,19 @@ long double    tanhl(long double x);
 
 bool signbit(arithmetic x);
 
-int fpclassify(arithmetic x);
+int fpclassify(arithmetic x); // constexpr since C++23
 
-bool isfinite(arithmetic x);
-bool isinf(arithmetic x);
-bool isnan(arithmetic x);
-bool isnormal(arithmetic x);
+bool isfinite(arithmetic x); // constexpr since C++23
+bool isinf(arithmetic x);    // constexpr since C++23
+bool isnan(arithmetic x);    // constexpr since C++23
+bool isnormal(arithmetic x); // constexpr since C++23
 
-bool isgreater(arithmetic x, arithmetic y);
-bool isgreaterequal(arithmetic x, arithmetic y);
-bool isless(arithmetic x, arithmetic y);
-bool islessequal(arithmetic x, arithmetic y);
-bool islessgreater(arithmetic x, arithmetic y);
-bool isunordered(arithmetic x, arithmetic y);
+bool isgreater(arithmetic x, arithmetic y);      // constexpr since C++23
+bool isgreaterequal(arithmetic x, arithmetic y); // constexpr since C++23
+bool isless(arithmetic x, arithmetic y);         // constexpr since C++23
+bool islessequal(arithmetic x, arithmetic y);    // constexpr since C++23
+bool islessgreater(arithmetic x, arithmetic y);  // constexpr since C++23
+bool isunordered(arithmetic x, arithmetic y);    // constexpr since C++23
 
 floating_point acosh (arithmetic x);
 float          acoshf(float x);

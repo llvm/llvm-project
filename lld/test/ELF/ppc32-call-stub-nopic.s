@@ -1,10 +1,10 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: echo '.globl f, g, h; f: g: h:' | llvm-mc -filetype=obj -triple=powerpc - -o %t1.o
-# RUN: ld.lld -shared %t1.o -soname t1.so -o %t1.so
+# RUN: ld.lld -z nosort-thunks -shared %t1.o -soname t1.so -o %t1.so
 
 ## Check we can create PLT entries for -fno-PIE executable.
-# RUN: ld.lld %t.o %t1.so -o %t
+# RUN: ld.lld -z nosort-thunks %t.o %t1.so -o %t
 # RUN: llvm-readobj -r -d %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .plt %t | FileCheck --check-prefix=HEX %s

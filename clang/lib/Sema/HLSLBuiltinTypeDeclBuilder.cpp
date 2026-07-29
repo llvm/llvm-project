@@ -1644,6 +1644,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   // original-value parameter for each entry.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
+  addByteAddressBufferInterlockedMethod("InterlockedOr", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_or");
 
   // Skip synthesizing the 64 bit methods on DXIL targets older than SM 6.6.
   const llvm::Triple &TT = AST.getTargetInfo().getTriple();
@@ -1655,6 +1657,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAdd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_add");
+    addByteAddressBufferInterlockedMethod("InterlockedOr64", AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_or");
   }
 
   return *this;

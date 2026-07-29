@@ -606,7 +606,8 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
 }
 
 void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                            MachineBasicBlock &MBB) const {
+                                            MachineBasicBlock &MBB,
+                                            RegScavenger *) const {
   const MachineFunction &MF = *MBB.getParent();
 
   // Insertion point.
@@ -619,12 +620,18 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   // Zero out FP stack if referenced. Do this outside of the loop below so that
   // it's done only once.
-  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (!X86::RFP80RegClass.contains(Reg))
       continue;
 
-    unsigned NumFPRegs = ST.is64Bit() ? 8 : 7;
+    // Do not push zeros over x87 return values. X86FloatingPoint records
+    // returned values as implicit ST0/ST1 uses on the return instruction.
+    unsigned NumFPRegs = 8;
+    if (MBBI->hasRegisterImplicitUseOperand(X86::ST0))
+      --NumFPRegs;
+    if (MBBI->hasRegisterImplicitUseOperand(X86::ST1))
+      --NumFPRegs;
+
     for (unsigned i = 0; i != NumFPRegs; ++i)
       BuildMI(MBB, MBBI, DL, TII.get(X86::LD_F0));
 

@@ -2,9 +2,6 @@
 
 # AMDGPU Memory Model
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

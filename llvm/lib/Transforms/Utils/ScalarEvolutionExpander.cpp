@@ -460,7 +460,6 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -1268,8 +1267,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
     const SCEV *Op = Diff;
     match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
     match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
-    match(Op, m_scev_PtrToAddr(m_SCEV(Op))) ||
-        match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    match(Op, m_scev_PtrToAddr(m_SCEV(Op)));
     if (!isa<SCEVConstant, SCEVUnknown>(Op))
       return nullptr;
     return Diff;
@@ -1285,13 +1283,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
     const SCEV *Diff = nullptr;
     if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
         DL.getAddressType(PhiTy) == STy) {
-      // Prefer ptrtoaddr over ptrtoint.
       const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
       Diff = CanReuse(AddrSCEV);
-      if (!Diff) {
-        const SCEV *IntSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-        Diff = CanReuse(IntSCEV);
-      }
     } else if (STy == PhiTy) {
       Diff = CanReuse(ExitSCEV);
     }
@@ -1455,33 +1448,72 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   return expand(T);
 }
 
+/// Return true if \p CI computes the same value as a `ptrtoaddr` of its
+/// pointer operand to \p Ty.
+static bool canReuseCastForPtrToAddr(const CastInst *CI, Type *Ty,
+                                     const DataLayout &DL) {
+  if (CI->getType() != Ty)
+    return false;
+  if (CI->getOpcode() == CastInst::PtrToAddr)
+    return true;
+  if (CI->getOpcode() != CastInst::PtrToInt)
+    return false;
+  unsigned AS = CI->getSrcTy()->getPointerAddressSpace();
+  return DL.getPointerSizeInBits(AS) == DL.getIndexSizeInBits(AS);
+}
+
+CastInst *SCEVExpander::findReusableCastForPtrToAddr(
+    Value *PtrOp, Type *Ty, const DataLayout &DL,
+    function_ref<bool(const CastInst *)> Dominates) {
+  // Constants have no use list to scan.
+  if (isa<Constant>(PtrOp))
+    return nullptr;
+  for (User *U : PtrOp->users()) {
+    auto *CI = dyn_cast<CastInst>(U);
+    if (!CI || !canReuseCastForPtrToAddr(CI, Ty, DL))
+      continue;
+    if (Dominates(CI))
+      return CI;
+  }
+  return nullptr;
+}
+
 Value *SCEVExpander::visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S) {
   Value *V = expand(S->getOperand());
   Type *Ty = S->getType();
 
-  // ptrtoaddr and ptrtoint produce the same value, so try to reuse either.
-  if (!isa<Constant>(V)) {
-    BasicBlock::iterator BIP = Builder.GetInsertPoint();
-    for (User *U : V->users()) {
-      auto *CI = dyn_cast<CastInst>(U);
-      if (CI && CI->getType() == Ty &&
-          (CI->getOpcode() == CastInst::PtrToAddr ||
-           CI->getOpcode() == CastInst::PtrToInt) &&
-          &*BIP != CI && SE.DT.dominates(CI, &*BIP))
-        return CI;
-    }
-  }
+  // ptrtoaddr and ptrtoint can produce the same value, so try to reuse either.
+  BasicBlock::iterator BIP = Builder.GetInsertPoint();
+  if (CastInst *CI =
+          findReusableCastForPtrToAddr(V, Ty, DL, [&](const CastInst *CI) {
+            return &*BIP != CI && SE.DT.dominates(CI, &*BIP);
+          }))
+    return CI;
+
   return ReuseOrCreateCast(V, Ty, CastInst::PtrToAddr,
                            GetOptimalInsertionPointForCastOf(V));
 }
 
-Value *SCEVExpander::visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S) {
-  Value *V = expand(S->getOperand());
-  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
-                           GetOptimalInsertionPointForCastOf(V));
-}
-
 Value *SCEVExpander::visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S) {
+  Type *Ty = S->getType();
+
+  // When truncating a ptrtoaddr, check for existing ptrtoint instructions that
+  // convert directly to the target type, to avoid generating redundant
+  // ptrtoaddr + trunc sequences.
+  if (auto *PtrToAddr = dyn_cast<SCEVPtrToAddrExpr>(S->getOperand())) {
+    Value *PtrOp = expand(PtrToAddr->getOperand());
+    if (!isa<Constant>(PtrOp)) {
+      BasicBlock::iterator BIP = Builder.GetInsertPoint();
+      for (User *U : PtrOp->users()) {
+        auto *CI = dyn_cast<CastInst>(U);
+        if (CI && CI->getType() == Ty &&
+            CI->getOpcode() == CastInst::PtrToInt && &*BIP != CI &&
+            SE.DT.dominates(CI, &*BIP))
+          return CI;
+      }
+    }
+  }
+
   Value *V = expand(S->getOperand());
   return Builder.CreateTrunc(V, S->getType());
 }
@@ -2011,9 +2043,6 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scPtrToAddr:
     Cost = CastCost(Instruction::PtrToAddr);
     break;
-  case scPtrToInt:
-    Cost = CastCost(Instruction::PtrToInt);
-    break;
   case scTruncate:
     Cost = CastCost(Instruction::Trunc);
     break;
@@ -2149,7 +2178,6 @@ bool SCEVExpander::isHighCostExpansionHelper(
   }
   case scTruncate:
   case scPtrToAddr:
-  case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
     Cost +=
