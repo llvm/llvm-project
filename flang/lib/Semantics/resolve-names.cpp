@@ -10686,25 +10686,42 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
     return; // error recovery
   }
 
-  // F2023 19.4 p2: a statement-function dummy argument name may be the same
-  // as an accessible name only if that name is a scalar variable.  The lookup
-  // walks the host chain (but not into the global scope), so host-associated
-  // identifiers are also considered.
+  // F2023 19.4 p2: a statement function dummy argument name may be the same
+  // as an accessible name only if that name is a scalar variable.  Only
+  // names present in the current scope after specification-part resolution
+  // can conflict: per 19.5.1.4 p2 item (11), the name's appearance as a
+  // statement function dummy argument renders any host entity of that name
+  // inaccessible by host association, and a global entity to which this
+  // scoping unit makes no other reference is not accessible in it either.
+  // (A name that becomes an external procedure name only by way of a
+  // reference in the execution part is not yet visible here and is not
+  // diagnosed.)
+  const std::set<SourceName> importNames{currScope().importNames()};
+  const common::ImportKind importKind{currScope().GetImportKind()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
-    if (const Symbol *hostSymbol{currScope().FindSymbol(dummyName.source)}) {
-      const Symbol &ultimate{hostSymbol->GetUltimate()};
+    // F2023 C8106: an explicitly imported name, or any host name made
+    // accessible by IMPORT, ALL, may not appear in a context that would
+    // render the host entity inaccessible, and a statement function dummy
+    // argument name is such a context (19.5.1.4 p2 item (11)).  There is
+    // no exception for scalar variables.  A plain IMPORT statement does
+    // not protect names from being hidden (8.8 p4).
+    if (importNames.count(dummyName.source) > 0 ||
+        importKind == common::ImportKind::All) {
+      if (const Symbol *host{
+              currScope().parent().FindSymbol(dummyName.source)}) {
+        Say(dummyName.source,
+            "'%s' from host may not be hidden by a statement function dummy argument"_err_en_US,
+            dummyName.source)
+            .Attach(host->name(), "Declaration of '%s'"_en_US, host->name());
+        continue;
+      }
+    }
+    if (const Symbol *local{FindInScope(currScope(), dummyName.source)}) {
+      const Symbol &ultimate{local->GetUltimate()};
       const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
                                       ultimate.has<EntityDetails>()) &&
           !IsNamedConstant(ultimate) && ultimate.Rank() == 0};
       if (!isScalarVariable) {
-        Say(dummyName.source,
-            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
-      }
-    } else {
-      // Also check the global scope, which FindSymbol skips
-      const Scope &globals{context().globalScope()};
-      if (auto it{globals.find(dummyName.source)}; it != globals.end()) {
-        // global function/subroutine — definitely not a scalar variable
         Say(dummyName.source,
             "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
       }
@@ -10740,7 +10757,7 @@ void ResolveNamesVisitor::CheckImports() {
   case common::ImportKind::None:
     break;
   case common::ImportKind::All:
-    // C8102: all entities in host must not be hidden
+    // F2023 C8106: all entities in host must not be hidden
     for (const auto &pair : scope.parent()) {
       auto &name{pair.first};
       std::optional<SourceName> scopeName{scope.GetName()};
@@ -10751,7 +10768,7 @@ void ResolveNamesVisitor::CheckImports() {
     break;
   case common::ImportKind::Default:
   case common::ImportKind::Only:
-    // C8102: entities named in IMPORT must not be hidden
+    // F2023 C8106: entities named in IMPORT must not be hidden
     for (auto &name : scope.importNames()) {
       CheckImport(name, name);
     }
