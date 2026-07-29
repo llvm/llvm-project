@@ -31,28 +31,16 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    bool Assumption) {
   SVal SimplifiedVal = simplifyToSVal(State, Sym);
   if (const auto *CI = SimplifiedVal.getAsInteger()) {
-    // The symbol folds to a concrete integer. If the assumption contradicts it
-    // the path is infeasible and must be pruned; otherwise a self-contradictory
-    // state would stay feasible and could crash checkers downstream.
+    // The assumption might be incompatible with the concrete integer after the
+    // simplification.
     if (isConcreteInfeasible(*CI, Assumption))
       return nullptr;
-    // When the fold is consistent we deliberately do NOT return early: we fall
+    // When the fold is feasible we deliberately do NOT return early: we fall
     // through and record the constraint on the *original* symbol. That is not a
     // no-op -- it is how the symbol-simplification fixpoint migrates a
-    // constraint onto a just-simplified symbol. Concretely, in
-    // symbol-simplification-fixpoint-two-iterations.cpp, once `b == 0` rewrites
-    // `c + b` (constrained to 0) into the bare symbol `c`, the classes merge
-    // and reAssume() calls assume(c, false); here `c` folds to the concrete 0,
-    // and falling through to assumeSymUnsupported()/assumeSymEQ() records `c ==
-    // 0`. That recorded fact is what lets the *next* iteration rewrite `a + c`
-    // into `a`. Returning State here skips the recording and the class stays
-    // stuck at
-    // `(a + c) != d`, regressing that test. (EquivalenceClass::simplify ->
-    // reAssume -> State->assume is the loop this participates in.)
+    // constraint onto a just-simplified symbol. See an example in
+    // symbol-simplification-fixpoint-two-iterations.cpp.
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
-    // A symbolic fold replaces the symbol so we reason about the simpler form.
-    // Any other SVal shape (Unknown, ...) keeps the original symbol -- matching
-    // the pre-existing behavior of the old simplify() helper.
     Sym = SimplifiedSym;
   }
 
@@ -138,13 +126,8 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
     // The symbol folds to a concrete integer. Prune the path only when the
     // concrete value proves it infeasible (mirroring
     // SimpleConstraintManager::assumeInclusiveRangeInternal). If it is
-    // consistent, fall through so the existing machinery still runs (see the
-    // note in assumeSym for why the fall-through is load-bearing).
-    //
-    // *CI comes from the simplified symbol, so it need not share From/To's
-    // bit width or signedness. Use APSInt::compareValues(), which normalizes
-    // both, rather than the APSInt relational operators, which assert on a
-    // signedness mismatch and require equal bit width.
+    // consistent, fall through so the existing machinery still runs it might
+    // trigger further simplification even if this assumption is trivial.
     bool IsInRange = llvm::APSInt::compareValues(*CI, From) >= 0 &&
                      llvm::APSInt::compareValues(*CI, To) <= 0;
     if (IsInRange != InRange)
@@ -185,8 +168,8 @@ RangedConstraintManager::assumeSymUnsupported(ProgramStateRef State,
   if (const auto *CI = SimplifiedVal.getAsInteger()) {
     // Prune only when the concrete fold contradicts the assumption. When it is
     // consistent we fall through and record the constraint on the original
-    // symbol (assumeSymNE/EQ below) rather than returning early; see the note
-    // in assumeSym for why the fall-through is load-bearing.
+    // symbol (assumeSymNE/EQ below) rather than returning early to continue
+    // constraint simplification.
     if (isConcreteInfeasible(*CI, Assumption))
       return nullptr;
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
