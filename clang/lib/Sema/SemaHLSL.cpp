@@ -2161,6 +2161,13 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.IsArray = true;
       break;
+    case attr::HLSLIsMultiSampled:
+      if (ResAttrs.IsMultiSampled) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.IsMultiSampled = true;
+      break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
@@ -2284,6 +2291,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLIsArray:
     A = HLSLIsArrayAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsMultiSampled:
+    A = HLSLIsMultiSampledAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -2993,6 +3004,11 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(
     const TranslationUnitDecl *TU) {
+  const TargetInfo &TargetInfo = SemaRef.getASTContext().getTargetInfo();
+  std::string &EntryName = TargetInfo.getTargetOpts().HLSLEntry;
+  bool IsLibraryShader = TargetInfo.getTriple().getEnvironment() ==
+                         llvm::Triple::EnvironmentType::Library;
+  SourceLocation EntryLoc{};
 
   // Iterate over all shader entry functions and library exports, and for those
   // that have a body (definiton), run diag scan on each, setting appropriate
@@ -3023,6 +3039,17 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
 
       // shader entry point
       if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
+        if (!IsLibraryShader && FD->getName() == EntryName) {
+          if (EntryLoc.isValid()) {
+            SemaRef.Diag(FD->getLocation(),
+                         diag::err_hlsl_ambiguous_entry_point)
+                << EntryName;
+            SemaRef.Diag(EntryLoc, diag::note_previous_declaration_as)
+                << EntryName;
+            return;
+          }
+          EntryLoc = FD->getLocation();
+        }
         SetShaderStageContext(ShaderAttr->getType());
         RunOnFunction(FD);
         continue;
@@ -3045,6 +3072,12 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
         continue;
       }
     }
+  }
+
+  if (!IsLibraryShader && EntryLoc.isInvalid()) {
+    SemaRef.Diag(TU->getLocation(), diag::err_hlsl_missing_entry_point)
+        << EntryName;
+    return;
   }
 }
 
@@ -3279,8 +3312,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
 }
 
 std::optional<ExprResult>
-SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
-  QualType BaseType = BaseExpr.get()->getType();
+SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
+  QualType BaseType = BaseExpr->getType();
   const HLSLAttributedResourceType *ResTy =
       HLSLAttributedResourceType::findHandleTypeOnResource(
           BaseType.getTypePtr());
@@ -3297,7 +3330,7 @@ SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
   auto *ConversionDecl =
       cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
 
-  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr, NamedConversionDecl,
                                         ConversionDecl,
                                         /*HadMultipleCandidates=*/false);
 }
@@ -4540,10 +4573,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_add: {
+  case Builtin::BI__builtin_hlsl_interlocked_add:
+  case Builtin::BI__builtin_hlsl_interlocked_or:
+  case Builtin::BI__builtin_hlsl_interlocked_xor: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
-    // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
-    // When reached via the synthesized `InterlockedAdd` overload set in
+    // to `__builtin_hlsl_interlocked_op` bypass argument checking entirely.
+    // When reached via the synthesized `InterlockedOp` overload set in
     // HLSLExternalSemaSource, overload resolution has already enforced the
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
@@ -4564,6 +4599,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                    diag::err_builtin_invalid_arg_type)
           << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
           << DestTy;
+      return true;
+    }
+
+    // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
+    // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared
+    // on SM 6.6+, so this defensive check only fires for direct builtin
+    // calls; skip synthetic invocations (invalid source location).
+    const TargetInfo &TI = SemaRef.Context.getTargetInfo();
+    if (TheCall->getBeginLoc().isValid() &&
+        TI.getTriple().getArch() == llvm::Triple::dxil &&
+        SemaRef.Context.getTypeSize(DestTy) == 64 &&
+        TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
+          << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
       return true;
     }
 
@@ -5152,7 +5201,7 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
 
   // Writebacks are performed with `=` binary operator, which allows for
   // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Param->getBeginLoc(),
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
                            tok::equal, ArgOpV, OpV);
 
   if (Res.isInvalid())

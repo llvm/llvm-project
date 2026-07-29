@@ -684,6 +684,7 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
 
 uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
                                          const char *description,
+                                         uint64_t type_mask,
                                          SBStructuredData &args_data,
                                          SBError &error) {
   if (!class_name || class_name[0] == '\0') {
@@ -704,7 +705,7 @@ uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
 
     llvm::Expected<lldb::user_id_t> id_or_err =
         target_sp->AddBreakpointResolverOverride(
-            class_name, args_dict,
+            class_name, type_mask, args_dict,
             description ? description : "<No Description>");
     if (id_or_err)
       return *id_or_err;
@@ -1208,7 +1209,7 @@ void SBTarget::DeleteBreakpointName(const char *name) {
 
   if (TargetSP target_sp = GetSP()) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    target_sp->DeleteBreakpointName(ConstString(name));
+    target_sp->DeleteBreakpointName(llvm::StringRef(name));
   }
 }
 
@@ -2158,6 +2159,8 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
       if (llvm::Expected<DisassemblerSP> disassembler =
               target_sp->ReadInstructions(*addr_ptr, count, flavor_string)) {
         sb_instructions.SetDisassembler(*disassembler);
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::API), disassembler.takeError(), "{0}");
       }
     }
   }

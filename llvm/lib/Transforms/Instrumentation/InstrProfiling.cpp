@@ -29,10 +29,10 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -972,14 +972,16 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   if (!isCounterPromotionEnabled())
     return;
 
-  DominatorTree DT(*F);
-  LoopInfo LI(DT);
+  CycleInfo CI;
+  CI.compute(*F);
+  LoopInfo LI;
+  LI.analyze(F);
   DenseMap<Loop *, SmallVector<LoadStorePair, 8>> LoopPromotionCandidates;
 
   std::unique_ptr<BlockFrequencyInfo> BFI;
   if (Options.UseBFIInPromotion) {
     std::unique_ptr<BranchProbabilityInfo> BPI;
-    BPI.reset(new BranchProbabilityInfo(*F, LI, &GetTLI(*F)));
+    BPI.reset(new BranchProbabilityInfo(*F, CI, &GetTLI(*F)));
     BFI.reset(new BlockFrequencyInfo(*F, *BPI, LI));
   }
 
@@ -1878,6 +1880,40 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
   PD.RegionBitmaps = BitmapPtr;
   PD.NumBitmapBytes = Inc->getNumBitmapBytes();
+
+  if (PD.NumBitmapBytes &&
+      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
+    LLVMContext &Ctx = M.getContext();
+    Function *Fn = Inc->getParent()->getParent();
+    if (auto *SP = Fn->getSubprogram()) {
+      DIBuilder DB(M, true, SP->getUnit());
+      Metadata *FunctionNameAnnotation[] = {
+          MDString::get(Ctx, InstrProfCorrelator::FunctionNameAttributeName),
+          MDString::get(Ctx, getPGOFuncNameVarInitializer(NamePtr)),
+      };
+      Metadata *NumBitmapBitsAnnotation[] = {
+          MDString::get(Ctx, InstrProfCorrelator::NumBitmapBitsAttributeName),
+          ConstantAsMetadata::get(Inc->getNumBitmapBits()),
+      };
+      auto Annotations = DB.getOrCreateArray({
+          MDNode::get(Ctx, FunctionNameAnnotation),
+          MDNode::get(Ctx, NumBitmapBitsAnnotation),
+      });
+      auto *DICounter = DB.createGlobalVariableExpression(
+          SP, BitmapPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
+          /*LineNo=*/0, DB.createUnspecifiedType("Profile Bitmap Type"),
+          BitmapPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
+          /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
+          Annotations);
+      BitmapPtr->addDebugInfo(DICounter);
+      DB.finalizeSubprogram(SP);
+      DB.finalize();
+    }
+
+    // Mark the bitmap variable as used so that it isn't optimized out.
+    CompilerUsedVars.push_back(PD.RegionBitmaps);
+  }
+
   return PD.RegionBitmaps;
 }
 
@@ -1947,6 +1983,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       CounterPtr->addDebugInfo(DICounter);
+      DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 

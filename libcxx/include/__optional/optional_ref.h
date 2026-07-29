@@ -313,8 +313,8 @@ public:
   template <class _Func>
   [[nodiscard]] constexpr auto and_then(_Func&& __f) const {
     using _Up = invoke_result_t<_Func, _Tp&>;
-    static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
-                  "Result of f(value()) must be a specialization of std::optional");
+    static_assert(
+        __is_std_optional_v<remove_cvref_t<_Up>>, "Result of f(value()) must be a specialization of std::optional");
     if (*this)
       return std::invoke(std::forward<_Func>(__f), value());
     return remove_cvref_t<_Up>();

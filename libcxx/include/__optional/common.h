@@ -16,7 +16,6 @@
 #include <__fwd/format.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
 
@@ -59,10 +58,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 struct __optional_construct_from_invoke_tag {};
 
 template <class _Tp>
-struct __is_std_optional : false_type {};
+inline constexpr bool __is_std_optional_v = false;
 
 template <class _Tp>
-struct __is_std_optional<optional<_Tp>> : true_type {};
+inline constexpr bool __is_std_optional_v<optional<_Tp>> = true;
 
 #  if _LIBCPP_STD_VER < 26
 template <class _Tp>

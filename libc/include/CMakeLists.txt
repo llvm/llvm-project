@@ -65,6 +65,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_fcntl
+  ../libc/include/sys/fcntl.yaml
+  sys/fcntl.h
+  DEPENDS
+    .fcntl
+)
+
+add_header_macro(
   dlfcn
   ../libc/include/dlfcn.yaml
   dlfcn.h
@@ -79,6 +87,14 @@ add_header_macro(
   endian.h
   DEPENDS
     .llvm-libc-macros.endian_macros
+    .llvm_libc_common_h
+)
+
+add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
     .llvm_libc_common_h
 )
 
@@ -204,6 +220,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   assert
   ../libc/include/assert.yaml
   assert.h
@@ -262,6 +288,14 @@ add_header_macro(
     .llvm-libc-types.errno_t
     .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
+)
+
+add_header_macro(
+  memory
+  ../libc/include/memory.yaml
+  memory.h
+  DEPENDS
+    .string
 )
 
 add_header_macro(
@@ -367,6 +401,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_signal
+  ../libc/include/sys/signal.yaml
+  sys/signal.h
+  DEPENDS
+    .signal
+)
+
+add_header_macro(
   stdbit
   ../libc/include/stdbit.yaml
   stdbit.h
@@ -441,6 +483,14 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.uid_t
     .llvm-libc-types.__getoptargv_t
+)
+
+add_header_macro(
+  sys_unistd
+  ../libc/include/sys/unistd.yaml
+  sys/unistd.h
+  DEPENDS
+    .unistd
 )
 
 add_header_macro(
@@ -539,6 +589,7 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-macros.sys_auxv_macros
     .llvm-libc-types.Elf32_Addr
     .llvm-libc-types.Elf32_Chdr
     .llvm-libc-types.Elf32_Dyn
@@ -826,16 +877,23 @@ add_header_macro(
   sys/types.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__off_t
+    .llvm-libc-types.__off64_t
+    .llvm-libc-types.__uint64_t
     .llvm-libc-types.blkcnt_t
     .llvm-libc-types.blksize_t
+    .llvm-libc-types.caddr_t
     .llvm-libc-types.clockid_t
     .llvm-libc-types.dev_t
     .llvm-libc-types.gid_t
+    .llvm-libc-types.id_t
+    .llvm-libc-types.ino64_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
     .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
+    .llvm-libc-types.off64_t
     .llvm-libc-types.off_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.pthread_attr_t
@@ -850,9 +908,17 @@ add_header_macro(
     .llvm-libc-types.suseconds_t
     .llvm-libc-types.time_t
     .llvm-libc-types.u_char
+    .llvm-libc-types.u_int
+    .llvm-libc-types.u_int16_t
     .llvm-libc-types.u_int32_t
+    .llvm-libc-types.u_int8_t
+    .llvm-libc-types.u_long
+    .llvm-libc-types.u_short
     .llvm-libc-types.uid_t
     .llvm-libc-types.uint
+    .llvm-libc-types.ulong
+    .llvm-libc-types.useconds_t
+    .llvm-libc-types.ushort
 )
 
 add_header_macro(
@@ -895,6 +961,18 @@ add_header_macro(
     .llvm-libc-types.siginfo_t
 )
 
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
+
+add_header_macro(
+  net_if
+  ../libc/include/net/if.yaml
+  net/if.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_ifreq
+)
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
 
@@ -908,6 +986,8 @@ add_header_macro(
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_group_req
+    .llvm-libc-types.struct_group_source_req
     .llvm-libc-types.struct_sockaddr_in
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
@@ -917,6 +997,7 @@ add_header_macro(
     .llvm-libc-types.struct_ip_mreqn
     .llvm-libc-types.struct_ip_msfilter
     .llvm-libc-types.struct_ip_opts
+    .llvm-libc-types.struct_ipv6_mreq
     .llvm_libc_common_h
     .sys_socket
 )
@@ -1029,12 +1110,31 @@ add_header_macro(
   )
 
 add_header_macro(
+  sys_poll
+  ../libc/include/sys/poll.yaml
+  sys/poll.h
+  DEPENDS
+    .poll
+)
+
+add_header_macro(
   nl_types
   ../libc/include/nl_types.yaml
   nl_types.h
   DEPENDS
     .llvm-libc-macros.nl_types_macros
     .llvm-libc-types.nl_catd
+  )
+
+add_header_macro(
+  langinfo
+  ../libc/include/langinfo.yaml
+  langinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.langinfo_macros
+    .llvm-libc-types.nl_item
+    .llvm-libc-types.locale_t
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility

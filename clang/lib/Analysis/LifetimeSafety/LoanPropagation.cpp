@@ -18,6 +18,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -202,53 +203,74 @@ public:
     return getLoans(getState(P), OID);
   }
 
-  llvm::SmallVector<OriginID>
-  buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
-                       const LoanID TargetLoan) const {
+  llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
+                                                   const OriginID StartOID,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const {
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
-    OriginID CurrOID = StartOID;
-    llvm::SmallVector<OriginID> OriginFlowChain;
-    llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
-    const auto *StartIt = llvm::find(Facts, StartPoint);
-    assert(StartIt != Facts.end());
+    // Locate the CFG block containing the StartPoint
+    const CFGBlock *EndBlock = nullptr;
+    size_t BlockID = FactMgr.getBlockID(StartPoint);
+    for (const CFGBlock *Block : *Cfg)
+      if (Block->getBlockID() == BlockID) {
+        EndBlock = Block;
+        break;
+      }
 
-    for (const Fact *F :
-         llvm::reverse(llvm::make_range(Facts.begin(), StartIt))) {
-      if (const auto *IF = F->getAs<IssueFact>())
-        if (IF->getLoanID() == TargetLoan) {
-          assert(IF->getOriginID() == CurrOID);
-          return OriginFlowChain;
-        }
+    // Set up DFS traversal state
+    // SearchState tracks which block we're in and which origin we're tracing
+    // Each DFSNode maintains its own OriginFlowChain.
+    using SearchState = std::pair<const CFGBlock *, OriginID>;
+    struct DFSNode {
+      SearchState CurrState;
+      llvm::SmallVector<OriginID> OriginFlowChain;
+    };
 
-      const auto *OFF = F->getAs<OriginFlowFact>();
-      if (!OFF)
-        continue;
-      if (OFF->getDestOriginID() != CurrOID)
-        continue;
+    llvm::SmallVector<DFSNode> PendingStates;
+    llvm::SmallSet<SearchState, 16> VistedStates;
+    PendingStates.push_back({{EndBlock, StartOID}, {}});
 
-      const OriginID SrcOriginID = OFF->getSrcOriginID();
-      if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
-        continue;
-      OriginFlowChain.push_back(SrcOriginID);
-      CurrOID = SrcOriginID;
+    // DFS loop to trace loan backwards through CFG
+    while (!PendingStates.empty()) {
+      DFSNode CurrNode = PendingStates.pop_back_val();
+      auto [CurrBlock, CurrOID] = CurrNode.CurrState;
+
+      // Trace origins within the current block
+      const auto [BuildResult, Complete] =
+          buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
+      if (!BuildResult.empty()) {
+        CurrNode.OriginFlowChain.append(BuildResult);
+        CurrOID = BuildResult.back();
+      }
+
+      // If we found the IssueFact, we're done
+      if (Complete)
+        return CurrNode.OriginFlowChain;
+
+      // Only explore predecessor blocks where the target loan is present in the
+      // current origin.
+      for (const CFGBlock *PredBlock : CurrBlock->preds()) {
+        SearchState NextState = {PredBlock, CurrOID};
+        if (getLoans(getOutState(PredBlock), CurrOID).contains(TargetLoan) &&
+            VistedStates.insert(NextState).second)
+          PendingStates.push_back({NextState, CurrNode.OriginFlowChain});
+      }
     }
 
-    // FIXME: Ideally, this return is unreachable and should be an assert
-    // because we expect to always finish at an IssueFact. But since current
-    // traversal is limited to a single CFG block, multi-block OriginFlowChain
-    // construction might miss the IssueFact. We should add llvm_unreachable
-    // here once multi-block support is implemented.
-    return {};
+    llvm_unreachable(
+        "buildOriginFlowChain did not reach IssueFact for TargetLoan");
   }
 
-  llvm::SmallVector<OriginID>
-  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan) const {
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan);
+        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
+                                    Cfg);
 
     return {};
   }
@@ -273,6 +295,40 @@ private:
     if (auto *Loans = Map->lookup(OID))
       return *Loans;
     return LoanSetFactory.getEmptySet();
+  }
+
+  /// Builds the chain of origins through which a loan has propagated.
+  ///
+  /// This procedure operates strictly within a single Block. Starting from the
+  /// last fact of the Block, it traces backwards through OriginFlowFacts to
+  /// identify the sequence of origins through which the loan flowed.
+  ///
+  /// Returns (chain, true) if the target loan origin is found during the
+  /// traversal, otherwise returns (chain, false).
+  std::pair<llvm::SmallVector<OriginID>, bool>
+  buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
+                       const LoanID TargetLoan) const {
+    OriginID CurrOID = StartOID;
+    llvm::SmallVector<OriginID> OriginFlowChain;
+
+    for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
+      if (const auto *IF = F->getAs<IssueFact>())
+        if (IF->getLoanID() == TargetLoan && IF->getOriginID() == CurrOID)
+          return {OriginFlowChain, true};
+
+      const auto *OFF = F->getAs<OriginFlowFact>();
+      if (!OFF || OFF->getDestOriginID() != CurrOID)
+        continue;
+
+      const OriginID SrcOriginID = OFF->getSrcOriginID();
+      if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
+        continue;
+
+      OriginFlowChain.push_back(SrcOriginID);
+      CurrOID = SrcOriginID;
+    }
+
+    return {OriginFlowChain, false};
   }
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
@@ -303,16 +359,14 @@ LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
 
-llvm::SmallVector<OriginID>
-LoanPropagationAnalysis::buildOriginFlowChain(ProgramPoint StartPoint,
-                                              const OriginID StartOID,
-                                              const LoanID TargetLoan) const {
-  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan);
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
+    const CFG *Cfg) const {
+  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, Cfg);
 }
 
-llvm::SmallVector<OriginID>
-LoanPropagationAnalysis::buildOriginFlowChain(const UseFact *UF,
-                                              const LoanID TargetLoan) const {
-  return PImpl->buildOriginFlowChain(UF, TargetLoan);
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    const UseFact *UF, const LoanID TargetLoan, const CFG *Cfg) const {
+  return PImpl->buildOriginFlowChain(UF, TargetLoan, Cfg);
 }
 } // namespace clang::lifetimes::internal

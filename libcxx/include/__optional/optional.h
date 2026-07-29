@@ -443,7 +443,7 @@ private:
   template <class _Up>
   using _CheckOptionalArgsCtor _LIBCPP_NODEBUG =
       _If< _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value && _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
-               (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
+               (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional_v<__remove_cvref_t<_Up>>),
            _CheckOptionalArgsConstructor,
            __check_tuple_constructor_fail >;
   template <class _QualUp>
@@ -633,8 +633,8 @@ public:
   template <class _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = invoke_result_t<_Func, _Tp&>;
-    static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
-                  "Result of f(value()) must be a specialization of std::optional");
+    static_assert(
+        __is_std_optional_v<remove_cvref_t<_Up>>, "Result of f(value()) must be a specialization of std::optional");
     if (*this)
       return std::invoke(std::forward<_Func>(__f), value());
     return remove_cvref_t<_Up>();
@@ -643,8 +643,8 @@ public:
   template <class _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = invoke_result_t<_Func, const _Tp&>;
-    static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
-                  "Result of f(value()) must be a specialization of std::optional");
+    static_assert(
+        __is_std_optional_v<remove_cvref_t<_Up>>, "Result of f(value()) must be a specialization of std::optional");
     if (*this)
       return std::invoke(std::forward<_Func>(__f), value());
     return remove_cvref_t<_Up>();
@@ -653,7 +653,7 @@ public:
   template <class _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = invoke_result_t<_Func, _Tp&&>;
-    static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
+    static_assert(__is_std_optional_v<remove_cvref_t<_Up>>,
                   "Result of f(std::move(value())) must be a specialization of std::optional");
     if (*this)
       return std::invoke(std::forward<_Func>(__f), std::move(value()));
@@ -663,7 +663,7 @@ public:
   template <class _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = invoke_result_t<_Func, const _Tp&&>;
-    static_assert(__is_std_optional<remove_cvref_t<_Up>>::value,
+    static_assert(__is_std_optional_v<remove_cvref_t<_Up>>,
                   "Result of f(std::move(value())) must be a specialization of std::optional");
     if (*this)
       return std::invoke(std::forward<_Func>(__f), std::move(value()));
