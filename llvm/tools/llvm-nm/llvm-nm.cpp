@@ -2045,26 +2045,6 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
   return true;
 }
 
-static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
-                            StringRef Filename) {
-  for (auto I : map) {
-    Expected<Archive::Child> C = I.getMember();
-    if (!C) {
-      error(C.takeError(), Filename);
-      break;
-    }
-    Expected<StringRef> FileNameOrErr = C->getName();
-    if (!FileNameOrErr) {
-      error(FileNameOrErr.takeError(), Filename);
-      break;
-    }
-    StringRef SymName = I.getName();
-    outs() << SymName << " in " << FileNameOrErr.get() << "\n";
-  }
-
-  outs() << "\n";
-}
-
 /// Decode the low 3 bits of a z/OS archive symbol attribute word into a
 /// human-readable string, e.g. "[64-bit + XPLink]".
 /// Any bits above the known 3-bit mask produce a trailing "?" flag.
@@ -2091,27 +2071,8 @@ static std::string decodeZOSAttributes(uint32_t Attrs) {
   return Result;
 }
 
-/// Print the z/OS-specific archive map with archive symbol attributes.
-///
-/// Columns:
-///   Name                   - symbol name
-///   Member                 - archive member filename
-///   Attributes             - raw attribute word (hex)
-///   Attribute Description  - decoded bit flags of the archive attributes
-static void printZOSArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
-                               StringRef Filename) {
-  constexpr unsigned NameW   = 20;
-  constexpr unsigned MemberW = 22;
-  constexpr unsigned AttrsW  = 12;
-
-  outs() << left_justify("Name", NameW) << " "
-         << left_justify("Member", MemberW) << " "
-         << left_justify("Attributes", AttrsW) << " "
-         << "Attribute Description\n";
-  constexpr unsigned AttrDescW = sizeof("Attribute Description") - 1;
-  outs() << std::string(NameW + 1 + MemberW + 1 + AttrsW + 1 + AttrDescW, '-')
-         << "\n";
-
+static void printArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
+                            StringRef Filename, bool PrintZOSAttrs = false) {
   for (auto I : Map) {
     Expected<Archive::Child> C = I.getMember();
     if (!C) {
@@ -2123,14 +2084,17 @@ static void printZOSArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
       error(FileNameOrErr.takeError(), Filename);
       break;
     }
-    uint32_t Attrs = I.getZOSAttributes();
-    std::string AttrsStr;
-    llvm::raw_string_ostream(AttrsStr) << format("0x%08x", Attrs);
-    outs() << left_justify(I.getName(), NameW) << " "
-           << left_justify(FileNameOrErr.get(), MemberW) << " "
-           << left_justify(AttrsStr, AttrsW) << " "
-           << decodeZOSAttributes(Attrs) << "\n";
+    outs() << I.getName() << " in " << FileNameOrErr.get();
+    if (PrintZOSAttrs) {
+      uint32_t Attrs = I.getZOSAttributes();
+      std::string AttrsStr;
+      llvm::raw_string_ostream(AttrsStr) << format("0x%08x", Attrs);
+      outs() << " (flags: " << AttrsStr << " " << decodeZOSAttributes(Attrs)
+             << ")";
+    }
+    outs() << "\n";
   }
+
   outs() << "\n";
 }
 
@@ -2138,13 +2102,7 @@ static void dumpArchiveMap(Archive *A, StringRef Filename) {
   auto Map = A->symbols();
   if (!Map.empty()) {
     outs() << "Archive map\n";
-    printArchiveMap(Map, Filename);
-    // For z/OS archives, also print the extended map showing per-symbol
-    // attributes (64-bit, XPLink, WSA) stored in the __.SYMDEF symbol table.
-    if (A->kind() == Archive::K_ZOS) {
-      outs() << "Archive map (z/OS attributes)\n";
-      printZOSArchiveMap(Map, Filename);
-    }
+    printArchiveMap(Map, Filename, A->kind() == Archive::K_ZOS);
   }
 
   auto ECMap = A->ec_symbols();

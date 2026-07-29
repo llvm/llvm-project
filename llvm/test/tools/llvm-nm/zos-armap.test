@@ -24,28 +24,13 @@
 
 # RUN: llvm-nm --print-armap %t.dir/test.a | FileCheck %s
 
-## Check the standard archive map with the usual "name in member" format.
+## For z/OS archives, each symbol line includes (flags: <hex> [description]).
 # CHECK:      Archive map
-# CHECK-NEXT: sym000 in test.o
-# CHECK-NEXT: sym001 in test.o
-# CHECK-NEXT: sym010 in test.o
-# CHECK-NEXT: sym011 in test.o
-# CHECK-NEXT: sym100 in test.o
-# CHECK-NEXT: sym101 in test.o
-# CHECK-NEXT: sym110 in test.o
-# CHECK-NEXT: sym111 in test.o
-
-## Check the z/OS attribute map follows with header and separator line.
-# CHECK:      Archive map (z/OS attributes)
-# CHECK-NEXT: Name{{.*}}Member{{.*}}Attributes{{.*}}Attribute Description
-# CHECK-NEXT: ---
-
-## All 8 bit combinations: raw hex and decoded description.
-# CHECK: sym000{{[ ]+}}test.o{{[ ]+}}0x00000000{{[ ]+}}[none]
-# CHECK: sym001{{[ ]+}}test.o{{[ ]+}}0x00000001{{[ ]+}}[WSA]
-# CHECK: sym010{{[ ]+}}test.o{{[ ]+}}0x00000002{{[ ]+}}[XPLink]
-# CHECK: sym011{{[ ]+}}test.o{{[ ]+}}0x00000003{{[ ]+}}[XPLink + WSA]
-# CHECK: sym100{{[ ]+}}test.o{{[ ]+}}0x00000004{{[ ]+}}[64-bit]
-# CHECK: sym101{{[ ]+}}test.o{{[ ]+}}0x00000005{{[ ]+}}[64-bit + WSA]
-# CHECK: sym110{{[ ]+}}test.o{{[ ]+}}0x00000006{{[ ]+}}[64-bit + XPLink]
-# CHECK: sym111{{[ ]+}}test.o{{[ ]+}}0x00000007{{[ ]+}}[64-bit + XPLink + WSA]
+# CHECK-NEXT: sym000 in test.o (flags: 0x00000000 [none])
+# CHECK-NEXT: sym001 in test.o (flags: 0x00000001 [WSA])
+# CHECK-NEXT: sym010 in test.o (flags: 0x00000002 [XPLink])
+# CHECK-NEXT: sym011 in test.o (flags: 0x00000003 [XPLink + WSA])
+# CHECK-NEXT: sym100 in test.o (flags: 0x00000004 [64-bit])
+# CHECK-NEXT: sym101 in test.o (flags: 0x00000005 [64-bit + WSA])
+# CHECK-NEXT: sym110 in test.o (flags: 0x00000006 [64-bit + XPLink])
+# CHECK-NEXT: sym111 in test.o (flags: 0x00000007 [64-bit + XPLink + WSA])
