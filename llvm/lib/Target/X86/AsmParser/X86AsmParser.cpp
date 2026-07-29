@@ -18,7 +18,6 @@
 #include "X86RegisterInfo.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -4603,8 +4602,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
   SMRange EmptyRange;
   // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
   // when matching the instruction. The mode must be restored before the
-  // instruction is emitted, or the 32-bit form loses its 0x66 prefix. Matching
-  // has several error returns, so a guard covers those.
+  // instruction is emitted, or the 32-bit form loses its 0x66 prefix.
   const bool ForcedData32 = ForcedDataPrefix == X86::Is32Bit;
   auto RestoreMode = [&] {
     if (ForcedData32) {
@@ -4614,7 +4612,6 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
   };
   if (ForcedData32)
     SwitchMode(X86::Is32Bit);
-  llvm::scope_exit ModeGuard(RestoreMode);
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
   for (const auto &Op : Operands) {
@@ -4712,6 +4709,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
 
   // If it's a bad mnemonic, all results will be the same.
   if (Match.back() == Match_MnemonicFail) {
+    RestoreMode();
     return Error(IDLoc, "invalid instruction mnemonic '" + Mnemonic + "'",
                  Op.getLocRange(), MatchingInlineAsm);
   }
@@ -4738,7 +4736,6 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
 
   // Matching is done, so drop back to 16-bit before anything is emitted.
   RestoreMode();
-  ModeGuard.release();
 
   // If exactly one matched, then we treat that as a successful match (and the
   // instruction will already have been filled in correctly, since the failing
