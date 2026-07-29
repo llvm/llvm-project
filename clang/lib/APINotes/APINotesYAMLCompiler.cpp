@@ -18,11 +18,16 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -788,6 +793,22 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
+static std::string
+getFunctionSelectorKey(llvm::StringRef Name,
+                       llvm::ArrayRef<llvm::StringRef> Parameters) {
+  llvm::SmallString<64> Key;
+  llvm::raw_svector_ostream OS(Key);
+  auto AppendKeyPart = [&OS](llvm::StringRef Part) {
+    OS << Part.size() << ':' << Part;
+  };
+
+  AppendKeyPart(Name);
+  OS << ';';
+  for (llvm::StringRef Parameter : Parameters)
+    AppendKeyPart(Parameter);
+  return Key.str().str();
+}
+
 class YAMLConverter {
   const Module &M;
   APINotesWriter Writer;
@@ -1162,10 +1183,23 @@ public:
       Writer.addField(TagCtxID, Field.Name, FI, SwiftVersion);
     }
 
+    llvm::StringSet<> KnownMethodSelectors;
     for (const auto &CXXMethod : T.Methods) {
       auto WhereParameters = getWhereParameters(CXXMethod);
       if (!WhereParameters.first)
         continue;
+
+      if (WhereParameters.second) {
+        if (!KnownMethodSelectors
+                 .insert(getFunctionSelectorKey(CXXMethod.Name,
+                                                *WhereParameters.second))
+                 .second) {
+          emitError(llvm::Twine("multiple API notes entries for C++ method '") +
+                    CXXMethod.Name + "' with Where.Parameters " +
+                    formatAPINotesParameterSelector(*WhereParameters.second));
+          continue;
+        }
+      }
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
@@ -1243,13 +1277,26 @@ public:
 
     // Write all global functions.
     llvm::StringSet<> KnownNameOnlyFunctions;
+    llvm::StringSet<> KnownFunctionSelectors;
     for (const auto &Function : TLItems.Functions) {
       auto WhereParameters = getWhereParameters(Function);
       if (!WhereParameters.first)
         continue;
 
-      // Check for duplicate name-only global functions. Selector-aware
-      // duplicate diagnostics are handled by a later overload-matching PR.
+      if (WhereParameters.second) {
+        if (!KnownFunctionSelectors
+                 .insert(getFunctionSelectorKey(Function.Name,
+                                                *WhereParameters.second))
+                 .second) {
+          emitError(
+              llvm::Twine("multiple API notes entries for global function '") +
+              Function.Name + "' with Where.Parameters " +
+              formatAPINotesParameterSelector(*WhereParameters.second));
+          continue;
+        }
+      }
+
+      // Check for duplicate name-only global functions.
       if (!WhereParameters.second &&
           !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +

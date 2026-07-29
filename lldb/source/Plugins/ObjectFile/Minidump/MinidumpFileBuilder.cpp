@@ -279,7 +279,7 @@ llvm::Expected<uint64_t> getModuleFileSize(Target &target,
   lldb::SectionSP next_sect_sp = sect_so_addr.GetSection();
   while (next_sect_sp &&
          next_sect_sp->GetLoadBaseAddress(&target) == next_sect_addr) {
-    sect_size = sect_sp->GetByteSize();
+    sect_size = next_sect_sp->GetByteSize();
     SizeOfImage += sect_size;
     next_sect_addr += sect_size;
     target.ResolveLoadAddress(next_sect_addr, sect_so_addr);
