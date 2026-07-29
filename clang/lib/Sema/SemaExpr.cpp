@@ -7533,10 +7533,17 @@ ExprResult Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
   SourceLocation ThreadStorageClassLoc;
   SourceLocation ConstexprLoc;
   if (DS) {
-    if (DS->getStorageClassSpec() == DeclSpec::SCS_static)
+    DeclSpec::SCS StorageClassSpec = DS->getStorageClassSpec();
+    if (StorageClassSpec == DeclSpec::SCS_static)
       SC = SC_Static;
-    else if (DS->getStorageClassSpec() == DeclSpec::SCS_register)
+    else if (StorageClassSpec == DeclSpec::SCS_register)
       SC = SC_Register;
+    else if (StorageClassSpec != DeclSpec::SCS_unspecified) {
+      Diag(DS->getStorageClassSpecLoc(),
+           diag::err_compound_literal_invalid_storage_class)
+          << DeclSpec::getSpecifierName(StorageClassSpec);
+      return ExprError();
+    }
 
     TSC = DS->getThreadStorageClassSpec();
     ConstexprKind = DS->getConstexprSpecifier();

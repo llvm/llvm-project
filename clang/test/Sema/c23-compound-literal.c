@@ -314,9 +314,9 @@ void test21(void) {
 }
 
 void test22(void) {
-  (void)(auto int){1};        // expected-error {{expected expression}}
-  (void)(extern int){2};      // expected-error {{expected expression}}
-  (void)(typedef int){3};     // expected-error {{expected expression}}
+  (void)(auto int){1};        // expected-error {{storage class specifier 'auto' is not permitted in a compound literal}}
+  (void)(extern int){2};      // expected-error {{storage class specifier 'extern' is not permitted in a compound literal}}
+  (void)(typedef int){3};     // expected-error {{storage class specifier 'typedef' is not permitted in a compound literal}}
   (void)(__auto_type int){4}; // expected-error {{expected expression}}
   (void)(__thread int){5};    // expected-error {{expected expression}}
 }

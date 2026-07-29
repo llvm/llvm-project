@@ -3183,6 +3183,8 @@ def err_register_compound_literal_file_scope : Error<
 def err_thread_local_compound_literal_without_static : Error<
   "compound literal with 'thread_local' storage duration at block scope must "
   "also specify 'static'">;
+def err_compound_literal_invalid_storage_class : Error<
+  "storage class specifier '%0' is not permitted in a compound literal">;
 def err_constexpr_compound_literal_invalid_type : Error<
   "constexpr compound literal cannot have type %0">;
 def err_compound_literal_initializer_not_constant : Error<

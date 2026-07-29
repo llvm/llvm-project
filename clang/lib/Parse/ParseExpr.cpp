@@ -2660,11 +2660,14 @@ bool Parser::isCompoundLiteralStorageClassSpecifier(const Token &Tok) const {
   if (!getLangOpts().C23)
     return false;
   switch (Tok.getKind()) {
+  case tok::kw_auto:
   case tok::kw_constexpr:
+  case tok::kw_extern:
   case tok::kw_register:
   case tok::kw_static:
   case tok::kw_thread_local:
   case tok::kw__Thread_local:
+  case tok::kw_typedef:
     return true;
   default:
     return false;
@@ -2680,8 +2683,20 @@ void Parser::ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS) {
     unsigned DiagID = 0;
     bool IsInvalid = false;
     switch (Tok.getKind()) {
+    case tok::kw_typedef:
+      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_typedef, Loc,
+                                         PrevSpec, DiagID, Policy);
+      break;
+    case tok::kw_extern:
+      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_extern, Loc,
+                                         PrevSpec, DiagID, Policy);
+      break;
     case tok::kw_static:
       IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_static, Loc,
+                                         PrevSpec, DiagID, Policy);
+      break;
+    case tok::kw_auto:
+      IsInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                          PrevSpec, DiagID, Policy);
       break;
     case tok::kw_register:
