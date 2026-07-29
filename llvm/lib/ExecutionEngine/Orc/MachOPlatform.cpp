@@ -1773,6 +1773,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
 
+  if (Opts.TargetTriple)
+    B.template addLoadCommand<MachO::LC_TARGET_TRIPLE>(*Opts.TargetTriple);
+
   using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
   for (auto &LD : Opts.LoadDylibs) {
     switch (LD.K) {

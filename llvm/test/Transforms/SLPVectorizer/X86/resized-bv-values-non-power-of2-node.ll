@@ -6,11 +6,8 @@ define <16 x half> @test(i32 %0, float %1, i32 %2) {
 ; CHECK-SAME: i32 [[TMP0:%.*]], float [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, float [[TMP1]], i64 13
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x float> [[TMP4]] to <16 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> zeroinitializer, <2 x float> zeroinitializer, <2 x float> zeroinitializer)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP0]], [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP9]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x i32> [[TMP5]], i64 10
@@ -27,6 +24,7 @@ define <16 x half> @test(i32 %0, float %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast float 0.000000e+00 to i32
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[TMP23]], 0
+; CHECK-NEXT:    [[TMP25:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> zeroinitializer, <2 x float> zeroinitializer, <2 x float> zeroinitializer)
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp ult <16 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP28:%.*]] = select <16 x i1> [[TMP27]], <16 x i32> zeroinitializer, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = sitofp <16 x i32> [[TMP28]] to <16 x float>
@@ -39,13 +37,15 @@ define <16 x half> @test(i32 %0, float %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = bitcast <16 x float> [[TMP35]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP37:%.*]] = and <16 x i32> [[TMP36]], zeroinitializer
 ; CHECK-NEXT:    [[TMP38:%.*]] = bitcast <16 x i32> [[TMP37]] to <16 x float>
-; CHECK-NEXT:    [[TMP53:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float poison>, <16 x float> [[TMP53]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
+; CHECK-NEXT:    [[TMP57:%.*]] = shufflevector <2 x float> [[TMP25]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float poison>, <16 x float> [[TMP57]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
 ; CHECK-NEXT:    [[TMP40:%.*]] = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> zeroinitializer, <16 x float> [[TMP38]], <16 x float> [[TMP39]])
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <16 x float> [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP44:%.*]] = fcmp olt float [[TMP43]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <16 x float> [[TMP29]], i64 14
 ; CHECK-NEXT:    [[TMP49:%.*]] = fcmp ogt float [[TMP45]], 0.000000e+00
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <2 x float> [[TMP25]], i64 0
+; CHECK-NEXT:    [[TMP56:%.*]] = fcmp ogt float [[TMP53]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP46:%.*]] = fcmp olt float [[TMP45]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <16 x float> [[TMP29]], i64 13
 ; CHECK-NEXT:    [[TMP50:%.*]] = fcmp ogt float [[TMP47]], 0.000000e+00

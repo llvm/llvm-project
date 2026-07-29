@@ -70,6 +70,15 @@ namespace llvm {
   };
   }
 
+  /// The floating-point format used for the target's "long double" type.
+  enum class LongDoubleFormat {
+    IEEEsingle,
+    IEEEdouble,
+    X87DoubleExtended,
+    IEEEquad,
+    PPCDoubleDouble,
+  };
+
   enum class EABI {
     Unknown,
     Default, // Default means not specified

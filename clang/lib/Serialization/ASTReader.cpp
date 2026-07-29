@@ -11559,7 +11559,10 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPWriteClause();
     break;
   case llvm::omp::OMPC_update:
-    C = OMPUpdateClause::CreateEmpty(Context, Record.readInt());
+    C = new (Context) OMPUpdateClause();
+    break;
+  case llvm::omp::OMPC_update_depend_objects:
+    C = OMPUpdateDependObjectsClause::CreateEmpty(Context);
     break;
   case llvm::omp::OMPC_capture:
     C = new (Context) OMPCaptureClause();
@@ -12037,12 +12040,13 @@ void OMPClauseReader::VisitOMPReadClause(OMPReadClause *) {}
 
 void OMPClauseReader::VisitOMPWriteClause(OMPWriteClause *) {}
 
-void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
-  if (C->isExtended()) {
-    C->setLParenLoc(Record.readSourceLocation());
-    C->setArgumentLoc(Record.readSourceLocation());
-    C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
-  }
+void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *) {}
+
+void OMPClauseReader::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setArgumentLoc(Record.readSourceLocation());
+  C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
 }
 
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}

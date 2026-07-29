@@ -2421,6 +2421,9 @@ void OMPClauseEnqueue::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseEnqueue::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 
+void OMPClauseEnqueue::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}

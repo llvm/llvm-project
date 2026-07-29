@@ -7413,6 +7413,7 @@ cc_library(
         ":MathDialect",
         ":Pass",
         ":Transforms",
+        ":VectorDialect",
         ":XeVMDialect",
         "//llvm:Support",
     ],

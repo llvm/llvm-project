@@ -2007,7 +2007,9 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Check(Value, "long-double-type metadata requires a string argument");
     if (Value)
       Check(Value->getString() == "ppc_fp128" ||
-                Value->getString() == "fp128" || Value->getString() == "double",
+                Value->getString() == "fp128" ||
+                Value->getString() == "x86_fp80" ||
+                Value->getString() == "double" || Value->getString() == "float",
             "invalid long-double-type metadata value", Op);
   }
 

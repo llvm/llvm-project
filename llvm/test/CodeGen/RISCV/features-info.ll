@@ -72,6 +72,12 @@
 ; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
+; CHECK-NEXT:   fusion-xqci-mov-longlogical      - Enable MOV + long accumulate macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-alu           - Enable MOVIMM + ALU operations macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-jump          - Enable MOVIMM + Jump macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-ldst          - Enable MOVIMM + long Load/Store macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-longlogical   - Enable MOVIMM + long accumulate macrofusion.
+; CHECK-NEXT:   fusion-xqci-movimm-mul           - Enable MOVIMM + multiply macrofusion.
 ; CHECK-NEXT:   fusion-zexth                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
 ; CHECK-NEXT:   fusion-zextw                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).

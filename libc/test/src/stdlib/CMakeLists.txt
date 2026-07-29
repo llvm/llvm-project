@@ -405,6 +405,7 @@ add_libc_test(
     libc.src.unistd.close
     libc.src.unistd.getcwd
     libc.src.unistd.getpid
+    libc.src.unistd.symlinkat
     libc.src.unistd.unlinkat
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher

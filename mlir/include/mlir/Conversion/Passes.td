@@ -919,6 +919,7 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   ];
   let dependentDialects = [
     "arith::ArithDialect",
+    "vector::VectorDialect",
     "xevm::XeVMDialect",
     "LLVM::LLVMDialect",
   ];

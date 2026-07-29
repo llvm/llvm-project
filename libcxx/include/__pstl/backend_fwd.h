@@ -339,6 +339,13 @@ struct __mismatch_3leg;
 // operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
 //                                _ForwardIterator2 __first2, _Comp __comp) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __adjacent_find;
+// template <class _Policy, class _ForwardIterator, class _BinaryPredicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last,
+//                                _BinaryPredicate __predicate) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 

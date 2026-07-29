@@ -2581,6 +2581,64 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
   return FloatABI::Hard;
 }
 
+LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
+  switch (getArch()) {
+  case loongarch64:
+  case riscv32:
+  case riscv64:
+  case riscv32be:
+  case riscv64be:
+  case sparc:
+  case sparcel:
+  case sparcv9:
+  case systemz:
+  case ve:
+  case wasm32:
+  case wasm64:
+    return LongDoubleFormat::IEEEquad;
+  case ppc:
+  case ppcle:
+  case ppc64:
+  case ppc64le:
+    // PowerPC uses IBM double-double, except on a handful of OSes that use
+    // plain IEEE double. NetBSD only switches to IEEE double on 32-bit PowerPC.
+    if (isOSAIX() || isOSFreeBSD() || isOSOpenBSD() || isMusl() ||
+        (isOSNetBSD() && isPPC32()))
+      return LongDoubleFormat::IEEEdouble;
+    return LongDoubleFormat::PPCDoubleDouble;
+  case x86:
+  case x86_64:
+    // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
+    if (isAndroid() || isOHOSFamily())
+      return isX86_64() ? LongDoubleFormat::IEEEquad
+                        : LongDoubleFormat::IEEEdouble;
+    // Windows-MSVC and UEFI use IEEE double. MinGW and Cygwin keep x87.
+    if (isWindowsMSVCEnvironment() || isUEFI())
+      return LongDoubleFormat::IEEEdouble;
+    return LongDoubleFormat::X87DoubleExtended;
+  case aarch64:
+  case aarch64_be:
+  case aarch64_32:
+    // AArch64 uses IEEE quad, except on Windows, Darwin, and Android.
+    if (isOSWindows() || isOSDarwin() || isAndroid())
+      return LongDoubleFormat::IEEEdouble;
+    return LongDoubleFormat::IEEEquad;
+  case mips64:
+  case mips64el:
+    return LongDoubleFormat::IEEEquad;
+  case avr:
+  case tce:
+  case tcele:
+    // AVR and 32-bit OpenASIP use IEEE single precision.
+    return LongDoubleFormat::IEEEsingle;
+  case tcele64:
+    // 64-bit OpenASIP uses IEEE double, unlike its 32-bit variants.
+    return LongDoubleFormat::IEEEdouble;
+  default:
+    return LongDoubleFormat::IEEEdouble;
+  }
+}
+
 // HLSL triple environment orders are relied on in the front end
 static_assert(Triple::Vertex - Triple::Pixel == 1,
               "incorrect HLSL stage order");

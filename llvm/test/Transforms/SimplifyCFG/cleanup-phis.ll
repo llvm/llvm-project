@@ -40,4 +40,4 @@ catch:                                            ; preds = %catchswitch
 
 declare void @foo()
 declare void @bar(i32, i32)
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)

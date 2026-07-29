@@ -82,6 +82,47 @@ int x;)cpp";
   EXPECT_EQ("\nint x;", remove(Code, "<abc.h>"));
 }
 
+TEST_F(HeaderIncludesTest, DeleteMixedImportAndIncludeQuoted) {
+  std::string Code = R"cpp(
+#include "a.h"
+#import "a.h"
+int x;)cpp";
+  EXPECT_EQ("\nint x;", remove(Code, "\"a.h\""));
+}
+
+TEST_F(HeaderIncludesTest, ImportWithSpacesAndTabs) {
+  std::string Code = "int x;\n";
+  // The parser should detect these as existing imports if we had them,
+  // but here we are testing insertion/detection integration.
+  // Let's verify that a file with weird spacing is parsed correctly.
+  std::string CodeWithSpaces =
+      "#  import   \"a.h\"\n#\tinclude\t\"b.h\"\nint x;\n";
+
+  // Try inserting "a.h" again as import - should be blocked by the existing one
+  // if the regex captures it correctly.
+  EXPECT_EQ(CodeWithSpaces,
+            insert(CodeWithSpaces, "\"a.h\"", IncludeDirective::Import));
+
+  // Try inserting "b.h" again as include - should be blocked.
+  EXPECT_EQ(CodeWithSpaces,
+            insert(CodeWithSpaces, "\"b.h\"", IncludeDirective::Include));
+}
+
+TEST_F(HeaderIncludesTest, InsertIncludeWhenImportExists) {
+  std::string Code = "#import \"a.h\"\n";
+  std::string Expected = Code + "#include \"a.h\"\n";
+  // Currently, the logic allows inserting #include even if #import exists
+  // because the Directive differs. This test verifies this current behavior.
+  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Include));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExists) {
+  std::string Code = "#include \"a.h\"\n";
+  std::string Expected = Code + "#import \"a.h\"\n";
+  // Similarly, allows inserting #import even if #include exists.
+  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
+}
+
 TEST_F(HeaderIncludesTest, NoExistingIncludeWithDefine) {
   std::string Code = "#ifndef A_H\n"
                      "#define A_H\n"

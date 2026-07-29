@@ -2314,8 +2314,10 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(RB == VccRB || RB == SgprRB);
       if (RB == SgprRB) {
         auto Aext = B.buildAnyExt(SgprRB_I32, Reg);
-        auto CopyVcc_Scc =
-            B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {VccRB_S1}, {Aext});
+        auto Cst1 = B.buildConstant(SgprRB_I32, 1);
+        auto BoolInReg = B.buildAnd(SgprRB_I32, Aext, Cst1);
+        auto CopyVcc_Scc = B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC,
+                                        {VccRB_S1}, {BoolInReg});
         Op.setReg(CopyVcc_Scc.getReg(0));
       }
       break;

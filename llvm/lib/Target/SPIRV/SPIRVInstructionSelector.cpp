@@ -6452,7 +6452,8 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
 
     if (!IsDecorated) {
       MachineBasicBlock &MBB = *DefMI->getParent();
-      MachineInstr &InsertPt = DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI;
+      MachineInstr &InsertPt =
+          DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI->getNextNode();
       buildOpDecorate(CurrentReg, InsertPt, TII,
                       SPIRV::Decoration::NonUniformEXT, {});
     }

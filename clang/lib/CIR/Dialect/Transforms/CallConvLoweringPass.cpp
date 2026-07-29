@@ -299,31 +299,30 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
-/// Classify a cir.func for x86_64 SysV using the LLVM ABI library.  Returns
-/// std::nullopt and emits an NYI error if the signature uses a type the bridge
-/// does not handle yet.
-static std::optional<FunctionClassification>
-classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
-                       mlir::abi::ABITypeMapper &typeMapper,
-                       const llvm::abi::TargetInfo &targetInfo,
-                       ModuleOp modOp) {
-  MLIRContext *ctx = func->getContext();
-  cir::FuncType fnTy = func.getFunctionType();
-  mlir::Type retCIR = fnTy.getReturnType();
-  assert(retCIR && "FuncType::getReturnType() never returns null");
+/// Classify an x86_64 SysV signature (return type + argument types) using the
+/// LLVM ABI library.  Shared by the cir.func path and the indirect-call path
+/// (which classifies from the callee function pointer's pointee FuncType).
+/// Returns std::nullopt and emits an NYI error via \p emitError if the
+/// signature uses a type the bridge does not handle yet.
+static std::optional<FunctionClassification> classifyX86_64Signature(
+    mlir::Type retCIR, mlir::TypeRange inputs, MLIRContext *ctx,
+    const DataLayout &dl, mlir::abi::ABITypeMapper &typeMapper,
+    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+  assert(retCIR && "signature return type must be non-null");
   bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
     if (isSupportedType(t))
       return false;
-    func.emitOpError()
+    emitError()
         << "x86_64 calling-convention lowering not yet implemented for type "
         << t;
     return true;
   };
   if (!voidRet && reject(retCIR))
     return std::nullopt;
-  for (mlir::Type a : fnTy.getInputs())
+  for (mlir::Type a : inputs)
     if (reject(a))
       return std::nullopt;
 
@@ -331,7 +330,7 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
       voidRet ? typeMapper.getTypeBuilder().getVoidType()
               : mapCIRType(retCIR, typeMapper, dl, modOp);
   SmallVector<const llvm::abi::Type *> argAbi;
-  for (mlir::Type a : fnTy.getInputs())
+  for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi =
@@ -342,9 +341,9 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
   // this bridge cannot represent (e.g. an SSE vector coerce for an all-float
   // aggregate).  Report it as NYI rather than emitting a wrong signature.
   auto nyiCoercion = [&](mlir::Type t) {
-    func.emitOpError() << "x86_64 calling-convention lowering not yet "
-                          "implemented for the ABI coercion of type "
-                       << t;
+    emitError() << "x86_64 calling-convention lowering not yet "
+                   "implemented for the ABI coercion of type "
+                << t;
   };
 
   FunctionClassification fc;
@@ -356,7 +355,6 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
     return std::nullopt;
   }
   fc.returnInfo = *retAc;
-  auto inputs = fnTy.getInputs();
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
     std::optional<ArgClassification> ac =
@@ -370,13 +368,18 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
   return fc;
 }
 
-bool needsRewrite(const FunctionClassification &fc) {
-  if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
-    return true;
-  for (const ArgClassification &ac : fc.argInfos)
-    if ((ac.kind != ArgKind::Direct) || ac.coercedType)
-      return true;
-  return false;
+/// Classify a cir.func for x86_64 SysV using the LLVM ABI library.  Returns
+/// std::nullopt and emits an NYI error if the signature uses a type the bridge
+/// does not handle yet.
+static std::optional<FunctionClassification>
+classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
+                       mlir::abi::ABITypeMapper &typeMapper,
+                       const llvm::abi::TargetInfo &targetInfo,
+                       ModuleOp modOp) {
+  cir::FuncType fnTy = func.getFunctionType();
+  return classifyX86_64Signature(fnTy.getReturnType(), fnTy.getInputs(),
+                                 func->getContext(), dl, typeMapper, targetInfo,
+                                 modOp, [&]() { return func.emitOpError(); });
 }
 
 struct CallConvLoweringPass
@@ -529,24 +532,44 @@ void CallConvLoweringPass::runOnOperation() {
     }
   }
 
-  // Reject indirect calls when the module contains any ABI rewrite that
-  // would need call-site lowering.  We cannot strip or coerce operands
-  // without a resolved callee symbol.
-  const FunctionClassification *rewriteFc = nullptr;
-  for (auto &kv : classifications) {
-    if (needsRewrite(kv.second)) {
-      rewriteFc = &kv.second;
-      break;
+  // Rewrite indirect call sites.  The callee is opaque, so classify from the
+  // function pointer's pointee FuncType and let rewriteCallSite retype the
+  // callee pointer to match the coerced signature.  Collect the calls first:
+  // when an sret rewrite reuses a single-use store's destination as the return
+  // slot it erases that store, which is the operation a live walk has already
+  // cached as the next one to visit.
+  SmallVector<cir::CallOp> indirectCalls;
+  moduleOp.walk([&](cir::CallOp c) {
+    if (c.isIndirect())
+      indirectCalls.push_back(c);
+  });
+  for (cir::CallOp c : indirectCalls) {
+    // classification-attr mode injects a per-function classification, which
+    // cannot describe a callee resolved at run time.  Report it rather than
+    // leave the indirect call unrewritten while direct calls are coerced.
+    if (!classificationAttr.empty()) {
+      c.emitOpError() << "indirect call cannot be classified in the "
+                         "'classification-attr' driver mode";
+      signalPassFailure();
+      return;
     }
-  }
-  if (rewriteFc) {
-    moduleOp.walk([&](cir::CallOp c) {
-      if (!c.isIndirect())
-        return;
-      if (failed(rewriteCtx.rewriteCallSite(c, *rewriteFc, builder)))
-        anyFailed = true;
-    });
-    if (anyFailed) {
+    // The CallOp verifier guarantees an indirect callee is a pointer to a
+    // function type.
+    auto ptrTy = cast<cir::PointerType>(c.getIndirectCall().getType());
+    auto funcTy = cast<cir::FuncType>(ptrTy.getPointee());
+    std::optional<FunctionClassification> fc;
+    if (x86Target)
+      fc = classifyX86_64Signature(funcTy.getReturnType(), funcTy.getInputs(),
+                                   ctx, dl, *x86TypeMapper, *x86Target,
+                                   moduleOp, [&]() { return c.emitOpError(); });
+    else
+      fc = mlir::abi::test::classify(funcTy.getInputs(), funcTy.getReturnType(),
+                                     dl);
+    if (!fc) {
+      signalPassFailure();
+      return;
+    }
+    if (failed(rewriteCtx.rewriteCallSite(c, *fc, builder))) {
       signalPassFailure();
       return;
     }

@@ -630,6 +630,9 @@ void OMPClauseProfiler::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseProfiler::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 
+void OMPClauseProfiler::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
+
 void OMPClauseProfiler::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseProfiler::VisitOMPCompareClause(const OMPCompareClause *) {}

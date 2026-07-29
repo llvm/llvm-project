@@ -799,6 +799,32 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
   newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
+/// For an indirect call, prepend the callee function pointer as operand 0 so
+/// CallOp::create rebuilds it as an indirect call, bitcasting it to a function
+/// pointer whose signature matches the rewritten operands and return type.
+/// No-op for direct calls.
+static void prependIndirectCallee(cir::CallOp call,
+                                  SmallVectorImpl<mlir::Value> &args,
+                                  mlir::Type retTy, mlir::OpBuilder &builder) {
+  if (!call.isIndirect())
+    return;
+  mlir::Value calleePtr = call.getIndirectCall();
+  SmallVector<mlir::Type> paramTypes;
+  paramTypes.reserve(args.size());
+  llvm::transform(args, std::back_inserter(paramTypes),
+                  [](mlir::Value v) { return v.getType(); });
+  // Lowering builds an indirect call's LLVM function type from the callee
+  // pointer's pointee and takes the call's result from that type, so the
+  // pointee's return type has to track the rewrite: an sret return would
+  // leave a result the call no longer produces, and a coerced return one of
+  // the wrong type.
+  auto newPtrTy = cir::PointerType::get(cir::FuncType::get(paramTypes, retTy));
+  if (calleePtr.getType() != newPtrTy)
+    calleePtr = cir::CastOp::create(builder, call.getLoc(), newPtrTy,
+                                    cir::CastKind::bitcast, calleePtr);
+  args.insert(args.begin(), calleePtr);
+}
+
 /// Rewrite an indirect-return (sret) call site: prepend a return-slot
 /// pointer as operand 0, make the call return void, and either reuse a
 /// dominating single-use store destination as the slot (so construction
@@ -853,6 +879,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   sretArgs.append(newArgs.begin(), newArgs.end());
 
   mlir::Type sretVoidTy = cir::VoidType::get(ctx);
+  prependIndirectCallee(call, sretArgs, sretVoidTy, builder);
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
   for (mlir::NamedAttribute attr : call->getAttrs())
@@ -1082,10 +1109,6 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
            << "TryCallOp not yet implemented in CallConvLowering";
 
   auto call = mlir::cast<cir::CallOp>(callOp);
-  if (call.isIndirect())
-    return call.emitOpError()
-           << "indirect call not yet implemented in CallConvLowering";
-
   mlir::MLIRContext *ctx = callOp->getContext();
   auto enclosingFunc = call->getParentOfType<mlir::FunctionOpInterface>();
 
@@ -1196,6 +1219,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     callRetTy = fc.returnInfo.coercedType;
 
   builder.setInsertionPoint(call);
+  prependIndirectCallee(call, newArgs, callRetTy, builder);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
   for (mlir::NamedAttribute attr : call->getAttrs())

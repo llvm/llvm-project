@@ -1572,10 +1572,7 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
       Ptr.asTypeidPointer().TypeInfoType->getAsRecordDecl());
   if (!R)
     return false;
-  const Record::Field *Field =
-      llvm::find_if(R->fields(), [=](const Record::Field &F) -> bool {
-        return F.Offset == Offset;
-      });
+  const Record::Field *Field = R->findField(Offset);
   if (!Field)
     return false;
 

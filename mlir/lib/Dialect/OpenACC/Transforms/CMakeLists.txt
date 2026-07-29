@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   ACCDeclareGPUModuleInsertion.cpp
   ACCEmitRemarksLoop.cpp
   ACCEmitRemarksPrivate.cpp
+  ACCEmitRemarksData.cpp
   ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
   ACCRecipeMaterialization.cpp

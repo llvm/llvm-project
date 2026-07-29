@@ -204,7 +204,7 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
-      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
       /// trunc_sat, const, and, 3x narrow
       {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
       {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},

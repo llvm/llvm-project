@@ -286,6 +286,10 @@ jobs:
         run: |
           brew install ninja cmake
           command -v sccache >/dev/null || brew install sccache
+      - name: Set up Python venv
+        run: |
+          "$(brew --prefix python@3.14)/bin/python3.14" -m venv "${RUNNER_TEMP}/venv"
+          echo "${RUNNER_TEMP}/venv/bin" >> "$GITHUB_PATH"
       - name: Build and Test
         timeout-minutes: 240
         env:
@@ -296,34 +300,14 @@ jobs:
           RUNTIMES: ${{ needs.premerge-compute-macos.outputs.macos-runtimes }}
           RUNTIMES_CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-runtimes-check-targets }}
           CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           export SCCACHE_IDLE_TIMEOUT=0
           mkdir -p artifacts
           SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
 
-          xcrun cmake -G Ninja \
-                -B build \
-                -S llvm \
-                -DLLVM_ENABLE_PROJECTS="${PROJECTS}" \
-                -DLLVM_ENABLE_RUNTIMES="${RUNTIMES}" \
-                -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DLLDB_INCLUDE_TESTS=OFF \
-                -DLLVM_ENABLE_ASSERTIONS=ON \
-                -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-                -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-
-          ninja -C build ${CHECK_TARGETS}
-
-          if [[ -n "${RUNTIMES_CHECK_TARGETS}" ]]; then
-            ninja -C build ${RUNTIMES_CHECK_TARGETS}
-          fi
-      - name: Show sccache stats
-        if: always()
-        run: |
-          mkdir -p artifacts
-          sccache --show-stats
-          sccache --show-stats >> artifacts/sccache_stats.txt
+          ./.ci/monolithic-macos.sh "${PROJECTS}" "${CHECK_TARGETS}" "${RUNTIMES}" "${RUNTIMES_CHECK_TARGETS}"
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not

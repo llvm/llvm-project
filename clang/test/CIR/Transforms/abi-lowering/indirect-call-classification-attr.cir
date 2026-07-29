@@ -3,25 +3,18 @@
 
 !s32i = !cir.int<s, 32>
 
-#ignore_first_arg = {
-  return = { kind = "direct" },
-  args   = [ { kind = "ignore" }, { kind = "direct" } ]
-}
-
 #passthrough = {
   return = { kind = "direct" },
-  args   = [ { kind = "direct" }, { kind = "direct" }, { kind = "direct" } ]
+  args   = [ { kind = "direct" }, { kind = "direct" } ]
 }
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
 } {
 
-  cir.func @callee(%arg0: !s32i, %arg1: !s32i) -> !s32i
-      attributes { test_classify = #ignore_first_arg } {
-    cir.return %arg1 : !s32i
-  }
-
+  // classification-attr injects a per-function classification, which cannot
+  // describe a callee resolved at run time, so an indirect call is a hard
+  // error in this driver mode rather than being left silently unrewritten.
   cir.func @caller(%fp: !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>,
                    %arg0: !s32i, %arg1: !s32i) -> !s32i
       attributes { test_classify = #passthrough } {
@@ -32,4 +25,4 @@ module attributes {
 
 }
 
-// CHECK: error: 'cir.call' op indirect call not yet implemented in CallConvLowering
+// CHECK: error: 'cir.call' op indirect call cannot be classified in the 'classification-attr' driver mode

@@ -6821,6 +6821,16 @@ the configuration (without a prefix: ``Auto``).
        # include "A.inc"              # include "A.h"
        # include "A-util.h"           # include "A.inc"
 
+  * ``bool Natural`` Whether or not includes are sorted by natural ordering i.e., whether
+    embedded runs of digits are compared as numbers rather than sequences of
+    characters.
+
+    .. code-block:: c++
+
+       true:                      false:
+       #include "A2.h"     vs.    #include "A10.h"
+       #include "A10.h"           #include "A2.h"
+
 
 .. _SortJavaStaticImport:
 

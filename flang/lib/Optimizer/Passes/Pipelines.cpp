@@ -73,6 +73,14 @@ void addMemoryAllocationOpt(mlir::PassManager &pm) {
   });
 }
 
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
+  fir::AllocationPlacementOptions options;
+  options.stackArrays = stackArrays;
+  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
+  options.totalStackLimitBytes = allocationPlacementStackLimit;
+  pm.addPass(fir::createAllocationPlacement(options));
+}
+
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
@@ -215,7 +223,9 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCSEPass());
 
-  if (pc.StackArrays)
+  if (enableAllocationPlacement)
+    fir::addAllocationPlacement(pm, pc.StackArrays);
+  else if (pc.StackArrays)
     pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);

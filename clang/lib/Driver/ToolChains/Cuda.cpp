@@ -616,7 +616,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_ptxas_path_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
+        "--ptxas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
 
   if (Args.hasArg(options::OPT_cuda_path_EQ) || TC.CudaInstallation.isValid()) {
     StringRef CudaPath = Args.getLastArgValue(
