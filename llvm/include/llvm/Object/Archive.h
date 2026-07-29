@@ -349,9 +349,9 @@ public:
     LLVM_ABI Symbol getNext() const;
     LLVM_ABI bool isECSymbol() const;
     /// Archive attribute bit masks for K_ZOS archive symbol table entries.
-    static constexpr uint32_t ZOSAttrWSA       = 0x1;
-    static constexpr uint32_t ZOSAttrXPLink    = 0x2;
-    static constexpr uint32_t ZOSAttr64Bit     = 0x4;
+    static constexpr uint32_t ZOSAttrWSA = 0x1;
+    static constexpr uint32_t ZOSAttrXPLink = 0x2;
+    static constexpr uint32_t ZOSAttr64Bit = 0x4;
     static constexpr uint32_t ZOSKnownAttrMask =
         ZOSAttrWSA | ZOSAttrXPLink | ZOSAttr64Bit;
     /// For K_ZOS archives, returns the 32-bit attribute word stored alongside

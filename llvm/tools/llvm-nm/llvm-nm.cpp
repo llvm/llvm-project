@@ -2052,7 +2052,7 @@ static std::string decodeZOSAttributes(uint32_t Attrs) {
   bool Unknown = (Attrs & ~Archive::Symbol::ZOSKnownAttrMask) != 0;
   bool Is64Bit = (Attrs & Archive::Symbol::ZOSAttr64Bit) != 0;
   bool IsXPLink = (Attrs & Archive::Symbol::ZOSAttrXPLink) != 0;
-  bool IsWSA    = (Attrs & Archive::Symbol::ZOSAttrWSA) != 0;
+  bool IsWSA = (Attrs & Archive::Symbol::ZOSAttrWSA) != 0;
 
   std::string Result = "[";
   bool NeedPlus = false;
@@ -2062,11 +2062,16 @@ static std::string decodeZOSAttributes(uint32_t Attrs) {
     Result += S;
     NeedPlus = true;
   };
-  if (Is64Bit)  append("64-bit");
-  if (IsXPLink) append("XPLink");
-  if (IsWSA)    append("WSA");
-  if (Unknown)  append("?");
-  if (!NeedPlus) append("none");
+  if (Is64Bit)
+    append("64-bit");
+  if (IsXPLink)
+    append("XPLink");
+  if (IsWSA)
+    append("WSA");
+  if (Unknown)
+    append("?");
+  if (!NeedPlus)
+    append("none");
   Result += "]";
   return Result;
 }
