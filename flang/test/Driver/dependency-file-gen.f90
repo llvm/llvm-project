@@ -1,5 +1,5 @@
 ! Frontend (-fc1) dependency-file generation: list INCLUDE and #include files,
-! derive a default target, and support -Eonly (dependencies only, no source).
+! and derive a default target.
 
 ! RUN: rm -rf %t && split-file %s %t
 
@@ -22,13 +22,6 @@
 ! RUN: FileCheck %s --input-file=%t/def.d --check-prefix=DEFAULT
 ! DEFAULT: use-include.o:
 ! DEFAULT: use-include.f90
-
-! -Eonly: run the prescanner only, writing the dependencies to stdout with no
-! preprocessed source.
-! RUN: %flang_fc1 -Eonly %t/use-include.f90 -dependency-file - -MT custom.o 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=EONLY
-! EONLY: custom.o:
-! EONLY: use-include.f90
 
 !--- header.h
       integer :: x

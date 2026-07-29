@@ -651,9 +651,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::options::OPT_E:
       opts.programAction = PrintPreprocessedInput;
       break;
-    case clang::options::OPT_Eonly:
-      opts.programAction = RunPreprocessorOnly;
-      break;
     case clang::options::OPT_fsyntax_only:
       opts.programAction = ParseSyntaxOnly;
       break;

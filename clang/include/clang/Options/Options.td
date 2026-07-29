@@ -7971,10 +7971,6 @@ def vectorize_loops : Flag<["-"], "vectorize-loops">,
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
-
-def Eonly : Flag<["-"], "Eonly">, Group<Action_Group>,
-  HelpText<"Just run preprocessor, no output (for timings or dependency "
-           "generation)">;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -8538,6 +8534,8 @@ defm recovery_ast_type : BoolOption<"f", "recovery-ast-type",
 
 let Group = Action_Group in {
 
+def Eonly : Flag<["-"], "Eonly">,
+  HelpText<"Just run preprocessor, no output (for timings)">;
 def dump_raw_tokens : Flag<["-"], "dump-raw-tokens">,
   HelpText<"Lex file in raw mode and dump raw tokens">;
 def analyze : Flag<["-"], "analyze">,

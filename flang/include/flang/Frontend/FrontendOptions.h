@@ -31,9 +31,6 @@ enum ActionKind {
   /// -E mode
   PrintPreprocessedInput,
 
-  /// -Eonly mode: prescan only and write just the dependency file (-M, -MM)
-  RunPreprocessorOnly,
-
   /// -fsyntax-only
   ParseSyntaxOnly,
 
