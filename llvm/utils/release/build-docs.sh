@@ -147,7 +147,6 @@ fi
 export CC=clang
 export CXX=clang++
 
-set -ex
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang${extra_man_page_projects}" \
                -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;${extra_man_page_runtimes}" \
