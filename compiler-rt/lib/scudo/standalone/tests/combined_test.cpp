@@ -21,11 +21,14 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdio>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <thread>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 
@@ -969,82 +972,49 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferDefaultDisabled) {
   // The RingBuffer is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  EXPECT_EQ(0u, Allocator->getRingBufferSize());
-  EXPECT_EQ(nullptr, Allocator->getRingBufferAddress());
+  EXPECT_FALSE(Allocator->getRingBufferEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto RingBufferSize = Allocator->getRingBufferSize();
-  ASSERT_GT(RingBufferSize, 0u);
-  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
+  const void *RingBufferAddress = Allocator->getRingBufferAddressTestOnly();
   EXPECT_NE(nullptr, RingBufferAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  ASSERT_EQ(RingBufferSize, Allocator->getRingBufferSize());
-  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddressTestOnly());
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferEnabled) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto RingBufferSize = Allocator->getRingBufferSize();
-  ASSERT_GT(RingBufferSize, 0u);
-  EXPECT_EQ(Allocator->getRingBufferAddress()[RingBufferSize - 1], '\0');
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto *RingBufferAddress = Allocator->getRingBufferAddress();
-  EXPECT_NE(RingBufferAddress, nullptr);
-  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+  EXPECT_TRUE(Allocator->getRingBufferEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotDefaultDisabled) {
   // The StackDepot is not initialized until tracking is enabled for the
   // first time.
   auto *Allocator = this->Allocator.get();
-  EXPECT_EQ(0u, Allocator->getStackDepotSize());
-  EXPECT_EQ(nullptr, Allocator->getStackDepotAddress());
+  EXPECT_FALSE(Allocator->getStackDepotEnabledTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotInitOnce) {
   auto *Allocator = this->Allocator.get();
   Allocator->setTrackAllocationStacks(true);
 
-  auto StackDepotSize = Allocator->getStackDepotSize();
-  EXPECT_GT(StackDepotSize, 0u);
-  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_TRUE(Allocator->getStackDepotEnabledTestOnly());
+  const void *StackDepotAddress = Allocator->getStackDepotAddressTestOnly();
   EXPECT_NE(nullptr, StackDepotAddress);
 
   // Enable tracking again to verify that the initialization only happens once.
   Allocator->setTrackAllocationStacks(true);
-  EXPECT_EQ(StackDepotSize, Allocator->getStackDepotSize());
-  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto StackDepotSize = Allocator->getStackDepotSize();
-  EXPECT_GT(StackDepotSize, 0u);
-  EXPECT_EQ(Allocator->getStackDepotAddress()[StackDepotSize - 1], '\0');
-}
-
-SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
-  auto *Allocator = this->Allocator.get();
-  Allocator->setTrackAllocationStacks(true);
-
-  auto *StackDepotAddress = Allocator->getStackDepotAddress();
-  EXPECT_NE(StackDepotAddress, nullptr);
-  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+  EXPECT_TRUE(Allocator->getStackDepotEnabledTestOnly());
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddressTestOnly());
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
@@ -2190,3 +2160,79 @@ TEST(ScudoCombinedTest, VerifyAllBoolTrueConfig) {
   EXPECT_NE(Stats.find("EnableRandomOffset: true"), std::string::npos);
   EXPECT_NE(Stats.find("EnableContiguousRegions: true"), std::string::npos);
 }
+
+#if SCUDO_LINUX
+SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
+  // Android has a small max maps, but this test is not flaky there.
+  if (!SCUDO_ANDROID) {
+    long MaxMapCount = 0;
+    // If the file can't be accessed, we proceed with the test.
+    std::ifstream Stream("/proc/sys/vm/max_map_count");
+    if (Stream.good()) {
+      Stream >> MaxMapCount;
+      if (MaxMapCount < 200000)
+        TEST_SKIP(
+            "Test might fail when running with fewer than 200000 max maps");
+    }
+  }
+
+  auto *Allocator = this->Allocator.get();
+  std::atomic_bool Stop(false);
+
+  // Create threads that simply allocate and free different sizes.
+  std::vector<std::thread *> Threads;
+  for (size_t N = 0; N < 5; N++) {
+    std::thread *T = new std::thread([&Stop, Allocator] {
+      while (!Stop) {
+        for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
+          const scudo::uptr Size = 1UL << SizeLog;
+          void *P = Allocator->allocate(Size, Origin);
+          if (P) {
+            // Make sure this value is not optimized away.
+            asm volatile("" : : "r,m"(P) : "memory");
+            Allocator->deallocateSized(P, Origin, Size);
+          }
+        }
+      }
+    });
+    Threads.push_back(T);
+  }
+
+  // Create a thread to fork and allocate.
+  for (size_t N = 0; N < 50; N++) {
+    // We need to disable the allocator before fork to ensure no other thread
+    // holds allocator locks during fork.
+    Allocator->disable();
+    pid_t Pid = fork();
+    if (Pid == 0) {
+      // Child process: enable the allocator and allocate.
+      Allocator->enable();
+      for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
+        const scudo::uptr Size = 1UL << SizeLog;
+        void *P = Allocator->allocate(Size, Origin);
+        if (P) {
+          // Make sure this value is not optimized away.
+          asm volatile("" : : "r,m"(P) : "memory");
+          // Make sure we can touch all of the allocation.
+          memset(P, 0x32, Size);
+          Allocator->deallocateSized(P, Origin, Size);
+        }
+      }
+      _exit(10);
+    }
+    // Parent process: enable the allocator and wait for child.
+    Allocator->enable();
+    EXPECT_NE(-1, Pid);
+    int Status;
+    EXPECT_EQ(Pid, waitpid(Pid, &Status, 0));
+    EXPECT_FALSE(WIFSIGNALED(Status));
+    EXPECT_EQ(10, WEXITSTATUS(Status));
+  }
+
+  Stop = true;
+  for (auto Thread : Threads) {
+    Thread->join();
+    delete Thread;
+  }
+}
+#endif

@@ -84,7 +84,7 @@ std::string TypeFilterImpl::GetDescription() {
     sstr.Printf("    %s\n", GetExpressionPathAtIndex(i));
   }
 
-  sstr.Printf("}");
+  sstr.PutCString("}");
   return std::string(sstr.GetString());
 }
 

@@ -87,7 +87,10 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
                         /*default=*/"false",
                         "Allow converting a fir.do_loop with the `unordered` "
-                        "attribute to scf.parallel (experimental).">];
+                        "attribute to scf.parallel (experimental).">,
+                 Option<"setNSW", "set-nsw", "bool",
+                        /*default=*/"true",
+                        "Add nsw flag to loop variable increments.">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -546,12 +549,19 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
     "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
   let options = [
+    Option<"allocatorRegistrationFunction",
+           "allocator-registration-function", "std::string", /*default=*/"",
+           "Name of the function to call to register CUDA Fortran allocators. "
+           "Defaults to CUFRegisterAllocator.">,
     Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
            "Treat host module globals as unified memory (-gpu=mem:unified): "
            "register every plain host module global that is mirrored in the "
-           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
-           "time and HMM/ATS handles migration.">
+           "time and HMM/ATS handles migration.">,
+    Option<"priority", "priority", "int32_t", /*default=*/"0",
+           "Priority for the CUDA Fortran global constructor in "
+           "llvm.mlir.global_ctors.">
   ];
 }
 

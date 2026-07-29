@@ -21,6 +21,8 @@
 ; value that still arms the guard (0 means unbounded) -- so the quota trips
 ; as early as possible and the test does not depend on an arbitrary tuned cutoff value.
 
+; REQUIRES: asserts
+
 ; RUN: opt %loadNPMPolly %s -passes='polly-custom<ast>' -polly-process-unprofitable \
 ; RUN:   -polly-astgen-computeout=1 -debug-only=polly-ast \
 ; RUN:   -disable-output 2>&1 | FileCheck %s

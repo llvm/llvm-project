@@ -408,6 +408,9 @@ def fpimm      : SDNode<"ISD::ConstantFP", SDTFPLeaf  , [], "ConstantFPSDNode">;
 def vt         : SDNode<"ISD::VALUETYPE" , SDTOther   , [], "VTSDNode">;
 def bb         : SDNode<"ISD::BasicBlock", SDTOther   , [], "BasicBlockSDNode">;
 def cond       : SDNode<"ISD::CONDCODE"  , SDTOther   , [], "CondCodeSDNode">;
+def poison     : SDNode<"ISD::POISON"    , SDTUNDEF   , []>;
+// `undef` is the ISD::UNDEF node, but in isel patterns it matches
+// either ISD::UNDEF or ISD::POISON
 def undef      : SDNode<"ISD::UNDEF"     , SDTUNDEF   , []>;
 def vscale     : SDNode<"ISD::VSCALE"    , SDTIntUnaryOp, []>;
 def globaladdr : SDNode<"ISD::GlobalAddress",         SDTPtrLeaf, [],
@@ -1028,6 +1031,10 @@ class SDNodeXForm<SDNode opc, code xformFunction> {
 
 // The default transform does not change the matched node.
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
+
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Fragments.

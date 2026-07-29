@@ -739,10 +739,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
 void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   outputModuleSection(SPIRV::MB_Annotations);
   // Process llvm.global.annotations special global variable.
-  for (auto F = M.global_begin(), E = M.global_end(); F != E; ++F) {
-    if ((*F).getName() != "llvm.global.annotations")
-      continue;
-    const GlobalVariable *V = &(*F);
+  if (const GlobalVariable *V = M.getNamedGlobal("llvm.global.annotations")) {
     const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
     for (Value *Op : CA->operands()) {
       ConstantStruct *CS = cast<ConstantStruct>(Op);
