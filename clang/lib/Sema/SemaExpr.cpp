@@ -6209,31 +6209,6 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   return false;
 }
 
-namespace {
-struct CoroSuspendFinder : DynamicRecursiveASTVisitor {
-  bool FoundSuspend = false;
-
-  CoroSuspendFinder() { ShouldVisitImplicitCode = true; }
-
-  bool VisitCoawaitExpr(CoawaitExpr *E) override {
-    FoundSuspend = true;
-    return false; // Stop traversal
-  }
-  bool VisitCoyieldExpr(CoyieldExpr *E) override {
-    FoundSuspend = true;
-    return false; // Stop traversal
-  }
-};
-} // namespace
-
-static bool containsCoroSuspend(const Expr *E) {
-  if (!E)
-    return false;
-  CoroSuspendFinder Finder;
-  Finder.TraverseStmt(const_cast<Expr *>(E));
-  return Finder.FoundSuspend;
-}
-
 static bool isWin32InAllocaRecord(ASTContext &Context, QualType Ty) {
   const RecordType *RT = Ty->getAs<RecordType>();
   if (!RT)
@@ -6268,7 +6243,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
   bool CallHasSuspend = false;
   if (getCurFunction() && getCurFunction()->isCoroutine()) {
     for (const Expr *A : Args) {
-      if (containsCoroSuspend(A)) {
+      if (A && A->containsCoroutineSuspendPoints()) {
         CallHasSuspend = true;
         break;
       }

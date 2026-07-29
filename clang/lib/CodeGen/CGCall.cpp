@@ -4790,27 +4790,6 @@ static bool isObjCMethodWithTypeParams(const ObjCMethodDecl *method) {
 }
 #endif
 
-namespace {
-class CoroSuspendFinder : public RecursiveASTVisitor<CoroSuspendFinder> {
-public:
-  bool FoundSuspend = false;
-  bool VisitCoawaitExpr(CoawaitExpr *) {
-    FoundSuspend = true;
-    return false; // Stop traversal
-  }
-  bool VisitCoyieldExpr(CoyieldExpr *) {
-    FoundSuspend = true;
-    return false; // Stop traversal
-  }
-};
-} // namespace
-
-static bool containsCoroSuspend(const Expr *E) {
-  CoroSuspendFinder Finder;
-  Finder.TraverseStmt(const_cast<Expr *>(E));
-  return Finder.FoundSuspend;
-}
-
 static const MaterializeTemporaryExpr *getMTEToPreEvaluate(const Expr *E) {
   while (true) {
     E = E->IgnoreParens();
@@ -4952,7 +4931,7 @@ void CodeGenFunction::EmitCallArgs(
   bool CallHasSuspend = false;
   if (isCoroutine()) {
     for (const Expr *A : ArgRange) {
-      if (containsCoroSuspend(A)) {
+      if (A && A->containsCoroutineSuspendPoints()) {
         CallHasSuspend = true;
         break;
       }
@@ -5517,6 +5496,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     auto Align = CallInfo.getArgStructAlignment();
     AI->setAlignment(Align.getAsAlign());
     AI->setUsedWithInAlloca(true);
+    if (isCoroutine()) {
+      AI->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                      llvm::MDNode::get(CGM.getLLVMContext(), {}));
+    }
     assert(AI->isUsedWithInAlloca() && !AI->isStaticAlloca());
     ArgMemory = RawAddress(AI, ArgStruct, Align);
     if (isCoroutine()) {

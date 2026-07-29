@@ -3986,6 +3986,22 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   return false;
 }
 
+static bool containsCoroutineSuspendPoints(const Stmt *S) {
+  if (!S)
+    return false;
+  if (isa<CoawaitExpr>(S) || isa<CoyieldExpr>(S) ||
+      isa<DependentCoawaitExpr>(S))
+    return true;
+  for (const Stmt *Child : S->children())
+    if (Child && containsCoroutineSuspendPoints(Child))
+      return true;
+  return false;
+}
+
+bool Expr::containsCoroutineSuspendPoints() const {
+  return ::containsCoroutineSuspendPoints(this);
+}
+
 FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
   if (auto Call = dyn_cast<CallExpr>(this))
     return Call->getFPFeaturesInEffect(LO);
