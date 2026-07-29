@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cuf-add-constructor %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-add-constructor %s | FileCheck --check-prefixes=CHECK,NOUNIFIED %s
 // RUN: fir-opt --split-input-file --cuf-add-constructor="cuda-unified=true" %s | FileCheck %s --check-prefixes=CHECK,UNIFIED
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang version 20.0.0 (https://github.com/llvm/llvm-project.git cae351f3453a0a26ec8eb2ddaf773c24a29d929e)", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
@@ -31,21 +31,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: gpu.module @cuda_device_mod
 
 // CHECK: llvm.func internal @__cudaFortranConstructor() {
-// CHECK-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
-// CHECK-DAG: %[[VAR_NAME:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,12>>
-// CHECK-DAG: %[[VAR_ADDR:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
-// CHECK-DAG: %[[MODULE2:.*]] = fir.convert %[[MODULE]] : (!llvm.ptr) -> !fir.ref<!fir.llvm_ptr<i8>>
-// CHECK-DAG: %[[VAR_ADDR2:.*]] = fir.convert %[[VAR_ADDR]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<i8>
-// CHECK-DAG: %[[VAR_NAME2:.*]] = fir.convert %[[VAR_NAME]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-// CHECK-DAG: %[[CST:.*]] = arith.constant 20 : index
-// CHECK-DAG: %[[CST2:.*]] = fir.convert %[[CST]] : (index) -> i64
-// CHECK-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE2]], %[[VAR_ADDR2]], %[[VAR_NAME2]], %[[CST2]]) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> ()
-// CHECK-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-// CHECK-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
-// CHECK-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
+// NOUNIFIED-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
+// NOUNIFIED-DAG: %[[VAR_NAME:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,12>>
+// NOUNIFIED-DAG: %[[VAR_ADDR:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
+// NOUNIFIED-DAG: %[[MODULE2:.*]] = fir.convert %[[MODULE]] : (!llvm.ptr) -> !fir.ref<!fir.llvm_ptr<i8>>
+// NOUNIFIED-DAG: %[[VAR_ADDR2:.*]] = fir.convert %[[VAR_ADDR]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: %[[VAR_NAME2:.*]] = fir.convert %[[VAR_NAME]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: %[[CST:.*]] = arith.constant 20 : index
+// NOUNIFIED-DAG: %[[CST2:.*]] = fir.convert %[[CST]] : (index) -> i64
+// NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE2]], %[[VAR_ADDR2]], %[[VAR_NAME2]], %[[CST2]]) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> ()
+// NOUNIFIED-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// NOUNIFIED-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
+// NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
 // Device and constant globals already live in device memory, so they are not
 // statically registered as device-resident under -gpu=mem:unified.
-// UNIFIED-NOT: cuf.register_variable_static
+// UNIFIED: cuf.register_variable_static @_QMmtestsEn("_QMmtestsEn", 20) {deviceResident}
 // CHECK-NOT: fir.call @_FortranACUFInitModule
 
 // -----
@@ -105,9 +105,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// CHECK: fir.address_of(@_QMmEa00)
-// CHECK: fir.call @_FortranACUFRegisterVariable
+// NOUNIFIED: fir.address_of(@_QMmEa00)
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable
 // CHECK-NOT: fir.call @_FortranACUFInitModule
+// The device side is a definition, so it must not also be mapped as host
+// memory: that would override the device symbol and break symbol lookups.
+// UNIFIED: cuf.register_variable_static @_QMmEa00("_QMmEa00", 144) {deviceResident}
 
 // -----
 
@@ -202,8 +205,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // CHECK-NOT: llvm.call @_FortranACUFRegisterAllocator()
 // CHECK: cuf.register_module @cuda_device_mod -> !llvm.ptr 
-// CHECK: fir.address_of(@_QMkernels_mEdev_var) : !fir.ref<f32> 
-// CHECK: fir.call @_FortranACUFRegisterVariable(%3, %4, %5, %6) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> () 
+// NOUNIFIED: fir.address_of(@_QMkernels_mEdev_var) : !fir.ref<f32> 
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable(%3, %4, %5, %6) : (!fir.ref<!fir.llvm_ptr<i8>>, !fir.ref<i8>, !fir.ref<i8>, i64) -> () 
 
 // -----
 
@@ -307,5 +310,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// CHECK: fir.call @_FortranACUFRegisterVariable
-// CHECK-NOT: cuf.register_variable_static
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable
+// UNIFIED: cuf.register_variable_static @_QMallocmodEac("_QMallocmodEac", 40) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMallocmodEad("_QMallocmodEad", 48) {deviceResident}

@@ -346,7 +346,8 @@ def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
   let arguments = (ins
     SymbolRefAttr:$global,
     StrAttr:$varName,
-    I64Attr:$size
+    I64Attr:$size,
+    UnitAttr:$deviceResident
   );
 
   let assemblyFormat = [{
