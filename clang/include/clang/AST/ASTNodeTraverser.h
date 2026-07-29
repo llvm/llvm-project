@@ -160,7 +160,8 @@ public:
       // Some statements have custom mechanisms for dumping their children.
       if (isa<DeclStmt, GenericSelectionExpr, RequiresExpr,
               OpenACCWaitConstruct, SYCLKernelCallStmt,
-              UnresolvedSYCLKernelCallStmt>(S))
+              UnresolvedSYCLKernelCallStmt,
+              CoroutineSuspendParameterBypassExpr>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -773,6 +774,12 @@ public:
     if (CSE->hasExplicitTemplateArgs())
       for (const auto &ArgLoc : CSE->getTemplateArgsAsWritten()->arguments())
         dumpTemplateArgumentLoc(ArgLoc);
+  }
+
+  void VisitCoroutineSuspendParameterBypassExpr(
+      const CoroutineSuspendParameterBypassExpr *Node) {
+    Visit(Node->getSubExpr(), "bypass_sub_expr");
+    Visit(Node->getMoveExpr(), "bypass_move_expr");
   }
 
   void VisitUsingShadowDecl(const UsingShadowDecl *D) {
