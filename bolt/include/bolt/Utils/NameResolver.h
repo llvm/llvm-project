@@ -38,7 +38,7 @@ class NameResolver {
   /// Return the map key used to track occurrences of \p Name.
   static std::pair<uint64_t, uint64_t> getKey(StringRef Name) {
     const XXH128_hash_t Hash = llvm::xxh3_128bits(
-        {reinterpret_cast<const uint8_t *>(Name.data()), Name.size()});
+        reinterpret_cast<const uint8_t *>(Name.data()), Name.size());
     return {Hash.low64, Hash.high64};
   }
 
