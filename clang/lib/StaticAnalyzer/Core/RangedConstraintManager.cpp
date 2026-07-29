@@ -20,11 +20,10 @@ namespace ento {
 
 RangedConstraintManager::~RangedConstraintManager() {}
 
-// Is `Assumption` (i.e. "the condition is non-zero") consistent with a symbol
-// that simplified to the concrete integer `V`? Mirrors the nonloc::ConcreteInt
-// handling in SimpleConstraintManager::assumeAux.
-static bool isConcreteFeasible(const llvm::APSInt &V, bool Assumption) {
-  return (V != 0) ? Assumption : !Assumption;
+// Is \p Assumption (i.e. "the condition is non-zero") inconsistent with a symbol
+// that simplified to the concrete integer `V`?
+static bool isConcreteInfeasible(const llvm::APSInt &V, bool Assumption) {
+  return (V != 0) ? !Assumption : Assumption;
 }
 
 ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
@@ -40,7 +39,7 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
     // The symbol folds to a concrete integer. If the assumption contradicts it
     // the path is infeasible and must be pruned; otherwise a self-contradictory
     // state would stay feasible and could crash checkers downstream.
-    if (!isConcreteFeasible(*CI->getValue(), Assumption))
+    if (isConcreteInfeasible(*CI->getValue(), Assumption))
       return nullptr;
     // When the fold is consistent we deliberately do NOT return early: we fall
     // through and record the constraint on the *original* symbol. That is not a
@@ -207,7 +206,7 @@ RangedConstraintManager::assumeSymUnsupported(ProgramStateRef State,
     // consistent we fall through and record the constraint on the original
     // symbol (assumeSymNE/EQ below) rather than returning early; see the note
     // in assumeSym for why the fall-through is load-bearing.
-    if (!isConcreteFeasible(*CI->getValue(), Assumption))
+    if (isConcreteInfeasible(*CI->getValue(), Assumption))
       return nullptr;
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
     Sym = SimplifiedSym;
