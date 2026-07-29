@@ -15,7 +15,8 @@
 ///
 /// A sub-dword store is therefore a read-modify-write of the containing dword.
 /// This runs before AMDGPUAssignIdxToM0, so the whole-dword accesses created
-/// here take part in the usual M0 setup, and before register allocation
+/// here take part in the usual M0 setup - they declare their write of M0
+/// themselves, like the pseudo they replace - and before register allocation
 /// because it introduces new virtual registers.
 //
 //===----------------------------------------------------------------------===//
@@ -71,11 +72,6 @@ void AMDGPULowerIdxOpsImpl::lowerLoadIdxBits(MachineInstr &MI) {
           .add(LoadIdx.getOffsetOp());
   auto *LoadMMO = *MI.memoperands_begin();
   LoadMIB.addMemOperand(LoadMMO);
-  // Match what instruction selection does for a whole-dword access with a
-  // register index: record that the M0 write implied by the eventual movrel
-  // clobbers M0 (see AMDGPUAssignIdxToM0).
-  if (LoadIdx.getIdxOp().isReg())
-    LoadMIB.addReg(AMDGPU::M0, RegState::ImplicitDefine);
   Register DataReg = LoadIdx.getDataOp().getReg();
 
   // Extract the accessed bits out of it.
@@ -118,8 +114,6 @@ void AMDGPULowerIdxOpsImpl::lowerStoreIdxBits(MachineInstr &MI) {
   NewFlags |= StoreMMO->getFlags() & ~MachineMemOperand::MOStore;
   MachineMemOperand *LoadMMO = MF->getMachineMemOperand(StoreMMO, NewFlags);
   LoadMIB.addMemOperand(LoadMMO);
-  if (StoreIdx.getIdxOp().isReg())
-    LoadMIB.addReg(AMDGPU::M0, RegState::ImplicitDefine);
 
   // Insert the stored bits into it.
   auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, DstAReg);
@@ -134,8 +128,6 @@ void AMDGPULowerIdxOpsImpl::lowerStoreIdxBits(MachineInstr &MI) {
           .add(StoreIdx.getIdxOp())
           .add(StoreIdx.getOffsetOp());
   StoreMIB.addMemOperand(StoreMMO);
-  if (StoreIdx.getIdxOp().isReg())
-    StoreMIB.addReg(AMDGPU::M0, RegState::ImplicitDefine);
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
 
