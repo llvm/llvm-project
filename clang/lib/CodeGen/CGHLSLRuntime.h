@@ -372,9 +372,8 @@ private:
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
   unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
 
-  // DXIL assigns each leaf semantic an index in parse order. Inputs and outputs
-  // are counted independently. Reset in emitEntryFunction before lowering the
-  // semantics of an entry point.
+  // FIXME: #57928, storing these here and reseting them in the entry is not
+  // very nice and is a temporary until we accumulate the signatures as part of
   unsigned DXILInputSemanticIndex = 0;
   unsigned DXILOutputSemanticIndex = 0;
 };
