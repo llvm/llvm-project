@@ -1,0 +1,32 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+
+# Operand invariants of the VGPR "as memory" (address space 13) indexed
+# accesses, as enforced by SIInstrInfo::verifyInstruction.
+#
+# The lowering relies on the access having exactly one memory operand, since a
+# sub-dword store synthesizes a load operand from it, and on the index carrying
+# no subregister, since AMDGPUAssignIdxToM0 rewrites it in place to M0. That the
+# access writes M0 is declared by the instructions themselves, so it needs no
+# check: MIR without the operand does not parse.
+
+# CHECK: *** Bad machine code: v_load/store_idx should have exactly one memory operand. ***
+# CHECK: *** Bad machine code: v_load/store_idx register index must not have a subregister. ***
+
+---
+name:            operand_invariants
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr2_sgpr3, $vgpr0
+    %0:sreg_32 = COPY $sgpr0
+    %1:vgpr_32 = COPY $vgpr0
+    %2:sreg_64 = COPY $sgpr2_sgpr3
+
+    ; No memory operand.
+    %3:vgpr_32 = V_LOAD_IDX_B32 %0, 0, implicit-def $m0, implicit $exec
+
+    ; Index with a subregister.
+    %4:vgpr_32 = V_LOAD_IDX_B32 %2.sub0, 0, implicit-def $m0, implicit $exec :: (load (s32), addrspace 13)
+
+    S_ENDPGM 0, implicit %3, implicit %4
+...
