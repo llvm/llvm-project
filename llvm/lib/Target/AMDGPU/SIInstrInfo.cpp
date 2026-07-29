@@ -5388,6 +5388,34 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return false;
   }
 
+  // A VGPR "as memory" indexed access carries its dword index in an SGPR, which
+  // AMDGPUAssignIdxToM0 rewrites to M0 - the register read by the v_movrel[sd]
+  // that AMDGPULowerVGPREncoding eventually emits. Until that rewrite the
+  // access has to record that the move clobbers M0, otherwise it could be
+  // separated from the code that sets M0 up.
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    if (MI.getNumMemOperands() != 1) {
+      ErrInfo = "v_load/store_idx should have exactly one memory operand.";
+      return false;
+    }
+
+    const MachineOperand &IdxOp = LdStIdx->getIdxOp();
+    if (IdxOp.isReg()) {
+      if (IdxOp.getSubReg() != 0) {
+        ErrInfo =
+            "v_load/store_idx register index must not have a subregister.";
+        return false;
+      }
+
+      if (ST.hasMovrel() && IdxOp.getReg() != AMDGPU::M0 &&
+          !MI.definesRegister(AMDGPU::M0, /*TRI=*/nullptr)) {
+        ErrInfo = "v_load/store_idx with register index must have implicit-def "
+                  "$m0 on movrel subtargets.";
+        return false;
+      }
+    }
+  }
+
   // Make sure the register classes are correct.
   for (int i = 0, e = Desc.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
