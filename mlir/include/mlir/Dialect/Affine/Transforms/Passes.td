@@ -386,7 +386,7 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
     Option<"promoteSingleIter", "promote-single-iter", "bool",
            /*default=*/"true", "Promote single iteration loops">,
     Option<"useExpensiveMath", "use-expensive-math", "bool", /*default=*/"false",
-           "Use the Presburger to constantize loop upper bounds (higher analysis cost)">
+           "Use Presburger arithmetic to constantize loop upper bounds (higher analysis cost)">
   ];
 }
 
