@@ -18,6 +18,7 @@
 #include <__ranges/enable_view.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
+#include <__verbose_abort>
 
 #include <__fwd/optional.h>
 
