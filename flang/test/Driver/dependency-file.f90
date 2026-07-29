@@ -1,15 +1,17 @@
 ! Test how the driver lowers -M, -MM, -MD, -MMD, -MF, -MT and -MQ to `flang
 ! -fc1` and the generated dependency file. Fortran has no system/user header
-! split, so -M behaves like -MM and -MD like -MMD.
+! split, so -M behaves like -MM and -MD like -MMD. Unlike clang, -M/-MM use
+! -fsyntax-only (not -Eonly) so that USE module dependencies are resolved.
 
 !--------------------------------------------------------------------------
-! -M / -MM: emit only the dependencies (prescan-only -Eonly), default
-! to stdout, imply -w, and use the object file as the default target.
+! -M / -MM: emit dependencies via -fsyntax-only (runs through semantics to
+! resolve USE statements), default to stdout, imply -w, and use the object
+! file as the default target.
 !--------------------------------------------------------------------------
 ! RUN: %flang -### -M  %s 2>&1 | FileCheck %s --check-prefix=M
 ! RUN: %flang -### -MM %s 2>&1 | FileCheck %s --check-prefix=M
 ! M: "-fc1"
-! M-SAME: "-Eonly"
+! M-SAME: "-fsyntax-only"
 ! M-SAME: "-w"
 ! M-SAME: "-dependency-file" "-"
 ! M-SAME: "-MT" "dependency-file.o"
@@ -20,7 +22,7 @@
 !--------------------------------------------------------------------------
 ! RUN: %flang -### -M  -o named.d %s 2>&1 | FileCheck %s --check-prefix=M-O
 ! RUN: %flang -### -MM -o named.d %s 2>&1 | FileCheck %s --check-prefix=M-O
-! M-O: "-Eonly"
+! M-O: "-fsyntax-only"
 ! M-O-SAME: "-dependency-file" "named.d"
 ! M-O-SAME: "-MT" "dependency-file.o"
 
@@ -35,7 +37,7 @@
 ! -MF redirects the dependency file; the target is unaffected.
 !--------------------------------------------------------------------------
 ! RUN: %flang -### -M -MF custom.d %s 2>&1 | FileCheck %s --check-prefix=M-MF
-! M-MF: "-Eonly"
+! M-MF: "-fsyntax-only"
 ! M-MF-SAME: "-dependency-file" "custom.d"
 ! M-MF-SAME: "-MT" "dependency-file.o"
 
@@ -63,7 +65,7 @@
 ! RUN: %flang -### -MD  -c %s 2>&1 | FileCheck %s --check-prefix=MD
 ! RUN: %flang -### -MMD -c %s 2>&1 | FileCheck %s --check-prefix=MD
 ! MD: "-fc1"
-! MD-NOT: "-Eonly"
+! MD-NOT: "-fsyntax-only"
 ! MD-SAME: "-dependency-file" "dependency-file.d"
 ! MD-SAME: "-MT" "dependency-file.o"
 

@@ -1149,7 +1149,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (isa<PreprocessJobAction>(JA)) {
     if (Output.getType() == types::TY_Dependencies) {
-      CmdArgs.push_back("-Eonly");
+      CmdArgs.push_back("-fsyntax-only");
     } else {
       CmdArgs.push_back("-E");
       if (Args.getLastArg(options::OPT_dM)) {

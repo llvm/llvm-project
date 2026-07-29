@@ -1,6 +1,6 @@
-! Module files used via `use` are real build dependencies. -MD/-MMD run a full
-! compile, so the .mod opened during semantics is recorded in the output. Plain
-! -M/-MM is prescan-only and does not resolve modules, so it lists includes only.
+! Module files used via `use` are real build dependencies. Both -M/-MM and
+! -MD/-MMD run through semantics, so the .mod opened during semantics is
+! recorded in the output for all four flags.
 
 ! RUN: rm -rf %t && split-file %s %t
 ! RUN: %flang -fsyntax-only %t/mymod.f90 -J %t
@@ -15,10 +15,10 @@
 ! MD-DAG: __fortran_builtins.mod
 ! MD-DAG: __fortran_type_info.mod
 
-! -M stays prescan-only: no module dependency.
+! -M runs through semantics and also lists module dependencies.
 ! RUN: %flang -M %t/main.f90 -J %t 2>&1 | FileCheck %s --check-prefix=M
 ! M: main.o:
-! M-NOT: mymod.mod
+! M-DAG: mymod.mod
 
 !--- mymod.f90
 module mymod
