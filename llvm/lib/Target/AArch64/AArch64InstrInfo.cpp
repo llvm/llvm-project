@@ -11360,7 +11360,7 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
        MI.getOperand(1).getReg() == AArch64::WZR &&
        MI.getOperand(3).getImm() == 0x0) ||
       (MI.getOpcode() == AArch64::ORRWrr &&
-       MI.getOperand(1).getReg() == AArch64::WZR))
+       MI.getOperand(1).getReg() == AArch64::WZR)) {
     // Check that the w->w move is not a zero-extending w->x mov.
     if ((MI.getOperand(0).getReg().isPhysical() &&
          MI.findRegisterDefOperandIdx(
@@ -11369,6 +11369,7 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
         (MI.getOperand(0).getReg().isVirtual() &&
          !MI.getOperand(0).getSubReg()))
       return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
