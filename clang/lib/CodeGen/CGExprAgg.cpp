@@ -782,7 +782,8 @@ void AggExprEmitter::VisitMaterializeTemporaryExpr(
     QualType Type = E->getType();
     assert((!Type->getAsCXXRecordDecl() ||
             Type->getAsCXXRecordDecl()->isTriviallyCopyable()) &&
-           "Non-trivially copyable MTE should not be visited as aggregate when pre-evaluated");
+           "Non-trivially copyable MTE should not be visited as aggregate when "
+           "pre-evaluated");
     EmitFinalDestCopy(Type, SrcLV);
     return;
   }
