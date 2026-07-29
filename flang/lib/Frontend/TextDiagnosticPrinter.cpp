@@ -55,10 +55,10 @@ static void printRemarkOption(llvm::raw_ostream &os,
 
 // For remarks only, if we are receiving a message of this format
 // [file location with line and column];;[path to file];;[the remark message]
-// then print the absolute file path, line and column number.
+// then print the base file name, line and column number.
 void TextDiagnosticPrinter::printLocForRemarks(
     llvm::raw_svector_ostream &diagMessageStream, llvm::StringRef &diagMsg) {
-  // split incoming string to get the absolute path and filename in the
+  // split incoming string to get the location and filename in the
   // case we are receiving optimization remarks from BackendRemarkConsumer
   diagMsg = diagMessageStream.str();
   llvm::StringRef delimiter = ";;";
@@ -73,19 +73,17 @@ void TextDiagnosticPrinter::printLocForRemarks(
   // tokens will always be of size 2 in the case of optimization
   // remark message received
   if (tokens.size() == 2) {
-    // Extract absolute path
-    llvm::SmallString<128> absPath = llvm::sys::path::relative_path(tokens[1]);
-    llvm::sys::path::remove_filename(absPath);
-    // Add the last separator before the file name
-    llvm::sys::path::append(absPath, llvm::sys::path::get_separator());
-    llvm::sys::path::make_preferred(absPath);
+    // tokens[0] is of the form [file path]:[line]:[column]. Strip any leading
+    // directory so that only the base file name is shown, matching how errors
+    // and warnings are displayed.
+    llvm::StringRef loc = llvm::sys::path::filename(tokens[0]);
 
     // Used for changing only the bold attribute
     if (diagOpts.showColors(os.has_colors()))
       os.changeColor(llvm::raw_ostream::SAVEDCOLOR, true);
 
-    // Print path, file name, line and column
-    os << absPath << tokens[0] << ": ";
+    // Print base file name, line and column
+    os << loc << ": ";
   }
 }
 

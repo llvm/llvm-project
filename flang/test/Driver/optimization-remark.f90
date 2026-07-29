@@ -82,3 +82,10 @@ subroutine swap_real(a1, a2)
     end do
 
 end subroutine swap_real
+
+! Check that only the base file name (not the full path passed on the command
+! line) is displayed in remarks, matching how errors and warnings are shown.
+! The RUN and CHECK lines are placed at the end of the file so that adding them
+! does not shift the source line numbers referenced by the checks above.
+! RUN: %flang %s -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=BASENAME
+! BASENAME: {{^}}optimization-remark.f90:{{[0-9]+}}:{{[0-9]+}}: remark:
