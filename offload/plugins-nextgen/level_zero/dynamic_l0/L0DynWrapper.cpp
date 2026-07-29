@@ -170,22 +170,24 @@ static bool loadLevelZero() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     void *Fallback = nullptr;
-    if (P == nullptr) {
+    if (P)
+      ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                      << ") -> " << P;
+    else {
       Fallback = findZeFallback(Sym);
-      if (!Fallback) {
+      if (Fallback) {
+        ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                        << "'. Using fallback implementation -> " << Fallback;
+        P = Fallback;
+      } else {
         ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
                         << "' and no fallback is available!";
         EmitCheckVersion();
         return false;
       }
-      ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
-                      << "'. Using fallback implementation -> " << Fallback;
     }
-    if (P)
-      ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
-                      << ") -> " << P;
 
-    *dlwrap::pointer(I) = P ? P : Fallback;
+    *dlwrap::pointer(I) = P;
   }
 
   return true;
