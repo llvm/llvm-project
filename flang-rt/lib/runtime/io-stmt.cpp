@@ -988,7 +988,9 @@ template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, child_{child},
-      mutableModes_{child.parent().mutableModes()} {}
+      mutableModes_{child.parent().mutableModes()} {
+  mutableModes_.inNamelist = false;
+}
 
 template <Direction DIR>
 const NonTbpDefinedIoTable *
