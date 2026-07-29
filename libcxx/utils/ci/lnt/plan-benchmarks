@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import Dict, List, Optional, Sequence, TypedDict
+import argparse
+import json
+import logging
+import pathlib
+import sys
+import tabulate
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+# LNT instances can be slow: timeout after that many seconds.
+TIMEOUT_SECONDS = 120
+
+# One line of the produced plan.
+class WorkItem(TypedDict):
+    commit: str
+    machine: str
+    samples_have: int
+    samples_want: int
+    reason: str
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                    argparse.RawDescriptionHelpFormatter):
+    """Show defaults, but keep the paragraphs of the description intact."""
+
+def is_sha(string: str) -> bool:
+    return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
+
+def positive(string: str) -> int:
+    value = int(string)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f'expected a positive integer, got {string}')
+    return value
+
+class LNTError(Exception):
+    pass
+
+
+def get(url: str) -> Optional[dict]:
+    """GET a JSON resource, returning None if the server answers 404."""
+    logging.debug(f'GET {url}')
+    try:
+        with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
+            return json.loads(response.read().decode())
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return None
+        raise LNTError(f'GET {url} failed with HTTP {error.code}: {error.reason}')
+    except urllib.error.URLError as error:
+        raise LNTError(f'GET {url} failed: {error.reason}')
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise LNTError(f'GET {url} returned a malformed response: {error}')
+
+
+def benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Optional[Dict[str, int]]:
+    """
+    Return {commit: number of runs} for a machine, or None if the instance has no
+    such machine.
+    """
+    base = f'{lnt_url.rstrip("/")}/api/db_default/v4/{test_suite}'
+    result = get(f'{base}/machines/{urllib.parse.quote(machine)}')
+    if result is None:
+        listing = get(f'{base}/machines')
+        if listing is None:
+            raise LNTError(f'{lnt_url} has no test suite named {test_suite}')
+        named = [m for m in listing.get('machines', []) if m.get('name') == machine]
+        if len(named) > 1:
+            ids = ', '.join(str(m.get('id')) for m in named)
+            raise LNTError(f'ambiguous name: {lnt_url} has {len(named)} machines named {machine} (ids {ids})')
+        return None
+
+    counts: Dict[str, int] = {}
+    for run in result.get('runs', []):
+        if 'git_sha' not in run:
+            raise LNTError(f'run {run.get("id")} has no git_sha field. Is {test_suite} the right test suite?')
+        commit = str(run['git_sha']).strip().lower() # normalize commit SHAs
+        counts[commit] = counts.get(commit, 0) + 1
+    return counts
+
+
+def plan(commits: Sequence[str],
+         have: Dict[str, int],
+         want: int,
+         machine: str) -> List[WorkItem]:
+    """
+    Return the work items needed to bring every commit up to `want` runs.
+
+    The order of the input is preserved. A commit repeated on the input is
+    planned once, at the position it first appeared.
+    """
+    items: List[WorkItem] = []
+    for commit in dict.fromkeys(commits):
+        existing = have.get(commit, 0)
+        if existing >= want:
+            continue
+        items.append({'commit': commit,
+                      'machine': machine,
+                      'samples_have': existing,
+                      'samples_want': want,
+                      'reason': f'{existing}/{want} runs'})
+    return items
+
+
+def main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog='plan-benchmarks',
+        description='Determine which commits need benchmark data based on the set of desired commits '
+                    'and the content of an existing LNT instance.\n'
+                    '\n'
+                    'This tool effectively compares a desired state (represented by a set of desired '
+                    'commits and a number of samples for each) to a current state (obtained from a '
+                    'LNT instance containing data), and determines the actions to take in order to '
+                    'fill that gap. This plan is printed to standard output as one JSON object per line, '
+                    'in the order the commits were given: that order is the priority, since the '
+                    'dispatcher works through the plan in order and stops when it runs out of '
+                    'capacity.\n'
+                    '\n'
+                    'This tool does not manage state of its own, and running it repeatedly as the LNT '
+                    'instance gains more data makes it converge towards the desired state.\n'
+                    '\n'
+                    'Note that a run counts towards a commit whether or not it produced any results. '
+                    'Building the library or its benchmarks can fail at an arbitrary commit, so this '
+                    'tool considers a commit with enough runs in LNT to have been measured, even if '
+                    'those runs contain no (or few) valid benchmark results.\n'
+                    '\n'
+                    'Each line of the produced plan carries the commit to benchmark, the machine the '
+                    'plan is about, how many runs the commit already has and how many it should end '
+                    'up with, and a human-readable reason.',
+        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        formatter_class=HelpFormatter)
+    parser.add_argument('--commit-list', type=argparse.FileType('r'), default=sys.stdin,
+        help='A file of whitespace separated commits for which benchmark data is desired. By default, '
+             'this is read from standard input.')
+    parser.add_argument('--lnt-url', type=str, required=True,
+        help='The URL of the LNT instance holding the benchmark data.')
+    parser.add_argument('--test-suite', type=str, required=True,
+        help='The LNT test suite holding the benchmark data.')
+    parser.add_argument('--machine', type=str, required=True,
+        help='The LNT machine to plan work for.')
+    parser.add_argument('--samples', type=positive, default=3,
+        help='How many benchmark runs each commit should have.')
+    parser.add_argument('--allow-missing-machine', action='store_true',
+        help='Accept that the LNT instance has no such machine, and plan despite that. '
+             'Needed when first populating a machine, and withheld by default because a '
+             'mistyped or renamed machine is otherwise indistinguishable from one that '
+             'has no data yet.')
+    parser.add_argument('--output', type=pathlib.Path, default=None,
+        help='Where to write the plan. Defaults to standard output.')
+    parser.add_argument('-q', '--quiet', action='store_true',
+        help='Do not print the human-readable summary to standard error.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
+    args = parser.parse_args(argv)
+
+    # --quiet raises the logging threshold rather than silencing everything, since we
+    # still want to see warnings.
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG if args.verbose else
+                              logging.WARNING if args.quiet else logging.INFO)
+
+    requested = [c.lower() for line in args.commit_list for c in line.split()] # normalize commit SHAs
+    invalid = [c for c in requested if not is_sha(c)]
+    if invalid:
+        raise ValueError(f'expected full 40-character SHAs on the input, got {invalid[0]!r}')
+
+    have = benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
+    if have is None:
+        if not args.allow_missing_machine:
+            raise ValueError(f'{args.lnt_url} has no machine named {args.machine} in test suite '
+                             f'{args.test_suite}. Pass --allow-missing-machine if that is intended, '
+                             f'otherwise check your usage of the tool to avoid generating a potentially '
+                             f'large list of commits to benchmark.')
+        logging.warning(f'{args.lnt_url} has no machine named {args.machine} yet: planning as if it had no data')
+        have = {}
+
+    items = plan(requested, have, args.samples, args.machine)
+
+    if not args.quiet:
+        runs_to_request = lambda item: item['samples_want'] - item['samples_have']
+        unique = list(dict.fromkeys(requested))
+        complete = sum(1 for c in unique if have.get(c, 0) >= args.samples)
+        partial = sum(1 for c in unique if 0 < have.get(c, 0) < args.samples)
+        print(f'Machine: {args.machine}   Suite: {args.test_suite}   LNT: {args.lnt_url}', file=sys.stderr)
+        print(f'Requested commits: {len(unique)}   '
+              f'({len(unique) - complete - partial} with no data, {partial} partial, {complete} complete)',
+              file=sys.stderr)
+        planned = {i['commit']: i for i in items}
+        rows = []
+        for commit in unique:
+            item = planned.get(commit)
+            if item is None and not args.verbose:
+                continue
+            action = f'request {runs_to_request(item)}' if item else 'ok'
+            rows.append((commit[:12], have.get(commit, 0), args.samples, action))
+        if rows:
+            print(tabulate.tabulate(rows, headers=['COMMIT', 'HAVE', 'WANT', 'ACTION'],
+                                    tablefmt='plain', disable_numparse=True,
+                                    colalign=('left', 'right', 'right', 'left')),
+                  file=sys.stderr)
+        print(f'Plan: {sum(runs_to_request(i) for i in items)} runs across {len(items)} commits',
+              file=sys.stderr)
+
+    # Write the output all at once at the end, to avoid partial output in case of failure.
+    contents = ''.join(json.dumps(i, sort_keys=True) + '\n' for i in items)
+    if args.output is None:
+        sys.stdout.write(contents)
+    else:
+        args.output.write_text(contents)
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError, LNTError) as error:
+        sys.exit(f'error: {error}')
