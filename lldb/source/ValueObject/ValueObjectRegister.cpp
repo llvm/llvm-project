@@ -136,9 +136,12 @@ ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
     return {};
 
   // See if this register is in this register set.
-  for (size_t i = 0; i < m_reg_set->num_registers; ++i)
-    if (reg_info->kinds[eRegisterKindLLDB] == m_reg_set->registers[i])
+  for (size_t i = 0; i < m_reg_set->num_registers; ++i) {
+    const RegisterInfo *contained_reg_info =
+        m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[i]);
+    if (contained_reg_info == reg_info)
       return std::make_pair(i, reg_info);
+  }
 
   return {};
 }
