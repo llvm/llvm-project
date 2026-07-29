@@ -3810,9 +3810,10 @@ static StringRef getCurrentResourceMethodName(Sema &S, StringRef DefaultName) {
   return MD->getName();
 }
 
-// Returns the element type of a resource's contained type, which is the
-// contained type itself for scalar element types.
-static QualType getResourceElementType(QualType ContainedType) {
+// Returns the element type of a typed resource's contained type. Typed resource
+// element types are scalars or vectors of scalars, so anything that is not a
+// vector is already the element type.
+static QualType getTypedResourceElementType(QualType ContainedType) {
   if (const auto *VecTy = ContainedType->getAs<VectorType>())
     return VecTy->getElementType();
   return ContainedType;
@@ -3824,7 +3825,7 @@ static QualType getResourceElementType(QualType ContainedType) {
 static bool CheckNoDoubleElementType(Sema &S, CallExpr *TheCall,
                                      QualType ContainedType,
                                      StringRef DefaultName) {
-  QualType EltTy = getResourceElementType(ContainedType);
+  QualType EltTy = getTypedResourceElementType(ContainedType);
   if (!EltTy->isSpecificBuiltinType(BuiltinType::Double))
     return false;
 
@@ -3846,7 +3847,7 @@ static bool CheckIntegerElementTypeShaderModel(Sema &S, CallExpr *TheCall,
 
   // 'bool' is an integer type in HLSL, but sampling bool resources is never
   // allowed, so it must not be reported as requiring shader model 6.7.
-  QualType EltTy = getResourceElementType(ContainedType);
+  QualType EltTy = getTypedResourceElementType(ContainedType);
   if (!EltTy->isIntegerType() || EltTy->isBooleanType())
     return false;
 
