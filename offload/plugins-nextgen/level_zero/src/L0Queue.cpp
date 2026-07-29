@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "L0Queue.h"
+#include "APIHelpers.h"
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
@@ -52,9 +53,40 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
                                       ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
-  return CmdList->appendLaunchKernelWithArgs(
-      Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
-      NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+  auto CanUseArgPtr =
+      api_helper::canCall<zeCommandListAppendLaunchKernelWithArguments>();
+  if (KEnv.IsPtrArg && CanUseArgPtr)
+    return CmdList->appendLaunchKernelWithArgs(
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+
+  // Arguments were provided but we have an old level zero version
+  if (KEnv.IsPtrArg) {
+    auto &GroupSizes = KEnv.GroupSizes;
+    auto Res =
+        zeKernelSetGroupSize(Kernel, GroupSizes.groupSizeX,
+                             GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
+    if (Res != ZE_RESULT_SUCCESS)
+      return error::createOffloadError(ErrorCode::UNKNOWN,
+                                       "Could not set group size!");
+
+    auto &KernelProperties = KEnv.KernelPR;
+
+    for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
+         KernelArg++) {
+      uint32_t ArgSize = KernelProperties.ArgSizes[KernelArg];
+
+      Res = zeKernelSetArgumentValue(Kernel, KernelArg, ArgSize,
+                                     KEnv.ArgPtrs[KernelArg]);
+      if (Res != ZE_RESULT_SUCCESS)
+        return error::createOffloadError(ErrorCode::UNKNOWN,
+                                         "Could not set argument to a kernel!");
+    }
+  }
+
+  return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
+                                     NumWaitEvents, WaitEvents,
+                                     KEnv.IsCooperative);
 }
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,

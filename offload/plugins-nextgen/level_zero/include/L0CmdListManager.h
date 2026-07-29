@@ -129,12 +129,6 @@ public:
       ze_event_handle_t SignalEvent = nullptr, uint32_t NumWaitEvents = 0,
       ze_event_handle_t *WaitEvents = nullptr, bool IsCooperative = false) {
 
-    if (!api_helper::canCall<zeCommandListAppendLaunchKernelWithArguments>())
-      return Plugin::error(
-          ErrorCode::UNSUPPORTED,
-          "zeCommandListAppendLaunchKernelWithArguments is not "
-          "available on this driver");
-
     ze_command_list_append_launch_kernel_param_cooperative_desc_t CoopDesc = {
         ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC, nullptr,
         static_cast<ze_bool_t>(IsCooperative)};
