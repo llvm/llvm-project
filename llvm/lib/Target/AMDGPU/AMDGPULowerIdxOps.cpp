@@ -36,9 +36,9 @@ using namespace llvm;
 
 namespace {
 
-class LowerIdxOps {
+class AMDGPULowerIdxOpsImpl {
 public:
-  LowerIdxOps(MachineFunction &MF)
+  AMDGPULowerIdxOpsImpl(MachineFunction &MF)
       : TII(MF.getSubtarget<GCNSubtarget>().getInstrInfo()),
         MRI(&MF.getRegInfo()) {}
 
@@ -52,7 +52,7 @@ private:
   MachineRegisterInfo *MRI;
 };
 
-void LowerIdxOps::lowerLoadIdxBits(MachineInstr &MI) {
+void AMDGPULowerIdxOpsImpl::lowerLoadIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
   auto &LoadIdx = cast<AMDGPUMI::VLoadIdxInst>(MI);
 
@@ -69,19 +69,21 @@ void LowerIdxOps::lowerLoadIdxBits(MachineInstr &MI) {
               SrcAReg)
           .add(LoadIdx.getIdxOp())
           .add(LoadIdx.getOffsetOp());
-  LoadMIB.addMemOperand(*MI.memoperands_begin());
+  auto *LoadMMO = *MI.memoperands_begin();
+  LoadMIB.addMemOperand(LoadMMO);
   // Match what instruction selection does for a whole-dword access with a
   // register index: record that the M0 write implied by the eventual movrel
   // clobbers M0 (see AMDGPUAssignIdxToM0).
   if (LoadIdx.getIdxOp().isReg())
     LoadMIB.addReg(AMDGPU::M0, RegState::ImplicitDefine);
+  Register DataReg = LoadIdx.getDataOp().getReg();
 
   // Extract the accessed bits out of it.
   MachineOperand BitOffset = MI.getOperand(4);
   if (BitOffset.isImm())
     BitOffset.setImm(BitOffset.getImm() & 31);
 
-  BuildMI(*MBB, MI, MI.getDebugLoc(), II, LoadIdx.getDataOp().getReg())
+  BuildMI(*MBB, MI, MI.getDebugLoc(), II, DataReg)
       .addReg(SrcAReg)
       .add(BitOffset)
       .add(MI.getOperand(3)); // bitsize
@@ -91,10 +93,14 @@ void LowerIdxOps::lowerLoadIdxBits(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void LowerIdxOps::lowerStoreIdxBits(MachineInstr &MI) {
+void AMDGPULowerIdxOpsImpl::lowerStoreIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
   auto &StoreIdx = cast<AMDGPUMI::VStoreIdxInst>(MI);
+
+  const MCInstrDesc &II = TII->get(AMDGPU::V_BFI_B32_e64);
+
+  Register DataReg = StoreIdx.getDataOp().getReg();
 
   Register SrcAReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
   Register DstAReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -110,15 +116,16 @@ void LowerIdxOps::lowerStoreIdxBits(MachineInstr &MI) {
   // Synthesize a load MMO from the store's.
   auto NewFlags = MachineMemOperand::MOLoad;
   NewFlags |= StoreMMO->getFlags() & ~MachineMemOperand::MOStore;
-  LoadMIB.addMemOperand(MF->getMachineMemOperand(StoreMMO, NewFlags));
+  MachineMemOperand *LoadMMO = MF->getMachineMemOperand(StoreMMO, NewFlags);
+  LoadMIB.addMemOperand(LoadMMO);
   if (StoreIdx.getIdxOp().isReg())
     LoadMIB.addReg(AMDGPU::M0, RegState::ImplicitDefine);
 
   // Insert the stored bits into it.
-  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::V_BFI_B32_e64), DstAReg)
-      .add(StoreIdx.getOperand(3)) // mask
-      .addReg(StoreIdx.getDataOp().getReg())
-      .addReg(SrcAReg);
+  auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, DstAReg);
+  CoreMIB.add(StoreIdx.getOperand(3)); // mask
+  CoreMIB.addReg(DataReg);
+  CoreMIB.addReg(SrcAReg);
 
   // Write the dword back.
   auto StoreMIB =
@@ -135,7 +142,7 @@ void LowerIdxOps::lowerStoreIdxBits(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-bool LowerIdxOps::run(MachineFunction &MF) {
+bool AMDGPULowerIdxOpsImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   LLVM_DEBUG(dbgs() << "\nLowerIdxOps on function: " << MF.getName() << "\n");
@@ -171,7 +178,7 @@ public:
     // This is required lowering, not an optimization: nothing else expands the
     // sub-dword pseudos, and AMDGPULowerVGPREncoding cannot lower them. It
     // therefore must not be skipped for optnone functions.
-    return LowerIdxOps(MF).run(MF);
+    return AMDGPULowerIdxOpsImpl(MF).run(MF);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -187,7 +194,7 @@ public:
 PreservedAnalyses
 AMDGPULowerIdxOpsPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  if (!LowerIdxOps(MF).run(MF))
+  if (!AMDGPULowerIdxOpsImpl(MF).run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
