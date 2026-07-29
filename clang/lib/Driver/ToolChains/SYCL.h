@@ -55,10 +55,6 @@ public:
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1Args) const override;
 
-  llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
-                const Action::OffloadKind DeviceOffloadingKind) const override;
-
 private:
   const ToolChain &HostTC;
   SYCLInstallationDetector SYCLInstallation;

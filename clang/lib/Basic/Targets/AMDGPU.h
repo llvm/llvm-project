@@ -54,7 +54,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   /// Has fast fma f32
   bool hasFastFMAF() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
   }
 
   /// Has fast fma f64
@@ -62,11 +63,12 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FMA);
+           !!(GPUFeatures & llvm::AMDGPU::R600_FEATURE_FMA);
   }
 
   bool hasFullRateDenormalsF32() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
   }
 
   bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
