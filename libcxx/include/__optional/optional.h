@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// std::optional<T>
-
 #ifndef _LIBCPP___OPTIONAL_OPTIONAL_H
 #define _LIBCPP___OPTIONAL_OPTIONAL_H
 
@@ -15,10 +13,16 @@
 #include <__concepts/invocable.h>
 #include <__config>
 #include <__functional/invoke.h>
+#include <__fwd/optional.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/capacity_aware_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__optional/common.h>
+#include <__optional/comparison.h>
+#include <__optional/hash.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/swap.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
@@ -50,16 +54,7 @@
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-
 #include <initializer_list>
-
-#include <__fwd/optional.h>
-#include <__optional/common.h>
-#include <__optional/nullopt_t.h>
-
-#include <__optional/comparison.h>
-#include <__optional/hash.h>
-#include <__optional/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

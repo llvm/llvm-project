@@ -33,6 +33,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// [optional.relops] Relational operators
+
 template <
     class _Tp,
     class _Up,

@@ -1814,17 +1814,24 @@ module std {
     }
     module common {
       header "__optional/common.h"
-      export std.iterator.bounded_iter
-      export std.iterator.capacity_aware_iterator
       export std.format.fwd
-      export std.utility.swap
     }
 
     module comparison { header "__optional/comparison.h" }
     module make_optional { header "__optional/make_optional.h" }
     module nullopt_t { header "__optional/nullopt_t.h" }
-    module optional { header "__optional/optional.h" }
-    module optional_ref { header "__optional/optional_ref.h" }
+    module optional {
+      header "__optional/optional.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module optional_ref {
+      header "__optional/optional_ref.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
     module swap { header "__optional/swap.h" }
 
     header "optional"

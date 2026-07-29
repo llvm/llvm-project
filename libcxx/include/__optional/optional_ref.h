@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// std::optional<T&>
-
 #ifndef _LIBCPP___OPTIONAL_OPTIONAL_REF_H
 #define _LIBCPP___OPTIONAL_OPTIONAL_REF_H
 
@@ -15,9 +13,15 @@
 #include <__concepts/invocable.h>
 #include <__config>
 #include <__functional/invoke.h>
+#include <__fwd/optional.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/capacity_aware_iterator.h>
 #include <__memory/addressof.h>
+#include <__optional/common.h>
+#include <__optional/comparison.h>
+#include <__optional/hash.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/swap.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>
@@ -37,14 +41,6 @@
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-
-#include <__fwd/optional.h>
-#include <__optional/comparison.h>
-#include <__optional/swap.h>
-
-#include <__optional/common.h>
-#include <__optional/hash.h>
-#include <__optional/nullopt_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -79,11 +75,13 @@ struct __optional_storage_base<_Tp, true> {
     __convert_init_ref_val(std::forward<_UArg>(__uarg));
   }
 
+#  if _LIBCPP_STD_VER >= 23
   template <class _Fp, class... _Args>
   constexpr __optional_storage_base(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args) {
     __convert_init_ref_val(std::forward<invoke_result_t<_Fp, _Args...>>(
         std::invoke(std::forward<_Fp>(__f), std::forward<_Args>(__args)...)));
   }
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept { __value_ = nullptr; }
 
