@@ -308,18 +308,6 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// LogOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult LogOp::fold(FoldAdaptor adaptor) {
-  // complex.log(complex.exp(a)) -> a
-  if (auto expOp = getOperand().getDefiningOp<ExpOp>())
-    return expOp.getOperand();
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
 // ExpOp
 //===----------------------------------------------------------------------===//
 

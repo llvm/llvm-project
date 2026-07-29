@@ -337,8 +337,6 @@ def LogOp : ComplexUnaryOp<"log", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
-
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
