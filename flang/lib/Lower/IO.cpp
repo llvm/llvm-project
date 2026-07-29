@@ -821,7 +821,7 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
     return std::nullopt;
 
   // lower and step are re-evaluated when rebuilding the loop variable's final
-  // value, so an impure or volatile call in a bound could run a different 
+  // value, so an impure or volatile call in a bound could run a different
   // number of times than in the source loop.
   Fortran::evaluate::FoldingContext &foldingContext =
       converter.getFoldingContext();
