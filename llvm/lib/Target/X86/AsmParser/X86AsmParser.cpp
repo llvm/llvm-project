@@ -980,8 +980,8 @@ private:
           IC.popOperand();
           IC.pushOperand(IC_IMM);
         }
-        IC.pushOperator(IC_MULTIPLY);
         State = IES_MULTIPLY;
+        IC.pushOperator(IC_MULTIPLY);
         break;
       }
     }
