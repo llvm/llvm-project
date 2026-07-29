@@ -1412,18 +1412,17 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && IsWholeManagedArray(lhs) &&
-      rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
-      (IsVariable(rhs) || IsConstantExpr(rhs))) {
-    return true; // Initializing a whole managed array is done on the device.
-  }
-
   // CUDA Fortran Programming Guide 3.4.1: an assignment involving managed or
   // unified data is a copy when the managed side is a whole variable or array,
   // and is done on the host when it is a section. The host can read and write
   // managed data directly, and copying section by section in a loop is slow.
   bool wholeLhs{IsWholeManagedArray(lhs)};
   bool wholeRhs{IsWholeManagedArray(rhs)};
+
+  if (wholeLhs && rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Initializing a whole managed array is done on the device.
+  }
 
   // Assignments done on the host, with no copy:
   // - A whole allocatable left-hand side: the assignment may reallocate it,
