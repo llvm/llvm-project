@@ -16,15 +16,10 @@ xfail lldb-shell :: Swift/ToolchainMismatch.test
 xfail lldb-shell :: Swift/global.test
 xfail lldb-shell :: Swift/runtime-initialization.test
 xfail lldb-shell :: SwiftREPL/ClosureScope.test
-xfail lldb-shell :: SwiftREPL/ExistentialTypes.test
-xfail lldb-shell :: SwiftREPL/OptionalUnowned.test
 
 ### Tests that pass locally, but fail in CI reliably ###
 
 # https://github.com/swiftlang/llvm-project/issues/9539
-xfail lldb-shell :: SwiftREPL/ErrorReturn.test
-xfail lldb-shell :: SwiftREPL/Optional.test
-xfail lldb-shell :: SwiftREPL/RecursiveClass.test
 xfail lldb-shell :: SwiftREPL/SimpleExpressions.test
 xfail lldb-shell :: SwiftREPL/enum-singlecase.test
 

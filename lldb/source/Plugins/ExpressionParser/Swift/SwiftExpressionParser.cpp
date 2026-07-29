@@ -886,6 +886,8 @@ SwiftExpressionParser::GetASTContext(DiagnosticManager &diagnostic_manager) {
     m_swift_ast_ctx.GetIRGenOptions().ForcePublicLinkage = true;
 
     m_swift_ast_ctx.GetIRGenOptions().DisableRoundTripDebugTypes = true;
+    m_swift_ast_ctx.GetIRGenOptions().ReflectionMetadata =
+        swift::ReflectionMetadataMode::Runtime;
     m_ast_init_successful = true;
   });
   if (m_ast_init_successful)
