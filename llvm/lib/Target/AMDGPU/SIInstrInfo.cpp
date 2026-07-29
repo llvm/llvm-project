@@ -5853,26 +5853,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (Data && !Data->isReg())
       Data = nullptr;
 
-    if (ST.hasGFX90AInsts()) {
-      auto IsAGPRFileMismatch = [&](Register X, Register Y) {
-        if (RI.isVectorSuperClass(RI.getRegClassForReg(MRI, X)) ||
-            RI.isVectorSuperClass(RI.getRegClassForReg(MRI, Y)))
-          return false;
-        return RI.isAGPR(MRI, X) != RI.isAGPR(MRI, Y);
-      };
-      if (Dst && Data && !Dst->isTied() && !Data->isTied() &&
-          IsAGPRFileMismatch(Dst->getReg(), Data->getReg())) {
-        ErrInfo = "Invalid register class: "
-                  "vdata and vdst should be both VGPR or AGPR";
-        return false;
-      }
-      if (Data && Data2 &&
-          IsAGPRFileMismatch(Data->getReg(), Data2->getReg())) {
-        ErrInfo = "Invalid register class: "
-                  "both data operands should be VGPR or AGPR";
-        return false;
-      }
-    } else {
+    if (!ST.hasGFX90AInsts()) {
       if ((Dst && RI.isAGPR(MRI, Dst->getReg())) ||
           (Data && RI.isAGPR(MRI, Data->getReg())) ||
           (Data2 && RI.isAGPR(MRI, Data2->getReg()))) {
