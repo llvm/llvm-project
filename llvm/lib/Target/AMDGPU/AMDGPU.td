@@ -2895,6 +2895,41 @@ def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
+// The fp8/bf8 to f32 conversions have three mutually exclusive encodings, so
+// each predicate below covers the instructions and the encoding together.
+def HasFP8ConversionInstsGFX9 :
+  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGCN3Encoding,
+                             FeatureGFX9Insts)>;
+
+def HasFP8ConversionInstsGFX9NoVOP1Bug :
+  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 &&"
+            " !Subtarget->hasCvtFP8VOP1Bug()">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGCN3Encoding,
+                             FeatureGFX9Insts, (not FeatureCvtFP8VOP1Bug))>;
+
+def HasFP8ConversionInstsGFX11Plus :
+  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
+            " Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGFX11Insts)>;
+
+def HasFP8ConversionInstsE5M3 :
+  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
+            " Subtarget->hasFP8E5M3Insts() &&"
+            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 &&"
+            " Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureFP8E5M3Insts,
+                             FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+
+def HasFP8ConversionInstsGFX11PlusNoE5M3 :
+  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
+            " Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
+            " !Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGFX11Insts,
+                             (not FeatureFP8E5M3Insts))>;
+
 def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureFmaLegacy32Insts, (not FeatureGFX12Insts))>;
 
@@ -2922,8 +2957,6 @@ def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDo
   AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
-
-def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
