@@ -1276,6 +1276,30 @@ static bool hasUnsafeEffectsWhenBroadening(Operation *op) {
   return !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
 }
 
+/// True when \p accumulator is the destination of a separate block-scoped
+/// combine, so it holds a distinct per-worker partial rather than a broadcast.
+static bool isFedByInnerBlockCombine(acc::PrivateLocalOp accumulator,
+                                     Operation *selfCombine) {
+  if (!accumulator)
+    return false;
+  for (Operation *user : accumulator.getResult().getUsers()) {
+    if (user == selfCombine)
+      continue;
+    auto combineOp = dyn_cast<acc::ReductionCombineOp>(user);
+    if (!combineOp ||
+        unwrapMemRefConversion(combineOp.getDestMemref()).getDefiningOp() !=
+            accumulator.getOperation())
+      continue;
+    SmallVector<mlir::acc::GPUParallelDimAttr> parDims =
+        getReductionCombineParDims(combineOp);
+    if (llvm::any_of(parDims, [](mlir::acc::GPUParallelDimAttr d) {
+          return d.isAnyBlock();
+        }))
+      return true;
+  }
+  return false;
+}
+
 /// Records whether \p combineOp requires ThreadY to remain active.
 static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
                                    Operation *combineOp, Value src, Value dest,
@@ -1295,6 +1319,16 @@ static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
                             getPrivatizeOp(destPrivate, computeRegion);
   if (hasThreadY && hasBlock &&
       isThreadYPrivate(srcPrivate, hasPrivateDest, computeRegion)) {
+    info.hasActiveWorkerCombine = true;
+    return;
+  }
+
+  // A block_y+thread_y accumulator fed by an inner block-scoped combine holds
+  // a distinct partial per worker row, so its combine runs on every row; a
+  // plain worker accumulate broadcasts via all_reduce and stays row-zero.
+  if (hasThreadY && hasBlock &&
+      isThreadYPrivate(srcPrivate, /*allowBlock=*/true, computeRegion) &&
+      isFedByInnerBlockCombine(srcPrivate, combineOp)) {
     info.hasActiveWorkerCombine = true;
     return;
   }
@@ -3478,9 +3512,13 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     return;
   }
 
-  // A thread-level reduction with no block owner for its elements cannot merge
-  // the cross-thread partials, so report NYI.
-  if (!reductionHasBlockContext(op)) {
+  // A thread-only accumulate merges with a within-block all_reduce, which is
+  // complete only in one block: block context, or a launch with no block dim.
+  // Multi-block thread-only still grid-strides across blocks, so stays NYI.
+  bool regionLaunchesBlocks = llvm::any_of(
+      computeRegion.getLaunchParDims(),
+      [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyBlock(); });
+  if (!reductionHasBlockContext(op) && regionLaunchesBlocks) {
     (void)accSupport.emitNYI(
         loc, "reduction: thread-only array reduction accumulate");
     return;

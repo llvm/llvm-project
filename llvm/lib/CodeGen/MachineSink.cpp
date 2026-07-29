@@ -1263,8 +1263,7 @@ bool MachineSinking::registerPressureExceedsLimit(
   std::vector<unsigned> BBRegisterPressure = getBBRegisterPressure(MBB, false);
 
   for (unsigned PS = 0; PS < BBRegisterPressure.size(); ++PS) {
-    if (BBRegisterPressure[PS] >=
-        TRI->getRegPressureSetLimit(*MBB.getParent(), PS)) {
+    if (BBRegisterPressure[PS] >= RegClassInfo->getRegPressureSetLimit(PS)) {
       return true;
     }
   }
@@ -2113,7 +2112,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

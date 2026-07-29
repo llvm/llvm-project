@@ -347,3 +347,33 @@ func.func @thread_x_reduction_with_thread_z_width() {
   } {origin = "acc.parallel"}
   return
 }
+
+// Thread-only array accumulate is well-defined when the region launches no
+// block dim (single block): a within-block all_reduce is a complete reduction.
+// CHECK-LABEL: func.func @thread_only_array_reduction_single_block
+// CHECK: gpu.launch
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK: scf.for %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[ELT:.*]] = memref.load %[[ALLOCA:.*]][%[[IV]]] : memref<8xi32>
+// CHECK:   %[[RED:.*]] = gpu.all_reduce add %[[ELT]]
+// CHECK:   memref.store %[[RED]], %[[ALLOCA]][%[[IV]]] : memref<8xi32>
+// CHECK: }
+func.func @thread_only_array_reduction_single_block() {
+  %c128 = arith.constant 128 : index
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%ktx = %tx) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<8xi32>
+    scf.for %i = %c0 to %c8 step %c1 {
+      memref.store %c0_i32, %local[%i] : memref<8xi32>
+    }
+    %bounds = acc.bounds extent(%c8 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<8xi32> {par_dims = #acc<par_dims[thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}

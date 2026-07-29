@@ -347,12 +347,12 @@ define <1 x i100> @ret_v1i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](s128)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](i128)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](s128)
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](i128)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[TRUNC]](i100)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]](s128)
   ; CHECK-NEXT:   $x0 = COPY [[UV]](i64)
@@ -369,12 +369,12 @@ define <2 x i100> @ret_v2i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](s128)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](i128)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](s128)
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](i128)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<2 x i100>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -399,12 +399,12 @@ define <3 x i100> @ret_v3i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](s128)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](i128)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](s128)
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](i128)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<3 x i100>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -434,12 +434,12 @@ define <4 x i100> @ret_v4i100(i100 %v1, i100 %v2) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](s128)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](i128)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](s128)
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY2]](i64), [[COPY3]](i64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i100) = G_TRUNC [[MV1]](i128)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(<4 x i100>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1

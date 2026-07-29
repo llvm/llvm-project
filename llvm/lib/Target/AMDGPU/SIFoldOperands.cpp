@@ -294,7 +294,6 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -1190,6 +1189,7 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:
     case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+    case AMDGPU::OPERAND_REG_IMM_V2FP32:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:

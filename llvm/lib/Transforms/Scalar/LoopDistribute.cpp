@@ -845,7 +845,7 @@ public:
     LLVM_DEBUG(Partitions.printBlocks(dbgs()));
 
     if (LDistVerify) {
-      LI->verify(*DT);
+      LI->verify();
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
 
