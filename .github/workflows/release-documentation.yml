@@ -58,41 +58,25 @@ concurrency:
   cancel-in-progress: True
 
 jobs:
-  # This job checks permissions and validates inputs to prevent potential
-  # malicious actions.  Since the release-documentation job has contents: write
-  # permissions we need to be extra careful about who can run the job and what
-  # inputs can be provided.
-  release-man-pages-validate-input:
-    name: Release Man Pages Validate Input
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          sparse-checkout: |
-            .github/workflows/
-
-      - name: Validate Input
-        uses: ./.github/workflows/validate-release-version
-        with:
-          release-version: ${{ inputs.release-version }}
-
   release-documentation:
     name: Build and Upload Release Documentation and Man Pages
     runs-on: ubuntu-24.04
-    needs:
-      - release-man-pages-validate-input
+    permissions:
+      contents: read
     outputs:
       man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
 
       man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
-      man-page-tarball-name: ${{ steps.vars.outputs.man-page-tarball-name }}
       man-page-upload: ${{ steps.vars.outputs.man-page-upload }}
       man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
     steps:
+      - name: Validate Input
+        if: inputs.release-version
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
+
       - name: Collect Variables
         id: vars
         env:
@@ -102,7 +86,6 @@ jobs:
         run: |
           {
             echo "man-page-release-version=$INPUTS_RELEASE_VERSION"
-            echo "man-page-tarball-name=llvm_man_pages-$INPUTS_RELEASE_VERSION.tar.xz"
             echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
             echo "man-page-upload=$UPLOAD_MAN_PAGES"
             echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
@@ -112,11 +95,6 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-
-      - name: Validate Input
-        uses: ./.github/workflows/validate-release-version
-        with:
-          release-version: ${{ inputs.release-version }}
 
       - name: Setup Python env
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -135,17 +113,21 @@ jobs:
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
       - name: Build Documentation
+        id: build
         env:
           GITHUB_TOKEN: ${{ github.token }}
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen
+          ./llvm/utils/release/build-docs.sh \
+            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release $INPUTS_RELEASE_VERSION || echo -srcdir llvm) -no-doxygen
+          echo "man-page-tarball-name=$(find . -iname 'llvm_man_pages-*')" >> "$GITHUB_OUTPUT"
+
 
       - name: Generate sha256 digest for man page tarball
         id: man-page-digest
         shell: bash
         env:
-          TARBALL_NAME: ${{ steps.vars.outputs.man-page-tarball-name }}
+          TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
         run: |
             echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
@@ -153,7 +135,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           path: |
-            ${{ steps.vars.outputs.man-page-tarball-name }}
+            ${{ steps.build.outputs.man-page-tarball-name }}
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
