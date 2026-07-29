@@ -1226,11 +1226,9 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
   return {Rows, Cols, Ty};
 }
 
-llvm::Value *
-CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl,
-                                        HLSLAppliedSemanticAttr *Semantic,
-                                        std::optional<unsigned> Index) {
+llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
+    llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   StringRef Name = Semantic->getAttrName()->getName();
   SemanticShape Shape =
       getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
