@@ -1,4 +1,5 @@
 add_offload_test_device_code(foo.cpp foo)
+add_offload_test_device_code(foo.cpp foo_jit -c -emit-llvm)
 add_offload_test_device_code(bar.cpp bar)
 # Compile with optimizations to eliminate AMDGPU implicit arguments.
 add_offload_test_device_code(noargs.cpp noargs -O3)

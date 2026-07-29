@@ -27,6 +27,20 @@ TEST_P(olCreateProgramTest, Success) {
   ASSERT_SUCCESS(olDestroyProgram(Program));
 }
 
+TEST_P(olCreateProgramTest, JITSuccess) {
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo_jit", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program;
+  ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+                                 DeviceBin->getBufferSize(), &Program));
+  ASSERT_NE(Program, nullptr);
+
+  ASSERT_SUCCESS(olDestroyProgram(Program));
+}
+
 TEST_P(olCreateProgramTest, NullDeviceHandle) {
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
