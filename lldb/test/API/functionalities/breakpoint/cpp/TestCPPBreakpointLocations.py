@@ -140,7 +140,7 @@ class TestCPPBreakpointLocations(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     # Wasm emits a single merged destructor rather than the distinct D1/D2
     # variants whose mangled names this test looks up by hand.
-    @skipIfWasm
+    @requireNotWasm
     def test_destructors(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

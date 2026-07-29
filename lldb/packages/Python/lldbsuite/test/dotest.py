@@ -1255,6 +1255,16 @@ def run_suite():
 
     configuration.failed = not result.wasSuccessful()
 
+    # unittest's own summary line lumps both kinds of skip together as
+    # "skipped=N". Emit the breakdown separately so the lit test format can
+    # report tests that can never run here as UNSUPPORTED and tests that are
+    # merely broken here as SKIPPED.
+    if getattr(result, "skipped", None):
+        sys.stderr.write(
+            "Skip breakdown (unsupported=%d, skipped=%d)\n"
+            % (result.countUnsupported(), result.countSkipped())
+        )
+
     if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(
             "Session logs for test failures/errors/unexpected successes"

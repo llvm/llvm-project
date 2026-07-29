@@ -127,6 +127,20 @@ class LLDBTest(TestFormat):
         expected_failures = parsed_details["expected failures"]
         unexpected_successes = parsed_details["unexpected successes"]
 
+        # dotest reports both kinds of skip as "skipped=N" above. It also emits
+        # a breakdown line splitting them into tests that can never run in this
+        # configuration (unsupported) and tests that ought to run here but are
+        # broken (skipped). Absent the line, treat every skip as unsupported,
+        # which is what lit reported before the distinction existed.
+        unsupported = skipped
+        only_skipped = 0
+        breakdown = re.search(
+            r"^Skip breakdown \(unsupported=(\d+), skipped=(\d+)\)\r?$", err, re.MULTILINE
+        )
+        if breakdown:
+            unsupported = int(breakdown.group(1))
+            only_skipped = int(breakdown.group(2))
+
         non_pass = (
             failures + errors + skipped + expected_failures + unexpected_successes
         )
@@ -142,9 +156,15 @@ class LLDBTest(TestFormat):
             return lit.Test.XPASS, output
         else:
             # Aggregate the tests results with the following precedence:
-            # PASS > XFAIL > UNSUPPORTED
+            # PASS > XFAIL > SKIPPED > UNSUPPORTED
+            #
+            # SKIPPED outranks UNSUPPORTED so that a file mixing the two is
+            # reported as work still to be done rather than as permanently
+            # inapplicable here.
             if passes > 0:
                 return lit.Test.PASS, output
             if expected_failures > 0:
                 return lit.Test.XFAIL, output
+            if only_skipped > 0:
+                return lit.Test.SKIPPED, output
             return lit.Test.UNSUPPORTED, output

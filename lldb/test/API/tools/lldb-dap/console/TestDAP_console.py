@@ -111,7 +111,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             command_escape_prefix="",
         )
 
-    @skipIfWindows
+    @requireNotWindows
     def test_exit_status_message_sigterm(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
