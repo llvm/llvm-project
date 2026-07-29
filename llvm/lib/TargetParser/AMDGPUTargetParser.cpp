@@ -178,6 +178,15 @@ bool AMDGPU::isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU) {
   return isCPUValidForSubArch(SubArch, parseArchAMDGCN(CPU));
 }
 
+bool AMDGPU::isPseudoTarget(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info && Info->SubArch == Triple::NoSubArch;
+}
+
+bool AMDGPU::isPseudoTarget(StringRef CPU) {
+  return isPseudoTarget(parseArchAMDGCN(CPU));
+}
+
 bool AMDGPU::isSubArchCompatible(const Triple &A, const Triple &B) {
   // Tolerate subarch mismatch if one entry is none. This is a hack for bitcode
   // libraries.

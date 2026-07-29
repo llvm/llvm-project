@@ -118,6 +118,16 @@ LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, GPUKind AK);
 /// is parsed via parseArchAMDGCN. An unrecognized name is never valid.
 LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU);
 
+/// Return true if \p AK is a pseudo target (e.g. "generic"/"generic-hsa"): a
+/// recognized AMDGCN GPU that represents no concrete hardware and has no
+/// subarch of its own. Such targets are resolved by the backend as a default
+/// device but are not valid as an explicit -mcpu.
+LLVM_ABI bool isPseudoTarget(GPUKind AK);
+
+/// Convenience overload of isPseudoTarget taking a GPU name \p CPU, which is
+/// parsed via parseArchAMDGCN.
+LLVM_ABI bool isPseudoTarget(StringRef CPU);
+
 /// Returns the effective triple appropriate to use when linking \p B into \p A
 /// by merging the subarches in case of inexact match.
 ///
