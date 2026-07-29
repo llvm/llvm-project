@@ -471,11 +471,13 @@ template <size_t Bits> struct DyadicFloat {
       // to avoid undefined behavior negating INT_MIN as an integer (although
       // exponents coming in to this function _shouldn't_ be that large). The
       // result should always end up as a positive size_t.
-      size_t exp = -static_cast<size_t>(exponent);
+      size_t shift = -static_cast<size_t>(exponent);
       size_t limit =
           static_cast<size_t>(cpp::numeric_limits<MantissaType>::digits);
-      size_t shift = exp < limit ? exp : limit;
-      new_mant >>= shift;
+      if (shift >= limit)
+        new_mant = 0;
+      else
+        new_mant >>= shift;
     }
 
     if (sign.is_neg()) {
