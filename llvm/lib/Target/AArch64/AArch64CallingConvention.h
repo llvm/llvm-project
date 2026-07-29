@@ -13,17 +13,9 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64CALLINGCONVENTION_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64CALLINGCONVENTION_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
-namespace AArch64 {
-// Registers used to pass function arguments.
-ArrayRef<MCPhysReg> getGPRArgRegs();
-ArrayRef<MCPhysReg> getFPRArgRegs();
-} // namespace AArch64
-
 bool CC_AArch64_AAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                       Type *OrigTy, CCState &State);

@@ -40,9 +40,6 @@ static const MCPhysReg ZRegList[] = {AArch64::Z0, AArch64::Z1, AArch64::Z2,
 static const MCPhysReg PRegList[] = {AArch64::P0, AArch64::P1, AArch64::P2,
                                      AArch64::P3};
 
-ArrayRef<MCPhysReg> llvm::AArch64::getGPRArgRegs() { return XRegList; }
-ArrayRef<MCPhysReg> llvm::AArch64::getFPRArgRegs() { return QRegList; }
-
 static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
                              MVT LocVT, ISD::ArgFlagsTy &ArgFlags,
                              CCState &State, Align SlotAlign) {

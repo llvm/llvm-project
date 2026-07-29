@@ -42,6 +42,10 @@ const unsigned RoundingBitsPos = 22;
 // Reserved bits should be preserved when modifying FPCR.
 const uint64_t ReservedFPControlBits = 0xfffffffff80040f8;
 
+// Registers used to pass function arguments.
+ArrayRef<MCPhysReg> getGPRArgRegs();
+ArrayRef<MCPhysReg> getFPRArgRegs();
+
 /// Maximum allowed number of unprobed bytes above SP at an ABI
 /// boundary.
 const unsigned StackProbeMaxUnprobedStack = 1024;

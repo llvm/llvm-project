@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterInfo.h"
-#include "AArch64CallingConvention.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -577,7 +576,7 @@ bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,
 }
 
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
-  for (size_t i = 0; i < AArch64::getGPRArgRegs().size(); ++i) {
+  for (size_t i = 0; i < 8; ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
       return true;
   }
