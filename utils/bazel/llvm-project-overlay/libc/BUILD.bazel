@@ -1120,6 +1120,7 @@ libc_support_library(
         ":__support_macros_macro_utils",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_os",
+        ":__support_macros_sanitizer",
         ":func_aligned_alloc",
         ":func_free",
         ":func_malloc",

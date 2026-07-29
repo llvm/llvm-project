@@ -445,7 +445,7 @@ struct CUFAddConstructor
         mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
-    priorities.push_back(0);
+    priorities.push_back(priority);
     data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),

@@ -1269,7 +1269,7 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
       OS << "nonemptyList(";
 
     if (!C.getPrefix().empty())
-      OS << "\"" << C.getPrefix() << ":\" >> ";
+      OS << "\"" << C.getPrefix() << " :\" >> ";
 
     // The common Flang parser are used directly. Their name is identical to
     // the Flang class with first letter as lowercase. If the Flang class is

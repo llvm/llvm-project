@@ -1729,7 +1729,7 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
       RecurKind::FMaximumNum, RecurKind::FMulAdd};
   // Skip unsupported reductions, including sub, any-of and find-last.
   // TODO: Handle sub, any-of and find-last reductions.
-  if (!any_of(ValidRKs, equal_to(RK)))
+  if (!is_contained(ValidRKs, RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
