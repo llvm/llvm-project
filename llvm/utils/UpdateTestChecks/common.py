@@ -348,9 +348,7 @@ class TestInfo(object):
             )[0].run_lines
             if run_lines_filter is not None:
                 min_run_line = min(
-                    parse_run_lines_argument(
-                        run_lines_filter, len(self.all_run_lines)
-                    )
+                    parse_run_lines_argument(run_lines_filter, len(self.all_run_lines))
                 )
             return (min_run_line, script_name or "", line)
 
@@ -766,9 +764,7 @@ def parse_run_lines_argument(run_lines_filter, num_run_lines):
             raise ValueError("--run-lines entries must be positive: '{}'".format(item))
         if start > end:
             raise ValueError(
-                "invalid --run-lines range '{}'; start must not exceed end".format(
-                    item
-                )
+                "invalid --run-lines range '{}'; start must not exceed end".format(item)
             )
         if end > num_run_lines:
             raise ValueError(
