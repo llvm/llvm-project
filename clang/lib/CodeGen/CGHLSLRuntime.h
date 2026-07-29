@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -373,8 +374,11 @@ private:
   // FIXME: #57928, storing these here and reseting them in the entry is not
   // very nice and is a temporary until we accumulate the signatures as part of
   // the mentioned issue.
-  unsigned DXILInputSemanticIndex = 0;
   unsigned DXILOutputSemanticIndex = 0;
+
+  // Accumulated while lowering an entry point's input semantics and consumed
+  // when constructing its signature metadata.
+  llvm::SmallVector<llvm::hlsl::SemanticSignatureElement> InputSignature;
 };
 
 } // namespace CodeGen

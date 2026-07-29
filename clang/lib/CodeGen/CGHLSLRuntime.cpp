@@ -31,10 +31,12 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -100,6 +102,27 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
   RootSignatureValMD->addOperand(MDVals);
+}
+
+void addSemanticSignatureMD(
+    ArrayRef<llvm::hlsl::SemanticSignatureElement> InputElements,
+    llvm::Function *Fn, llvm::Module &M) {
+  if (InputElements.empty())
+    return;
+
+  LLVMContext &Ctx = M.getContext();
+  SmallVector<Metadata *> InputElementMD;
+  llvm::transform(InputElements, std::back_inserter(InputElementMD),
+                  [&Ctx](const llvm::hlsl::SemanticSignatureElement &Element) {
+                    return Element.toMetadata(Ctx);
+                  });
+
+  MDNode *InputSignature = MDNode::get(Ctx, InputElementMD);
+  MDNode *OutputSignature = nullptr;
+  MDNode *MDVals = MDNode::get(
+      Ctx, {ValueAsMetadata::get(Fn), InputSignature, OutputSignature});
+
+  M.getOrInsertNamedMetadata("dx.semantic.signatures")->addOperand(MDVals);
 }
 
 static void copyGlobalResource(CodeGenFunction &CGF, const VarDecl *ResourceVD,
@@ -1246,12 +1269,51 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
   return Shape;
 }
 
+static llvm::dxil::ElementType getSignatureComponentType(CodeGenModule &CGM,
+                                                         QualType Ty) {
+  if (const auto *VT = Ty->getAs<clang::VectorType>())
+    Ty = VT->getElementType();
+  else if (const auto *MT = Ty->getAs<clang::ConstantMatrixType>())
+    Ty = MT->getElementType();
+
+  llvm::Type *IRTy = CGM.getTypes().ConvertTypeForMem(Ty);
+  bool IsSigned = Ty->isSignedIntegerOrEnumerationType();
+  return llvm::dxil::toDXILElementType(IRTy, IsSigned);
+}
+
+static llvm::dxbc::PSV::SemanticKind
+getSignatureSemanticKind(StringRef SemanticName) {
+  if (!SemanticName.consume_front_insensitive("SV_"))
+    return llvm::dxbc::PSV::SemanticKind::Arbitrary;
+
+  for (const auto &Kind : llvm::dxbc::PSV::getSemanticKinds())
+    if (SemanticName.equals_insensitive(Kind.name()))
+      return Kind.value();
+
+  return llvm::dxbc::PSV::SemanticKind::Invalid;
+}
+
 llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
     llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   StringRef Name = Semantic->getAttrName()->getName();
   SemanticShape Shape =
       getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
+
+  llvm::hlsl::SemanticSignatureElement SigElement{};
+  SigElement.SigId = DXILInputSemanticIndex++;
+  SigElement.SemanticName = Name;
+  SigElement.CompType = getSignatureComponentType(CGM, Shape.RowType);
+  SigElement.SemanticKind = getSignatureSemanticKind(Name);
+  SigElement.Rows = Shape.Rows;
+  SigElement.Cols = static_cast<uint8_t>(Shape.Cols);
+
+  uint32_t FirstSemanticIndex = Index.value_or(0);
+  for (uint32_t I = 0; I < Shape.Rows; ++I)
+    SigElement.SemanticIndices.push_back(FirstSemanticIndex + I);
+
+  unsigned SigId = SigElement.SigId;
+  InputSignature.push_back(SigElement);
 
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
@@ -1263,8 +1325,6 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
     llvm::Value *bundleArgs[] = {Token};
     OB.emplace_back("convergencectrl", bundleArgs);
   }
-
-  unsigned SigId = DXILInputSemanticIndex++;
 
   llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
   llvm::Value *Result = llvm::PoisonValue::get(Type);
@@ -1586,8 +1646,8 @@ CGHLSLRuntime::handleSemanticStore(
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                       llvm::Function *Fn) {
-  DXILInputSemanticIndex = 0;
   DXILOutputSemanticIndex = 0;
+  InputSignature.clear();
 
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &Ctx = M.getContext();
@@ -1698,6 +1758,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                          EntryFn, M);
     }
   }
+
+  addSemanticSignatureMD(InputSignature, EntryFn, M);
 }
 
 static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
