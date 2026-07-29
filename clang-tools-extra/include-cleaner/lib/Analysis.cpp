@@ -20,8 +20,10 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -31,7 +33,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <climits>
 #include <string>
 #include <utility>
 
@@ -167,12 +168,30 @@ std::string fixIncludes(const AnalysisResults &Results,
                         const format::FormatStyle &Style) {
   assert(Style.isCpp() && "Only C++ style supports include insertions!");
   tooling::Replacements R;
-  // Encode insertions/deletions in the magic way clang-format understands.
-  for (const Include *I : Results.Unused)
-    cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 1, I->quote())));
-  for (auto &[Spelled, _] : Results.Missing)
-    cantFail(R.add(
-        tooling::Replacement(FileName, UINT_MAX, 0, "#include " + Spelled)));
+  tooling::HeaderIncludes HeaderIncludes(FileName, Code, Style.IncludeStyle);
+
+  for (const Include *I : Results.Unused) {
+    auto Deletion = HeaderIncludes.remove(I->Spelled, I->Angled);
+    for (const auto &Del : Deletion) {
+      cantFail(R.add(Del));
+    }
+  }
+
+  llvm::DenseMap<unsigned, std::string> InsertionsByOffset;
+  for (auto &[Spelled, _] : Results.Missing) {
+    auto Insertion = HeaderIncludes.insert(StringRef{Spelled}.trim("\"<>"),
+                                           Spelled.starts_with('<'),
+                                           tooling::IncludeDirective::Include);
+    if (Insertion) {
+      InsertionsByOffset[Insertion->getOffset()] +=
+          Insertion->getReplacementText();
+    }
+  }
+
+  for (const auto &Entry : InsertionsByOffset) {
+    cantFail(
+        R.add(tooling::Replacement(FileName, Entry.first, 0, Entry.second)));
+  }
   // "cleanup" actually turns the UINT_MAX replacements into concrete edits.
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));
