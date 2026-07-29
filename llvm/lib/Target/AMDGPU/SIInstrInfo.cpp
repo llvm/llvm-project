@@ -11251,7 +11251,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
 
   // Always divergent: it reads the wave's per-lane registers, so even a uniform
   // index yields a per-lane value.
-  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD ||
+      Opcode == AMDGPU::G_AMDGPU_REG_LOAD_BITS)
     return ValueUniformity::NeverUniform;
 
   // Loads from the private and flat address spaces are divergent, because
