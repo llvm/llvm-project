@@ -634,8 +634,9 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub33
 ! CHECK-NOT: cuf.data_transfer 
 
-! Only a whole managed array is initialized on the device; a section is assigned on
-! the host (CUDA Fortran Programming Guide 3.4.1).
+! A section reference is assigned on the host even when it covers the whole array:
+! what matters is the form of the reference, not the extent it happens to cover
+! (CUDA Fortran Programming Guide 3.4.1).
 subroutine sub34(n)
   integer :: n
   real(2), managed, allocatable :: dx(:)
