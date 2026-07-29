@@ -504,7 +504,21 @@ public:
         continue;
       const auto *member_field_name =
           member.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
-      auto *member_type = dwarf_parser->GetTypeForDIE(member);
+
+      // The compiler marks an `indirect` enum case by wrapping the variant
+      // member's payload in a DW_TAG_reference_type.
+      DWARFDIE member_type_die =
+          member.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_type);
+      bool is_indirect_case =
+          member_type_die &&
+          member_type_die.Tag() == llvm::dwarf::DW_TAG_reference_type;
+
+      // For an indirect case, follow the reference wrapper's DW_AT_type to the
+      // underlying payload type; GetTypeForDIE(member_type_die) resolves that
+      // referenced DIE. For a direct case, resolve the member's own type.
+      auto *member_type = is_indirect_case
+                              ? dwarf_parser->GetTypeForDIE(member_type_die)
+                              : dwarf_parser->GetTypeForDIE(member);
 
       // Empty enum cases don't have a type.
       ConstString member_mangled_typename;
@@ -523,11 +537,9 @@ public:
         member_mangled_typename = canonical.GetMangledTypeName();
       }
 
-      // Only matters for enums, so set to false for structs.
-      bool is_indirect_case = false;
       // Unused by type info construction.
       bool is_var = false;
-     
+
       // If there is a type, this case has a payload.
       if (member_type)
         payload_fields.emplace_back(std::make_unique<DWARFFieldRecordImpl>(
