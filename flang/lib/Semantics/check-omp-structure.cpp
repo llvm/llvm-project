@@ -1847,6 +1847,18 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     context_.Say(name->source,
         "A variable in a %s directive cannot appear in an EQUIVALENCE statement"_err_en_US,
         ContextDirectiveAsFortran());
+  } else if (IsDummy(*name->symbol)) {
+    context_.Say(name->source,
+        "A dummy argument cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsAutomatic(*name->symbol)) {
+    context_.Say(name->source,
+        "An automatic data object cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsFunctionResult(*name->symbol)) {
+    context_.Say(name->source,
+        "A function result object cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
   } else if (name->symbol->test(Symbol::Flag::OmpThreadprivate) &&
       directive == llvm::omp::Directive::OMPD_declare_target) {
     context_.Say(name->source,
