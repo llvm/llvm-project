@@ -203,6 +203,7 @@ public:
     bool PublishInactiveRegions = false;
 
     explicit operator TUScheduler::Options() const;
+    explicit operator BackgroundIndex::Options() const;
   };
   // Sensible default options for use in tests.
   // Features like indexing must be enabled if desired.
