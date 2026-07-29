@@ -594,6 +594,10 @@ struct VPlanTransforms {
   /// enabled by prior widening of consecutive memory operations for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
+  /// Drop the branch weights from all recipes that cannot preserve them.
+  /// Currently that are all recipes, except VPReplicateRecipes.
+  static void dropBranchWeightsFromUnguardedRecipes(VPlan &Plan);
+
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,

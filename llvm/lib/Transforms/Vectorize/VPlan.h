@@ -1184,7 +1184,12 @@ public:
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+  VPIRMetadata(Instruction &I) {
+    getMetadataToPropagate(&I, Metadata);
+    if (I.isTerminator())
+      if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
+        Metadata.emplace_back(LLVMContext::MD_prof, BW);
+  }
 
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) = default;
@@ -1210,6 +1215,11 @@ public:
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
+
+  /// Remove metadata of kind \p Kind, if present.
+  void eraseMetadata(unsigned Kind) {
+    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
+  }
 
   /// Get metadata of kind \p Kind. Returns nullptr if not found.
   MDNode *getMetadata(unsigned Kind) const {
@@ -3493,13 +3503,16 @@ protected:
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
-class LLVM_ABI_FOR_TEST VPBranchOnMaskRecipe : public VPRecipeBase {
+class LLVM_ABI_FOR_TEST VPBranchOnMaskRecipe : public VPRecipeBase,
+                                               public VPIRMetadata {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL)
-      : VPRecipeBase(VPRecipeBase::VPBranchOnMaskSC, {BlockInMask}, DL) {}
+  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL,
+                       const VPIRMetadata &Metadata = {})
+      : VPRecipeBase(VPRecipeBase::VPBranchOnMaskSC, {BlockInMask}, DL),
+        VPIRMetadata(Metadata) {}
 
   VPBranchOnMaskRecipe *clone() override {
-    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc());
+    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc(), *this);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPBranchOnMaskSC)
@@ -4359,10 +4372,11 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<
-          VPIRMetadata, VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-          VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
-          VPInterleaveBase, VPWidenMemoryRecipe, VPHistogramRecipe> {};
+    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
+                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
+                                  VPWidenCallRecipe, VPReplicateRecipe,
+                                  VPInterleaveBase, VPWidenMemoryRecipe,
+                                  VPHistogramRecipe, VPBranchOnMaskRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>

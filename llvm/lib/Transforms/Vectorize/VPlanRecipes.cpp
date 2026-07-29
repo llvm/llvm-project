@@ -29,6 +29,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -2139,6 +2140,13 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
+    SmallVector<uint32_t> Weights;
+    if (Kind == LLVMContext::MD_prof && extractBranchWeights(Node, Weights)) {
+      O << "{";
+      interleaveComma(Weights, O);
+      O << "}";
+      return;
+    }
     Node->printAsOperand(O, M);
   });
   O << ")";
