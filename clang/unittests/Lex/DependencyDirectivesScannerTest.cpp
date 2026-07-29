@@ -1271,6 +1271,12 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ScanningPreprocessedModuleFile) {
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, CXX20ModuleUnitKind) {
+  EXPECT_FALSE(scanInputForCXX20ModulesUsage("int x;"));
+  EXPECT_TRUE(scanInputForCXX20ModulesUsage("module;"));
+  EXPECT_TRUE(scanInputForCXX20ModulesUsage("export module M;"));
+  EXPECT_TRUE(scanInputForCXX20ModulesUsage("import M;"));
+  EXPECT_TRUE(scanInputForCXX20ModulesUsage("export import M;"));
+
   EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
             scanInputForCXX20ModuleUnit("int x;"));
   EXPECT_EQ(ModuleUnitKind::NotModuleUnit,
@@ -1308,6 +1314,11 @@ TEST(MinimizeSourceToDependencyDirectivesTest, CXX20ModuleUnitKind) {
             scanInputForCXX20ModuleUnit("export module M any pp tokens;"));
   EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
             scanInputForCXX20ModuleUnit("#line 7\nexport module M;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit(
+                "# 7 \"input.cppm\"\nexport module M;"));
+  EXPECT_EQ(ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment,
+            scanInputForCXX20ModuleUnit("#pragma once\nexport module M;"));
 }
 
 } // end anonymous namespace
