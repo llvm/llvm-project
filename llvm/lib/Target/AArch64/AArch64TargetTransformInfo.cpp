@@ -711,9 +711,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32,
                                         MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
-    // Type promotion for v2i8 and v2i16 types have a heavy cost when vectorising.
-    // Account for this cost to avoid vectorising unprofitable examples when vectorising
-    // loops with low trip counts.
+    // Type promotion for v2i8 and v2i16 types have a heavy cost when
+    // vectorising. Account for this cost to avoid vectorising unprofitable
+    // examples when vectorising loops with low trip counts.
     MVT VT = MVT::getVT(RetTy);
     if (VT == MVT::v2i8 || VT == MVT::v2i16)
       return LT.first * 6;
