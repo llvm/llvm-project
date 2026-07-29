@@ -15,8 +15,7 @@ define i1 @latch_counted_header_check_removable(ptr %p, i64 %n, i64 %lim) {
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = shl nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[RC:%.*]] = icmp ult i64 [[OFF]], [[LIM]]
-; CHECK-NEXT:    br i1 [[RC]], label %[[LOOP_LATCH]], label %[[EXIT_1]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT_1]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
@@ -131,8 +130,7 @@ define i1 @latch_counted_bound_consumer_folded(ptr %s, i64 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[SUB]], 0
-; CHECK-NEXT:    ret i1 [[CMP_NOT]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %loop.header
@@ -163,8 +161,7 @@ define i64 @both_header_and_latch_guards(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br i1 [[POS]], label %[[LOOP_HEADER:.*]], label %[[EXIT_EARLY:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[HC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[HC]], label %[[EXIT_HDR:.*]], label %[[LOOP_BODY:.*]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_HDR:.*]], label %[[LOOP_BODY:.*]]
 ; CHECK:       [[LOOP_BODY]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
@@ -257,8 +254,7 @@ define i1 @latch_counted_signed_header_check_removable(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -10, %[[PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[EXIT_1:.*]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT_1:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1

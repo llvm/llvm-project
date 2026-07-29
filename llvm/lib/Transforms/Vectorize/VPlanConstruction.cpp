@@ -1277,18 +1277,12 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
 
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-
-      // Remove phi operands for the early exiting block.
-      for (VPRecipeBase &R : EB->phis())
-        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      EarlyExitingVPBB->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
-    }
+  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // Remove phi operands for the early exiting block.
+    for (VPRecipeBase &R : EB->phis())
+      cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
+    EarlyExitingVPBB->getTerminator()->eraseFromParent();
+    VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EB);
   }
   return true;
 }

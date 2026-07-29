@@ -1392,6 +1392,15 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
+// True for a whole reference to a managed or unified array: a whole array
+// variable, or a whole array component that itself has the attribute (a%b where
+// b is managed). An array section, an array element, a component of a managed
+// object and a computed value are all false.
+template <typename A> inline bool IsWholeManagedArray(const A &expr) {
+  const Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return expr.Rank() > 0 && sym && IsCUDAManagedOrUnifiedSymbol(*sym);
+}
+
 // Check if any of the symbols part of the lhs or rhs expression has a CUDA
 // device attribute.
 template <typename A, typename B>
@@ -1403,30 +1412,33 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
-      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
-    return true; // Managed arrays initialization is performed on the device.
+  // CUDA Fortran Programming Guide 3.4.1: an assignment involving managed or
+  // unified data is a copy when the managed side is a whole variable or array,
+  // and is done on the host when it is a section. The host can read and write
+  // managed data directly, and copying section by section in a loop is slow.
+  bool wholeLhs{IsWholeManagedArray(lhs)};
+  bool wholeRhs{IsWholeManagedArray(rhs)};
+
+  if (wholeLhs && rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Initializing a whole managed array is done on the device.
   }
 
-  // Managed/unified data is host-addressable, so several assignments are
-  // performed on the host and need no explicit data transfer:
-  // - A whole-allocatable left-hand side involving managed/unified data: the
-  //   assignment has reallocation semantics and is performed on the host.
-  // - Element-wise (scalar) access to managed/unified data.
-  // - A right-hand side expression involving managed/unified data assigned into
-  //   a host-addressable (managed/unified or host) left-hand side: evaluating
-  //   it on the host avoids materializing a temporary.
-  // - A managed/unified left-hand side assigned from host-only data.
-  // A whole-array assignment whose right-hand side is a managed/unified
-  // variable is a synchronous data transfer that waits for previously launched
-  // kernels.
+  // Assignments done on the host, with no copy:
+  // - A whole allocatable left-hand side: the assignment may reallocate it,
+  //   which is done on the host.
+  // - No managed operand is a whole array: they are all sections or elements,
+  //   which the host can read and write in place.
+  // - An expression involving managed data assigned to a managed or host
+  //   left-hand side: evaluating it on the host avoids a temporary.
+  // - A managed left-hand side assigned from host-only data.
   if ((IsAllocatableDesignator(lhs) &&
           (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
       (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          lhs.Rank() == 0) ||
+          !(wholeLhs || wholeRhs)) ||
       (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
           rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          lhs.Rank() == 0) ||
+          !wholeRhs) ||
       (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) &&
           (lhsNbManagedSymbols >= 1 || !HasCUDADeviceAttrs(lhs))) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
@@ -1438,6 +1450,9 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
