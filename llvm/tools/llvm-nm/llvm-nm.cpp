@@ -2084,7 +2084,8 @@ static void printArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
       error(FileNameOrErr.takeError(), Filename);
       break;
     }
-    outs() << I.getName() << " in " << FileNameOrErr.get();
+    StringRef SymName = I.getName();
+    outs() << SymName << " in " << FileNameOrErr.get();
     if (PrintZOSAttrs) {
       uint32_t Attrs = I.getZOSAttributes();
       std::string AttrsStr;
