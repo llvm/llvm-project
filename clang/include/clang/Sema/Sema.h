@@ -2649,13 +2649,6 @@ public:
            isConstantEvaluatedOverride;
   }
 
-  /// Set only around the compiler-synthesized whole-object memcpy for a
-  /// defaulted union copy/move assignment.  While set, CheckMemaccessArguments
-  /// skips the non-trivially-copyable record warning (warn_cxxstruct_memaccess)
-  /// for that one call, whose arguments are known correct.  It does not affect
-  /// any other memaccess check or any user code.
-  bool SuppressMemaccessCheck = false;
-
   SourceLocation getLocationOfStringLiteralByte(const StringLiteral *SL,
                                                 unsigned ByteNo) const;
 
@@ -7265,6 +7258,15 @@ public:
   /// diagnostic will not be emitted.
   bool DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
                        const PartialDiagnostic &PD);
+
+  /// Tracks whether the most recently deferred diagnostic (queued by
+  /// DiagIfReachable) was skipped because warnings are ignored.  Used to also
+  /// skip a trailing note that belongs to a skipped warning, mirroring how the
+  /// diagnostic engine drops a note whose parent warning was ignored.  Only
+  /// meaningful for a note that immediately follows its own skipped warning
+  /// through the deferred path; it is reset on every other DiagIfReachable so a
+  /// stale value cannot suppress an unrelated note.
+  bool LastDeferredDiagIgnored = false;
 
   /// Conditionally issue a diagnostic based on the current
   /// evaluation context.

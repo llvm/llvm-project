@@ -14962,13 +14962,12 @@ public:
 /// of class type where the selected copy/move-assignment operator is trivial.
 ///
 /// \param SuppressMemaccessWarning skips the non-trivially-copyable record
-/// warning for the synthesized call by setting Sema::SuppressMemaccessCheck
-/// across it.  A union's defaulted assignment copies the whole object
-/// representation by memcpy (like the defaulted union copy constructor), which
-/// is correct even when the union is not trivially copyable, so the
-/// -Wnontrivial-memcall diagnostic that CheckMemaccessArguments would emit is
-/// a false positive here.  The pointer arguments keep their real types, so no
-/// qualifier is dropped.
+/// warning for the synthesized call by ignoring warnings across it.  A union's
+/// defaulted assignment copies the whole object representation by memcpy (like
+/// the defaulted union copy constructor), which is correct even when the union
+/// is not trivially copyable, so the -Wnontrivial-memcall diagnostic that
+/// CheckMemaccessArguments would emit is a false positive here.  The pointer
+/// arguments keep their real types, so no qualifier is dropped.
 static StmtResult
 buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
                            const ExprBuilder &ToB, const ExprBuilder &FromB,
@@ -15017,11 +15016,13 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   };
 
   // The synthesized union whole-object copy is a memcpy of a possibly
-  // non-trivially-copyable record, which is correct here; skip the memaccess
-  // warning across just this call rather than casting the arguments to void*.
-  std::optional<llvm::SaveAndRestore<bool>> DisableMemaccessCheck;
+  // non-trivially-copyable record, which is correct here.  Silence warnings
+  // across just this call rather than casting the arguments to void*.  The
+  // memaccess warning is deferred inside BuildCallExpr and honors the ignore
+  // state at that point, so a narrow scope here is sufficient.
+  std::optional<IgnoreAllWarningDiagRAII> IgnoreWarnings;
   if (SuppressMemaccessWarning)
-    DisableMemaccessCheck.emplace(S.SuppressMemaccessCheck, true);
+    IgnoreWarnings.emplace(S.Diags);
 
   ExprResult Call = S.BuildCallExpr(/*Scope=*/nullptr, MemCpyRef.get(),
                                     Loc, CallArgs, Loc);
