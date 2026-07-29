@@ -29,6 +29,10 @@ using namespace llvm;
 
 static bool assignIdxToM0(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  // Only movrel takes its index from M0. Subtargets without it index with the
+  // VGPR indexing mode instead, which AMDGPULowerVGPREncoding enables around
+  // the move with s_set_gpr_idx_on, reading the index straight out of its SGPR.
   if (!ST.hasMovrel())
     return false;
 
