@@ -52,6 +52,40 @@ struct FoldExpandOfRankReducingExtract
   }
 };
 
+/// Fold a full-slice rank-reducing extract_slice of an expand_shape back to
+/// the expand_shape source when the expanded and sliced dimensions match.
+struct FoldExtractSliceOfExpandShape : public OpRewritePattern<ExtractSliceOp> {
+  using OpRewritePattern<ExtractSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractSliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    auto expandOp = sliceOp.getSource().getDefiningOp<ExpandShapeOp>();
+    if (!expandOp)
+      return failure();
+
+    if (sliceOp.getType() != expandOp.getSrcType())
+      return failure();
+
+    SmallVector<OpFoldResult> mixedExpandedSizes =
+        expandOp.getMixedOutputShape();
+    if (mixedExpandedSizes.size() != sliceOp.getMixedSizes().size())
+      return failure();
+
+    for (auto [offset, size, stride, expandedSize] :
+         llvm::zip_equal(sliceOp.getMixedOffsets(), sliceOp.getMixedSizes(),
+                         sliceOp.getMixedStrides(), mixedExpandedSizes)) {
+      if (getConstantIntValue(offset) != static_cast<int64_t>(0) ||
+          getConstantIntValue(stride) != static_cast<int64_t>(1))
+        return failure();
+      if (size != expandedSize)
+        return failure();
+    }
+
+    rewriter.replaceOp(sliceOp, expandOp.getSrc());
+    return success();
+  }
+};
+
 /// Fold collapse_shape which only removes static dimensions of size `1`
 /// into extract_slice.
 struct FoldUnPaddingCollapseIntoExtract
@@ -808,13 +842,13 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<FoldExpandOfRankReducingExtract, FoldUnPaddingCollapseIntoExtract,
-           FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
-           FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
-           FoldPaddingExpandIntoInsert<tensor::InsertSliceOp>,
-           FoldPaddingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
-          patterns.getContext());
+  patterns.add<FoldExpandOfRankReducingExtract, FoldExtractSliceOfExpandShape,
+               FoldUnPaddingCollapseIntoExtract,
+               FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
+               FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
+               FoldPaddingExpandIntoInsert<tensor::InsertSliceOp>,
+               FoldPaddingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
+      patterns.getContext());
 }
 
 void mlir::tensor::populateBubbleUpExpandShapePatterns(
