@@ -812,10 +812,13 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
         "Global @" + GV.getName() + " has illegal target extension type",
         GVType);
 
-  // Check that the the address space can hold all bits of the type, recognized
+  // Check that the address space can hold all bits of the type, recognized
   // by an access in the address space being able to reach all bytes of the
   // type.
+  // An exemption to this is sectioned global variables with local linkage
+  // and no uses. These are usually used for metadata.
   Check(!GVType->isSized() ||
+            (GV.use_empty() && GV.hasLocalLinkage() && GV.hasSection()) ||
             isUIntN(DL.getAddressSizeInBits(GV.getAddressSpace()),
                     GV.getGlobalSize(DL)),
         "Global variable is too large to fit into the address space", &GV,
