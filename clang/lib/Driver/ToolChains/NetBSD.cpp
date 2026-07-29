@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Gnu.h"
 #include "NetBSD.h"
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
@@ -497,23 +498,14 @@ void NetBSD::AddClangSystemIncludeArgs(
 
 void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
-  const std::string Candidates[] = {
-    // directory relative to build tree
-    concat(getDriver().Dir, "/../include/c++/v1"),
-    // system install with full upstream path
-    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
-    // system install from src
-    concat(getDriver().SysRoot, "/usr/include/c++"),
-  };
+  Generic_GCC::addLibCxxIncludePaths(DriverArgs, CC1Args);
 
-  for (const auto &IncludePath : Candidates) {
-    if (!getVFS().exists(IncludePath + "/__config"))
-      continue;
+  // system install from src
+  const std::string IncludePath =
+      concat(getDriver().SysRoot, "/usr/include/c++");
 
-    // Use the first candidate that looks valid.
+  if (getVFS().exists(IncludePath + "/__config"))
     addSystemInclude(DriverArgs, CC1Args, IncludePath);
-    return;
-  }
 }
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
