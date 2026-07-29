@@ -17,18 +17,26 @@
 #include "DLWrap.h"
 
 // Macro to mark external symbol as weak, so linker will be okay
-// if the symbol is missing. For direct linking (dlwrap::IsDlOpened<&name> ==
-// false), we need to check if linker could find the symbol. For symbols loaded
-// using dlsym we use dlwrap::loaded<name>().
+// if the symbol is missing. For direct linking only available on Linux, we need
+// to check if linker could find the symbol. For symbols loaded using dlsym we
+// call name##_loaded function. The name##_loaded function will be nullptr if
+// external library was linked directly.
 #define API_HELPER_OPTIONAL(return_type, name, ...)                            \
+  namespace dlwrap {                                                           \
+  bool name##_loaded() __attribute__((weak));                                  \
+  }                                                                            \
   extern "C" return_type name(__VA_ARGS__) __attribute__((weak));              \
   template <> inline bool api_helper::canCall<name>() {                        \
     if (name == nullptr)                                                       \
-      /* Not loaded weak symbol */                                             \
+      /* Not loaded weak symbol, only possible on Linux */                     \
       return false;                                                            \
-    /* Symbols from dlwrap are never nullptr, but `loaded` might return false  \
-     */                                                                        \
-    return dlwrap::loaded<name>();                                             \
+    /* If symbol wasn't dlwrapped, i.e name##_loaded == nullptr and is not     \
+     * nullptr, it means the symbol was linked directly, so we can call it */  \
+    if (dlwrap::name##_loaded == nullptr)                                      \
+      return true;                                                             \
+    /* Symbol is not nullptr and it was dlwrapped, all symbols on Windows go   \
+     * here*/                                                                  \
+    return dlwrap::name##_loaded();                                            \
   }
 
 namespace api_helper {

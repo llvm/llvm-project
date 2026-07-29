@@ -137,10 +137,6 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
   static_assert(Requested == Required, "Arity Error");
 }
 
-// Template to check if a symbol was loaded successfully.
-// Returns true for symbols that were not wrapped by dlwrap.
-template <auto Fn> bool loaded() { return true; }
-
 } // namespace dlwrap
 
 #define DLWRAP_INSTANTIATE(SYM_DEF, SYM_USE, ARITY)                            \
@@ -173,9 +169,7 @@ template <auto Fn> bool loaded() { return true; }
       return reinterpret_cast<T::FunctionType>(P);                             \
     }                                                                          \
   };                                                                           \
-  template <> bool loaded<&(::SYMBOL)>() {                                     \
-    return SYMBOL##_Trait::get() != nullptr;                                   \
-  }                                                                            \
+  bool SYMBOL##_loaded() { return SYMBOL##_Trait::get() != nullptr; }          \
   }
 
 #define DLWRAP_IMPL(SYMBOL, ARITY)                                             \
