@@ -1,13 +1,13 @@
 // HIP on AMDGPU.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -x hip -fcuda-is-device -target-cpu gfx90a -fsyntax-only -verify %s \
+// RUN:   -triple amdgpu9.0a-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -x hip -fcuda-is-device -fsyntax-only -verify %s \
 // RUN:   -include __clang_gpu_device_functions.h
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -x hip -fcuda-is-device -target-cpu gfx1100 -fsyntax-only -verify %s \
+// RUN:   -triple amdgpu11.00-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -x hip -fcuda-is-device -fsyntax-only -verify %s \
 // RUN:   -include __clang_gpu_device_functions.h
 
 // HIP on SPIR-V.
@@ -27,8 +27,8 @@
 // HIP host compilation.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
-// RUN:   -triple x86_64-unknown-unknown -aux-triple amdgcn-amd-amdhsa \
-// RUN:   -aux-target-cpu gfx90a -x hip -fsyntax-only -verify %s \
+// RUN:   -triple x86_64-unknown-unknown -aux-triple amdgpu9.0a-amd-amdhsa \
+// RUN: -x hip -fsyntax-only -verify %s \
 // RUN:   -include __clang_gpu_device_functions.h
 //
 // HIP host compilation with a SPIR-V device.

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -triple amdgcn -target-cpu gfx90a -fsyntax-only -fcuda-is-device -verify=gfx90a -o - %s
-// RUN: %clang_cc1 -std=c++20 -triple amdgcn -target-cpu gfx950 -fsyntax-only -fcuda-is-device -o - %s
+// RUN: %clang_cc1 -std=c++20 -triple amdgpu9.0a -fsyntax-only -fcuda-is-device -verify=gfx90a -o - %s
+// RUN: %clang_cc1 -std=c++20 -triple amdgpu9.50 -fsyntax-only -fcuda-is-device -o - %s
 
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))
