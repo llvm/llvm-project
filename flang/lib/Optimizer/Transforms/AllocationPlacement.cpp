@@ -288,10 +288,10 @@ void AllocationPlacementPass::runOnOperation() {
     mlir::MLIRContext &context = getContext();
     mlir::RewritePatternSet patterns(&context);
     mlir::GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks; otherwise use the default
+    // configuration (folding on) as the legacy stack-arrays pass did.
     config.setRegionSimplificationLevel(
         mlir::GreedySimplifyRegionLevel::Disabled);
-    config.setStrictness(mlir::GreedyRewriteStrictness::ExistingAndNewOps);
-    config.enableFolding(false);
     patterns.insert<fir::AllocMemConversion>(&context, *candidateOps, dl,
                                              kindMap);
     if (mlir::failed(mlir::applyOpPatternsGreedily(
