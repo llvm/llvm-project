@@ -7844,8 +7844,9 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
 
 /// Validate prefer_type fr() and attr() arguments in an OMPInteropInfo.
 /// fr() must be a string literal or constant integer expression.
-/// attr() must be a string literal starting with "ompx_" and containing no commas.
-/// Returns true if valid; emits diagnostic and returns false on first error.
+/// attr() must be a string literal starting with "ompx_" and containing no
+/// commas. Returns true if valid; emits diagnostic and returns false on first
+/// error.
 static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
   auto isDependent = [](const Expr *E) {
     return E->isValueDependent() || E->isTypeDependent() ||
