@@ -73,6 +73,7 @@ using CompiledModelType = NoopSavedModelImpl;
 #endif
 
 #if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
+constexpr bool HaveMLIRLoweringInliner = true;
 #include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/Analysis/InlinerModels.h"
 
@@ -106,39 +107,42 @@ createEmitCModelRunner(LLVMContext &Ctx,
   }
   llvm_unreachable("Unknown MLGO model type!");
 }
+#else
+constexpr bool HaveMLIRLoweringInliner = false;
+enum class EmitCModelChoice { Default };
+static const EmitCModelChoice SelectedMLGOModel = EmitCModelChoice::Default;
+inline std::unique_ptr<MLModelRunner>
+createEmitCModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
+  return nullptr;
+}
 #endif
 
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                             std::function<bool(CallBase &)> GetDefaultAdvice) {
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
-      InteractiveChannelBaseName.empty()
-#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
-      && SelectedMLGOModel == EmitCModelChoice::Default
-#endif
-  )
+      InteractiveChannelBaseName.empty() &&
+      SelectedMLGOModel == EmitCModelChoice::Default)
     return nullptr;
   auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
       -> std::unique_ptr<MLModelRunner> {
-    std::unique_ptr<MLModelRunner> AOTRunner;
+    std::unique_ptr<MLModelRunner> ModelRunner;
     if (InteractiveChannelBaseName.empty()) {
-#if defined(LLVM_HAVE_MLIR_LOWERING_INLINER)
-      if (SelectedMLGOModel != EmitCModelChoice::Default) {
-        AOTRunner = createEmitCModelRunner(M.getContext(), InputFeatures);
-      } else
-#endif
-      {
-        AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-            M.getContext(), InputFeatures, DecisionName,
-            EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
+      if constexpr (HaveMLIRLoweringInliner) {
+        ModelRunner = createEmitCModelRunner(M.getContext(), InputFeatures);
+      } else {
+        ModelRunner =
+            std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+                M.getContext(), InputFeatures, DecisionName,
+                EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
       }
     } else {
-      AOTRunner = std::make_unique<InteractiveModelRunner>(
+      ModelRunner = std::make_unique<InteractiveModelRunner>(
           M.getContext(), InputFeatures, InlineDecisionSpec,
           InteractiveChannelBaseName + ".out",
           InteractiveChannelBaseName + ".in");
     }
-    return AOTRunner;
+    return ModelRunner;
   };
   return std::make_unique<MLInlineAdvisor>(M, MAM, RunnerFactory,
                                            GetDefaultAdvice);

@@ -35,7 +35,8 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
   set(MODEL_INDEX 1)
 
   foreach(MODEL_INFO IN LISTS models)
-    # Parse comma-separated fields: cli-flag,path/to/model.mlir,type
+    # Parse comma-separated fields (from the LLVM_MLGO_MODELS flag)
+    # cli-flag,path/to/model.mlir,type
     string(REPLACE "," ";" MODEL_FIELDS "${MODEL_INFO}")
     list(GET MODEL_FIELDS 0 CLI_FLAG)
     list(GET MODEL_FIELDS 1 MODEL_PATH)
@@ -57,6 +58,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
     set(HEADER_FILE "${LLVM_INCLUDE_DIR}/${include_subdir}/${CLASS_NAME}.h")
 
     # Pass pipeline to lower MLIR models to EmitC dialect
+    # TODO: Simplify with builtin pipeline for translation.
     set(EMITC_PASSES
       "func.func(tosa-to-linalg-named,tosa-to-linalg,tosa-to-arith,tosa-to-tensor)"
       "symbol-privatize"
@@ -107,11 +109,11 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
     string(APPEND DEF_CONTENT "MLGO_MODEL(${CLASS_NAME}, \"${CLI_FLAG}\")\n")
 
     # Append to the master header content
-    string(APPEND HEADERS_CONTENT "namespace ${CLASS_NAME}_ns {\n#include \"${include_subdir}/${CLASS_NAME}.h\"\n}\nusing ${CLASS_NAME}_ns::${CLASS_NAME};\n")
+    string(APPEND HEADERS_CONTENT "namespace ${CLASS_NAME}_ns {\n#include \"${include_subdir}/${CLASS_NAME}.h\"\n} // namespace ${CLASS_NAME}_ns\nusing ${CLASS_NAME}_ns::${CLASS_NAME};\n")
   endforeach()
 
   string(APPEND DEF_CONTENT "\n#undef MLGO_MODEL\n")
-  string(APPEND HEADERS_CONTENT "}\n")
+  string(APPEND HEADERS_CONTENT "} // namespace llvm\n")
 
   # Stage the generated files, then only update the copies under
   # LLVM_INCLUDE_DIR when their content changed, so that reconfiguring does not

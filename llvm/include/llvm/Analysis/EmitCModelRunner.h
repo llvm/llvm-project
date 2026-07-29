@@ -1,14 +1,14 @@
-//===- EmitCModelRunner.h - Fast, precompiled model runner ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a model runner wrapping an EmitC compiled ML model.
-// Only inference is supported.
-//
+///
+/// \file
+/// This file implements a model runner wrapping an EmitC compiled ML model.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_EMITCMODELRUNNER_H
@@ -57,8 +57,8 @@ private:
     return &Result;
   }
 
-  ResultType Result{};
-  TGen CompiledModel{};
+  ResultType Result = {};
+  TGen CompiledModel = {};
 };
 
 } // namespace llvm

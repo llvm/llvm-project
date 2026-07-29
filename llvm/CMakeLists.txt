@@ -1231,10 +1231,9 @@ set(LLVM_MLGO_MODELS "" CACHE STRING "List of MLGO models")
 set(LLVM_MLGO_MLIR_OPT "mlir-opt" CACHE STRING "Path or system binary name for mlir-opt")
 set(LLVM_MLGO_MLIR_TRANSLATE "mlir-translate" CACHE STRING "Path or system binary name for mlir-translate")
 
+set(LLVM_HAVE_EMITC_COMPILE OFF CACHE BOOL "MLGO models to be compiled with EmitC are available")
 if (NOT LLVM_MLGO_MODELS STREQUAL "")
-  set(LLVM_HAVE_EMITC_COMPILE "ON" CACHE BOOL "MLGO AOT models compiled with EmitC are available" FORCE)
-else()
-  set(LLVM_HAVE_EMITC_COMPILE "OFF" CACHE BOOL "MLGO AOT models compiled with EmitC are available" FORCE)
+  set(LLVM_HAVE_EMITC_COMPILE ON CACHE BOOL "MLGO models to be compiled with EmitC are available" FORCE)
 endif()
 
 if (LLVM_HAVE_EMITC_COMPILE AND LLVM_HAVE_TFLITE)
