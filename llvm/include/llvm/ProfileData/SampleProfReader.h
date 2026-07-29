@@ -848,11 +848,13 @@ public:
   }
 
   bool contains(StringRef Key) const override {
-    return NameTable && NameTable->contains(Key);
+    assert(NameTable && "NameTable should be populated before querying");
+    return NameTable->contains(Key);
   }
 
   bool contains(uint64_t GUID) const override {
-    return NameTable && NameTable->contains(GUID);
+    assert(NameTable && "NameTable should be populated before querying");
+    return NameTable->contains(GUID);
   }
 
 protected:
