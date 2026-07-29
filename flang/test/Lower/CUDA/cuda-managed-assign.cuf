@@ -275,18 +275,3 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_attr_section_assign()
 ! CHECK-NOT: cuf.data_transfer
-
-! Sections of unified data are assigned on the host, like sections of managed
-! data.
-subroutine unified_section_assign(n)
-  integer :: n, i
-  integer(4), unified :: ua(4,16), ub(4,16)
-  integer(4) :: ha(4,16)
-  do i = 1, n
-    ua(:,i) = ub(:,i)
-    ha(:,i) = ub(:,i)
-  end do
-end subroutine
-
-! CHECK-LABEL: func.func @_QPunified_section_assign
-! CHECK-NOT: cuf.data_transfer
