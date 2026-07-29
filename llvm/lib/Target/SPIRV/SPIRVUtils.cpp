@@ -1256,15 +1256,13 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   if (GV.isDeclarationForLinker()) {
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
       auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
-      // Interface variables (shader-only storage classes) must never get
-      // Import linkage.
+      // Interface variables must not get Import linkage.
       if (SC == SPIRV::StorageClass::Input ||
           SC == SPIRV::StorageClass::Output ||
           SC == SPIRV::StorageClass::PushConstant)
         return std::nullopt;
-      // Shaders have no linker, so module-internal storage (e.g. HLSL
-      // groupshared) can't be imported; kernels (e.g. HIP LDS) legitimately
-      // can.
+      // Shaders have no linker, so module-internal storage
+      // (e.g. HLSL groupshared) can't be imported
       if (ST.isShader() && (SC == SPIRV::StorageClass::Workgroup ||
                             SC == SPIRV::StorageClass::Private))
         return std::nullopt;
