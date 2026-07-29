@@ -1461,6 +1461,34 @@ BUILD_CONVERSION_OP(int32_t, int64_t, extendU, ExtendUI32Op)
 
 #undef BUILD_CONVERSION_OP
 
+parsed_inst_t parse(OpCode<WasmBinaryEncoding::OpCode::saturatedTruncate>,
+                    OpBuilder &builder,
+                    ExpressionParser::ExprParserProxy &parser,
+                    std::uint32_t subOpCode) {
+  if (subOpCode > 7)
+    return emitError(parser.getCurrentOpLoc())
+           << "invalid sub-opcode for trunc_saturate: " << subOpCode;
+  LDBG() << "Sub subOpcode for operation: " << subOpCode;
+  bool isDestUnsigned = subOpCode & 1;
+  bool isSrcF64 = subOpCode & 2;
+  bool isDestI64 = subOpCode & 4;
+  auto srcTypeBuilder =
+      isSrcF64 ? buildLiteralType<double> : buildLiteralType<float>;
+  auto destTypeBuilder =
+      isDestI64 ? buildLiteralType<uint64_t> : buildLiteralType<int32_t>;
+  auto srcOp = parser.popOperands(srcTypeBuilder(builder));
+  if (failed(srcOp))
+    return failure();
+  Operation *op =
+      isDestUnsigned
+          ? TruncSatUIOp::create(builder, parser.getCurrentOpLoc(),
+                                 destTypeBuilder(builder), srcOp->front())
+          : TruncSatSIOp::create(builder, parser.getCurrentOpLoc(),
+                                 destTypeBuilder(builder), srcOp->front());
+  LDBG() << "Built operation: " << op;
+  return {{op->getResult(0)}};
+}
+
 #define BUILD_SLICE_EXTEND_PARSER(IT_WIDTH, EXTRACT_WIDTH)                     \
   parsed_inst_t parse(                                                         \
       OpCode<WasmBinaryEncoding::OpCode::extendI##IT_WIDTH##EXTRACT_WIDTH##S>, \
@@ -1563,7 +1591,8 @@ private:
     auto loc = exprParser.getCurrentOpLoc();
     auto subOpCode = exprParser.parser().parseLiteral<std::uint32_t>();
     if (failed(subOpCode))
-      return emitError(loc) << "expecting sub opcode for opcode " << opCode;
+      return emitError(loc) << "expecting sub opcode for opcode "
+                            << static_cast<uint8_t>(opCode);
     return parse(OpCode<opCode>{}, builder, exprParser, subOpCode.value());
   }
 
