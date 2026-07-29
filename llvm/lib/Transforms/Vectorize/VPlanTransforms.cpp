@@ -2793,12 +2793,13 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
         VPRecipeBase *AddrDef = WidenRec->getAddr()->getDefiningRecipe();
-        if (AddrDef && WidenRec->isConsecutive() &&
+        if (AddrDef && WidenRec->isConsecutive() && WidenRec->getMask() &&
             match(WidenRec->getMask(), m_UnlessHdrMask))
           CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
         VPRecipeBase *AddrDef = InterleaveRec->getAddr()->getDefiningRecipe();
-        if (AddrDef && match(InterleaveRec->getMask(), m_UnlessHdrMask))
+        if (AddrDef && InterleaveRec->getMask() &&
+            match(InterleaveRec->getMask(), m_UnlessHdrMask))
           CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       }
     }
