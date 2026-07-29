@@ -320,6 +320,8 @@ public:
 
   CompilerType GetArrayType(uint64_t size) const;
 
+  int64_t GetArrayLowerBound() const;
+
   CompilerType GetCanonicalType() const;
 
   CompilerType GetFullyUnqualifiedType() const;

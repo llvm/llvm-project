@@ -11,6 +11,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace lldb_private {
@@ -18,6 +19,9 @@ namespace lldb_private {
 namespace plugin {
 namespace fortran {
 class FortranType;
+class FortranFunction;
+class FortranArray;
+class FortranPointer;
 struct FortranDimension;
 struct FortranArrayMetadata;
 } // namespace fortran
@@ -238,6 +242,8 @@ public:
                                    ExecutionContextScope *exe_scope) override {
     return CompilerType();
   }
+
+  int64_t GetArrayLowerBound(lldb::opaque_compiler_type_t type) override;
   //
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override {
     if (!type)
@@ -482,20 +488,14 @@ public:
   }
 
 private:
-  typedef std::pair<int, uint64_t> TypeKey;
-  typedef llvm::DenseMap<TypeKey, std::unique_ptr<plugin::fortran::FortranType>>
-      BasicTypeMap;
-  typedef llvm::DenseMap<ConstString,
-                         std::unique_ptr<plugin::fortran::FortranType>>
-      FunctionMap;
-
-  // TODO: Types are assosciated by their kind and bitsize, this helps to
-  // return from their basic type and is enough for basic types but
-  // will change once more types are supported
-  BasicTypeMap m_basic_type_map;
-  // Right now we can index functions just by their name, but a more
-  // effecient solution might replace this
-  FunctionMap m_function_map;
+  mutable llvm::FoldingSet<plugin::fortran::FortranType> m_basic_types;
+  mutable llvm::FoldingSet<plugin::fortran::FortranFunction> m_functions;
+  mutable llvm::FoldingSet<plugin::fortran::FortranArray> m_arrays;
+  mutable llvm::FoldingSet<plugin::fortran::FortranPointer> m_pointers;
+  // We store all unique pointer types here so we can manage the lifecycle
+  // of the types
+  mutable llvm::SmallVector<std::unique_ptr<plugin::fortran::FortranType>>
+      m_types;
   std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;
   /// Store byte order of the system so variables can be printed correctly
   lldb::ByteOrder m_byte_order;

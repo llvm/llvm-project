@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Clean this up, fix names, add comments
-// TODO: Fix the BitSize...
 #include "DynamicArray.h"
 
 #include "Plugins/TypeSystem/Fortran/FortranTypes.h"
@@ -48,8 +47,6 @@ private:
   lldb::addr_t m_array_addr;
   bool m_allocated;
   std::shared_ptr<lldb_private::TypeSystemFortran> m_ast_sp;
-  // TODO: very bad design, children will overwrite themselves...
-  llvm::DenseMap<FortranArray *, CompilerType> m_children_map;
 };
 
 DynamicArraySyntheticFrontEnd::DynamicArraySyntheticFrontEnd(
@@ -60,7 +57,6 @@ DynamicArraySyntheticFrontEnd::DynamicArraySyntheticFrontEnd(
 }
 // TODO: Handle star arrays
 lldb::ChildCacheState DynamicArraySyntheticFrontEnd::Update() {
-  m_children_map.clear();
   m_allocated = false;
 
   lldb::opaque_compiler_type_t raw_type =
@@ -304,13 +300,13 @@ DynamicArraySyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   const bool transparent_pointers = true;
   std::string child_name;
   llvm::ArrayRef<ArrayShape> old_dimensions = fortran_type->GetDimensions();
-  int64_t ub = old_dimensions.front().GetUpperBound().GetBound();
   int64_t lb = old_dimensions.front().GetLowerBound().GetBound();
   uint64_t num_elements = old_dimensions.front().GetNumberOfElements();
-  if (idx >= num_elements)
+
+  if (idx > num_elements)
     return ValueObjectSP();
 
-  child_name = llvm::formatv("[{0}]", idx);
+  child_name = llvm::formatv("[{0}]", idx + lb);
   llvm::Expected<CompilerType> child_type_orr_err =
       m_ast_sp->GetChildCompilerTypeAtIndex(
           raw_type, &exe_ctx, idx, transparent_pointers,
@@ -323,7 +319,6 @@ DynamicArraySyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
     return ValueObjectSP();
   }
   CompilerType child_type = *child_type_orr_err;
-  m_children_map[fortran_type] = child_type;
   uint64_t array_address = m_array_addr + child_byte_offset;
   if (!fortran_type->IsDynamic() && m_array_addr == LLDB_INVALID_ADDRESS) {
     return m_backend.GetSyntheticChildAtOffset(child_byte_offset, child_type,

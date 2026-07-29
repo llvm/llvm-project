@@ -50,7 +50,7 @@ FortranArrayMetadata ParseArray(const DWARFDIE &parent_die,
   FortranArrayMetadata array_info;
   DWARFAttributes parent_attributes = parent_die.GetAttributes();
   ModuleSP parent_module(parent_die.GetModule());
-  for (int idx = 0; idx < parent_attributes.Size(); idx++) {
+  for (size_t idx = 0; idx < parent_attributes.Size(); idx++) {
     const dw_attr_t attr = parent_attributes.AttributeAtIndex(idx);
     DWARFFormValue form_value;
     if (!parent_attributes.ExtractFormValueAtIndex(idx, form_value))
@@ -90,7 +90,6 @@ FortranArrayMetadata ParseArray(const DWARFDIE &parent_die,
     DWARFValue byte_stride;
     DWARFValue lower_bound;
     DWARFValue upper_bound;
-    bool upper_bound_valid = false;
     for (size_t i = 0; i < attributes.Size(); ++i) {
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
       DWARFFormValue form_value;
@@ -140,7 +139,6 @@ FortranArrayMetadata ParseArray(const DWARFDIE &parent_die,
         break;
 
       case DW_AT_upper_bound:
-        upper_bound_valid = true;
         if (DWARFFormValue::IsBlockForm(form_value.Form())) {
           array_info.is_dynamic = true;
           upper_bound = GetDWARFExpression(die, form_value, module);
@@ -244,9 +242,6 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(const SymbolContext &sc,
       case DW_TAG_array_type: {
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
-        uint32_t byte_stride = 0;
-        uint32_t bit_stride = 0;
-
         DWARFDIE element_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
 
         Type *element_type = dwarf->ResolveTypeUID(element_die, true);
@@ -263,7 +258,7 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(const SymbolContext &sc,
             // We need to calculate the total array size, if it is known
             // at compile time
             if (!array_info.is_dynamic) {
-              for (int idx = 0; idx < array_info.dimensions.size(); idx++) {
+              for (size_t idx = 0; idx < array_info.dimensions.size(); idx++) {
                 total_elements *= std::get<uint64_t>(
                     array_info.dimensions[idx].element_count);
               }
