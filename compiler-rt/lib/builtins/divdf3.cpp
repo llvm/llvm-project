@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DOUBLE_PRECISION
 #include "fp_lib.h"
 
-#define DOUBLE_PRECISION
 #include "fp_libc_config.h"
 #include "int_lib.h"
 #include "shared/builtins/divdf3.h"

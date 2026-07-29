@@ -18,6 +18,6 @@
 #include "int_lib.h"
 #include "shared/builtins/negsf2.h"
 
-extern "C" COMPILER_RT_ABI fp_t __negsf2(fp_t a, fp_t b) {
-  return LIBC_NAMESPACE::shared::negsf2(a, b);
+extern "C" COMPILER_RT_ABI fp_t __negsf2(fp_t a) {
+  return LIBC_NAMESPACE::shared::negsf2(a);
 }
