@@ -32,22 +32,42 @@ enum WasmAddressType : uint8_t {
   Invalid = 0x03,
 };
 
-/// The top two bits of a 64-bit address hold the space it belongs to.
-static constexpr uint32_t kWasmAddressTypeShift = 62;
-static constexpr uint64_t kWasmAddressTypeMask = uint64_t(0b11)
-                                                 << kWasmAddressTypeShift;
+/// Widths of the fields a 64-bit address is made of, from the low bits up. The
+/// bitfields below are declared with the same constants, so a field and the
+/// mask that extracts it cannot come to disagree.
+static constexpr uint32_t kWasmOffsetBits = 32;
+static constexpr uint32_t kWasmModuleIDBits = 30;
+static constexpr uint32_t kWasmAddressTypeBits = 2;
+
+static_assert(kWasmOffsetBits + kWasmModuleIDBits + kWasmAddressTypeBits == 64,
+              "a Wasm address has to account for all 64 bits");
+
+static constexpr uint32_t kWasmModuleIDShift = kWasmOffsetBits;
+static constexpr uint32_t kWasmAddressTypeShift =
+    kWasmModuleIDShift + kWasmModuleIDBits;
+
+static constexpr uint64_t MakeFieldMask(uint32_t bits, uint32_t shift) {
+  return ((uint64_t(1) << bits) - 1) << shift;
+}
+
+static constexpr uint64_t kWasmOffsetMask = MakeFieldMask(kWasmOffsetBits, 0);
+static constexpr uint64_t kWasmModuleIDMask =
+    MakeFieldMask(kWasmModuleIDBits, kWasmModuleIDShift);
+static constexpr uint64_t kWasmAddressTypeMask =
+    MakeFieldMask(kWasmAddressTypeBits, kWasmAddressTypeShift);
 
 /// For the purpose of debugging, we can represent all these separated 32-bit
 /// address spaces with a single virtual 64-bit address space. The
 /// wasm_addr_t provides this encoding using bitfields.
 struct wasm_addr_t {
-  uint64_t offset : 32;
-  uint64_t module_id : 30;
-  uint64_t type : 2;
+  uint64_t offset : kWasmOffsetBits;
+  uint64_t module_id : kWasmModuleIDBits;
+  uint64_t type : kWasmAddressTypeBits;
 
   wasm_addr_t(lldb::addr_t addr)
-      : offset(addr & 0x00000000ffffffff),
-        module_id((addr & 0x00ffffff00000000) >> 32), type(addr >> 62) {}
+      : offset(addr & kWasmOffsetMask),
+        module_id((addr & kWasmModuleIDMask) >> kWasmModuleIDShift),
+        type(addr >> kWasmAddressTypeShift) {}
 
   wasm_addr_t(WasmAddressType type, uint32_t module_id, uint32_t offset)
       : offset(offset), module_id(module_id), type(type) {}
