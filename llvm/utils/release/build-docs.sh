@@ -149,22 +149,14 @@ export CXX=clang++
 
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang${extra_man_page_projects}" \
+               -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;${extra_man_page_runtimes}" \
                -DCMAKE_BUILD_TYPE=Release \
                -DLLVM_BUILD_DOCS=ON \
                $sphinx_flag \
                $doxygen_flag \
                $man_page_flag
 
-ninja -C $builddir $sphinx_targets $doxygen_targets $man_page_targets
-
-cmake -G Ninja $srcdir/../runtimes -B $builddir/runtimes-doc \
-               -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;${extra_man_page_runtimes}" \
-               -DLLVM_ENABLE_SPHINX=ON \
-               -DLLVM_BUILD_DOCS=ON \
-               -DSPHINX_WARNINGS_AS_ERRORS=OFF
-
-ninja -C $builddir/runtimes-doc \
-               docs-libcxx-html
+ninja -C $builddir $sphinx_targets $doxygen_targets $man_page_targets docs-libcxx-html
 
 if [ "${no_man_page}" != "yes" ]; then
   output="llvm_man_pages-${release}"
@@ -196,5 +188,5 @@ done
 # Keep the documentation for the runtimes under /projects/ to avoid breaking existing links.
 for d in libcxx/docs/; do
   mkdir -p $html_dir/projects/$d
-  mv $builddir/runtimes-doc/$d/html/* $html_dir/projects/$d/
+  mv $builddir/$d/html/* $html_dir/projects/$d/
 done
