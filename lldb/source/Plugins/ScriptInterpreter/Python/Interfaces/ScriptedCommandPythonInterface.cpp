@@ -9,6 +9,7 @@
 #include "../lldb-python.h"
 
 #include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/ExecutionContext.h"
