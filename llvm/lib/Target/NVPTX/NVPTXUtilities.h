@@ -28,7 +28,6 @@
 namespace llvm {
 
 class DataLayout;
-class TargetMachine;
 
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
@@ -65,8 +64,6 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
   return size;
 }
 
-bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
-
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||
          Ty->getScalarSizeInBits() >= 128 || Ty->isHalfTy() || Ty->isBFloatTy();
@@ -84,7 +81,7 @@ inline auto packed_types() {
 
 // Checks if the type VT can fit into a single register.
 inline bool isPackedVectorTy(EVT VT) {
-  return any_of(packed_types(), equal_to(VT));
+  return is_contained(packed_types(), VT);
 }
 
 // Checks if two or more of the type ET can fit into a single register.

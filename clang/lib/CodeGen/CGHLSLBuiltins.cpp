@@ -1460,6 +1460,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_interlocked_or: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Or);
   }
+  case Builtin::BI__builtin_hlsl_interlocked_xor: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xor);
+  }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType()->isIntegerTy(1) &&
