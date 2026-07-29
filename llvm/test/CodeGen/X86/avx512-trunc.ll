@@ -57,9 +57,8 @@ define <8 x i8> @trunc_qb_512_maskz(<8 x i64> %i, i8 %m) #0 {
 ;
 ; SKX-LABEL: trunc_qb_512_maskz:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovqb %zmm0, %xmm0
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vmovdqu8 %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpmovqb %zmm0, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = trunc <8 x i64> %i to <8 x i8>

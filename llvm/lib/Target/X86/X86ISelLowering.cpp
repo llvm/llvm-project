@@ -48680,6 +48680,20 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
   }
 
+  // Fold vselect(mask, vtrunc(x), 0) to vtrunc for masked vpmovqb.
+  if (Subtarget.hasAVX512() && CondVT.isVector() &&
+      CondVT.getVectorElementType() == MVT::i1 &&
+      ISD::isBuildVectorAllZeros(RHS.getNode()) && LHS.hasOneUse()) {
+    if (LHS.getOpcode() == X86ISD::VTRUNC) {
+      SDValue TruncSrc = LHS.getOperand(0);
+      EVT TruncSrcVT = TruncSrc.getValueType();
+      if (VT == MVT::v16i8 && TruncSrcVT == MVT::v8i64) {
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, DAG.getUNDEF(VT),
+                           Cond);
+      }
+    }
+  }
+
   // AVX512 - Extend select to merge with target shuffle.
   // select(mask, extract_subvector(shuffle(x)), y) -->
   // extract_subvector(select(widen(mask), shuffle(x), widen(y)))

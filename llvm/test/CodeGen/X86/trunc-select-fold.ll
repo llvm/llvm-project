@@ -6,8 +6,7 @@ define <8 x i8> @test_mask_vpmovqb(<8 x i64> %0, <8 x i64> %1) {
 ; CHECK:       # %bb.0: # %Entry
 ; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpopcntq %zmm0, %zmm0
-; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK-NEXT:    vmovdqu8 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vpmovqb %zmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 Entry:
