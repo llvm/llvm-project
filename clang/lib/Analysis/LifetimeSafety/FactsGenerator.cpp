@@ -1019,71 +1019,53 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   // FIXME: Add support for capture_by on constructors.
   if (isa<CXXConstructorDecl>(FD))
     return;
-  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  bool HasImplicitThisParam = MD && MD->isImplicitObjectMemberFunction();
-  auto processArgAttrs = [&](unsigned I, auto Callback) {
+  const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+  bool HasImplicitThisParam =
+      Method && Method->isImplicitObjectMemberFunction();
+  auto getArgCaptureBy = [FD,
+                          HasImplicitThisParam](unsigned I) -> LifetimeCaptureByAttr * {
+    const ParmVarDecl *PVD = nullptr;
     if (HasImplicitThisParam) {
-      if (I == 0) {
-        if (TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
-          AttributedTypeLoc ATL;
-          for (TypeLoc TL = TSI->getTypeLoc();
-               (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
-               TL = ATL.getModifiedLoc())
-            if (auto *A = ATL.getAttrAs<LifetimeCaptureByAttr>())
-              Callback(A);
-        }
-        return;
-      }
-      if (I - 1 < FD->getNumParams()) {
-        const ParmVarDecl *PVD = FD->getParamDecl(I - 1);
-        for (const auto *A : PVD->specific_attrs<LifetimeCaptureByAttr>())
-          Callback(A);
-      }
+      // FIXME: Add support for I == 0 i.e. capture_by on function declarations
+      if (I > 0 && I - 1 < FD->getNumParams())
+        PVD = FD->getParamDecl(I - 1);
     } else {
-      if (I < FD->getNumParams()) {
-        const ParmVarDecl *PVD = FD->getParamDecl(I);
-        for (const auto *A : PVD->specific_attrs<LifetimeCaptureByAttr>())
-          Callback(A);
-      }
+      if (I < FD->getNumParams())
+        PVD = FD->getParamDecl(I);
     }
+    return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    OriginList *CapturedOriginList = nullptr;
-    processArgAttrs(I, [&](const LifetimeCaptureByAttr *Attr) {
-      if (!Attr)
-        return;
-      if (!CapturedOriginList) {
-        CapturedOriginList = getOriginsList(*Args[I]);
-        if (!CapturedOriginList)
-          return;
-      }
-      for (int CapturingArgIdx : Attr->params()) {
-        // FIXME: Add support for capturing to Global/unknown.
-        if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
-            CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
-            CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
-          continue;
-        if (CapturingArgIdx < 0 ||
-            CapturingArgIdx >= static_cast<int>(Args.size()))
-          continue;
+    const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
+    if (!Attr)
+      continue;
+    OriginList *CapturedOriginList = getOriginsList(*Args[I]);
+    if (!CapturedOriginList)
+      continue;
+    for (int CapturingArgIdx : Attr->params()) {
+      // FIXME: Add support for capturing to Global/unknown.
+      if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
+          CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
+          CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
+      const Expr *CapturedByArg =
+          (CapturingArgIdx == LifetimeCaptureByAttr::This)
+              ? Args[0]
+              : Args[CapturingArgIdx];
+      assert(CapturedByArg && "Capturer expression must be valid");
 
-        const Expr *CapturedByArg = Args[CapturingArgIdx];
-        assert(CapturedByArg && "Capturer expression must be valid");
-
-        OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
-        OriginList *Dest =
-            getRValueOrigins(CapturedByArg, CapturingOriginList);
-        if (!Dest)
-          continue;
-        // KillDest=false because we cannot know if previous captures are being
-        // replaced or accumulated. Multiple successive captures into the same
-        // destination must all be tracked, so captured lifetimes are always
-        // merged.
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            Dest->getOuterOriginID(), CapturedOriginList->getOuterOriginID(),
-            /*KillDest=*/false));
-      }
-    });
+      OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
+      OriginList *Dest = getRValueOrigins(CapturedByArg, CapturingOriginList);
+      if (!Dest)
+        continue;
+      // KillDest=false because we cannot know if previous captures are being
+      // replaced or accumulated. Multiple successive captures into the same
+      // destination must all be tracked, so captured lifetimes are always
+      // merged.
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          Dest->getOuterOriginID(), CapturedOriginList->getOuterOriginID(),
+          /*KillDest=*/false));
+    }
   }
 }
 
