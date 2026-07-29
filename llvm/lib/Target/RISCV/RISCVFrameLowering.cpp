@@ -195,7 +195,8 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   // The shadow call stack popchk needs to happen after cm.pop that loads ra.
-  if (MI->getOpcode() == RISCV::CM_POP || MI->getOpcode() == RISCV::QC_CM_POP)
+  if (MI != MBB.end() &&
+      (MI->getOpcode() == RISCV::CM_POP || MI->getOpcode() == RISCV::QC_CM_POP))
     ++MI;
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
