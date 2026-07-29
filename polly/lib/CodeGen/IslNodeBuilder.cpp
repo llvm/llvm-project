@@ -464,6 +464,25 @@ static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
   return false;
 }
 
+static Value *adjustToType(IRBuilderBase &Builder, Value *V, Type *Ty) {
+  if (V->getType() == Ty)
+    return V;
+  if (V->getType()->getIntegerBitWidth() < Ty->getIntegerBitWidth())
+    return Builder.CreateSExt(V, Ty);
+  return Builder.CreateTrunc(V, Ty);
+}
+
+// Returns true when V is known to fit in IntPtrTy without data loss.
+// Accepts i64 constants such as 0 and 1 that ISL materialises as i64 even on
+// 32-bit targets.
+static bool fitsInPtrTy(Value *V, IntegerType *IntPtrTy) {
+  if (V->getType()->getIntegerBitWidth() <= IntPtrTy->getBitWidth())
+    return true;
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isSignedIntN(IntPtrTy->getBitWidth());
+  return false;
+}
+
 void IslNodeBuilder::createForSequential(isl::ast_node_for For,
                                          bool MarkParallel) {
   Value *ValueLB, *ValueUB, *ValueInc;
@@ -497,12 +516,23 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. This also allows Hexagon to represent loops as
+  // Hardware loops. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInPtrTy(ValueLB, IntPtrTy) && fitsInPtrTy(ValueUB, IntPtrTy) &&
+      fitsInPtrTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = adjustToType(Builder, ValueLB, MaxType);
+  ValueUB = adjustToType(Builder, ValueUB, MaxType);
+  ValueInc = adjustToType(Builder, ValueInc, MaxType);
 
   // If we can show that LB <Predicate> UB holds at least once, we can
   // omit the GuardBB in front of the loop.
@@ -577,12 +607,22 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInPtrTy(ValueLB, IntPtrTy) && fitsInPtrTy(ValueUB, IntPtrTy) &&
+      fitsInPtrTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = adjustToType(Builder, ValueLB, MaxType);
+  ValueUB = adjustToType(Builder, ValueUB, MaxType);
+  ValueInc = adjustToType(Builder, ValueInc, MaxType);
 
   BasicBlock::iterator LoopBody;
 
