@@ -69,11 +69,11 @@ struct FoldIntoElementwisePattern : public OpInterfaceRewritePattern<LinalgOp> {
       if (folded) {
         changed = true;
       } else {
+        // push in original operand and its map.
         newIns.push_back(operand->get());
         newMaps.push_back(consumerMap);
       }
     }
-
     if (!changed)
       return failure();
 
