@@ -26,7 +26,7 @@ typedef int   __attribute__((coop_mat(CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
 
 // CHECK-LABEL: @{{.*}}test_init_float
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
-// CHECK-SAME:    @__spirv_CompositeConstruct(float
+// CHECK-SAME:    @__spirv_CompositeConstruct
 
 kernel void test_init_float(global float *out) {
     MatA_t a;
@@ -41,7 +41,7 @@ kernel void test_init_float(global float *out) {
 
 // CHECK-LABEL: @{{.*}}test_init_int
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
-// CHECK-SAME:    @__spirv_CompositeConstruct(i32
+// CHECK-SAME:    @__spirv_CompositeConstruct
 
 kernel void test_init_int(void) {
     MatA_int_t m;
@@ -56,7 +56,7 @@ kernel void test_init_int(void) {
 
 // CHECK-LABEL: @{{.*}}test_init_zero
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
-// CHECK-SAME:    @__spirv_CompositeConstruct(float {{.*}}0
+// CHECK-SAME:    @__spirv_CompositeConstruct_{{.*}}(float {{.*}}0
 
 kernel void test_init_zero(void) {
     MatC_t acc;
@@ -71,7 +71,7 @@ kernel void test_init_zero(void) {
 // ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_length
-// CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR(
+// CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
 // CHECK-SAME:    target("spirv.CooperativeMatrixKHR"
 
 kernel void test_length(global unsigned int *out) {
@@ -88,8 +88,8 @@ kernel void test_length(global unsigned int *out) {
 
 // CHECK-LABEL: @{{.*}}test_init_then_length
 // CHECK:         call spir_func target("spirv.CooperativeMatrixKHR"
-// CHECK-SAME:    @__spirv_CompositeConstruct(
-// CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR(
+// CHECK-SAME:    @__spirv_CompositeConstruct
+// CHECK:         call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
 
 kernel void test_init_then_length(global unsigned int *out) {
     MatA_t a;
@@ -103,7 +103,7 @@ kernel void test_init_then_length(global unsigned int *out) {
 // ---------------------------------------------------------------------------
 
 // CHECK-LABEL: @{{.*}}test_length_cc
-// CHECK:        call spir_func i32 @__spirv_CooperativeMatrixLengthKHR(
+// CHECK:        call spir_func i32 @__spirv_CooperativeMatrixLengthKHR
 
 kernel void test_length_cc(global unsigned int *out) {
     MatC_t acc;
