@@ -131,8 +131,8 @@ OPTIONS:
 )___";
 }
 
-void printVersion() {
-  outs() << "lldb-mcp: ";
+void printVersion(StringRef tool_name) {
+  outs() << tool_name << ": ";
   cl::PrintVersionMessage();
   outs() << "liblldb: " << SBDebugger::GetVersionString() << '\n';
 }
@@ -161,18 +161,19 @@ int main(int argc, char *argv[]) {
   assert(result);
 #endif
 
+  StringRef tool_name = sys::path::filename(argv[0]);
   for (int i = 1; i < argc; ++i) {
     StringRef arg(argv[i]);
     if (arg == "-h" || arg == "--help") {
-      printHelp(sys::path::filename(argv[0]));
+      printHelp(tool_name);
       return EXIT_SUCCESS;
     }
     if (arg == "-v" || arg == "--version") {
-      printVersion();
+      printVersion(tool_name);
       return EXIT_SUCCESS;
     }
     WithColor::error(errs()) << "unknown argument '" << arg << "'\n";
-    printHelp(sys::path::filename(argv[0]));
+    printHelp(tool_name);
     return EXIT_FAILURE;
   }
 
