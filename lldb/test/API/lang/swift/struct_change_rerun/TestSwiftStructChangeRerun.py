@@ -22,7 +22,6 @@ import shutil
 
 class TestSwiftStructChangeRerun(TestBase):
     @expectedFailureWindows  # https://github.com/swiftlang/llvm-project/issues/13444
-    @skipEmbeddedSwift
     @swiftTest
     @skipIf(
         oslist=["windows"],
