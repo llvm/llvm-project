@@ -79,6 +79,9 @@ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
   directory containing the LLDB library.")
 
+set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information.")
+
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
   # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.

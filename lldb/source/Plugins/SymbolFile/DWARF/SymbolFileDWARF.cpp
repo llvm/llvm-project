@@ -39,6 +39,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 
@@ -95,10 +96,6 @@
 
 #include <cctype>
 #include <cstring>
-
-#ifndef LLDB_DWO_DIAGNOSTIC_SUFFIX
-#define LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded."
-#endif
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
 
