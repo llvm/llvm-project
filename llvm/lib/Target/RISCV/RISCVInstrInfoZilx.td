@@ -113,11 +113,11 @@ def : InstAlias<"lxbu $rd, $rs2, $rs1", (LXSBU GPR:$rd, GPRMemZeroOffset:$rs2, G
 // base L{B,H,W,D}[U] patterns (which also match a "reg + reg" address as
 // base+0) and, being listed later, would never be selected. The required
 // ordering is:
-//   base L*  <  scale-0 (unscaled) Zilx  <  scaled Zilx
-// For a given load only the scale-0 form (which leaves the shift as a separate
-// slli) and the exactly-matching scaled form can compete, so a scaled load
-// only needs to outrank its own unscaled form; distinct non-zero scales never
-// compete for the same node.
+//   base L*  <  unscaled (shift-amount 0) Zilx  <  scaled Zilx
+// For a given load only the shift-amount-0 form (which leaves the shift as a
+// separate slli) and the exactly-matching scaled form can compete, so a scaled
+// load only needs to outrank its own unscaled form; distinct non-zero shift
+// amounts never compete for the same node.
 class AddrRegReg<int N>
     : ComplexPattern<iPTR, 2, "SelectAddrRegRegFixedScale<"#N#">",
                      [], [], !if(!eq(N, 0), 10, 11)>;
@@ -156,7 +156,8 @@ class ScaledZextIndexLoadPat<PatFrag LoadOp, RVInst Inst, int Scale, ValueType v
 
 // Patterns
 let Predicates = [HasStdExtZilx] in {
-// Byte loads only have a scaled (scale-0) encoding.
+// Byte loads only exist in scaled form, but the byte scale factor is 1, so
+// they match with shift amount 0 (address = base + index).
 def : UnscaledIndexLoadPat<extloadi8, LXSB>;
 def : UnscaledIndexLoadPat<sextloadi8, LXSB>;
 def : UnscaledIndexLoadPat<zextloadi8, LXSBU>;
@@ -186,7 +187,7 @@ def : ScaledIndexLoadPat<zextloadi32, LXSWU, 2, i64>;
 
 def : ScaledIndexLoadPat<load, LXSD, 3, i64>;
 
-// Zero-extended 32-bit index. Byte loads use the scale-0 encoding.
+// Zero-extended 32-bit index. Byte loads match with shift amount 0.
 def : ScaledZextIndexLoadPat<extloadi8, LXSUWB, 0>;
 def : ScaledZextIndexLoadPat<sextloadi8, LXSUWB, 0>;
 def : ScaledZextIndexLoadPat<zextloadi8, LXSUWBU, 0>;
