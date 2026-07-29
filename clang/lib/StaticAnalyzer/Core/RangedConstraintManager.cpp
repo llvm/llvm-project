@@ -30,16 +30,11 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    SymbolRef Sym,
                                                    bool Assumption) {
   SVal SimplifiedVal = simplifyToSVal(State, Sym);
-  // Note: a loc::ConcreteInt is not possible here. This callsite is only ever
-  // reached with non-loc-typed symbols (SimpleConstraintManager::assumeAux's
-  // nonloc::SymbolVal case and assumeSymRel's comparison-to-zero rewrite), and
-  // simplifyToSVal() -> makeSymbolVal() only produces a Loc for pointer-typed
-  // symbols -- so the fold can only ever be a nonloc::ConcreteInt.
-  if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
+  if (const auto *CI = SimplifiedVal.getAsInteger()) {
     // The symbol folds to a concrete integer. If the assumption contradicts it
     // the path is infeasible and must be pruned; otherwise a self-contradictory
     // state would stay feasible and could crash checkers downstream.
-    if (isConcreteInfeasible(*CI->getValue(), Assumption))
+    if (isConcreteInfeasible(*CI, Assumption))
       return nullptr;
     // When the fold is consistent we deliberately do NOT return early: we fall
     // through and record the constraint on the *original* symbol. That is not a
@@ -139,28 +134,19 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
     const llvm::APSInt &To, bool InRange) {
 
   SVal SimplifiedVal = simplifyToSVal(State, Sym);
-  // Note: unlike assumeSym(), this callsite can receive a pointer-typed Sym
-  // (assumeInclusiveRangeInternal's nonloc::LocAsInteger case, e.g. a
-  // case-range switch over `(intptr_t)ptr`), so simplifyToSVal() could in
-  // principle yield a loc::ConcreteInt. In practice it never does: that fold
-  // requires the pointer pinned to a single concrete address, and once it is,
-  // `(intptr_t)ptr` folds eagerly to a nonloc::ConcreteInt and is handled
-  // before ever reaching a symbol here. Hence only the nonloc::ConcreteInt case
-  // needs handling.
-  if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
+  if (const auto *CI = SimplifiedVal.getAsInteger()) {
     // The symbol folds to a concrete integer. Prune the path only when the
     // concrete value proves it infeasible (mirroring
     // SimpleConstraintManager::assumeInclusiveRangeInternal). If it is
     // consistent, fall through so the existing machinery still runs (see the
     // note in assumeSym for why the fall-through is load-bearing).
     //
-    // V comes from the simplified symbol, so it need not share From/To's
+    // *CI comes from the simplified symbol, so it need not share From/To's
     // bit width or signedness. Use APSInt::compareValues(), which normalizes
     // both, rather than the APSInt relational operators, which assert on a
     // signedness mismatch and require equal bit width.
-    const llvm::APSInt &V = *CI->getValue();
-    bool IsInRange = llvm::APSInt::compareValues(V, From) >= 0 &&
-                     llvm::APSInt::compareValues(V, To) <= 0;
+    bool IsInRange = llvm::APSInt::compareValues(*CI, From) >= 0 &&
+                     llvm::APSInt::compareValues(*CI, To) <= 0;
     if (IsInRange != InRange)
       return nullptr;
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
@@ -196,17 +182,12 @@ ProgramStateRef
 RangedConstraintManager::assumeSymUnsupported(ProgramStateRef State,
                                               SymbolRef Sym, bool Assumption) {
   SVal SimplifiedVal = simplifyToSVal(State, Sym);
-  // Note: like assumeSym(), this never receives a pointer-typed Sym -- its
-  // callers (assumeSym()'s fall-through and assumeAux()'s !canReasonAbout
-  // branch, where getAsSymbol() yields the integer-typed bitwise/comparison
-  // expression) only pass non-loc symbols -- so the fold is always a
-  // nonloc::ConcreteInt.
-  if (auto CI = SimplifiedVal.getAs<nonloc::ConcreteInt>()) {
+  if (const auto *CI = SimplifiedVal.getAsInteger()) {
     // Prune only when the concrete fold contradicts the assumption. When it is
     // consistent we fall through and record the constraint on the original
     // symbol (assumeSymNE/EQ below) rather than returning early; see the note
     // in assumeSym for why the fall-through is load-bearing.
-    if (isConcreteInfeasible(*CI->getValue(), Assumption))
+    if (isConcreteInfeasible(*CI, Assumption))
       return nullptr;
   } else if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol()) {
     Sym = SimplifiedSym;
