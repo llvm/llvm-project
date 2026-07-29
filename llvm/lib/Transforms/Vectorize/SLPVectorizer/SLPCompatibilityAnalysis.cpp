@@ -23,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <array>
+#include <cassert>
 #include <utility>
 
 using namespace llvm;

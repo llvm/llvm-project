@@ -152,7 +152,7 @@ class InstructionsState {
   /// GetVectorCost.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
-  /// Wether the instruction state represents copyable instructions.
+  /// Whether the instruction state represents copyable instructions.
   bool HasCopyables = false;
 
 public:
