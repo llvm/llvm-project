@@ -338,9 +338,9 @@ def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
   let summary = "Register a device or constant global as device-resident";
 
   let description = [{
-    Emitted under -gpu=mem:unified for a module-scope device or constant global.
-    Registers the global with the runtime as device-resident so that a matching
-    host-side declaration of the same symbol is not treated as host memory.
+    Emitted under -gpu=mem:unified for globals.
+    Registers the global with the runtime as unified variable or device-resident
+    if the `deviceResident` attribute is present.
   }];
 
   let arguments = (ins
