@@ -1439,6 +1439,75 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
+    def test_memory_region_name_from_nt_file(self):
+        yaml_path = self.getSourcePath("elf-NT_FILE-memory-region.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-memory-region.core")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+
+        region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x400000, region))
+        self.assertEqual(region.GetRegionBase(), 0x400000)
+        self.assertEqual(region.GetRegionEnd(), 0x401000)
+        self.assertTrue(region.IsMapped())
+        self.assertTrue(region.IsReadable())
+        self.assertFalse(region.IsWritable())
+        self.assertTrue(region.IsExecutable())
+        self.assertEqual(region.GetName(), "/tmp/kernel.hsaco")
+
+        interior_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x401000, interior_region))
+        self.assertEqual(interior_region.GetRegionBase(), 0x401000)
+        self.assertEqual(interior_region.GetRegionEnd(), 0x402000)
+        self.assertTrue(interior_region.IsMapped())
+        self.assertTrue(interior_region.IsReadable())
+        self.assertFalse(interior_region.IsWritable())
+        self.assertFalse(interior_region.IsExecutable())
+        self.assertIsNone(interior_region.GetName())
+
+        nt_file_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x402000, nt_file_region))
+        self.assertEqual(nt_file_region.GetRegionBase(), 0x402000)
+        self.assertEqual(nt_file_region.GetRegionEnd(), 0x403000)
+        self.assertTrue(nt_file_region.IsMapped())
+        # SB's boolean permission accessors report unknown as false.
+        self.assertFalse(nt_file_region.IsReadable())
+        self.assertFalse(nt_file_region.IsWritable())
+        self.assertFalse(nt_file_region.IsExecutable())
+        self.assertEqual(nt_file_region.GetName(), "/tmp/kernel.hsaco")
+
+        self.expect(
+            "memory region 0x402000",
+            substrs=["???", "/tmp/kernel.hsaco"],
+        )
+
+        regions = process.GetMemoryRegions()
+        self.assertEqual(regions.GetSize(), 3)
+        listed_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            regions.GetMemoryRegionContainingAddress(0x400000, listed_region)
+        )
+        self.assertEqual(listed_region, region)
+        self.assertTrue(
+            regions.GetMemoryRegionContainingAddress(0x401000, listed_region)
+        )
+        self.assertEqual(listed_region, interior_region)
+        self.assertTrue(regions.GetMemoryRegionAtIndex(2, listed_region))
+        self.assertEqual(listed_region, nt_file_region)
+
+        following_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x403000, following_region))
+        self.assertEqual(following_region.GetRegionBase(), 0x403000)
+        self.assertEqual(following_region.GetRegionEnd(), lldb.LLDB_INVALID_ADDRESS)
+        self.assertFalse(following_region.IsMapped())
+        self.assertIsNone(following_region.GetName())
+
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
     def test_exe_name_extraction_nt_file(self):
         # This core file has:
         # - NT_FILE entry for the executable with path '/path/nt_file_foo
