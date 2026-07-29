@@ -3218,9 +3218,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);
 
-      // TODO: We could add the byref attribute if not byval, but it would
-      // require updating many testcases.
-
       CharUnits Align = AI.getIndirectAlign();
 
       // In a byval argument, it is important that the required
@@ -3237,6 +3234,23 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
       Attrs.addAlignmentAttr(Align.getQuantity());
+
+      // According to [basic.stc.auto], parameters have automatic storage
+      // duration. Therefore, the underlying object of this pointer will not be
+      // freed during the function's execution. If the parameter is realigned,
+      // this may not be true, but realignment does not currently occur for
+      // non-byval. Hmm....
+      //
+      // We can already infer noalias and nofree like optimization behavior if
+      // the byval attribute is present.
+      if (!AI.getIndirectByVal()) {
+        assert(!AI.getIndirectRealign() &&
+               "Pointer copied from realign legal to be freed?");
+        Attrs.addAttribute(llvm::Attribute::NoFree);
+        if (!ParamType->isIncompleteType() && ParamType->isConstantSizeType())
+          Attrs.addDereferenceableAttr(
+              getMinimumObjectSize(ParamType).getQuantity());
+      }
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
