@@ -266,11 +266,11 @@ cc_library(
     name = "API",
     srcs = glob([
         "source/API/**/*.cpp",
-        "source/API/**/*.h",
     ]),
     hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     includes = ["include"],
     deps = [
+        ":APIPrivateHeaders",
         ":Breakpoint",
         ":Commands",
         ":Core",
@@ -419,6 +419,16 @@ cc_library(
 )
 
 cc_library(
+    name = "APIPrivateHeaders",
+    hdrs = glob(["source/API/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
+    includes = ["source"],
+    deps = [
+        ":APIHeaders",
+    ],
+)
+
+cc_library(
     name = "InterpreterHeaders",
     hdrs = glob(["include/lldb/Interpreter/**/*.h"]),
     features = ["-parse_headers"],  # Would otherwise have circular dependencies
@@ -460,6 +470,7 @@ cc_library(
     srcs = glob(["source/Interpreter/**/*.cpp"]),
     deps = [
         ":API",
+        ":APIPrivateHeaders",
         ":Commands",
         ":Core",
         ":DataFormatters",
