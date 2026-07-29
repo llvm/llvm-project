@@ -66,30 +66,12 @@ jobs:
     outputs:
       man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
-
-      man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
-      man-page-upload: ${{ steps.vars.outputs.man-page-upload }}
-      man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
     steps:
       - name: Validate Input
         if: inputs.release-version
         uses: ./.github/workflows/validate-release-version
         with:
           release-version: ${{ inputs.release-version }}
-
-      - name: Collect Variables
-        id: vars
-        env:
-          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
-          UPLOAD_MAN_PAGES: ${{ inputs.upload }}
-        shell: bash
-        run: |
-          {
-            echo "man-page-release-version=$INPUTS_RELEASE_VERSION"
-            echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
-            echo "man-page-upload=$UPLOAD_MAN_PAGES"
-            echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -212,10 +194,10 @@ jobs:
        id: man-page-artifact-upload
        uses: ./.github/workflows/upload-release-artifact
        with:
-         release-version: ${{ needs.release-documentation.outputs.man-page-release-version }}
+         release-version: ${{ inputs.release-version }}
          artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
-         attestation-name: ${{ needs.release-documentation.outputs.man-page-attestation-name }}
+         attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-man-page-attestation
          digest: ${{ needs.release-documentation.outputs.man-page-digest }}
-         upload: ${{ needs.release-documentation.outputs.man-page-upload }}
+         upload: ${{ inputs.upload }}
          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
