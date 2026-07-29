@@ -56,6 +56,7 @@ STATISTIC(NumShufOfBitcast, "Number of shuffles moved after bitcast");
 STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
+STATISTIC(NumScalarCast, "Number of scalar casts formed");
 
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
@@ -149,6 +150,7 @@ private:
   bool foldShuffleFromReductions(Instruction &I);
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
+  bool scalarizeCastExtract(Instruction &I);
   bool foldSignBitReductionCmp(Instruction &I);
   bool foldReductionZeroTest(Instruction &I);
   bool foldICmpEqZeroVectorReduce(Instruction &I);
@@ -4360,6 +4362,98 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   return true;
 }
 
+/// Try to scalarize a multi-use cast whose users are all extractelements:
+///   extractelement (castop X), Idx  -->  castop (extractelement X, Idx)
+///
+/// InstCombine canonicalizes this for single-use casts. Multi-use cast
+/// needs a cost model, since it turns one vector cast into N scalar casts;
+/// every user must be an extractelement or the vector cast would survive
+/// anyway.
+bool VectorCombine::scalarizeCastExtract(Instruction &I) {
+  if (!TTI.allowVectorElementIndexingUsingGEP())
+    return false;
+
+  auto *Cast = dyn_cast<CastInst>(&I);
+  if (!Cast || Cast->hasOneUse())
+    return false;
+
+  // Every cast except bitcast is elementwise, so moving one past an
+  // extractelement is always valid and profitability is left to the cost model
+  // below. A bitcast can change the lane count, so it's excluded here;
+  // InstCombine's foldBitcastExtElt() handles that case,
+  Instruction::CastOps Opc = Cast->getOpcode();
+  if (Opc == Instruction::BitCast)
+    return false;
+
+  // TODO: Fixed-width only; scalable vectors need separate cost validation.
+  auto *SrcTy = dyn_cast<FixedVectorType>(Cast->getOperand(0)->getType());
+  auto *DstTy = dyn_cast<FixedVectorType>(Cast->getType());
+  if (!SrcTy || !DstTy)
+    return false;
+
+  // Every user has to be an extractelement, or the vector cast would survive
+  // alongside the new scalar casts. A variable index is only allowed in the
+  // cast's own block: elsewhere it may sit in a loop, and unlike a constant
+  // index it can't be hoisted back out if the cast was loop-invariant.
+  SmallVector<ExtractElementInst *, 4> Extracts;
+  for (User *U : Cast->users()) {
+    auto *EE = dyn_cast<ExtractElementInst>(U);
+    if (!EE)
+      return false;
+    if (!isa<ConstantInt>(EE->getIndexOperand()) &&
+        EE->getParent() != Cast->getParent())
+      return false;
+    if (!EE->use_empty())
+      Extracts.push_back(EE);
+  }
+  if (Extracts.empty())
+    return false;
+
+  // OldCost: the vector cast + its extracts.
+  // NewCost: a narrow extract + scalar cast per lane.
+  InstructionCost OldCost = TTI.getCastInstrCost(
+      Opc, DstTy, SrcTy, TTI::getCastContextHint(Cast), CostKind, Cast);
+  // The scalar cast reads the new narrow extract, so unlike the vector cast it
+  // has no load or store to fold into.
+  InstructionCost ScalarCastCost = TTI.getCastInstrCost(
+      Opc, DstTy->getElementType(), SrcTy->getElementType(),
+      TTI::CastContextHint::None, CostKind);
+  InstructionCost NewCost = 0;
+  for (ExtractElementInst *EE : Extracts) {
+    // Only an in-range constant maps to a known lane; anything else is costed
+    // as an unknown index.
+    unsigned Idx = -1U;
+    if (auto *IdxC = dyn_cast<ConstantInt>(EE->getIndexOperand()))
+      if (IdxC->getValue().ult(DstTy->getNumElements()))
+        Idx = IdxC->getZExtValue();
+    OldCost += TTI.getVectorInstrCost(*EE, DstTy, CostKind, Idx);
+    NewCost += TTI.getVectorInstrCost(Instruction::ExtractElement, SrcTy,
+                                      CostKind, Idx) +
+               ScalarCastCost;
+  }
+
+  LLVM_DEBUG(dbgs() << "Found a multi-use cast feeding extracts: " << *Cast
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (!NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  for (ExtractElementInst *EE : Extracts) {
+    Builder.SetInsertPoint(EE);
+    Value *Extract = Builder.CreateExtractElement(Cast->getOperand(0),
+                                                  EE->getIndexOperand());
+    Worklist.pushValue(Extract);
+    Value *ScalarCast = Builder.CreateCast(Opc, Extract, EE->getType());
+    if (auto *SC = dyn_cast<Instruction>(ScalarCast))
+      SC->copyIRFlags(Cast);
+    replaceValue(*EE, *ScalarCast, /*Erase=*/false);
+    ++NumScalarCast;
+  }
+
+  return true;
+}
+
 /// Determine if its more efficient to fold:
 ///   reduce(trunc(x)) -> trunc(reduce(x)).
 ///   reduce(sext(x))  -> sext(reduce(x)).
@@ -6516,6 +6610,8 @@ bool VectorCombine::run() {
       if (scalarizeLoad(I))
         return true;
       if (scalarizeExtExtract(I))
+        return true;
+      if (scalarizeCastExtract(I))
         return true;
       if (scalarizeVPIntrinsic(I))
         return true;
