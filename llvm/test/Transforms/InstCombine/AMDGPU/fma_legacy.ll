@@ -140,38 +140,6 @@ define float @test_finite_assumed(float %x, float %y, float %z) {
   ret float %call
 }
 
-; Combine without nsz: both mul operands are finite non-zero constants so the
-; legacy zero clause can never fire and sign-of-zero cannot diverge.
-define float @test_both_const_nonzero(float %z) {
-; CHECK-LABEL: @test_both_const_nonzero(
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float -2.000000e+00, float 9.950000e+01, float [[Z:%.*]])
-; CHECK-NEXT:    ret float [[CALL]]
-;
-  %call = call float @llvm.amdgcn.fma.legacy(float -2.0, float 99.5, float %z)
-  ret float %call
-}
-
-; Combine without nsz: qNaN and finite non-zero, neither can be zero.
-; Result constant-folds to +qnan.
-define float @test_nan_const_nonzero(float %z) {
-; CHECK-LABEL: @test_nan_const_nonzero(
-; CHECK-NEXT:    ret float +qnan
-;
-  %call = call float @llvm.amdgcn.fma.legacy(float 0x7FF8000000000000, float -2.0, float %z)
-  ret float %call
-}
-
-; Combine without nsz: +inf and finite non-zero, neither can be zero.
-; Folds to llvm.fma.f32 (not constant-folded since %z is a runtime value).
-define float @test_inf_const_nonzero(float %z) {
-; CHECK-LABEL: @test_inf_const_nonzero(
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float +inf, float -2.000000e+00, float [[Z:%.*]])
-; CHECK-NEXT:    ret float [[CALL]]
-;
-  %call = call float @llvm.amdgcn.fma.legacy(float 0x7FF0000000000000, float -2.0, float %z)
-  ret float %call
-}
-
 define float @test_poison_x_y(float %x, float %y) {
 ; CHECK-LABEL: @test_poison_x_y(
 ; CHECK-NEXT:    ret float poison

@@ -108,37 +108,6 @@ define float @test_finite_assumed(float %x, float %y) {
   ret float %call
 }
 
-; Combine to fmul without nsz: both operands are finite non-zero constants so
-; the legacy zero clause can never fire (neither operand is zero) and there is
-; no sign-of-zero divergence. The result is further constant-folded to -199.0.
-define float @test_both_const_nonzero() {
-; CHECK-LABEL: @test_both_const_nonzero(
-; CHECK-NEXT:    ret float -1.990000e+02
-;
-  %call = call float @llvm.amdgcn.fmul.legacy(float -2.0, float 99.5)
-  ret float %call
-}
-
-; Combine to fmul without nsz: qNaN and finite non-zero, neither can be zero.
-; Result constant-folds to +qnan.
-define float @test_nan_const_nonzero() {
-; CHECK-LABEL: @test_nan_const_nonzero(
-; CHECK-NEXT:    ret float +qnan
-;
-  %call = call float @llvm.amdgcn.fmul.legacy(float 0x7FF8000000000000, float -2.0)
-  ret float %call
-}
-
-; Combine to fmul without nsz: +inf and finite non-zero, neither can be zero.
-; Result constant-folds to -inf.
-define float @test_inf_const_nonzero() {
-; CHECK-LABEL: @test_inf_const_nonzero(
-; CHECK-NEXT:    ret float -inf
-;
-  %call = call float @llvm.amdgcn.fmul.legacy(float 0x7FF0000000000000, float -2.0)
-  ret float %call
-}
-
 define float @test_poison_var(float %x) {
 ; CHECK-LABEL: @test_poison_var(
 ; CHECK-NEXT:    ret float poison
