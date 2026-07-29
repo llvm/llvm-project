@@ -293,8 +293,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // Sanitize the name of generic targets.
   // e.g. gfx10-1-generic -> gfx10_1_generic
-  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
-      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
+  if (GPUKind >= llvm::AMDGPU::GK_AMDGPU_GENERIC_FIRST &&
+      GPUKind <= llvm::AMDGPU::GK_AMDGPU_GENERIC_LAST) {
     llvm::replace(CanonName, '-', '_');
   }
 

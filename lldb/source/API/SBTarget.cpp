@@ -2159,6 +2159,8 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
       if (llvm::Expected<DisassemblerSP> disassembler =
               target_sp->ReadInstructions(*addr_ptr, count, flavor_string)) {
         sb_instructions.SetDisassembler(*disassembler);
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::API), disassembler.takeError(), "{0}");
       }
     }
   }

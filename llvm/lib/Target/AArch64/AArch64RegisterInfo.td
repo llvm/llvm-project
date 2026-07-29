@@ -2022,5 +2022,7 @@ let isAllocatable = 0, GeneratePressureSet = 0 in {
 
 def GeneralPurposeRegisters : RegisterCategory<[GPR64, GPR32]>;
 
-def FIXED_REGS : RegisterClass<"AArch64", [i64], 64, (add FP, SP, VG, FFR)>;
+def FIXED_REGS : RegisterClass<"AArch64", [i64], 64, (add FP, SP, VG, FFR)> {
+  let isAllocatable = 0;
+}
 def FixedRegisters : RegisterCategory<[CCR, FIXED_REGS]>;
