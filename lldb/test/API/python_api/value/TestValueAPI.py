@@ -332,6 +332,13 @@ class ValueAPITestCase(TestBase):
                     rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
                     self.assertTrue(rsp_with_name_index < num_registers)
                     self.assertEqual(sp_with_name_index, rsp_with_name_index)
+
+                    # FIXME: There is another bug that the conversion only looks for lower
+                    # case names. By using mixed case, you can reach the real "sp.
+                    sp_with_name_index_mixed = reg_set.GetIndexOfChildWithName("sP")
+                    self.assertTrue(sp_with_name_index_mixed < num_registers)
+                    self.assertEqual(sp_with_name_index_mixed, child_idx)
+
                     continue
 
                 # GetIndexOfChildWithName should return the same index.
