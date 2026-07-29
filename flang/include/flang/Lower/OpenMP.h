@@ -22,6 +22,8 @@ namespace mlir {
 class Operation;
 class Location;
 class Type;
+class Value;
+class OpBuilder;
 namespace omp {
 enum class DeclareTargetDeviceType : uint32_t;
 enum class DeclareTargetCaptureClause : uint32_t;
