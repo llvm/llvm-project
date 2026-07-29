@@ -5525,6 +5525,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
         ScanRedInfo->Span,
         llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
     Builder.SetInsertPoint(InputBB);
+    // Branch around the orig-val seed load and combine when the loop has zero
+    // logical iterations. When Span == 0 no scan-buffer entry is populated, so
+    // loading buffer[0] and feeding it to a (possibly input-sensitive
+    // user-defined) reduction combiner would be undefined behavior. In that
+    // case skip straight to the exit; the finals' zero-trip guard preserves
+    // orig-val as the result.
+    llvm::Value *HasElem = Builder.CreateICmpUGT(
+        ScanRedInfo->Span, llvm::ConstantInt::get(IndexTy, 0));
+    llvm::BasicBlock *SeedBB =
+        BasicBlock::Create(CurFn->getContext(), "omp.scan.seed", CurFn, ExitBB);
+    Builder.CreateCondBr(HasElem, SeedBB, ExitBB);
+    Builder.SetInsertPoint(SeedBB);
     // Combine the original variable's incoming value (orig-val) into the first
     // buffer element before computing the prefix sum. Per the OpenMP scan
     // semantics orig-val is a single prefix element that must be reflected in
@@ -5532,21 +5544,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     // Folding it in here lets the log-scan prefix computation propagate it into
     // every element (and into the finals' read of `buffer[Span]`), regardless
     // of whether an iteration's input phase accumulates into or overwrites the
-    // reduction variable. `select(Span > 0, 1, 0)` keeps the access in bounds
-    // when Span == 0: buffer[0] is otherwise unused and the finals' zero-trip
-    // guard discards it.
-    llvm::Value *HasElem = Builder.CreateICmpUGT(
-        ScanRedInfo->Span, llvm::ConstantInt::get(IndexTy, 0));
-    llvm::Value *FirstIdx =
-        Builder.CreateSelect(HasElem, llvm::ConstantInt::get(IndexTy, 1),
-                             llvm::ConstantInt::get(IndexTy, 0));
+    // reduction variable. Span > 0 is guaranteed here, so buffer[1] is valid.
     for (ReductionInfo RedInfo : ReductionInfos) {
       Value *ReductionVal = RedInfo.PrivateVariable;
       Value *BuffPtr = (*(ScanRedInfo->ScanBuffPtrs))[ReductionVal];
       Value *Buff = Builder.CreateLoad(Builder.getPtrTy(), BuffPtr);
       Type *DestTy = RedInfo.ElementType;
-      Value *ElemPtr =
-          Builder.CreateInBoundsGEP(DestTy, Buff, FirstIdx, "arrayOffset");
+      Value *ElemPtr = Builder.CreateInBoundsGEP(
+          DestTy, Buff, llvm::ConstantInt::get(IndexTy, 1), "arrayOffset");
       Value *OrigVal = Builder.CreateLoad(DestTy, RedInfo.Variable);
       Value *Elem = Builder.CreateLoad(DestTy, ElemPtr);
       llvm::Value *Combined;
@@ -5559,9 +5564,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     }
     // The log-scan prefix computation is only well-defined when there are at
     // least two elements: `log2(Span)` is invalid for Span == 0 and the loop
-    // trip computation underflows/loops forever for Span <= 1. For Span <= 1
-    // the buffer already holds the final value(s), so skip straight to the
-    // exit.
+    // trip computation underflows/loops forever for Span <= 1. For Span == 1
+    // the buffer already holds the final (seeded) value, so skip straight to
+    // the exit.
     llvm::Value *SpanGuard = Builder.CreateICmpUGT(
         ScanRedInfo->Span,
         llvm::ConstantInt::get(ScanRedInfo->Span->getType(), 1));
@@ -5572,9 +5577,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
     // size pow2k = 1;
     PHINode *Pow2K = Builder.CreatePHI(IndexTy, 2);
+    // The loop is now entered from the seed block (guarded by Span > 0), not
+    // directly from InputBB.
     Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
-                         InputBB);
-    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1), InputBB);
+                         SeedBB);
+    Pow2K->addIncoming(llvm::ConstantInt::get(IndexTy, 1), SeedBB);
     // for (size i = n - 1; i >= 2 ^ k; --i)
     //   tmp[i] op= tmp[i-pow2k];
     llvm::BasicBlock *InnerLoopBB =

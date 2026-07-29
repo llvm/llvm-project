@@ -86,9 +86,15 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[LOG:.+]] = call double @llvm.log2.f64(double 1.000000e+02) #0
 //CHECK:   %[[CEIL:.+]] = call double @llvm.ceil.f64(double %[[LOG]]) #0
 //CHECK:   %[[UB:.+]] = fptoui double %[[CEIL]] to i32
+// Zero-trip guard: skip the orig-val seed load/combine when Span == 0 so
+// buffer[0] is never loaded or passed to the reduction combiner.
+//CHECK:   br i1 {{.*}}, label %omp.scan.seed, label %omp.outer.log.scan.exit
+//CHECK: omp.outer.log.scan.exit:
+//CHECK: @__kmpc_end_masked
+//CHECK: omp.scan.seed:
 // Combine the original variable's incoming value (orig-val) into the first
-// buffer element once, before the prefix sum, so it is reflected in every
-// scan result and in the final reduction value.
+// buffer element once (Span > 0 is guaranteed here), before the prefix sum, so
+// it is reflected in every scan result and in the final reduction value.
 //CHECK:   %[[OBUFF:.+]] = load ptr, ptr %{{.*}}, align 8
 //CHECK:   %[[OELEMPTR:.+]] = getelementptr inbounds i32, ptr %[[OBUFF]], i32 1
 //CHECK:   %[[OORIG:.+]] = load i32, ptr %{{.*}}, align 4
@@ -96,8 +102,6 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[OCOMB:.+]] = add i32 %[[OELEM]], %[[OORIG]]
 //CHECK:   store i32 %[[OCOMB]], ptr %[[OELEMPTR]], align 4
 //CHECK:   br i1 {{.*}}, label %omp.outer.log.scan.body, label %omp.outer.log.scan.exit
-//CHECK: omp.outer.log.scan.exit:                          ; preds = %omp.inner.log.scan.exit, %omp_region.body{{.*}}
-//CHECK: @__kmpc_end_masked
 //CHECK: omp.outer.log.scan.body:
 //CHECK:   %[[K:.+]] = phi i32 [ 0, %{{.*}} ], [ %[[NEXTK:.+]], %omp.inner.log.scan.exit ]
 //CHECK:   %[[I:.+]] = phi i32 [ 1, %{{.*}} ], [ %[[NEXTI:.+]], %omp.inner.log.scan.exit ]
