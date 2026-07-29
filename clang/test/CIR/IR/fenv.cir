@@ -66,3 +66,27 @@ cir.func @binary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float) {
   %2 = cir.atan2 %a, %b : !cir.float
   cir.return
 }
+
+// CHECK-LABEL: cir.func @unary_fp_to_int_builtin_fenv
+cir.func @unary_fp_to_int_builtin_fenv(%a: !cir.float) -> !s32i {
+  // CHECK: cir.lround %{{.*}} : !cir.float -> !s32i {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+  %0 = cir.lround %a : !cir.float -> !s32i {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+  // CHECK: cir.llround %{{.*}} : !cir.float -> !s32i {fenv = #cir.fenv<except_mode = unmasked>}
+  %1 = cir.llround %a : !cir.float -> !s32i {fenv = #cir.fenv<except_mode = unmasked>}
+  // CHECK: cir.lrint %{{.*}} : !cir.float -> !s32i {fenv = #cir.fenv<>}
+  %2 = cir.lrint %a : !cir.float -> !s32i {fenv = #cir.fenv<>}
+  // CHECK: cir.llrint %{{.*}} : !cir.float -> !s32i
+  // CHECK-NOT: fenv
+  %3 = cir.llrint %a : !cir.float -> !s32i
+  cir.return %3 : !s32i
+}
+
+// CHECK-LABEL: cir.func @ternary_fp_builtin_fenv
+cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float) {
+  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward, strict_except = true>}
+  %0 = cir.fma %a, %b, %c : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward, strict_except = true>}
+  // CHECK: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
+  // CHECK-NOT: fenv
+  %1 = cir.fma %a, %b, %c : !cir.float
+  cir.return
+}
