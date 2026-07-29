@@ -2606,9 +2606,18 @@ ThreadForLiveTaskArgument(Args &command, ExecutionContext &exe_ctx) {
     if (!status.Success())
       return status.takeError();
 
-    if (valobj_sp)
-      if (auto task_obj_sp = valobj_sp->GetChildMemberWithName("_task"))
+    if (valobj_sp) {
+      // Newer stdlibs store the task as `_rawTask` (a non-owning wrapper
+      // around a `Builtin.RawPointer`); see swiftlang/swift#89283.
+      ValueObjectSP task_obj_sp;
+      if (auto raw_sp = valobj_sp->GetChildMemberWithName("_rawTask"))
+        task_obj_sp = raw_sp->GetChildMemberWithName("_rawValue");
+      // Fallback, older stdlibs used to store a _task property
+      if (!task_obj_sp)
+        task_obj_sp = valobj_sp->GetChildMemberWithName("_task");
+      if (task_obj_sp)
         task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    }
   }
 
   if (task_ptr == 0 || task_ptr == LLDB_INVALID_ADDRESS)
