@@ -1,9 +1,10 @@
-.. title:: clang-tidy - bugprone-reserved-identifier
+```{title} clang-tidy - bugprone-reserved-identifier
+```
 
-bugprone-reserved-identifier
-============================
+# bugprone-reserved-identifier
 
-`cert-dcl37-c` and `cert-dcl51-cpp` redirect here as an alias for this check.
+`cert-dcl37-c` and `cert-dcl51-cpp` redirect
+here as an alias for this check.
 
 Checks for usages of identifiers reserved for use by the implementation.
 
@@ -18,14 +19,14 @@ underscore occurring anywhere.
 
 Violating the naming rules above results in undefined behavior.
 
-.. code-block:: c++
-
-  namespace NS {
-    void __f(); // name is not allowed in user code
-    using _Int = int; // same with this
-    #define cool__macro // also this
-  }
-  int _g(); // disallowed in global namespace only
+```c++
+namespace NS {
+  void __f(); // name is not allowed in user code
+  using _Int = int; // same with this
+  #define cool__macro // also this
+}
+int _g(); // disallowed in global namespace only
+```
 
 The check can also be inverted, i.e. it can be configured to flag any
 identifier that is *not* a reserved identifier. This mode is for use by e.g.
@@ -36,22 +37,19 @@ This check does not (yet) check for other reserved names, e.g. macro names
 identical to language keywords, and names specifically reserved by language
 standards, e.g. C++ 'zombie names' and C future library directions.
 
-This check corresponds to CERT C Coding Standard rule `DCL37-C. Do not declare
-or define a reserved identifier
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/declarations-and-initialization-dcl/dcl37-c/>`_
-as well as its C++ counterpart, `DCL51-CPP. Do not declare or define a reserved
-identifier
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl51-cpp/>`_.
+This check corresponds to CERT C Coding Standard rule [DCL37-C. Do not declare
+or define a reserved identifier](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/declarations-and-initialization-dcl/dcl37-c/)
+as well as its C++ counterpart, [DCL51-CPP. Do not declare or define a reserved
+identifier](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl51-cpp/).
 
-Options
--------
+## Options
 
-.. option:: Invert
+```{option} Invert
+If `true`, inverts the check, i.e. flags names that are not reserved.
+Default is `false`.
+```
 
-   If `true`, inverts the check, i.e. flags names that are not reserved.
-   Default is `false`.
-
-.. option:: AllowedIdentifiers
-
-   Semicolon-separated list of regular expressions that the check ignores. Default is an
-   empty list.
+```{option} AllowedIdentifiers
+Semicolon-separated list of regular expressions that the check ignores. Default is an
+empty list.
+```
