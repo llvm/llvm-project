@@ -74,7 +74,7 @@ void stf() {
   fp_stparam(St2, &St2);
 }
 
-// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvE"}
+// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvvE"}
 // ITANIUM: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
 // ITANIUM: [[F_TPRIMITIVE]] = !{!"_ZTSFicfdE"}
 // ITANIUM: [[F_TPTR]] = !{!"_ZTSFPiPcPfPdE"}
@@ -83,7 +83,7 @@ void stf() {
 // ITANIUM: [[F_TSTRUCT]] = !{!"_ZTSFv3st2PS_E"}
 // ITANIUM: [[F_TSTRUCT_CT]] = !{[[F_TSTRUCT:![0-9]+]]}
 
-// MS: [[F_TVOID]] = !{!"?6AX@Z"}
+// MS: [[F_TVOID]] = !{!"?6AXXZ"}
 // MS: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
 // MS: [[F_TPRIMITIVE]] = !{!"?6AHDMN@Z"}
 // MS: [[F_TPTR]] = !{!"?6APEAHPEADPEAMPEAN@Z"}

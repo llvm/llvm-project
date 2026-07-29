@@ -3464,11 +3464,38 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
                                        /*IgnoreLLVMUsed=*/false)) {
+    const FunctionDecl *Def = nullptr;
+    bool HasBody = FD->hasBody(Def);
+    if (!HasBody || !Def)
+      Def = FD;
+
+    QualType QT = Def->getType();
+    if (const auto *FNPT = QT->getAs<FunctionNoProtoType>()) {
+      // If there is no definition available in this TU for an unprototyped
+      // function declaration, skip generating incomplete callgraph metadata.
+      if (!HasBody && !Def->isThisDeclarationADefinition())
+        return;
+
+      SmallVector<QualType, 8> ParamTypes;
+      for (const ParmVarDecl *P : Def->parameters()) {
+        QualType ParamTy = P->getType();
+        if (Context.isPromotableIntegerType(ParamTy))
+          ParamTy = Context.getPromotedIntegerType(ParamTy);
+        else if (const auto *BT = ParamTy->getAs<BuiltinType>()) {
+          if (BT->getKind() == BuiltinType::Float ||
+              BT->getKind() == BuiltinType::Half)
+            ParamTy = Context.DoubleTy;
+        }
+        ParamTypes.push_back(ParamTy);
+      }
+      FunctionProtoType::ExtProtoInfo EPI;
+      QT = Context.getFunctionType(FNPT->getReturnType(), ParamTypes, EPI);
+    }
+
     F->addMetadata(
         llvm::LLVMContext::MD_callgraph,
-        *llvm::MDTuple::get(
-            getLLVMContext(),
-            {CreateMetadataIdentifierForCallGraphType(FD->getType())}));
+        *llvm::MDTuple::get(getLLVMContext(),
+                            {CreateMetadataIdentifierForCallGraphType(QT)}));
   }
 }
 
@@ -8636,6 +8663,10 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
 
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
+  if (auto *FNPT = T->getAs<FunctionNoProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI;
+    T = getContext().getFunctionType(FNPT->getReturnType(), {}, EPI);
+  }
   return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
                                       /*ForceString=*/true);
 }
