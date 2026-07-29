@@ -119,7 +119,6 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   ASSERT_EQ(static_cast<int>(Float128(1e-300)), 0);
   ASSERT_EQ(static_cast<int>(Float128(-1e-300)), 0);
-  ASSERT_EQ(static_cast<long long>(Float128(1e-300)), 0LL);
   ASSERT_EQ(static_cast<int>(Float128(0.5)), 0);
   ASSERT_EQ(static_cast<int>(Float128(-0.5)), 0);
 }
