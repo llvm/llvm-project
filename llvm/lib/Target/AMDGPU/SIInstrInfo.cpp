@@ -11308,8 +11308,9 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     std::pair<MachineInstr *, unsigned> RegSequence2;
     MachineInstr *Src2Def = MRI->getVRegDef(SrcReg2);
     if (!Src2Def ||
-        !(Src2Def = (RegSequence2 = analyzePartiallyZeroRegSequence(*Src2Def, *MRI))
-                        .first) ||
+        !(Src2Def =
+              (RegSequence2 = analyzePartiallyZeroRegSequence(*Src2Def, *MRI))
+                  .first) ||
         !getFoldableImm(Src2Def->getOperand(0).getReg(), *MRI, CmpValue))
       return false;
     else if (RegSequence2.second)
