@@ -30,6 +30,7 @@ void ScriptInterpreterPythonInterfaces::Initialize() {
   ScriptedThreadPythonInterface::Initialize();
   ScriptedFramePythonInterface::Initialize();
   ScriptedStackFrameRecognizerPythonInterface::Initialize();
+  ScriptedCommandPythonInterface::Initialize();
 }
 
 void ScriptInterpreterPythonInterfaces::Terminate() {
@@ -43,4 +44,5 @@ void ScriptInterpreterPythonInterfaces::Terminate() {
   ScriptedThreadPythonInterface::Terminate();
   ScriptedFramePythonInterface::Terminate();
   ScriptedStackFrameRecognizerPythonInterface::Terminate();
+  ScriptedCommandPythonInterface::Terminate();
 }
