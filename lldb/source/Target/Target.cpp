@@ -2141,23 +2141,18 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   std::unique_ptr<uint8_t[]> file_cache_read_buffer;
   size_t file_cache_bytes_read = 0;
 
-  // Read from file cache if read-only section.
+  // Read from file cache if the section is immutable after load.
   if (!force_live_memory && resolved_addr.IsSectionOffset()) {
     SectionSP section_sp(resolved_addr.GetSection());
-    if (section_sp) {
-      auto permissions = Flags(section_sp->GetPermissions());
-      bool is_readonly = !permissions.Test(ePermissionsWritable) &&
-                         permissions.Test(ePermissionsReadable);
-      if (is_readonly) {
-        file_cache_bytes_read =
-            ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
-        if (file_cache_bytes_read == dst_len)
-          return file_cache_bytes_read;
-        else if (file_cache_bytes_read > 0) {
-          file_cache_read_buffer =
-              std::make_unique<uint8_t[]>(file_cache_bytes_read);
-          std::memcpy(file_cache_read_buffer.get(), dst, file_cache_bytes_read);
-        }
+    if (section_sp && section_sp->IsImmutableAfterLoad()) {
+      file_cache_bytes_read =
+          ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+      if (file_cache_bytes_read == dst_len)
+        return file_cache_bytes_read;
+      else if (file_cache_bytes_read > 0) {
+        file_cache_read_buffer =
+            std::make_unique<uint8_t[]>(file_cache_bytes_read);
+        std::memcpy(file_cache_read_buffer.get(), dst, file_cache_bytes_read);
       }
     }
   }

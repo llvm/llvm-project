@@ -284,6 +284,12 @@ public:
   /// Returns true if this is a global offset table section.
   bool IsGOTSection() const;
 
+  /// Return true if this section's bytes in the host object file are guaranteed
+  /// identical to its bytes in the running process, so a reader may serve them
+  /// from the file instead of issuing a live memory read.  Conservative:
+  /// returns false unless the section is positively known to be immutable.
+  bool IsImmutableAfterLoad() const;
+
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
                             // be read from

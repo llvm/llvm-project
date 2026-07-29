@@ -470,6 +470,8 @@ bool Section::IsGOTSection() const {
   return GetObjectFile()->IsGOTSection(*this);
 }
 
+bool Section::IsImmutableAfterLoad() const { return m_readable && !m_writable; }
+
 #pragma mark SectionList
 
 SectionList::SectionList(const SectionList &rhs) : m_sections(rhs.m_sections) {}
