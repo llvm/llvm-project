@@ -10749,6 +10749,16 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
       // Save + restore LR.
       NumBytesToCreateFrame += 8;
+
+      // On MachO, buildOutlinedFrame saves a full frame record and sets up the
+      // frame pointer so the unwind can use the compact FRAME encoding. That is
+      // one extra instruction, so account for it here.
+      if (RepeatedSequenceLocs.front()
+              .getMF()
+              ->getTarget()
+              .getTargetTriple()
+              .isOSBinFormatMachO())
+        NumBytesToCreateFrame += 4;
     }
   }
 
@@ -11181,32 +11191,85 @@ void AArch64InstrInfo::buildOutlinedFrame(
         OF.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
-    // Insert a save before the outlined region
-    MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
-                                .addReg(AArch64::SP, RegState::Define)
-                                .addReg(AArch64::LR)
+    bool NeedsDwarf =
+        MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
+
+    // There is a call in the range, so we must save LR. Saving it alone
+    // (str x30) can't be described by MachO compact unwind, so the encoder
+    // falls back to a larger DWARF FDE. Saving a full frame record instead (stp
+    // x29,x30 ; mov x29,sp) gets the small compact FRAME encoding, for one
+    // extra instruction (the mov).
+    //
+    // Do it only when we emit unwind info, and only on MachO -- there x29 is a
+    // reserved frame pointer, so setting it up can't clobber a live value.
+    bool UseFrameRecord =
+        NeedsDwarf && MF.getTarget().getTargetTriple().isOSBinFormatMachO();
+
+    if (UseFrameRecord) {
+      // FP is saved here, so it must be live-in.
+      if (!MBB.isLiveIn(AArch64::FP))
+        MBB.addLiveIn(AArch64::FP);
+
+      // stp x29, x30, [sp, #-16]!   (STP pre-index imm is scaled by 8: -2 * 8)
+      MachineInstr *STPXpre = BuildMI(MF, DebugLoc(), get(AArch64::STPXpre))
+                                  .addReg(AArch64::SP, RegState::Define)
+                                  .addReg(AArch64::FP)
+                                  .addReg(AArch64::LR)
+                                  .addReg(AArch64::SP)
+                                  .addImm(-2);
+      It = MBB.insert(It, STPXpre);
+
+      // mov x29, sp  (add x29, sp, #0) so x29 points at the saved frame record.
+      MachineInstr *SetFP = BuildMI(MF, DebugLoc(), get(AArch64::ADDXri))
+                                .addReg(AArch64::FP, RegState::Define)
                                 .addReg(AArch64::SP)
-                                .addImm(-16);
-    It = MBB.insert(It, STRXpre);
+                                .addImm(0)
+                                .addImm(0);
+      MBB.insertAfter(It, SetFP);
 
-    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-      CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+      // Standard frame-record CFI (FP is the CFA) so the encoder emits FRAME.
+      CFIInstBuilder CFIBuilder(MBB, std::next(SetFP->getIterator()),
+                                MachineInstr::FrameSetup);
+      CFIBuilder.buildDefCFA(AArch64::FP, 16);
+      CFIBuilder.buildOffset(AArch64::LR, -8);
+      CFIBuilder.buildOffset(AArch64::FP, -16);
 
-      // Add a CFI saying the stack was moved 16 B down.
-      CFIBuilder.buildDefCFAOffset(16);
+      // ldp x29, x30, [sp], #16
+      MachineInstr *LDPXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDPXpost))
+                                   .addReg(AArch64::SP, RegState::Define)
+                                   .addReg(AArch64::FP, RegState::Define)
+                                   .addReg(AArch64::LR, RegState::Define)
+                                   .addReg(AArch64::SP)
+                                   .addImm(2);
+      Et = MBB.insert(Et, LDPXpost);
+    } else {
+      // Insert a save before the outlined region
+      MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
+                                  .addReg(AArch64::SP, RegState::Define)
+                                  .addReg(AArch64::LR)
+                                  .addReg(AArch64::SP)
+                                  .addImm(-16);
+      It = MBB.insert(It, STRXpre);
 
-      // Add a CFI saying that the LR that we want to find is now 16 B higher
-      // than before.
-      CFIBuilder.buildOffset(AArch64::LR, -16);
+      if (NeedsDwarf) {
+        CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+
+        // Add a CFI saying the stack was moved 16 B down.
+        CFIBuilder.buildDefCFAOffset(16);
+
+        // Add a CFI saying that the LR that we want to find is now 16 B higher
+        // than before.
+        CFIBuilder.buildOffset(AArch64::LR, -16);
+      }
+
+      // Insert a restore before the terminator for the function.
+      MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
+                                   .addReg(AArch64::SP, RegState::Define)
+                                   .addReg(AArch64::LR, RegState::Define)
+                                   .addReg(AArch64::SP)
+                                   .addImm(16);
+      Et = MBB.insert(Et, LDRXpost);
     }
-
-    // Insert a restore before the terminator for the function.
-    MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
-                                 .addReg(AArch64::SP, RegState::Define)
-                                 .addReg(AArch64::LR, RegState::Define)
-                                 .addReg(AArch64::SP)
-                                 .addImm(16);
-    Et = MBB.insert(Et, LDRXpost);
   }
 
   auto RASignCondition = FI->getSignReturnAddressCondition();
