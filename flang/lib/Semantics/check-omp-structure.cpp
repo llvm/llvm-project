@@ -945,6 +945,22 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
+void OmpStructureChecker::CheckDirectiveInPureProcedure(
+    parser::CharBlock source, llvm::omp::Directive id) {
+  // A directive that does not have the "pure" property is not permitted to
+  // appear in a Fortran PURE procedure, since it may introduce side effects.
+  if (llvm::omp::isDirectivePure(id)) {
+    return;
+  }
+  const Scope &scope{context_.FindScope(source)};
+  if (FindPureProcedureContaining(scope)) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    context_.Say(source,
+        "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,
+        parser::omp::GetUpperName(id, version));
+  }
+}
+
 std::pair<const parser::OmpClause *, const parser::OmpClause *>
 OmpStructureChecker::FindMutuallyExclusiveClauses(
     llvm::omp::ClauseSet exclusive,
@@ -1293,6 +1309,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   PushContextAndClauseSets(dirName.source, dirName.v);
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
 
   // Verify clauses
   common::visit(
@@ -1349,6 +1366,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
   CheckClauses(dirName, llvm::iterator_range(dirStack_.back()->Clauses().v),
       llvm::iterator_range(std::list<parser::OmpClause>{}));
 
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
   EnterDirectiveNest(DeclarativeNest);
 }
 

@@ -899,6 +899,26 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
   OS << "}\n";
 }
 
+static void generateIsDirectivePure(const DirectiveLanguage &DirLang,
+                                    raw_ostream &OS) {
+  OS << "constexpr bool isDirectivePure(Directive Dir) {\n";
+  OS << "  switch (Dir) {\n";
+
+  StringRef Prefix = DirLang.getDirectivePrefix();
+
+  for (const Record *R : DirLang.getDirectives()) {
+    Directive D(R);
+    if (!D.isPure())
+      continue;
+    OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+  }
+  OS << "    return true;\n";
+  OS << "  default:\n";
+  OS << "    return false;\n";
+  OS << "  } // switch (Dir)\n";
+  OS << "}\n";
+}
+
 static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
                                           raw_ostream &OS) {
   OS << "constexpr SourceLanguage getDirectiveLanguages(Directive D) {\n";
@@ -1382,6 +1402,8 @@ static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
   generateGetDirectiveAssociation(DirLang, OS);
   OS << "\n";
   generateGetDirectiveCategory(DirLang, OS);
+  OS << "\n";
+  generateIsDirectivePure(DirLang, OS);
   OS << "\n";
   generateGetDirectiveLanguages(DirLang, OS);
 }

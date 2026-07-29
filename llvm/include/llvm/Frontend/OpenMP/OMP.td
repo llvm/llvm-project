@@ -680,6 +680,7 @@ def OMP_Assumes : Directive<[Spelling<"assumes">]> {
     VersionedClause<OMPC_NoOpenMPRoutines, 51>,
     VersionedClause<OMPC_NoParallelism, 51>,
   ];
+  let isPure = true;
 }
 def OMP_Assume : Directive<[Spelling<"assume">]> {
   let association = AS_Block;
@@ -693,6 +694,7 @@ def OMP_Assume : Directive<[Spelling<"assume">]> {
     VersionedClause<OMPC_NoOpenMPRoutines, 51>,
     VersionedClause<OMPC_NoParallelism, 51>,
   ];
+  let isPure = true;
 }
 def OMP_Atomic : Directive<[Spelling<"atomic">]> {
   let allowedOnceClauses = [
@@ -936,6 +938,7 @@ def OMP_Error : Directive<[Spelling<"error">]> {
   ];
   let association = AS_None;
   let category = CA_Utility;
+  let isPure = true;
 }
 def OMP_Flatten : Directive<[Spelling<"flatten">]> {
   let allowedClauses = [
@@ -1004,6 +1007,7 @@ def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedLoopModifiers = [
     LM_Fused,
   ];
+  let isPure = true;
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedClauses = [
@@ -1017,6 +1021,7 @@ def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedLoopModifiers = [
     LM_Interchanged,
   ];
+  let isPure = true;
 }
 def OMP_interop : Directive<[Spelling<"interop">]> {
   let allowedClauses = [
@@ -1067,6 +1072,7 @@ def OMP_Metadirective : Directive<[Spelling<"metadirective">]> {
   ];
   let association = AS_None;
   let category = CA_Meta;
+  let isPure = true;  
 }
 def OMP_Nothing : Directive<[Spelling<"nothing">]> {
   let allowedClauses = [
@@ -1077,6 +1083,7 @@ def OMP_Nothing : Directive<[Spelling<"nothing">]> {
   let allowedLoopModifiers = [
     LM_Identity,
   ];
+  let isPure = true;
 }
 def OMP_Ordered : Directive<[Spelling<"ordered">]> {
   let allowedClauses = [
@@ -1134,6 +1141,7 @@ def OMP_Reverse : Directive<[Spelling<"reverse">]> {
   let allowedLoopModifiers = [
     LM_Reversed,
   ];
+  let isPure = true;
 }
 def OMP_Scan : Directive<[Spelling<"scan">]> {
   let allowedOnceClauses = [
@@ -1432,6 +1440,7 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
     LM_Grid,
     LM_Intratile,
   ];
+  let isPure = true;
 }
 def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let allowedClauses = [
@@ -1446,6 +1455,7 @@ def OMP_Stripe : Directive<[Spelling<"stripe">]> {
     LM_Grid,
     LM_Offsets,
   ];
+  let isPure = true;
 }
 def OMP_Split : Directive<[Spelling<"split">]> {
   let allowedClauses = [
@@ -1462,6 +1472,7 @@ def OMP_Split : Directive<[Spelling<"split">]> {
   let allowedLoopModifiers = [
     LM_Split,
   ];
+  let isPure = true;
 }
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
   let isDefault = true;
@@ -1481,6 +1492,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
   let allowedLoopModifiers = [
     LM_Unrolled,
   ];
+  let isPure = true;
 }
 def OMP_Workshare : Directive<[Spelling<"workshare">]> {
   let allowedOnceClauses = [
