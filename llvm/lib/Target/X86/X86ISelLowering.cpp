@@ -34531,11 +34531,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 ///
 /// Each operand is reinterpreted as f16 before building the vector. bf16 has no
 /// scalar register class of its own, but f16 does (FR16X), and bf16/f16 share
-/// the same bits and vector register class (VR128X). Going through f16 keeps the
-/// value in an XMM register: bf16->f16 bitcast, f16->v8f16 SCALAR_TO_VECTOR
-/// (a free COPY_TO_REGCLASS), and v8f16->v8bf16 bitcast are all free. Feeding a
-/// scalar bf16 to SCALAR_TO_VECTOR directly would instead route through bf16's
-/// i16 soft-promote carrier, forcing xmm<->GPR vmovw roundtrips.
+/// the same bits and vector register class (VR128X).
 ///
 /// Returns a bf16-typed value.
 static SDValue LowerScalarBF16ArithViaVector(SDNode *N, SelectionDAG &DAG) {
@@ -34549,8 +34545,7 @@ static SDValue LowerScalarBF16ArithViaVector(SDNode *N, SelectionDAG &DAG) {
   }
   SDValue Vec =
       DAG.getNode(N->getOpcode(), dl, MVT::v8bf16, VecOps, N->getFlags());
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::bf16, Vec,
-                     DAG.getVectorIdxConstant(0, dl));
+  return DAG.getExtractVectorElt(dl, MVT::bf16, Vec, 0);
 }
 
 /// Replace a node with an illegal result type with a new node built out of
