@@ -192,7 +192,6 @@ std::string fixIncludes(const AnalysisResults &Results,
     cantFail(
         R.add(tooling::Replacement(FileName, Entry.first, 0, Entry.second)));
   }
-  // "cleanup" actually turns the UINT_MAX replacements into concrete edits.
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));
 }
