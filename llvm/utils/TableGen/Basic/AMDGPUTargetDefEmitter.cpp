@@ -179,120 +179,154 @@ static void validate(ArrayRef<GPUEntry> Entries) {
   }
 }
 
-static void emitR600(raw_ostream &OS, const RecordKeeper &RK) {
+// The canonical R600 GPU records, in GPUKind-enum / TableGen definition order.
+static std::vector<const Record *>
+collectR600Canonicals(const RecordKeeper &RK) {
+  std::vector<GPUEntry> Entries = collectGPUs(RK, /*WantR600=*/true);
+  std::vector<const Record *> Canon;
+  Canon.reserve(Entries.size());
+
+  for (const GPUEntry &E : Entries) {
+    if (!E.IsAlias)
+      Canon.push_back(E.Rec);
+  }
+
+  return Canon;
+}
+
+// Emit the R600 GPUKind enumerators (canonical GPUs only; aliases share a
+// canonical's kind). Guarded by GET_R600_GPU_ENUM.
+static void emitR600Enum(raw_ostream &OS, const RecordKeeper &RK) {
+  std::vector<const Record *> Canon = collectR600Canonicals(RK);
+  if (Canon.empty())
+    return;
+  OS << "#ifdef GET_R600_GPU_ENUM\n"
+        "#undef GET_R600_GPU_ENUM\n";
+  for (const Record *R : Canon) {
+    OS << "  ";
+    emitGPUKindEnum(OS, R->getValueAsString("Name"));
+    OS << ",\n";
+  }
+  OS << "#endif // GET_R600_GPU_ENUM\n\n";
+}
+
+// Emit the R600Info table indexed by (GPUKind - R600FirstGPUKind). Names are
+// offsets into the shared \p Names table. Guarded by GET_R600_GPU_TABLE.
+static void emitR600Table(raw_ostream &OS, const RecordKeeper &RK,
+                          StringToOffsetTable &Names) {
+  std::vector<const Record *> Canon = collectR600Canonicals(RK);
+  if (Canon.empty())
+    return;
+
+  OS << "#ifdef GET_R600_GPU_TABLE\n"
+        "#undef GET_R600_GPU_TABLE\n";
+  OS << "static constexpr GPUKind R600FirstGPUKind = ";
+  emitGPUKindEnum(OS, Canon.front()->getValueAsString("Name"));
+  OS << ";\n"
+        "static constexpr R600Info R600GPUTable[] = {\n";
+  for (const Record *R : Canon) {
+    OS << "  {" << Names.GetOrAddStringOffset(R->getValueAsString("Name"))
+       << ", ";
+    emitFeatureExpr(OS, R, "R600_FEATURE_NONE");
+    OS << "},\n";
+  }
+  OS << "};\n"
+        "#endif // GET_R600_GPU_TABLE\n\n";
+}
+
+// Emit the R600 name -> GPUKind alias table. Guarded by
+// GET_R600_GPU_ALIAS_TABLE; names are offsets into \p Names.
+static void emitR600Aliases(raw_ostream &OS, const RecordKeeper &RK,
+                            StringToOffsetTable &Names) {
   std::vector<GPUEntry> Entries = collectGPUs(RK, /*WantR600=*/true);
   validate(Entries);
   if (Entries.empty())
     return;
 
-  OS << "#ifndef R600_GPU\n"
-        "#define R600_GPU(NAME, ENUM, FEATURES)\n"
-        "#endif\n\n"
-        "#ifndef R600_GPU_ALIAS\n"
-        "#define R600_GPU_ALIAS(NAME, ENUM)\n"
-        "#endif\n\n";
-
+  OS << "#ifdef GET_R600_GPU_ALIAS_TABLE\n"
+        "#undef GET_R600_GPU_ALIAS_TABLE\n"
+        "static constexpr GPUNameAlias R600GPUAliases[] = {\n";
   for (const GPUEntry &E : Entries) {
-    StringRef Name = E.Rec->getValueAsString("Name");
-    if (E.IsAlias) {
-      OS << "R600_GPU_ALIAS(\"" << Name << "\", ";
-      emitGPUKindEnum(OS, E.Rec->getValueAsString("Alias"));
-      OS << ")\n";
+    if (!E.IsAlias)
       continue;
-    }
-    OS << "R600_GPU(\"" << Name << "\", ";
-    emitGPUKindEnum(OS, Name);
-    OS << ", ";
-    emitFeatureExpr(OS, E.Rec, "R600_FEATURE_NONE");
-    OS << ")\n";
-  }
-
-  OS << "\n#undef R600_GPU\n"
-        "#undef R600_GPU_ALIAS\n";
-}
-
-// Return \p Entries with the generic-family entries moved after the non-generic
-// ones, each group keeping definition order. The GPUKind enum and GPUInfo table
-// are positional and rely on the generics forming a contiguous block at the
-// end, so both are emitted in this order.
-static std::vector<GPUEntry>
-orderGenericsLast(ArrayRef<GPUEntry> Entries,
-                  const StringMap<const Record *> &Canonicals) {
-  std::vector<GPUEntry> Ordered;
-  Ordered.reserve(Entries.size());
-
-  for (const GPUEntry &E : Entries) {
-    if (!E.isGeneric(Canonicals))
-      Ordered.push_back(E);
-  }
-
-  for (const GPUEntry &E : Entries) {
-    if (E.isGeneric(Canonicals))
-      Ordered.push_back(E);
-  }
-
-  return Ordered;
-}
-
-static void emitAMDGPUEntry(raw_ostream &OS, const GPUEntry &E) {
-  StringRef Name = E.Rec->getValueAsString("Name");
-  if (E.IsAlias) {
-    OS << "AMDGPU_GPU_ALIAS(\"" << Name << "\", ";
+    OS << "  {" << Names.GetOrAddStringOffset(E.Rec->getValueAsString("Name"))
+       << ", ";
     emitGPUKindEnum(OS, E.Rec->getValueAsString("Alias"));
-    OS << ")\n";
-  } else {
-    OS << "AMDGPU_GPU(\"" << Name << "\", ";
-    emitGPUKindEnum(OS, Name);
-    OS << ")\n";
+    OS << "},\n";
   }
+  OS << "};\n"
+        "#endif // GET_R600_GPU_ALIAS_TABLE\n\n";
 }
 
-static void emitAMDGPU(raw_ostream &OS, const RecordKeeper &RK) {
+// Canonical AMDGPU GPUs in GPUKind-enum order: non-generic targets first, then
+// the "gfxN-generic" targets. The enum and the GPUInfo table share this order.
+static std::vector<const Record *>
+collectAMDGPUCanonicals(const RecordKeeper &RK) {
+  std::vector<GPUEntry> Entries = collectGPUs(RK, /*WantR600=*/false);
+  std::vector<const Record *> Canon;
+  Canon.reserve(Entries.size());
+
+  for (const GPUEntry &E : Entries) {
+    if (!E.IsAlias && !isGenericTarget(E.Rec))
+      Canon.push_back(E.Rec);
+  }
+
+  for (const GPUEntry &E : Entries) {
+    if (!E.IsAlias && isGenericTarget(E.Rec))
+      Canon.push_back(E.Rec);
+  }
+
+  return Canon;
+}
+
+// Emit the AMDGPU GPUKind enumerators (canonical GPUs only; aliases share a
+// canonical's kind). Guarded by GET_AMDGPU_GPU_ENUM.
+static void emitAMDGPUEnum(raw_ostream &OS, const RecordKeeper &RK) {
+  std::vector<const Record *> Canon = collectAMDGPUCanonicals(RK);
+  if (Canon.empty())
+    return;
+  OS << "#ifdef GET_AMDGPU_GPU_ENUM\n"
+        "#undef GET_AMDGPU_GPU_ENUM\n";
+  for (const Record *R : Canon) {
+    OS << "  ";
+    emitGPUKindEnum(OS, R->getValueAsString("Name"));
+    OS << ",\n";
+  }
+  OS << "#endif // GET_AMDGPU_GPU_ENUM\n\n";
+}
+
+// Emit the name -> GPUKind alias table (legacy names such as "tahiti" ->
+// gfx600). Guarded by GET_AMDGPU_GPU_ALIAS_TABLE; names are offsets into \p
+// Names.
+static void emitAMDGPUAliases(raw_ostream &OS, const RecordKeeper &RK,
+                              StringToOffsetTable &Names) {
   std::vector<GPUEntry> Entries = collectGPUs(RK, /*WantR600=*/false);
   validate(Entries);
   if (Entries.empty())
     return;
 
-  StringMap<const Record *> Canonicals;
+  OS << "#ifdef GET_AMDGPU_GPU_ALIAS_TABLE\n"
+        "#undef GET_AMDGPU_GPU_ALIAS_TABLE\n"
+        "static constexpr GPUNameAlias AMDGPUGPUAliases[] = {\n";
   for (const GPUEntry &E : Entries) {
     if (!E.IsAlias)
-      Canonicals[E.Rec->getValueAsString("Name")] = E.Rec;
+      continue;
+    OS << "  {" << Names.GetOrAddStringOffset(E.Rec->getValueAsString("Name"))
+       << ", ";
+    emitGPUKindEnum(OS, E.Rec->getValueAsString("Alias"));
+    OS << "},\n";
   }
-
-  OS << "#ifndef AMDGPU_GPU\n"
-        "#define AMDGPU_GPU(NAME, ENUM)\n"
-        "#endif\n\n"
-        "#ifndef AMDGPU_GPU_ALIAS\n"
-        "#define AMDGPU_GPU_ALIAS(NAME, ENUM)\n"
-        "#endif\n\n";
-
-  for (const GPUEntry &E : orderGenericsLast(Entries, Canonicals))
-    emitAMDGPUEntry(OS, E);
-
-  OS << "\n#undef AMDGPU_GPU\n"
-        "#undef AMDGPU_GPU_ALIAS\n";
+  OS << "};\n"
+        "#endif // GET_AMDGPU_GPU_ALIAS_TABLE\n\n";
 }
 
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
 /// family strings are stored as offsets into the shared \p Names table.
 static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
                             StringToOffsetTable &Names) {
-  std::vector<GPUEntry> Entries = collectGPUs(RK, /*WantR600=*/false);
-  if (Entries.empty())
+  std::vector<const Record *> Canon = collectAMDGPUCanonicals(RK);
+  if (Canon.empty())
     return;
-
-  StringMap<const Record *> Canonicals;
-  for (const GPUEntry &E : Entries) {
-    if (!E.IsAlias)
-      Canonicals[E.Rec->getValueAsString("Name")] = E.Rec;
-  }
-
-  // Canonicals only; aliases share a canonical's GPUKind row.
-  std::vector<const Record *> Canon;
-  for (const GPUEntry &E : orderGenericsLast(Entries, Canonicals)) {
-    if (!E.IsAlias)
-      Canon.push_back(E.Rec);
-  }
 
   OS << "#ifdef GET_AMDGPU_GPU_TABLE\n"
         "#undef GET_AMDGPU_GPU_TABLE\n";
@@ -314,11 +348,10 @@ static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
 }
 
-// Emit the subarch -> major-family-subarch overrides; a subarch not listed here
-// is its own major subarch. Each entry maps a member GPU's own subarch to its
-// family's major subarch, from one of two sources: a "gfxN-generic" target,
-// whose subarch is the major for every GPU it lists in CoveredGPUs, or an
-// AMDGPUFamily's MajorSubArch for the gfx6/gfx7/gfx8 families that have no
+// Emit the subarch -> major-family-subarch overrides for getMajorSubArch (a
+// subarch not listed here is its own major). Each member GPU maps to its
+// family's major, sourced from a "gfxN-generic" target's CoveredGPUs, or from
+// an AMDGPUFamily's MajorSubArch for the gfx6/gfx7/gfx8 families that have no
 // generic target.
 static void emitAMDGPUMajorSubArch(raw_ostream &OS, const RecordKeeper &RK) {
   ArrayRef<const Record *> GPUs =
@@ -408,30 +441,45 @@ static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
 
 static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "// Autogenerated by AMDGPUTargetDefEmitter.cpp\n\n";
-  // R600 processors are Processor records; AMDGPU processors are
-  // ProcessorModel records. R600.td and AMDGPU.td are separate top-level files
-  // (neither includes the other), so exactly one family is present in a given
-  // run; the other section emits nothing.
-  emitR600(OS, RK);
-  emitAMDGPU(OS, RK);
+  // R600.td and AMDGPU.td are separate top-level files, so a run sees exactly
+  // one family; the other family's sections emit nothing.
+  emitR600Enum(OS, RK);
+  emitAMDGPUEnum(OS, RK);
   emitAMDGPUMajorSubArch(OS, RK);
 
-  // The GPUInfo and SubArchName tables both reference GPU-name strings; pool
-  // them into a single string table. Buffer the two tables first so every
-  // referenced string is interned, then emit the shared table def (guarded so
-  // consumers pull it in once) ahead of the buffered tables.
-  StringToOffsetTable Names;
-  std::string GPUTable, SubArchNames;
-  raw_string_ostream GPUTableOS(GPUTable), SubArchNamesOS(SubArchNames);
-  emitAMDGPUTable(GPUTableOS, RK, Names);
-  emitAMDGPUSubArchNames(SubArchNamesOS, RK, Names);
+  // Each family gets its own string pool with a distinct guard/symbol so the
+  // two generated headers stay independent when a consumer includes both.
+  // Buffer the tables first to intern their strings, then emit the pool ahead.
+  {
+    StringToOffsetTable Names;
+    std::string Tables;
+    raw_string_ostream TablesOS(Tables);
+    emitR600Table(TablesOS, RK, Names);
+    emitR600Aliases(TablesOS, RK, Names);
+    if (!Tables.empty()) {
+      OS << "#ifdef GET_R600_NAME_TABLE\n"
+            "#undef GET_R600_NAME_TABLE\n";
+      Names.EmitStringTableDef(OS, "R600NameTable");
+      OS << "#endif // GET_R600_NAME_TABLE\n\n";
+      OS << Tables;
+    }
+  }
 
-  OS << "#ifdef GET_AMDGPU_NAME_TABLE\n"
-        "#undef GET_AMDGPU_NAME_TABLE\n";
-  Names.EmitStringTableDef(OS, "AMDGPUNameTable");
-  OS << "#endif // GET_AMDGPU_NAME_TABLE\n\n";
-
-  OS << GPUTable << SubArchNames;
+  {
+    StringToOffsetTable Names;
+    std::string Tables;
+    raw_string_ostream TablesOS(Tables);
+    emitAMDGPUTable(TablesOS, RK, Names);
+    emitAMDGPUAliases(TablesOS, RK, Names);
+    emitAMDGPUSubArchNames(TablesOS, RK, Names);
+    if (!Tables.empty()) {
+      OS << "#ifdef GET_AMDGPU_NAME_TABLE\n"
+            "#undef GET_AMDGPU_NAME_TABLE\n";
+      Names.EmitStringTableDef(OS, "AMDGPUNameTable");
+      OS << "#endif // GET_AMDGPU_NAME_TABLE\n\n";
+      OS << Tables;
+    }
+  }
 }
 
 static TableGen::Emitter::Opt X("gen-amdgpu-target-def", emitAMDGPUTargetDef,

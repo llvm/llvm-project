@@ -35,10 +35,10 @@ enum GPUKind : uint32_t {
   // Not specified processor.
   GK_NONE = 0,
 
-#define R600_GPU(NAME, ENUM, FEATURES) ENUM,
+#define GET_R600_GPU_ENUM
 #include "llvm/TargetParser/R600TargetParserDef.inc"
 
-#define AMDGPU_GPU(NAME, ENUM) ENUM,
+#define GET_AMDGPU_GPU_ENUM
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 };
 
