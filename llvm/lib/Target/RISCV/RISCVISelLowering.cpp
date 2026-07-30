@@ -13880,6 +13880,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                          VecVT.getVectorElementCount() * Factor);
 
     // Allocate a stack slot.
+    // Note that in the case where VecVT is fixed vector, even we later
+    // create a container for each (fixed vector) operand, we still allocate
+    // the stack with fixed vector size, rather than container size, as
+    // fixed vector size is already sufficient.
     Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(MemVT.getStoreSize(), Alignment);
@@ -13894,45 +13898,28 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
         Intrinsic::riscv_vsseg8_mask,
     };
-    static const Intrinsic::ID FixedIntrIds[] = {
-        Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
-        Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
-        Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
-        Intrinsic::riscv_seg8_store_mask,
-    };
 
-    SmallVector<SDValue> Ops;
-    if (VecVT.isFixedLengthVector()) {
-      Ops = {DAG.getEntryNode(),
-             DAG.getTargetConstant(FixedIntrIds[Factor - 2], DL, XLenVT)};
-      for (unsigned i = 0U; i < Factor; ++i)
-        Ops.push_back(Op.getOperand(i));
+    unsigned Sz = Factor * ContainerVecVT.getVectorMinNumElements() *
+                  ContainerVecVT.getScalarSizeInBits();
+    EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
 
-      // We cannot use Mask (or getAllOnesMask) here as it is a scalable vector
-      // mask.
-      SDValue FixedAllOnesMask = DAG.getSplat(getMaskTypeFor(VecVT), DL,
-                                              DAG.getConstant(1, DL, XLenVT));
-      Ops.append({StackPtr, FixedAllOnesMask, VL});
-    } else {
-      unsigned Sz = Factor * VecVT.getVectorMinNumElements() *
-                    VecVT.getScalarSizeInBits();
-      EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
-
-      SDValue StoredVal = DAG.getUNDEF(VecTupTy);
-      for (unsigned i = 0; i < Factor; i++)
-        StoredVal = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
-                                Op.getOperand(i),
-                                DAG.getTargetConstant(i, DL, MVT::i32));
-
-      Ops = {DAG.getEntryNode(),
-             DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
-             StoredVal,
-             StackPtr,
-             Mask,
-             VL,
-             DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL,
-                                   XLenVT)};
+    SDValue StoredVal = DAG.getUNDEF(VecTupTy);
+    for (unsigned i = 0; i < Factor; i++) {
+      SDValue OpVal = Op.getOperand(i);
+      if (VecVT.isFixedLengthVector())
+        OpVal = convertToScalableVector(ContainerVecVT, OpVal, DAG, Subtarget);
+      StoredVal = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
+                              OpVal, DAG.getTargetConstant(i, DL, MVT::i32));
     }
+
+    SDValue Ops[] = {DAG.getEntryNode(),
+                     DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
+                     StoredVal,
+                     StackPtr,
+                     Mask,
+                     VL,
+                     DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()),
+                                           DL, XLenVT)};
 
     SDValue Chain = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
