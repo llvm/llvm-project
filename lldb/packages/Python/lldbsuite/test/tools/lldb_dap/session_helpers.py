@@ -5,6 +5,7 @@ import base64
 import dataclasses
 import logging
 import os
+import re
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
@@ -555,7 +556,7 @@ class _ExpectCommon:
 
     # Checks on the Expression's result or Variable's value.
     startswith: Optional[str] = None
-    matches: Optional[str] = None  # regex applied to .value/.result
+    matches: Optional[str | re.Pattern[str]] = None  # regex applied to .value/.result
     # When set, fetch children via `variablesReference` and verify recursively.
     children: Optional[dict[str, "ExpectVar"]] = None
 
