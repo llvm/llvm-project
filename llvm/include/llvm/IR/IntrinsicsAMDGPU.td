@@ -2880,9 +2880,10 @@ def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 // Waits until the Nth previous marker is completed, if it exists.
+// N must fold to a constant by instruction selection.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+    Intrinsic<[], [llvm_i16_ty], [IntrNoMem, IntrHasSideEffects]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics

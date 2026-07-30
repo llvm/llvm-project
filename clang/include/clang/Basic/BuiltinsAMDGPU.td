@@ -331,7 +331,7 @@ def __builtin_amdgcn_av_store_b128
 
 // Mirrors GCNSubtarget::hasAsyncMark()
 def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts|asynccnt">;
-def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts|asynccnt">;
+def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(unsigned short)", [], "vmem-to-lds-load-insts|asynccnt">;
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.

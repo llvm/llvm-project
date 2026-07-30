@@ -15,3 +15,17 @@ void test_invocation() {
   __builtin_amdgcn_asyncmark();
   __builtin_amdgcn_wait_asyncmark(0);
 }
+
+// The argument is no longer required to be an integer constant expression in
+// the frontend; it must only fold to a constant by instruction selection.
+// CHECK-LABEL: @test_non_ice(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// CHECK-NEXT:    store i16 [[N:%.*]], ptr addrspace(5) [[N_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr addrspace(5) [[N_ADDR]], align 2
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+void test_non_ice(unsigned short n) {
+  __builtin_amdgcn_wait_asyncmark(n);
+}
