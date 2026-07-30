@@ -4730,19 +4730,21 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (VTy->getElementCount() == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
 
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
-
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
-  // Increase the cost for half and bfloat types if not architecturally
-  // supported.
+  // TODO: Handle more cost kinds for floating point operations.
+  if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
+      ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info, Args, CxtI);
+
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {
+    // Increase the cost for half and bfloat types if not architecturally
+    // supported.
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
             // There is not native support for fdiv/frem even with +sve-b16b16.
