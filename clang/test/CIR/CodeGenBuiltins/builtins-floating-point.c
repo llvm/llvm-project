@@ -1550,6 +1550,19 @@ long double my_coshl(long double f) {
   // OGCG: define{{.*}}@my_coshl(
   // OGCG: call x86_fp80 @llvm.cosh.f80(
 }
+long double my_coshf128(long double f) {
+  return __builtin_coshf128(f);
+  // CIR: cir.func no_inline dso_local @my_coshf128
+  // CIR: {{.*}} = cir.cosh {{.*}} : !cir.f128
+  // AARCH64: {{.+}} = cir.cosh {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_coshf128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.cosh.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_coshf128(
+  // OGCG: call fp128 @llvm.cosh.f128(
+}
 
 // sinh
 
@@ -1589,6 +1602,19 @@ long double my_sinhl(long double f) {
 
   // OGCG: define{{.*}}@my_sinhl(
   // OGCG: call x86_fp80 @llvm.sinh.f80(
+}
+long double my_sinhf128(long double f) {
+  return __builtin_sinhf128(f);
+  // CIR: cir.func no_inline dso_local @my_sinhf128
+  // CIR: {{.+}} = cir.sinh {{.+}} : !cir.f128
+  // AARCH64: {{.+}} = cir.sinh {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_sinhf128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.sinh.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_sinhf128(
+  // OGCG: call fp128 @llvm.sinh.f128(
 }
 
 // tanh
@@ -1630,6 +1656,19 @@ long double my_tanhl(long double f) {
   // OGCG: define{{.*}}@my_tanhl(
   // OGCG: call x86_fp80 @llvm.tanh.f80(
 }
+long double my_tanhf128(long double f) {
+  return __builtin_tanhf128(f);
+  // CIR: cir.func no_inline dso_local @my_tanhf128
+  // CIR: {{.+}} = cir.tanh {{.+}} : !cir.f128
+  // AARCH64: {{.+}} = cir.tanh {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_tanhf128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.tanh.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_tanhf128(
+  // OGCG: call fp128 @llvm.tanh.f128(
+}
 
 // exp10
 
@@ -1669,6 +1708,19 @@ long double my_exp10l(long double f) {
 
   // OGCG: define{{.*}}@my_exp10l(
   // OGCG: call x86_fp80 @llvm.exp10.f80(
+}
+long double my_exp10f128(long double f) {
+  return __builtin_exp10f128(f);
+  // CIR: cir.func no_inline dso_local @my_exp10f128
+  // CIR: {{.+}} = cir.exp10 {{.+}} : !cir.f128
+  // AARCH64: {{.+}} = cir.exp10 {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_exp10f128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.exp10.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_exp10f128(
+  // OGCG: call fp128 @llvm.exp10.f128(
 }
 
 float tanf(float);
