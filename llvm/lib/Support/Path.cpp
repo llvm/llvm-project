@@ -507,8 +507,28 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
   path.append(ext.begin(), ext.end());
 }
 
-static bool starts_with(StringRef Path, StringRef Prefix,
-                        Style style = Style::native) {
+template <typename T> static T &asLValue(T &&RValue) { return RValue; }
+
+bool starts_with(StringRef Path, StringRef Prefix, Style style) {
+  SmallString<128> PathBuf{Path};
+  if (remove_dots(PathBuf, false, style))
+    errs() << "starts_with remove_dots(" << Path << ") -> " << PathBuf << "\n";
+  SmallString<128> PrefixBuf{Prefix};
+  if (remove_dots(PrefixBuf, false, style))
+    errs() << "starts_with remove_dots(" << Prefix << ") -> " << PrefixBuf << "\n";
+  assert(!remove_dots(asLValue(SmallString<128>{Path}), false, style));
+  assert(!remove_dots(asLValue(SmallString<128>{Prefix}), false, style));
+
+  // The path must start with the prefix and last matching component must match
+  // in its entirety, not just the prefix.
+  return Path.consume_front(Prefix) &&
+         (Path.empty() || is_separator(Path[0], style));
+}
+
+// Unlike \c starts_with, this returns true even when the last component is just
+// a prefix match and not an exact match.
+static bool starts_with_relaxed(StringRef Path, StringRef Prefix,
+                                Style style = Style::native) {
   // Windows prefix matching : case and separator insensitive
   if (is_style_windows(style)) {
     if (Path.size() < Prefix.size())
@@ -532,7 +552,7 @@ bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
     return false;
 
   StringRef OrigPath(Path.begin(), Path.size());
-  if (!starts_with(OrigPath, OldPrefix, style))
+  if (!starts_with_relaxed(OrigPath, OldPrefix, style))
     return false;
 
   // If prefixes have the same size we can simply copy the new one over.
