@@ -55,6 +55,10 @@ FormatTokenLexer::FormatTokenLexer(
     auto Identifier = &IdentTable.get(StatementMacro);
     Macros.insert({Identifier, TT_StatementMacro});
   }
+  for (const std::string &AccessModifierMacro : Style.AccessModifierMacros) {
+    auto Identifier = &IdentTable.get(AccessModifierMacro);
+    Macros.insert({Identifier, TT_AccessModifierMacro});
+  }
   for (const std::string &TypenameMacro : Style.TypenameMacros) {
     auto Identifier = &IdentTable.get(TypenameMacro);
     Macros.insert({Identifier, TT_TypenameMacro});

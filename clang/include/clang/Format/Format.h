@@ -63,6 +63,11 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
+  /// A list of macros that should be interpreted as access modifiers instead of
+  /// as a regular identifier.
+  /// \version 22
+  std::vector<std::string> AccessModifierMacros;
+
   /// If ``true``, horizontally aligns arguments after an open bracket.
   ///
   /// \code
@@ -6057,7 +6062,8 @@ struct FormatStyle {
   WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
 
   bool operator==(const FormatStyle &R) const {
-    return AccessModifierOffset == R.AccessModifierOffset &&
+    return AccessModifierMacros == R.AccessModifierMacros &&
+           AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
            AlignArrayOfStructures == R.AlignArrayOfStructures &&
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&

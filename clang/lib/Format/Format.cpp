@@ -1247,6 +1247,7 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("UseCRLF", UseCRLF);
     }
 
+    IO.mapOptional("AccessModifierMacros", Style.AccessModifierMacros);
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
     IO.mapOptional("AlignConsecutiveAssignments",
