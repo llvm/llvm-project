@@ -13,6 +13,7 @@
 
 #include "SPIRVEmitIntrinsics.h"
 #include "SPIRV.h"
+#include "SPIRVAuxDataHandler.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -394,6 +395,7 @@ public:
   Instruction *visitStoreInst(StoreInst &I);
   Instruction *visitAllocaInst(AllocaInst &I);
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  Instruction *visitAtomicRMWInst(AtomicRMWInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
 
@@ -2609,6 +2611,48 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   return NewI;
 }
 
+Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
+  auto Op = I.getOperation();
+  if (Op != AtomicRMWInst::UIncWrap && Op != AtomicRMWInst::UDecWrap)
+    return &I;
+
+  Module *M = I.getModule();
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+
+  uint32_t Scope =
+      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()));
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
+  uint32_t MemSem =
+      static_cast<uint32_t>(getMemSemantics(I.getOrdering())) | ScSem;
+
+  StringRef FuncName = (Op == AtomicRMWInst::UIncWrap)
+                           ? "__spirv_AtomicUIncWrap"
+                           : "__spirv_AtomicUDecWrap";
+
+  Type *ValTy = I.getValOperand()->getType();
+  Type *PtrTy = I.getPointerOperand()->getType();
+  Type *Int32Ty = B.getInt32Ty();
+  SmallVector<Type *, 4> ArgTys = {PtrTy, Int32Ty, Int32Ty, ValTy};
+  FunctionType *FT = FunctionType::get(ValTy, ArgTys, false);
+  FunctionCallee FC = M->getOrInsertFunction(FuncName, FT);
+  if (auto *F = dyn_cast<Function>(FC.getCallee()))
+    F->setCallingConv(CallingConv::SPIR_FUNC);
+
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt32(Scope),
+                                  B.getInt32(MemSem), I.getValOperand()};
+  CallInst *CI = B.CreateCall(FC, Args);
+  CI->setCallingConv(CallingConv::SPIR_FUNC);
+
+  I.replaceAllUsesWith(CI);
+  I.eraseFromParent();
+  return CI;
+}
+
 static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
   auto *CI = dyn_cast<CallInst>(&I);
   if (!CI)
@@ -3004,27 +3048,29 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
-  if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
+  if (spirvPreserveAuxData() &&
+      I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
       isa<AtomicRMWInst>(I)) {
-    // If present, we encode AMDGPU atomic metadata as UserSemantic string
-    // decorations, which will be parsed during reverse translation.
-    auto &Ctx = B.getContext();
-    auto *US = ConstantAsMetadata::get(
-        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+    LLVMContext &Ctx = B.getContext();
+    auto *AuxMD = ConstantAsMetadata::get(ConstantInt::get(
+        B.getInt32Ty(), SPIRV::Decoration::AuxDataInstructionMetadata));
 
     SmallVector<Metadata *> MDs;
     if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+          Ctx,
+          {AuxMD, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
     if (I->hasMetadata("amdgpu.no.remote.memory"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
     if (I->hasMetadata("amdgpu.ignore.denormal.mode"))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
-    if (!MDs.empty())
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
+    if (!MDs.empty()) {
+      setInsertPointAfterDef(B, I);
       B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
                         {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
+    }
   }
 }
 

@@ -65,6 +65,8 @@ SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
 
 bool SPIRVAuxDataHandler::hasWork() const { return SPVPreserveAuxData; }
 
+bool llvm::spirvPreserveAuxData() { return SPVPreserveAuxData; }
+
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {
   if (!hasWork())
@@ -76,7 +78,7 @@ void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
     return;
   }
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
-  if (!MAI.ExtInstSetMap.count(NonSemanticAuxDataSet))
+  if (!MAI.ExtInstSetMap.contains(NonSemanticAuxDataSet))
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
 }
 
@@ -181,6 +183,16 @@ void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
     collectAttributesFor(&GO, MAI);
     collectMetadataFor(&GO, MDNames, MAI);
   }
+  // There are only 3 possible metadata names (AMDGPUAtomicMDKind has 3
+  // enumerators). Track which we've seen so we can stop early instead of
+  // scanning potentially thousands of records with redundant hash lookups.
+  unsigned SeenMask = 0;
+  for (const auto &Rec : MAI.InstrAuxDataRecords) {
+    SeenMask |= 1u << static_cast<unsigned>(Rec.Kind);
+    getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
+    if (SeenMask == 0x7)
+      break;
+  }
 }
 
 void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
@@ -199,6 +211,16 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
     for (const Operand &Op : Rec.Operands)
       Operands.push_back(Op.Const ? emitConstant(Op.Const, MAI) : Op.Reg);
     emitAuxDataExtInst(Rec.Opcode, VoidTypeReg, ExtSetReg, Operands, MAI);
+  }
+
+  for (const auto &Rec : MAI.InstrAuxDataRecords) {
+    MCRegister TargetReg = MAI.getRegisterAlias(Rec.MF, Rec.TargetReg);
+    if (!TargetReg.isValid())
+      continue;
+    MCRegister MDNameReg =
+        getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
+    emitAuxDataExtInst(InstructionMetadataOpcode, VoidTypeReg, ExtSetReg,
+                       {TargetReg, MDNameReg}, MAI);
   }
 
   if (LinkagePreservedGOs.empty())

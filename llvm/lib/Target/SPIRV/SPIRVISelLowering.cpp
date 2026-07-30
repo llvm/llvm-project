@@ -679,7 +679,7 @@ SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return AtomicExpansionKind::None;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
-    return AtomicExpansionKind::CmpXChg;
+    return AtomicExpansionKind::None;
   default:
     return TargetLowering::shouldExpandAtomicRMWInIR(RMW);
   }

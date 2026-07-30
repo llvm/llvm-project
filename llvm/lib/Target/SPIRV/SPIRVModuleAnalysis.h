@@ -167,6 +167,18 @@ struct ModuleAnalysisInfo {
   DenseMap<const Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
+  enum class AMDGPUAtomicMDKind : uint8_t {
+    NoFineGrainedMemory,
+    NoRemoteMemory,
+    IgnoreDenormalMode,
+  };
+  struct InstrAuxDataRecord {
+    const MachineFunction *MF;
+    Register TargetReg;
+    AMDGPUAtomicMDKind Kind;
+  };
+  SmallVector<InstrAuxDataRecord> InstrAuxDataRecords;
+
   MCRegister getGlobalObjReg(const GlobalObject *GO) {
     assert(GO && "GlobalObject is null");
     return GlobalObjMap.lookup(GO);
@@ -210,6 +222,18 @@ struct ModuleAnalysisInfo {
     if (Inserted)
       It->second = getNextIDRegister();
     return It->second;
+  }
+  static StringRef getAMDGPUAtomicMDName(AMDGPUAtomicMDKind Kind) {
+    switch (Kind) {
+    case AMDGPUAtomicMDKind::NoFineGrainedMemory:
+      return "amdgpu.no.fine.grained.memory";
+    case AMDGPUAtomicMDKind::NoRemoteMemory:
+      return "amdgpu.no.remote.memory";
+    case AMDGPUAtomicMDKind::IgnoreDenormalMode:
+      return "amdgpu.ignore.denormal.mode";
+    default:
+      llvm_unreachable("unknown AMDGPUAtomicMDKind");
+    }
   }
 };
 } // namespace SPIRV
