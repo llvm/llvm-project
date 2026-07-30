@@ -7,137 +7,70 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseNewMLIROpBuilderCheck.h"
-#include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Tooling/Transformer/RangeSelector.h"
-#include "clang/Tooling/Transformer/RewriteRule.h"
-#include "clang/Tooling/Transformer/Stencil.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FormatVariadic.h"
+#include "clang/Lex/Lexer.h"
+
+using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_check {
 
-using namespace ::clang::ast_matchers;
-using namespace ::clang::transformer;
-
-static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
-  // This is using an EditGenerator rather than ASTEdit as we want to warn even
-  // if in macro.
-  return [Call = std::move(Call),
-          Builder = std::move(Builder)](const MatchFinder::MatchResult &Result)
-             -> Expected<SmallVector<transformer::Edit, 1>> {
-    Expected<CharSourceRange> CallRange = Call(Result);
-    if (!CallRange)
-      return CallRange.takeError();
-    SourceManager &SM = *Result.SourceManager;
-    const LangOptions &LangOpts = Result.Context->getLangOpts();
-    SourceLocation Begin = CallRange->getBegin();
-
-    // This will result in just a warning and no edit.
-    const bool InMacro = CallRange->getBegin().isMacroID();
-    if (InMacro) {
-      while (SM.isMacroArgExpansion(Begin))
-        Begin = SM.getImmediateExpansionRange(Begin).getBegin();
-      Edit WarnOnly;
-      WarnOnly.Kind = EditKind::Range;
-      WarnOnly.Range = CharSourceRange::getCharRange(Begin, Begin);
-      return SmallVector<Edit, 1>({WarnOnly});
-    }
-
-    // This will try to extract the template argument as written so that the
-    // rewritten code looks closest to original.
-    auto NextToken = [&](std::optional<Token> CurrentToken) {
-      if (!CurrentToken)
-        return CurrentToken;
-      if (CurrentToken->is(tok::eof))
-        return std::optional<Token>();
-      return utils::lexer::findNextTokenSkippingComments(
-          CurrentToken->getLocation(), SM, LangOpts);
-    };
-    std::optional<Token> LessToken =
-        utils::lexer::findNextTokenSkippingComments(Begin, SM, LangOpts);
-    while (LessToken && LessToken->getKind() != tok::less)
-      LessToken = NextToken(LessToken);
-    if (!LessToken) {
-      return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
-                                                 "missing '<' token");
-    }
-
-    std::optional<Token> EndToken = NextToken(LessToken);
-    std::optional<Token> GreaterToken = NextToken(EndToken);
-    for (; GreaterToken && GreaterToken->getKind() != tok::greater;
-         GreaterToken = NextToken(GreaterToken)) {
-      EndToken = GreaterToken;
-    }
-    if (!EndToken) {
-      return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
-                                                 "missing '>' token");
-    }
-
-    std::optional<Token> ArgStart = NextToken(GreaterToken);
-    if (!ArgStart || ArgStart->getKind() != tok::l_paren) {
-      return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
-                                                 "missing '(' token");
-    }
-    std::optional<Token> Arg = NextToken(ArgStart);
-    if (!Arg) {
-      return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
-                                                 "unexpected end of file");
-    }
-    const bool HasArgs = Arg->getKind() != tok::r_paren;
-
-    Expected<CharSourceRange> BuilderRange = Builder(Result);
-    if (!BuilderRange)
-      return BuilderRange.takeError();
-
-    // Helper for concatting below.
-    auto GetText = [&](const CharSourceRange &Range) {
-      return Lexer::getSourceText(Range, SM, LangOpts);
-    };
-
-    Edit Replace;
-    Replace.Kind = EditKind::Range;
-    Replace.Range.setBegin(CallRange->getBegin());
-    Replace.Range.setEnd(ArgStart->getEndLoc());
-    const Expr *BuilderExpr = Result.Nodes.getNodeAs<Expr>("builder");
-    std::string BuilderText = GetText(*BuilderRange).str();
-    if (BuilderExpr->getType()->isPointerType()) {
-      BuilderText = BuilderExpr->isImplicitCXXThis()
-                        ? "*this"
-                        : llvm::formatv("*{}", BuilderText).str();
-    }
-    const StringRef OpType = GetText(CharSourceRange::getTokenRange(
-        LessToken->getEndLoc(), EndToken->getLastLoc()));
-    Replace.Replacement = llvm::formatv("{}::create({}{}", OpType, BuilderText,
-                                        HasArgs ? ", " : "");
-
-    return SmallVector<Edit, 1>({Replace});
-  };
-}
-
-static RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
-  const Stencil Message = cat("use 'OpType::create(builder, ...)' instead of "
-                              "'builder.create<OpType>(...)'");
+void UseNewMlirOpBuilderCheck::registerMatchers(MatchFinder *Finder) {
   // Match a create call on an OpBuilder.
-  auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
-  const ast_matchers::internal::Matcher<Stmt> Base =
+  const auto BuilderType =
+      cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
+  Finder->addMatcher(
       cxxMemberCallExpr(
-          on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
-                 .bind("builder")),
           callee(cxxMethodDecl(hasTemplateArgument(0, templateArgument()),
-                               hasName("create"))))
-          .bind("call");
-  return applyFirst(
-      //  Attempt rewrite given an lvalue builder, else just warn.
-      {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), Base),
-                rewrite(node("call"), node("builder")), Message),
-       makeRule(Base, noopEdit(node("call")), Message)});
+                               hasName("create"))),
+          on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
+                 .bind("builder")))
+          .bind("call"),
+      this);
 }
 
-UseNewMlirOpBuilderCheck::UseNewMlirOpBuilderCheck(StringRef Name,
-                                                   ClangTidyContext *Context)
-    : TransformerClangTidyCheck(useNewMlirOpBuilderCheckRule(), Name, Context) {
+void UseNewMlirOpBuilderCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
+  const auto *Builder = Result.Nodes.getNodeAs<Expr>("builder");
+
+  const DiagnosticBuilder Diag =
+      diag(Result.SourceManager->getExpansionLoc(Call->getBeginLoc()),
+           "use 'OpType::create(builder, ...)' instead of "
+           "'builder.create<OpType>(...)'");
+
+  if (Call->getBeginLoc().isMacroID())
+    return;
+
+  // Only attempt the rewrite if given an lvalue builder.
+  if (isa<CXXTemporaryObjectExpr>(Builder))
+    return;
+
+  const auto *Callee = dyn_cast<MemberExpr>(Call->getCallee());
+  if (!Callee)
+    return;
+
+  Diag << FixItHint::CreateRemoval(
+              {Call->getBeginLoc(), Callee->getLAngleLoc()})
+       << FixItHint::CreateReplacement(Callee->getRAngleLoc(), "::create");
+
+  std::string BuilderArg;
+  if (Builder->isImplicitCXXThis()) {
+    BuilderArg = "*this";
+  } else {
+    if (Callee->isArrow())
+      BuilderArg += '*';
+
+    BuilderArg += Lexer::getSourceText(
+        CharSourceRange::getTokenRange(Builder->getSourceRange()),
+        *Result.SourceManager, getLangOpts());
+  }
+
+  if (Call->getNumArgs() == 0) {
+    Diag << FixItHint::CreateInsertion(Call->getRParenLoc(), BuilderArg);
+  } else {
+    BuilderArg += ", ";
+    Diag << FixItHint::CreateInsertion(Call->getArg(0)->getBeginLoc(),
+                                       BuilderArg);
+  }
 }
 
 } // namespace clang::tidy::llvm_check

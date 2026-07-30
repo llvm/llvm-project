@@ -9,15 +9,17 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_USENEWMLIROPBUILDERCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_USENEWMLIROPBUILDERCHECK_H
 
-#include "../utils/TransformerClangTidyCheck.h"
+#include "../ClangTidyCheck.h"
 
 namespace clang::tidy::llvm_check {
 
 /// Checks for uses of MLIR's old/to be deprecated `OpBuilder::create<T>` form
 /// and suggests using `T::create` instead.
-class UseNewMlirOpBuilderCheck : public utils::TransformerClangTidyCheck {
+class UseNewMlirOpBuilderCheck : public ClangTidyCheck {
 public:
-  UseNewMlirOpBuilderCheck(StringRef Name, ClangTidyContext *Context);
+  using ClangTidyCheck::ClangTidyCheck;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
