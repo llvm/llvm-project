@@ -84,6 +84,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: SelectOpsConversion
 ! ALL-NEXT: AssumedRankOpConversion
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
