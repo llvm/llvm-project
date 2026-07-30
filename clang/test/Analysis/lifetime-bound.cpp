@@ -46,8 +46,8 @@ void caller() {
   X obj;
   int &r = obj.choose(v);
   clang_analyzer_dumpLifetimeOriginsOf(r);
-  // expected-warning@-1 {{Origin &v bound to v}}
-  // expected-note@-2    {{Origin &v bound to v}}
+  // expected-warning@-1 {{Origin '&v' bound to 'v'}}
+  // expected-note@-2    {{Origin '&v' bound to 'v'}}
 }
 
 // Obj ref type function return annotated case.
@@ -61,8 +61,8 @@ void caller_two() {
   Y y;
   A &f = y.getA();
   clang_analyzer_dumpLifetimeOriginsOf(f);
-  // expected-warning@-1 {{Origin &y.a bound to y}}
-  // expected-note@-2    {{Origin &y.a bound to y}}
+  // expected-warning@-1 {{Origin '&y.a' bound to 'y'}}
+  // expected-note@-2    {{Origin '&y.a' bound to 'y'}}
 }
 
 // Obj ptr type function return annotated case.
@@ -75,8 +75,8 @@ void caller_three() {
   Z z;
   A *func = z.getA();
   clang_analyzer_dumpLifetimeOriginsOf(func);
-  // expected-warning@-1 {{Origin &z.a bound to z}}
-  // expected-note@-2    {{Origin &z.a bound to z}}
+  // expected-warning@-1 {{Origin '&z.a' bound to 'z'}}
+  // expected-note@-2    {{Origin '&z.a' bound to 'z'}}
 }
 
 // Free function with annotated param and ref return.
@@ -86,8 +86,8 @@ void caller_four() {
   int num = 5;
   int &s = foo(num);
   clang_analyzer_dumpLifetimeOriginsOf(s);
-  // expected-warning@-1 {{Origin &num bound to num}}
-  // expected-note@-2    {{Origin &num bound to num}}
+  // expected-warning@-1 {{Origin '&num' bound to 'num'}}
+  // expected-note@-2    {{Origin '&num' bound to 'num'}}
 }
 
 // Free function with annotated param and ptr return.
@@ -99,8 +99,8 @@ void caller_five() {
   int *s = boo(n_ptr);
 
   clang_analyzer_dumpLifetimeOriginsOf(s);
-  // expected-warning@-1 {{Origin &n bound to n}}
-  // expected-note@-2  {{Origin &n bound to n}}
+  // expected-warning@-1 {{Origin '&n' bound to 'n'}}
+  // expected-note@-2  {{Origin '&n' bound to 'n'}}
 }
 
 // Free function with both annotated and non-annotated parameters.
@@ -112,8 +112,8 @@ void caller_six() {
   int &s = fn(even, odd);
 
   clang_analyzer_dumpLifetimeOriginsOf(s);
-  // expected-warning@-1 {{Origin &odd bound to odd}}
-  // expected-note@-2    {{Origin &odd bound to odd}}
+  // expected-warning@-1 {{Origin '&odd' bound to 'odd'}}
+  // expected-note@-2    {{Origin '&odd' bound to 'odd'}}
 }
 
 // Test cases for testing when the result of function calls are SymbolRefs.
@@ -127,8 +127,8 @@ void caller_seven() {
   auto *bind = foo(y_ptr);
 
   clang_analyzer_dumpLifetimeOriginsOf(bind);
-  // expected-warning-re@-1 {{Origin &SymRegion{{.*}} bound to y}}
-  // expected-note-re@-2    {{Origin &SymRegion{{.*}} bound to y}} 
+  // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'y'}}
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'y'}}
 }
 
 // Function returns a reference and has an annotated parameter.
@@ -139,8 +139,8 @@ void caller_eight() {
   auto &bind = func(f);
 
   clang_analyzer_dumpLifetimeOriginsOf(bind);
-  // expected-warning-re@-1 {{Origin &SymRegion{{.*}} bound to f}}
-  // expected-note-re@-2    {{Origin &SymRegion{{.*}} bound to f}}
+  // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'f'}}
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'f'}}
 }
 
 // Function returns a reference and has two annotated parameters.
@@ -152,8 +152,8 @@ void caller_nine() {
   int &numbers = f(first_num, second_num);
 
   clang_analyzer_dumpLifetimeOriginsOf(numbers);
-  // expected-warning-re@-1 {{Origin &SymRegion{{.*}} bound to first_num, second_num}}
-  // expected-note-re@-2    {{Origin &SymRegion{{.*}} bound to first_num, second_num}}
+  // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'first_num', 'second_num'}}
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'first_num', 'second_num'}}
 }
 
 struct View {
@@ -359,4 +359,3 @@ int *array_member_subobject_dangling() {
   // expected-note@-4    {{Address of stack memory associated with local variable 'buf' returned to caller}}
   // expected-warning@-5 {{address of stack memory associated with local variable 'buf' returned}}
 }
-

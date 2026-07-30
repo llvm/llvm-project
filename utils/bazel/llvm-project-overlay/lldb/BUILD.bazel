@@ -648,6 +648,10 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+        "@platforms//os:windows": glob(
+            ["include/lldb/Host/windows/*.h"],
+            exclude = ["include/lldb/Host/windows/ConPTYUtils.h"],
+        ),
     }) + select({
         ":libedit_enabled": ["include/lldb/Host/Editline.h"],
         "//conditions:default": [],

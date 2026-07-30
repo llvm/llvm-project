@@ -31,6 +31,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.netinet_udp
     libc.include.poll
     libc.include.pthread
+    libc.include.pwd
     libc.include.sched
     libc.include.search
     libc.include.setjmp

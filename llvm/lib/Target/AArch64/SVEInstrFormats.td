@@ -10438,11 +10438,16 @@ class sve2p1_mem_cst_si_2z<string mnemonic, bits<2> msz, bit n,
 
 
 multiclass sve2p1_mem_cst_si_2z<string mnemonic, bits<2> msz, bit n,
-                              RegisterOperand vector_ty> {
+                               RegisterOperand vector_ty,
+                               RegisterOperand vector_pseudo_ty> {
   def NAME : sve2p1_mem_cst_si_2z<mnemonic, msz, n, vector_ty>;
 
   def : InstAlias<mnemonic # " $Zt, $PNg, [$Rn]",
                   (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+
+  let hasSideEffects = 0, mayStore = 1 in
+  def NAME # _PSEUDO : Pseudo<(outs), (ins vector_pseudo_ty:$Zt,
+                         PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s2:$imm4), []>;
 }
 
 
@@ -10498,11 +10503,16 @@ class sve2p1_mem_cst_si_4z<string mnemonic, bits<2> msz, bit n,
 
 
 multiclass sve2p1_mem_cst_si_4z<string mnemonic, bits<2> msz, bit n,
-                                RegisterOperand vector_ty> {
+                                RegisterOperand vector_ty,
+                                RegisterOperand vector_pseudo_ty> {
   def NAME : sve2p1_mem_cst_si_4z<mnemonic, msz, n, vector_ty>;
 
   def : InstAlias<mnemonic # " $Zt, $PNg, [$Rn]",
                   (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn,0), 1>;
+
+  let hasSideEffects = 0, mayStore = 1 in
+  def NAME # _PSEUDO : Pseudo<(outs), (ins vector_pseudo_ty:$Zt,
+                         PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s4:$imm4), []>;
 }
 
 // SVE predicate count (predicate-as-counter)
