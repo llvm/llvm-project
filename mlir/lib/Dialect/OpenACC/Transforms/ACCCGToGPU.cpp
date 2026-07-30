@@ -382,6 +382,21 @@ static Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc,
 /// looking through view/cast ops.
 static acc::PrivateLocalOp getPrivateLocalForMemref(Value memref);
 
+/// Returns the dimensions that own \p privateLocal.
+static GPUParallelDimsAttr
+getPrivateParDims(acc::PrivateLocalOp privateLocal,
+                  acc::ComputeRegionOp computeRegion);
+
+/// True when the storage backing \p privateLocal is thread_x-private. An
+/// unknown scope conservatively counts as per-thread.
+static bool storageHasThreadX(acc::PrivateLocalOp privateLocal,
+                              acc::ComputeRegionOp computeRegion) {
+  GPUParallelDimsAttr dims = getPrivateParDims(privateLocal, computeRegion);
+  return !dims || llvm::any_of(dims.getArray(), [](GPUParallelDimAttr d) {
+    return d.isThreadX();
+  });
+}
+
 /// Returns the sole user of \p v, or null if it has zero or multiple uses.
 static Operation *getOnlyUser(Value v) {
   if (!v.hasOneUse())
@@ -780,20 +795,9 @@ ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
   // Cross-thread array reduction accumulators must stay per-thread when their
   // storage scope includes thread_x. Gang-/worker-scoped array temps remain
   // eligible for shared memory.
-  if (perThreadArrayReductionAccum(privateLocal.getResult())) {
-    bool storageHasThreadX = true;
-    if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal)) {
-      storageHasThreadX =
-          llvm::any_of(dims.getArray(), [](auto d) { return d.isThreadX(); });
-    } else if (GPUParallelDimsAttr dims =
-                   getPrivatizeOp(privateLocal, computeRegion)
-                       .getParDimsAttr()) {
-      storageHasThreadX =
-          llvm::any_of(dims.getArray(), [](auto d) { return d.isThreadX(); });
-    }
-    if (storageHasThreadX)
-      return std::nullopt;
-  }
+  if (perThreadArrayReductionAccum(privateLocal.getResult()) &&
+      storageHasThreadX(privateLocal, computeRegion))
+    return std::nullopt;
   ModuleOp module = computeRegion->getParentOfType<ModuleOp>();
   FailureOr<bool> isCandidate = isPrivateLocalSharedMemoryCandidate(
       privateLocal, computeRegion, module, defaultPolicy, &accSupport);
@@ -1239,13 +1243,14 @@ static bool isRedundantChainAccumulate(acc::ReductionAccumulateOp op) {
   return false;
 }
 
-/// Returns the dimensions that own \p privateLocal.
 static GPUParallelDimsAttr
 getPrivateParDims(acc::PrivateLocalOp privateLocal,
                   acc::ComputeRegionOp computeRegion) {
   if (GPUParallelDimsAttr parDims = acc::getParDimsAttr(privateLocal))
     return parDims;
-  return getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr();
+  if (acc::PrivatizeOp privatize = getPrivatizeOp(privateLocal, computeRegion))
+    return privatize.getParDimsAttr();
+  return {};
 }
 
 /// True when \p privateLocal has one private slot per ThreadY row.
@@ -2725,17 +2730,8 @@ void ACCCGToGPULowering::processPrivateLocal(
     // par_dims lack thread_x (gang-/worker-scoped array temp).
     acc::ReductionAccumulateArrayOp arrayAccum =
         perThreadArrayReductionAccum(privateLocal.getResult());
-    auto storageHasThreadX = [&]() {
-      if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal))
-        return llvm::any_of(dims.getArray(),
-                            [](auto d) { return d.isThreadX(); });
-      if (GPUParallelDimsAttr dims = privatizeOp.getParDimsAttr())
-        return llvm::any_of(dims.getArray(),
-                            [](auto d) { return d.isThreadX(); });
-      return true;
-    };
     if ((isThreadXPrivatize(privatizeOp) ||
-         (arrayAccum && storageHasThreadX())) &&
+         (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
@@ -2823,18 +2819,9 @@ void ACCCGToGPULowering::processPrivateLocal(
       parDimsPair = computeActiveAndInactiveParDims(privateLocal, nullptr);
   acc::ReductionAccumulateArrayOp arrayAccum =
       perThreadArrayReductionAccum(privateLocal.getResult());
-  auto storageHasThreadX = [&]() {
-    if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal))
-      return llvm::any_of(dims.getArray(),
-                          [](auto d) { return d.isThreadX(); });
-    if (GPUParallelDimsAttr dims =
-            getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr())
-      return llvm::any_of(dims.getArray(),
-                          [](auto d) { return d.isThreadX(); });
-    return true;
-  };
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
-    if ((parDim.isThreadX() || (arrayAccum && storageHasThreadX())) &&
+    if ((parDim.isThreadX() ||
+         (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
@@ -3568,28 +3555,17 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
   // would fit on the stack. For a dynamically-shaped accumulator the type
   // conveys no size, so classify from storage/accumulate thread_x dims.
   auto storageIsThreadXPrivate = [&](Value v) -> bool {
-    if (acc::PrivateLocalOp privateLocal = getPrivateLocalForMemref(v)) {
-      if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal)) {
-        return llvm::any_of(dims.getArray(),
-                            [](auto d) { return d.isThreadX(); });
-      }
-      if (acc::PrivatizeOp privatize =
-              getPrivatizeOp(privateLocal, computeRegion)) {
-        if (GPUParallelDimsAttr dims = privatize.getParDimsAttr()) {
-          return llvm::any_of(dims.getArray(),
-                              [](auto d) { return d.isThreadX(); });
-        }
-      }
+    acc::PrivateLocalOp privateLocal = getPrivateLocalForMemref(v);
+    GPUParallelDimsAttr dims =
+        privateLocal ? getPrivateParDims(privateLocal, computeRegion)
+                     : GPUParallelDimsAttr();
+    if (!dims) {
+      if (Operation *root = unwrapMemRefConversion(v).getDefiningOp())
+        dims = getParDimsAttr(root);
     }
-    if (Operation *root = unwrapMemRefConversion(v).getDefiningOp()) {
-      if (GPUParallelDimsAttr dims = getParDimsAttr(root)) {
-        return llvm::any_of(dims.getArray(),
-                            [](auto d) { return d.isThreadX(); });
-      }
-    }
-    return true;
+    return !dims ||
+           llvm::any_of(dims.getArray(), [](auto d) { return d.isThreadX(); });
   };
-  bool isPerThreadPrivate;
   Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
   bool isSharedStorage = isa_and_nonnull<memref::AllocOp>(rootOp) ||
                          isa_and_nonnull<acc::GPUSharedMemoryOp>(rootOp);
@@ -3598,26 +3574,21 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     isSharedStorage |=
         addrSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
   }
-  if (memrefTy.hasStaticShape()) {
-    isPerThreadPrivate =
-        !isSharedStorage &&
-        canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack) &&
-        storageIsThreadXPrivate(op.getMemref());
-  } else {
-    isPerThreadPrivate = !isSharedStorage &&
-                         storageIsThreadXPrivate(op.getMemref()) &&
-                         llvm::any_of(op.getParDims().getArray(),
-                                      [](mlir::acc::GPUParallelDimAttr d) {
-                                        return d.isThreadX();
-                                      });
-  }
+  bool isPerThreadPrivate =
+      !isSharedStorage && storageIsThreadXPrivate(op.getMemref()) &&
+      (memrefTy.hasStaticShape()
+           ? canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack)
+           : llvm::any_of(op.getParDims().getArray(),
+                          [](mlir::acc::GPUParallelDimAttr d) {
+                            return d.isThreadX();
+                          }));
   if (!isPerThreadPrivate) {
-    // Block-shared accumulator: no-op when the accumulate spans a block dim or
-    // sits in block context (threads already hold the block partial; the
-    // atomic combine finishes across blocks). A thread-only shared reduction
-    // with no block context, where several threads reduce into the same
-    // element, is not yet supported.
-    if (hasBlockDim || reductionHasBlockContext(op)) {
+    // Block-shared accumulator: no-op when the accumulate has block context,
+    // i.e. it spans a block dim or is nested in a block-mapped loop (threads
+    // already hold the block partial; the atomic combine finishes across
+    // blocks). A thread-only shared reduction with no block context, where
+    // several threads reduce into the same element, is not yet supported.
+    if (reductionHasBlockContext(op)) {
       eraseDeadBounds();
     } else {
       (void)accSupport.emitNYI(
