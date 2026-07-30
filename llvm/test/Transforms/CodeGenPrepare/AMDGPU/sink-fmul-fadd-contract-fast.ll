@@ -7,9 +7,9 @@ define float @sink_fmul_fadd_f32(i1 %cond, float %a, float %b, float %c) {
 ; CHECK-LABEL: define float @sink_fmul_fadd_f32(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul float [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul float [[A]], [[B]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[C]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:

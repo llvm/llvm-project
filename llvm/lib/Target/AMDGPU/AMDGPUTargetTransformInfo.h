@@ -71,7 +71,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphics;
   bool HasFP32Denormals;
-  bool HasFP64FP16Denormals;
   static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
@@ -102,6 +101,12 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
+
+  /// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
+  /// expected to fuse during instruction selection. \p SLT is the legalized
+  /// scalar type.
+  bool canFuseFMulWithFAddSub(MVT::SimpleValueType SLT, const Instruction *FMul,
+                              const Instruction *FAddSub) const;
 
   /// \returns true if V might be divergent even when all of its operands
   /// are uniform.

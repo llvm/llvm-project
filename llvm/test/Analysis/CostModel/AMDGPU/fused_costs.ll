@@ -92,65 +92,65 @@ define void @fmul_fadd_f32() #0 {
 }
 
 define void @fmul_fadd_f16() #0 {
-; FUSED-LABEL: 'fmul_fadd_f16'
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16 = fmul half undef, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = fmul <2 x half> undef, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16_2 = fmul half undef, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
-; FUSED-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; SLOWF32-LABEL: 'fmul_fadd_f16'
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16 = fmul half undef, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = fmul <2 x half> undef, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16_2 = fmul half undef, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; GFX9SLOW-LABEL: 'fmul_fadd_f16'
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = fmul half undef, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fmul <2 x half> undef, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16_2 = fmul half undef, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
-; GFX9SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; FASTF32-LABEL: 'fmul_fadd_f16'
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = fmul half undef, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fmul <2 x half> undef, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16_2 = fmul half undef, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; FUSED-SIZE-LABEL: 'fmul_fadd_f16'
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16 = fmul half undef, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = fmul <2 x half> undef, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16_2 = fmul half undef, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
-; FUSED-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; SLOWF32-SIZE-LABEL: 'fmul_fadd_f16'
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16 = fmul half undef, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16 = fmul <2 x half> undef, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16_2 = fmul half undef, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; GFX9SLOW-SIZE-LABEL: 'fmul_fadd_f16'
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = fmul half undef, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fmul <2 x half> undef, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16_2 = fmul half undef, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
-; GFX9SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; FASTF32-SIZE-LABEL: 'fmul_fadd_f16'
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = fmul half undef, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16add = fadd half %f16, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c = fmul contract half undef, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15cadd = fadd contract half %f16c, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fmul <2 x half> undef, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16add = fadd <2 x half> %v2f16, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16_2 = fmul half undef, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16sub = fsub half %f16_2, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %f16c_2 = fmul contract half undef, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f15csub = fsub contract half %f16c_2, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16_2 = fmul <2 x half> undef, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16sub = fsub <2 x half> %v2f16_2, undef
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fmul half undef, undef
   %f16add = fadd half %f16, undef
@@ -255,3 +255,8 @@ define void @fmul_fadd_f64() #0 {
 
 attributes #0 = { nounwind }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; FUSED: {{.*}}
+; FUSED-SIZE: {{.*}}
+; GFX9SLOW: {{.*}}
+; GFX9SLOW-SIZE: {{.*}}
