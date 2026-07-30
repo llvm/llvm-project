@@ -11,6 +11,7 @@
 // Iterator traits and member typedefs in zip_transform_view::iterator.
 
 #include <array>
+#include <cstdint>
 #include <ranges>
 
 #include "test_iterators.h"

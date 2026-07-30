@@ -11,6 +11,7 @@
 // Iterator traits and member typedefs in adjacent_transform_view::iterator.
 
 #include <array>
+#include <cstdint>
 #include <iterator>
 #include <ranges>
 #include <tuple>
