@@ -5671,7 +5671,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
     ReplaceMVUses(StrideVal);
     for (auto *U : StrideVal->users())
-      if (isa<SExtInst, ZExtInst>(U))
+      if (isa<SExtInst, ZExtInst, TruncInst>(U))
         ReplaceMVUses(U);
 
     widenUnitStridedLoadStore(VPI, /*Reverse=*/false, VPI->getMask());

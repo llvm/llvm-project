@@ -2594,7 +2594,7 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%iv.trunc> = trunc ir<%iv> to i16
 ; CHECK-NEXT:      EMIT-SCALAR ir<%iv.ext> = sext ir<%iv> to i64
-; CHECK-NEXT:      EMIT ir<%idx.trunc> = mul ir<%iv.trunc>, ir<%stride.trunc>
+; CHECK-NEXT:      EMIT ir<%idx.trunc> = mul ir<%iv.trunc>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx.ext> = mul ir<%iv.ext>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.trunc> = getelementptr ir<%p0>, ir<%idx.trunc>
 ; CHECK-NEXT:      EMIT ir<%gep.ext> = getelementptr ir<%p0>, ir<%idx.ext>
