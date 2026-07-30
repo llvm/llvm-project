@@ -14,6 +14,7 @@
 #include <__iterator/concepts.h>        // indirectly_readable
 #include <__iterator/iterator_traits.h> // iter_reference_t
 #include <__memory/addressof.h>
+#include <__type_traits/is_object.h>
 #include <__utility/forward.h>
 #include <optional>
 

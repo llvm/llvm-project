@@ -31,10 +31,14 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/maybe_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/as_lvalue.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
