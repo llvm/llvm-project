@@ -626,14 +626,11 @@ static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
              : parseArchAMDGCN(CPUName);
 }
 
-// Compute the xnack/sramecc settings for processor \p Arch from the
-// processor+features string \p TargetIDStr
-// (e.g. "gfx90a:xnack+:sramecc-"). Returns false if a modifier names an unknown
-// or repeated feature, names one the processor does not support, or has a
-// malformed sign.
-static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
-                                    TargetIDSetting &XnackSetting,
-                                    TargetIDSetting &SramEccSetting) {
+// Compute the default xnack/sramecc settings for processor \p Arch, before any
+// explicit feature modifiers are applied.
+static void getDefaultTargetIDFeatures(GPUKind Arch,
+                                       TargetIDSetting &XnackSetting,
+                                       TargetIDSetting &SramEccSetting) {
   const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
   // xnack with on/off modes defaults to Any; supported without on/off modes is
   // hardwired On (e.g. gfx1250); unsupported is Unsupported.
@@ -646,6 +643,18 @@ static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
   SramEccSetting = Features.test(FEAT_SRAMECC_SUPPORT)
                        ? TargetIDSetting::Any
                        : TargetIDSetting::Unsupported;
+}
+
+// Compute the xnack/sramecc settings for processor \p Arch from the
+// processor+features string \p TargetIDStr
+// (e.g. "gfx90a:xnack+:sramecc-"). Returns false if a modifier names an unknown
+// or repeated feature, names one the processor does not support, or has a
+// malformed sign.
+static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
+                                    TargetIDSetting &XnackSetting,
+                                    TargetIDSetting &SramEccSetting) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
+  getDefaultTargetIDFeatures(Arch, XnackSetting, SramEccSetting);
 
   // The first component is the processor; the rest are feature modifiers of the
   // form "<feature><+|->".
@@ -688,6 +697,33 @@ TargetID::TargetID(const Triple &TT, StringRef TargetIDStr)
   // Derive the feature settings from the string. Validity is not checked here;
   // parseTargetIDString validates untrusted input.
   computeTargetIDFeatures(Arch, TargetIDStr, XnackSetting, SramEccSetting);
+}
+
+TargetID TargetID::createFromSubtargetFeatures(const Triple &TT, StringRef CPU,
+                                               StringRef FeatureString) {
+  GPUKind Arch = parseArchAMDGCN(CPU);
+  TargetIDSetting XnackSetting, SramEccSetting;
+  getDefaultTargetIDFeatures(Arch, XnackSetting, SramEccSetting);
+
+  // Apply the +/-xnack and +/-sramecc modifiers from the feature string, only
+  // for targets that can toggle the corresponding mode.
+  bool XnackToggleable = XnackSetting == TargetIDSetting::Any;
+  bool SramEccToggleable = SramEccSetting != TargetIDSetting::Unsupported;
+  SmallVector<StringRef, 4> Features;
+  FeatureString.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (StringRef Feature : Features) {
+    TargetIDSetting Sign =
+        getTargetIDSettingFromFeatureString(Feature.take_front());
+    if (Sign == TargetIDSetting::Unsupported)
+      continue;
+    StringRef Name = Feature.drop_front();
+    if (Name == "xnack" && XnackToggleable)
+      XnackSetting = Sign;
+    else if (Name == "sramecc" && SramEccToggleable)
+      SramEccSetting = Sign;
+  }
+
+  return TargetID(Arch, TT, XnackSetting, SramEccSetting);
 }
 
 std::optional<TargetID> TargetID::parse(const Triple &TT,
