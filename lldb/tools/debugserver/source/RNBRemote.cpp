@@ -2757,29 +2757,25 @@ struct ExpeditedMemory {
 //   k_expedite_stack_window, $fp) for a large frame, covering the params near
 //   $sp and the locals near $fp while leaving the (rarely-interesting) middle
 //   spill area out so the cost stays bounded.
-static void ReadFrameZeroStackMemory(nub_process_t pid, nub_thread_t tid,
-                                     std::vector<ExpeditedMemory> &chunks) {
-  chunks.clear();
-  std::unique_ptr<DNBRegisterValue> sp_value =
-      std::make_unique<DNBRegisterValue>();
-  std::unique_ptr<DNBRegisterValue> fp_value =
-      std::make_unique<DNBRegisterValue>();
+static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
+                                                             nub_thread_t tid) {
+  std::vector<ExpeditedMemory> chunks;
+  DNBRegisterValue sp_value;
+  DNBRegisterValue fp_value;
   if (!DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
-                                     GENERIC_REGNUM_SP, sp_value.get()) ||
+                                     GENERIC_REGNUM_SP, &sp_value) ||
       !DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
-                                     GENERIC_REGNUM_FP, fp_value.get()))
-    return;
+                                     GENERIC_REGNUM_FP, &fp_value))
+    return chunks;
 
-  const nub_size_t ptr_size = sp_value->info.size;
-  uint64_t sp =
-      (ptr_size == 4) ? sp_value->value.uint32 : sp_value->value.uint64;
-  uint64_t fp =
-      (ptr_size == 4) ? fp_value->value.uint32 : fp_value->value.uint64;
+  const nub_size_t ptr_size = sp_value.info.size;
+  uint64_t sp = (ptr_size == 4) ? sp_value.value.uint32 : sp_value.value.uint64;
+  uint64_t fp = (ptr_size == 4) ? fp_value.value.uint32 : fp_value.value.uint64;
 
   // The stack grows down, so a normal frame has sp < fp.  Bail on a leaf/empty
   // frame (sp == fp) or anything that doesn't look like a frame.
   if (sp == 0 || fp <= sp)
-    return;
+    return chunks;
 
   auto read_range = [&](uint64_t start, uint64_t length) {
     std::vector<uint8_t> buf(length);
@@ -2794,13 +2790,14 @@ static void ReadFrameZeroStackMemory(nub_process_t pid, nub_thread_t tid,
   if (frame_size <= 2 * window) {
     // Small frame: cover the whole frame as a single contiguous chunk [sp, fp).
     read_range(sp, frame_size);
-    return;
+    return chunks;
   }
 
   // Large frame: cover the params near $sp and the locals near $fp with two
   // bounded windows, leaving the middle spill area out to keep the cost capped.
   read_range(sp, window);          // [sp, sp + WINDOW)
   read_range(fp - window, window); // [fp - WINDOW, fp)
+  return chunks;
 }
 
 rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
@@ -5953,8 +5950,8 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
         // Also expedite the innermost frame's stack memory of the thread that
         // stopped.
         if (tid == DNBProcessGetCurrentThread(pid)) {
-          std::vector<ExpeditedMemory> frame_zero_chunks;
-          ReadFrameZeroStackMemory(pid, tid, frame_zero_chunks);
+          std::vector<ExpeditedMemory> frame_zero_chunks =
+              ReadFrameZeroStackMemory(pid, tid);
 
           for (const auto &chunk : frame_zero_chunks) {
             JSONGenerator::DictionarySP frame_zero_sp(
