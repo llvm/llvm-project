@@ -6,7 +6,7 @@
 ! reusing a single size value, or CSE merging duplicates).
 
 ! RUN: %flang_fc1 -emit-fir -fstack-arrays %s -o - \
-! RUN:   | fir-opt --stack-arrays \
+! RUN:   | fir-opt --allocation-placement="stack-arrays=true" \
 ! RUN:   | FileCheck %s
 
 subroutine ss1(a)

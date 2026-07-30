@@ -22,17 +22,6 @@ using namespace llvm;
                                cl::desc("enable " EODescription " pass"),      \
                                cl::init(false), cl::Hidden)
 
-cl::opt<bool> dynamicArrayStackToHeapAllocation(
-    "fdynamic-heap-array",
-    cl::desc("place all array allocations of dynamic size on the heap"),
-    cl::init(false), cl::Hidden);
-
-cl::opt<std::size_t> arrayStackAllocationThreshold(
-    "fstack-array-size",
-    cl::desc(
-        "place all array allocations more than <size> elements on the heap"),
-    cl::init(~static_cast<std::size_t>(0)), cl::Hidden);
-
 cl::opt<bool> ignoreMissingTypeDescriptors(
     "ignore-missing-type-desc",
     cl::desc("ignore failures to find derived type descriptors when "
@@ -51,9 +40,6 @@ codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};
 
 /// Optimizer Passes
 DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
-DisableOption(FirMao, "memory-allocation-opt",
-              "memory allocation optimization");
-
 DisableOption(FirAliasTags, "fir-alias-tags", "fir alias analysis");
 cl::opt<bool> useOldAliasTags(
     "use-old-alias-tags",
@@ -61,14 +47,6 @@ cl::opt<bool> useOldAliasTags(
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
 EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
-// Enabled by default: the unified allocation-placement pass supersedes the
-// legacy stack-arrays and memory-allocation-opt passes. Pass
-// -enable-allocation-placement=false to fall back to the legacy passes.
-cl::opt<bool> enableAllocationPlacement(
-    "enable-allocation-placement",
-    cl::desc("use the unified array allocation-placement pass instead of the "
-             "legacy stack-arrays and memory-allocation-opt passes"),
-    cl::init(true), cl::Hidden);
 DisableOption(AllocationPlacement, "allocation-placement",
               "unified array allocation placement");
 

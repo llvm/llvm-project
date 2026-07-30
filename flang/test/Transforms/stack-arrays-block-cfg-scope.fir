@@ -1,4 +1,4 @@
-// RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="stack-arrays=true" %s | FileCheck %s
 
 // Test that an allocmem in a sibling block is not hoisted to the
 // block where its size operand is defined.

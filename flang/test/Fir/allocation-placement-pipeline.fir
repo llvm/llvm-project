@@ -1,20 +1,14 @@
 // Test that the default optimizer pipeline uses the unified
 // allocation-placement pass in place of the legacy stack-arrays /
-// memory-allocation-opt passes, and that -enable-allocation-placement=false
-// restores the legacy passes.
+// memory-allocation-opt passes.
 
-// RUN: tco %s --mlir-pass-statistics --mlir-pass-statistics-display=pipeline 2>&1 | FileCheck %s --check-prefix=NEW
-// RUN: tco -enable-allocation-placement=false %s --mlir-pass-statistics --mlir-pass-statistics-display=pipeline 2>&1 | FileCheck %s --check-prefix=OLD
+// RUN: tco %s --mlir-pass-statistics --mlir-pass-statistics-display=pipeline 2>&1 | FileCheck %s
 
 // REQUIRES: asserts
 
-// NEW-NOT: MemoryAllocationOpt
-// NEW: AllocationPlacement
-// NEW-NOT: MemoryAllocationOpt
-
-// OLD-NOT: AllocationPlacement
-// OLD: MemoryAllocationOpt
-// OLD-NOT: AllocationPlacement
+// CHECK-NOT: MemoryAllocationOpt
+// CHECK-NOT: StackArrays
+// CHECK: AllocationPlacement
 
 func.func @_QPfoo() {
   return

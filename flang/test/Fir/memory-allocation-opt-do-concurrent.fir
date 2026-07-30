@@ -1,4 +1,7 @@
-// RUN: fir-opt --memory-allocation-opt="dynamic-array-on-heap=true" %s | FileCheck %s
+// The default (-fno-stack-arrays) policy sends every runtime-sized array to the
+// heap, reproducing the legacy memory-allocation-opt "dynamic-array-on-heap"
+// behavior inside do_concurrent loops (with conditional allocations).
+// RUN: fir-opt --allocation-placement %s | FileCheck %s
 
 func.func @test_do_concurrent() {
   %c1 = arith.constant 1 : index

@@ -223,5 +223,3 @@ target- or region-specific placement strategies to be layered on top.
   tune the "small array" byte-size threshold and the per-function stack budget.
 - `-disable-allocation-placement`: skip the pass entirely (no stack/heap
   rewriting).
-- `-enable-allocation-placement=false`: fall back to the legacy `stack-arrays`
-  and `memory-allocation-opt` passes for A/B comparison.
