@@ -236,48 +236,11 @@ Object JSONFormat::entityIdToJSONObject(EntityId EI) {
 }
 
 //----------------------------------------------------------------------------
-// BuildNamespaceKind
-//----------------------------------------------------------------------------
-
-llvm::Expected<BuildNamespaceKind>
-buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
-  auto OptBuildNamespaceKind =
-      buildNamespaceKindFromString(BuildNamespaceKindStr);
-  if (!OptBuildNamespaceKind) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::InvalidBuildNamespaceKind,
-                                BuildNamespaceKindStr)
-        .build();
-  }
-  return *OptBuildNamespaceKind;
-}
-
-// Provided for consistency with respect to rest of the codebase.
-llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
-  return buildNamespaceKindToString(BNK);
-}
-
-//----------------------------------------------------------------------------
 // BuildNamespace
 //----------------------------------------------------------------------------
 
 llvm::Expected<BuildNamespace>
 JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
-  auto OptBuildNamespaceKindStr = BuildNamespaceObject.getString("kind");
-  if (!OptBuildNamespaceKindStr) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObjectAtField,
-                                "BuildNamespaceKind", "kind", "string")
-        .build();
-  }
-
-  auto ExpectedKind = buildNamespaceKindFromJSON(*OptBuildNamespaceKindStr);
-  if (!ExpectedKind) {
-    return ErrorBuilder::wrap(ExpectedKind.takeError())
-        .context(ErrorMessages::ReadingFromField, "BuildNamespaceKind", "kind")
-        .build();
-  }
-
   auto OptNameStr = BuildNamespaceObject.getString("name");
   if (!OptNameStr) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -286,12 +249,11 @@ JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
         .build();
   }
 
-  return {BuildNamespace(*ExpectedKind, *OptNameStr)};
+  return {BuildNamespace(*OptNameStr)};
 }
 
 Object JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
   Object Result;
-  Result["kind"] = buildNamespaceKindToJSON(getKind(BN));
   Result["name"] = getName(BN);
   return Result;
 }

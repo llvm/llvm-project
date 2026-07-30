@@ -3,7 +3,6 @@
   "id_table": [],
   "linkage_table": [],
   "tu_namespace": {
-    "kind": "CompilationUnit",
     "name": "test.cpp"
   },
   "type": "TUSummary"

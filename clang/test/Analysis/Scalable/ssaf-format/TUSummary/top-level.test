@@ -4,29 +4,8 @@
 // REQUIRES: plugins
 
 // ============================================================================
-// buildNamespaceKindFromJSON() errors
-// ============================================================================
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-KIND
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-KIND
-// INVALID-KIND:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}invalid-kind.json'
-// INVALID-KIND-NEXT: reading BuildNamespace from field 'tu_namespace'
-// INVALID-KIND-NEXT: reading BuildNamespaceKind from field 'kind'
-// INVALID-KIND-NEXT: invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'
-
-// ============================================================================
 // buildNamespaceFromJSON() errors
 // ============================================================================
-
-// RUN: not clang-ssaf-format --type tu %S/Inputs/missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-KIND
-// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-KIND
-// MISSING-KIND:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-kind.json'
-// MISSING-KIND-NEXT: reading BuildNamespace from field 'tu_namespace'
-// MISSING-KIND-NEXT: failed to read BuildNamespaceKind from field 'kind': expected JSON string
 
 // RUN: not clang-ssaf-format --type tu %S/Inputs/missing-name.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-NAME

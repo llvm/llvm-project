@@ -62,7 +62,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "LinkUnit",
             "name": "test.exe"
           }
         ],
@@ -75,7 +74,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "LinkUnit",
             "name": "test.exe"
           }
         ],
@@ -88,7 +86,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "LinkUnit",
             "name": "test.exe"
           }
         ],
@@ -119,7 +116,6 @@
   ],
   "lu_namespace": [
     {
-      "kind": "LinkUnit",
       "name": "test.exe"
     }
   ],

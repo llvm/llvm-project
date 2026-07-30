@@ -155,8 +155,7 @@ protected:
   std::unique_ptr<ASTUnit> AST;
 
   PointerFlowTest()
-      : TUSum(llvm::Triple("arm64-apple-macosx"),
-              BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
+      : TUSum(llvm::Triple("arm64-apple-macosx"), BuildNamespace("Mock.cpp")),
         Builder(TUSum, Opts), Extractor(nullptr) {}
 
   template <typename ContributorDecl = NamedDecl,

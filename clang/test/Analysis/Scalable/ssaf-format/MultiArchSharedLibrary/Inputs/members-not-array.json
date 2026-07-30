@@ -2,7 +2,6 @@
   "members": {},
   "namespace": [
     {
-      "kind": "LinkUnit",
       "name": "libfoo"
     }
   ],

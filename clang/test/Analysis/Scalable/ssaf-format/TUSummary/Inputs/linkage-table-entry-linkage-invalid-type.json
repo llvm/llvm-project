@@ -1,13 +1,12 @@
 {
   "tu_namespace": {
-    "kind": "CompilationUnit",
     "name": "test.cpp"
   },
   "id_table": [],
   "linkage_table": [
     {
       "id": 0,
-      "linkage": { "type": "invalid_type" }
+      "linkage": {"type": "invalid_type"}
     }
   ],
   "data": [],

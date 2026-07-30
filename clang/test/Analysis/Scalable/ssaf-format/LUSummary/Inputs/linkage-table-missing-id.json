@@ -1,7 +1,6 @@
 {
   "lu_namespace": [
     {
-      "kind": "LinkUnit",
       "name": "test.exe"
     }
   ],
@@ -13,11 +12,9 @@
         "suffix": "",
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "test.cpp"
           },
           {
-            "kind": "LinkUnit",
             "name": "test.exe"
           }
         ]

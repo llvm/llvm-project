@@ -8,7 +8,6 @@
           "name": {
             "namespace": [
               {
-                "kind": "LinkUnit",
                 "name": "libfoo"
               }
             ],
@@ -27,7 +26,6 @@
       ],
       "lu_namespace": [
         {
-          "kind": "LinkUnit",
           "name": "libfoo"
         }
       ],
@@ -42,7 +40,6 @@
           "name": {
             "namespace": [
               {
-                "kind": "LinkUnit",
                 "name": "libfoo"
               }
             ],
@@ -61,7 +58,6 @@
       ],
       "lu_namespace": [
         {
-          "kind": "LinkUnit",
           "name": "libfoo"
         }
       ],
@@ -71,7 +67,6 @@
   ],
   "namespace": [
     {
-      "kind": "LinkUnit",
       "name": "libfoo"
     }
   ],

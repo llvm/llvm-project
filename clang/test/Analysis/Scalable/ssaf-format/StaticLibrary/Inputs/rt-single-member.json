@@ -6,14 +6,12 @@
       "linkage_table": [],
       "target_triple": "arm64-apple-macosx",
       "tu_namespace": {
-        "kind": "CompilationUnit",
         "name": "a.cpp"
       },
       "type": "TUSummary"
     }
   ],
   "namespace": {
-    "kind": "StaticLibrary",
     "name": "libfoo"
   },
   "target_triple": "arm64-apple-macosx",

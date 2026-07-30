@@ -16,48 +16,12 @@
 #ifndef LLVM_CLANG_LIB_ScalableStaticAnalysis_CORE_MODELSTRINGCONVERSIONS_H
 #define LLVM_CLANG_LIB_ScalableStaticAnalysis_CORE_MODELSTRINGCONVERSIONS_H
 
-#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityLinkage.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 namespace clang::ssaf {
-
-//===----------------------------------------------------------------------===//
-// BuildNamespaceKind
-//===----------------------------------------------------------------------===//
-
-/// Returns the canonical string representation of \p BNK used for
-/// serialization and display (e.g. "CompilationUnit", "LinkUnit").
-inline llvm::StringRef buildNamespaceKindToString(BuildNamespaceKind BNK) {
-  switch (BNK) {
-  case BuildNamespaceKind::CompilationUnit:
-    return "CompilationUnit";
-  case BuildNamespaceKind::LinkUnit:
-    return "LinkUnit";
-  case BuildNamespaceKind::StaticLibrary:
-    return "StaticLibrary";
-  case BuildNamespaceKind::MultiArchStaticLibrary:
-    return "MultiArchStaticLibrary";
-  }
-  llvm_unreachable("Unhandled BuildNamespaceKind variant");
-}
-
-/// Parses a string produced by buildNamespaceKindToString(). Returns
-/// std::nullopt if \p Str does not match any known BuildNamespaceKind value.
-inline std::optional<BuildNamespaceKind>
-buildNamespaceKindFromString(llvm::StringRef Str) {
-  if (Str == "CompilationUnit")
-    return BuildNamespaceKind::CompilationUnit;
-  if (Str == "LinkUnit")
-    return BuildNamespaceKind::LinkUnit;
-  if (Str == "StaticLibrary")
-    return BuildNamespaceKind::StaticLibrary;
-  if (Str == "MultiArchStaticLibrary")
-    return BuildNamespaceKind::MultiArchStaticLibrary;
-  return std::nullopt;
-}
 
 //===----------------------------------------------------------------------===//
 // EntityLinkageType

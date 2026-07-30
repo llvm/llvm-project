@@ -33,12 +33,6 @@
 // NAMESPACE-NOT-OBJECT:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}namespace-not-object.json'
 // NAMESPACE-NOT-OBJECT-NEXT: failed to read BuildNamespace from field 'namespace': expected JSON object
 
-// The namespace kind must be MultiArchStaticLibrary.
-// RUN: not clang-ssaf-format --type multi-arch-static-library %S/Inputs/namespace-wrong-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-WRONG-KIND
-// NAMESPACE-WRONG-KIND:      clang-ssaf-format: error: reading MultiArchStaticLibrary from file '{{.*}}namespace-wrong-kind.json'
-// NAMESPACE-WRONG-KIND-NEXT: expected 'MultiArchStaticLibrary' for field 'namespace.kind' but got 'StaticLibrary'
-
 // ============================================================================
 // members field errors
 // ============================================================================

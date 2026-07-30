@@ -27,38 +27,20 @@
 
 namespace clang::ssaf {
 
-enum class BuildNamespaceKind : unsigned short {
-  CompilationUnit,
-  LinkUnit,
-  StaticLibrary,
-  MultiArchStaticLibrary
-};
-
 /// Represents a single namespace in the build process.
 ///
 /// A BuildNamespace groups program entities, such as those belonging to a
-/// compilation unit or link unit (e.g., a shared library). Each namespace has a
-/// kind (CompilationUnit or LinkUnit) and a unique identifier name within that
-/// kind.
+/// compilation unit or link unit (e.g., a shared library). Each namespace is
+/// identified by a unique name.
 ///
 /// BuildNamespaces can be composed into NestedBuildNamespace to represent
 /// hierarchical namespace structures that model how software is constructed
 /// from its components.
 class BuildNamespace {
-  BuildNamespaceKind Kind;
   std::string Name;
 
-  auto asTuple() const { return std::tie(Kind, Name); }
-
 public:
-  BuildNamespace(BuildNamespaceKind Kind, llvm::StringRef Name)
-      : Kind(Kind), Name(Name.str()) {}
-
-  /// Creates a BuildNamespace representing a compilation unit.
-  ///
-  /// \param CompilationId The unique identifier for the compilation unit.
-  /// \returns A BuildNamespace with CompilationUnit kind.
-  static BuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
+  explicit BuildNamespace(llvm::StringRef Name) : Name(Name.str()) {}
 
   bool operator==(const BuildNamespace &Other) const;
   bool operator!=(const BuildNamespace &Other) const;
@@ -93,14 +75,6 @@ public:
     Namespaces.push_back(N);
   }
 
-  /// Creates a NestedBuildNamespace representing a compilation unit.
-  ///
-  /// \param CompilationId The unique identifier for the compilation unit.
-  /// \returns A NestedBuildNamespace containing a single CompilationUnit
-  ///          BuildNamespace.
-  static NestedBuildNamespace
-  makeCompilationUnit(llvm::StringRef CompilationId);
-
   /// Creates a new NestedBuildNamespace by appending additional namespace.
   ///
   /// \param Namespace The namespace to append.
@@ -124,7 +98,6 @@ public:
                                        const NestedBuildNamespace &NBN);
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, BuildNamespaceKind BNK);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const NestedBuildNamespace &NBN);

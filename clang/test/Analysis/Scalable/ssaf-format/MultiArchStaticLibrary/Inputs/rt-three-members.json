@@ -3,7 +3,6 @@
     {
       "members": [],
       "namespace": {
-        "kind": "StaticLibrary",
         "name": "libfoo"
       },
       "target_triple": "arm64-apple-macosx",
@@ -12,7 +11,6 @@
     {
       "members": [],
       "namespace": {
-        "kind": "StaticLibrary",
         "name": "libfoo"
       },
       "target_triple": "arm64_32-apple-macosx",
@@ -21,7 +19,6 @@
     {
       "members": [],
       "namespace": {
-        "kind": "StaticLibrary",
         "name": "libfoo"
       },
       "target_triple": "x86_64-apple-macosx",
@@ -29,7 +26,6 @@
     }
   ],
   "namespace": {
-    "kind": "MultiArchStaticLibrary",
     "name": "libfoo"
   },
   "type": "MultiArchStaticLibrary"

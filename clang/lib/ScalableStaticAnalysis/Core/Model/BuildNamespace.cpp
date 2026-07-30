@@ -7,21 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
-#include "../ModelStringConversions.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <tuple>
 
 namespace clang::ssaf {
 
-BuildNamespace
-BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
-  return BuildNamespace{BuildNamespaceKind::CompilationUnit,
-                        CompilationId.str()};
-}
-
 bool BuildNamespace::operator==(const BuildNamespace &Other) const {
-  return asTuple() == Other.asTuple();
+  return Name == Other.Name;
 }
 
 bool BuildNamespace::operator!=(const BuildNamespace &Other) const {
@@ -29,15 +20,7 @@ bool BuildNamespace::operator!=(const BuildNamespace &Other) const {
 }
 
 bool BuildNamespace::operator<(const BuildNamespace &Other) const {
-  return asTuple() < Other.asTuple();
-}
-
-NestedBuildNamespace
-NestedBuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
-  NestedBuildNamespace Result;
-  Result.Namespaces.push_back(
-      BuildNamespace::makeCompilationUnit(CompilationId));
-  return Result;
+  return Name < Other.Name;
 }
 
 bool NestedBuildNamespace::empty() const { return Namespaces.empty(); }
@@ -54,12 +37,8 @@ bool NestedBuildNamespace::operator<(const NestedBuildNamespace &Other) const {
   return Namespaces < Other.Namespaces;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, BuildNamespaceKind BNK) {
-  return OS << buildNamespaceKindToString(BNK);
-}
-
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN) {
-  return OS << "BuildNamespace(" << BN.Kind << ", " << BN.Name << ")";
+  return OS << "BuildNamespace(" << BN.Name << ")";
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,

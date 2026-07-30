@@ -125,9 +125,8 @@ static const SummaryName CallGraphName{CallGraphSummary::Name.str()};
 
 struct CallGraphExtractorTest : ssaf::TestFixture {
   SSAFOptions Opts;
-  TUSummary Summary{
-      llvm::Triple("arm64-apple-macosx"),
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
+  TUSummary Summary{llvm::Triple("arm64-apple-macosx"),
+                    BuildNamespace("Mock.cpp")};
   TUSummaryBuilder Builder = TUSummaryBuilder(Summary, Opts);
 
   /// Creates the AST and extractor, then extracts the summaries from the AST.
