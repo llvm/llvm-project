@@ -1468,6 +1468,9 @@ let OtherPredicates = [HasUnpackedD16VMem, HasFormattedMUBUFInsts] in {
   defm : MUBUF_LoadIntrinsicPat_Common<SIbuffer_load_format_d16, v2i32, "BUFFER_LOAD_FORMAT_D16_XY_gfx80">;
   defm : MUBUF_LoadIntrinsicPat_Common<SIbuffer_load_format_d16, v3i32, "BUFFER_LOAD_FORMAT_D16_XYZ_gfx80">;
   defm : MUBUF_LoadIntrinsicPat_Common<SIbuffer_load_format_d16, v4i32, "BUFFER_LOAD_FORMAT_D16_XYZW_gfx80">;
+
+  defm : MUBUF_LoadIntrinsicPat_Common<SIbuffer_load_format_d16_tfe, v2i32, "BUFFER_LOAD_FORMAT_D16_X_gfx80_TFE">;
+  defm : MUBUF_LoadIntrinsicPat_Common<SIbuffer_load_format_d16_tfe, v4i32, "BUFFER_LOAD_FORMAT_D16_XYZ_gfx80_TFE">;
 } // End OtherPredicates = [HasUnpackedD16VMem, HasFormattedMUBUFInsts].
 
 let OtherPredicates = [HasPackedD16VMem, HasFormattedMUBUFInsts] in {
@@ -1486,6 +1489,9 @@ let True16Predicate = UseRealTrue16Insts in {
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, v4i16, "BUFFER_LOAD_FORMAT_D16_XYZ", v3i16>;
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, v4f16, "BUFFER_LOAD_FORMAT_D16_XYZW">;
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, v4i16, "BUFFER_LOAD_FORMAT_D16_XYZW">;
+
+  defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16_tfe, v2i32, "BUFFER_LOAD_FORMAT_D16_X_TFE">;
+  defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16_tfe, v3i32, "BUFFER_LOAD_FORMAT_D16_XYZ_TFE">;
 } // End OtherPredicates = [HasPackedD16VMem, HasFormattedMUBUFInsts].
 
 foreach vt = Reg32Types.types in {

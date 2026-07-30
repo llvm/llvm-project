@@ -6862,10 +6862,11 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     return true;
   }
 
-  if (IsFormat && !IsTyped && IsD16 && IsTFE) {
+  if (IsFormat && !IsTyped && IsD16 && IsTFE && ST.hasGFX90AInsts()) {
     const Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "unsupported TFE D16 format buffer load", MI.getDebugLoc()));
+        Fn, "TFE D16 format buffer load is not supported on this GPU",
+        MI.getDebugLoc()));
     B.buildUndef(Dst);
     B.buildUndef(StatusDst);
     MI.eraseFromParent();
@@ -6884,9 +6885,8 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                   AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT;
   } else if (IsFormat) {
     if (IsD16) {
-      if (IsTFE)
-        return false;
-      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16;
+      Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE
+                  : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16;
     } else {
       Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE
                   : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
@@ -6908,7 +6908,58 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     }
   }
 
-  if (IsTFE) {
+  if (IsTFE && IsD16 && Ty.isVector()) {
+    // D16 dwords are packed (or, on unpacked-D16 targets, one element per
+    // dword) at a different granularity than Ty's own bit width, so the
+    // dwords loaded for the value do not necessarily cover Ty exactly (e.g.
+    // v3i16 needs 2 dwords = 64 bits for its 48 bits of data). Load the
+    // dwords, then repack/truncate down to Ty the same way the MUBUF/MIMG
+    // TFE v3i16 case does.
+    const unsigned NumElts = Ty.getNumElements();
+    const unsigned NumValueDWords =
+        Unpacked ? NumElts : divideCeil(NumElts * 16, 32);
+    const unsigned NumLoadDWords = NumValueDWords + 1;
+    LLT LoadTy = LLT::fixed_vector(NumLoadDWords, I32);
+    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
+    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
+                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+
+    SmallVector<Register, 5> LoadElts;
+    for (unsigned I = 0; I != NumValueDWords; ++I)
+      LoadElts.push_back(B.getMRI()->createGenericVirtualRegister(I32));
+    LoadElts.push_back(StatusDst);
+    B.buildUnmerge(LoadElts, LoadDstReg);
+    LoadElts.truncate(NumValueDWords);
+
+    Register PackedI16;
+    if (Unpacked) {
+      SmallVector<Register, 4> Repack;
+      for (Register R : LoadElts)
+        Repack.push_back(B.buildTrunc(LLT::integer(16), R).getReg(0));
+      LLT RepackedTy = LLT::fixed_vector(NumValueDWords, LLT::integer(16));
+      PackedI16 = B.buildMergeLikeInstr(RepackedTy, Repack).getReg(0);
+    } else {
+      LLT MergedTy = LLT::fixed_vector(NumValueDWords, I32);
+      Register Merged =
+          NumValueDWords == 1
+              ? LoadElts[0]
+              : B.buildMergeLikeInstr(MergedTy, LoadElts).getReg(0);
+      LLT PackedI16Ty = LLT::fixed_vector(NumValueDWords * 2, LLT::integer(16));
+      PackedI16 = B.buildBitcast(PackedI16Ty, Merged).getReg(0);
+    }
+
+    LLT PackedI16Ty = B.getMRI()->getType(PackedI16);
+    LLT DstIntTy = Ty.changeElementType(LLT::integer(16));
+    Register ValueI16 = PackedI16;
+    if (PackedI16Ty.getNumElements() != NumElts) {
+      ValueI16 = B.getMRI()->createGenericVirtualRegister(DstIntTy);
+      B.buildDeleteTrailingVectorElements(ValueI16, PackedI16);
+    }
+    if (EltTy.isFloat())
+      B.buildBitcast(Dst, ValueI16);
+    else
+      B.buildCopy(Dst, ValueI16);
+  } else if (IsTFE) {
     unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
     unsigned NumLoadDWords = NumValueDWords + 1;
     LLT LoadTy = LLT::fixed_vector(NumLoadDWords, I32);
