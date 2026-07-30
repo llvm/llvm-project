@@ -33,9 +33,10 @@ entry:
   ret i1 %cmp
 }
 
-; Check that fabs on negative ppc_fp128 produces a non-negative value.
-define i1 @fabs_clears_sign_le(ppc_fp128 %x) {
-; LE-LABEL: fabs_clears_sign_le:
+; On BE the ppc_fp128 sign bit is stored in bit 127, this information
+; makes the function return a constant there.
+define i1 @fabs_clears_sign_be(ppc_fp128 %x) {
+; LE-LABEL: fabs_clears_sign_be:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    mffprd 3, 1
 ; LE-NEXT:    mffprd 4, 2
@@ -43,12 +44,12 @@ define i1 @fabs_clears_sign_le(ppc_fp128 %x) {
 ; LE-NEXT:    rldicl 3, 3, 1, 63
 ; LE-NEXT:    blr
 ;
-; BE-LABEL: fabs_clears_sign_le:
+; BE-LABEL: fabs_clears_sign_be:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    li 3, 0
 ; BE-NEXT:    blr
 ;
-; BE32-LABEL: fabs_clears_sign_le:
+; BE32-LABEL: fabs_clears_sign_be:
 ; BE32:       # %bb.0: # %entry
 ; BE32-NEXT:    li 3, 0
 ; BE32-NEXT:    blr
@@ -57,5 +58,44 @@ entry:
   %a = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 %neg)
   %v = bitcast ppc_fp128 %a to i128
   %cmp = icmp slt i128 %v, 0
+  ret i1 %cmp
+}
+
+; On LE the ppc_fp128 sign bit is stored in bit 63, this information
+; makes the function return a constant there.
+define i1 @fabs_clears_sign_le(ppc_fp128 %x) {
+; LE-LABEL: fabs_clears_sign_le:
+; LE:       # %bb.0: # %entry
+; LE-NEXT:    li 3, 0
+; LE-NEXT:    blr
+;
+; BE-LABEL: fabs_clears_sign_le:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    stfd 1, -16(1)
+; BE-NEXT:    stfd 2, -8(1)
+; BE-NEXT:    ld 3, -16(1)
+; BE-NEXT:    ld 4, -8(1)
+; BE-NEXT:    xor 3, 4, 3
+; BE-NEXT:    rldicl 3, 3, 1, 63
+; BE-NEXT:    blr
+;
+; BE32-LABEL: fabs_clears_sign_le:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    stwu 1, -32(1)
+; BE32-NEXT:    .cfi_def_cfa_offset 32
+; BE32-NEXT:    stfd 1, 24(1)
+; BE32-NEXT:    stfd 2, 16(1)
+; BE32-NEXT:    lwz 3, 24(1)
+; BE32-NEXT:    lwz 4, 16(1)
+; BE32-NEXT:    xor 3, 4, 3
+; BE32-NEXT:    srwi 3, 3, 31
+; BE32-NEXT:    addi 1, 1, 32
+; BE32-NEXT:    blr
+entry:
+  %neg = fneg ppc_fp128 %x
+  %a = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 %neg)
+  %v = bitcast ppc_fp128 %a to i128
+  %masked = and i128 %v, 9223372036854775808 ; 1 << 63
+  %cmp = icmp ne i128 %masked, 0
   ret i1 %cmp
 }
