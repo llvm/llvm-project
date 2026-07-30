@@ -501,6 +501,30 @@ def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
   }];
 }
 
+def NVVM_TanhOp : NVVM_Op<"tanh", [Pure, SameOperandsAndResultType]> {
+  let summary = "Hyperbolic tangent (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the hyperbolic tangent of the input
+    value. Lowers to PTX `tanh.approx.f32` (sm_75+, PTX 7.0+). PTX does not
+    expose an `ftz` modifier for `tanh.approx`, so this op has no `ftz`
+    attribute.
+
+    For more information, see PTX ISA:
+    [tanh](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-tanh)
+  }];
+  let arguments = (ins F32:$src);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+  string llvmBuilder = [{
+    llvm::CallInst *call = createIntrinsicCall(
+        builder, llvm::Intrinsic::tanh, {$src}, {$src->getType()});
+    llvm::FastMathFlags fmf;
+    fmf.setApproxFunc();
+    call->setFastMathFlags(fmf);
+    $res = call;
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM rsqrt op definitions
 //===----------------------------------------------------------------------===//

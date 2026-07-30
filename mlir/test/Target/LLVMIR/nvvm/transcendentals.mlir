@@ -55,3 +55,10 @@ llvm.func @nvvm_ex2_ftz(%arg0: f32) -> f32 {
   %0 = nvvm.ex2 %arg0 {ftz = true} : f32
   llvm.return %0 : f32
 }
+
+// CHECK-LABEL: @nvvm_tanh
+llvm.func @nvvm_tanh(%arg0: f32) -> f32 {
+  // CHECK: call afn float @llvm.tanh.f32(float %{{.*}})
+  %0 = nvvm.tanh %arg0 : f32
+  llvm.return %0 : f32
+}
