@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
   unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
   unsigned AddrVGPRs =
       AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSizeEff);
-  unsigned AddrSGPRs = AMDGPU::IsaInfo::getAddressableNumSGPRs(STI);
+  unsigned AddrSGPRs = ST.getAddressableNumSGPRs();
   unsigned MaxWGSize = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
 
   // Warn about inputs that exceed the hardware's physical capacity: such a
