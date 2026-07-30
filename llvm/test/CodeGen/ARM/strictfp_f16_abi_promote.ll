@@ -218,17 +218,20 @@ define void @outgoing_v4f16_return(ptr %ptr) #0 {
 define void @outgoing_v8f16_return(ptr %ptr) #0 {
 ; NOFP16-LABEL: outgoing_v8f16_return:
 ; NOFP16:       @ %bb.0:
-; NOFP16-NEXT:    push {r4, r10, r11, lr}
+; NOFP16-NEXT:    push {r4, r5, r11, lr}
 ; NOFP16-NEXT:    add r11, sp, #8
 ; NOFP16-NEXT:    sub sp, sp, #16
 ; NOFP16-NEXT:    bfc sp, #0, #4
+; NOFP16-NEXT:    mov r5, sp
 ; NOFP16-NEXT:    mov r4, r0
-; NOFP16-NEXT:    mov r0, sp
+; NOFP16-NEXT:    mov r0, r5
 ; NOFP16-NEXT:    bl v8f16_result
-; NOFP16-NEXT:    ldm sp, {r0, r1, r2, r3}
-; NOFP16-NEXT:    stm r4, {r0, r1, r2, r3}
+; NOFP16-NEXT:    vld1.32 {d16}, [r5:64]!
+; NOFP16-NEXT:    vldr d17, [r5]
+; NOFP16-NEXT:    vst1.32 {d16}, [r4:64]!
+; NOFP16-NEXT:    vstr d17, [r4]
 ; NOFP16-NEXT:    sub sp, r11, #8
-; NOFP16-NEXT:    pop {r4, r10, r11, pc}
+; NOFP16-NEXT:    pop {r4, r5, r11, pc}
   %val = call <8 x half> @v8f16_result() #0
   store <8 x half> %val, ptr %ptr
   ret void

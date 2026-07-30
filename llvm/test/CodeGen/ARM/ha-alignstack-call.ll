@@ -477,20 +477,19 @@ define dso_local double @g0_1_call() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
-; CHECK-NEXT:    movw r0, #26214
 ; CHECK-NEXT:    movw r1, #26214
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movt r0, #16358
-; CHECK-NEXT:    movt r1, #26214
-; CHECK-NEXT:    str r1, [sp]
-; CHECK-NEXT:    vmov.i32 d0, #0x0
+; CHECK-NEXT:    movw r0, #26214
+; CHECK-NEXT:    movt r1, #16358
+; CHECK-NEXT:    movt r0, #26214
+; CHECK-NEXT:    strd r0, r1, [sp]
+; CHECK-NEXT:    vmov.i32 d16, #0x0
 ; CHECK-NEXT:    vldr d1, .LCPI10_0
+; CHECK-NEXT:    vmov.i32 d0, #0x0
 ; CHECK-NEXT:    vldr d2, .LCPI10_1
 ; CHECK-NEXT:    vldr d3, .LCPI10_2
 ; CHECK-NEXT:    vldr d4, .LCPI10_3
 ; CHECK-NEXT:    vldr d6, .LCPI10_4
-; CHECK-NEXT:    stmib sp, {r0, r2}
-; CHECK-NEXT:    str r2, [sp, #12]
+; CHECK-NEXT:    vstr d16, [sp, #8]
 ; CHECK-NEXT:    bl g0_1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    pop {r11, pc}
@@ -525,26 +524,24 @@ define dso_local double @g0_2_call() local_unnamed_addr #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .pad #24
 ; CHECK-NEXT:    sub sp, sp, #24
-; CHECK-NEXT:    movw r0, #52428
-; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
-; CHECK-NEXT:    movt r0, #16364
-; CHECK-NEXT:    movw r1, #52429
-; CHECK-NEXT:    str r0, [sp, #12]
+; CHECK-NEXT:    movw r1, #52428
 ; CHECK-NEXT:    movw r0, #52429
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movt r1, #52428
-; CHECK-NEXT:    vmov.i32 d0, #0x0
-; CHECK-NEXT:    vldr d1, .LCPI11_0
-; CHECK-NEXT:    vldr d2, .LCPI11_1
+; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
+; CHECK-NEXT:    movt r1, #16364
+; CHECK-NEXT:    movt r0, #52428
+; CHECK-NEXT:    strd r0, r1, [sp, #8]
+; CHECK-NEXT:    movw r0, #52429
 ; CHECK-NEXT:    movt r0, #16204
+; CHECK-NEXT:    vmov.i32 d16, #0x0
+; CHECK-NEXT:    vldr d1, .LCPI11_0
+; CHECK-NEXT:    vmov.i32 d0, #0x0
+; CHECK-NEXT:    vldr d2, .LCPI11_1
 ; CHECK-NEXT:    vldr d3, .LCPI11_2
 ; CHECK-NEXT:    vldr d4, .LCPI11_3
 ; CHECK-NEXT:    vldr d6, .LCPI11_4
 ; CHECK-NEXT:    vldr d7, .LCPI11_5
-; CHECK-NEXT:    str r1, [sp, #8]
-; CHECK-NEXT:    str r2, [sp, #16]
-; CHECK-NEXT:    str r2, [sp, #20]
 ; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    vstr d16, [sp, #16]
 ; CHECK-NEXT:    bl g0_2
 ; CHECK-NEXT:    add sp, sp, #24
 ; CHECK-NEXT:    pop {r11, pc}
@@ -619,20 +616,19 @@ define dso_local double @g1_1_call() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
-; CHECK-NEXT:    movw r0, #26214
 ; CHECK-NEXT:    movw r1, #26214
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movt r0, #16358
-; CHECK-NEXT:    movt r1, #26214
-; CHECK-NEXT:    str r1, [sp]
-; CHECK-NEXT:    vmov.i32 d0, #0x0
+; CHECK-NEXT:    movw r0, #26214
+; CHECK-NEXT:    movt r1, #16358
+; CHECK-NEXT:    movt r0, #26214
+; CHECK-NEXT:    strd r0, r1, [sp]
+; CHECK-NEXT:    vmov.i32 d16, #0x0
 ; CHECK-NEXT:    vldr d1, .LCPI13_0
+; CHECK-NEXT:    vmov.i32 d0, #0x0
 ; CHECK-NEXT:    vldr d2, .LCPI13_1
 ; CHECK-NEXT:    vldr d3, .LCPI13_2
 ; CHECK-NEXT:    vldr d4, .LCPI13_3
 ; CHECK-NEXT:    vldr d6, .LCPI13_4
-; CHECK-NEXT:    stmib sp, {r0, r2}
-; CHECK-NEXT:    str r2, [sp, #12]
+; CHECK-NEXT:    vstr d16, [sp, #8]
 ; CHECK-NEXT:    bl g1_1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    pop {r11, pc}
@@ -667,26 +663,24 @@ define dso_local double @g1_2_call() local_unnamed_addr #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .pad #24
 ; CHECK-NEXT:    sub sp, sp, #24
-; CHECK-NEXT:    movw r0, #52428
-; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
-; CHECK-NEXT:    movt r0, #16364
-; CHECK-NEXT:    movw r1, #52429
-; CHECK-NEXT:    str r0, [sp, #12]
+; CHECK-NEXT:    movw r1, #52428
 ; CHECK-NEXT:    movw r0, #52429
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movt r1, #52428
-; CHECK-NEXT:    vmov.i32 d0, #0x0
-; CHECK-NEXT:    vldr d1, .LCPI14_0
-; CHECK-NEXT:    vldr d2, .LCPI14_1
+; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
+; CHECK-NEXT:    movt r1, #16364
+; CHECK-NEXT:    movt r0, #52428
+; CHECK-NEXT:    strd r0, r1, [sp, #8]
+; CHECK-NEXT:    movw r0, #52429
 ; CHECK-NEXT:    movt r0, #16204
+; CHECK-NEXT:    vmov.i32 d16, #0x0
+; CHECK-NEXT:    vldr d1, .LCPI14_0
+; CHECK-NEXT:    vmov.i32 d0, #0x0
+; CHECK-NEXT:    vldr d2, .LCPI14_1
 ; CHECK-NEXT:    vldr d3, .LCPI14_2
 ; CHECK-NEXT:    vldr d4, .LCPI14_3
 ; CHECK-NEXT:    vldr d6, .LCPI14_4
 ; CHECK-NEXT:    vldr d7, .LCPI14_5
-; CHECK-NEXT:    str r1, [sp, #8]
-; CHECK-NEXT:    str r2, [sp, #16]
-; CHECK-NEXT:    str r2, [sp, #20]
 ; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    vstr d16, [sp, #16]
 ; CHECK-NEXT:    bl g1_2
 ; CHECK-NEXT:    add sp, sp, #24
 ; CHECK-NEXT:    pop {r11, pc}
@@ -761,19 +755,17 @@ define dso_local double @g2_1_call() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    vmov.f64 d16, #5.000000e-01
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    str r0, [sp, #12]
-; CHECK-NEXT:    str r0, [sp, #16]
-; CHECK-NEXT:    vmov.i32 d0, #0x0
+; CHECK-NEXT:    add r0, sp, #8
+; CHECK-NEXT:    vmov.i32 q9, #0x0
+; CHECK-NEXT:    vstr d16, [sp]
+; CHECK-NEXT:    vmov.i32 d17, #0x0
 ; CHECK-NEXT:    vldr d1, .LCPI16_0
+; CHECK-NEXT:    vmov.i32 d0, #0x0
 ; CHECK-NEXT:    vldr d2, .LCPI16_1
+; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vldr d3, .LCPI16_2
 ; CHECK-NEXT:    vldr d4, .LCPI16_3
-; CHECK-NEXT:    str r0, [sp, #20]
-; CHECK-NEXT:    str r0, [sp, #24]
-; CHECK-NEXT:    str r0, [sp, #28]
-; CHECK-NEXT:    vstr d16, [sp]
+; CHECK-NEXT:    vstr d17, [r0]
 ; CHECK-NEXT:    bl g2_1
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    pop {r11, pc}
@@ -805,30 +797,27 @@ define dso_local double @g2_2call() local_unnamed_addr #0 {
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .pad #40
 ; CHECK-NEXT:    sub sp, sp, #40
-; CHECK-NEXT:    movw r0, #52428
-; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
-; CHECK-NEXT:    movt r0, #16364
-; CHECK-NEXT:    movw r1, #52429
-; CHECK-NEXT:    str r0, [sp, #12]
+; CHECK-NEXT:    movw r1, #52428
 ; CHECK-NEXT:    movw r0, #52429
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movt r1, #52428
+; CHECK-NEXT:    movt r1, #16364
+; CHECK-NEXT:    movt r0, #52428
+; CHECK-NEXT:    strd r0, r1, [sp, #8]
+; CHECK-NEXT:    movw r0, #52429
+; CHECK-NEXT:    vmov.i32 q9, #0x0
+; CHECK-NEXT:    movt r0, #16204
+; CHECK-NEXT:    vmov.f64 d5, #5.000000e-01
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov.i32 d16, #0x0
+; CHECK-NEXT:    vst1.64 {d18, d19}, [r0]!
 ; CHECK-NEXT:    vmov.i32 d0, #0x0
 ; CHECK-NEXT:    vldr d1, .LCPI17_0
 ; CHECK-NEXT:    vldr d2, .LCPI17_1
-; CHECK-NEXT:    movt r0, #16204
 ; CHECK-NEXT:    vldr d3, .LCPI17_2
 ; CHECK-NEXT:    vldr d4, .LCPI17_3
 ; CHECK-NEXT:    vldr d6, .LCPI17_4
 ; CHECK-NEXT:    vldr d7, .LCPI17_5
-; CHECK-NEXT:    str r1, [sp, #8]
-; CHECK-NEXT:    str r2, [sp, #16]
-; CHECK-NEXT:    str r2, [sp, #20]
-; CHECK-NEXT:    str r2, [sp, #24]
-; CHECK-NEXT:    str r2, [sp, #28]
-; CHECK-NEXT:    str r2, [sp, #32]
-; CHECK-NEXT:    str r2, [sp, #36]
-; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    vstr d16, [r0]
 ; CHECK-NEXT:    bl g2_2
 ; CHECK-NEXT:    add sp, sp, #40
 ; CHECK-NEXT:    pop {r11, pc}

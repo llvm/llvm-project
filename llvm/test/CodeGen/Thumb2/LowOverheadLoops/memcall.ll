@@ -156,24 +156,20 @@ for.body:                                         ; preds = %entry, %for.body
 define void @test_memcpy16(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: test_memcpy16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB3_1: @ %for.body.preheader
 ; CHECK-NEXT:    dls lr, r2
 ; CHECK-NEXT:  .LBB3_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldm.w r1, {r2, r3, r12}
-; CHECK-NEXT:    ldr r4, [r1, #12]
-; CHECK-NEXT:    adds r1, #64
-; CHECK-NEXT:    stm.w r0, {r2, r3, r12}
-; CHECK-NEXT:    str r4, [r0, #12]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #64
+; CHECK-NEXT:    vstrb.8 q0, [r0], #64
 ; CHECK-NEXT:    le lr, .LBB3_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
@@ -203,12 +199,10 @@ define void @test_memset16(ptr nocapture %x, i32 %n) {
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB4_1: @ %for.body.preheader
 ; CHECK-NEXT:    dls lr, r1
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB4_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    strd r1, r1, [r0]
-; CHECK-NEXT:    strd r1, r1, [r0, #8]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vstrb.8 q0, [r0], #64
 ; CHECK-NEXT:    le lr, .LBB4_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -232,24 +226,20 @@ for.body:                                         ; preds = %entry, %for.body
 define void @test_memmove16(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: test_memmove16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB5_1: @ %for.body.preheader
 ; CHECK-NEXT:    dls lr, r2
 ; CHECK-NEXT:  .LBB5_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldm.w r1, {r2, r3, r12}
-; CHECK-NEXT:    ldr r4, [r1, #12]
-; CHECK-NEXT:    adds r1, #64
-; CHECK-NEXT:    stm.w r0, {r2, r3, r12}
-; CHECK-NEXT:    str r4, [r0, #12]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #64
+; CHECK-NEXT:    vstrb.8 q0, [r0], #64
 ; CHECK-NEXT:    le lr, .LBB5_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup

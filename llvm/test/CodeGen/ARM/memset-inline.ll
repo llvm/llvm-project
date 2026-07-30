@@ -4,9 +4,10 @@
 define void @t1(ptr nocapture %c) nounwind optsize {
 entry:
 ; CHECK-7A-LABEL: t1:
+; CHECK-7A: vmov.i32 d{{[0-9]+}}, #0x0
+; CHECK-7A: vst1.32 {d{{[0-9]+}}}, [r0:64]!
 ; CHECK-7A: movs r1, #0
-; CHECK-7A: strd r1, r1, [r0]
-; CHECK-7A: str r1, [r0, #8]
+; CHECK-7A: str r1, [r0]
 ; CHECK-6M-LABEL: t1:
 ; CHECK-6M: movs r1, #0
 ; CHECK-6M: str r1, [r0]
