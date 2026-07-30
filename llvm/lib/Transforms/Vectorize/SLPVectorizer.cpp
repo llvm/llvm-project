@@ -22647,7 +22647,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // than generating the splat vector, the vector instruction may be able to
     // take a scalar operand), for example RISCV vfoo.vx instructions. Pass a
     // hint to the TTI when costing the insert/shuffle sequence in such cases.
-    if (all_of(ReuseMask, [](const int Idx) { return Idx == 0; })) {
+    if (ShuffleVectorInst::isZeroEltSplatMask(ReuseMask, ReuseMask.size())) {
       Value *SplatVal = E->Scalars.front();
       if (!isa<VectorType>(SplatVal->getType()) &&
           !isa<ExtractElementInst>(SplatVal)) {
