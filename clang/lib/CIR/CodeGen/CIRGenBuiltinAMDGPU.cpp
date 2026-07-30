@@ -373,10 +373,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     mlir::Value lhs = emitScalarExpr(expr->getArg(0));
     mlir::Value rhs = emitScalarExpr(expr->getArg(1));
 
-    // The predicate is a compile-time constant. Evaluate it from the AST
-    // rather than the emitted value: a non-literal constant expression such as
-    // `39 - 1` lowers to a `cir.binop`, not a `cir.const`, so reading it back
-    // off the IR would fail.
     uint64_t imm =
         expr->getArg(2)->EvaluateKnownConstInt(getContext()).getZExtValue();
 
@@ -424,10 +420,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
 
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value cmp = builder.createCompare(loc, pred, lhs, rhs);
-
-    // FIXME-GFX10: The builtin's return type is fixed at uint64_t, so the
-    // ballot mask is always 64 bits wide even on wave32 targets where only the
-    // low 32 bits are meaningful.
     return builder.emitIntrinsicCallOp(loc, "amdgcn.ballot",
                                        convertType(expr->getType()), cmp);
   }
