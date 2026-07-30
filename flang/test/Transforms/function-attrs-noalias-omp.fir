@@ -1,11 +1,12 @@
 // RUN: fir-opt --function-attr="set-noalias=true" %s | FileCheck %s
 
-// Test that noalias is not set on arguments of functions containing
-// OpenMP synchronization or work-sharing constructs, because shared
-// variables may cause multiple threads to pass the same address.
+// Test that noalias is still set on arguments of functions containing OpenMP
+// synchronization or work-sharing constructs. The memory ordering these
+// constructs require is enforced when they are lowered, so noalias can be
+// preserved here.
 
 // CHECK-LABEL:   func.func @test_omp_single(
-// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp", llvm.noalias}) {
 func.func @test_omp_single(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
   omp.single {
     omp.terminator
@@ -14,7 +15,7 @@ func.func @test_omp_single(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
 }
 
 // CHECK-LABEL:   func.func @test_omp_critical(
-// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp", llvm.noalias}) {
 func.func @test_omp_critical(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
   omp.critical {
     omp.terminator
@@ -23,7 +24,7 @@ func.func @test_omp_critical(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
 }
 
 // CHECK-LABEL:   func.func @test_omp_barrier(
-// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp", llvm.noalias}) {
 func.func @test_omp_barrier(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
   omp.barrier
   return
@@ -39,7 +40,7 @@ func.func @test_omp_master(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
 }
 
 // CHECK-LABEL:   func.func @test_omp_parallel(
-// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "tmp", llvm.noalias}) {
 func.func @test_omp_parallel(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) {
   omp.parallel {
     omp.terminator

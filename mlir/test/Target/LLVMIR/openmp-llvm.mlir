@@ -43,6 +43,34 @@ llvm.func @test_flush_construct(%arg0: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @test_barrier_noalias(ptr noalias %{{[0-9]+}})
+llvm.func @test_barrier_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
+  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
+  // CHECK: call void @__kmpc_barrier
+  omp.barrier
+  llvm.return
+}
+
+// CHECK-LABEL: define void @test_critical_noalias(ptr noalias %{{[0-9]+}})
+llvm.func @test_critical_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
+  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
+  // CHECK: call void @__kmpc_critical
+  omp.critical {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @test_single_noalias(ptr noalias %{{[0-9]+}})
+llvm.func @test_single_noalias(%arg0: !llvm.ptr {llvm.noalias}) {
+  // CHECK: call void asm sideeffect "", "r,~{memory}"(ptr %{{[0-9]+}})
+  // CHECK: call i32 @__kmpc_single
+  omp.single {
+    omp.terminator
+  }
+  llvm.return
+}
+
 // CHECK-LABEL: define void @test_omp_parallel_1()
 llvm.func @test_omp_parallel_1() -> () {
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_1:.*]])

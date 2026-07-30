@@ -755,6 +755,51 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Emits an empty side-effecting inline-asm barrier with a "memory" clobber
+/// over \p ptrs, pinning their accesses at this point even under `noalias`.
+static void emitNoAliasFlushBarrier(llvm::IRBuilderBase &builder,
+                                    llvm::ArrayRef<llvm::Value *> ptrs) {
+  if (ptrs.empty())
+    return;
+  llvm::SmallVector<llvm::Type *> ptrTypes;
+  for (llvm::Value *ptr : ptrs)
+    ptrTypes.push_back(ptr->getType());
+  std::string constraints;
+  for (size_t i = 0, e = ptrs.size(); i != e; ++i)
+    constraints += "r,";
+  constraints += "~{memory}";
+  llvm::FunctionType *asmFTy =
+      llvm::FunctionType::get(builder.getVoidTy(), ptrTypes, /*isVarArg=*/false);
+  llvm::InlineAsm *barrier = llvm::InlineAsm::get(
+      asmFTy, /*AsmString=*/"", constraints, /*hasSideEffects=*/true);
+  builder.CreateCall(barrier, ptrs);
+}
+
+/// Collects the `noalias` pointer arguments of the function currently being
+/// built; these are the dummy arguments an implicit flush must keep ordered.
+static llvm::SmallVector<llvm::Value *>
+collectNoAliasPointerArgs(llvm::IRBuilderBase &builder) {
+  llvm::SmallVector<llvm::Value *> ptrs;
+  llvm::BasicBlock *insertBB = builder.GetInsertBlock();
+  if (!insertBB)
+    return ptrs;
+  if (llvm::Function *fn = insertBB->getParent())
+    for (llvm::Argument &arg : fn->args())
+      if (arg.getType()->isPointerTy() && arg.hasNoAliasAttr())
+        ptrs.push_back(&arg);
+  return ptrs;
+}
+
+/// Returns true if translating \p op emits a construct that implies a flush of
+/// all thread-visible variables. Explicit `omp.flush` with a list is handled
+/// separately, pinning only the listed variables.
+static bool impliesFlushAll(mlir::Operation *op) {
+  return mlir::isa<mlir::omp::BarrierOp, mlir::omp::CriticalOp,
+                   mlir::omp::SingleOp, mlir::omp::SectionsOp,
+                   mlir::omp::WsloopOp, mlir::omp::OrderedOp,
+                   mlir::omp::OrderedRegionOp>(op);
+}
+
 /// Converts an OpenMP 'critical' operation into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -7895,6 +7940,11 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   if (isOutermostLoopWrapper)
     moduleTranslation.stackPush<OpenMPLoopInfoStackFrame>();
 
+  // A flush-implying construct must not let accesses to the function's noalias
+  // dummy arguments move across it; pin them here while keeping `noalias`.
+  if (impliesFlushAll(op))
+    emitNoAliasFlushBarrier(builder, collectNoAliasPointerArgs(builder));
+
   auto result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
           .Case([&](omp::BarrierOp op) -> LogicalResult {
@@ -7927,24 +7977,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             // over the listed pointers to keep their accesses ordered across the
             // flush even when they carry the Fortran-implied `noalias`.
             llvm::SmallVector<llvm::Value *> flushPtrs;
-            llvm::SmallVector<llvm::Type *> flushPtrTypes;
-            for (mlir::Value flushVar : op.getVarList()) {
-              llvm::Value *ptr = moduleTranslation.lookupValue(flushVar);
-              flushPtrs.push_back(ptr);
-              flushPtrTypes.push_back(ptr->getType());
-            }
-            if (!flushPtrs.empty()) {
-              std::string constraints;
-              for (size_t i = 0, e = flushPtrs.size(); i != e; ++i)
-                constraints += "r,";
-              constraints += "~{memory}";
-              llvm::FunctionType *asmFTy = llvm::FunctionType::get(
-                  builder.getVoidTy(), flushPtrTypes, /*isVarArg=*/false);
-              llvm::InlineAsm *barrier = llvm::InlineAsm::get(
-                  asmFTy, /*AsmString=*/"", constraints,
-                  /*hasSideEffects=*/true);
-              builder.CreateCall(barrier, flushPtrs);
-            }
+            for (mlir::Value flushVar : op.getVarList())
+              flushPtrs.push_back(moduleTranslation.lookupValue(flushVar));
+            emitNoAliasFlushBarrier(builder, flushPtrs);
             ompBuilder->createFlush(builder.saveIP());
             return success();
           })
