@@ -29,17 +29,8 @@ namespace llvm {
 
 class DataLayout;
 
-Function *getMaybeBitcastedCallee(const CallBase *CB);
-
 /// ABI alignment of \p ArgTy in .param space, capped at the PTX maximum of 128.
 Align getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL);
-
-/// The .param-space alignment for a byval parameter or call argument: the
-/// (possibly promoted) parameter alignment, raised to the ptxas byval minimum.
-Align getDeviceByValParamAlign(const Function *F, Type *ArgTy, unsigned AttrIdx,
-                               const DataLayout &DL);
-Align getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
-                               unsigned AttrIdx, const DataLayout &DL);
 
 /// Alignment for a function parameter or return value at AttributeList index
 /// \p AttrIdx (FirstArgIndex + argNo, or ReturnIndex). Prefers an explicit

@@ -496,8 +496,8 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
 
     if (CB.paramHasAttr(I, Attribute::ByVal)) {
       Type *ETy = CB.getParamByValType(I);
-      Align ParamByValAlign = getDeviceByValParamAlign(
-          &CB, ETy, I + AttributeList::FirstArgIndex, DL);
+      Align ParamByValAlign =
+          getPTXParamAlign(&CB, ETy, I + AttributeList::FirstArgIndex, DL);
 
       O << ".param .align " << ParamByValAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(ETy) << "]";
@@ -1696,9 +1696,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
       const unsigned ParamIdx = Arg.getArgNo() + AttributeList::FirstArgIndex;
-      const Align OptimalAlign =
-          IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
-                       : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
+      const Align OptimalAlign = getPTXParamAlign(F, ETy, ParamIdx, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";

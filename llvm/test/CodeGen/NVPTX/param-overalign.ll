@@ -38,7 +38,7 @@ define float @caller_md(float %a, float %b) {
 
   %s1 = insertvalue %struct.float2 poison, float %a, 0
   %s2 = insertvalue %struct.float2 %s1, float %b, 1
-  %r = call float @callee_md(%struct.float2 %s2)
+  %r = call float @callee_md(%struct.float2 alignstack(8) %s2)
   ret float %r
 }
 
@@ -79,7 +79,7 @@ define float @caller(float %a, float %b) {
 
   %s1 = insertvalue %struct.float2 poison, float %a, 0
   %s2 = insertvalue %struct.float2 %s1, float %b, 1
-  %r = call float @callee(%struct.float2 %s2)
+  %r = call float @callee(%struct.float2 alignstack(8) %s2)
   ret float %r
 }
 
