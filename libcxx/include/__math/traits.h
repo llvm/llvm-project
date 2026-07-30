@@ -70,15 +70,15 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 // isinf
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] constexpr _LIBCPP_HIDE_FROM_ABI bool __isinf(_A1) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool __isinf(_A1) _NOEXCEPT {
   return false;
 }
 
-[[__nodiscard__]] inline constexpr _LIBCPP_HIDE_FROM_ABI bool __isinf(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool __isinf(float __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
-[[__nodiscard__]] inline constexpr _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
 #ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_PREFERRED_OVERLOAD
 #endif
@@ -86,7 +86,7 @@ _LIBCPP_PREFERRED_OVERLOAD
   return __builtin_isinf(__x);
 }
 
-[[__nodiscard__]] inline constexpr _LIBCPP_HIDE_FROM_ABI bool __isinf(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool __isinf(long double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
