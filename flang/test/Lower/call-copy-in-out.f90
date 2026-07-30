@@ -189,8 +189,8 @@ subroutine test_scalar_substring_does_no_trigger_copy_inout(c, i, j)
   call bar_char_2(c(i:j))
 end subroutine
 
-! CHECK-LABEL: func @_QPissue871(
-subroutine issue871(p)
+! CHECK-LABEL: func @_QPderived_pointer_no_copy(
+subroutine derived_pointer_no_copy(p)
   ! Test passing implicit derived from scalar pointer (no copy-in/out).
   type t
     integer :: i
@@ -201,8 +201,8 @@ subroutine issue871(p)
   call bar_derived(p)
 end subroutine
 
-! CHECK-LABEL: func @_QPissue871_array(
-subroutine issue871_array(p)
+! CHECK-LABEL: func @_QPderived_pointer_no_copy_array(
+subroutine derived_pointer_no_copy_array(p)
   ! Test passing implicit derived from contiguous pointer (no copy-in/out).
   type t
     integer :: i

@@ -92,48 +92,10 @@ void fd(D d, XD xd, D *p) {
   // CHECK: call void %
   p[0].f();
 
-  // We can devirtualize this, by CWG1504 / [expr.add]/6 (if the array
+  // FIXME: We can devirtualize this, by C++1z [expr.add]/6 (if the array
   // element type and the pointee type are not similar, behavior is undefined).
-  // CHECK: call void @_ZN1A1fEv
+  // CHECK: call void %
   p[1].f();
-
-  // Negative indices are also UB for the same reason.
-  // CHECK: call void @_ZN1A1fEv
-  p[-1].f();
-
-  // Pointer arithmetic with arrow syntax: (p + N)->f()
-  // CHECK: call void @_ZN1A1fEv
-  (p + 1)->f();
-
-  // Pointer subtraction with arrow syntax: (p - N)->f()
-  // CHECK: call void @_ZN1A1fEv
-  (p - 1)->f();
-
-  // Can't devirtualize with non-constant index; we can't prove N != 0.
-  int n = 1;
-  // CHECK: call void %
-  p[n].f();
-
-  // Zero through expression: p[1-1] evaluates to 0, can't devirtualize.
-  // CHECK: call void %
-  p[1-1].f();
-
-  // (p + 0)->f() also can't be devirtualized (same as *p).
-  // CHECK: call void %
-  (p + 0)->f();
-
-  // 1 + p is legal pointer arithmetic too.
-  // CHECK: call void @_ZN1A1fEv
-  (1 + p)->f();
-
-  // Constant variables are evaluated.
-  const int N = 1;
-  // CHECK: call void @_ZN1A1fEv
-  p[N].f();
-
-  // Pointer arithmetic with deref: *(p + 1)
-  // CHECK: call void @_ZN1A1fEv
-  (*(p + 1)).f();
 }
 
 struct B {

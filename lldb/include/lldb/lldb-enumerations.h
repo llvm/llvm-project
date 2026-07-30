@@ -267,7 +267,11 @@ enum ScriptedExtension {
   eScriptedExtensionScriptedHook,
   eScriptedExtensionScriptedThread,
   eScriptedExtensionScriptedFrame,
-  kLastScriptedExtension = eScriptedExtensionScriptedFrame
+  eScriptedExtensionScriptedStackFrameRecognizer,
+  eScriptedExtensionScriptedCommand,
+  eScriptedExtensionParsedCommand,
+  eScriptedExtensionScriptedStringSummary,
+  kLastScriptedExtension = eScriptedExtensionScriptedStringSummary
 };
 
 /// Register numbering types.
@@ -797,6 +801,7 @@ enum CommandArgumentType {
   eArgTypeNameMatchStyle,
   eArgTypePluginDomain,
   eArgTypeBreakpointResolverMask,
+  eArgTypeScriptedExtension,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -921,6 +926,7 @@ enum SectionType {
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
   eSectionTypeWasmName,
+  eSectionTypeWasmGlobal,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -1477,10 +1483,11 @@ enum CompletionType {
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
   eManagedPluginCompletion = (1ul << 27),
+  eScriptedExtensionCompletion = (1ul << 28),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 28)
+  eTerminatorCompletion = (1ul << 29)
 };
 
 /// Specifies if children need to be re-computed after a call to \ref

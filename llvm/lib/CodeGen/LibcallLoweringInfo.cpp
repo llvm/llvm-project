@@ -34,7 +34,7 @@ LibcallLoweringInfo::LibcallLoweringInfo(
 
 AnalysisKey LibcallLoweringModuleAnalysis::Key;
 
-bool LibcallLoweringModuleAnalysisResult::invalidate(
+bool ModuleLibcallLoweringInfo::invalidate(
     Module &, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &) {
   // Passes that change the runtime libcall set must explicitly invalidate this
@@ -43,7 +43,7 @@ bool LibcallLoweringModuleAnalysisResult::invalidate(
   return !PAC.preservedWhenStateless();
 }
 
-LibcallLoweringModuleAnalysisResult
+ModuleLibcallLoweringInfo
 LibcallLoweringModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   LibcallLoweringMap.init(&MAM.getResult<RuntimeLibraryAnalysis>(M));
   return LibcallLoweringMap;

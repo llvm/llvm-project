@@ -22,9 +22,10 @@
 ; CHECK-NEXT:      Lower Garbage Collection Instructions
 ; CHECK-NEXT:      Shadow Stack GC Lowering
 ; CHECK-NEXT:      Remove unreachable blocks from the CFG
-; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
+; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Block Frequency Analysis
 ; CHECK-NEXT:      Constant Hoisting
 ; CHECK-NEXT:      Replace intrinsics with calls to vector library
@@ -36,6 +37,7 @@
 ; CHECK-NEXT:      Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:      Expand reduction intrinsics
 ; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Block Frequency Analysis
@@ -48,11 +50,12 @@
 ; CHECK-NEXT:      Module Verifier
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Function Alias Analysis Results
-; CHECK-NEXT:      Natural Loop Information
+; CHECK-NEXT:      Cycle Info Analysis
 ; CHECK-NEXT:      Post-Dominator Tree Construction
 ; CHECK-NEXT:      Branch Probability Analysis
 ; CHECK-NEXT:      Assignment Tracking Analysis
 ; CHECK-NEXT:      Lazy Branch Probability Analysis
+; CHECK-NEXT:      Natural Loop Information
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
 ; CHECK-NEXT:      M68k DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:      M68k PIC Global Base Reg Initialization
@@ -73,6 +76,7 @@
 ; CHECK-NEXT:      Machine Common Subexpression Elimination
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
 ; CHECK-NEXT:      Machine Cycle Info Analysis
+; CHECK-NEXT:      Machine Register Class Info Analysis
 ; CHECK-NEXT:      Machine code sinking
 ; CHECK-NEXT:      Peephole Optimizations
 ; CHECK-NEXT:      Remove dead machine instructions

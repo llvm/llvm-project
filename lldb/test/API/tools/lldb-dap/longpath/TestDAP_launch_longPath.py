@@ -6,16 +6,18 @@ the program lives at a path longer than the Windows MAX_PATH limit (260).
 import os
 import shutil
 
-import lldbdap_testcase
-from lldbsuite.test.decorators import *
+from lldbsuite.test import lldbutil
+from lldbsuite.test.decorators import skipUnlessWindows
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import ExitedEvent, LaunchArgs, TerminatedEvent
 
 MAX_PATH = 260
 
 
 @skipUnlessWindows
-class TestDAP_launch_longPath(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_launch_longPath(DAPTestCaseBase):
     def _long_path(self, path):
-        return "\\\\?\\" + os.path.abspath(path)
+        return lldbutil.get_extended_windows_path(path)
 
     def _normalize(self, path):
         if path.startswith("\\\\?\\"):
@@ -43,12 +45,10 @@ class TestDAP_launch_longPath(lldbdap_testcase.DAPTestCaseBase):
         shutil.copyfile(program, self._long_path(long_program))
         self.assertGreater(len(os.path.abspath(long_program)), MAX_PATH)
 
-        self.create_debug_adapter()
-        self.launch_and_configurationDone(long_program)
+        session = self.create_session()
+        process_event = session.launch(LaunchArgs(long_program))
 
-        process_event = self.dap_server.wait_for_event(["process"])
-        self.assertIsNotNone(process_event, "lldb-dap sent a process event")
-        name = process_event["body"]["name"]
+        name = process_event.body.name
         self.assertGreater(
             len(name), MAX_PATH, "process event name must not be truncated"
         )
@@ -57,4 +57,4 @@ class TestDAP_launch_longPath(lldbdap_testcase.DAPTestCaseBase):
             self._normalize(long_program),
         )
 
-        self.dap_server.wait_for_event(["terminated", "exited"])
+        session.wait_for_any_event((TerminatedEvent, ExitedEvent), after=process_event)

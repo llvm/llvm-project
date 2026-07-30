@@ -623,8 +623,16 @@ void RISCVPassConfig::addPreEmitPass2() {
 void RISCVPassConfig::addMachineSSAOptimization() {
   // It's beneficial to reduce the VL to enable more
   // Machine SSA optimizations.
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    // RISCVVLOptimizer can make loop invariant instructions like vmv.v.i
+    // loop variant by propagating a VL defined inside the loop. Run LICM and
+    // hoist them early. Don't do this at -O0 to avoid the compile-time
+    // overhead. Not reducing the VL of loop invariant pseudos results in more
+    // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
+    // run.
+    addPass(&EarlyMachineLICMID);
     addPass(createRISCVVLOptimizerPass());
+  }
 
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());

@@ -73,13 +73,6 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonCreateSyntheticProvider(
   return python::PythonObject();
 }
 
-python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject(
-    const char *python_class_name, const char *session_dictionary_name,
-    lldb::DebuggerSP debugger_sp) {
-  return python::PythonObject();
-}
-
 size_t lldb_private::python::SWIGBridge::LLDBSwigPython_CalculateNumChildren(
     PyObject *implementor, uint32_t max) {
   return 0;
@@ -123,6 +116,16 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBLaunchInfo(
 
 void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBError(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBCommandReturnObject(
+    PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBDebugger(PyObject *data) {
   return nullptr;
 }
 
@@ -207,40 +210,6 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
   return false;
 }
 
-bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
-    PyObject *implementor, lldb::DebuggerSP debugger, const char *args,
-    lldb_private::CommandReturnObject &cmd_retobj,
-    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
-  return false;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
-    PyObject *implementor, lldb::DebuggerSP debugger,
-    StructuredDataImpl &args_impl,
-    lldb_private::CommandReturnObject &cmd_retobj,
-    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
-  return false;
-}
-
-std::optional<std::string>
-LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
-                                                 std::string &command) {
-  return std::nullopt;
-}
-
-StructuredData::DictionarySP
-LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
-    PyObject *implementor, std::vector<llvm::StringRef> &args, size_t args_pos,
-    size_t pos_in_arg) {
-  return {};
-}
-
-StructuredData::DictionarySP
-LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
-    PyObject *implementor, llvm::StringRef &long_options, size_t char_in_arg) {
-  return {};
-}
-
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger) {
@@ -258,18 +227,6 @@ lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process_sp) {
   return python::PythonObject();
-}
-
-python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecognizer(
-    const char *python_class_name, const char *session_dictionary_name) {
-  return python::PythonObject();
-}
-
-PyObject *
-lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  return nullptr;
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordProcess(

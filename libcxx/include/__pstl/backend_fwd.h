@@ -317,6 +317,35 @@ struct __is_sorted;
 // optional<bool>
 // operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __adjacent_difference;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _BinaryOperation &&__op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __mismatch;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+// optional<pair<_ForwardIterator1, _ForwardIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __mismatch_3leg;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+// optional<pair<_ForwardIterator1, _ForwardIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __adjacent_find;
+// template <class _Policy, class _ForwardIterator, class _BinaryPredicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last,
+//                                _BinaryPredicate __predicate) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
