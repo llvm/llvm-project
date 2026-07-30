@@ -117,3 +117,21 @@ end subroutine
 
 ! HLFIR-LABEL: func.func @_QPallocator_scalar_types
 ! HLFIR: } {allocate_private_indices = array<i64: 0, 1, 2, 3>}
+
+subroutine allocator_common_block(y)
+  integer :: x1, x2, y
+  common /blk/ x1, x2
+  !$omp parallel private(/blk/, y) allocate(y)
+    x1 = 1
+    x2 = 2
+    y = 3
+  !$omp end parallel
+end subroutine
+
+! A privatized common block contributes one private operand per member, so the
+! recorded index of an allocated item must account for that expansion.
+! HLFIR-LABEL: func.func @_QPallocator_common_block
+! HLFIR: omp.parallel allocate({{.*}} -> %[[Y:.*]]#0 : !fir.ref<i32>)
+! HLFIR-SAME: private({{.*}} -> %{{.*}}, {{.*}} -> %{{.*}}, {{.*}} %[[Y]]#0 -> %{{.*}} :
+! HLFIR-SAME: !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
+! HLFIR: } {allocate_private_indices = array<i64: 2>}

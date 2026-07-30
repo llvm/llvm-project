@@ -3507,14 +3507,26 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   if (!clauseOps.allocateVars.empty()) {
     llvm::DenseMap<const semantics::Symbol *, int64_t> privateSlots;
-    for (auto [index, object] : llvm::enumerate(args.priv.objects)) {
+    int64_t privateSlot = 0;
+    auto addPrivateSlot = [&](const semantics::Symbol &symbol) {
+      if (!privateSlots.try_emplace(&symbol.GetUltimate(), privateSlot).second)
+        fir::emitFatalError(
+            loc, "symbol with multiple private storage slots on one construct");
+      ++privateSlot;
+    };
+    for (const Object &object : args.priv.objects) {
       const semantics::Symbol *symbol = object.sym();
       if (!symbol)
         fir::emitFatalError(loc, "private item without a semantic symbol");
-      const semantics::Symbol *ultimate = &symbol->GetUltimate();
-      if (!privateSlots.try_emplace(ultimate, index).second)
-        fir::emitFatalError(
-            loc, "symbol with multiple private storage slots on one construct");
+      // A privatized common block contributes one private operand per member,
+      // so slot numbering must follow the same expansion.
+      if (const auto *commonDetails =
+              symbol->detailsIf<semantics::CommonBlockDetails>()) {
+        for (const auto &member : commonDetails->objects())
+          addPrivateSlot(*member);
+      } else {
+        addPrivateSlot(*symbol);
+      }
     }
 
     llvm::DenseSet<const semantics::Symbol *> allocateSymbols;
