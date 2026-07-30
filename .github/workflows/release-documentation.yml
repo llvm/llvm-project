@@ -61,8 +61,6 @@ jobs:
   release-documentation:
     name: Build and Upload Release Documentation and Man Pages
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     outputs:
       man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
