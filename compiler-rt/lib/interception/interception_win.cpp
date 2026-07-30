@@ -1118,6 +1118,33 @@ bool OverrideFunctionWithDetour(
 
 bool OverrideFunctionWithRedirectJump(
     uptr old_func, uptr new_func, uptr *orig_old_func) {
+#  if SANITIZER_WINDOWS64 && defined(__GNUC__) && !defined(__clang__)
+  u8* old_u8 = (u8*)old_func;
+
+  // relative indirect jump
+  if (old_u8[0] == 0xff && old_u8[1] == 0x25) {
+    sptr relative_offset = *(s32*)(old_func + 2);
+    uptr* absolute_target_ptr = (uptr*)(old_func + 6 + relative_offset);
+    if (orig_old_func)
+      *orig_old_func = *absolute_target_ptr;
+
+    // Change memory protection to writable.
+    DWORD protection = 0;
+    if (!ChangeMemoryProtection((uptr)absolute_target_ptr, sizeof(uptr),
+                                &protection))
+      return false;
+
+    *absolute_target_ptr = new_func;
+
+    // Restore previous memory protection.
+    if (!RestoreMemoryProtection((uptr)absolute_target_ptr, sizeof(uptr),
+                                 protection))
+      return false;
+
+    return true;
+  }
+#  endif
+
   // Check whether the first instruction is a relative jump.
   if (*(u8*)old_func != 0xE9)
     return false;
