@@ -117,3 +117,52 @@ func.func @array_reduction_shared_partitioned(%arg0: memref<8192xi32>) {
   acc.copyout accPtr(%0 : memref<8192xi32>) to varPtr(%arg0 : memref<8192xi32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "r"}
   return
 }
+
+// A gang-scoped array private_local (block-only storage dims) feeding a
+// worker-level accumulate must not take the per-thread all_reduce path. Every
+// worker updates element 0 of the gang-private slot, so the update must be
+// atomic.
+
+// CHECK-LABEL: func.func @array_reduction_gang_storage_thread_accum
+// CHECK: gpu.launch
+// CHECK: memref.atomic_rmw addi
+// CHECK-NOT: gpu.all_reduce
+// CHECK-NOT: acc.reduction_accumulate_array
+
+func.func @array_reduction_gang_storage_thread_accum(%arg0: memref<4xi32>) {
+  %0 = acc.copyin varPtr(%arg0 : memref<4xi32>) -> memref<4xi32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "r"}
+  acc.kernel_environment dataOperands(%0 : memref<4xi32>) {
+    %c2 = arith.constant 2 : index
+    %c4 = arith.constant 4 : index
+    %c32 = arith.constant 32 : index
+    %bx = acc.par_width %c2 {par_dim = #acc.par_dim<block_x>}
+    %wy = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
+    %tx = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+    %private = acc.privatize [#acc<par_dims[block_x]>] : () -> !acc.private_type<memref<4xi32>>
+    acc.compute_region launch(%kbx = %bx, %kwy = %wy, %ktx = %tx) ins(%arg2 = %0, %priv = %private) : (memref<4xi32>, !acc.private_type<memref<4xi32>>) {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %c0_i32 = arith.constant 0 : i32
+      %c1_i32 = arith.constant 1 : i32
+      %c4_idx = arith.constant 4 : index
+      scf.parallel (%bx_iv) = (%c0) to (%kbx) step (%c1) {
+        %local = acc.private_local %priv {acc.par_dims = #acc<par_dims[block_x]>} : (!acc.private_type<memref<4xi32>>) -> memref<4xi32>
+        scf.for %i = %c0 to %c4_idx step %c1 {
+          memref.store %c0_i32, %local[%i] : memref<4xi32>
+        }
+        scf.parallel (%wy_iv) = (%c0) to (%kwy) step (%c1) {
+          %3 = memref.load %local[%c0] : memref<4xi32>
+          %4 = arith.addi %3, %c1_i32 : i32
+          memref.store %4, %local[%c0] : memref<4xi32>
+          scf.reduce
+        } {acc.par_dims = #acc<par_dims[thread_y]>}
+        %b = acc.bounds extent(%c4_idx : index)
+        acc.reduction_accumulate_array %local bounds(%b) <add> : memref<4xi32> {par_dims = #acc<par_dims[thread_y]>}
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  acc.copyout accPtr(%0 : memref<4xi32>) to varPtr(%arg0 : memref<4xi32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "r"}
+  return
+}
