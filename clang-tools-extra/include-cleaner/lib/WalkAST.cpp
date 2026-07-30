@@ -193,7 +193,7 @@ public:
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    // Always treat consturctor calls as implicit. We'll have an explicit
+    // Always treat constructor calls as implicit. We'll have an explicit
     // reference for the constructor calls that mention the type-name (through
     // TypeLocs). This reference only matters for cases where there's no
     // explicit syntax at all or there're only braces.
@@ -416,11 +416,12 @@ public:
     return true;
   }
 
-  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+    auto startLoc = E->getSelectorStartLoc();
     // Identify the selector and the method declaration
     if (auto *Method = E->getMethodDecl()) {
       // Report the method as a used symbol
-      report(E->getSelectorStartLoc(), Method);
+      report(startLoc, Method);
     }
 
     // If it's a class message, report the interface/class as used
@@ -428,9 +429,24 @@ public:
       if (auto *Interface = E->getReceiverInterface()) {
         report(E->getReceiverRange().getBegin(), Interface);
       }
+    } else {
+      if (auto *Interface = E->getReceiverInterface()) {
+        report(startLoc, Interface, RefType::Implicit);
+      }
+      QualType Type = E->getReceiverType();
+      if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
+        for (auto *Proto : ObjCPtr->quals()) {
+          report(startLoc, Proto, RefType::Implicit);
+        }
+      } else if (const auto *ObjCType = Type->getAs<ObjCObjectType>()) {
+        for (auto *Proto : ObjCType->quals()) {
+          report(startLoc, Proto, RefType::Implicit);
+        }
+      }
     }
     return true;
   }
+
 
   bool VisitObjCPropertyDecl(clang::ObjCPropertyDecl *PD) {
     reportType(PD->getLocation(), PD);
@@ -460,15 +476,14 @@ public:
     }
 
     // Report the receiver to ensure its declaring header is kept.
-    if (E->isObjectReceiver()) {
+   if (E->isObjectReceiver()) {
       QualType Type = E->getBase()->IgnoreImpCasts()->getType();
       if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
         if (auto *Interface = ObjCPtr->getInterfaceDecl()) {
           report(E->getLocation(), Interface, RefType::Implicit);
         }
-        for (const auto *Proto : ObjCPtr->quals()) {
-          report(E->getLocation(), const_cast<ObjCProtocolDecl *>(Proto),
-                 RefType::Implicit);
+        for (auto *Proto : ObjCPtr->quals()) {
+          report(E->getLocation(), Proto, RefType::Implicit);
         }
       }
     } else if (E->isClassReceiver()) {
@@ -481,9 +496,17 @@ public:
         if (auto *Interface = ObjCPtr->getInterfaceDecl()) {
           report(E->getLocation(), Interface, RefType::Implicit);
         }
-        for (const auto *Proto : ObjCPtr->quals()) {
-          report(E->getLocation(), const_cast<ObjCProtocolDecl *>(Proto),
-                 RefType::Implicit);
+        for (auto *Proto : ObjCPtr->quals()) {
+          report(E->getLocation(), Proto, RefType::Implicit);
+        }
+      } else if (const auto *ObjCType = Type->getAs<ObjCObjectType>()) {
+        // This is for handling `super.foo` property references.
+        if (auto *Interface = ObjCType->getInterface()) {
+          report(E->getLocation(), Interface, RefType::Implicit);
+        }
+        // The foo declaration could be in a protocol on super.
+        for (auto *Proto : ObjCType->quals()) {
+          report(E->getLocation(), Proto, RefType::Implicit);
         }
       }
     }

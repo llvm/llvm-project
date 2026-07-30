@@ -605,13 +605,45 @@ TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
 
 TEST(WalkAST, ObjCMessageExprSelectorLoc) {
   testWalk(R"objc(
-    @interface MyClass
+    @interface $implicit^MyClass
     $explicit^- (void)doSomething;
     @end
   )objc",
            R"objc(
     void test(MyClass *obj) {
       [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorLocProtocol) {
+  testWalk(R"objc(
+    @protocol $implicit^MyProtocol
+    $explicit^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(id<MyProtocol> obj) {
+      [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorMessageChaining) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    $explicit^- (void)doSomething;
+    @end
+    @interface WrapperClass
+    - (MyClass *)myClass;
+    @end
+  )objc",
+           R"objc(
+    void test(WrapperClass *obj) {
+      // Weird space avoids Annotations thinking this is a range.
+      [ [obj myClass] ^doSomething];
     }
   )objc",
            {"-x", "objective-c"});
@@ -687,6 +719,62 @@ TEST(WalkAST, ObjCPropertyRefExprExplicitSetter) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCPropertyRefExprDesugaredSetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      [obj ^setFoo:42];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredGetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      [obj ^foo];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredClassSetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(class) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      [MyClass ^setFoo:42];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredClassGetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(class) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      [MyClass ^foo];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCPropertyRefExprProtocol) {
   testWalk(R"objc(
     @protocol $implicit^MyProtocol
@@ -726,6 +814,44 @@ TEST(WalkAST, ObjCPropertyRefExprSuperReceiver) {
            R"objc(
     @implementation MyClass
     - (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassSuperReceiver) {
+  testWalk(R"objc(
+    @interface $implicit^ParentClass
+    @property(class, nonatomic) int $explicit^foo;
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    + (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassSuperProtocolReceiver) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @property(class) int $explicit^foo;
+    @end
+    @interface $implicit^ParentClass <MyProtocol>
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    + (void)testSummary {
       int x = super.^foo;
     }
     @end
