@@ -443,7 +443,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   // The pseudo is later expanded back to LUI+ADD.
   if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
       SrcReg == getFrameRegister(MF) && isShiftedInt<20, 12>(Val)) {
-    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUI), DestReg)
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUpperImm), DestReg)
         .addReg(SrcReg)
         .addImm(static_cast<uint32_t>(Val) >> 12);
     return;
