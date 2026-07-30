@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-long pathconfig(const ::statfs &s, int name);
+long pathconfig(const struct statfs &s, int name);
 
 } // namespace LIBC_NAMESPACE_DECL
 
