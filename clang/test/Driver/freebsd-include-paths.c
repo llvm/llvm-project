@@ -11,6 +11,7 @@
 // RUN: %clang -### -xc++ %s --target=x86_64-unknown-freebsd13.1 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DRIVER-PASS-INCLUDES-CXX
 // DRIVER-PASS-INCLUDES-CXX:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
-// DRIVER-PASS-INCLUDES-CXX-SAME: "-internal-isystem" "/usr/include/c++/v1"
+// DRIVER-PASS-INCLUDES-CXX-SAME: "-internal-isystem" "{{.*}}bin/../include/c++/v1"
+// DRIVER-PASS-INCLUDES-CXX-NOT:  "-internal-isystem" "/usr/include/c++/v1"
 // DRIVER-PASS-INCLUDES-CXX-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DRIVER-PASS-INCLUDES-CXX-SAME: {{^}} "-internal-externc-isystem" "/usr/include"
