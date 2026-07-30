@@ -280,4 +280,3 @@ int *danglingParam(S param) {
   // expected-note@-4    {{Address of stack memory associated with local variable 'param' returned to caller}}
   // expected-warning@-5 {{address of stack memory associated with parameter 'param' returned}}
 }
-
