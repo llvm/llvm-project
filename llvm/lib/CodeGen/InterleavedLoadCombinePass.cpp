@@ -18,6 +18,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -43,6 +47,7 @@
 #include <algorithm>
 #include <cassert>
 #include <list>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -95,14 +100,8 @@ private:
   /// Replace interleaved load candidates. It does additional
   /// analyses if this makes sense. Returns true on success and false
   /// of nothing has been changed.
-  bool combine(std::list<VectorInfo> &InterleavedLoad,
+  bool combine(ArrayRef<VectorInfo *> InterleavedLoad,
                OptimizationRemarkEmitter &ORE);
-
-  /// Given a set of VectorInfo containing candidates for a given interleave
-  /// factor, find a set that represents a 'factor' interleaved load.
-  bool findPattern(std::list<VectorInfo> &Candidates,
-                   std::list<VectorInfo> &InterleavedLoad, unsigned Factor,
-                   const DataLayout &DL);
 }; // InterleavedLoadCombine
 
 /// First Order Polynomial on an n-Bit Integer Value
@@ -566,10 +565,24 @@ public:
   }
 
   /// Returns true if it can be proven that two Polynomials are equal.
-  bool isProvenEqualTo(const Polynomial &o) {
+  bool isProvenEqualTo(const Polynomial &o) const {
     // Subtract both polynomials and test if it is fully defined and zero.
     Polynomial r = *this - o;
     return (r.ErrorMSBs == 0) && (!r.isFirstOrder()) && (r.A.isZero());
+  }
+
+  /// Returns true if every bit of the polynomial is provably exact. An inexact
+  /// polynomial can never be proven equal to another, so it is never a valid
+  /// match candidate.
+  bool isProvenExact() const { return ErrorMSBs == 0; }
+
+  /// Hash the identity checked by isProvenEqualTo. Only meaningful for exact
+  /// polynomials; two exact, proven-equal polynomials hash identically.
+  friend hash_code hash_value(const Polynomial &P) {
+    hash_code H = hash_combine(P.A.getBitWidth(), P.V);
+    for (const auto &BO : P.B)
+      H = hash_combine(H, BO.first, hash_value(BO.second));
+    return hash_combine(H, hash_value(P.A));
   }
 
   /// Print the polynomial into a stream.
@@ -624,6 +637,29 @@ static raw_ostream &operator<<(raw_ostream &OS, const Polynomial &S) {
   return OS;
 }
 #endif
+
+/// Address key of a candidate's first vector element: the block, the common
+/// base pointer, the vector type and the offset polynomial. Two candidates
+/// belong to the same interleaved group iff their keys agree on everything but
+/// the constant offset, so consecutive elements are located by building the
+/// neighbouring keys and looking them up.
+struct OffsetKey {
+  BasicBlock *BB;
+  Value *PV;
+  FixedVectorType *VTy;
+  Polynomial Ofs;
+
+  bool operator==(const OffsetKey &O) const {
+    return BB == O.BB && PV == O.PV && VTy == O.VTy &&
+           Ofs.isProvenEqualTo(O.Ofs);
+  }
+};
+
+struct OffsetKeyHash {
+  size_t operator()(const OffsetKey &K) const {
+    return hash_combine(K.BB, K.PV, K.VTy, hash_value(K.Ofs));
+  }
+};
 
 /// VectorInfo stores abstract the following information for each vector
 /// element:
@@ -1053,54 +1089,6 @@ public:
 
 } // anonymous namespace
 
-bool InterleavedLoadCombineImpl::findPattern(
-    std::list<VectorInfo> &Candidates, std::list<VectorInfo> &InterleavedLoad,
-    unsigned Factor, const DataLayout &DL) {
-  for (auto C0 = Candidates.begin(), E0 = Candidates.end(); C0 != E0; ++C0) {
-    unsigned i;
-    // Try to find an interleaved load using the front of Worklist as first line
-    unsigned Size = DL.getTypeAllocSize(C0->VTy->getElementType());
-
-    // List containing iterators pointing to the VectorInfos of the candidates
-    std::vector<std::list<VectorInfo>::iterator> Res(Factor, Candidates.end());
-
-    for (auto C = Candidates.begin(), E = Candidates.end(); C != E; C++) {
-      if (C->VTy != C0->VTy)
-        continue;
-      if (C->BB != C0->BB)
-        continue;
-      if (C->PV != C0->PV)
-        continue;
-
-      // Check the current value matches any of factor - 1 remaining lines
-      for (i = 1; i < Factor; i++) {
-        if (C->EI[0].Ofs.isProvenEqualTo(C0->EI[0].Ofs + i * Size)) {
-          Res[i] = C;
-        }
-      }
-
-      for (i = 1; i < Factor; i++) {
-        if (Res[i] == Candidates.end())
-          break;
-      }
-      if (i == Factor) {
-        Res[0] = C0;
-        break;
-      }
-    }
-
-    if (Res[0] != Candidates.end()) {
-      // Move the result into the output
-      for (unsigned i = 0; i < Factor; i++) {
-        InterleavedLoad.splice(InterleavedLoad.end(), Candidates, Res[i]);
-      }
-
-      return true;
-    }
-  }
-  return false;
-}
-
 LoadInst *
 InterleavedLoadCombineImpl::findFirstLoad(const std::set<LoadInst *> &LIs) {
   assert(!LIs.empty() && "No load instructions given.");
@@ -1114,14 +1102,14 @@ InterleavedLoadCombineImpl::findFirstLoad(const std::set<LoadInst *> &LIs) {
   return cast<LoadInst>(FLI);
 }
 
-bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
+bool InterleavedLoadCombineImpl::combine(ArrayRef<VectorInfo *> InterleavedLoad,
                                          OptimizationRemarkEmitter &ORE) {
   LLVM_DEBUG(dbgs() << "Checking interleaved load\n");
 
   // The insertion point is the LoadInst which loads the first values. The
   // following tests are used to proof that the combined load can be inserted
   // just before InsertionPoint.
-  LoadInst *InsertionPoint = InterleavedLoad.front().EI[0].LI;
+  LoadInst *InsertionPoint = InterleavedLoad.front()->EI[0].LI;
 
   // Test if the offset is computed
   if (!InsertionPoint)
@@ -1139,17 +1127,17 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   unsigned Factor = InterleavedLoad.size();
 
   // Merge all input sets used in analysis
-  for (auto &VI : InterleavedLoad) {
+  for (const VectorInfo *VI : InterleavedLoad) {
     // Generate a set of all load instructions to be combined
-    LIs.insert(VI.LIs.begin(), VI.LIs.end());
+    LIs.insert(VI->LIs.begin(), VI->LIs.end());
 
     // Generate a set of all instructions taking part in load
     // interleaved. This list excludes the instructions necessary for the
     // polynomial construction.
-    Is.insert(VI.Is.begin(), VI.Is.end());
+    Is.insert(VI->Is.begin(), VI->Is.end());
 
     // Generate the set of the final ShuffleVectorInst.
-    SVIs.insert(VI.SVI);
+    SVIs.insert(VI->SVI);
   }
 
   // There is nothing to combine.
@@ -1195,17 +1183,17 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   assert(!LIs.empty() && "There are no LoadInst to combine");
 
   // It is necessary that insertion point dominates all final ShuffleVectorInst.
-  for (auto &VI : InterleavedLoad) {
-    if (!DT.dominates(InsertionPoint, VI.SVI))
+  for (const VectorInfo *VI : InterleavedLoad) {
+    if (!DT.dominates(InsertionPoint, VI->SVI))
       return false;
   }
 
   // All checks are done. Add instructions detectable by InterleavedAccessPass
   // The old instruction will are left dead.
   IRBuilder<> Builder(InsertionPoint);
-  Type *ETy = InterleavedLoad.front().SVI->getType()->getElementType();
+  Type *ETy = InterleavedLoad.front()->SVI->getType()->getElementType();
   unsigned ElementsPerSVI =
-      cast<FixedVectorType>(InterleavedLoad.front().SVI->getType())
+      cast<FixedVectorType>(InterleavedLoad.front()->SVI->getType())
           ->getNumElements();
   FixedVectorType *ILTy = FixedVectorType::get(ETy, Factor * ElementsPerSVI);
 
@@ -1229,14 +1217,14 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
 
   // Create the final SVIs and replace all uses.
   int i = 0;
-  for (auto &VI : InterleavedLoad) {
+  for (const VectorInfo *VI : InterleavedLoad) {
     SmallVector<int, 4> Mask;
     for (unsigned j = 0; j < ElementsPerSVI; j++)
       Mask.push_back(i + j * Factor);
 
-    Builder.SetInsertPoint(VI.SVI);
+    Builder.SetInsertPoint(VI->SVI);
     auto SVI = Builder.CreateShuffleVector(LI, Mask, "interleaved.shuffle");
-    VI.SVI->replaceAllUsesWith(SVI);
+    VI->SVI->replaceAllUsesWith(SVI);
     i++;
   }
 
@@ -1282,18 +1270,60 @@ bool InterleavedLoadCombineImpl::run() {
       }
     }
 
-    std::list<VectorInfo> InterleavedLoad;
-    while (findPattern(Candidates, InterleavedLoad, Factor, DL)) {
-      if (combine(InterleavedLoad, ORE)) {
+    // Index every candidate whose first element has a provably exact offset by
+    // its address key. Finding an interleaved group then only needs lookups of
+    // the neighbouring keys. The key embeds a Polynomial, which has no natural
+    // empty/tombstone value, so use std::unordered_map rather than DenseMap.
+    std::unordered_map<OffsetKey, SmallVector<VectorInfo *, 1>, OffsetKeyHash>
+        OffsetMap;
+    for (VectorInfo &C : Candidates) {
+      if (!C.EI[0].Ofs.isProvenExact())
+        continue;
+      OffsetMap[{C.BB, C.PV, C.VTy, C.EI[0].Ofs}].push_back(&C);
+    }
+
+    // Candidates already combined (a whole group) or dropped (a failed base).
+    SmallPtrSet<const VectorInfo *, 16> Consumed;
+
+    // Return the last still-available candidate registered under Key. Iterating
+    // in reverse makes a later duplicate offset win over an earlier one.
+    auto FindNeighbor = [&](const OffsetKey &Key) -> VectorInfo * {
+      auto It = OffsetMap.find(Key);
+      if (It == OffsetMap.end())
+        return nullptr;
+      for (VectorInfo *Cand : reverse(It->second))
+        if (!Consumed.contains(Cand))
+          return Cand;
+      return nullptr;
+    };
+
+    for (VectorInfo &C0 : Candidates) {
+      if (Consumed.contains(&C0) || !C0.EI[0].Ofs.isProvenExact())
+        continue;
+
+      unsigned Size = DL.getTypeAllocSize(C0.VTy->getElementType());
+
+      // Collect C0 and its Factor - 1 consecutive neighbours.
+      SmallVector<VectorInfo *, 4> Group;
+      Group.push_back(&C0);
+      for (unsigned i = 1; i < Factor; i++) {
+        VectorInfo *Nb =
+            FindNeighbor({C0.BB, C0.PV, C0.VTy, C0.EI[0].Ofs + i * Size});
+        if (!Nb)
+          break;
+        Group.push_back(Nb);
+      }
+      if (Group.size() != Factor)
+        continue;
+
+      if (combine(Group, ORE)) {
+        // The whole group is combined and left dead.
+        Consumed.insert(Group.begin(), Group.end());
         changed = true;
       } else {
-        // Remove the first element of the Interleaved Load but put the others
-        // back on the list and continue searching
-        Candidates.splice(Candidates.begin(), InterleavedLoad,
-                          std::next(InterleavedLoad.begin()),
-                          InterleavedLoad.end());
+        // Drop only the base and keep its neighbours available as future bases.
+        Consumed.insert(&C0);
       }
-      InterleavedLoad.clear();
     }
   }
 
