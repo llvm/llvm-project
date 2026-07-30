@@ -141,12 +141,6 @@ static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
                                     cl::desc("Combine ext and trunc to TBL"),
                                     cl::init(true));
 
-static cl::opt<bool> EnableSME2MultiVectorStoreLowering(
-    "aarch64-enable-sme2-multivector-store-lowering", cl::Hidden,
-    cl::desc("Enable lowering of oversized SVE stores to SME2 multi-vector "
-             "operations."),
-    cl::init(false));
-
 // All of the XOR, OR and CMP use ALU ports, and data dependency will become the
 // bottleneck after this transform on high end CPU. So this max leaf node
 // limitation is guard cmp+ccmp will be profitable.
@@ -2117,12 +2111,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          (Subtarget->hasSME2() && Subtarget->isStreaming()))) {
 
       for (unsigned Opcode : {ISD::LOAD, ISD::STORE}) {
-        // FIXME: Remove this guard on SME2 once new register classes and
-        // pseudos for multi-vector stores have been added.
-        if (Opcode == ISD::STORE && Subtarget->hasSME2() &&
-            Subtarget->isStreaming() && !EnableSME2MultiVectorStoreLowering)
-          continue;
-
         // 2x multi-vector load/stores
         setOperationAction(Opcode, MVT::nxv32i8, Custom);
         setOperationAction(Opcode, MVT::nxv16i16, Custom);
