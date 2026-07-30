@@ -57,6 +57,13 @@ bool replaceAllocas(mlir::RewriterBase &rewriter, mlir::Operation *parentOp,
                     MustRewriteCallBack, AllocaRewriterCallBack,
                     DeallocCallBack);
 
+/// Under -gpu=mem:unified|managed, move the dynamically sized fir.alloca of
+/// \p func to fir.allocmem/fir.freemem pairs marked for the unified/managed
+/// allocator. Does nothing for device code, which keeps its stack allocations.
+/// Returns true if the function was modified.
+bool promoteDynamicAllocasToCudaHeap(mlir::RewriterBase &rewriter,
+                                     mlir::Operation *func);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_MEMORYUTILS_H

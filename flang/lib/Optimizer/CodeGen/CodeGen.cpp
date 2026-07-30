@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
@@ -1293,8 +1294,7 @@ template <typename ModuleOp>
 static mlir::SymbolRefAttr
 getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
                   mlir::ConversionPatternRewriter &rewriter,
-                  mlir::Type indexType) {
-  static constexpr char mallocName[] = "malloc";
+                  mlir::Type indexType, llvm::StringRef mallocName) {
   if (auto mallocFunc =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
     return mlir::SymbolRefAttr::get(mallocFunc);
@@ -1311,22 +1311,61 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
   return mlir::SymbolRefAttr::get(mallocDecl);
 }
 
+/// Allocator entry points for an allocation marked by the allocation placement
+/// passes under -gpu=mem:unified|managed. Only marked fir.allocmem/fir.freemem
+/// pairs are routed: memory that the Fortran runtime allocated must keep being
+/// released by libc free, and vice versa.
+static llvm::StringRef getHeapAllocName(mlir::Operation *op,
+                                        llvm::StringRef plain,
+                                        llvm::StringRef unified,
+                                        llvm::StringRef managed) {
+  // Device modules keep libc names; the indirect entry points are host-side.
+  if (op->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return plain;
+  switch (fir::getCudaHeapAllocMode(op)) {
+  case fir::CudaHeapAllocMode::Unified:
+    return unified;
+  case fir::CudaHeapAllocMode::Managed:
+    return managed;
+  case fir::CudaHeapAllocMode::None:
+    return plain;
+  }
+  llvm_unreachable("unexpected CudaHeapAllocMode");
+}
+
+static llvm::StringRef getHostHeapMallocName(mlir::Operation *op) {
+  return getHeapAllocName(op, "malloc", "malloc_unified", "malloc_managed");
+}
+
+static llvm::StringRef getHostHeapFreeName(mlir::Operation *op) {
+  return getHeapAllocName(op, "free", "free_unified", "free_managed");
+}
+
+static llvm::StringRef getHostHeapAlignedAllocName(mlir::Operation *op) {
+  return getHeapAllocName(op, "aligned_alloc", "aligned_alloc_unified",
+                          "aligned_alloc_managed");
+}
+
+static llvm::StringRef getHostHeapPosixMemalignName(mlir::Operation *op) {
+  return getHeapAllocName(op, "posix_memalign", "posix_memalign_unified",
+                          "posix_memalign_managed");
+}
+
 /// Return the LLVMFuncOp corresponding to the standard malloc call.
 static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
                                      mlir::ConversionPatternRewriter &rewriter,
                                      mlir::Type indexType) {
+  llvm::StringRef name = getHostHeapMallocName(op);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getMallocInModule(mod, op, rewriter, indexType);
+    return getMallocInModule(mod, op, rewriter, indexType, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getMallocInModule(mod, op, rewriter, indexType);
+  return getMallocInModule(mod, op, rewriter, indexType, name);
 }
 
 template <typename ModuleOp>
-static mlir::SymbolRefAttr
-getAlignedAllocInModule(ModuleOp mod, fir::AllocMemOp op,
-                        mlir::ConversionPatternRewriter &rewriter,
-                        mlir::Type indexType) {
-  static constexpr char alignedAllocName[] = "aligned_alloc";
+static mlir::SymbolRefAttr getAlignedAllocInModule(
+    ModuleOp mod, fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+    mlir::Type indexType, llvm::StringRef alignedAllocName) {
   if (auto func =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(alignedAllocName))
     return mlir::SymbolRefAttr::get(func);
@@ -1346,18 +1385,17 @@ getAlignedAllocInModule(ModuleOp mod, fir::AllocMemOp op,
 static mlir::SymbolRefAttr
 getAlignedAlloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
                 mlir::Type indexType) {
+  llvm::StringRef name = getHostHeapAlignedAllocName(op);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getAlignedAllocInModule(mod, op, rewriter, indexType);
+    return getAlignedAllocInModule(mod, op, rewriter, indexType, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getAlignedAllocInModule(mod, op, rewriter, indexType);
+  return getAlignedAllocInModule(mod, op, rewriter, indexType, name);
 }
 
 template <typename ModuleOp>
-static mlir::SymbolRefAttr
-getPosixMemalignInModule(ModuleOp mod, fir::AllocMemOp op,
-                         mlir::ConversionPatternRewriter &rewriter,
-                         mlir::Type indexType) {
-  static constexpr char posixMemalignName[] = "posix_memalign";
+static mlir::SymbolRefAttr getPosixMemalignInModule(
+    ModuleOp mod, fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+    mlir::Type indexType, llvm::StringRef posixMemalignName) {
   if (auto func =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(posixMemalignName))
     return mlir::SymbolRefAttr::get(func);
@@ -1379,10 +1417,11 @@ getPosixMemalignInModule(ModuleOp mod, fir::AllocMemOp op,
 static mlir::SymbolRefAttr
 getPosixMemalign(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
                  mlir::Type indexType) {
+  llvm::StringRef name = getHostHeapPosixMemalignName(op);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getPosixMemalignInModule(mod, op, rewriter, indexType);
+    return getPosixMemalignInModule(mod, op, rewriter, indexType, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getPosixMemalignInModule(mod, op, rewriter, indexType);
+  return getPosixMemalignInModule(mod, op, rewriter, indexType, name);
 }
 
 /// Return value of the stride in bytes between adjacent elements
@@ -1519,8 +1558,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
 template <typename ModuleOp>
 static mlir::SymbolRefAttr
 getFreeInModule(ModuleOp mod, fir::FreeMemOp op,
-                mlir::ConversionPatternRewriter &rewriter) {
-  static constexpr char freeName[] = "free";
+                mlir::ConversionPatternRewriter &rewriter,
+                llvm::StringRef freeName) {
   // Check if free already defined in the module.
   if (auto freeFunc =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(freeName))
@@ -1541,10 +1580,11 @@ getFreeInModule(ModuleOp mod, fir::FreeMemOp op,
 
 static mlir::SymbolRefAttr getFree(fir::FreeMemOp op,
                                    mlir::ConversionPatternRewriter &rewriter) {
+  llvm::StringRef name = getHostHeapFreeName(op);
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getFreeInModule(mod, op, rewriter);
+    return getFreeInModule(mod, op, rewriter, name);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getFreeInModule(mod, op, rewriter);
+  return getFreeInModule(mod, op, rewriter, name);
 }
 
 static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {

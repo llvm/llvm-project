@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -131,6 +132,8 @@ public:
     // If func is a declaration, skip it.
     if (func.empty())
       return;
+    mlir::IRRewriter cudaHeapRewriter(context);
+    fir::promoteDynamicAllocasToCudaHeap(cudaHeapRewriter, func.getOperation());
     auto tryReplacing = [&](fir::AllocaOp alloca) {
       bool res = !keepStackAllocation(alloca, options);
       if (res) {
