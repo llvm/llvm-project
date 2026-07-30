@@ -54617,6 +54617,83 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   return NewStore;
 }
 
+/// Fold store(abs/min/max(load…)) of scalar i16/i32/i64 into SIMD
+/// PABS/PMIN/PMAX to keep memory-bound sort2/abs in the XMM domain.
+static SDValue combineScalarMinMaxAbsStore(StoreSDNode *St, const SDLoc &DL,
+                                           SelectionDAG &DAG,
+                                           const X86Subtarget &Subtarget) {
+  if (!ISD::isNormalStore(St))
+    return SDValue();
+
+  SDValue StoredVal = St->getValue();
+  unsigned Opc = StoredVal.getOpcode();
+  bool IsAbs = Opc == ISD::ABS;
+  if ((!IsAbs && !ISD::isMinMaxOpcode(Opc)) || !StoredVal.hasOneUse())
+    return SDValue();
+
+  EVT VT = StoredVal.getValueType();
+  const Function &F = DAG.getMachineFunction().getFunction();
+  if (F.hasFnAttribute(Attribute::NoImplicitFloat) ||
+      Subtarget.useSoftFloat() || F.hasOptSize())
+    return SDValue();
+
+  // i32: SSE4.1 (min/max) / SSSE3 (abs). i64: AVX512F+VLX (no VLX widens to
+  // zmm + vzeroupper). i16: AVX512FP16 (needs VMOVW for mem->XMM).
+  auto getVecVT = [&]() -> std::optional<MVT> {
+    if (VT == MVT::i32 && (IsAbs ? Subtarget.hasSSSE3() : Subtarget.hasSSE41()))
+      return MVT::v4i32;
+    if (VT == MVT::i64 && Subtarget.hasAVX512() && Subtarget.hasVLX())
+      return MVT::v2i64;
+    if (VT == MVT::i16 && Subtarget.hasFP16())
+      return MVT::v8i16;
+    return std::nullopt;
+  };
+  std::optional<MVT> VecVTOpt = getVecVT();
+  if (!VecVTOpt)
+    return SDValue();
+  MVT VecVT = *VecVTOpt;
+
+  SDValue Op0 = StoredVal.getOperand(0);
+  if (!ISD::isNormalLoad(Op0.getNode()))
+    return SDValue();
+
+  SDValue Vec;
+  if (IsAbs) {
+    if (!Op0.hasOneUse())
+      return SDValue();
+    Vec = DAG.getNode(ISD::ABS, DL, VecVT,
+                      DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Op0));
+  } else {
+    SDValue Op1 = StoredVal.getOperand(1);
+    if (!ISD::isNormalLoad(Op1.getNode()))
+      return SDValue();
+
+    // Loads may feed paired smin+smax (sort2); allow SCALAR_TO_VECTOR from a
+    // sibling already combined this turn so CSE can share them.
+    auto checkLoadUses = [](SDValue Ld) {
+      return all_of(Ld->uses(), [&](const SDUse &Use) {
+        if (Use.getResNo() != Ld.getResNo())
+          return true;
+        const SDNode *User = Use.getUser();
+        return User->getOpcode() == ISD::SCALAR_TO_VECTOR ||
+               (ISD::isMinMaxOpcode(User->getOpcode()) &&
+                !User->getValueType(0).isVector());
+      });
+    };
+    if (!checkLoadUses(Op0) || !checkLoadUses(Op1))
+      return SDValue();
+
+    Vec = DAG.getNode(Opc, DL, VecVT,
+                      DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Op0),
+                      DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Op1));
+  }
+
+  return DAG.getStore(St->getChain(), DL,
+                      DAG.getExtractVectorElt(DL, VT, Vec, 0), St->getBasePtr(),
+                      St->getPointerInfo(), St->getBaseAlign(),
+                      St->getMemOperand()->getFlags());
+}
+
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
@@ -54741,6 +54818,11 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                           St->getMemOperand()->getFlags());
     }
   }
+
+  // Convert scalar abs/min/max of loads stored back to memory into SIMD
+  // PABS/PMIN/PMAX, keeping the values in the XMM domain.
+  if (SDValue R = combineScalarMinMaxAbsStore(St, dl, DAG, Subtarget))
+    return R;
 
   // If we are saving a 32-byte vector and 32-byte stores are slow, such as on
   // Sandy Bridge, perform two 16-byte stores.
