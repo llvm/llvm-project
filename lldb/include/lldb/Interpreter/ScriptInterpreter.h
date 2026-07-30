@@ -512,6 +512,11 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedStringSummaryInterfaceSP
+  CreateScriptedStringSummaryInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};

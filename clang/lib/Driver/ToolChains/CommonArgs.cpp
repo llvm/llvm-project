@@ -906,7 +906,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features);
+    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features, ForAS);
     break;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:

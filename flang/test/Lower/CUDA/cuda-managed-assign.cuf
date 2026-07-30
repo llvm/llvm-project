@@ -108,6 +108,23 @@ end subroutine
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
 
+! An allocatable left-hand side is assigned on the host so that it can be
+! reallocated, but not when either side is device data: an assignment between
+! managed and device data is always a copy.
+subroutine managed_device_alloc_transfer()
+  integer(4), allocatable, device :: da(:)
+  integer(4), allocatable, managed :: ma(:)
+  integer(4), managed :: mb(16)
+  integer(4), device :: db(16)
+  allocate(da(16), ma(16))
+  da = mb                ! device allocatable = whole managed
+  ma = db                ! managed allocatable = whole device
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_device_alloc_transfer
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
 ! Only the managed side has to be whole: a host section can be the target of a
 ! whole managed array copy.
 subroutine host_section_from_managed(n)
@@ -143,6 +160,24 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_func_result_section()
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
+! Pinned data is host memory, so a whole managed array and device data on the
+! other side are copied.
+subroutine pinned_transfer(n)
+  integer :: n
+  integer(4), allocatable, pinned :: pa(:)
+  integer(4), managed :: mb(16)
+  integer(4), device :: dc(16)
+  allocate(pa(n))
+  mb = pa
+  pa = dc
+  dc = pa
+end subroutine
+
+! CHECK-LABEL: func.func @_QPpinned_transfer
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
 
 ! Assignments done on the host.
 
