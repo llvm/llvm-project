@@ -241,20 +241,23 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
 
   {
     // Schedule all instructions in sequence.
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::BottomUp);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_TRUE(Sched.trySchedule({S1}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
   }
   {
     // Skip instructions.
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::BottomUp);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
   }
   {
     // Try invalid scheduling. Dependency S0->S1.
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::BottomUp);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_FALSE(Sched.trySchedule({S0, S1}));
   }
@@ -285,8 +288,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
 
   {
     Ctx.save();
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0, L1}));
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
     EXPECT_TRUE(Sched.trySchedule({Ret}));
@@ -294,8 +297,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   }
   {
     Ctx.save();
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0, L1}));
     EXPECT_TRUE(Sched.trySchedule({S1}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
@@ -304,8 +307,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   }
   {
     Ctx.save();
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0, L1}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
     EXPECT_TRUE(Sched.trySchedule({S1}));
@@ -315,8 +318,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   }
   {
     Ctx.save();
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0}));
     EXPECT_TRUE(Sched.trySchedule({L1}));
     EXPECT_FALSE(Sched.trySchedule({S0, S2}));
@@ -326,8 +329,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   }
   {
     Ctx.save();
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L1}));
     EXPECT_TRUE(Sched.trySchedule({L0}));
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
@@ -336,8 +339,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   }
   {
     Ctx.save();
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::TopDown);
     // Dependent instrs.
     EXPECT_FALSE(Sched.trySchedule({L0, L1, S0, S1}));
     EXPECT_FALSE(Sched.trySchedule({L0, L1, S0}));
@@ -374,7 +377,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({Ret}));
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
@@ -407,7 +411,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({Ret}));
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
@@ -420,6 +425,34 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
   EXPECT_FALSE(Sched.trySchedule({L1, Z}));
   // This should succeed because it matches the original vec bundle.
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+}
+
+// Top-down mirror of the TrimSchedule test. This exercises the top-down path of
+// Scheduler::trimSchedule(), where the ready list must be refilled by visiting
+// the nodes from the top of schedule down to the bottom of the DAG.
+TEST_F(SchedulerTest, TrimSchedule_TopDown) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
+  %ld = load i8, ptr %ptr0
+  %add = add i8 %ld, 0
+  store i8 %add, ptr %ptr0
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::TopDown);
+  EXPECT_TRUE(Sched.trySchedule({Load}));
+  EXPECT_TRUE(Sched.trySchedule({Store}));
+  EXPECT_TRUE(Sched.trySchedule({Add}));
 }
 
 // Make sure that instructions in  SchedBundles are always scheduled
@@ -457,7 +490,8 @@ define void @foo(ptr %ptr, i16 %arg) {
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({Zext0, Zext1}));
   EXPECT_TRUE(Sched.trySchedule({Shl0, Shl1}));
@@ -496,7 +530,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
@@ -533,7 +568,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
@@ -570,7 +606,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({S0, S1}));
   EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
@@ -609,7 +646,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
   auto GetBndlSchedState = [&Sched](ArrayRef<sandboxir::Instruction *> Instrs) {
     return sandboxir::SchedulerInternalsAttorney::getBndlSchedState(Sched,
@@ -729,7 +767,8 @@ define void @foo(ptr noalias %ptrA0, ptr noalias %ptrA1,
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
   (void)Ret;
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(Sched.trySchedule({A0, A1}));
   // NOTE: We schedule the intermediate nodes between {A0,A1} and {B0,B1} by
   // hand one by one to make sure they are scheduled in that order because
@@ -781,7 +820,8 @@ bb1:
 
   {
     // Schedule bottom-up
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::BottomUp);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
     // Scheduling across blocks should fail.
@@ -789,7 +829,8 @@ bb1:
   }
   {
     // Schedule top-down
-    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                               sandboxir::SchedDirection::BottomUp);
     EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
     // Scheduling across blocks should fail.
     EXPECT_FALSE(Sched.trySchedule({S0, S1}));
@@ -815,7 +856,8 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *Ptr1 = F->getArg(1);
   auto *Ptr2 = F->getArg(2);
 
-  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
   // Schedule Ret and S0. The top of schedule should be at S0.
   EXPECT_TRUE(Sched.trySchedule({Ret}));
   EXPECT_TRUE(Sched.trySchedule({S0}));
@@ -978,4 +1020,92 @@ bb1:
   EXPECT_EQ(ReadyList.pop(), L0N);
   EXPECT_EQ(ReadyList.pop(), S0N);
   EXPECT_EQ(ReadyList.pop(), RetN);
+}
+
+TEST_F(SchedulerTest, SchedulingPoint) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0) {
+  store i8 %v0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check at each instruction.
+  for (auto &I : *BB) {
+    sandboxir::SchedulingPoint SP(I.getIterator());
+    // Check atBeforeBeginOrNull(), I can't be before begin.
+    EXPECT_EQ(SP.atBeforeBeginOrNull(), nullptr);
+    // Check atEndOrNull(), I can't be at end.
+    EXPECT_EQ(SP.atEndOrNull(), nullptr);
+
+    // Check atInstrOrNull().
+    EXPECT_EQ(SP.atInstrOrNull(), &I);
+    // Check cast to Instruction *.
+    EXPECT_EQ((sandboxir::Instruction *)SP, &I);
+    // Check getIterator().
+    EXPECT_EQ(SP.getIterator(), I.getIterator());
+    // Check getIterator() const.
+    EXPECT_EQ(((const sandboxir::SchedulingPoint &)SP).getIterator(),
+              I.getIterator());
+    // Check getNext().
+    EXPECT_EQ(SP.getNext().getIterator(), std::next(I.getIterator()));
+    // Check getPrev().
+    EXPECT_EQ(SP.getNext().getPrev().getIterator(), I.getIterator());
+    // Check operator==() and createAt().
+    EXPECT_EQ(sandboxir::SchedulingPoint::createAt(I.getIterator()), SP);
+  }
+  // Check createBefore().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(Ret->getIterator()),
+            sandboxir::SchedulingPoint::createAt(S0->getIterator()));
+  // Check createAfter().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAfter(S0->getIterator()),
+            sandboxir::SchedulingPoint::createAt(Ret->getIterator()));
+  // Check atBeforeBeginOrNull().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->begin())
+                .atBeforeBeginOrNull(),
+            BB);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(S0->getIterator())
+                .atBeforeBeginOrNull(),
+            nullptr);
+  EXPECT_EQ(
+      sandboxir::SchedulingPoint::createAt(BB->end()).atBeforeBeginOrNull(),
+      nullptr);
+  // Check atEndOrNull().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->end()).atEndOrNull(), BB);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->end()).atEndOrNull(),
+            nullptr);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->begin()).atEndOrNull(),
+            nullptr);
+  // Check atInstrOrNull().
+  EXPECT_EQ(
+      sandboxir::SchedulingPoint::createBefore(BB->begin()).atInstrOrNull(),
+      nullptr);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->begin()).atInstrOrNull(),
+            &BB->front());
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->end()).atInstrOrNull(),
+            nullptr);
+
+#ifndef NDEBUG
+  // Check assertion when trying to createAfter() at BB.end().
+  EXPECT_DEATH(sandboxir::SchedulingPoint::createAfter(BB->end()),
+               ".*at end.*");
+  // Check assertion when trying to get out of bounds getPrev().
+  sandboxir::SchedulingPoint BeforeBegin =
+      sandboxir::SchedulingPoint::createBefore(BB->begin());
+  EXPECT_DEATH(BeforeBegin.getPrev(), ".*Expected.*");
+  // Check assertion when trying to get out of bounds getNext().
+  sandboxir::SchedulingPoint AtEnd =
+      sandboxir::SchedulingPoint::createAt(BB->end());
+  EXPECT_DEATH(AtEnd.getNext(), ".*Expected.*");
+
+  // Check assertion before begin.
+  EXPECT_DEATH(BeforeBegin.getIterator(), ".*Expected.*");
+#endif
 }

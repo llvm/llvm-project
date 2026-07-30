@@ -733,6 +733,7 @@ def int_aarch64_neon_tbx3 : AdvSIMD_Tbx3_Intrinsic;
 def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
 // Maps Memory locations to registers.
+defvar FFR = InaccessibleMem;
 defvar FPMR = InaccessibleMem;
 defvar ZT0 = TargetMem0;
 defvar ZA = TargetMem1;
@@ -1083,7 +1084,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_1Vec_PredLoad_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
   class AdvSIMD_1Vec_PredStore_Intrinsic
     : DefaultAttrsIntrinsic<[],
@@ -1590,7 +1591,7 @@ class AdvSIMD_GatherLoad_SV_64b_Offsets_WriteFFR_Intrinsic
                   llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                 ],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
 class AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1608,7 +1609,7 @@ class AdvSIMD_GatherLoad_SV_32b_Offsets_WriteFFR_Intrinsic
                   llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
 class AdvSIMD_GatherLoad_VS_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1644,7 +1645,7 @@ class AdvSIMD_GatherLoad_VS_WriteFFR_Intrinsic
                   llvm_anyvector_ty,
                   llvm_i64_ty
                 ],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
 class AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[],
@@ -1955,10 +1956,10 @@ def int_aarch64_sve_lastp  : AdvSIMD_SVE_CNTP_Intrinsic<[IntrSpeculatable]>;
 // FFR manipulation
 //
 
-def int_aarch64_sve_rdffr   : ClangBuiltin<"__builtin_sve_svrdffr">,   DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [], [IntrReadMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_rdffr_z : ClangBuiltin<"__builtin_sve_svrdffr_z">, DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [llvm_nxv16i1_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_setffr  : ClangBuiltin<"__builtin_sve_svsetffr">,  DefaultAttrsIntrinsic<[], [], [IntrWriteMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_wrffr   : ClangBuiltin<"__builtin_sve_svwrffr">,   DefaultAttrsIntrinsic<[], [llvm_nxv16i1_ty], [IntrWriteMem, IntrInaccessibleMemOnly]>;
+def int_aarch64_sve_rdffr   : ClangBuiltin<"__builtin_sve_svrdffr">,   DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [], [IntrRead<[FFR]>, IntrReadOnly]>;
+def int_aarch64_sve_rdffr_z : ClangBuiltin<"__builtin_sve_svrdffr_z">, DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [llvm_nxv16i1_ty], [IntrRead<[FFR]>, IntrReadOnly]>;
+def int_aarch64_sve_setffr  : ClangBuiltin<"__builtin_sve_svsetffr">,  DefaultAttrsIntrinsic<[], [], [IntrWrite<[FFR]>, IntrWriteOnly]>;
+def int_aarch64_sve_wrffr   : ClangBuiltin<"__builtin_sve_svwrffr">,   DefaultAttrsIntrinsic<[], [llvm_nxv16i1_ty], [IntrWrite<[FFR]>, IntrWriteOnly]>;
 
 //
 // Saturating scalar arithmetic

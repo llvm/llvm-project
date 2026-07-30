@@ -80,11 +80,6 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %cx
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    addl %eax, %eax
-; X64-NEXT:    cwtl
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func3:
@@ -97,11 +92,6 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divw %cx
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    cwtl
-; X86-NEXT:    shrl %eax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %y2 = sext i8 %y to i15
   %y3 = shl i15 %y2, 7

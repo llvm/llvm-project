@@ -15,13 +15,20 @@
 #define LLVM_CLANG_AST_DECLFRIEND_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <cassert>
+#include <iterator>
 
 namespace clang {
 
@@ -42,7 +49,9 @@ class ASTContext;
 /// @endcode
 ///
 /// The semantic context of a friend decl is its declaring class.
-class FriendDecl : public Decl {
+class FriendDecl final
+    : public Decl,
+      private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
@@ -52,28 +61,46 @@ private:
   friend class CXXRecordDecl;
   friend class CXXRecordDecl::friend_iterator;
 
-  // Location of the '...', if present.
-  SourceLocation EllipsisLoc;
-
-  SourceLocation FriendLoc;
-
-protected:
   // The declaration that's a friend of this class.
   FriendUnion Friend;
 
+  // A pointer to the next friend in the sequence.
   LazyDeclPtr NextFriend;
 
-  FriendDecl(Kind K, DeclContext *DC, SourceLocation L, FriendUnion Friend,
-             SourceLocation FriendL, SourceLocation EllipsisLoc = {})
-      : Decl(K, DC, L), EllipsisLoc(EllipsisLoc), FriendLoc(FriendL),
-        Friend(Friend), NextFriend() {}
+  // Location of the 'friend' specifier.
+  SourceLocation FriendLoc;
 
-  FriendDecl(Kind K, EmptyShell Empty) : Decl(K, Empty) {}
+  // Location of the '...', if present.
+  SourceLocation EllipsisLoc;
+
+  /// True if this 'friend' declaration is unsupported.  Eventually we
+  /// will support every possible friend declaration, but for now we
+  /// silently ignore some and set this flag to authorize all access.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UnsupportedFriend : 1;
+
+  // The number of "outer" template parameter lists in non-templatic
+  // (currently unsupported) friend type declarations, such as
+  //     template <class T> friend class A<T>::B;
+  unsigned NumTPLists : 31;
+
+  FriendDecl(DeclContext *DC, SourceLocation L, FriendUnion Friend,
+             SourceLocation FriendL, SourceLocation EllipsisLoc,
+             ArrayRef<TemplateParameterList *> FriendTypeTPLists)
+      : Decl(Decl::Friend, DC, L), Friend(Friend), FriendLoc(FriendL),
+        EllipsisLoc(EllipsisLoc), UnsupportedFriend(false),
+        NumTPLists(FriendTypeTPLists.size()) {
+    llvm::copy(FriendTypeTPLists, getTrailingObjects());
+  }
+
+  FriendDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
+      : Decl(Decl::Friend, Empty), UnsupportedFriend(false),
+        NumTPLists(NumFriendTypeTPLists) {}
 
   FriendDecl *getNextFriend() {
-    if (NextFriend.isOffset())
-      return getNextFriendSlowCase();
-    return cast_or_null<FriendDecl>(NextFriend.get(nullptr));
+    if (!NextFriend.isOffset())
+      return cast_or_null<FriendDecl>(NextFriend.get(nullptr));
+    return getNextFriendSlowCase();
   }
 
   FriendDecl *getNextFriendSlowCase();
@@ -82,11 +109,14 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
+  friend TrailingObjects;
 
-  static FriendDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                            FriendUnion Friend_, SourceLocation FriendL,
-                            SourceLocation EllipsisLoc = {});
-  static FriendDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+  static FriendDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation L, FriendUnion Friend_,
+         SourceLocation FriendL, SourceLocation EllipsisLoc = {},
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {});
+  static FriendDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                        unsigned FriendTypeNumTPLists);
 
   /// If this friend declaration names an (untemplated but possibly
   /// dependent) type, return the type; otherwise return null.  This
@@ -96,27 +126,74 @@ public:
     return Friend.dyn_cast<TypeSourceInfo*>();
   }
 
+  unsigned getFriendTypeNumTemplateParameterLists() const {
+    return NumTPLists;
+  }
+
+  TemplateParameterList *getFriendTypeTemplateParameterList(unsigned N) const {
+    return getTrailingObjects(NumTPLists)[N];
+  }
+
   /// If this friend declaration doesn't name a type, return the inner
   /// declaration.
   NamedDecl *getFriendDecl() const {
     return Friend.dyn_cast<NamedDecl *>();
   }
 
+  /// Retrieves the location of the 'friend' keyword.
+  SourceLocation getFriendLoc() const {
+    return FriendLoc;
+  }
+
   /// Retrieves the location of the '...', if present.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
 
-  SourceLocation getFriendLoc() const { return FriendLoc; }
+  /// Retrieves the source range for the friend declaration.
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    if (TypeSourceInfo *TInfo = getFriendType()) {
+      SourceLocation StartL = (NumTPLists == 0)
+                                  ? getFriendLoc()
+                                  : getTrailingObjects()[0]->getTemplateLoc();
+      SourceLocation EndL = isPackExpansion() ? getEllipsisLoc()
+                                              : TInfo->getTypeLoc().getEndLoc();
+      return SourceRange(StartL, EndL);
+    }
 
-  SourceRange getSourceRange() const override LLVM_READONLY;
+    if (isPackExpansion())
+      return SourceRange(getFriendLoc(), getEllipsisLoc());
+
+    if (NamedDecl *ND = getFriendDecl()) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+        return FD->getSourceRange();
+      if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+        return FTD->getSourceRange();
+      if (const auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
+        return CTD->getSourceRange();
+      if (const auto *DD = dyn_cast<DeclaratorDecl>(ND)) {
+        if (DD->getOuterLocStart() != DD->getInnerLocStart())
+          return DD->getSourceRange();
+      }
+      return SourceRange(getFriendLoc(), ND->getEndLoc());
+    }
+
+    return SourceRange(getFriendLoc(), getLocation());
+  }
+
+  /// Determines if this friend kind is unsupported.
+  bool isUnsupportedFriend() const {
+    return UnsupportedFriend;
+  }
+  void setUnsupportedFriend(bool Unsupported) {
+    UnsupportedFriend = Unsupported;
+  }
 
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) {
-    return K >= firstFriend && K <= lastFriend;
-  }
+  static bool classofKind(Kind K) { return K == Decl::Friend; }
 };
+
 /// An iterator over the friend declarations of a class.
 class CXXRecordDecl::friend_iterator {
   friend class CXXRecordDecl;

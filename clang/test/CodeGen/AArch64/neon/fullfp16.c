@@ -34,7 +34,7 @@
 #include <arm_fp16.h>
 
 //===------------------------------------------------------===//
-// 2.5.1.1.  Addition
+// 2.5.1.5.  Addition
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vaddh_f16(
 float16_t test_vaddh_f16(float16_t a, float16_t b) {
@@ -60,7 +60,7 @@ float16_t test_vsubh_f16(float16_t a, float16_t b) {
 }
 
 //===------------------------------------------------------===//
-// 2.5.9.1.  Multiplication
+// 2.5.1.9.1.  Multiplication
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vmulh_f16(
 float16_t test_vmulh_f16(float16_t a, float16_t b) {
@@ -83,6 +83,52 @@ float16_t test_vdivh_f16(float16_t a, float16_t b) {
 // LLVM:  [[DIV:%.*]] = fdiv half [[A]], [[B]]
 // LLVM:  ret half [[DIV]]
   return vdivh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.7.  Maximum
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vmaxh_f16
+float16_t test_vmaxh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmax"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MAX:%.*]] = call half @llvm.aarch64.neon.fmax.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MAX]]
+  return vmaxh_f16(a, b);
+}
+
+// ALL-LABEL: test_vmaxnmh_f16
+float16_t test_vmaxnmh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fmaxnm"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MAX:%.*]] = call half @llvm.aarch64.neon.fmaxnm.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MAX]]
+  return vmaxnmh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.8.  Mimimum
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vminh_f16
+float16_t test_vminh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmin"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fmin.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MIN]]
+  return vminh_f16(a, b);
+}
+
+// ALL-LABEL: test_vminnmh_f16
+float16_t test_vminnmh_f16(float16_t a, float16_t b) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.fminnm"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fminnm.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MIN]]
+  return vminnmh_f16(a, b);
 }
 
 //===------------------------------------------------------===//
@@ -261,6 +307,19 @@ float16_t test_vrndxh_f16(float16_t a) {
 }
 
 //===------------------------------------------------------===//
+// 2.5.1.4.  Square root
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vsqrth_f16
+float16_t test_vsqrth_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "sqrt"
+
+// LLVM-SAME: half{{.*}} [[A:%.*]])
+// LLVM:  [[SQR:%.*]] = call half @llvm.sqrt.f16(half [[A]])
+// LLVM:  ret half [[SQR]]
+  return vsqrth_f16(a);
+}
+
+//===------------------------------------------------------===//
 // 2.5.4.1. Negate
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vnegh_f16
@@ -296,4 +355,17 @@ float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
 // LLVM:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half [[C]], half [[A]])
 // LLVM:  ret half [[ADD]]
   return vfmsh_f16(a, b, c);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.9.2  Multiply extended 
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vmulxh_f16
+float16_t test_vmulxh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fmulx"
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]])
+// LLVM:  [[MUL:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MUL]]
+  return vmulxh_f16(a, b);
 }

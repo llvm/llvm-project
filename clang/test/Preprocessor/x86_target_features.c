@@ -180,6 +180,10 @@
 // AVX512BITALG: #define __SSE__ 1
 // AVX512BITALG: #define __SSSE3__ 1
 
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bmm -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BMM %s
+
+// AVX512BMM: #define __AVX512BMM__ 1
+// AVX512BMM: #define __AVX512BW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512vbmi -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512VBMINOAVX512BW %s
 
@@ -211,6 +215,11 @@
 
 // AVX512BITALGNOAVX512BW-NOT: #define __AVX512BITALG__ 1
 // AVX512BITALGNOAVX512BW-NOT: #define __AVX512BW__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bmm -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BMM_NOAVX512BW %s
+
+// AVX512BMM_NOAVX512BW-NOT: #define __AVX512BMM__ 1
+// AVX512BMM_NOAVX512BW-NOT: #define __AVX512BW__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -msse4.2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=SSE42POPCNT %s
 

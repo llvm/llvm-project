@@ -84,6 +84,24 @@ add_header_library(
 )
 
 add_header_library(
+  negsf2
+  HDRS
+    negsf2.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  negdf2
+  HDRS
+    negdf2.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
   subsf3
   HDRS
     subsf3.h
@@ -98,5 +116,14 @@ add_header_library(
     mulsf3.h
   DEPENDS
     libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  divsf3
+  HDRS
+    divsf3.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
     libc.src.__support.macros.config
 )

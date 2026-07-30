@@ -1277,18 +1277,12 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
 
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-
-      // Remove phi operands for the early exiting block.
-      for (VPRecipeBase &R : EB->phis())
-        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      EarlyExitingVPBB->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
-    }
+  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
+    // Remove phi operands for the early exiting block.
+    for (VPRecipeBase &R : EB->phis())
+      cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
+    EarlyExitingVPBB->getTerminator()->eraseFromParent();
+    VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EB);
   }
   return true;
 }
@@ -1358,14 +1352,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   Header->splitAt(Header->getFirstNonPhi());
 
-  // Create the header mask, insert it in the header and branch on it.
-  auto *IV = new VPWidenCanonicalIVRecipe(
-      LoopRegion->getCanonicalIV(),
-      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false));
+  // Abstract header mask, materialized into concrete recipes later.
+  VPValue *HeaderMask = LoopRegion->createHeaderMask();
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  Builder.insert(IV);
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
   VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
@@ -1825,7 +1814,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   if (Phis.empty())
     return true;
 
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
   for (VPReductionPHIRecipe *PhiR : Phis) {
     // Find the condition for the select/blend.
     VPValue *BackedgeSelect = PhiR->getBackedgeValue();
@@ -2252,4 +2241,24 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
+}
+
+void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPValue *HeaderMask = LoopRegion->getHeaderMask();
+  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+
+  VPBuilder Builder(Plan.getVectorPreheader());
+  auto *AliasMask = Builder.createNaryOp(
+      VPInstruction::IncomingAliasMask, {}, nullptr, {}, {},
+      DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
+
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+  Builder = VPBuilder(Header, Header->getFirstNonPhi());
+
+  // Update all existing users of the header mask to "HeaderMask & AliasMask".
+  auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
+  HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
+    return &U != ClampedHeaderMask;
+  });
 }
