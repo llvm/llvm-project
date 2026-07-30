@@ -9505,6 +9505,41 @@ while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
+...
+
+### Exception Model Module Flags Metadata
+
+This module flag describes the exception-handling model that the module was
+compiled for. The value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"dwarf"`
+  - DWARF-like table-based (CFI) exception handling.
+
+* - `"sjlj"`
+  - setjmp/longjmp based exception handling.
+
+* - `"arm"`
+  - ARM EHABI exception handling.
+
+* - `"wineh"`
+  - Windows exception handling.
+
+* - `"wasm"`
+  - WebAssembly exception handling.
+```
+
+When the flag is absent, the target's default exception model is used. The flag
+must use the `error` merge behavior, so that linking modules with conflicting
+exception models is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"sjlj"}
 ```
 
 ### Long Double Type Module Flags Metadata

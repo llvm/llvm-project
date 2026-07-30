@@ -63,6 +63,46 @@ namespace llvm {
          ///< PPA1 is used instead of an .eh_frame section.
   };
 
+  /// Returns the string spelling used by the "exception-model" IR module flag
+  /// for an ExceptionHandling value. Models that are not user-selectable (None,
+  /// AIX, ZOS) have no spelling and return the empty string.
+  inline StringRef getExceptionModelName(ExceptionHandling EH) {
+    switch (EH) {
+    case ExceptionHandling::DwarfCFI:
+      return "dwarf";
+    case ExceptionHandling::SjLj:
+      return "sjlj";
+    case ExceptionHandling::ARM:
+      return "arm";
+    case ExceptionHandling::WinEH:
+      return "wineh";
+    case ExceptionHandling::Wasm:
+      return "wasm";
+    case ExceptionHandling::None:
+    case ExceptionHandling::AIX:
+    case ExceptionHandling::ZOS:
+      break;
+    }
+    return "";
+  }
+
+  /// Parses the string spelling used by the "exception-model" IR module flag
+  /// into an ExceptionHandling value, returning std::nullopt if it does not
+  /// name a supported exception model.
+  inline std::optional<ExceptionHandling> parseExceptionModel(StringRef Name) {
+    if (Name == "dwarf")
+      return ExceptionHandling::DwarfCFI;
+    if (Name == "sjlj")
+      return ExceptionHandling::SjLj;
+    if (Name == "arm")
+      return ExceptionHandling::ARM;
+    if (Name == "wineh")
+      return ExceptionHandling::WinEH;
+    if (Name == "wasm")
+      return ExceptionHandling::Wasm;
+    return std::nullopt;
+  }
+
   /// The floating-point format used for the target's "long double" type.
   enum class LongDoubleFormat {
     IEEEsingle,

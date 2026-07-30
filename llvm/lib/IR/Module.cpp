@@ -706,6 +706,15 @@ FloatABI::ABIType Module::getFloatABI() const {
   return getTargetTriple().getDefaultFloatABI();
 }
 
+ExceptionHandling Module::getExceptionModel() const {
+  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("exception-model")))
+    return *parseExceptionModel(Val->getString());
+  // When the flag is absent the model is unspecified. Callers that have a
+  // TargetMachine should fall back to its (TargetOptions-derived) exception
+  // model; the triple default is only a last resort.
+  return ExceptionHandling::None;
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));
