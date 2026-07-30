@@ -86,22 +86,22 @@ define void @sext_v4i3_v4i64(<4 x i3> %a, ptr %out) {
 ;
 ; NONEON-NOSVE-LABEL: sext_v4i3_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NONEON-NOSVE-NEXT:    str q0, [sp, #-64]!
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldp w9, w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    ldp w11, w10, [sp, #16]
+; NONEON-NOSVE-NEXT:    sub sp, sp, #48
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
+; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldrh w10, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldrh w11, [sp, #12]
 ; NONEON-NOSVE-NEXT:    sbfx x8, x8, #0, #3
 ; NONEON-NOSVE-NEXT:    sbfx x9, x9, #0, #3
 ; NONEON-NOSVE-NEXT:    sbfx x10, x10, #0, #3
-; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #48]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    sbfx x8, x11, #0, #3
-; NONEON-NOSVE-NEXT:    stp x8, x10, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp x8, x10, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x0]
-; NONEON-NOSVE-NEXT:    add sp, sp, #64
+; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
   %b = sext <4 x i3> %a to <4 x i64>
   store <4 x i64> %b, ptr %out
@@ -683,20 +683,18 @@ define void @sext_v4i8_v4i64(<4 x i8> %a, ptr %out) {
 ;
 ; NONEON-NOSVE-LABEL: sext_v4i8_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
-; NONEON-NOSVE-NEXT:    str q0, [sp, #-64]!
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
-; NONEON-NOSVE-NEXT:    ldp d0, d1, [sp]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldrsb x8, [sp, #28]
-; NONEON-NOSVE-NEXT:    ldrsb x9, [sp, #24]
-; NONEON-NOSVE-NEXT:    ldrsb x10, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldrsb x11, [sp, #20]
-; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp x10, x11, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    sub sp, sp, #48
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
+; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldrsb x8, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldrsb x9, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldrsb x10, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldrsb x11, [sp, #14]
+; NONEON-NOSVE-NEXT:    stp x9, x8, [sp, #32]
+; NONEON-NOSVE-NEXT:    stp x10, x11, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x0]
-; NONEON-NOSVE-NEXT:    add sp, sp, #64
+; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
   %b = sext <4 x i8> %a to <4 x i64>
   store <4 x i64>%b, ptr %out

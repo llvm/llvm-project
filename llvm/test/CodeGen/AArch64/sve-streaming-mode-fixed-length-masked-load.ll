@@ -2314,21 +2314,11 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov z1.b, z0.b[3]
-; CHECK-NEXT:    mov z2.b, z0.b[2]
-; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    mov z3.b, z0.b[1]
-; CHECK-NEXT:    mov z4.b, z0.b[7]
-; CHECK-NEXT:    mov z5.b, z0.b[6]
-; CHECK-NEXT:    mov z6.b, z0.b[5]
-; CHECK-NEXT:    mov z7.b, z0.b[4]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z2.h, z5.h, z4.h
-; CHECK-NEXT:    zip1 z3.h, z7.h, z6.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z1.s, z3.s, z2.s
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
@@ -2338,8 +2328,8 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    cmpne p2.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
 ;

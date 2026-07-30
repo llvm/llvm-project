@@ -23754,37 +23754,162 @@ static SDValue performBuildVectorCombine(SDNode *N,
   //                  (extract_elt_iXX_to_i32 vec Idx+1))
   // => (extract_subvector (anyext_iXX_to_i32 vec) Idx)
 
-  // For now, only consider the v2i32 case, which arises as a result of
-  // legalization.
-  if (VT != MVT::v2i32)
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Op0 = N->getOperand(0);
+
+  auto IsValidBV = [&]() {
+    if (Op0.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return false;
+    if (!isa<ConstantSDNode>(Op0.getOperand(1)))
+      return false;
+    uint64_t ExtractIdx = Op0.getConstantOperandVal(1);
+    // EXTRACT_SUBVECTOR requires that Idx be a constant multiple of
+    // ResultType's known minimum vector length.
+    if (ExtractIdx % VT.getVectorMinNumElements() != 0)
+      return false;
+    // Check that the vector we are extracting from is the same in all extracts
+    // and the indices are sequential.
+    for (const SDValue &Op : drop_begin(N->op_values())) {
+      if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+        return false;
+      if (Op.getOperand(0) != Op0.getOperand(0))
+        return false;
+      if (!isa<ConstantSDNode>(Op.getOperand(1)))
+        return false;
+      if (Op.getConstantOperandVal(1) != ++ExtractIdx)
+        return false;
+    }
+    return true;
+  };
+
+  if (!IsValidBV())
     return SDValue();
 
-  SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1);
-  // Reminder, EXTRACT_VECTOR_ELT has the effect of any-extending to its VT.
-  if (Elt0->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-      Elt1->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-      // Constant index.
-      isa<ConstantSDNode>(Elt0->getOperand(1)) &&
-      isa<ConstantSDNode>(Elt1->getOperand(1)) &&
-      // Both EXTRACT_VECTOR_ELT from same vector...
-      Elt0->getOperand(0) == Elt1->getOperand(0) &&
-      // ... and contiguous. First element's index +1 == second element's index.
-      Elt0->getConstantOperandVal(1) + 1 == Elt1->getConstantOperandVal(1) &&
-      // EXTRACT_SUBVECTOR requires that Idx be a constant multiple of
-      // ResultType's known minimum vector length.
-      Elt0->getConstantOperandVal(1) % VT.getVectorMinNumElements() == 0) {
-    SDValue VecToExtend = Elt0->getOperand(0);
-    EVT ExtVT = VecToExtend.getValueType().changeVectorElementType(
-        *DAG.getContext(), MVT::i32);
-    if (!DAG.getTargetLoweringInfo().isTypeLegal(ExtVT))
+  SDValue VecToExtract = Op0.getOperand(0);
+  EVT PreExtractVT = VecToExtract.getValueType();
+  uint64_t ExtractIdx = Op0.getConstantOperandVal(1);
+
+  // Scalable predicate to fixed vector extracts.
+  // We want to extend the predicate to the corresponding packed scalable
+  // integer type with the same number of elements. We can then extract a
+  // fixed vector from it, a create an appropriate build vector that can then
+  // be optimized by existing code.
+  //
+  // nxv8i1  -> nxv8i16 -> extract v8i16 -> v4i16 BV.
+  // nxv4i1  -> nxv4i32 -> extract v4i32 -> v4i16 BV.
+  // nxv4i1  -> nxv4i32 -> extract v8i32 if legal -> v8i8 BV.
+  // nxv16i1 -> nxv16i8 -> extract v16i8 -> v4i32 BV.
+  // nxv16i1 -> nxv16i8 -> extract v16i8 -> v4i16 BV.
+  if (PreExtractVT.isScalableVectorOf(MVT::i1) && !DCI.isBeforeLegalize() &&
+      VT.isFixedLengthVector()) {
+    EVT PackedSVIntTy =
+        getPackedSVEVectorVT(PreExtractVT.getVectorElementCount());
+    unsigned ResNumElements = VT.getVectorMinNumElements();
+    unsigned PackedMinElements = PackedSVIntTy.getVectorMinNumElements();
+    // Extracting a bigger vector makes things simpler in terms implementation
+    // using legal types.
+    unsigned ExtractNumElems = std::max(ResNumElements, PackedMinElements);
+    unsigned BVIndex = 0;
+    if (ExtractIdx % ExtractNumElems != 0) {
+      BVIndex = ExtractIdx % PackedMinElements;
+      ExtractIdx = ExtractIdx - BVIndex;
+    }
+    EVT ExtractFixedVT =
+        EVT::getVectorVT(*DAG.getContext(),
+                         PackedSVIntTy.getVectorElementType(), ExtractNumElems);
+    if (!TLI.isTypeLegal(ExtractFixedVT) ||
+        (!DCI.isBeforeLegalizeOps() &&
+         !TLI.isOperationLegal(ISD::EXTRACT_SUBVECTOR, ExtractFixedVT)))
       return SDValue();
 
-    SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, DL, ExtVT, VecToExtend);
-    return DAG.getExtractSubvector(DL, MVT::v2i32, Ext,
-                                   Elt0->getConstantOperandVal(1));
+    SDValue FixedExtract = DAG.getExtractSubvector(
+        DL, ExtractFixedVT,
+        DAG.getAnyExtOrTrunc(VecToExtract, DL, PackedSVIntTy), ExtractIdx);
+    EVT ExtractElemTy =
+        ExtractFixedVT.getScalarSizeInBits() > 32 ? MVT::i64 : MVT::i32;
+    SmallVector<SDValue, 16> ExtractElems;
+    for (unsigned Idx = 0; Idx < VT.getVectorNumElements(); ++Idx, ++BVIndex)
+      ExtractElems.push_back(
+          DAG.getExtractVectorElt(DL, ExtractElemTy, FixedExtract, BVIndex));
+    return DAG.getBuildVector(VT, DL, ExtractElems);
   }
 
-  return SDValue();
+  if (DCI.isBeforeLegalize() || !VT.isInteger() ||
+      !PreExtractVT.isFixedLengthVector())
+    return SDValue();
+
+  // Not sure if we will ever hit this case.
+  if (PreExtractVT.getScalarSizeInBits() == VT.getScalarSizeInBits())
+    return SDValue();
+
+  auto TryExtractHalf = [&TLI, &DAG, &DCI, &DL](SDValue Vector, unsigned Idx,
+                                                bool &IsExtractHi) {
+    EVT ExtractVT =
+        Vector.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
+
+    if (!TLI.isTypeLegal(ExtractVT))
+      return SDValue();
+    if (!DCI.isBeforeLegalizeOps() &&
+        !TLI.isOperationLegal(ISD::EXTRACT_SUBVECTOR, ExtractVT))
+      return SDValue();
+
+    unsigned ExtractNumElem = ExtractVT.getVectorMinNumElements();
+    IsExtractHi = Idx >= ExtractNumElem;
+    unsigned ExtractIdx = IsExtractHi ? ExtractNumElem : 0;
+    return DAG.getExtractSubvector(DL, ExtractVT, Vector, ExtractIdx);
+  };
+
+  auto TryAnyExtendOrTrunc = [&TLI, &DAG, &DCI, &DL](SDValue Vector,
+                                                     bool IsExtend) {
+    LLVMContext &Context = *DAG.getContext();
+    EVT VT = Vector.getValueType();
+    uint64_t NumBits = VT.getScalarSizeInBits();
+    EVT NewVT = EVT::getVectorVT(
+        Context,
+        EVT::getIntegerVT(Context, IsExtend ? 2 * NumBits : NumBits / 2),
+        VT.getVectorNumElements());
+
+    if (!TLI.isTypeLegal(NewVT))
+      return SDValue();
+    if (!DCI.isBeforeLegalizeOps() &&
+        !TLI.isOperationLegal(IsExtend ? ISD::ANY_EXTEND : ISD::TRUNCATE,
+                              NewVT))
+      return SDValue();
+    return DAG.getAnyExtOrTrunc(Vector, DL, NewVT);
+  };
+
+  SDValue CurrentVec = VecToExtract;
+  EVT CurrentTy = PreExtractVT;
+
+  // We can't extend a 128bit vector, extract first.
+  if (CurrentTy.is128BitVector() &&
+      VT.getScalarSizeInBits() > CurrentTy.getScalarSizeInBits()) {
+    bool IsExtractHi = false;
+    if (!(CurrentVec = TryExtractHalf(CurrentVec, ExtractIdx, IsExtractHi)))
+      return SDValue();
+    CurrentTy = CurrentVec.getValueType();
+    if (IsExtractHi)
+      ExtractIdx -= CurrentTy.getVectorMinNumElements();
+  }
+
+  // Extend/trunc and extract until we reach the desired element type.
+  while (CurrentTy.getScalarSizeInBits() != VT.getScalarSizeInBits()) {
+    bool IsExtend = VT.getScalarSizeInBits() > CurrentTy.getScalarSizeInBits();
+    if (!(CurrentVec = TryAnyExtendOrTrunc(CurrentVec, IsExtend)))
+      return SDValue();
+
+    CurrentTy = CurrentVec.getValueType();
+    if (CurrentTy.getVectorMinNumElements() == VT.getVectorMinNumElements())
+      continue;
+
+    bool IsExtractHi = false;
+    if (!(CurrentVec = TryExtractHalf(CurrentVec, ExtractIdx, IsExtractHi)))
+      return SDValue();
+    CurrentTy = CurrentVec.getValueType();
+    if (IsExtractHi)
+      ExtractIdx -= CurrentTy.getVectorMinNumElements();
+  }
+  return CurrentVec;
 }
 
 // A special combine for the sqdmulh family of instructions.
