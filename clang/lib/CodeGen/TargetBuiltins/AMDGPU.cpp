@@ -299,7 +299,7 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
     return Rt2;
   }
 
-  return Builder.CreateTrunc(Call, CGF.ConvertType(E->getType()));
+  return Builder.CreateTrunc(Call, ValueType);
 }
 
 static llvm::Value *loadTextureDescPtorAsVec8I32(CodeGenFunction &CGF,
