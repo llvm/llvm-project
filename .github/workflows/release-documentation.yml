@@ -130,15 +130,8 @@ jobs:
   upload-release-notes:
     name: "Upload Release Notes"
     runs-on: ubuntu-24.04
-    environment:
-      deployment: false
-      name: release
     needs:
       - release-documentation
-    if: >-
-      github.event_name != 'pull_request' &&
-      inputs.upload &&
-      !contains(inputs.release-version, 'rc')
     permissions:
       contents: read
     steps:
