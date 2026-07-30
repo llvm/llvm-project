@@ -440,7 +440,8 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
     Opcode = IsStore ? AMDGPU::V_MOV_B32_indirect_write
                      : AMDGPU::V_MOV_B32_indirect_read;
   else
-    Opcode = IsStore ? AMDGPU::V_MOVRELD_B32_e32 : AMDGPU::V_MOVRELS_B32_e32;
+    Opcode =
+        IsStore ? AMDGPU::V_MOVRELD_B32_as_mem : AMDGPU::V_MOVRELS_B32_as_mem;
 
   // The dword index is (M0 + $offset). Fold $offset into the base register so
   // each dword i reads/writes VGPR($offset + i) relative to M0. Mask the offset
