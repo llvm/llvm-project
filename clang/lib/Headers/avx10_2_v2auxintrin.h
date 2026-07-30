@@ -2210,7 +2210,7 @@ _mm_cvtss_epi32_epi8(__m128i __A) {
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask((__v4si)__A, (__v16qi)__W,
-                                                  __U);
+                                                   __U);
 }
 
 /// Convert packed signed 32-bit integers in \a __A to packed 8-bit integers
@@ -2269,7 +2269,7 @@ _mm256_cvtss_epi32_epi8(__m256i __A) {
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask((__v8si)__A, (__v16qi)__W,
-                                                  __U);
+                                                   __U);
 }
 
 /// Convert packed signed 32-bit integers in \a __A to packed 8-bit integers

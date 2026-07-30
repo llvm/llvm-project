@@ -1136,7 +1136,7 @@ _mm512_cvtss_epi32_epi8(__m512i __A) {
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_mask_cvtss_epi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb512_mask((__v16si)__A, (__v16qi)__W,
-                                                  __U);
+                                                   __U);
 }
 
 /// Convert packed signed 32-bit integers in \a __A to packed 8-bit integers
