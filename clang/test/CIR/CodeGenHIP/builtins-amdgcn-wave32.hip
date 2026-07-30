@@ -14,7 +14,7 @@
 #define __device__ __attribute__((device))
 
 //===----------------------------------------------------------------------===//
-// Test AMDGPU wave32 builtins
+// Test AMDGPU builtins
 //===----------------------------------------------------------------------===//
 
 // CIR-LABEL: @_Z15test_ballot_w32Pjii
