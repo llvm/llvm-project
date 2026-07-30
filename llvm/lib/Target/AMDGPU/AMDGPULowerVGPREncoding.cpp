@@ -446,6 +446,18 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   // each dword i reads/writes VGPR($offset + i) relative to M0. Mask the offset
   // into the addressable range so a statically out-of-bounds offset still
   // resolves to a valid register.
+  //
+  // A move touches VGPR($offset + i) *plus M0*, which is only known at run
+  // time, so no operand can name the register it really reads or writes.
+  // Operands that name registers as memory rather than a value are therefore
+  // marked undef: the base of every move below, and the stored value as well
+  // when that is itself undef. Liveness of the registers behind this address
+  // space is consequently not expressed here, and correctness relies on nothing
+  // else being allocated to them - which is why frontend use of the address
+  // space is documented as discouraged.
+  const RegState DataFlags = IsStore
+                                 ? getUndefRegState(LdSt.getDataOp().isUndef())
+                                 : RegState::NoFlags;
   for (unsigned i = 0; i < NumDwords; ++i) {
     Register Base = AMDGPU::VGPR0 + ((Offset + i) & (NumAddressableVGPRs - 1));
     Register Sub = Data;
@@ -456,7 +468,7 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
     if (IsStore)
       Mov = BuildMI(BB, MI, DL, TII->get(Opcode))
                 .addReg(Base, RegState::Undef)
-                .addReg(Sub)
+                .addReg(Sub, DataFlags)
                 .getInstr();
     else
       Mov = BuildMI(BB, MI, DL, TII->get(Opcode), Sub)
