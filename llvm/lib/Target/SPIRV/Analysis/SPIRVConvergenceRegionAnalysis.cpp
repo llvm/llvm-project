@@ -14,6 +14,7 @@
 
 #include "SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -211,31 +212,32 @@ private:
     return false;
   }
 
+  class ForwardPostOrderTraversal
+      : public PostOrderTraversalBase<ForwardPostOrderTraversal,
+                                      GraphTraits<BasicBlock *>> {
+    const ConvergenceRegionAnalyzer &Analyzer;
+
+  public:
+    ForwardPostOrderTraversal(const ConvergenceRegionAnalyzer &Analyzer,
+                              BasicBlock *From)
+        : Analyzer(Analyzer) {
+      init(From);
+    }
+
+    bool insertEdge(std::optional<BasicBlock *> From, BasicBlock *To) {
+      return !(From && Analyzer.isBackEdge(*From, To)) &&
+             Visited.insert(To).second;
+    }
+
+  private:
+    SmallPtrSet<BasicBlock *, 16> Visited;
+  };
+
   SmallPtrSet<BasicBlock *, 0>
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
-    // Compute the postorder of the blocks forward-reachable from |From|,
-    // ignoring back edges. Successors therefore always appear before their
-    // predecessors in the resulting list.
-    SmallVector<BasicBlock *, 16> PostOrder;
-    SmallPtrSet<BasicBlock *, 16> Visited;
-    SmallVector<std::pair<BasicBlock *, unsigned>, 16> Stack;
-
-    Visited.insert(From);
-    Stack.push_back({From, 0});
-    while (!Stack.empty()) {
-      auto &[BB, NextSuccessor] = Stack.back();
-      auto *Terminator = BB->getTerminator();
-      if (NextSuccessor < Terminator->getNumSuccessors()) {
-        auto *To = Terminator->getSuccessor(NextSuccessor++);
-        if (isBackEdge(BB, To) || !Visited.insert(To).second)
-          continue;
-        Stack.push_back({To, 0});
-      } else {
-        PostOrder.push_back(BB);
-        Stack.pop_back();
-      }
-    }
+    ForwardPostOrderTraversal Traversal(*this, From);
+    SmallVector<BasicBlock *, 16> PostOrder(Traversal.begin(), Traversal.end());
 
     // Propagate reachability to a matching block backward: a block belongs
     // to the output if it matches, or if one of its non-back-edge successors
