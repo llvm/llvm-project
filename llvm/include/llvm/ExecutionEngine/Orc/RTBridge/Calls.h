@@ -29,14 +29,27 @@
 
 namespace llvm::orc::rt {
 
+/// Interface for running a main-like function (int(int argc, char *argv[])) in
+/// the executor.
+///
+/// Given the address of the function to run and an argument vector, invokes the
+/// function in the executor and returns its integer result. Calls can be made
+/// asynchronously (delivering the result to an OnComplete continuation) or
+/// synchronously (blocking until the result is available). Concrete
+/// implementations (e.g. rt::sps::MainCaller) determine how the call reaches
+/// the executor.
 class MainCaller {
 public:
   virtual ~MainCaller();
 
+  /// Asynchronously run the main-like function at MainFnAddr with the given
+  /// Args, delivering its result (or an error) to OnComplete.
   virtual void operator()(unique_function<void(Expected<int64_t>)> OnComplete,
                           ExecutorAddr MainFnAddr,
                           ArrayRef<std::string> Args) = 0;
 
+  /// Run the main-like function at MainFnAddr with the given Args, blocking
+  /// until its result (or an error) is available.
   Expected<int64_t> operator()(ExecutorAddr MainFnAddr,
                                ArrayRef<std::string> Args) {
     std::promise<MSVCPExpected<int64_t>> P;
