@@ -55,6 +55,10 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   case X86::VCMPPSYrri:
   case X86::VCMPSDrri:
   case X86::VCMPSSrri: {
+    // A symbolic predicate is not known until link time, so whether the
+    // operands commute cannot be decided here. Leave the encoding alone.
+    if (!MI.getOperand(3).isImm())
+      return false;
     switch (MI.getOperand(3).getImm() & 0x7) {
     default:
       return false;
