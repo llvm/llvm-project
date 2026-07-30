@@ -38,8 +38,9 @@ STATISTIC(NumPromotedInRegArgs,
           "Number of uniform pointer arguments promoted to inreg");
 STATISTIC(NumPromotedInRegFuncs,
           "Number of functions with a promoted uniform pointer argument");
-STATISTIC(NumSkippedDueToInRegBudget,
-          "Number of uniform pointer arguments not promoted due to SGPR budget");
+STATISTIC(
+    NumSkippedDueToInRegBudget,
+    "Number of uniform pointer arguments not promoted due to SGPR budget");
 
 static cl::opt<bool> EnablePromoteUniformPointerArgs(
     "amdgpu-promote-uniform-pointer-args", cl::Hidden, cl::init(true),
@@ -158,8 +159,7 @@ static bool collectCallSites(Function &F, SmallVectorImpl<CallBase *> &Calls) {
 
 static bool promoteUniformPointerArgsToInReg(Module &M,
                                              ModuleAnalysisManager &AM) {
-  auto &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   const DataLayout &DL = M.getDataLayout();
   bool Changed = false;
   bool RoundChanged = true;
@@ -200,8 +200,7 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
           }
 
           Function *Caller = CB->getFunction();
-          UniformityInfo &UI =
-              FAM.getResult<UniformityInfoAnalysis>(*Caller);
+          UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(*Caller);
           if (UI.isDivergentAtUse(CB->getArgOperandUse(A.getArgNo()))) {
             AllUniform = false;
             break;
@@ -243,8 +242,9 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
 } // namespace
 
 PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
-                                                     ModuleAnalysisManager &AM) {
-  if (!EnablePromoteUniformPointerArgs || !Triple(M.getTargetTriple()).isAMDGCN())
+                                                    ModuleAnalysisManager &AM) {
+  if (!EnablePromoteUniformPointerArgs ||
+      !Triple(M.getTargetTriple()).isAMDGCN())
     return PreservedAnalyses::all();
   return promoteUniformPointerArgsToInReg(M, AM) ? PreservedAnalyses::none()
                                                  : PreservedAnalyses::all();
