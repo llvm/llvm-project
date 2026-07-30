@@ -15457,47 +15457,74 @@ void Sema::CheckThreadLocalForLargeAlignment(VarDecl *VD) {
 /// '-mloadtime-comment-vars=': attach an implicit attribute to supported
 /// string variables so CodeGen preserves them as loadtime identifying
 /// strings, and warn when a named variable cannot be preserved.
-static void checkLoadTimeCommentVar(Sema &S, VarDecl *VD) {
-  // Only variables defined at file, namespace, or class scope participate;
-  // anything else (e.g. a function-local static) is silently ignored. A
-  // template has no object-file symbol of its own, only its instantiations
-  // do, so template patterns are ignored as well.
-  if (!VD->isFileVarDecl() && !VD->isStaticDataMember())
+static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
+  // The driver restricts the option to AIX, but cc1 can be invoked directly
+  // with any triple, so the target is checked here rather than inherited from
+  // driver gating.
+  if (!S.Context.getTargetInfo().getTriple().isOSAIX())
+    return;
+  // Declarations that cannot be name-matched are silently skipped: an
+  // automatic variable has no symbol of its own, and neither does a template
+  // pattern (only its specializations do, and those are processed
+  // separately). Only definitions are considered.
+  if (VD->hasLocalStorage())
     return;
   if (VD->isTemplated())
     return;
   if (VD->isThisDeclarationADefinition(S.Context) != VarDecl::Definition)
     return;
 
-  // Only character pointers/arrays with an initializer are supported; a
-  // matched variable of any other form (int, struct, no initializer, ...) is
-  // silently ignored.
+  // Only plain `char` pointers/arrays with an initializer are supported; a
+  // matched variable of any other form (int, struct, wide or explicitly
+  // signed/unsigned character types, no initializer, ...) is silently
+  // ignored.
   QualType Ty = VD->getType();
-  const PointerType *PT = Ty->getAs<PointerType>();
+  const PointerType *PT = Ty->getAsCanonical<PointerType>();
   const ArrayType *AT = PT ? nullptr : S.Context.getAsArrayType(Ty);
   QualType Pointee = PT   ? PT->getPointeeType()
                      : AT ? AT->getElementType()
                           : QualType();
-  if (Pointee.isNull() || !Pointee->isAnyCharacterType() || !VD->hasInit())
+  if (Pointee.isNull() ||
+      !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy) ||
+      !VD->hasInit())
     return;
 
   // Names are matched against the mangled name, as it appears in the object
   // file. For plain C file-scope variables this is the source identifier; for
   // C++ variables it is the mangled symbol.
-  if (!llvm::is_contained(S.getLangOpts().LoadTimeCommentVars,
-                          ASTNameGenerator(S.Context).getName(VD)))
+  if (!S.getLangOpts().isLoadTimeCommentVar(
+          ASTNameGenerator(S.Context).getName(VD)))
     return;
 
   // Indices of the %select in warn_loadtime_comment_var_not_preserved.
-  enum { Volatile, BadStorage, DynamicInit, NotStringLiteral };
+  enum {
+    Volatile,
+    BadStorage,
+    DynamicInit,
+    NotStringLiteral,
+    FunctionLocal,
+    StaticDataMember,
+    TemplateSpecialization
+  };
   int Reason = -1;
-  if (VD->getStorageDuration() != SD_Static)
+  if (VD->isLocalVarDecl())
+    // Only file- and namespace-scope variables are supported. A name match
+    // on anything else demonstrates intent (scope participates in the
+    // mangled name), so the unsupported kinds are diagnosed rather than
+    // silently ignored.
+    Reason = FunctionLocal;
+  else if (isa<VarTemplateSpecializationDecl>(VD))
+    Reason = TemplateSpecialization;
+  else if (VD->isStaticDataMember())
+    Reason = StaticDataMember;
+  else if (VD->getStorageDuration() != SD_Static)
     // The string must have static storage duration; a thread-local variable
     // is not preserved.
     Reason = BadStorage;
   else if (Ty.isVolatileQualified() || Pointee.isVolatileQualified())
-    // A volatile string has no stable value to embed, whether the variable
-    // itself or the character it refers to is volatile-qualified.
+    // The intended usage does not intersect with use cases where the character
+    // array or the pointer to it is volatile-qualified; such variables are not
+    // preserved.
     Reason = Volatile;
   else if (!VD->hasConstantInitialization())
     // The string has to be present in the object at load time. A dynamically
@@ -15518,6 +15545,10 @@ static void checkLoadTimeCommentVar(Sema &S, VarDecl *VD) {
 
   VD->addAttr(
       LoadTimeCommentVarAttr::CreateImplicit(S.Context, VD->getLocation()));
+}
+
+void Sema::ProcessLoadTimeCommentVar(VarDecl *VD) {
+  processForLoadTimeCommentVar(*this, VD);
 }
 
 void Sema::FinalizeDeclaration(Decl *ThisDecl) {
@@ -15637,9 +15668,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // Validate variables named in '-mloadtime-comment-vars=': supported string
   // variables get an implicit attribute that CodeGen uses to preserve them;
   // named variables that cannot be preserved are diagnosed.
-  if (!getLangOpts().LoadTimeCommentVars.empty() && !VD->isInvalidDecl() &&
-      Context.getTargetInfo().getTriple().isOSAIX())
-    checkLoadTimeCommentVar(*this, VD);
+  if (!getLangOpts().LoadTimeCommentVars.empty() && !VD->isInvalidDecl())
+    processForLoadTimeCommentVar(*this, VD);
 
   const DeclContext *DC = VD->getDeclContext();
   // If there's a #pragma GCC visibility in scope, and this isn't a class

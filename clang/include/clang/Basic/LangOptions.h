@@ -704,6 +704,9 @@ public:
   /// builtin because a -fno-builtin-* option has been specified?
   bool isNoBuiltinFunc(StringRef Name) const;
 
+  /// Returns true if \p MangledName is listed in -mloadtime-comment-vars=.
+  bool isLoadTimeCommentVar(StringRef MangledName) const;
+
   /// True if any ObjC types may have non-trivial lifetime qualifiers.
   bool allowsNonTrivialObjCLifetimeQualifiers() const {
     return ObjCAutoRefCount || ObjCWeak;

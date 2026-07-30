@@ -6840,6 +6840,10 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                                        OldVar->getPointOfInstantiation());
     // Emit any deferred warnings for the variable's initializer
     AnalysisWarnings.issueWarningsForRegisteredVarDecl(Var);
+    // Variables named in '-mloadtime-comment-vars=' are normally processed in
+    // FinalizeDeclaration, which instantiated definitions do not reach.
+    if (!getLangOpts().LoadTimeCommentVars.empty() && !Var->isInvalidDecl())
+      ProcessLoadTimeCommentVar(Var);
   }
 
   // This variable may have local implicit instantiations that need to be

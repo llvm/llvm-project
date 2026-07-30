@@ -6540,16 +6540,17 @@ Syntax:
 
 In C, variable names are not mangled, so the mangled name is identical to the source
 identifier (for example, `sccsid`). In C++, the mangled name follows the
-Itanium C++ ABI, so a namespace-scoped or class-scoped variable must be named
-using its mangled form:
+Itanium C++ ABI, so a namespace-scoped, class-scoped, or internal-linkage
+variable (for example, a file-scope `static`) must be named using its mangled
+form:
 
 ```c++
-namespace N { char sccsid[] = "@(#) MyApp Version 1.0"; }   // N::sccsid   -> _ZN1N6sccsidE
-const char *App::version = "@(#) Built 2026-06-25";         // App::version -> _ZN3App7versionE
+namespace N { char sccsid[] = "@(#) MyApp Version 1.0"; }   // N::sccsid -> _ZN1N6sccsidE
+static char build[] = "@(#) Level 42";                      // build     -> _ZL5build
 ```
 
 ```console
--mloadtime-comment-vars=_ZN1N6sccsidE,_ZN3App7versionE
+-mloadtime-comment-vars=_ZN1N6sccsidE,_ZL5build
 ```
 
 Valid variable types:
@@ -6557,26 +6558,41 @@ Valid variable types:
 A variable named in the list must meet all of these conditions to be
 preserved:
 
-- It must be defined at file, namespace, or class scope (a function-local
-  `static` variable is not supported).
+- It must be defined at file or namespace scope. A name-matched function-local
+  `static` variable, static data member, or variable template specialization
+  is not supported and is diagnosed.
 - Its type must be a character pointer (`char *`, `const char *`) or a
-  character array (`char[]`, `const char[]`).
+  character array (`char[]`, `const char[]`). The character type must be plain
+  `char`: variables of `signed char`, `unsigned char`, and the wide and
+  Unicode character types (`wchar_t`, `char8_t`, `char16_t`, `char32_t`) are
+  not matched.
 - It must have static storage duration and must not be `volatile`-qualified.
 - It must be constant-initialized, so that the string is present in the object
   at load time. A dynamically initialized variable (whose value is computed by
   a start-up constructor) is not preserved.
 - A character *pointer* must be initialized directly with a string literal (for
   example, `char *p = "@(#) ...";`). A pointer bound to some other object
-  -- even a constant one, such as another character array -- does not itself
-  carry the identifying string and is not preserved.
+  -- even a constant one, such as another character array or the result of a
+  `constexpr` function returning the address of an external array -- does not
+  itself carry the identifying string and is not preserved. The expected
+  behavior is that the identifying string is present in the object file
+  compiled from the defining translation unit itself, not merely in the final
+  linked output.
 
 A variable that is named in the list but is `volatile`-qualified, does not
 have static storage duration (for example, a `thread_local` variable), is
 dynamically initialized, or is a pointer not bound to a string literal, is
-diagnosed with a warning and is not preserved. Variables of an unsupported type
--- for example, an `int` or a `struct` -- or without an initializer are
-silently skipped, as are function-local `static` variables and names that are
-not defined in the translation unit.
+diagnosed with a warning and is not preserved. The same applies to name-matched
+variables of unsupported kinds: function-local `static` variables, static data
+members, and variable template specializations (implicit specializations are
+diagnosed in each translation unit that instantiates them). Variables of an
+unsupported type -- for example, an `int` or a `struct` -- or without an
+initializer are silently skipped, as are names that are not defined in the
+translation unit.
+
+For C++20 modules, a named variable defined in a module unit is processed when
+that module unit itself is compiled to object code, and the option applies to
+that compilation.
 
 Example:
 
