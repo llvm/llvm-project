@@ -270,10 +270,10 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
   auto CastArgFromIdToSpecificType =
       implicitCastExpr(
           hasCastKind(CK_BitCast),
-          hasSourceExpression(ignoringParenImpCasts(
-              hasType(qualType(isObjCIdType())))),
-          hasType(qualType(hasCanonicalType(objcObjectPointerType(
-              pointee(hasDeclaration(objcInterfaceDecl().bind(DerivedNode))))))))
+          hasSourceExpression(
+              ignoringParenImpCasts(hasType(qualType(isObjCIdType())))),
+          hasType(qualType(hasCanonicalType(objcObjectPointerType(pointee(
+              hasDeclaration(objcInterfaceDecl().bind(DerivedNode))))))))
           .bind(WarnRecordDecl);
   auto MatchCallArgFromId =
       anyOf(callExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
