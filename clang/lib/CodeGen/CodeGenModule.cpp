@@ -1451,6 +1451,18 @@ void CodeGenModule::Release() {
       getModule().setLongDoubleFormat(*Format);
   }
 
+  // Record the exception model as a module flag when it differs from the
+  // target default.
+  llvm::ExceptionHandling ExceptionModel =
+      CodeGenOptions::toExceptionHandling(CodeGenOpts.getExceptionHandling());
+  if (ExceptionModel != llvm::ExceptionHandling::None &&
+      ExceptionModel != getTriple().getDefaultExceptionHandling()) {
+    getModule().addModuleFlag(
+        llvm::Module::Error, "exception-model",
+        llvm::MDString::get(getLLVMContext(),
+                            llvm::getExceptionModelName(ExceptionModel)));
+  }
+
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
                               "zos_product_major_version",
