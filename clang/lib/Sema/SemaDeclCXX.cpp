@@ -14960,18 +14960,9 @@ public:
 /// should be copied with __builtin_memcpy rather than via explicit assignments,
 /// do so. This optimization only applies for arrays of scalars, and for arrays
 /// of class type where the selected copy/move-assignment operator is trivial.
-///
-/// \param SuppressMemaccessWarning skips the non-trivially-copyable record
-/// warning for the synthesized call by ignoring warnings across it.  A union's
-/// defaulted assignment copies the whole object representation by memcpy (like
-/// the defaulted union copy constructor), which is correct even when the union
-/// is not trivially copyable, so the -Wnontrivial-memcall diagnostic that
-/// CheckMemaccessArguments would emit is a false positive here.  The pointer
-/// arguments keep their real types, so no qualifier is dropped.
 static StmtResult
 buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
-                           const ExprBuilder &ToB, const ExprBuilder &FromB,
-                           bool SuppressMemaccessWarning = false) {
+                           const ExprBuilder &ToB, const ExprBuilder &FromB) {
   // Compute the size of the memory buffer to be copied.
   QualType SizeType = S.Context.getSizeType();
   llvm::APInt Size(S.Context.getTypeSize(SizeType),
@@ -15014,16 +15005,6 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   Expr *CallArgs[] = {
     To, From, IntegerLiteral::Create(S.Context, Size, SizeType, Loc)
   };
-
-  // The synthesized union whole-object copy is a memcpy of a possibly
-  // non-trivially-copyable record, which is correct here.  Silence warnings
-  // across just this call rather than casting the arguments to void*.  The
-  // memaccess warning is deferred inside BuildCallExpr and honors the ignore
-  // state at that point, so a narrow scope here is sufficient.
-  std::optional<IgnoreAllWarningDiagRAII> IgnoreWarnings;
-  if (SuppressMemaccessWarning)
-    IgnoreWarnings.emplace(S.Diags);
-
   ExprResult Call = S.BuildCallExpr(/*Scope=*/nullptr, MemCpyRef.get(),
                                     Loc, CallArgs, Loc);
 
@@ -15416,9 +15397,14 @@ static bool buildUnionAssignmentCopy(Sema &S, SourceLocation Loc,
                                      SmallVectorImpl<Stmt *> &Statements) {
   ExprBuilder &To = ExplicitObject ? static_cast<ExprBuilder &>(*ExplicitObject)
                                    : static_cast<ExprBuilder &>(*DerefThis);
+
+  // Copying the object representation is correct even for a union that is not
+  // trivially copyable, so -Wnontrivial-memcall is a false positive here.
+  // Ignoring warnings rather than casting the arguments to void* keeps them
+  // typed, which preserves their address space.
+  IgnoreAllWarningDiagRAII IgnoreWarnings(S.Diags);
   StmtResult Copy = buildMemcpyForAssignmentOp(
-      S, Loc, S.Context.getCanonicalTagType(ClassDecl), To, From,
-      /*SuppressMemaccessWarning=*/true);
+      S, Loc, S.Context.getCanonicalTagType(ClassDecl), To, From);
   if (Copy.isInvalid()) {
     AssignOp->setInvalidDecl();
     return false;

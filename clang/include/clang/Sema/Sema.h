@@ -7259,15 +7259,6 @@ public:
   bool DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
                        const PartialDiagnostic &PD);
 
-  /// Tracks whether the most recently deferred diagnostic (queued by
-  /// DiagIfReachable) was skipped because warnings are ignored.  Used to also
-  /// skip a trailing note that belongs to a skipped warning, mirroring how the
-  /// diagnostic engine drops a note whose parent warning was ignored.  Only
-  /// meaningful for a note that immediately follows its own skipped warning
-  /// through the deferred path; it is reset on every other DiagIfReachable so a
-  /// stale value cannot suppress an unrelated note.
-  bool LastDeferredDiagIgnored = false;
-
   /// Conditionally issue a diagnostic based on the current
   /// evaluation context.
   ///

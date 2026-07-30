@@ -10,7 +10,8 @@ void odr_use(U &x, const U &y, U &&z) {
   x = static_cast<U &&>(z);
 }
 
-// Synthesized memcpy uses typed union pointers, not a void* cast.
+// The memcpy operands are typed union pointers, converted to void * only by
+// the builtin's parameter.
 
 // CHECK: CXXMethodDecl {{.*}} implicit {{.*}}operator= 'U &(const U &)
 // CHECK:   CompoundStmt

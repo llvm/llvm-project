@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 union U {
   int a;
@@ -15,24 +15,19 @@ union U {
 auto get_copy = static_cast<U &(U::*)(const U &)>(&U::operator=);
 auto get_move = static_cast<U &(U::*)(U &&)>(&U::operator=);
 
-// The defaulted union copy/move assignment operators copy the object
-// representation; CIR lowers that to a memcpy.  LLVM lowering uses a memcpy
-// libcall; the classic backend uses the llvm.memcpy intrinsic (the divergence
-// is the pre-existing builtin-memcpy lowering, not this feature).
-
 // CIR: cir.func{{.*}}@_ZN1UaSERKS_{{.*}}cxx_assign<!rec_U, copy, trivial true>
 // CIR:   cir.call @memcpy(
 // CIR: cir.func{{.*}}@_ZN1UaSEOS_{{.*}}cxx_assign<!rec_U, move, trivial true>
 // CIR:   cir.call @memcpy(
 
-// LLVMCIR: define{{.*}}ptr @_ZN1UaSERKS_
-// LLVMCIR:   call ptr @memcpy(ptr {{.*}}, ptr {{.*}}, i64 noundef 4)
-// LLVMCIR-NOT: @memcpy
-// LLVMCIR: define{{.*}}ptr @_ZN1UaSEOS_
-// LLVMCIR:   call ptr @memcpy(ptr {{.*}}, ptr {{.*}}, i64 noundef 4)
+// The CIR backend calls the memcpy libcall where the classic backend emits the
+// llvm.memcpy intrinsic.
 
-// OGCG: define{{.*}}ptr @_ZN1UaSERKS_
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 4, i1 false)
-// OGCG-NOT: @llvm.memcpy
-// OGCG: define{{.*}}ptr @_ZN1UaSEOS_
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr {{.*}}, i64 4, i1 false)
+// LLVM: define linkonce_odr noundef nonnull align 4 dereferenceable(4) ptr @_ZN1UaSERKS_(ptr noundef nonnull align 4 dereferenceable(4) %{{.+}}, ptr noundef nonnull align 4 dereferenceable(4) %{{.+}})
+// LLVMCIR:     call ptr @memcpy(ptr noundef %{{.+}}, ptr noundef %{{.+}}, i64 noundef 4)
+// LLVMCIR-NOT: call ptr @memcpy
+// OGCG:        call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.+}}, ptr align 4 %{{.+}}, i64 4, i1 false)
+// OGCG-NOT:    call void @llvm.memcpy
+// LLVM: define linkonce_odr noundef nonnull align 4 dereferenceable(4) ptr @_ZN1UaSEOS_(ptr noundef nonnull align 4 dereferenceable(4) %{{.+}}, ptr noundef nonnull align 4 dereferenceable(4) %{{.+}})
+// LLVMCIR:     call ptr @memcpy(ptr noundef %{{.+}}, ptr noundef %{{.+}}, i64 noundef 4)
+// OGCG:        call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.+}}, ptr align 4 %{{.+}}, i64 4, i1 false)
