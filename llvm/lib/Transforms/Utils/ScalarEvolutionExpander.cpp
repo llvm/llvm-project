@@ -599,8 +599,6 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
 Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   Type *Ty = S->getType();
 
-  // Specializations for 2-operand cases.
-
   const SCEVConstant *C1, *C2;
   const SCEV *Val;
   // mul(PowerOf2C, (udiv X, PowerOf2C)) == (X >> C) << C
@@ -611,7 +609,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     Value *LHS = expand(Val);
     unsigned ShAmtC = C1->getAPInt().logBase2();
     unsigned BitWidth = Ty->getScalarSizeInBits();
-    APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmtC));
+    APInt Mask(APInt::getBitsSetFrom(BitWidth, ShAmtC));
     Value *Res = InsertBinop(Instruction::And, LHS, ConstantInt::get(Ty, Mask),
                              SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
     return Res;
