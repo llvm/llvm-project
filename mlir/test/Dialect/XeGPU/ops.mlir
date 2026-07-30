@@ -697,31 +697,17 @@ gpu.func @truncf(%a: vector<8x16xf16>) {
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @lane_shuffle_pack_16
-gpu.func @lane_shuffle_pack_16(%a: vector<2xi16>) {
-  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<2xi16>
-  %1 = xegpu.lane_shuffle %a pack : vector<2xi16>
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_f4
+gpu.func @lane_shuffle_pack_f4(%a: vector<4xf4E2M1FN>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xf4E2M1FN>
+  %1 = xegpu.lane_shuffle %a pack : vector<4xf4E2M1FN>
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @lane_shuffle_unpack_16
-gpu.func @lane_shuffle_unpack_16(%a: vector<2xi16>) {
-  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<2xi16>
-  %1 = xegpu.lane_shuffle %a unpack : vector<2xi16>
-  gpu.return
-}
-
-// CHECK-LABEL: gpu.func @lane_shuffle_pack_8
-gpu.func @lane_shuffle_pack_8(%a: vector<4xi8>) {
-  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xi8>
-  %1 = xegpu.lane_shuffle %a pack : vector<4xi8>
-  gpu.return
-}
-
-// CHECK-LABEL: gpu.func @lane_shuffle_unpack_8
-gpu.func @lane_shuffle_unpack_8(%a: vector<4xi8>) {
-  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<4xi8>
-  %1 = xegpu.lane_shuffle %a unpack : vector<4xi8>
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_f4
+gpu.func @lane_shuffle_unpack_f4(%a: vector<4xf4E2M1FN>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<4xf4E2M1FN>
+  %1 = xegpu.lane_shuffle %a unpack : vector<4xf4E2M1FN>
   gpu.return
 }
 
@@ -729,6 +715,27 @@ gpu.func @lane_shuffle_unpack_8(%a: vector<4xi8>) {
 gpu.func @lane_shuffle_pack_f8(%a: vector<4xf8E5M2>) {
   // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xf8E5M2>
   %1 = xegpu.lane_shuffle %a pack : vector<4xf8E5M2>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_f8
+gpu.func @lane_shuffle_unpack_f8(%a: vector<4xf8E5M2>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<4xf8E5M2>
+  %1 = xegpu.lane_shuffle %a unpack : vector<4xf8E5M2>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_f16
+gpu.func @lane_shuffle_pack_f16(%a: vector<2xf16>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<2xf16>
+  %1 = xegpu.lane_shuffle %a pack : vector<2xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_f16
+gpu.func @lane_shuffle_unpack_f16(%a: vector<2xf16>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<2xf16>
+  %1 = xegpu.lane_shuffle %a unpack : vector<2xf16>
   gpu.return
 }
 
