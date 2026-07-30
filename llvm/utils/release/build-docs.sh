@@ -20,7 +20,7 @@
 #   * pip install --user -r ./llvm/docs/requirements.txt
 #===------------------------------------------------------------------------===#
 
-set -ex
+set -e
 
 builddir=docs-build
 srcdir=$(readlink -f $(dirname "$(readlink -f "$0")")/../..)
@@ -140,12 +140,6 @@ if [ "$no_doxygen" != "yes" ]; then
 else
    echo "Doxygen: disabled"
 fi
-
-# This is just to ensure we're using the right compiler
-# When running this locally, the script otherwise might
-# prefer GCC.
-#export CC=clang
-#export CXX=clang++
 
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang${extra_man_page_projects}" \
