@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail\
+; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s
 
 ; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
@@ -11,6 +11,10 @@
 ; RUN: opt -S -p loop-vectorize -debug -enable-epilogue-vectorization=false \
 ; RUN: --disable-output -force-vector-width=16 -epilogue-vectorization-force-VF=8 -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
+
+; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 -vectorize-scev-check-threshold=0 < %s 2>&1 | FileCheck %s \
+; RUN: --check-prefix=CHECK-NO-VPLANS
 
 define void @test_epilogue_tf(ptr %A, i64 %n) {
 ; CHECK-LABEL: Checking a loop in 'test_epilogue_tf'
@@ -25,6 +29,29 @@ for.body:
   store i8 1, ptr %arrayidx, align 1
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp ne i64 %iv.next, %n
+  br i1 %exitcond, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+; This case can't be tail-folded because all the iterations will be executed by
+; main vector loop.
+define void @test_epilogue_tf_reset(ptr %A) {
+; CHECK-LABEL: Checking a loop in 'test_epilogue_tf_reset'
+; CHECK: LV: epilogue tail-folding is enabled
+; CHECK: LV: This case of epilogue loop can't be tail-folded.
+; CHECK: LV: Applying epilogue tail-folding failed, disable it.
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
+  store i8 1, ptr %arrayidx, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp ne i64 %iv.next, 64
   br i1 %exitcond, label %for.body, label %exit
 
 exit:
@@ -122,4 +149,31 @@ for.body:
 
 for.end:
   ret i32 0
+}
+
+; Can't build a valid vplan for this case because too many SCEV checks needed,
+; more than the specfied limit.
+define i64 @test_no_vplan_built(ptr %dst, i64 %n) {
+; CHECK-NO-VPLANS-LABEL: Checking a loop in 'test_no_vplan_built'
+; CHECK-NO-VPLANS: LV: epilogue tail-folding is enabled
+; CHECK-NO-VPLANS: LV: no vplans have been built for main loop VF, bail out of epilogue tail-folding
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %dead.iv = phi i16 [ 0, %entry ], [ %dead.iv.next, %loop ]
+  %prev = phi i64 [ 0, %entry ], [ %ext, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %dead.iv.next = add i16 %dead.iv, 1
+  %ext = zext i16 %dead.iv.next to i64
+  %gep = getelementptr inbounds i64, ptr %dst, i64 %prev
+  store i64 %iv, ptr %gep, align 8
+  %cmp = icmp slt i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %result = phi i64 [ %ext, %loop ]
+  ret i64 %result
 }
