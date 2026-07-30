@@ -16,7 +16,7 @@ define void @fully_unrolled_single_iteration(ptr %src) #0 {
 ; CHECK-NEXT:    [[ARR:%.*]] = alloca [4 x i32], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC:%.*]], align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr [[ARR]], align 4
 ; CHECK-NEXT:    call void @use(ptr nonnull [[ARR]])
 ; CHECK-NEXT:    ret void
@@ -122,17 +122,21 @@ define void @fully_unrolled_bigger() #0 {
 ; CHECK-NEXT:    [[ARR:%.*]] = alloca [4 x i32], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_TR:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[SHL_0:%.*]] = shl i32 [[INDVARS_IV_TR]], 3
-; CHECK-NEXT:    [[SHL_1:%.*]] = shl i32 16, [[SHL_0]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL_1]], [[SHL_0]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[OR]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 7
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
-; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    store i32 16, ptr [[ARR]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 1
+; CHECK-NEXT:    store i32 4104, ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 2
+; CHECK-NEXT:    store i32 1048592, ptr [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 3
+; CHECK-NEXT:    store i32 268435480, ptr [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 4
+; CHECK-NEXT:    store i32 poison, ptr [[ARRAYIDX_4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 5
+; CHECK-NEXT:    store i32 poison, ptr [[ARRAYIDX_5]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 6
+; CHECK-NEXT:    store i32 poison, ptr [[ARRAYIDX_6]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 7
+; CHECK-NEXT:    store i32 poison, ptr [[ARRAYIDX_7]], align 4
 ; CHECK-NEXT:    call void @use(ptr nonnull [[ARR]])
 ; CHECK-NEXT:    ret void
 ;

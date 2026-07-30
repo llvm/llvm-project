@@ -11,8 +11,8 @@ define void @abs() {
 ; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I8 = call i8 @llvm.abs.i8(i8 undef, i1 false)
 ; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I16 = call i16 @llvm.abs.i16(i16 undef, i1 false)
 ; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:3 SizeLat:3 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
-; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:6 Lat:5 SizeLat:5 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
-; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:10 Lat:9 SizeLat:9 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
+; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:7 Lat:6 SizeLat:6 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
+; CHECK-T1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:13 Lat:12 SizeLat:12 for: %I128 = call i128 @llvm.abs.i128(i128 undef, i1 false)
 ; CHECK-T1-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-T2-LABEL: 'abs'

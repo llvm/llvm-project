@@ -32,9 +32,9 @@ declare <64 x i8>  @llvm.abs.v64i8(<64 x i8>, i1)
 define i32 @abs(i32 %arg) {
 ; MVE-LABEL: 'abs'
 ; MVE-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.abs.i64(i64 undef, i1 false)
-; MVE-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:55 Lat:74 SizeLat:74 for: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> undef, i1 false)
-; MVE-NEXT:  Cost Model: Found costs of RThru:148 CodeSize:110 Lat:148 SizeLat:148 for: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> undef, i1 false)
-; MVE-NEXT:  Cost Model: Found costs of RThru:296 CodeSize:220 Lat:296 SizeLat:296 for: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> undef, i1 false)
+; MVE-NEXT:  Cost Model: Found costs of RThru:78 CodeSize:57 Lat:78 SizeLat:78 for: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> undef, i1 false)
+; MVE-NEXT:  Cost Model: Found costs of RThru:156 CodeSize:114 Lat:156 SizeLat:156 for: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> undef, i1 false)
+; MVE-NEXT:  Cost Model: Found costs of RThru:312 CodeSize:228 Lat:312 SizeLat:312 for: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> undef, i1 false)
 ; MVE-NEXT:  Cost Model: Found costs of 2 for: %I32 = call i32 @llvm.abs.i32(i32 undef, i1 false)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:29 Lat:40 SizeLat:40 for: %V2I32 = call <2 x i32> @llvm.abs.v2i32(<2 x i32> undef, i1 false)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> undef, i1 false)

@@ -33,10 +33,10 @@ declare <64 x i8>  @llvm.sadd.sat.v64i8(<64 x i8>, <64 x i8>)
 
 define i32 @add(i32 %arg) {
 ; V8M-LABEL: 'add'
-; V8M-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:8 SizeLat:8 for: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:34 Lat:30 SizeLat:30 for: %V2I64 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:68 Lat:60 SizeLat:60 for: %V4I64 = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:136 Lat:120 SizeLat:120 for: %V8I64 = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:10 SizeLat:10 for: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:32 SizeLat:32 for: %V2I64 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:64 SizeLat:64 for: %V4I64 = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:128 SizeLat:128 for: %V8I64 = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:7 Lat:5 SizeLat:5 for: %I32 = call i32 @llvm.sadd.sat.i32(i32 undef, i32 undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:20 Lat:16 SizeLat:16 for: %V2I32 = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:40 Lat:32 SizeLat:32 for: %V4I32 = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> undef, <4 x i32> undef)
@@ -58,7 +58,7 @@ define i32 @add(i32 %arg) {
 ; V8M-NEXT:  Cost Model: Found costs of 1 for: ret i32 undef
 ;
 ; NEON-LABEL: 'add'
-; NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
+; NEON-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:9 Lat:9 SizeLat:9 for: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
 ; NEON-NEXT:  Cost Model: Found costs of 1 for: %V2I64 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; NEON-NEXT:  Cost Model: Found costs of 4 for: %V4I64 = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
 ; NEON-NEXT:  Cost Model: Found costs of 8 for: %V8I64 = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
@@ -83,10 +83,10 @@ define i32 @add(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; MVE-LABEL: 'add'
-; MVE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:8 SizeLat:8 for: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:166 CodeSize:112 Lat:166 SizeLat:166 for: %V2I64 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:298 CodeSize:185 Lat:298 SizeLat:298 for: %V4I64 = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:594 CodeSize:369 Lat:594 SizeLat:594 for: %V8I64 = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:10 SizeLat:10 for: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:178 CodeSize:118 Lat:178 SizeLat:178 for: %V2I64 = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:322 CodeSize:197 Lat:322 SizeLat:322 for: %V4I64 = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:642 CodeSize:393 Lat:642 SizeLat:642 for: %V8I64 = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.sadd.sat.i32(i32 undef, i32 undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:70 Lat:100 SizeLat:100 for: %V2I32 = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> undef, <4 x i32> undef)
@@ -164,10 +164,10 @@ declare <64 x i8>  @llvm.ssub.sat.v64i8(<64 x i8>, <64 x i8>)
 
 define i32 @sub(i32 %arg) {
 ; V8M-LABEL: 'sub'
-; V8M-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:8 SizeLat:8 for: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:34 Lat:30 SizeLat:30 for: %V2I64 = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:68 Lat:60 SizeLat:60 for: %V4I64 = call <4 x i64> @llvm.ssub.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:136 Lat:120 SizeLat:120 for: %V8I64 = call <8 x i64> @llvm.ssub.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:10 SizeLat:10 for: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:32 SizeLat:32 for: %V2I64 = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:64 SizeLat:64 for: %V4I64 = call <4 x i64> @llvm.ssub.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:128 SizeLat:128 for: %V8I64 = call <8 x i64> @llvm.ssub.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:7 Lat:5 SizeLat:5 for: %I32 = call i32 @llvm.ssub.sat.i32(i32 undef, i32 undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:20 Lat:16 SizeLat:16 for: %V2I32 = call <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:40 Lat:32 SizeLat:32 for: %V4I32 = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> undef, <4 x i32> undef)
@@ -189,7 +189,7 @@ define i32 @sub(i32 %arg) {
 ; V8M-NEXT:  Cost Model: Found costs of 1 for: ret i32 undef
 ;
 ; NEON-LABEL: 'sub'
-; NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
+; NEON-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:9 Lat:9 SizeLat:9 for: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
 ; NEON-NEXT:  Cost Model: Found costs of 1 for: %V2I64 = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; NEON-NEXT:  Cost Model: Found costs of 4 for: %V4I64 = call <4 x i64> @llvm.ssub.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
 ; NEON-NEXT:  Cost Model: Found costs of 8 for: %V8I64 = call <8 x i64> @llvm.ssub.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
@@ -214,10 +214,10 @@ define i32 @sub(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; MVE-LABEL: 'sub'
-; MVE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:8 SizeLat:8 for: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:166 CodeSize:112 Lat:166 SizeLat:166 for: %V2I64 = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:298 CodeSize:185 Lat:298 SizeLat:298 for: %V4I64 = call <4 x i64> @llvm.ssub.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:594 CodeSize:369 Lat:594 SizeLat:594 for: %V8I64 = call <8 x i64> @llvm.ssub.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:10 SizeLat:10 for: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:178 CodeSize:118 Lat:178 SizeLat:178 for: %V2I64 = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> undef, <2 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:322 CodeSize:197 Lat:322 SizeLat:322 for: %V4I64 = call <4 x i64> @llvm.ssub.sat.v4i64(<4 x i64> undef, <4 x i64> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:642 CodeSize:393 Lat:642 SizeLat:642 for: %V8I64 = call <8 x i64> @llvm.ssub.sat.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.ssub.sat.i32(i32 undef, i32 undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:70 Lat:100 SizeLat:100 for: %V2I32 = call <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32> undef, <2 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4I32 = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> undef, <4 x i32> undef)
