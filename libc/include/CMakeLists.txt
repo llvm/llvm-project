@@ -861,6 +861,19 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_statfs
+  ../libc/include/sys/statfs.yaml
+  sys/statfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.fsblkcnt_t
+    .llvm-libc-types.fsfilcnt_t
+    .llvm-libc-types.fsid_t
+    .llvm-libc-types.struct_statfs
+    .llvm-libc-macros.sys_statfs_macros
+)
+
+add_header_macro(
   sys_statvfs
   ../libc/include/sys/statvfs.yaml
   sys/statvfs.h
