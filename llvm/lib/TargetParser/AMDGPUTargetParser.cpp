@@ -18,6 +18,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cassert>
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -142,6 +143,17 @@ constexpr std::array<StringTable::Offset, NumAMDGPUSubArches>
         Map[Entry.SubArch - Triple::FirstAMDGPUSubArch] = Entry.NameOffset;
       return Map;
     }();
+
+// SubArch -> triple-name-offset (e.g. "amdgpu9.00"), like
+// AMDGPUSubArchNameOffsets.
+constexpr std::array<StringTable::Offset, NumAMDGPUSubArches>
+    AMDGPUSubArchTripleNameOffsets = [] {
+      std::array<StringTable::Offset, NumAMDGPUSubArches> Map{};
+      for (const AMDGPUSubArchNameEntry &Entry : AMDGPUSubArchNames)
+        Map[Entry.SubArch - Triple::FirstAMDGPUSubArch] =
+            Entry.TripleNameOffset;
+      return Map;
+    }();
 } // namespace
 
 StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
@@ -262,6 +274,17 @@ StringRef llvm::AMDGPU::getArchNameFromSubArch(Triple::SubArchType SubArch) {
     return "";
   return AMDGPUNameStrTab[AMDGPUSubArchNameOffsets[SubArch -
                                                    Triple::FirstAMDGPUSubArch]];
+}
+
+StringRef llvm::AMDGPU::getSubArchName(Triple::SubArchType SubArch) {
+  if (SubArch == Triple::NoSubArch)
+    return AMDGPUNameStrTab[AMDGPUNoSubArchNameOffset];
+
+  assert(SubArch >= Triple::FirstAMDGPUSubArch &&
+         SubArch <= Triple::LastAMDGPUSubArch &&
+         "expected an AMDGPU subarch or NoSubArch");
+  return AMDGPUNameStrTab
+      [AMDGPUSubArchTripleNameOffsets[SubArch - Triple::FirstAMDGPUSubArch]];
 }
 
 StringRef llvm::AMDGPU::getArchNameR600(GPUKind AK) {

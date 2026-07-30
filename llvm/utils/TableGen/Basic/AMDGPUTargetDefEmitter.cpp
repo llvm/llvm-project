@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,17 +34,22 @@ static void emitGPUKindEnum(raw_ostream &OS, StringRef Name) {
     OS << ((C == '-') ? '_' : toUpper(C));
 }
 
-// Derive the Triple::SubArchType from a "gfx..." GPU name, e.g. "gfx90a" ->
-// Triple::AMDGPUSubArch90A, "gfx9-generic" -> Triple::AMDGPUSubArch9 (the
-// family major). The name must be a real hardware GPU (not a pseudo target).
-static void emitSubArchForName(raw_ostream &OS, StringRef Name) {
+// Emit the Triple::AMDGPUSubArch enumerator suffix for a "gfx..." GPU name,
+// e.g. "gfx90a" -> "90A", "gfx9-generic" -> "9" (the family major).
+static void emitSubArchSuffix(raw_ostream &OS, StringRef Name) {
   StringRef Suffix = Name;
   Suffix.consume_front("gfx");
   Suffix.consume_back("-generic");
 
-  OS << "Triple::AMDGPUSubArch";
   for (char C : Suffix)
-    OS << ((C == '-') ? '_' : toUpper(C));
+    OS << static_cast<char>((C == '-') ? '_' : toUpper(C));
+}
+
+/// Derive the Triple::SubArchType from a "gfx..." GPU name, e.g. "gfx90a" ->
+/// Triple::AMDGPUSubArch90A
+static void emitSubArchForName(raw_ostream &OS, StringRef Name) {
+  OS << "Triple::AMDGPUSubArch";
+  emitSubArchSuffix(OS, Name);
 }
 
 // Derive the Triple::SubArchType for a canonical GPU record. A pseudo target
@@ -90,6 +97,29 @@ static void emitIsaVersion(raw_ostream &OS, const Record *Rec, char Open,
   }
 
   OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
+}
+
+// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
+// "amdgpu9.0c" (stepping is a single lowercase hex digit).
+static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
+  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
+
+  // Assuming emitIsaVersion validated the number of elements.
+  if (V[2] < 0 || V[2] > 15) {
+    PrintFatalError(Rec->getLoc(), "GPU '" + Rec->getValueAsString("Name") +
+                                       "' stepping must be a single hex digit");
+  }
+
+  OS << "amdgpu" << V[0] << '.' << V[1] << hexdigit(V[2], /*LowerCase=*/true);
+}
+
+// Emit the triple subarch name for a major-family subarch, e.g. "9" ->
+// "amdgpu9", "9_4" -> "amdgpu9.4" (the enumerator suffix uses '_', the triple
+// name '.').
+static void emitFamilySubArchTripleName(raw_ostream &OS, StringRef Suffix) {
+  OS << "amdgpu";
+  for (char C : Suffix)
+    OS << static_cast<char>((C == '_') ? '.' : C);
 }
 
 // A canonical GPU or a ProcessorAlias.
@@ -402,38 +432,75 @@ static void emitAMDGPUMajorSubArch(raw_ostream &OS, const RecordKeeper &RK) {
         "#endif // GET_AMDGPU_MAJOR_SUBARCH\n\n";
 }
 
-// Emit the canonical GPU name for each AMDGPU subarch.
+/// Emit the canonical GPU name for each AMDGPU subarch ("gfx900"), and it's
+/// corresponding subarch ("amdgpu9.00")
 static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
                                    StringToOffsetTable &Names) {
-  // (subarch enumerator, name) pairs.
-  std::vector<std::pair<std::string, StringRef>> Pairs;
+  // A row of the generated table. \p Suffix is emitted verbatim after
+  // "Triple::AMDGPUSubArch"; the two name offsets index the shared string pool.
+  struct SubArchEntry {
+    SmallString<16> Suffix;
+    StringRef GPUName; // e.g. "gfx900".
+    unsigned TripleNameOffset;
+  };
+  std::vector<SubArchEntry> Entries;
+
   for (const GPUEntry &E : collectGPUs(RK, /*WantR600=*/false)) {
     if (E.IsAlias || E.Rec->getValueAsBit("IsPseudoTarget"))
       continue;
-    StringRef Name = E.Rec->getValueAsString("Name");
-    std::string SA;
-    raw_string_ostream SO(SA);
-    emitSubArchForName(SO, Name);
-    Pairs.emplace_back(std::move(SA), Name);
+    SubArchEntry Entry;
+    Entry.GPUName = E.Rec->getValueAsString("Name");
+    {
+      raw_svector_ostream SubArchOS(Entry.Suffix);
+      emitSubArchSuffix(SubArchOS, Entry.GPUName);
+    }
+
+    // A "gfxN-generic" target maps to the major-family subarch, so it takes the
+    // family triple name; a concrete GPU derives it from the ISA version.
+    SmallString<16> TripleName;
+    raw_svector_ostream TripleOS(TripleName);
+    if (isGenericTarget(E.Rec))
+      emitFamilySubArchTripleName(TripleOS, Entry.Suffix);
+    else
+      emitConcreteSubArchTripleName(TripleOS, E.Rec);
+    Entry.TripleNameOffset = Names.GetOrAddStringOffset(TripleName);
+
+    Entries.push_back(std::move(Entry));
   }
+
   for (const Record *F : RK.getAllDerivedDefinitionsIfDefined("AMDGPUFamily")) {
     std::vector<const Record *> Members = F->getValueAsListOfDefs("Members");
-    Pairs.emplace_back("Triple::AMDGPUSubArch" +
-                           F->getValueAsString("MajorSubArch").str(),
-                       Members.front()->getValueAsString("Name"));
+    StringRef Major = F->getValueAsString("MajorSubArch");
+    SubArchEntry Entry;
+    Entry.Suffix = Major;
+    Entry.GPUName = Members.front()->getValueAsString("Name");
+
+    SmallString<16> TripleName;
+    raw_svector_ostream TripleOS(TripleName);
+    emitFamilySubArchTripleName(TripleOS, Major);
+    Entry.TripleNameOffset = Names.GetOrAddStringOffset(TripleName);
+
+    Entries.push_back(std::move(Entry));
   }
-  if (Pairs.empty())
+
+  if (Entries.empty())
     return;
+
+  unsigned NoSubArchOffset = Names.GetOrAddStringOffset("amdgpu");
 
   OS << "#ifdef GET_AMDGPU_SUBARCH_NAME\n"
         "#undef GET_AMDGPU_SUBARCH_NAME\n";
+  OS << "static constexpr StringTable::Offset AMDGPUNoSubArchNameOffset = "
+     << NoSubArchOffset << ";\n";
   OS << "struct AMDGPUSubArchNameEntry {\n"
         "  Triple::SubArchType SubArch;\n"
         "  StringTable::Offset NameOffset;\n"
+        "  StringTable::Offset TripleNameOffset;\n"
         "};\n"
         "static constexpr AMDGPUSubArchNameEntry AMDGPUSubArchNames[] = {\n";
-  for (const auto &[SubArch, Name] : Pairs)
-    OS << "  {" << SubArch << ", " << Names.GetOrAddStringOffset(Name)
+  for (const SubArchEntry &E : Entries)
+    OS << "  {Triple::AMDGPUSubArch" << E.Suffix << ", "
+       << Names.GetOrAddStringOffset(E.GPUName) << ", " << E.TripleNameOffset
        << "},\n";
   OS << "};\n"
         "#endif // GET_AMDGPU_SUBARCH_NAME\n\n";
