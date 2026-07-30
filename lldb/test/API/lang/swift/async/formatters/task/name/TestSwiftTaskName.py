@@ -19,7 +19,6 @@ class TestCase(TestBase):
     @skipEmbeddedSwift
     @swiftTest
     @skipIfWindows # rdar://176009590
-    @skipIfLinux  # rdar://151471067
     def test_thread_contains_name(self):
         self.build()
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(

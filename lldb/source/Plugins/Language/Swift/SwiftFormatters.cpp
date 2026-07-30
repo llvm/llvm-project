@@ -741,11 +741,6 @@ namespace lldb_private {
 namespace formatters {
 namespace swift {
 
-/// The size of Swift Tasks. Fragments are tail allocated.
-static constexpr size_t AsyncTaskSize = sizeof(::swift::AsyncTask);
-/// The offset of ChildFragment, which is the first fragment of an AsyncTask.
-static constexpr offset_t ChildFragmentOffset = AsyncTaskSize;
-
 class EnumSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   EnumSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
@@ -894,11 +889,18 @@ public:
         addr_t parent_addr = 0;
         if (m_task_info.isChildTask) {
           // Read ChildFragment::Parent, the first field of the ChildFragment.
-          Status status;
-          parent_addr = process_sp->ReadPointerFromMemory(
-              m_task_ptr + ChildFragmentOffset, status);
-          if (status.Fail() || parent_addr == LLDB_INVALID_ADDRESS)
-            parent_addr = 0;
+          auto child_offset =
+              lldb_private::GetChildFragmentOffset(*process_sp, m_task_ptr);
+          if (child_offset) {
+            Status status;
+            parent_addr = process_sp->ReadPointerFromMemory(
+                m_task_ptr + *child_offset, status);
+            if (status.Fail() || parent_addr == LLDB_INVALID_ADDRESS)
+              parent_addr = 0;
+          } else {
+            LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                           child_offset.takeError(), "{0}");
+          }
         }
 
         addr_t value = process_sp->FixDataAddress(parent_addr);
@@ -1131,7 +1133,9 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    bool is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    bool is_supported_target =
+        is_64bit && SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+                        concurrency_version);
     if (!is_supported_target)
       return;
 
@@ -1222,7 +1226,9 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    m_is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    m_is_supported_target =
+        is_64bit && SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+                        concurrency_version);
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -1344,13 +1350,22 @@ private:
     bool operator==(const Task &other) const { return addr == other.addr; }
     bool operator!=(const Task &other) const { return !(*this == other); }
 
-    static constexpr offset_t NextChildOffset = ChildFragmentOffset + 0x8;
-
     Task getNextChild(Status &status) {
       addr_t next_task = LLDB_INVALID_ADDRESS;
-      if (status.Success())
-        next_task =
-            process_sp->ReadPointerFromMemory(addr + NextChildOffset, status);
+      if (status.Success()) {
+        auto child_offset =
+            lldb_private::GetChildFragmentOffset(*process_sp, addr);
+        if (child_offset) {
+          // NextChild is the second pointer-sized field in ChildFragment
+          // (after `Parent`).
+          offset_t next_child_offset =
+              *child_offset + process_sp->GetAddressByteSize();
+          next_task = process_sp->ReadPointerFromMemory(
+              addr + next_child_offset, status);
+        } else {
+          status = Status::FromError(child_offset.takeError());
+        }
+      }
       return {process_sp, next_task};
     }
   };
@@ -1424,7 +1439,9 @@ public:
       concurrency_version =
           SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
 
-    m_is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    m_is_supported_target =
+        is_64bit && SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+                        concurrency_version);
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {

@@ -82,10 +82,8 @@ TEST_F(StackIDTest, StackStackCFAComparison) {
   MockStackID small_cfa_on_stack(/*cfa*/ 10, OnStack::Yes);
   MockStackID big_cfa_on_stack(/*cfa*/ 100, OnStack::Yes);
 
-  EXPECT_TRUE(
-      StackID::IsYounger(small_cfa_on_stack, big_cfa_on_stack, *process));
-  EXPECT_FALSE(
-      StackID::IsYounger(big_cfa_on_stack, small_cfa_on_stack, *process));
+  EXPECT_TRUE(small_cfa_on_stack.IsYoungerThan(big_cfa_on_stack, *process));
+  EXPECT_FALSE(big_cfa_on_stack.IsYoungerThan(small_cfa_on_stack, *process));
 }
 
 TEST_F(StackIDTest, StackHeapCFAComparison) {
@@ -95,8 +93,8 @@ TEST_F(StackIDTest, StackHeapCFAComparison) {
   MockStackID cfa_on_stack(/*cfa*/ 100, OnStack::Yes);
   MockStackID cfa_on_heap(/*cfa*/ 10, OnStack::No);
 
-  EXPECT_TRUE(StackID::IsYounger(cfa_on_stack, cfa_on_heap, *process));
-  EXPECT_FALSE(StackID::IsYounger(cfa_on_heap, cfa_on_stack, *process));
+  EXPECT_TRUE(cfa_on_stack.IsYoungerThan(cfa_on_heap, *process));
+  EXPECT_FALSE(cfa_on_heap.IsYoungerThan(cfa_on_stack, *process));
 }
 
 TEST_F(StackIDTest, HeapHeapCFAComparison) {
@@ -116,14 +114,14 @@ TEST_F(StackIDTest, HeapHeapCFAComparison) {
   MockStackID middle_cfa(/*cfa*/ 108, OnStack::No);
   MockStackID youngest_cfa(/*cfa*/ 100, OnStack::No);
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, *process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, *process));
+  EXPECT_TRUE(youngest_cfa.IsYoungerThan(oldest_cfa, *process));
+  EXPECT_FALSE(oldest_cfa.IsYoungerThan(youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, *process));
-  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, *process));
+  EXPECT_TRUE(youngest_cfa.IsYoungerThan(middle_cfa, *process));
+  EXPECT_FALSE(middle_cfa.IsYoungerThan(youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, *process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, *process));
+  EXPECT_TRUE(middle_cfa.IsYoungerThan(oldest_cfa, *process));
+  EXPECT_FALSE(oldest_cfa.IsYoungerThan(middle_cfa, *process));
 }
 
 TEST_F(StackIDTest, HeapHeapCFAComparisonDecreasing) {
@@ -143,12 +141,12 @@ TEST_F(StackIDTest, HeapHeapCFAComparisonDecreasing) {
   MockStackID middle_cfa(/*cfa*/ 90, OnStack::No);
   MockStackID youngest_cfa(/*cfa*/ 100, OnStack::No);
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, *process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, *process));
+  EXPECT_TRUE(youngest_cfa.IsYoungerThan(oldest_cfa, *process));
+  EXPECT_FALSE(oldest_cfa.IsYoungerThan(youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, *process));
-  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, *process));
+  EXPECT_TRUE(youngest_cfa.IsYoungerThan(middle_cfa, *process));
+  EXPECT_FALSE(middle_cfa.IsYoungerThan(youngest_cfa, *process));
 
-  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, *process));
-  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, *process));
+  EXPECT_TRUE(middle_cfa.IsYoungerThan(oldest_cfa, *process));
+  EXPECT_FALSE(oldest_cfa.IsYoungerThan(middle_cfa, *process));
 }

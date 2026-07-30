@@ -51,9 +51,18 @@ class TestCase(lldbtest.TestBase):
         for expected_name, actual_name in zip(expected_funcnames, actual_funcnames):
             self.assertIn(expected_name, actual_name, f"Unexpected backtrace: {frames}")
 
+    def find_stopped_thread(self, process, breakpoints):
+        # Return the thread stopped at one of the breakpoints we set, along with
+        # its breakpoint id, or (None, None).
+        for thread in lldbutil.get_stopped_threads(process, lldb.eStopReasonBreakpoint):
+            bpid = thread.GetStopReasonDataAtIndex(0)
+            if bpid in breakpoints:
+                return thread, bpid
+        return None, None
+
     @skipEmbeddedSwift
     @swiftTest
-    @skipIf(oslist=["windows", "linux"])
+    @skipIf(oslist=["windows"])
     def test(self):
         """Test that the debugger can unwind at all instructions of all funclets"""
         self.build()
@@ -72,9 +81,10 @@ class TestCase(lldbtest.TestBase):
             process.Continue()
             if process.GetState() == lldb.eStateExited:
                 break
-            thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-            self.assertTrue(thread.IsValid())
-            bpid = thread.GetStopReasonDataAtIndex(0)
+            # Another thread may be stopped at an unrelated internal breakpoint.
+            thread, bpid = self.find_stopped_thread(process, breakpoints)
+            if thread is None:
+                continue
             breakpoints.remove(bpid)
             target.FindBreakpointByID(bpid).SetEnabled(False)
 

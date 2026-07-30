@@ -7,7 +7,7 @@ class TestDisableLanguageUnwinder(lldbtest.TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIf(oslist=['windows', 'linux'])
+    @skipIf(oslist=['windows',])
     def test(self):
         """Test async unwind"""
         self.build()

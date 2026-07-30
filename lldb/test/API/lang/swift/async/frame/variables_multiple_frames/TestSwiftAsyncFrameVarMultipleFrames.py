@@ -4,7 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
-@skipIf(archs=no_match(["arm64", "arm64e", "x86_64"]))
+@skipIf(archs=no_match(["aarch", "arm64", "arm64e", "x86_64"]))
 class TestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
@@ -69,7 +69,7 @@ class TestCase(lldbtest.TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIf(oslist=["windows", "linux"])
+    @skipIf(oslist=["windows"])
     def test(self):
         """Test `frame variable` in async functions"""
         self.build()

@@ -26,6 +26,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+using CurrentTaskStorageKind = SwiftLanguageRuntime::CurrentTaskStorageKind;
+
 LLDB_PLUGIN_DEFINE(OperatingSystemSwiftTasks)
 
 void OperatingSystemSwiftTasks::Initialize() {
@@ -102,28 +104,37 @@ OperatingSystem *OperatingSystemSwiftTasks::CreateInstance(Process *process,
     return nullptr;
 
   Log *log = GetLog(LLDBLog::OS);
-  std::optional<uint32_t> concurrency_version =
-      SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process);
-  if (!concurrency_version) {
-    LLDB_LOG(log,
-             "OperatingSystemSwiftTasks: did not find concurrency module.");
+  SwiftLanguageRuntime::ConcurrencyInfo concurrency_info =
+      SwiftLanguageRuntime::FindConcurrencyInfo(*process);
+  if (!concurrency_info.version) {
+    LLDB_LOG(
+        log,
+        "OperatingSystemSwiftTasks: did not find concurrency module version");
     return nullptr;
   }
 
   LLDB_LOGF(log,
             "OperatingSystemSwiftTasks: got a concurrency version symbol of %u",
-            *concurrency_version);
-  if (*concurrency_version > 1) {
+            *concurrency_info.version);
+  if (!SwiftLanguageRuntime::IsSupportedConcurrencyDebugVersion(
+          *concurrency_info.version)) {
     auto warning =
         llvm::formatv("Unexpected Swift concurrency version {0}. Stepping on "
                       "concurrent code may behave incorrectly.",
-                      *concurrency_version);
+                      *concurrency_info.version);
     lldb::user_id_t debugger_id = process->GetTarget().GetDebugger().GetID();
     static std::once_flag concurrency_warning_flag;
     Debugger::ReportWarning(warning, debugger_id, &concurrency_warning_flag);
     return nullptr;
   }
-  return new OperatingSystemSwiftTasks(*process);
+
+  // Versions 1 and below did not have a storage description field. Assume
+  // pthread_reserved_key.
+  if (concurrency_info.version <= 1)
+    concurrency_info.task_storage_kind =
+        CurrentTaskStorageKind::pthread_reserved_key;
+
+  return new OperatingSystemSwiftTasks(*process, concurrency_info);
 }
 
 llvm::StringRef OperatingSystemSwiftTasks::GetPluginDescriptionStatic() {
@@ -133,8 +144,17 @@ llvm::StringRef OperatingSystemSwiftTasks::GetPluginDescriptionStatic() {
 OperatingSystemSwiftTasks::~OperatingSystemSwiftTasks() = default;
 
 OperatingSystemSwiftTasks::OperatingSystemSwiftTasks(
-    lldb_private::Process &process)
-    : OperatingSystem(&process) {}
+    lldb_private::Process &process,
+    const SwiftLanguageRuntime::ConcurrencyInfo &concurrency_info)
+    : OperatingSystem(&process),
+      m_task_finder(GetTaskFinder(concurrency_info)) {
+  LLDB_LOG(
+      GetLog(LLDBLog::OS),
+      "OperatingSystemSwiftTasks: concurrency runtime using storage kind {0}",
+      concurrency_info.task_storage_kind
+          ? static_cast<uint32_t>(*concurrency_info.task_storage_kind)
+          : 0);
+}
 
 ThreadSP
 OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
@@ -155,7 +175,7 @@ OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
 /// For each thread in `threads_it`, computes the task address that is being run
 /// by the thread, if any.
 static llvm::SmallVector<std::optional<addr_t>>
-FindTaskAddresses(TaskInspector &task_inspector,
+FindTaskAddresses(TaskFinder &task_finder,
                   ThreadCollection::ThreadIterable &threads_it) {
   llvm::SmallVector<Thread *> threads;
   for (const ThreadSP &thread : threads_it)
@@ -165,7 +185,7 @@ FindTaskAddresses(TaskInspector &task_inspector,
   task_addrs.reserve(threads.size());
 
   for (std::optional<addr_t> &task_addr :
-       task_inspector.GetTaskAddrFromThreadLocalStorage(threads)) {
+       task_finder.GetTaskAddrForThread(threads)) {
     if (!task_addr) {
       LLDB_LOG(GetLog(LLDBLog::OS), "OperatingSystemSwiftTasks: failed to find "
                                     "task address in thread local storage");
@@ -227,7 +247,7 @@ bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
   ThreadCollection::ThreadIterable locked_core_threads =
       core_thread_list.Threads();
   llvm::SmallVector<std::optional<addr_t>> task_addrs =
-      FindTaskAddresses(m_task_inspector, locked_core_threads);
+      FindTaskAddresses(*m_task_finder, locked_core_threads);
 
   assert(m_process != nullptr);
   llvm::SmallVector<std::optional<addr_t>> task_ids =
@@ -262,11 +282,6 @@ RegisterContextSP OperatingSystemSwiftTasks::CreateRegisterContextForThread(
   if (!thread || !IsOperatingSystemPluginThread(thread->shared_from_this()))
     return nullptr;
   return thread->GetRegisterContext();
-}
-
-StopInfoSP OperatingSystemSwiftTasks::CreateThreadStopReason(
-    lldb_private::Thread *thread) {
-  return thread->GetStopInfo();
 }
 
 #endif // #if LLDB_ENABLE_SWIFT

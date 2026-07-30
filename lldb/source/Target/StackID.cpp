@@ -161,10 +161,9 @@ CompareHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
 }
 // END SWIFT
 
-bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
-                        Process &process) {
+bool StackID::IsYoungerThan(const StackID &other, Process &process) const {
   // BEGIN SWIFT
-  switch (CompareHeapCFAs(lhs, rhs, process)) {
+  switch (CompareHeapCFAs(*this, other, process)) {
   case HeapCFAComparisonResult::Younger:
     return true;
   case HeapCFAComparisonResult::Older:
@@ -173,9 +172,8 @@ bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
     break;
   }
   // END SWIFT
-  //
-  const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddressWithoutMetadata();
-  const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddressWithoutMetadata();
+  const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
+  const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on
@@ -189,8 +187,8 @@ bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
   if (lhs_cfa != rhs_cfa)
     return lhs_cfa < rhs_cfa;
 
-  SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
-  SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
+  SymbolContextScope *lhs_scope = GetSymbolContextScope();
+  SymbolContextScope *rhs_scope = other.GetSymbolContextScope();
 
   if (lhs_scope != nullptr && rhs_scope != nullptr) {
     // Same exact scope, lhs is not less than (younger than rhs)
