@@ -1062,34 +1062,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i64, LibCall);
   }
 
-  if (Subtarget->outlineAtomics() &&
-      (!Subtarget->hasLSFE() || !Subtarget->canIgnoreFPExceptions())) {
-    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f16, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f64, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::bf16, LibCall);
-
-    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f16, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f64, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::bf16, LibCall);
-
-    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f16, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::bf16, LibCall);
-
-    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f16, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::f64, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMAXIMUM, MVT::bf16, LibCall);
-
-    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f16, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::f64, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_FMINIMUM, MVT::bf16, LibCall);
-  }
-
   if (Subtarget->hasLSE128()) {
     // Custom lowering because i128 is not legal. Must be replaced by 2x64
     // values. ATOMIC_LOAD_AND also needs op legalisation to emit LDCLRP.
@@ -32639,7 +32611,9 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(
 
   // If LSFE is available and FP exceptions are not observable, use atomic FP
   // instructions in preference to expansion.
-  if (Subtarget->hasLSFE() && Subtarget->canIgnoreFPExceptions() &&
+  const Function &F = *AI->getFunction();
+  if (Subtarget->hasLSFE() && !F.isStrictFP() &&
+      F.getFnAttribute("no-trapping-math").getValueAsBool() &&
       (AI->getOperation() == AtomicRMWInst::FAdd ||
        AI->getOperation() == AtomicRMWInst::FMax ||
        AI->getOperation() == AtomicRMWInst::FMin ||

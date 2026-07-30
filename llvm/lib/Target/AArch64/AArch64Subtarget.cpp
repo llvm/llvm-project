@@ -355,14 +355,13 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool IsStreaming, bool IsStreamingCompatible,
                                    bool HasMinSize,
-                                   bool EnableSRLTSubregToRegMitigation,
-                                   bool CanIgnoreFPExceptions)
+                                   bool EnableSRLTSubregToRegMitigation)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
-      IsLittle(LittleEndian), CanIgnoreFPExceptions(CanIgnoreFPExceptions),
-      IsStreaming(IsStreaming), IsStreamingCompatible(IsStreamingCompatible),
+      IsLittle(LittleEndian), IsStreaming(IsStreaming),
+      IsStreamingCompatible(IsStreamingCompatible),
       StreamingHazardSize(
           AArch64StreamingHazardSize.getNumOccurrences() > 0
               ? std::optional<unsigned>(AArch64StreamingHazardSize)

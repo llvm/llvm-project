@@ -83,7 +83,6 @@ protected:
   BitVector CustomCallSavedXRegs;
 
   bool IsLittle;
-  bool CanIgnoreFPExceptions;
 
   bool IsStreaming;
   bool IsStreamingCompatible;
@@ -132,8 +131,7 @@ public:
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false,
-                   bool EnableSRLTSubregToRegMitigation = false,
-                   bool CanIgnoreFPExceptions = false);
+                   bool EnableSRLTSubregToRegMitigation = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -309,7 +307,6 @@ public:
   bool supportsAddressTopByteIgnored() const;
 
   bool isLittleEndian() const { return IsLittle; }
-  bool canIgnoreFPExceptions() const { return CanIgnoreFPExceptions; }
 
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
