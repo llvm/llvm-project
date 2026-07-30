@@ -13660,7 +13660,6 @@ protected:
     Mask.swap(NewMask);
   }
 
-protected:
   /// Looks through shuffles trying to reduce final number of shuffles in the
   /// code. The function looks through the previously emitted shuffle
   /// instructions and properly mark indices in mask as undef.
@@ -15117,7 +15116,6 @@ void BoUpSLP::transformNodes() {
 /// end of the process, to reduce the number of emitted instructions and further
 /// analysis/transformations.
 class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
-private:
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
   SmallVector<PointerUnion<Value *, const TreeEntry *>, 2> InVectors;
