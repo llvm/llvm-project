@@ -42,11 +42,11 @@ int main(int argc, char** argv) {
         }
       })->Range(8, 1 << 20);
     };
-    bm.operator()<std::vector<int>, std::vector<int>>("std::copy(vector<int>) -> std::vector<int>", std_copy);
-    bm.operator()<std::vector<int>, std::deque<int>>("std::copy(vector<int>) -> std::deque<int>", std_copy);
-    bm.operator()<std::deque<int>, std::vector<int>>("std::copy(deque<int>) -> std::vector<int>", std_copy);
-    bm.operator()<std::deque<int>, std::deque<int>>("std::copy(deque<int>) -> std::deque<int>", std_copy);
-    bm.operator()<std::list<int>, std::vector<int>>("std::copy(list<int>) -> std::vector<int>", std_copy);
+    bm.operator()<std::vector<int>, std::vector<int>>("std::copy(vector<int>, vector<int>::iterator)", std_copy);
+    bm.operator()<std::vector<int>, std::deque<int>>("std::copy(vector<int>, deque<int>::iterator)", std_copy);
+    bm.operator()<std::deque<int>, std::vector<int>>("std::copy(deque<int>, vector<int>::iterator)", std_copy);
+    bm.operator()<std::deque<int>, std::deque<int>>("std::copy(deque<int>, deque<int>::iterator)", std_copy);
+    bm.operator()<std::list<int>, std::vector<int>>("std::copy(list<int>, vector<int>::iterator)", std_copy);
   }
 
   // {std,ranges}::copy(vector<bool>)
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
         }
       })->Range(64, 1 << 20);
     };
-    bm.operator()<true>("std::copy(vector<bool>) (aligned)", std_copy);
-    bm.operator()<false>("std::copy(vector<bool>) (unaligned)", std_copy);
+    bm.operator()<true>("std::copy(vector<bool>, vector<bool>::iterator) (aligned)", std_copy);
+    bm.operator()<false>("std::copy(vector<bool>, vector<bool>::iterator) (unaligned)", std_copy);
   }
 
   benchmark::Initialize(&argc, argv);

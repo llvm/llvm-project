@@ -44,11 +44,11 @@ int main(int argc, char** argv) {
         }
       })->Range(8, 1 << 20);
     };
-    bm.operator()<std::vector<int>, std::vector<int>>("std::move(vector<int>) -> std::vector<int>", std_move);
-    bm.operator()<std::vector<int>, std::deque<int>>("std::move(vector<int>) -> std::deque<int>", std_move);
-    bm.operator()<std::deque<int>, std::vector<int>>("std::move(deque<int>) -> std::vector<int>", std_move);
-    bm.operator()<std::deque<int>, std::deque<int>>("std::move(deque<int>) -> std::deque<int>", std_move);
-    bm.operator()<std::list<int>, std::vector<int>>("std::move(list<int>) -> std::vector<int>", std_move);
+    bm.operator()<std::vector<int>, std::vector<int>>("std::move(vector<int>, vector<int>::iterator)", std_move);
+    bm.operator()<std::vector<int>, std::deque<int>>("std::move(vector<int>, deque<int>::iterator)", std_move);
+    bm.operator()<std::deque<int>, std::vector<int>>("std::move(deque<int>, vector<int>::iterator)", std_move);
+    bm.operator()<std::deque<int>, std::deque<int>>("std::move(deque<int>, deque<int>::iterator)", std_move);
+    bm.operator()<std::list<int>, std::vector<int>>("std::move(list<int>, vector<int>::iterator)", std_move);
   }
 
   // {std,ranges}::move(vector<bool>)
@@ -71,8 +71,8 @@ int main(int argc, char** argv) {
         }
       })->Range(64, 1 << 20);
     };
-    bm.operator()<true>("std::move(vector<bool>) (aligned)", std_move);
-    bm.operator()<false>("std::move(vector<bool>) (unaligned)", std_move);
+    bm.operator()<true>("std::move(vector<bool>, vector<bool>::iterator) (aligned)", std_move);
+    bm.operator()<false>("std::move(vector<bool>, vector<bool>::iterator) (unaligned)", std_move);
   }
 
   benchmark::Initialize(&argc, argv);
