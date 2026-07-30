@@ -15,6 +15,7 @@
 #include "mlir/CAPI/IRMapping.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -924,6 +925,65 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
           return unwrap(callback(wrap(op), userData));
         });
   }
+}
+
+static MlirWalkResult wrap(mlir::WalkResult result) {
+  if (result.wasInterrupted())
+    return MlirWalkResultInterrupt;
+  if (result.wasSkipped())
+    return MlirWalkResultSkip;
+  return MlirWalkResultAdvance;
+}
+
+/// Registers the caller's callbacks on `walker`. A null callback registers no
+/// walk function for that kind of element, which leaves elements of that kind
+/// unreported while the walk still descends through them.
+static void addSubElementWalks(AttrTypeWalker &walker,
+                               MlirTypeWalkCallback typeCallback,
+                               MlirAttributeWalkCallback attributeCallback,
+                               void *userData) {
+  if (typeCallback) {
+    walker.addWalk([typeCallback, userData](Type type) {
+      return unwrap(typeCallback(wrap(type), userData));
+    });
+  }
+  if (attributeCallback) {
+    walker.addWalk([attributeCallback, userData](Attribute attribute) {
+      return unwrap(attributeCallback(wrap(attribute), userData));
+    });
+  }
+}
+
+/// Runs `walker` over `element`. AttrTypeWalker takes the traversal order as a
+/// template argument, so the run-time order selects the instantiation here.
+template <typename ElementT>
+static MlirWalkResult runSubElementWalk(AttrTypeWalker &walker,
+                                        ElementT element,
+                                        MlirWalkOrder walkOrder) {
+  switch (walkOrder) {
+  case MlirWalkPreOrder:
+    return wrap(walker.walk<mlir::WalkOrder::PreOrder>(element));
+  case MlirWalkPostOrder:
+    return wrap(walker.walk<mlir::WalkOrder::PostOrder>(element));
+  }
+  llvm_unreachable("unknown order in runSubElementWalk");
+}
+
+MlirWalkResult mlirTypeWalk(MlirType type, MlirTypeWalkCallback typeCallback,
+                            MlirAttributeWalkCallback attributeCallback,
+                            void *userData, MlirWalkOrder walkOrder) {
+  AttrTypeWalker walker;
+  addSubElementWalks(walker, typeCallback, attributeCallback, userData);
+  return runSubElementWalk(walker, unwrap(type), walkOrder);
+}
+
+MlirWalkResult mlirAttributeWalk(MlirAttribute attribute,
+                                 MlirTypeWalkCallback typeCallback,
+                                 MlirAttributeWalkCallback attributeCallback,
+                                 void *userData, MlirWalkOrder walkOrder) {
+  AttrTypeWalker walker;
+  addSubElementWalks(walker, typeCallback, attributeCallback, userData);
+  return runSubElementWalk(walker, unwrap(attribute), walkOrder);
 }
 
 void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,

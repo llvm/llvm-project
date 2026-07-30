@@ -2943,6 +2943,138 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+typedef struct {
+  const char *label;
+} attrTypeWalkData;
+
+MlirWalkResult attrTypeWalkTypeCallBack(MlirType type, void *dataVoid) {
+  fprintf(stderr, "%s type: ", ((attrTypeWalkData *)(dataVoid))->label);
+  mlirTypePrint(type, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  return MlirWalkResultAdvance;
+}
+
+MlirWalkResult attrTypeWalkAttributeCallBack(MlirAttribute attribute,
+                                             void *dataVoid) {
+  fprintf(stderr, "%s attr: ", ((attrTypeWalkData *)(dataVoid))->label);
+  mlirAttributePrint(attribute, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  return MlirWalkResultAdvance;
+}
+
+MlirWalkResult attrTypeWalkTypeCallBackTestInterrupt(MlirType type,
+                                                     void *dataVoid) {
+  attrTypeWalkTypeCallBack(type, dataVoid);
+  if (mlirTypeIsAInteger(type))
+    return MlirWalkResultInterrupt;
+  return MlirWalkResultAdvance;
+}
+
+MlirWalkResult attrTypeWalkAttributeCallBackTestSkip(MlirAttribute attribute,
+                                                     void *dataVoid) {
+  attrTypeWalkAttributeCallBack(attribute, dataVoid);
+  if (mlirAttributeIsAArray(attribute))
+    return MlirWalkResultSkip;
+  return MlirWalkResultAdvance;
+}
+
+int testAttrTypeWalk(MlirContext ctx) {
+  // CHECK-LABEL: @testAttrTypeWalk
+  fprintf(stderr, "@testAttrTypeWalk\n");
+
+  // A tensor type encoded by an array attribute that holds a type attribute,
+  // so a type sits two levels down behind an attribute. The string attribute
+  // beside it spells a type name that the walk must not report as a type.
+  MlirAttribute elements[2] = {
+      mlirTypeAttrGet(mlirIntegerTypeGet(ctx, 16)),
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("i64"))};
+  MlirAttribute encoding = mlirArrayAttrGet(ctx, 2, elements);
+  int64_t shape[1] = {4};
+  MlirType tensor =
+      mlirRankedTensorTypeGet(1, shape, mlirF32TypeGet(ctx), encoding);
+
+  attrTypeWalkData data;
+  data.label = "postorder";
+
+  // CHECK-NEXT: postorder type: f32
+  // CHECK-NEXT: postorder type: i16
+  // CHECK-NEXT: postorder attr: i16
+  // CHECK-NEXT: postorder attr: "i64"
+  // CHECK-NEXT: postorder attr: [i16, "i64"]
+  // CHECK-NEXT: postorder type: tensor<4xf32, [i16, "i64"]>
+  mlirTypeWalk(tensor, attrTypeWalkTypeCallBack, attrTypeWalkAttributeCallBack,
+               (void *)(&data), MlirWalkPostOrder);
+
+  data.label = "preorder";
+  // CHECK-NEXT: preorder type: tensor<4xf32, [i16, "i64"]>
+  // CHECK-NEXT: preorder type: f32
+  // CHECK-NEXT: preorder attr: [i16, "i64"]
+  // CHECK-NEXT: preorder attr: i16
+  // CHECK-NEXT: preorder type: i16
+  // CHECK-NEXT: preorder attr: "i64"
+  mlirTypeWalk(tensor, attrTypeWalkTypeCallBack, attrTypeWalkAttributeCallBack,
+               (void *)(&data), MlirWalkPreOrder);
+
+  data.label = "skip preorder";
+  // Skipping the array attribute leaves what it holds unvisited.
+  // CHECK-NEXT: skip preorder type: tensor<4xf32, [i16, "i64"]>
+  // CHECK-NEXT: skip preorder type: f32
+  // CHECK-NEXT: skip preorder attr: [i16, "i64"]
+  MlirWalkResult result = mlirTypeWalk(tensor, attrTypeWalkTypeCallBack,
+                                       attrTypeWalkAttributeCallBackTestSkip,
+                                       (void *)(&data), MlirWalkPreOrder);
+  // CHECK-NEXT: result after skip is advance: 1
+  fprintf(stderr, "result after skip is advance: %d\n",
+          result == MlirWalkResultAdvance);
+
+  data.label = "skip postorder";
+  // In postorder the array attribute is reported after what it holds, so
+  // skipping it has nothing left to leave unvisited.
+  // CHECK-NEXT: skip postorder type: f32
+  // CHECK-NEXT: skip postorder type: i16
+  // CHECK-NEXT: skip postorder attr: i16
+  // CHECK-NEXT: skip postorder attr: "i64"
+  // CHECK-NEXT: skip postorder attr: [i16, "i64"]
+  // CHECK-NEXT: skip postorder type: tensor<4xf32, [i16, "i64"]>
+  mlirTypeWalk(tensor, attrTypeWalkTypeCallBack,
+               attrTypeWalkAttributeCallBackTestSkip, (void *)(&data),
+               MlirWalkPostOrder);
+
+  data.label = "interrupt";
+  // Interrupted at `i16`, the type the type attribute holds.
+  // CHECK-NEXT: interrupt type: tensor<4xf32, [i16, "i64"]>
+  // CHECK-NEXT: interrupt type: f32
+  // CHECK-NEXT: interrupt attr: [i16, "i64"]
+  // CHECK-NEXT: interrupt attr: i16
+  // CHECK-NEXT: interrupt type: i16
+  result = mlirTypeWalk(tensor, attrTypeWalkTypeCallBackTestInterrupt,
+                        attrTypeWalkAttributeCallBack, (void *)(&data),
+                        MlirWalkPreOrder);
+  // CHECK-NEXT: result after interrupt is interrupt: 1
+  fprintf(stderr, "result after interrupt is interrupt: %d\n",
+          result == MlirWalkResultInterrupt);
+
+  data.label = "from attribute";
+  // CHECK-NEXT: from attribute type: i16
+  // CHECK-NEXT: from attribute attr: i16
+  // CHECK-NEXT: from attribute attr: "i64"
+  // CHECK-NEXT: from attribute attr: [i16, "i64"]
+  mlirAttributeWalk(encoding, attrTypeWalkTypeCallBack,
+                    attrTypeWalkAttributeCallBack, (void *)(&data),
+                    MlirWalkPostOrder);
+
+  data.label = "attributes only";
+  // A null type callback leaves types unreported, and the walk still descends
+  // through them to the attributes they carry.
+  // CHECK-NEXT: attributes only attr: i16
+  // CHECK-NEXT: attributes only attr: "i64"
+  // CHECK-NEXT: attributes only attr: [i16, "i64"]
+  mlirTypeWalk(tensor, NULL, attrTypeWalkAttributeCallBack, (void *)(&data),
+               MlirWalkPostOrder);
+
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2998,6 +3130,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testAttrTypeWalk(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
