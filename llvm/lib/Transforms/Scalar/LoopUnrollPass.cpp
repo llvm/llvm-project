@@ -940,7 +940,6 @@ static std::optional<unsigned> shouldFullUnroll(
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
   uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
-
   if (UnrolledSize < UP.Threshold) {
     LLVM_DEBUG(dbgs().indent(2) << "Unrolling: size " << UnrolledSize
                                 << " < threshold " << UP.Threshold << ".\n");
