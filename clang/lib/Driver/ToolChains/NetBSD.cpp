@@ -10,7 +10,6 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
-#include "Gnu.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
@@ -494,18 +493,6 @@ void NetBSD::AddClangSystemIncludeArgs(
 
   addExternCSystemInclude(DriverArgs, CC1Args,
                           concat(D.SysRoot, "/usr/include"));
-}
-
-void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args) const {
-  Generic_GCC::addLibCxxIncludePaths(DriverArgs, CC1Args);
-
-  // system install from src
-  const std::string IncludePath =
-      concat(getDriver().SysRoot, "/usr/include/c++");
-
-  if (getVFS().exists(IncludePath + "/__config"))
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
 }
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

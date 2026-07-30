@@ -188,6 +188,8 @@
 // RUN: %clang -### %s --target=x86_64-unknown-netbsd -r 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DRIVER-PASS-INCLUDES
 // DRIVER-PASS-INCLUDES:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
+// DRIVER-PASS-INCLUDES:      "-internal-isystem" "{{.*}}bin/../include/c++/v1"
+// DRIVER-PASS-INCLUDES-NOT:  "-internal-isystem" "{{.*}}/usr/include/c++/v1"
 // DRIVER-PASS-INCLUDES:      "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // DRIVER-PASS-INCLUDES:      "-internal-externc-isystem" "{{.*}}/usr/include"
 
