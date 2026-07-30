@@ -108,6 +108,7 @@ template <typename Ty> struct match_unless { // NOLINT
   template <typename ITy> bool match(ITy *V) const { return !P.match(V); }
 };
 
+/// Match if the inner matcher does *NOT* match.
 template <typename Pattern>
 inline match_unless<Pattern> m_Unless(const Pattern &P) { // NOLINT
   return P;
