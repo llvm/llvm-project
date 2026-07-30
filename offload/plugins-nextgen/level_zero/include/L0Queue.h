@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
-#include "L0Defs.h"
 #include "L0Event.h"
-#include "L0Trace.h"
 #include "PluginInterface.h"
 
 #include <mutex>

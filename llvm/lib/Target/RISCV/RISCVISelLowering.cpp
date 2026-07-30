@@ -1726,6 +1726,21 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                 Custom);
         }
 
+        if (VT.getVectorElementType() == MVT::i64) {
+          if (Subtarget.hasStdExtZvbc())
+            setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Custom);
+        } else {
+          if (Subtarget.hasStdExtZvbc32e()) {
+            setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Custom);
+          } else if (Subtarget.hasStdExtZvbc()) {
+            // Promote to i64 as is done for scalable vectors.
+            MVT I64VecVT =
+                MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
+            if (I64VecVT.isValid() && useRVVForFixedLengthVectorVT(I64VecVT))
+              setOperationAction(ISD::CLMUL, VT, Custom);
+          }
+        }
+
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
         setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV,
                             ISD::MASKED_UREM, ISD::MASKED_SREM},
@@ -6512,6 +6527,8 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 
 // Match a strided-interleave shuffle that forms a P-extension packed pair:
 //   <a0, b0, a2, b2, ...> -> ppaire.*
+//   <a0, b1, a2, b3, ...> -> ppaireo.*
+//   <a1, b0, a3, b2, ...> -> ppairoe.*
 //   <a1, b1, a3, b3, ...> -> ppairo.*
 static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
                                           SelectionDAG &DAG) {
@@ -6534,32 +6551,37 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   bool V1IsSplat = DAG.isSplatValue(V1);
   bool V2IsSplat = DAG.isSplatValue(V2);
 
-  // Match <start, N+start, start+2, N+start+2, ...>: even lanes come from V1
-  // and odd lanes from V2 (start=0, ppaire) or vice versa (start=1, ppairo).
-  // Trailing lanes may be undef when a 4-byte source was widened to v8i8.
-  auto IsStrided = [&](unsigned Start) {
+  // Match the packed pair shuffle forms:
+  //   <V1Start, N+V2Start, V1Start+2, N+V2Start+2, ...>
+  // where each start is 0 for even lanes or 1 for odd lanes. This covers all
+  // four PPAIRE/PPAIREO/PPAIROE/PPAIRO combinations. Trailing lanes may be
+  // undef when a 4-byte source was widened to v8i8.
+  auto IsStrided = [&](unsigned V1Start, unsigned V2Start) {
     for (unsigned I = 0; I != NumElts / 2; ++I) {
       int M0 = Mask[2 * I];
       int M1 = Mask[2 * I + 1];
       if (M0 >= 0 &&
-          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(Start + 2 * I)))
+          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(V1Start + 2 * I)))
         return false;
       if (M1 >= 0 && (V2IsSplat ? M1 < (int)NumElts
-                                : M1 != (int)(NumElts + Start + 2 * I)))
+                                : M1 != (int)(NumElts + V2Start + 2 * I)))
         return false;
     }
     return true;
   };
 
-  bool IsOdd;
-  if (IsStrided(0))
-    IsOdd = false;
-  else if (IsStrided(1))
-    IsOdd = true;
+  unsigned Opc;
+  if (IsStrided(0, 0))
+    Opc = RISCVISD::PPAIRE;
+  else if (IsStrided(1, 1))
+    Opc = RISCVISD::PPAIRO;
+  else if (IsStrided(0, 1))
+    Opc = RISCVISD::PPAIREO;
+  else if (IsStrided(1, 0))
+    Opc = RISCVISD::PPAIROE;
   else
     return SDValue();
 
-  unsigned Opc = IsOdd ? RISCVISD::PPAIRO : RISCVISD::PPAIRE;
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
@@ -7948,6 +7970,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(CTLZ)
   OP_CASE(CTPOP)
   OP_CASE(BITREVERSE)
+  OP_CASE(CLMUL)
+  OP_CASE(CLMULH)
   OP_CASE(SADDSAT)
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
@@ -9513,10 +9537,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerToScalableOp(Op, DAG);
     assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_POISON(Op, DAG);
-  case ISD::CLMUL: {
+  case ISD::CLMUL:
+  case ISD::CLMULH: {
     MVT VT = Op.getSimpleValueType();
-    assert(VT.isScalableVector() && Subtarget.hasStdExtZvbc() &&
-           "Unexpected custom legalisation");
+    // If the scalable vector version of this op is Legal, convert to scalable.
+    if (VT.isFixedLengthVector() &&
+        (VT.getVectorElementType() == MVT::i64 || Subtarget.hasStdExtZvbc32e()))
+      return lowerToScalableOp(Op, DAG);
+
+    assert(Op.getOpcode() == ISD::CLMUL && VT.isVector() &&
+           Subtarget.hasStdExtZvbc() && "Unexpected custom legalisation");
     // Promote to i64 vector.
     MVT I64VecVT = VT.changeVectorElementType(MVT::i64);
     SDLoc DL(Op);

@@ -6626,6 +6626,26 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
       Changed = true;
     }
+
+    // clang/PowerPC used to use "float-abi" to describe the long double format;
+    // it has been renamed to "long-double-type", with its values changed to the
+    // corresponding IR floating-point type names. Map any unrecognized value
+    // (which was never valid) to the PowerPC default ppc_fp128 rather than
+    // erasing the flag.
+    if (M.getTargetTriple().isPPC() && ID->getString() == "float-abi") {
+      StringRef Format;
+      if (auto *S = dyn_cast_or_null<MDString>(Op->getOperand(2)))
+        Format = S->getString();
+      StringRef NewType = StringSwitch<StringRef>(Format)
+                              .Case("ieeequad", "fp128")
+                              .Case("ieeedouble", "double")
+                              .Default("ppc_fp128");
+      Metadata *Ops[3] = {Op->getOperand(0),
+                          MDString::get(M.getContext(), "long-double-type"),
+                          MDString::get(M.getContext(), NewType)};
+      ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+      Changed = true;
+    }
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We
