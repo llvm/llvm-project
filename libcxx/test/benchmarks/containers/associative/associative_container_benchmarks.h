@@ -238,7 +238,12 @@ void associative_container_benchmarks(std::string container) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
+    Container half(std::next(in.begin(), in.size() / 2), in.end());
+
     Container c[BatchSize];
+    for (std::size_t i = 0; i != BatchSize; ++i) {
+      c[i] = half;
+    }
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
@@ -249,7 +254,7 @@ void associative_container_benchmarks(std::string container) {
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].clear();
+        c[i] = half;
       }
       st.ResumeTiming();
     }
