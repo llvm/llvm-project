@@ -600,15 +600,14 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   Type *Ty = S->getType();
 
   // Specializations for 2-operand cases.
-  if (S->getNumOperands() == 2) {
-    const SCEVConstant *MulC;
-    const SCEV *Val;
+  const SCEVConstant *MulC;
+  const SCEV *Op1;
+  if (match(S, m_scev_Mul(m_SCEVConstant(MulC), m_SCEV(Op1)))) {
     // mul(PowerOf2C, (udiv X, PowerOf2C)) == (X >> C) << C
     //  -> X & (-1 << C)
-    if (match(S->getOperand(0), m_SCEVConstant(MulC)) &&
-        MulC->getAPInt().isPowerOf2() &&
-        match(S->getOperand(1),
-              m_scev_UDiv(m_SCEV(Val), m_scev_Specific(MulC)))) {
+    const SCEV *Val;
+    if (MulC->getAPInt().isPowerOf2() &&
+        match(Op1, m_scev_UDiv(m_SCEV(Val), m_scev_Specific(MulC)))) {
       Value *LHS = expand(Val);
       unsigned ShAmtC = MulC->getAPInt().logBase2();
       unsigned BitWidth = Ty->getScalarSizeInBits();
