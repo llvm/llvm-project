@@ -93,6 +93,23 @@ public:
     return {word_.IEOR(that.word_)};
   }
 
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  static constexpr std::size_t bytesStored() { return Word::bytesStored(); }
+
+  /// De-serializes a logical from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Logical FromRawBytes(const void *raw, std::size_t expectedSize) {
+    return Logical{Word::FromRawBytes(raw, expectedSize)};
+  }
+
+  /// Serializes this logical to \p dst. \p expectedSize must match the the
+  /// number of bytes to be written. If \p changed points to a boolean, it will
+  /// be set to true if any bytes at \p dst have changed.
+  void StoreRawBytes(
+      void *dst, size_t expectedSize, bool *changed = nullptr) const {
+    word_.StoreRawBytes(dst, expectedSize, changed);
+  }
+
 private:
   static constexpr Word canonicalTrue{IsLikeC ? 1 : -std::uint64_t{1}};
   static constexpr Word canonicalFalse{0};

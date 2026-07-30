@@ -111,6 +111,35 @@ public:
     return str.substr(0, LEN_TRIM(str));
   }
 
+  static Character FromRawBytes(const void *raw, std::size_t size) {
+    CHECK(size % sizeof(CharT) == 0);
+    Character s;
+    if (size > 0) {
+      s.assign(static_cast<const CharT *>(raw), size / sizeof(CharT));
+    }
+    return s;
+  }
+
+  static void StoreRawBytes(void *dst, const Character &s, std::size_t size,
+      bool *changed = nullptr) {
+    CHECK(size % sizeof(CharT) == 0);
+    if (size > 0) {
+      std::size_t payloadSize{std::min(size, sizeof(CharT) * s.size())};
+      std::size_t padSize{size - payloadSize};
+
+      Character strWithPadding{s};
+      strWithPadding.append(padSize / sizeof(CharT), ' ');
+
+      if (changed) {
+        if (std::memcmp(dst, strWithPadding.data(), size) == 0) {
+          return;
+        }
+        *changed = true;
+      }
+      std::memcpy(dst, strWithPadding.data(), size);
+    }
+  }
+
 private:
   // Following helpers assume that character encodings contain ASCII
   static constexpr CharT Space() { return 0x20; }

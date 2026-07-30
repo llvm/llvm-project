@@ -164,6 +164,8 @@ public:
         using Char = typename Scalar::value_type;
         auto at{static_cast<std::size_t>(offset_ + j * stride)};
         auto chunk{length};
+        // FIXME: chunk is a number of characters, data_.size() is a number of
+        // bytes
         if (at + chunk > image_.data_.size()) {
           CHECK(padWithZero_);
           if (at >= image_.data_.size()) {
@@ -172,10 +174,8 @@ public:
             chunk = image_.data_.size() - at;
           }
         }
-        if (chunk > 0) {
-          const Char *data{reinterpret_cast<const Char *>(&image_.data_[at])};
-          typedValue[j].assign(data, chunk);
-        }
+        typedValue[j] = CharacterValue<T::kind>::FromRawBytes(
+            &image_.data_[at], chunk * T::kind);
         if (chunk < length && padWithZero_) {
           typedValue[j].append(length - chunk, Char{});
         }
@@ -184,23 +184,19 @@ public:
           Const{length, std::move(typedValue), std::move(extents_)});
     } else {
       // Lengthless intrinsic type
-      CHECK(sizeof(Scalar) <= stride);
-      for (std::size_t j{0}; j < elements; ++j) {
-        auto at{static_cast<std::size_t>(offset_ + j * stride)};
-        std::size_t chunk{sizeof(Scalar)};
-        if (at + chunk > image_.data_.size()) {
-          CHECK(padWithZero_);
-          if (at >= image_.data_.size()) {
-            chunk = 0;
-          } else {
-            chunk = image_.data_.size() - at;
-          }
-        }
-        // TODO endianness
-        if (chunk > 0) {
-          std::memcpy(&typedValue[j], &image_.data_[at], chunk);
-        }
-      }
+      // There is a test (Evaluate/folding10.f90) where this
+      // wants wants to read 2 elements of kind 8 out of an image_.data_ of
+      // size 12. Fortunately, the second element seems to be unused.
+      size_t scalarSize{evaluate::Scalar<T>::bytesStored()};
+      size_t length{std::min(elements,
+          (image_.data_.size() - offset_ - scalarSize + stride) / stride)};
+      CHECK(length == elements || padWithZero_);
+      // TODO endianness
+      LoadSerialValues(image_.data_.data() + offset_,
+          llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue)
+              .slice(0, length),
+          stride);
+
       return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});
     }
   }
