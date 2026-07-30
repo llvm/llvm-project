@@ -26,8 +26,13 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> statfs(const char *path, struct statfs *buf) {
 #ifdef SYS_statfs64
+  static_assert(sizeof(statfs::f_blocks) == 8,
+                "Can only be used with 64-bit version of the struct");
   return syscall_checked<int>(SYS_statfs64, path, sizeof(*buf), buf);
 #else
+  static_assert(
+      sizeof(statfs::f_blocks) == sizeof(long),
+      "The fallback is unsafe on 32-bit platforms with 64-bit f_blocks.");
   return syscall_checked<int>(SYS_statfs, path, buf);
 #endif
 }

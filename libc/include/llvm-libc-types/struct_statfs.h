@@ -18,6 +18,9 @@
 #include "fsfilcnt_t.h"
 #include "fsid_t.h"
 
+// NOTE: This structure may have different layouts on architectures we don't
+// fully support (e.g. s390 or MIPS).
+
 struct statfs {
   unsigned long f_type;
   unsigned long f_bsize;
