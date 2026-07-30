@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler.h"
+#include "../ExprConstShared.h"
 #include "ByteCodeEmitter.h"
 #include "Context.h"
 #include "FixedPoint.h"
@@ -453,8 +454,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   switch (E->getCastKind()) {
   case CK_LValueToRValue: {
-    if (ToLValue && E->getType()->isPointerType())
-      return this->delegate(SubExpr);
+    if (ToLValue && E->getType()->isPointerType()) {
+      assert(!DiscardResult);
+      if (!this->visit(SubExpr))
+        return false;
+      return this->emitLoadPopL(E);
+    }
 
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, E);
@@ -6100,7 +6105,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
 
     } else {
-      if (!this->visitAsLValue(Arg0))
+      if (!this->visitAsLValue(ignorePointerCastsAndParens(Arg0)))
         return false;
     }
     if (!this->visit(E->getArg(1)))
@@ -8722,8 +8727,13 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-  unsigned DummyID = P.getOrCreateDummy(D, CU);
 
+  if (ToLValue) {
+    if (const auto *VD = D.asValueDecl())
+      return this->emitGetOpaquePtr(VD, CU, E);
+  }
+
+  unsigned DummyID = P.getOrCreateDummy(D, CU);
   if (!this->emitGetPtrGlobal(DummyID, E))
     return false;
   if (E->getType()->isVoidType())
