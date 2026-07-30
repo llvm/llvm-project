@@ -28,6 +28,8 @@
 //   C::info       _ZN1C4infoE      no definition in this TU: skipped
 //   wstr          _ZL4wstr         wchar_t element type: ignored, not emitted
 //   u16str        _ZL6u16str       char16_t element type: ignored, not emitted
+//   u8str         _ZL5u8str        char8_t element type: ignored, not emitted
+//   not_string    not_string       int: unsupported type, silently skipped
 //   sccsid_ce     _ZL9sccsid_ce    preserved (static constexpr, internal)
 //   sccsid_ci     sccsid_ci        preserved (constinit; needs -std=c++20)
 //   sccsid_inl    sccsid_inl       preserved (inline variable, linkonce_odr)
@@ -44,7 +46,7 @@
 //   g()::fn       _ZZ1gvE2fn       function-local static: diagnosed, no metadata
 
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,_ZL4wstr,_ZL6u16str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl \
+// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,sccsid_inl \
 // RUN:   -emit-llvm -disable-llvm-passes -o %t.ll %s
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT < %t.ll
@@ -107,6 +109,7 @@ int not_string = 7;
 //    emitted at all.
 static wchar_t wstr[] = L"@(#) wide";
 static char16_t u16str[] = u"@(#) u16";
+static char8_t u8str[] = u8"@(#) u8";
 
 // 9. Eligible C++ declaration forms. Uses of these constant-fold, so without
 //    the option none of them would be emitted at all — the forced emission is
@@ -204,6 +207,7 @@ char bar[] = "@(#) bar";
 
 // NOEMIT-NOT: @_ZL4wstr
 // NOEMIT-NOT: @_ZL6u16str
+// NOEMIT-NOT: @_ZL5u8str
 
 // ===========================================================================
 // STORAGE patterns — thread_local variables get no metadata

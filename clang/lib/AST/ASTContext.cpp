@@ -13387,6 +13387,12 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<AliasAttr>() || D->hasAttr<UsedAttr>())
     return true;
 
+  // Variables validated for '-mloadtime-comment-vars=' must reach the object
+  // file even when unreferenced, including when the definition is loaded
+  // from a PCH or module file rather than parsed in this compilation.
+  if (D->hasAttr<LoadTimeCommentVarAttr>())
+    return true;
+
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Forward declarations aren't required.
     if (!FD->doesThisDeclarationHaveABody())

@@ -9,10 +9,21 @@
 //   - thread-local variable (__thread, not static storage duration)
 //   - pointer not initialized directly with a string literal
 //   - valid const char array — no diagnostic
+//   - a preserved variable counts as used: no -Wunused-const-variable for it,
+//     while an unlisted static const variable still warns
+//
+// The quiet scenario compiles the same source for a non-AIX target: the
+// option is a silent no-op at the cc1 layer there (the driver, tested
+// separately, warns and drops it), so no diagnostics at all are expected.
 
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wunused-const-variable \
+// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept \
 // RUN:   -fsyntax-only -verify %s
+
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept \
+// RUN:   -fsyntax-only -verify=quiet %s
+// quiet-no-diagnostics
 
 // A volatile-qualified pointer is diagnosed.
 char *volatile vol_ptr = "@(#) vol ptr"; // expected-warning {{'vol_ptr' named in '-mloadtime-comment-vars=' is volatile-qualified and will not be preserved}}
@@ -38,3 +49,11 @@ const char const_arr[] = "@(#) const arr";
 // A function-local static: name-matched, so diagnosed rather than silently
 // ignored.
 void h(void) { static char lfn[] = "@(#) lfn"; (void)lfn; } // expected-warning {{'lfn' named in '-mloadtime-comment-vars=' is a function-local variable and will not be preserved}}
+
+// A preserved variable is materially used — it is forced into the object
+// file — so -Wunused-const-variable does not fire for it.
+static const char kept[] = "@(#) kept";
+
+// An unlisted static const variable is unaffected by the option and still
+// gets the unused warning.
+static const char dropped[] = "@(#) dropped"; // expected-warning {{unused variable 'dropped'}}

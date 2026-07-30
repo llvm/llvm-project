@@ -6540,9 +6540,8 @@ Syntax:
 
 In C, variable names are not mangled, so the mangled name is identical to the source
 identifier (for example, `sccsid`). In C++, the mangled name follows the
-Itanium C++ ABI, so a namespace-scoped, class-scoped, or internal-linkage
-variable (for example, a file-scope `static`) must be named using its mangled
-form:
+Itanium C++ ABI, so a namespace-scoped or internal-linkage variable (for
+example, a file-scope `static`) must be named using its mangled form:
 
 ```c++
 namespace N { char sccsid[] = "@(#) MyApp Version 1.0"; }   // N::sccsid -> _ZN1N6sccsidE
@@ -6591,8 +6590,12 @@ initializer are silently skipped, as are names that are not defined in the
 translation unit.
 
 For C++20 modules, a named variable defined in a module unit is processed when
-that module unit itself is compiled to object code, and the option applies to
-that compilation.
+the module unit itself is compiled, and the option must be present on that
+compilation -- in a two-phase build, the step that builds the module
+interface. Importing translation units do not re-emit the variable. A variable
+attached to a named module is matched by its module-attached mangled name (for
+example, `export char ver[];` in module `M` is `_ZW1M3ver`). The same applies
+to a precompiled header: the option must be present when the PCH is built.
 
 Example:
 
