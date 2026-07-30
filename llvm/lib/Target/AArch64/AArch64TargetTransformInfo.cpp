@@ -3368,44 +3368,31 @@ instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
                                                        IntrinsicInst &II) {
-  // Fold umin(umin(umin(umin(A, B), 1),
-  //                umin(umin(C, D), 1)),
-  //           1)
-  // into
-  //      umin(umin(umin(A, B),
-  //                umin(C, D)),
-  //           1),
-  // removing two redundant boolean umins when predication is equal across all
-  // umins.
+  // umin(umin(A, 1), umin(B, 1)) -> umin(umin(A,B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *A, *B;
   Value *Pg = II.getOperand(0);
-  auto getUMinOpFromBooleanUMin = [&Pg](Value *UMin) -> IntrinsicInst * {
-    Value *LHS;
-    if (!match(UMin, m_Intrinsic<Intrinsic::aarch64_sve_umin_u>(
-                         m_Specific(Pg), m_Value(LHS), m_One())))
-      return nullptr;
-    if (!match(LHS, m_Intrinsic<Intrinsic::aarch64_sve_umin_u>(
-                        m_Specific(Pg), m_Value(), m_Value())))
-      return nullptr;
+  if (match(II.getOperand(1),
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(A), m_One())) &&
+      match(II.getOperand(2),
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(B), m_One())) &&
+      II.hasOneUse()) {
+    Value *NewUMin =
+        IC.Builder.CreateIntrinsic(UMinID, II.getType(), {Pg, A, B});
+    Value *NewLogicalUMin = IC.Builder.CreateIntrinsic(
+        UMinID, II.getType(), {Pg, NewUMin, ConstantInt::get(II.getType(), 1)});
+    return IC.replaceInstUsesWith(II, NewLogicalUMin);
+  }
 
-    return cast<IntrinsicInst>(LHS);
-  };
+  // umin(umin(A, 1), 1) -> umin(A, 1)
+  Value *InnerUMin;
+  if (match(&II,
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(InnerUMin), m_One())) &&
+      match(InnerUMin,
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(A), m_One())))
+    return IC.replaceInstUsesWith(II, InnerUMin);
 
-  IntrinsicInst *OuterUMin = getUMinOpFromBooleanUMin(&II);
-  if (!OuterUMin || !OuterUMin->hasOneUse())
-    return std::nullopt;
-
-  IntrinsicInst *LHS = getUMinOpFromBooleanUMin(OuterUMin->getOperand(1));
-  IntrinsicInst *RHS = getUMinOpFromBooleanUMin(OuterUMin->getOperand(2));
-  if (!LHS || !RHS)
-    return std::nullopt;
-
-  Value *NewUMin = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_umin_u,
-                                              II.getType(), {Pg, LHS, RHS});
-  Value *NewBooleanUMin =
-      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_umin_u, II.getType(),
-                                 {Pg, NewUMin, II.getOperand(2)});
-
-  return IC.replaceInstUsesWith(II, NewBooleanUMin);
+  return std::nullopt;
 }
 
 std::optional<Instruction *>
