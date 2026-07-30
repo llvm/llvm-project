@@ -1873,70 +1873,42 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
       Instr ? InsertPosition(unwrap<Instruction>(Instr)->getIterator())
             : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValue(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDbgValue(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc),
       Instr ? InsertPosition(unwrap<Instruction>(Instr)->getIterator())
             : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValue(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDbgValue(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc),
       Block ? InsertPosition(unwrap(Block)->end()) : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
@@ -2015,36 +1987,22 @@ LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(LLVMDIBuilderRef Builder,
                                                 LLVMMetadataRef LabelInfo,
                                                 LLVMMetadataRef Location,
                                                 LLVMValueRef InsertBefore) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
+  DbgRecord *DbgInst = unwrap(Builder)->insertLabel(
       unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
       InsertBefore
           ? InsertPosition(unwrap<Instruction>(InsertBefore)->getIterator())
           : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(LLVMDIBuilderRef Builder,
                                                LLVMMetadataRef LabelInfo,
                                                LLVMMetadataRef Location,
                                                LLVMBasicBlockRef InsertAtEnd) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
+  DbgRecord *DbgInst = unwrap(Builder)->insertLabel(
       unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
       InsertAtEnd ? InsertPosition(unwrap(InsertAtEnd)->end()) : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {

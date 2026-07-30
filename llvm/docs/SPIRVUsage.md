@@ -1,8 +1,5 @@
 # User Guide for SPIR-V Target
 
-```{contents}
-:local: true
-```
 
 ```{toctree}
 :hidden:

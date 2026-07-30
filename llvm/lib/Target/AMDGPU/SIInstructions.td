@@ -4100,9 +4100,9 @@ def : GCNPat <
     (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
     i32:$src2)),
   (REG_SEQUENCE VGPR_32,
-    (i16 (EXTRACT_SUBREG $src2, lo16)), lo16,
+    (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), lo16)), lo16,
     (V_OR_B16_t16_e64 (i32 0), VGPR_16:$src_hi,
-                      (i32 0), (i16 (EXTRACT_SUBREG $src2, hi16))), hi16)
+                      (i32 0), (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), hi16))), hi16)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and

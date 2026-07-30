@@ -546,6 +546,8 @@ private:
                                  MachineIRBuilder &MIRBuilder);
   bool hasBlockDecoration(SPIRVTypeInst Type) const;
 
+  void constrainSelectedInstRegOperands(MachineInstrBuilder &MIB) const;
+
   SPIRVTypeInst
   getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder,
                          SPIRVTypeInst SampledType, SPIRV::Dim::Dim Dim,
