@@ -3047,6 +3047,10 @@ int testOperationEquivalence(MlirContext ctx) {
                           "  %3 = arith.subi %0, %2 : i32\n"
                           "  %4 = arith.subi %0, %2 : i32\n"
                           "  %5 = arith.subi %2, %0 : i32\n"
+                          "  %6 = arith.subi %0, %2 {dialect.discardable} : "
+                          "i32\n"
+                          "  %7 = arith.addi %0, %2 : i32\n"
+                          "  %8 = arith.addi %2, %0 : i32\n"
                           "  return %0 : i32\n"
                           "}\n";
   MlirModule module =
@@ -3063,6 +3067,9 @@ int testOperationEquivalence(MlirContext ctx) {
   MlirOperation sub3 = mlirOperationGetNextInBlock(c7);
   MlirOperation sub4 = mlirOperationGetNextInBlock(sub3);
   MlirOperation sub5 = mlirOperationGetNextInBlock(sub4);
+  MlirOperation sub6 = mlirOperationGetNextInBlock(sub5);
+  MlirOperation add7 = mlirOperationGetNextInBlock(sub6);
+  MlirOperation add8 = mlirOperationGetNextInBlock(add7);
 
   // Two identical constants are structurally equivalent when locations are
   // ignored, even though their result SSA values and source locations differ.
@@ -3086,8 +3093,10 @@ int testOperationEquivalence(MlirContext ctx) {
   assert(mlirOperationIsStructurallyEquivalent(
       sub3, sub4, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
 
-  // `%5 = subi %2, %0` swaps the operands; since subi is not commutative this
-  // is not equivalent to `%3 = subi %0, %2`.
+  // `%5 = subi %2, %0` is not equivalent to `%3 = subi %0, %2`: `subi` is not
+  // commutative, so operands are compared pairwise, and the very first pair
+  // (`%0` = 42 vs `%2` = 7) already mismatches. See the `addi` pair below for
+  // the commutative path.
   assert(!mlirOperationIsStructurallyEquivalent(
       sub3, sub5, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
 
@@ -3095,7 +3104,111 @@ int testOperationEquivalence(MlirContext ctx) {
   assert(!mlirOperationIsStructurallyEquivalent(
       c42a, sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
 
+  // `%6 = subi %0, %2 {dialect.discardable}` carries a discardable attribute
+  // that `%3 = subi %0, %2` does not, so the two differ unless discardable
+  // attributes are ignored as well. This also exercises OR-ing flags together.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      sub3, sub6, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(mlirOperationIsStructurallyEquivalent(
+      sub3, sub6,
+      MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+          MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS));
+
+  // `%7 = addi %0, %2` and `%8 = addi %2, %0` have swapped operands, but `addi`
+  // is commutative, so they are equivalent through the commutative path and
+  // only differ once commutativity is explicitly ignored.
+  assert(mlirOperationIsStructurallyEquivalent(
+      add7, add8, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(!mlirOperationIsStructurallyEquivalent(
+      add7, add8,
+      MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+          MLIR_OPERATION_EQUIVALENCE_IGNORE_COMMUTATIVITY));
+
+  // The `value` of arith.constant is an inherent attribute held in the
+  // operation's properties, so ignoring properties makes constants with
+  // different values equivalent.
+  assert(mlirOperationIsStructurallyEquivalent(
+      c42a, c7,
+      MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+          MLIR_OPERATION_EQUIVALENCE_IGNORE_PROPERTIES));
+
+  // The structural hash pairs with the equivalence above: operations that are
+  // equivalent under a set of flags hash equally under the same flags.
+  assert(mlirOperationStructuralHashValue(
+             c42a, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) ==
+         mlirOperationStructuralHashValue(
+             c42b, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(mlirOperationStructuralHashValue(
+             sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) ==
+         mlirOperationStructuralHashValue(
+             sub4, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(mlirOperationStructuralHashValue(
+             sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+                       MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS) ==
+         mlirOperationStructuralHashValue(
+             sub6, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+                       MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS));
+  // Commutative operands are folded into the hash in an order-insensitive way,
+  // matching the commutative equivalence above.
+  assert(mlirOperationStructuralHashValue(
+             add7, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) ==
+         mlirOperationStructuralHashValue(
+             add8, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // The flags are threaded through to the hash: locations and discardable
+  // attributes are hashed unless the corresponding flag is set. Hash
+  // inequality is not part of the contract, but these inputs do differ.
+  assert(
+      mlirOperationStructuralHashValue(c42a, MLIR_OPERATION_EQUIVALENCE_NONE) !=
+      mlirOperationStructuralHashValue(c42b, MLIR_OPERATION_EQUIVALENCE_NONE));
+  assert(mlirOperationStructuralHashValue(
+             sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) !=
+         mlirOperationStructuralHashValue(
+             sub6, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
   mlirModuleDestroy(module);
+
+  // Operands defined *inside* the compared regions need not be the same SSA
+  // values: recursing into the regions marks the two inner constants
+  // equivalent, and the `addi` operands are then matched through that mapping.
+  const char *regionModuleStr = "func.func @g() {\n"
+                                "  %r0 = scf.execute_region -> i32 {\n"
+                                "    %c = arith.constant 1 : i32\n"
+                                "    %d = arith.addi %c, %c : i32\n"
+                                "    scf.yield %d : i32\n"
+                                "  }\n"
+                                "  %r1 = scf.execute_region -> i32 {\n"
+                                "    %c = arith.constant 1 : i32\n"
+                                "    %d = arith.addi %c, %c : i32\n"
+                                "    scf.yield %d : i32\n"
+                                "  }\n"
+                                "  return\n"
+                                "}\n";
+  MlirModule regionModule = mlirModuleCreateParse(
+      ctx, mlirStringRefCreateFromCString(regionModuleStr));
+  assert(!mlirModuleIsNull(regionModule));
+  MlirBlock regionFuncBody = mlirRegionGetFirstBlock(mlirOperationGetRegion(
+      mlirBlockGetFirstOperation(mlirModuleGetBody(regionModule)), 0));
+  MlirOperation exec0 = mlirBlockGetFirstOperation(regionFuncBody);
+  MlirOperation exec1 = mlirOperationGetNextInBlock(exec0);
+  assert(mlirOperationIsStructurallyEquivalent(
+      exec0, exec1, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // The nested `addi` operations compared on their own are *not* equivalent:
+  // the value mapping starts out empty, so operands defined outside the
+  // compared operation must be the exact same SSA values.
+  MlirBlock exec0Body =
+      mlirRegionGetFirstBlock(mlirOperationGetRegion(exec0, 0));
+  MlirBlock exec1Body =
+      mlirRegionGetFirstBlock(mlirOperationGetRegion(exec1, 0));
+  MlirOperation innerAdd0 =
+      mlirOperationGetNextInBlock(mlirBlockGetFirstOperation(exec0Body));
+  MlirOperation innerAdd1 =
+      mlirOperationGetNextInBlock(mlirBlockGetFirstOperation(exec1Body));
+  assert(!mlirOperationIsStructurallyEquivalent(
+      innerAdd0, innerAdd1, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  mlirModuleDestroy(regionModule);
 
   // CHECK: testOperationEquivalence: PASSED
   fprintf(stderr, "testOperationEquivalence: PASSED\n");

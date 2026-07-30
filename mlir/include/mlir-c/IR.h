@@ -639,7 +639,10 @@ static inline bool mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
                                            MlirOperation other);
 
-/// Compute a hash for the given operation.
+/// Compute a hash for the given operation. Operand and result SSA values are
+/// hashed by identity and locations are significant, so equivalent-but-distinct
+/// operations hash differently; use mlirOperationStructuralHashValue for a hash
+/// that pairs with mlirOperationIsStructurallyEquivalent.
 MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
 
 /// Flags controlling structural operation equivalence and hashing. These mirror
@@ -660,12 +663,21 @@ typedef enum MlirOperationEquivalenceFlags {
 
 /// Checks whether two operations are structurally equivalent, i.e. they have
 /// the same name, attributes, operand and result types, and recursively
-/// equivalent regions. Operand equivalence is tracked structurally during the
-/// traversal (operands need not be the exact same SSA values). The comparison
-/// is parameterized by `flags` (see MlirOperationEquivalenceFlags).
-MLIR_CAPI_EXPORTED bool
-mlirOperationIsStructurallyEquivalent(MlirOperation lhs, MlirOperation rhs,
-                                      MlirOperationEquivalenceFlags flags);
+/// equivalent regions. Operand equivalence is tracked structurally while
+/// recursing into regions, so operands defined inside the compared regions need
+/// not be the exact same SSA values; operands defined outside must be. `flags`
+/// is a bitwise OR of MlirOperationEquivalenceFlags values.
+MLIR_CAPI_EXPORTED bool mlirOperationIsStructurallyEquivalent(MlirOperation lhs,
+                                                              MlirOperation rhs,
+                                                              uint32_t flags);
+
+/// Computes a hash for the given operation that pairs with
+/// mlirOperationIsStructurallyEquivalent: two operations that are structurally
+/// equivalent under the same `flags` hash equally. Operands are hashed by
+/// identity, results are not hashed at all, and regions do not participate in
+/// the hash. `flags` is a bitwise OR of MlirOperationEquivalenceFlags values.
+MLIR_CAPI_EXPORTED size_t mlirOperationStructuralHashValue(MlirOperation op,
+                                                           uint32_t flags);
 
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
