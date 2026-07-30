@@ -5927,7 +5927,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // See SIInstrInfo::isLegalSingleSGPRReadInstOperand for more information.
-  if (AMDGPU::isGFX12Plus(ST) && AMDGPU::isSingleSGPRReadInst(Opcode)) {
+  if (AMDGPU::isSingleSGPRReadInst(Opcode)) {
     for (unsigned I = 0; I < 3; ++I) {
       if (!isLegalSingleSGPRReadInstOperand(MRI, MI, I))
         return false;
@@ -6286,7 +6286,7 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
   Register Reg = MRI.createVirtualRegister(VRC);
   DebugLoc DL = MBB->findDebugLoc(I);
 
-  if (Size == 128 && AMDGPU::isPacked64BitInst(MI.getOpcode()) &&
+  if (Size == 128 && AMDGPU::isPackedSingleSGPR64BitInst(MI.getOpcode()) &&
       isLegalSingleSGPRReadInstOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx))) {
     // Special case for V_PK_*64 instructions: these do not have OPSEL but SGPR
     // sources behave like OPSEL is set replicating low 64-bits into high. VGPR
@@ -6390,7 +6390,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   unsigned Opc = MI.getOpcode();
 
   // See SIInstrInfo::isLegalSingleSGPRReadInstOperand for more information.
-  if (AMDGPU::isGFX12Plus(ST) && MO.isReg() && RI.isSGPRReg(MRI, MO.getReg()) &&
+  if (MO.isReg() && RI.isSGPRReg(MRI, MO.getReg()) &&
       AMDGPU::isSingleSGPRReadInst(MI.getOpcode()) &&
       !isLegalSingleSGPRReadInstOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx),
                                         &MO))
@@ -6882,7 +6882,7 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
 
   // Fix the register class of single-sgpr-read instructions on gfx12+. See
   // SIInstrInfo::isLegalSingleSGPRReadInstOperand for more information.
-  if (AMDGPU::isGFX12Plus(ST) && AMDGPU::isSingleSGPRReadInst(Opc)) {
+  if (AMDGPU::isSingleSGPRReadInst(Opc)) {
     for (unsigned I = 0; I < 3; ++I) {
       if (!isLegalSingleSGPRReadInstOperand(MRI, MI, /*SrcN=*/I))
         legalizeOpWithMove(MI, VOP3Idx[I]);

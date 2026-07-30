@@ -908,7 +908,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                            VT, Custom);
     }
 
-    if (Subtarget->hasPackedFP32Ops()) {
+    if (Subtarget->hasAnyPackedFP32Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
                          MVT::v2f32, Legal);
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
