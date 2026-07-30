@@ -94,7 +94,9 @@ declare ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuff
 define void @byteBufferStore() {
 ; CHECK-LABEL: define void @byteBufferStore(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
-; CHECK: store i32 42, ptr addrspace(11)
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i8 0, ptr addrspace(11)
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
@@ -105,7 +107,9 @@ entry:
 define void @byteBufferLoad() {
 ; CHECK-LABEL: define void @byteBufferLoad(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
-; CHECK: load i32, ptr addrspace(11)
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: load i8, ptr addrspace(11)
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
@@ -122,7 +126,8 @@ define void @byteBufferStoreViaLoadedHandle() {
 ; CHECK-LABEL: define void @byteBufferStoreViaLoadedHandle(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
-; CHECK: store i32 42, ptr addrspace(11)
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   store target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, ptr @slot, align 8
@@ -136,12 +141,38 @@ define void @byteBufferLoadViaLoadedHandle() {
 ; CHECK-LABEL: define void @byteBufferLoadViaLoadedHandle(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
-; CHECK: load i32, ptr addrspace(11)
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
 entry:
   %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   store target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, ptr @slot, align 8
   %loaded = load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot, align 8
   %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %loaded, i32 0)
   %val = load i32, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferStore4() {
+; CHECK-LABEL: define void @byteBufferStore4(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 4)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(11) %ptr, align 16
+  ret void
+}
+
+define void @byteBufferLoad4() {
+; CHECK-LABEL: define void @byteBufferLoad4(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 4)
+; CHECK: call {{.*}}@llvm.spv.insertelt
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load <4 x i32>, ptr addrspace(11) %ptr, align 16
   ret void
 }

@@ -234,6 +234,159 @@ class SPIRVLegalizePointerCastImpl {
     llvm_unreachable("Unexpected memory instruction being legalized.");
   }
 
+  static bool isByteLayoutType(Type *Ty, LLVMContext &Ctx) {
+    return Ty == Type::getInt8Ty(Ctx);
+  }
+
+  static IntrinsicInst *getResourceGetPointer(Value *Ptr) {
+    if (auto *II = dyn_cast<IntrinsicInst>(Ptr))
+      if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)
+        return II;
+    return nullptr;
+  }
+
+  Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, Type *I8Ty,
+                       unsigned ByteOffset) {
+    if (ByteOffset == 0)
+      return BasePtr;
+
+    IntrinsicInst *GetPtr = getResourceGetPointer(BasePtr);
+    assert(GetPtr &&
+           "byte layout pointer must come from spv.resource.getpointer");
+
+    Value *Handle = GetPtr->getOperand(0);
+    Value *BaseOffset = GetPtr->getOperand(1);
+    Value *NewOffset = BaseOffset;
+    if (ByteOffset != 0) {
+      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+        NewOffset = ConstantInt::get(CI->getType(),
+                                     CI->getZExtValue() + ByteOffset);
+      else
+        NewOffset = B.CreateAdd(
+            BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
+    }
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    GetPtr->getOperandBundlesAsDefs(OpBundles);
+    CallInst *NewPtr = B.CreateCall(GetPtr->getFunctionType(),
+                                    GetPtr->getCalledOperand(),
+                                    {Handle, NewOffset}, OpBundles);
+    NewPtr->setAttributes(GetPtr->getAttributes());
+    NewPtr->setCallingConv(GetPtr->getCallingConv());
+    GR->buildAssignPtr(B, I8Ty, NewPtr);
+    return NewPtr;
+  }
+
+  Value *bitcastScalarToInt(IRBuilder<> &B, Value *Scalar) {
+    Type *Ty = Scalar->getType();
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    Type *IntTy =
+        IntegerType::get(B.getContext(), DL.getTypeStoreSizeInBits(Ty));
+    if (Ty == IntTy)
+      return Scalar;
+    if (Ty->isIntOrIntVectorTy())
+      return B.CreateIntCast(Scalar, IntTy, /*isSigned=*/false);
+    return B.CreateBitCast(Scalar, IntTy);
+  }
+
+  Value *bitcastIntToScalar(IRBuilder<> &B, Value *IntVal, Type *ScalarTy) {
+    if (IntVal->getType() == ScalarTy)
+      return IntVal;
+    if (ScalarTy->isIntOrIntVectorTy())
+      return B.CreateIntCast(IntVal, ScalarTy, /*isSigned=*/false);
+    return B.CreateBitCast(IntVal, ScalarTy);
+  }
+
+  void storeScalarToByteLayout(IRBuilder<> &B, Value *Src, Value *Dst,
+                             Align Alignment) {
+    LLVMContext &Ctx = B.getContext();
+    Type *I8Ty = Type::getInt8Ty(Ctx);
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    Value *IntVal = bitcastScalarToInt(B, Src);
+    buildAssignType(B, IntVal->getType(), IntVal);
+    unsigned NumBytes = DL.getTypeStoreSize(Src->getType());
+
+    for (unsigned I = 0; I < NumBytes; ++I) {
+      Value *Shifted =
+          I == 0 ? IntVal
+                 : B.CreateLShr(IntVal, ConstantInt::get(IntVal->getType(), 8 * I));
+      if (I != 0)
+        buildAssignType(B, IntVal->getType(), Shifted);
+      Value *Byte = B.CreateTrunc(Shifted, I8Ty);
+      buildAssignType(B, I8Ty, Byte);
+      Value *Ptr = gepByteOffset(B, Dst, I8Ty, I);
+      StoreInst *SI = B.CreateStore(Byte, Ptr);
+      SI->setAlignment(commonAlignment(Alignment, I));
+    }
+  }
+
+  void storeValueToByteLayout(IRBuilder<> &B, Value *Src, Value *Dst,
+                              Align Alignment) {
+    if (auto *VT = dyn_cast<FixedVectorType>(Src->getType())) {
+      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      Type *I8Ty = Type::getInt8Ty(B.getContext());
+      unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
+      for (unsigned I = 0; I < VT->getNumElements(); ++I) {
+        Value *Elem = extractScalarFromVector(B, Src, I);
+        Value *ElemPtr = gepByteOffset(B, Dst, I8Ty, I * ElemSize);
+        storeScalarToByteLayout(B, Elem, ElemPtr,
+                                commonAlignment(Alignment, I * ElemSize));
+      }
+      return;
+    }
+    storeScalarToByteLayout(B, Src, Dst, Alignment);
+  }
+
+  Value *loadScalarFromByteLayout(IRBuilder<> &B, Type *AccessTy, Value *Src,
+                                  Align Alignment) {
+    LLVMContext &Ctx = B.getContext();
+    Type *I8Ty = Type::getInt8Ty(Ctx);
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    unsigned NumBytes = DL.getTypeStoreSize(AccessTy);
+    Type *IntTy = IntegerType::get(Ctx, DL.getTypeStoreSizeInBits(AccessTy));
+    Value *IntVal = ConstantInt::get(IntTy, 0);
+
+    for (unsigned I = 0; I < NumBytes; ++I) {
+      Value *Ptr = gepByteOffset(B, Src, I8Ty, I);
+      LoadInst *LI = B.CreateLoad(I8Ty, Ptr);
+      LI->setAlignment(commonAlignment(Alignment, I));
+      buildAssignType(B, I8Ty, LI);
+      Value *Extended = B.CreateZExt(LI, IntTy);
+      buildAssignType(B, IntTy, Extended);
+      Value *Shifted =
+          I == 0 ? Extended
+                 : B.CreateShl(Extended, ConstantInt::get(IntTy, 8 * I));
+      if (I != 0)
+        buildAssignType(B, IntTy, Shifted);
+      IntVal = I == 0 ? Shifted : B.CreateOr(IntVal, Shifted);
+      buildAssignType(B, IntTy, IntVal);
+    }
+
+    Value *Result = bitcastIntToScalar(B, IntVal, AccessTy);
+    if (Result != IntVal)
+      buildAssignType(B, AccessTy, Result);
+    return Result;
+  }
+
+  Value *loadValueFromByteLayout(IRBuilder<> &B, Type *AccessTy, Value *Src,
+                                 Align Alignment) {
+    if (auto *VT = dyn_cast<FixedVectorType>(AccessTy)) {
+      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      Type *I8Ty = Type::getInt8Ty(B.getContext());
+      unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
+      SmallVector<Value *, 4> LoadedElements;
+      for (unsigned I = 0; I < VT->getNumElements(); ++I) {
+        Value *ElemPtr = gepByteOffset(B, Src, I8Ty, I * ElemSize);
+        Value *Elem = loadScalarFromByteLayout(
+            B, VT->getElementType(), ElemPtr,
+            commonAlignment(Alignment, I * ElemSize));
+        buildAssignType(B, VT->getElementType(), Elem);
+        LoadedElements.push_back(Elem);
+      }
+      return buildVectorFromLoadedElements(B, VT, LoadedElements);
+    }
+    return loadScalarFromByteLayout(B, AccessTy, Src, Alignment);
+  }
+
   // Legalizes a reinterpretation ptrcast: the casted pointer's pointee type
   // matches the access type but differs from the original pointer layout (e.g.
   // byte-addressable i8 storage accessed as i32).
@@ -245,6 +398,23 @@ class SPIRVLegalizePointerCastImpl {
     Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
     if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
+
+    Type *OriginalElemTy = GR->findDeducedElementType(OriginalPtr);
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    if (OriginalElemTy && isByteLayoutType(OriginalElemTy, B.getContext()) &&
+        AccessTy->isSingleValueType() &&
+        DL.getTypeStoreSize(AccessTy) > 1) {
+      if (IsStore) {
+        storeValueToByteLayout(B, StoreSrc, OriginalPtr, Alignment);
+      } else {
+        Value *Loaded =
+            loadValueFromByteLayout(B, AccessTy, OriginalPtr, Alignment);
+        buildAssignType(B, AccessTy, Loaded);
+        GR->replaceAllUsesWith(BadMem, Loaded, /* DeleteOld= */ true);
+        DeadInstructions.push_back(BadMem);
+      }
+      return true;
+    }
 
     GR->buildAssignPtr(B, CastedElemTy, OriginalPtr);
     if (IsStore) {
