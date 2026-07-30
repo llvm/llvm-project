@@ -104,8 +104,10 @@ static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
 // Allow LDP/STP pairing for far-offset scaled loads/stores by inserting an
 // ADDXri to adjust the base register. Restricted to scaled accesses with
 // loop-invariant bases.
-static cl::opt<bool> EnableLdpStpBaseAdjust("aarch64-ldp-stp-base-adjust",
-                                            cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableLdpStpBaseAdjust(
+    "aarch64-ldp-stp-base-adjust", cl::init(true), cl::Hidden,
+    cl::desc("Allow LDP/STP pairing for far-offset scaled loads/stores by "
+             "adjusting the base register"));
 
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 

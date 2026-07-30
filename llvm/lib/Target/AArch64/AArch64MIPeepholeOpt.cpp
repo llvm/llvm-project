@@ -72,12 +72,19 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-mi-peephole-opt"
+
+static cl::opt<bool> EnableBaseAddressCSE(
+    "aarch64-base-address-cse", cl::init(true), cl::Hidden,
+    cl::desc("Coalesce sibling base-address materializations to enable "
+             "LDP/STP pairing"));
 
 namespace {
 
@@ -143,6 +150,8 @@ private:
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+
+  bool shareBaseAddresses(MachineBasicBlock &MBB);
 };
 
 struct AArch64MIPeepholeOptLegacy : public MachineFunctionPass {
@@ -957,6 +966,114 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOptImpl::shareBaseAddresses(MachineBasicBlock &MBB) {
+  if (!EnableBaseAddressCSE)
+    return false;
+
+  bool Changed = false;
+
+  DenseMap<MachineInstr *, unsigned> Pos;
+  unsigned Idx = 0;
+  for (MachineInstr &MI : MBB.instrs())
+    Pos[&MI] = Idx++;
+
+  struct Cand {
+    MachineInstr *DefMI;
+    Register SrcReg;
+    unsigned Opc;
+    int64_t C;
+    Register BaseReg;
+    MachineInstr *UserMI;
+    int Scale;
+    int64_t OldOff;
+  };
+  SmallVector<Cand, 8> Cands;
+  using Key = std::pair<Register, unsigned>;
+  MapVector<Key, SmallVector<unsigned, 4>> Groups;
+
+  for (MachineInstr &MI : MBB.instrs()) {
+    unsigned Opc = MI.getOpcode();
+    if (Opc != AArch64::ADDXri && Opc != AArch64::SUBXri)
+      continue;
+    if (!MI.getOperand(2).isImm() || !MI.getOperand(3).isImm())
+      continue;
+    if (MI.getOperand(3).getImm() != 0) // shift must be 0 (no LSL #12)
+      continue;
+    Register SrcReg = MI.getOperand(1).getReg();
+    Register BaseReg = MI.getOperand(0).getReg();
+    if (!SrcReg.isVirtual() || !BaseReg.isVirtual())
+      continue;
+    if (!MRI->hasOneUse(BaseReg)) // secondary def is erased below
+      continue;
+    MachineInstr &User = *MRI->use_instr_begin(BaseReg);
+    if (!User.mayLoadOrStore())
+      continue;
+    if (AArch64InstrInfo::isPairedLdSt(User) ||
+        AArch64InstrInfo::isPreLdSt(User)) // different operand layout
+      continue;
+    if (TII->hasUnscaledLdStOffset(User)) // rewrite below assumes scaled
+      continue;
+    if (!AArch64InstrInfo::getLdStOffsetOp(User).isImm())
+      continue;
+    const MachineOperand &BaseOp = AArch64InstrInfo::getLdStBaseOp(User);
+    if (!BaseOp.isReg() || BaseOp.getReg() != BaseReg)
+      continue;
+    unsigned CIdx = Cands.size();
+    Cands.push_back({&MI, SrcReg, Opc, MI.getOperand(2).getImm(), BaseReg,
+                     &User, TII->getMemScale(User),
+                     AArch64InstrInfo::getLdStOffsetOp(User).getImm()});
+    Groups[{SrcReg, Opc}].push_back(CIdx);
+  }
+
+  auto Eff = [](const Cand &C) {
+    return C.Opc == AArch64::ADDXri ? C.C : -C.C;
+  };
+
+  for (auto &Group : Groups) {
+    auto &Idxs = Group.second;
+    if (Idxs.size() < 2)
+      continue;
+    unsigned PrimaryIdx = Idxs[0];
+    for (unsigned i : Idxs)
+      if (Eff(Cands[i]) < Eff(Cands[PrimaryIdx]))
+        PrimaryIdx = i;
+    const Cand &Primary = Cands[PrimaryIdx];
+    Register PrimaryBaseReg = Primary.BaseReg;
+    MachineInstr *PrimaryDef = Primary.DefMI;
+
+    for (unsigned i : Idxs) {
+      if (i == PrimaryIdx)
+        continue;
+      Cand &Sec = Cands[i];
+      int64_t Delta = Eff(Sec) - Eff(Primary);
+      if (Delta % Sec.Scale != 0)
+        continue;
+      int64_t NewOff = Sec.OldOff + Delta / Sec.Scale;
+      if (NewOff < 0 || NewOff > 0xFFF)
+        continue;
+      if (Pos[PrimaryDef] >= Pos[Sec.UserMI])
+        continue;
+      bool IsPairOrPre = AArch64InstrInfo::isPairedLdSt(*Sec.UserMI) ||
+                        AArch64InstrInfo::isPreLdSt(*Sec.UserMI);
+      unsigned BaseIdx = IsPairOrPre ? 2 : 1;
+      unsigned OffIdx = IsPairOrPre ? 3 : 2;
+      MachineOperand &BaseOp = Sec.UserMI->getOperand(BaseIdx);
+      BaseOp.setReg(PrimaryBaseReg);
+      BaseOp.setIsKill(false);
+      Sec.UserMI->getOperand(OffIdx).setImm(NewOff);
+      for (MachineInstr &UseMI : MRI->use_instructions(PrimaryBaseReg))
+        for (MachineOperand &MO : UseMI.operands())
+          if (MO.isReg() && MO.getReg() == PrimaryBaseReg)
+            MO.setIsKill(false);
+      LLVM_DEBUG(dbgs() << "Coalesced base address materialization "
+                        << *Sec.DefMI << "  into: " << *PrimaryDef);
+      Sec.DefMI->eraseFromParent();
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
 bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
@@ -968,6 +1085,7 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+    Changed |= shareBaseAddresses(MBB);
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       default:
