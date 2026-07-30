@@ -59,4 +59,3 @@ entry:
   %cmp = icmp slt i128 %v, 0
   ret i1 %cmp
 }
-
