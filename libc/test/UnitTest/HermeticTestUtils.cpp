@@ -76,7 +76,6 @@ void *aligned_alloc(size_t align, size_t s) {
   uintptr_t ptr_val = reinterpret_cast<uintptr_t>(ptr);
   uintptr_t aligned_ptr_val = ((ptr_val + align - 1) / align) * align;
   ptr = reinterpret_cast<uint8_t *>(aligned_ptr_val);
-  s = ((s + align - 1) / align) * align;
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
