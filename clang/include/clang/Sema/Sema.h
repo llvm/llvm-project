@@ -4193,6 +4193,11 @@ public:
   /// FinalizeDeclaration - called by ParseDeclarationAfterDeclarator to perform
   /// any semantic actions necessary after any initializer has been attached.
   void FinalizeDeclaration(Decl *D);
+
+  /// Process a variable definition against '-mloadtime-comment-vars='.
+  /// Exposed for instantiated variable definitions, which do not pass
+  /// through FinalizeDeclaration.
+  void ProcessLoadTimeCommentVar(VarDecl *VD);
   DeclGroupPtrTy FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
                                          ArrayRef<Decl *> Group);
 
