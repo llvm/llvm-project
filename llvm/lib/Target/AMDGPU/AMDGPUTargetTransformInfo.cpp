@@ -24,10 +24,12 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include <llvm/CodeGen/ISDOpcodes.h>
 #include <optional>
@@ -984,6 +986,9 @@ InstructionCost GCNTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
+  if (isa<ScalableVectorType>(ValTy))
+    return InstructionCost::getInvalid();
+
   // For size and latency cost kinds, return a low cost independent of vector
   // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -996,36 +1001,30 @@ InstructionCost GCNTTIImpl::getCmpSelInstrCost(
 
   const int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
-  auto getScalarCost = [TLI, ISD](std::pair<InstructionCost, MVT> ScalarLT) {
-    return TLI->isOperationExpand(ISD, ScalarLT.second) ? 1 : ScalarLT.first;
-  };
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
-  const std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   if (!ValTy->isVectorTy())
-    return getScalarCost(LT);
+    return TLI->isOperationExpand(ISD, LT.second) ? 1 : LT.first;
 
-  auto *ValVTy = dyn_cast_or_null<FixedVectorType>(ValTy);
-  if (!ValVTy)
-    return InstructionCost::getInvalid();
-
-  // Return legalization cost for legal vector types.
-  // TODO Handle splitting as suggested but not implemented in the base
-  // implementation?
-  if (LT.second.isVector()) {
-    const int VecISD =
-        ISD == ISD::SELECT && CondTy->isVectorTy() ? ISD::VSELECT : ISD;
-    if (!TLI->isOperationExpand(VecISD, LT.second))
-      return LT.first;
+  if (!TLI->isOperationExpand(ISD, LT.second) && !LT.second.isVector()) {
+    // The operation is legal. Assume it costs 1. Multiply
+    // by the type-legalization overhead.
+    return LT.first * 1;
   }
 
-  // Otherwise, assume vector needs to be scalarized.
-  InstructionCost ScalarCost =
-      getScalarCost(getTypeLegalizationCost(ValVTy->getScalarType()));
+  // Return the cost of multiple scalar invocations plus the cost of
+  // inserting and extracting the values.
+  auto *ValVTy = cast<FixedVectorType>(ValTy);
+  unsigned Num = ValVTy->getNumElements();
+  InstructionCost ScalarCost = getCmpSelInstrCost(
+      Opcode, ValTy->getScalarType(), CondTy->getScalarType(), VecPred,
+      CostKind, Op1Info, Op2Info, I);
 
-  // Return scalar cost plus cost of inserting all values.
-  return getScalarizationOverhead(ValVTy, /*Insert*/ true,
-                                  /*Extract*/ false, CostKind) +
-         ValVTy->getNumElements() * ScalarCost;
+  InstructionCost Overhead =
+      getScalarizationOverhead(ValVTy, /*Insert*/ true,
+                               /*Extract*/ true, CostKind);
+
+  return Overhead + Num * ScalarCost;
 }
 
 InstructionCost
