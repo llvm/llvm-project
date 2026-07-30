@@ -78,8 +78,8 @@ mlirRewriterBaseGetContext(MlirRewriterBase rewriter);
 //===----------------------------------------------------------------------===//
 
 // These do not include functions using Block::iterator or Region::iterator, as
-// they are not exposed by the C API yet. Similarly for methods using
-// `InsertPoint` directly.
+// they are not exposed by the C API yet. `InsertPoint` is exposed as
+// `MlirRewriterBaseInsertPoint` below.
 
 /// Reset the insertion point to no location.  Creating an operation without a
 /// set insertion point is an error, but this can still be useful when the

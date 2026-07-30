@@ -652,8 +652,6 @@ void testInsertionPointSaveRestore(MlirContext ctx) {
       mlirRewriterBaseSaveInsertionPoint(rewriter);
   assert(!mlirBlockIsNull(endIp.block));
   assert(mlirOperationIsNull(endIp.operationAfter));
-  MlirOperation opEnd = createOperationWithName(ctx, "dialect.op_end");
-  mlirRewriterBaseInsert(rewriter, opEnd);
 
   // Restoring the first saved insertion point makes subsequent insertions land
   // before op2 again, not at the end where we just were.
@@ -662,11 +660,27 @@ void testInsertionPointSaveRestore(MlirContext ctx) {
       createOperationWithName(ctx, "dialect.op_restored");
   mlirRewriterBaseInsert(rewriter, opRestored);
 
+  // Restoring the null-`operationAfter` point re-establishes end-of-block, even
+  // though the insertion point currently sits in the middle of the block.
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, endIp);
+  assert(!mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+  assert(mlirOperationIsNull(
+      mlirRewriterBaseGetOperationAfterInsertion(rewriter)));
+  MlirOperation opEnd = createOperationWithName(ctx, "dialect.op_end");
+  mlirRewriterBaseInsert(rewriter, opEnd);
+
   // A cleared insertion point round-trips as a null block.
   mlirRewriterBaseClearInsertionPoint(rewriter);
   MlirRewriterBaseInsertPoint clearedIp =
       mlirRewriterBaseSaveInsertionPoint(rewriter);
   assert(mlirBlockIsNull(clearedIp.block));
+  assert(mlirOperationIsNull(clearedIp.operationAfter));
+
+  // Restoring a cleared insertion point clears the current one.
+  mlirRewriterBaseSetInsertionPointToStart(rewriter, body);
+  assert(!mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, clearedIp);
+  assert(mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
 
   mlirOperationDump(op);
   // clang-format off
