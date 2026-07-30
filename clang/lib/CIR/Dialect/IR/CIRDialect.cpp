@@ -642,21 +642,44 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 // CastOp
 //===----------------------------------------------------------------------===//
 
+static bool isFloatingPointCastKind(cir::CastKind kind) {
+  switch (kind) {
+  case cir::CastKind::floating:
+  case cir::CastKind::int_to_float:
+  case cir::CastKind::float_to_int:
+  case cir::CastKind::float_to_bool:
+  case cir::CastKind::bool_to_float:
+  case cir::CastKind::float_to_complex:
+  case cir::CastKind::float_complex_to_real:
+  case cir::CastKind::float_complex_to_bool:
+  case cir::CastKind::float_complex:
+  case cir::CastKind::float_complex_to_int_complex:
+  case cir::CastKind::int_complex_to_float_complex:
+    return true;
+  default:
+    return false;
+  }
+}
+
 LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
+  cir::CastKind kind = getKind();
+
+  if (getFenvAttr() && !isFloatingPointCastKind(kind))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point cast kinds";
 
   // Verify address space casts for pointer types. given that
   // casts for within a different address space are illegal.
   auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
   auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
-  if (srcPtrTy && resPtrTy && (getKind() != cir::CastKind::address_space))
+  if (srcPtrTy && resPtrTy && (kind != cir::CastKind::address_space))
     if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
       return emitOpError() << "result type address space does not match the "
                               "address space of the operand";
     }
 
-  cir::CastKind kind = getKind();
   auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
   auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
   if (srcVTy && resVTy) {
@@ -674,7 +697,7 @@ LogicalResult cir::CastOp::verify() {
     resType = resVTy.getElementType();
   }
 
-  switch (getKind()) {
+  switch (kind) {
   case cir::CastKind::int_to_bool: {
     if (!mlir::isa<cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
