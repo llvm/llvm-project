@@ -2459,7 +2459,9 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Type *RsrcType = SplitType->getElementType(0);
     Type *OffType = SplitType->getElementType(1);
     IRB.SetInsertPoint(&I);
-    Value *Rsrc = IRB.CreateIntrinsic(IID, {RsrcType, Base->getType()},
+    Value *Rsrc = IRB.CreateIntrinsic(IID,
+                                      {RsrcType, Base->getType(),
+                                       NumRecords->getType()},
                                       {Base, Stride, NumRecords, Flags});
     copyMetadata(Rsrc, &I);
     Rsrc->takeName(&I);

@@ -442,17 +442,17 @@ define <2 x ptr addrspace(7)> @addrspacecast_poison_vec() {
   ret <2 x ptr addrspace(7)> %ret
 }
 
-declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1), i16, i64, i32)
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1), i16, i64, i32)
 
 define ptr addrspace(7) @make_buffer_rsrc(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @make_buffer_rsrc
 ; CHECK-SAME: (ptr addrspace(1) [[BUF:%.*]], i16 [[STRIDE:%.*]], i64 [[NUMRECORDS:%.*]], i32 [[FLAGS:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i64 [[NUMRECORDS]], i32 [[FLAGS]])
+; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i64 [[NUMRECORDS]], i32 [[FLAGS]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[RET]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 0, 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
 ;
-  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags)
+  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags)
   ret ptr addrspace(7) %ret
 }
 

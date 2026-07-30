@@ -2080,8 +2080,17 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     llvm::PointerType *RetTy = llvm::PointerType::get(
         Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
+    llvm::StringMap<bool> CallerFeatureMap;
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+    CGM.getContext().getFunctionFeatureMap(CallerFeatureMap, FD);
+    llvm::Type *NumRecordsTy =
+        getTarget().hasFeatureEnabled(CallerFeatureMap,
+                                      "45-bit-num-records-buffer-resource")
+            ? Int64Ty
+            : Int32Ty;
+    Args[2] = Builder.CreateZExtOrTrunc(Args[2], NumRecordsTy);
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
-                                   {RetTy, Args[0]->getType()});
+                                   {RetTy, Args[0]->getType(), NumRecordsTy});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
