@@ -272,15 +272,20 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
     if ((CommentBehindDecl->isDocumentation() ||
          LangOpts.CommentOpts.ParseAllComments) &&
         CommentBehindDecl->isTrailingComment() &&
-        (IsMacro || (D && (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) ||
-                           isa<VarDecl>(D) || isa<ObjCMethodDecl>(D) ||
-                           isa<ObjCPropertyDecl>(D))))) {
+        (IsMacro ||
+         (D && (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) ||
+                isa<VarDecl>(D) || isa<ObjCMethodDecl>(D) ||
+                isa<ObjCPropertyDecl>(D) || isa<FunctionDecl>(D))))) {
 
       // Check that Doxygen trailing comment comes after the declaration, starts
-      // on the same line and in the same file as the declaration.
-      if (SourceMgr.getLineNumber(LocDecomp.first, LocDecomp.second) ==
-          Comments.getCommentBeginLine(CommentBehindDecl, LocDecomp.first,
-                                       OffsetCommentBehindDecl->first)) {
+      // on the same or the next line, and in the same file as the declaration.
+      auto LocLineNumber =
+          SourceMgr.getLineNumber(LocDecomp.first, LocDecomp.second);
+      auto CommentBeginLine = Comments.getCommentBeginLine(
+          CommentBehindDecl, LocDecomp.first, OffsetCommentBehindDecl->first);
+      if (LocLineNumber == CommentBeginLine ||
+          (LocLineNumber + 1 == CommentBeginLine &&
+           CommentBehindDecl->isDocumentation())) {
         return CommentBehindDecl;
       }
     }
