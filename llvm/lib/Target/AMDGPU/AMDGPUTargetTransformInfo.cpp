@@ -1357,11 +1357,11 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
 
-  // Gfx9 packed FP32 shuffles are free. InsertElement above already taxes
-  // assembling <2 x f32> pairs, and a per-lane shuffle cost stacks on top and
-  // over-penalizes SLP. f32-only on gfx9 targets with packed FP32 ops.
+  // Packed FP32 shuffles are free. InsertElement above already taxes assembling
+  // <2 x f32> pairs, and a per-lane shuffle cost stacks on top and over-penalizes
+  // SLP. f32-only on targets with packed FP32 ops.
   if (ScalarSize == 32 && SrcTy->getElementType()->isFloatTy() &&
-      ST->hasPackedFP32Ops() && ST->getGeneration() == AMDGPUSubtarget::GFX9) {
+      ST->hasPackedFP32Ops()) {
     return 0;
   }
 

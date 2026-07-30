@@ -542,17 +542,9 @@ define amdgpu_kernel void @test_single_exp_hreduction(
 ; GCN-SAME: ptr addrspace(1) [[INPUT:%.*]], ptr addrspace(1) [[OUTPUT:%.*]]) {
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[P0:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 0
-; GCN-NEXT:    [[P1:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 1
-; GCN-NEXT:    [[P2:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 2
-; GCN-NEXT:    [[P3:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 3
-; GCN-NEXT:    [[A0:%.*]] = load float, ptr addrspace(1) [[P0]], align 4
-; GCN-NEXT:    [[A1:%.*]] = load float, ptr addrspace(1) [[P1]], align 4
-; GCN-NEXT:    [[A2:%.*]] = load float, ptr addrspace(1) [[P2]], align 4
-; GCN-NEXT:    [[A3:%.*]] = load float, ptr addrspace(1) [[P3]], align 4
-; GCN-NEXT:    [[ADD01:%.*]] = fadd fast float [[A0]], [[A1]]
-; GCN-NEXT:    [[ADD23:%.*]] = fadd fast float [[A2]], [[A3]]
-; GCN-NEXT:    [[SUM:%.*]] = fadd fast float [[ADD01]], [[ADD23]]
-; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[SUM]])
+; GCN-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr addrspace(1) [[P0]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
+; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[TMP1]])
 ; GCN-NEXT:    store float [[EXP0]], ptr addrspace(1) [[OUTPUT]], align 4
 ; GCN-NEXT:    ret void
 ;
@@ -582,18 +574,13 @@ define amdgpu_kernel void @test_hreduction_into_exp(
 ; GCN-SAME: ptr addrspace(1) [[INPUT:%.*]], ptr addrspace(1) [[OUTPUT:%.*]], <16 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], i32 [[SCALE_IDX:%.*]]) {
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[P0:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 0
-; GCN-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr addrspace(1) [[P0]], align 4
-; GCN-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <2 x i32> <i32 0, i32 4>
-; GCN-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <2 x i32> <i32 1, i32 5>
-; GCN-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP1]], [[TMP2]]
-; GCN-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <2 x i32> <i32 2, i32 6>
-; GCN-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <2 x i32> <i32 3, i32 7>
-; GCN-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP4]], [[TMP5]]
-; GCN-NEXT:    [[TMP7:%.*]] = fadd fast <2 x float> [[TMP3]], [[TMP6]]
-; GCN-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i64 0
-; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[TMP8]])
-; GCN-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP7]], i64 1
-; GCN-NEXT:    [[EXP1:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[TMP9]])
+; GCN-NEXT:    [[P4:%.*]] = getelementptr float, ptr addrspace(1) [[INPUT]], i64 4
+; GCN-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr addrspace(1) [[P0]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr addrspace(1) [[P4]], align 4
+; GCN-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
+; GCN-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP1]])
+; GCN-NEXT:    [[EXP0:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[TMP2]])
+; GCN-NEXT:    [[EXP1:%.*]] = tail call float @llvm.amdgcn.exp2.f32(float [[TMP3]])
 ; GCN-NEXT:    [[VEC0:%.*]] = insertelement <2 x float> poison, float [[EXP0]], i64 0
 ; GCN-NEXT:    [[VEC1:%.*]] = insertelement <2 x float> [[VEC0]], float [[EXP1]], i64 1
 ; GCN-NEXT:    [[VEC_I32:%.*]] = bitcast <2 x float> [[VEC1]] to <2 x i32>
