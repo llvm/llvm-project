@@ -525,11 +525,12 @@ struct CeilDivUIOpPattern final : OpConversionPattern<arith::CeilDivUIOp> {
     Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
     Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
 
+    Value cmp = spirv::IEqualOp::create(rewriter, loc, n, zero);
+
     Value minusOne = spirv::ISubOp::create(rewriter, loc, n, one);
     Value quotient = spirv::UDivOp::create(rewriter, loc, minusOne, m);
     Value plusOne = spirv::IAddOp::create(rewriter, loc, quotient, one);
 
-    Value cmp = spirv::IEqualOp::create(rewriter, loc, n, zero);
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cmp, zero, plusOne);
     return success();
   }
