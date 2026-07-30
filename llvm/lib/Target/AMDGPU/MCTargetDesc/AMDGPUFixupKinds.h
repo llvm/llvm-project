@@ -19,7 +19,7 @@ enum Fixups {
 
   /// Fixups for s_prefetch_inst instructions.
   /// These compute values based on code size at assembly time.
-  /// The sdata field (cacheline count) is a 5-bit field.
+  /// The encoded 5-bit sdata field (cacheline count minus one).
   fixup_si_prefetch_sdata,
 
   /// The offset field (byte offset) is a 24-bit signed field.

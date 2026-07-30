@@ -260,9 +260,9 @@ bool AMDGPUMCExpr::evaluatePrefetchCachelines(MCValue &Res,
     return false;
 
   // Constants for prefetch calculation.
-  // Each instruction can prefetch up to 31 cachelines (5-bit sdata field).
-  // Cacheline size is 128 bytes. Each slot covers ~4KB (31 * 128 = 3968 bytes).
-  constexpr unsigned MaxCachelinesPerPrefetch = 31;
+  // Each instruction can prefetch up to 32 cachelines (5-bit sdata field, plus
+  // one added). Cacheline size is 128 bytes. Each slot covers 4KiB.
+  constexpr unsigned MaxCachelinesPerPrefetch = 32;
   constexpr unsigned CacheLineSize = 128;
   constexpr unsigned BytesPerPrefetch =
       MaxCachelinesPerPrefetch * CacheLineSize;
@@ -288,7 +288,8 @@ bool AMDGPUMCExpr::evaluatePrefetchCachelines(MCValue &Res,
   uint64_t CachelineCount = std::min(
       CachelinesNeeded, static_cast<uint64_t>(MaxCachelinesPerPrefetch));
 
-  Res = MCValue::get(static_cast<int64_t>(CachelineCount));
+  // The instruction adds 1 to the encoded sdata, so deduct it here.
+  Res = MCValue::get(static_cast<int64_t>(CachelineCount - 1));
   return true;
 }
 
@@ -298,7 +299,7 @@ bool AMDGPUMCExpr::evaluatePrefetchOffset(MCValue &Res,
   if (!evaluateMCExprs(Args, Asm, {SlotIndex, CodeSizeInBytes}))
     return false;
 
-  constexpr unsigned MaxCachelinesPerPrefetch = 31;
+  constexpr unsigned MaxCachelinesPerPrefetch = 32;
   constexpr unsigned CacheLineSize = 128;
   constexpr uint64_t MaxPrefetchSize = 64 * 1024;
 

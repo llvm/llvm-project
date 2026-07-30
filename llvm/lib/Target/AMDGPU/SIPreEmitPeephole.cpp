@@ -58,9 +58,9 @@ static cl::opt<bool>
 namespace {
 
 // Number of prefetch instructions to insert.
-// Each can prefetch up to 31 cachelines of 128 bytes = ~4KB.
-// 16 instructions cover 64KB (the full ICache size).
-static constexpr unsigned NumPrefetchInsts = 16;
+// Each can prefetch up to 32 cachelines of 128 bytes = 4KiB.
+// 16 instructions cover 64KiB (the full ICache size).
+static constexpr unsigned MaxNumPrefetchInsts = 16;
 
 class SIPreEmitPeephole {
 private:

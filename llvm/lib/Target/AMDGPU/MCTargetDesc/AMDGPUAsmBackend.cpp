@@ -128,8 +128,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return BrImm;
   }
   case AMDGPU::fixup_si_prefetch_sdata:
-    // The value is already the computed cacheline count from the MCExpr.
-    // Clamp to 5-bit field (max 31).
+    // The value is already the encoded sdata field value from the MCExpr.
+    // Clamp to the maximum 5-bit encoded field value (31).
     return std::min(Value, static_cast<uint64_t>(31));
   case AMDGPU::fixup_si_prefetch_offset:
     // The value is the byte offset. It's a 24-bit signed field.

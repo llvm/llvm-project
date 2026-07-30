@@ -120,10 +120,12 @@ public:
   static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
                                                 MCContext &Ctx);
 
-  /// Create an expression for computing cacheline count for a prefetch slot.
+  /// Create an expression for computing the encoded sdata field for a prefetch
+  /// slot.
   /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
   /// CodeSizeBytes is the total code size in bytes.
-  /// Returns the number of cachelines this slot should prefetch.
+  /// Returns the requested cacheline count minus one, encoded for the 5-bit
+  /// sdata field.
   static const AMDGPUMCExpr *
   createPrefetchCachelines(const MCExpr *SlotIndex, const MCExpr *CodeSizeBytes,
                            MCContext &Ctx);
