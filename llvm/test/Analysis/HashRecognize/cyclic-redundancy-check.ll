@@ -1027,10 +1027,10 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define void @not.crc.result.unused(i16 %crc.init) {
+define i16 @not.crc.result.unused(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.result.unused'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find use of computed value in loop exit block
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
 ;
 entry:
   br label %loop
@@ -1047,7 +1047,7 @@ loop:                                              ; preds = %loop, %entry
   br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop
-  ret void
+  ret i16 %crc
 }
 
 define i16 @not.crc.wrong.sb.check.const(i8 %msg, i16 %checksum) {
