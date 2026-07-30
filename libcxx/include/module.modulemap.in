@@ -2448,6 +2448,7 @@ module std {
   module tree                 {
     header "__tree"
     export std.memory.unique_ptr
+    export std_core.type_traits.invoke
   }
   module std_mbstate_t {
     header "__std_mbstate_t.h"

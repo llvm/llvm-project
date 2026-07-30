@@ -705,9 +705,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 set& operator=(set&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~set() {
-    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~set()
+      _LIBCPP_DIAGNOSE_NON_CONST_COMPARATOR(key_compare, key_type) {}
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() _NOEXCEPT {
     return __tree_.begin();
@@ -1260,9 +1259,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 multiset& operator=(multiset&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~multiset() {
-    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~multiset()
+      _LIBCPP_DIAGNOSE_NON_CONST_COMPARATOR(key_compare, key_type) {}
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() _NOEXCEPT {
     return __tree_.begin();
