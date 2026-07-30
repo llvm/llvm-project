@@ -396,20 +396,20 @@
 # CHECK-NEXT:  1      6     1.00                        fneg	v0.4s, v0.4s
 # CHECK-NEXT:  1      6     1.00                        fneg	v0.8h, v0.8h
 # CHECK-NEXT:  1      6     0.50                        frecpe	h20, h8
-# CHECK-NEXT:  1      6     0.50                        frecpe	d13, d13
-# CHECK-NEXT:  1      6     0.50                        frecpe	s19, s14
-# CHECK-NEXT:  1      6     1.00                        frecpe	v0.2d, v0.2d
-# CHECK-NEXT:  1      6     0.50                        frecpe	v0.2s, v0.2s
+# CHECK-NEXT:  1      4     0.50                        frecpe	d13, d13
+# CHECK-NEXT:  1      4     0.50                        frecpe	s19, s14
+# CHECK-NEXT:  1      4     1.00                        frecpe	v0.2d, v0.2d
+# CHECK-NEXT:  1      4     0.50                        frecpe	v0.2s, v0.2s
 # CHECK-NEXT:  1      6     0.50                        frecpe	v0.4h, v0.4h
-# CHECK-NEXT:  1      6     1.00                        frecpe	v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        frecpe	v0.4s, v0.4s
 # CHECK-NEXT:  1      6     1.00                        frecpe	v0.8h, v0.8h
 # CHECK-NEXT:  1      6     0.50                        frecps	h29, h19, h8
 # CHECK-NEXT:  1      6     0.50                        frecpx	h18, h11
 # CHECK-NEXT:  1      6     1.00                        frecps	v12.8h, v25.8h, v4.8h
-# CHECK-NEXT:  1      6     1.00                        frecps	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        frecps	d22, d30, d21
-# CHECK-NEXT:  1      6     0.50                        frecps	s21, s16, s13
-# CHECK-NEXT:  1      6     1.00                        frecps	v7.2d, v29.2d, v18.2d
+# CHECK-NEXT:  1      8     1.00                        frecps	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT:  1      8     0.50                        frecps	d22, d30, d21
+# CHECK-NEXT:  1      8     0.50                        frecps	s21, s16, s13
+# CHECK-NEXT:  1      8     1.00                        frecps	v7.2d, v29.2d, v18.2d
 # CHECK-NEXT:  1      6     0.50                        frecpx	d16, d19
 # CHECK-NEXT:  1      6     0.50                        frecpx	s18, s10
 # CHECK-NEXT:  1      6     1.00                        frinta	v0.2d, v0.2d
@@ -448,19 +448,19 @@
 # CHECK-NEXT:  1      6     1.00                        frintz	v0.4s, v0.4s
 # CHECK-NEXT:  1      6     1.00                        frintz	v0.8h, v0.8h
 # CHECK-NEXT:  1      6     0.50                        frsqrte	h23, h26
-# CHECK-NEXT:  1      32    28.00                       frsqrte	d21, d12
-# CHECK-NEXT:  1      17    13.00                       frsqrte	s22, s13
-# CHECK-NEXT:  1      32    28.00                       frsqrte	v0.2d, v0.2d
-# CHECK-NEXT:  1      17    13.00                       frsqrte	v0.2s, v0.2s
+# CHECK-NEXT:  1      4     0.50                        frsqrte	d21, d12
+# CHECK-NEXT:  1      4     0.50                        frsqrte	s22, s13
+# CHECK-NEXT:  1      4     1.00                        frsqrte	v0.2d, v0.2d
+# CHECK-NEXT:  1      4     0.50                        frsqrte	v0.2s, v0.2s
 # CHECK-NEXT:  1      6     0.50                        frsqrte	v0.4h, v0.4h
-# CHECK-NEXT:  1      17    13.00                       frsqrte	v0.4s, v0.4s
-# CHECK-NEXT:  1      17    13.00                       frsqrts	v20.4s, v26.4s, v27.4s
+# CHECK-NEXT:  1      4     1.00                        frsqrte	v0.4s, v0.4s
+# CHECK-NEXT:  1      8     1.00                        frsqrts	v20.4s, v26.4s, v27.4s
 # CHECK-NEXT:  1      6     0.50                        frsqrts	v8.4h, v9.4h, v30.4h
 # CHECK-NEXT:  1      6     1.00                        frsqrte	v0.8h, v0.8h
 # CHECK-NEXT:  1      6     0.50                        frsqrts	h28, h26, h1
-# CHECK-NEXT:  1      32    28.00                       frsqrts	d8, d22, d18
-# CHECK-NEXT:  1      17    13.00                       frsqrts	s21, s5, s12
-# CHECK-NEXT:  1      32    28.00                       frsqrts	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT:  1      8     0.50                        frsqrts	d8, d22, d18
+# CHECK-NEXT:  1      8     0.50                        frsqrts	s21, s5, s12
+# CHECK-NEXT:  1      8     1.00                        frsqrts	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      32    28.00                       fsqrt	v0.2d, v0.2d
 # CHECK-NEXT:  1      17    13.00                       fsqrt	v0.2s, v0.2s
 # CHECK-NEXT:  1      6     0.50                        fsqrt	v0.4h, v0.4h
@@ -1466,8 +1466,8 @@
 # CHECK-NEXT:  1      6     1.00                        urshr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  1      6     0.50                        urshr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  1      6     1.00                        urshr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  1      17    13.00                       ursqrte	v0.2s, v0.2s
-# CHECK-NEXT:  1      17    13.00                       ursqrte	v0.4s, v0.4s
+# CHECK-NEXT:  1      6     0.50                        ursqrte	v0.2s, v0.2s
+# CHECK-NEXT:  1      6     1.00                        ursqrte	v0.4s, v0.4s
 # CHECK-NEXT:  1      6     0.50                        ursra	d18, d10, #13
 # CHECK-NEXT:  1      6     1.00                        ursra	v0.16b, v0.16b, #3
 # CHECK-NEXT:  1      6     1.00                        ursra	v0.2d, v0.2d, #3
@@ -1586,7 +1586,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     966.00 966.00 327.50 327.50 466.00  -
+# CHECK-NEXT:  -      -      -      -     974.00 974.00 124.50 124.50 466.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -2028,19 +2028,19 @@
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frintz	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frintz	v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrte	h23, h26
-# CHECK-NEXT:  -      -      -      -      -      -     28.00  28.00   -      -     frsqrte	d21, d12
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrte	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -     28.00  28.00   -      -     frsqrte	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrte	v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrte	d21, d12
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrte	s22, s13
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frsqrte	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrte	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrte	v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrte	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrts	v20.4s, v26.4s, v27.4s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frsqrte	v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frsqrts	v20.4s, v26.4s, v27.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrts	v8.4h, v9.4h, v30.4h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frsqrte	v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrts	h28, h26, h1
-# CHECK-NEXT:  -      -      -      -      -      -     28.00  28.00   -      -     frsqrts	d8, d22, d18
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrts	s21, s5, s12
-# CHECK-NEXT:  -      -      -      -      -      -     28.00  28.00   -      -     frsqrts	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrts	d8, d22, d18
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrts	s21, s5, s12
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frsqrts	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -     28.00  28.00   -      -     fsqrt	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     fsqrt	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fsqrt	v0.4h, v0.4h
@@ -3046,8 +3046,8 @@
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     urshr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     urshr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     urshr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     ursqrte	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     ursqrte	v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     ursqrte	v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ursqrte	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     ursra	d18, d10, #13
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ursra	v0.16b, v0.16b, #3
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ursra	v0.2d, v0.2d, #3
