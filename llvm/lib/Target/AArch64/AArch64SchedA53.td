@@ -160,6 +160,16 @@ def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8;
 def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
 def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4;
                                                          let ReleaseAtCycles = [2]; }
+// Integer Advanced SIMD ALU. Measured on Cortex-A53, and matching the sibling
+// Cortex-A55 model: simple arithmetic (ADD/SUB/NEG, halving add/sub) is 2
+// cycles and the wider ALU ops (ABS, pairwise, reduce, saturating, abs-diff)
+// 3, not the flat 6 of WriteVd. Q-form keeps the two-cycle datapath occupancy.
+def A53WriteIVecD_2 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
+def A53WriteIVecQ_2 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2;
+                                                      let ReleaseAtCycles = [2]; }
+def A53WriteIVecD_3 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 3; }
+def A53WriteIVecQ_3 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 3;
+                                                      let ReleaseAtCycles = [2]; }
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -346,5 +356,29 @@ def : InstRW<[A53WriteFRecpEst],
       (instregex "^FR(ECP|SQRT)E(v1i32|v1i64|v2f32)$")>;
 def : InstRW<[A53WriteFRecpEstQ],
       (instregex "^FR(ECP|SQRT)E(v2f64|v4f32)$")>;
+
+// Integer ASIMD arithmetic (see the write classes above). Accumulate, widening
+// and reduction-narrowing ops are intentionally left on the default here: their
+// A53 measurements were less clear-cut than the sibling A55 model, so they are
+// deferred rather than guessed.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^(ADD|SUB|NEG)v(1i64|2i32|4i16|8i8)$",
+                 "^[SU]R?HADDv(2i32|4i16|8i8)$", "^[SU]HSUBv(2i32|4i16|8i8)$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^(ADD|SUB|NEG)v(2i64|4i32|8i16|16i8)$",
+                 "^[SU]R?HADDv(8i16|4i32|16i8)$", "^[SU]HSUBv(8i16|4i32|16i8)$")>;
+def : InstRW<[A53WriteIVecD_3],
+      (instregex "^ABSv(1i64|2i32|4i16|8i8)$",
+                 "^ADDPv(2i32|4i16|8i8)$",
+                 "^[SU]ABDv(2i32|4i16|8i8)$",
+                 "^[SU]ADDLPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$",
+                 "^([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(1i8|1i16|1i32|1i64|2i32|4i16|8i8)$",
+                 "^(ADDV|SADDLV|UADDLV)v")>;
+def : InstRW<[A53WriteIVecQ_3],
+      (instregex "^ABSv(2i64|4i32|8i16|16i8)$",
+                 "^ADDPv(16i8|2i64|4i32|8i16)$",
+                 "^[SU]ABDv(16i8|4i32|8i16)$",
+                 "^[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
+                 "^([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$")>;
 
 }
