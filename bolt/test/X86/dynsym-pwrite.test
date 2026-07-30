@@ -1,0 +1,89 @@
+## Check that llvm-bolt can properly update the .dynsym section
+## when it is located at a high offset in the ELF file.
+
+
+# REQUIRES: system-linux
+
+# RUN: yaml2obj %s -o %t.so
+# RUN: llvm-bolt %t.so -o %t.so.bolt 2>&1 | FileCheck %s
+
+# CHECK-NOT: We don't support extending the stream
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_X ]
+    VAddr:           0x1000
+    Align:           0x1000
+    FirstSec:        .text
+    LastSec:         .eh_frame
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_W ]
+    VAddr:           0x2000
+    Align:           0x1000
+    FirstSec:        .dynamic
+    LastSec:         .dynsym
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_R, PF_W ]
+    VAddr:           0x2000
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    VAddr:           0x1010
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Content:         'C3' # ret
+    Size:            0x1
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1010
+    Content:         '011B033B0C00000001000000F0FFFFFF28000000'
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1020
+    Content:         '1400000000000000017A5200017810011B0C070890010000140000001C000000C0FFFFFF010000000000000000000000'
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x2000
+    AddressAlign:    0x1000
+    Entries:
+      - Tag:             DT_SYMTAB
+        Value:           0x2100
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2050
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2100
+    Link:            .dynstr
+DynamicSymbols:
+  - Name:            _DYNAMIC
+    Binding:         STB_GLOBAL
+    Section:         .dynamic
+Symbols:
+  - Name:            _start
+    Section:         .text
+    Value:           0x1000
+    Size:            0x1
+    Binding:         STB_GLOBAL
+    Type:            STT_FUNC
+...

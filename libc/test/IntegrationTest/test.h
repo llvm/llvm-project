@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 #define LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -46,6 +47,18 @@
       LIBC_NAMESPACE::internal::exit(127);                                     \
   }
 
+#define __CHECK_STREQ(file, line, val1, val2, should_exit)                     \
+  if (const char *__val1_str = (val1), *__val2_str = (val2);                   \
+      __val1_str != __val2_str &&                                              \
+      (!__val1_str || !__val2_str ||                                           \
+       LIBC_NAMESPACE::cpp::string_view(__val1_str) !=                         \
+           LIBC_NAMESPACE::cpp::string_view(__val2_str))) {                    \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
+        line) ": Expected '" #val1 "' to be equal to '" #val2 "'\n");          \
+    if (should_exit)                                                           \
+      LIBC_NAMESPACE::internal::exit(127);                                     \
+  }
+
 ////////////////////////////////////////////////////////////////////////////////
 // Boolean checks are handled as comparison to the true / false values.
 
@@ -65,6 +78,14 @@
   __CHECK_NE(__FILE__, __LINE__, (val1), (val2), false)
 #define ASSERT_NE(val1, val2)                                                  \
   __CHECK_NE(__FILE__, __LINE__, (val1), (val2), true)
+
+////////////////////////////////////////////////////////////////////////////////
+// String equality.
+
+#define EXPECT_STREQ(val1, val2)                                               \
+  __CHECK_STREQ(__FILE__, __LINE__, (val1), (val2), false)
+#define ASSERT_STREQ(val1, val2)                                               \
+  __CHECK_STREQ(__FILE__, __LINE__, (val1), (val2), true)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Errno checks.

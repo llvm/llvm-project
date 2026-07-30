@@ -1166,6 +1166,14 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<
        VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
 }
 
+multiclass VOP1_Real_FULL_t16_and_fake16_gfx13<
+    bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {
+  defm opName#"_t16" :
+       VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_t16", asmName>;
+  defm opName#"_fake16":
+       VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
+}
+
 multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<bits<9> op, string opName,
                                                                   string asmName> :
   VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
@@ -1177,6 +1185,36 @@ multiclass VOP1_Real_OpSelIsDPP<GFXGen Gen, bits<9> op> : VOP1_Real_e32<Gen, op>
    def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
+}
+
+let HasClamp = 0 in {
+class VOP1_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOPProfile<[i16, v2f16, untyped, untyped]> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+class VOP1_CVT_PK_F8_F16_True16_Profile<RegisterOperand RC> : VOPProfile_True16<VOP_I16_V2F16> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+class VOP1_CVT_PK_F8_F16_Fake16_Profile<RegisterOperand RC> : VOPProfile_Fake16<VOP_I16_V2F16> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+}
+
+let SubtargetPredicate = isGFX1250Plus in {
+let ReadsModeReg = 0 in {
+  defm V_CVT_PK_FP8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_fp8_f16",
+                                                      VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                                      int_amdgcn_cvt_pk_fp8_f16>;
+  defm V_CVT_PK_BF8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_bf8_f16",
+                                                      VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                                      int_amdgcn_cvt_pk_bf8_f16>;
+}
 }
 
 multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
@@ -1268,6 +1306,9 @@ defm V_LOG_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07c
 defm V_EXP_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07d>;
 defm V_SIN_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07e>;
 defm V_COS_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07f>;
+
+defm V_CVT_PK_FP8_F16        : VOP1_Real_FULL_t16_and_fake16_gfx13<0x2c>;
+defm V_CVT_PK_BF8_F16        : VOP1_Real_FULL_t16_and_fake16_gfx13<0x2d>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

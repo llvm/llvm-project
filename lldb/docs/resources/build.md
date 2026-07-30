@@ -54,6 +54,7 @@ CMake configuration error.
 | Libxml2  | XML                                                        | `LLDB_ENABLE_LIBXML2` |
 | Python   | Python scripting. 3.8 or later (3.11 or later on Windows). | `LLDB_ENABLE_PYTHON`  |
 | Lua      | Lua scripting. Lua 5.3 and 5.4 are supported.              | `LLDB_ENABLE_LUA`     |
+| SWIG     | Required for Python or LUA support. Version 4 or later.    | N/A                   |
 
 Depending on your platform and package manager, one might run any of the
 commands below.
@@ -65,13 +66,6 @@ $ pkg install swig python libxml2
 $ pkgin install swig python38 cmake ninja-build
 $ brew install swig cmake ninja
 ```
-
-:::{note}
-There is an [incompatibility](https://github.com/swig/swig/issues/1321) between Python version 3.7 and later
-and swig versions older than 4.0.0 which makes builds of LLDB using debug
-versions of python unusable. This primarily affects Windows, as debug builds of
-LLDB must use debug python as well.
-:::
 
 :::{note}
 Installing multiple versions of Curses, particularly when only one is built with
@@ -271,6 +265,21 @@ $ cmake -G Ninja \
 
 It is strongly recommend to use a release build for the compiler to speed up
 test execution.
+
+#### Script Interpreter Plugins
+
+LLDB's script interpreter plugins (for Python and  Lua) can be built as static
+or dynamic libraries. This is controlled by
+`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS`, which defaults to `ON` on masOS and
+FreeBSD, and `OFF` everywhere else.
+
+`LLDB_ENABLE_PYTHON_LIMITED_API` makes LLDB use the Python
+[Limited API](https://docs.python.org/3/c-api/stable.html). It defaults to `ON`
+when using SWIG 4.2 or later.
+
+When both of these options are enabled, LLDB can use, and be used from, a
+different version of Python (3.8 or later) than it was built against. Note that
+on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required.
 
 #### Windows
 
