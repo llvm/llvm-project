@@ -14496,8 +14496,7 @@ static SDValue WidenVector(SDValue V64Reg, SelectionDAG &DAG) {
   MVT WideTy = MVT::getVectorVT(EltTy, 2 * NarrowSize);
   SDLoc DL(V64Reg);
 
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideTy, DAG.getPOISON(WideTy),
-                     V64Reg, DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(WideTy), V64Reg, 0);
 }
 
 /// getExtFactor - Determine the adjustment factor for the position when
@@ -17583,9 +17582,8 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
     EVT PackedVT = getPackedSVEVectorVT(InVT.getVectorElementType());
     if (PackedVT != InVT) {
       // Pack input into the bottom part of an SVE register and try again.
-      SDValue Container = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PackedVT,
-                                      DAG.getPOISON(PackedVT), Vec,
-                                      DAG.getVectorIdxConstant(0, DL));
+      SDValue Container =
+          DAG.getInsertSubvector(DL, DAG.getPOISON(PackedVT), Vec, 0);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Container, Idx);
     }
 
@@ -17629,11 +17627,9 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
       Lo = DAG.getExtractSubvector(DL, HalfVT, Vec0, 0);
       Hi = DAG.getExtractSubvector(DL, HalfVT, Vec0, NumElts / 2);
       if (Idx < (NumElts / 2))
-        Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Lo, Vec1,
-                         DAG.getVectorIdxConstant(Idx, DL));
+        Lo = DAG.getInsertSubvector(DL, Lo, Vec1, Idx);
       else
-        Hi = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Hi, Vec1,
-                         DAG.getVectorIdxConstant(Idx - (NumElts / 2), DL));
+        Hi = DAG.getInsertSubvector(DL, Hi, Vec1, Idx - (NumElts / 2));
 
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
@@ -26999,10 +26995,8 @@ static SDValue performLOADCombine(SDNode *N,
                   LD->getPointerInfo().getWithOffset(PtrOffset), NewAlign,
                   LD->getMemOperand()->getFlags(), LD->getAAInfo());
   SDValue PoisonVector = DAG.getPOISON(NewVT);
-  SDValue InsertIdx = DAG.getVectorIdxConstant(0, DL);
   SDValue ExtendedRemainingLoad =
-      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NewVT,
-                  {PoisonVector, RemainingLoad, InsertIdx});
+      DAG.getInsertSubvector(DL, PoisonVector, RemainingLoad, 0);
   LoadOps.push_back(ExtendedRemainingLoad);
   LoadOpsChain.push_back(SDValue(cast<SDNode>(RemainingLoad), 1));
   EVT ConcatVT =
@@ -33376,9 +33370,7 @@ static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V) {
          "Expected to convert into a scalable vector!");
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected a fixed length vector operand!");
-  SDLoc DL(V);
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getPOISON(VT), V, Zero);
+  return DAG.getInsertSubvector(SDLoc(V), DAG.getPOISON(VT), V, 0);
 }
 
 // Shrink V so it's just big enough to maintain a VT's worth of data.
