@@ -23,7 +23,6 @@ class TestSwiftHeadermapConflict(TestBase):
         setting=("symbols.use-swift-clangimporter", "false"),
     )
     @skipEmbeddedSwift
-    @skipUnlessDarwin
     @swiftTest
     def test(self):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.

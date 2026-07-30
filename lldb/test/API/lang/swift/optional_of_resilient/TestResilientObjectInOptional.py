@@ -19,7 +19,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestResilientObjectInOptional(TestBase):
     @skipEmbeddedSwift
-    @skipUnlessDarwin
     @swiftTest
     def test_optional_of_resilient(self):
         """Test that can extract resilient objects from an Optional"""
