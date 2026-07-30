@@ -15,8 +15,6 @@ add_mlir_conversion_library(MLIRXeGPUToXeVM
   MLIRGPUDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
-  MLIRSPIRVAttrToLLVMConversion
-  MLIRSPIRVDialect
   MLIRXeVMDialect
   MLIRVectorDialect
   MLIRArithDialect

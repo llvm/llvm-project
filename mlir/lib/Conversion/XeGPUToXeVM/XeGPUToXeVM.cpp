@@ -11,7 +11,6 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
@@ -21,7 +20,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
@@ -74,8 +72,8 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
 /// global, 2 = constant, 3 = shared/local, 4 = generic). A null attribute,
 /// meaning the memory space was left unspecified, maps to the default space
 /// 0. Returns failure if `memSpace` is a representation this pass does not
-/// know how to translate (e.g. an arbitrary string or dictionary attribute),
-/// rather than assuming it is an `IntegerAttr` and asserting.
+/// know how to translate (e.g. a SPIR-V storage class or an arbitrary string
+/// attribute), rather than assuming it is an `IntegerAttr` and asserting.
 static FailureOr<unsigned> getNumericMemorySpace(Attribute memSpace) {
   if (!memSpace)
     return 0u;
@@ -96,9 +94,6 @@ static FailureOr<unsigned> getNumericMemorySpace(Attribute memSpace) {
     }
     llvm_unreachable("Unknown GPU address space");
   }
-  if (auto storageClass = llvm::dyn_cast<spirv::StorageClassAttr>(memSpace))
-    return storageClassToAddressSpace(spirv::ClientAPI::OpenCL,
-                                      storageClass.getValue());
   return failure();
 }
 
