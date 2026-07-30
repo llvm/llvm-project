@@ -2871,6 +2871,7 @@ def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_am
 def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_async_lds">;
 
 // This is IntrHasSideEffects because it reads from a volatile hardware register.
+let TargetFeatures = "pops-exiting-wave-id" in
 def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
@@ -3271,6 +3272,16 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
     "",
     [SDNPMemOperand]
   >;
+
+//===----------------------------------------------------------------------===//
+// GFX13 Intrinsics
+//===----------------------------------------------------------------------===//
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_bf6_f32">;
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_fp6_f32">;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.

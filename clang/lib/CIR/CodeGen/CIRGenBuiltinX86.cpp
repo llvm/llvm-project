@@ -26,6 +26,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 #include <string>
 
 using namespace clang;
@@ -908,20 +909,177 @@ static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
   return shuffleResult;
 }
 
+mlir::Value CIRGenFunction::emitX86CpuIs(const CallExpr *expr) {
+  const Expr *cpuExpr = expr->getArg(0)->IgnoreParenCasts();
+  StringRef cpuStr = cast<clang::StringLiteral>(cpuExpr)->getString();
+  return emitX86CpuIs(getLoc(expr->getExprLoc()), cpuStr);
+}
+
+cir::GetGlobalOp CIRGenFunction::createGetCpuModel(mlir::Location loc) {
+  mlir::Type u32 = builder.getUInt32Ty();
+  auto cpuModel =
+      mlir::dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue("__cpu_model"));
+
+  if (!cpuModel) {
+    // Matching the struct layout from the compiler-rt/libgcc structure that is
+    // filled in:
+    // unsigned int __cpu_vendor;
+    // unsigned int __cpu_type;
+    // unsigned int __cpu_subtype;
+    // unsigned int __cpu_features[1];
+    mlir::Type tys[] = {u32, u32, u32, cir::ArrayType::get(u32, 1)};
+    mlir::Type modelTy = builder.getAnonRecordTy(tys, /*incomplete=*/false);
+    cpuModel =
+        cgm.createGlobalOp(loc, "__cpu_model", modelTy, /*isConstant=*/false);
+    cpuModel.setDsoLocal(true);
+  }
+
+  return cir::GetGlobalOp::create(builder, loc,
+                                  builder.getPointerTo(cpuModel.getSymType()),
+                                  cpuModel.getSymName());
+}
+
+cir::GetGlobalOp CIRGenFunction::createGetCpuFeatures2(mlir::Location loc) {
+  mlir::Type u32 = builder.getUInt32Ty();
+  auto cpuFeatures2 = mlir::dyn_cast_or_null<cir::GlobalOp>(
+      cgm.getGlobalValue("__cpu_features2"));
+
+  if (!cpuFeatures2) {
+    // This is just an array of 3 uint32s.
+    mlir::Type arrTy = cir::ArrayType::get(u32, 3);
+    cpuFeatures2 =
+        cgm.createGlobalOp(loc, "__cpu_features2", arrTy, /*isConstant=*/false);
+    cpuFeatures2.setDsoLocal(true);
+  }
+
+  return cir::GetGlobalOp::create(
+      builder, loc, builder.getPointerTo(cpuFeatures2.getSymType()),
+      cpuFeatures2.getSymName());
+}
+
+mlir::Value CIRGenFunction::emitX86CpuIs(mlir::Location loc, StringRef cpuStr) {
+  mlir::Type u32 = builder.getUInt32Ty();
+  // Calculate the index needed to access the correct field based on the
+  // range. ABI_VALUE matches with compiler-rt/libgcc values.
+  auto [fieldName, index, value] =
+      llvm::StringSwitch<std::tuple<llvm::StringLiteral, unsigned, unsigned>>(
+          cpuStr)
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE)                                    \
+  .Case(STRING, {"__cpu_vendor", 0u, ABI_VALUE})
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE)                                     \
+  .Case(STR, {"__cpu_type", 1u, ABI_VALUE})
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE)                                  \
+  .Case(STR, {"__cpu_subtype", 2u, ABI_VALUE})
+#include "llvm/TargetParser/X86TargetParser.def"
+          .Default({"", 0, 0});
+  assert(value != 0 && "Invalid CPUStr passed to CpuIs");
+
+  cir::GetGlobalOp getCpuModel = createGetCpuModel(loc);
+
+  // Note: the StringSwitch above ONLY has the ability to get the first 3
+  // fields, so we don't have to worry about it being the array field.  So we
+  // can continue assuming everything is an int.
+  cir::GetMemberOp cpuValuePtr = builder.createGetMember(
+      loc, builder.getPointerTo(u32), getCpuModel, fieldName, index);
+  cir::LoadOp getVal = builder.createAlignedLoad(loc, u32, cpuValuePtr,
+                                                 CharUnits::fromQuantity(4));
+
+  return cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, getVal,
+                            builder.getUInt32(value, loc));
+}
+
+mlir::Value CIRGenFunction::emitX86CpuSupports(const CallExpr *expr) {
+  const Expr *featureExpr = expr->getArg(0)->IgnoreParenCasts();
+  StringRef featureStr = cast<StringLiteral>(featureExpr)->getString();
+  if (!getContext().getTargetInfo().validateCpuSupports(featureStr))
+    return builder.getFalse(getLoc(expr->getExprLoc()));
+  return emitX86CpuSupports(getLoc(expr->getExprLoc()), featureStr);
+}
+
+mlir::Value
+CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
+                                   ArrayRef<StringRef> featureStrs) {
+  return emitX86CpuSupports(loc, llvm::X86::getCpuSupportsMask(featureStrs));
+}
+
+mlir::Value
+CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
+                                   std::array<uint32_t, 4> featureMask) {
+  mlir::Type u32 = builder.getUInt32Ty();
+  mlir::Value result;
+
+  auto addCondition = [&](unsigned maskVal, mlir::Value features) {
+    cir::ConstantOp mask = builder.getUInt32(maskVal, loc);
+    mlir::Value bitset = builder.createAnd(loc, features, mask);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, bitset, mask);
+
+    if (result)
+      result = builder.createAnd(loc, result, cmp);
+    else
+      result = cmp;
+  };
+
+  // only check the '__cpu_features[0]' if we have a non-zero value.  A zero
+  // here means to JUST check __cpu_features2.
+  if (featureMask[0] != 0) {
+    cir::GetGlobalOp getCpuModel = createGetCpuModel(loc);
+    mlir::Type u32 = builder.getUInt32Ty();
+    auto arrTy = cir::ArrayType::get(u32, 1);
+
+    // Pick out the __cpu_features field, the 4th field in the struct.
+    cir::GetMemberOp cpuFeatArrPtr = builder.createGetMember(
+        loc, builder.getPointerTo(arrTy), getCpuModel, "__cpu_features", 3);
+
+    mlir::Value cpuFeatVal = builder.getArrayElement(
+        loc, loc, cpuFeatArrPtr, arrTy,
+        /*index=*/builder.getUInt32(0, loc), /*shouldDecay=*/true);
+    cir::LoadOp features = builder.createAlignedLoad(
+        loc, u32, cpuFeatVal, CharUnits::fromQuantity(4));
+
+    addCondition(featureMask[0], features);
+  }
+
+  // the 0th index is looked up in the __cpu_model field, the rest come from an
+  // array.
+  cir::GetGlobalOp getCpuFeatures2; // = createGetCpuFeatures2(loc);
+  for (int i = 1; i != 4; ++i) {
+    const uint32_t val = featureMask[i];
+    if (!val)
+      continue;
+    if (!getCpuFeatures2)
+      getCpuFeatures2 = createGetCpuFeatures2(loc);
+    mlir::Value getArrayElt = builder.getArrayElement(
+        loc, loc, getCpuFeatures2,
+        cast<cir::PointerType>(getCpuFeatures2.getType()).getPointee(),
+        builder.getUInt32(/*index=*/i - 1, loc),
+        /*shouldDecay=*/true);
+    cir::LoadOp features = builder.createAlignedLoad(
+        loc, u32, getArrayElt, CharUnits::fromQuantity(4));
+
+    addCondition(val, features);
+  }
+
+  return result;
+}
+
+mlir::Value CIRGenFunction::emitX86CpuInit(mlir::Location loc) {
+  cir::FuncOp initFunc =
+      cgm.createRuntimeFunction(builder.getVoidFnTy(), "__cpu_indicator_init");
+  initFunc.setDsoLocal(true);
+  assert(!cir::MissingFeatures::setDLLStorageClass());
+
+  return builder.createCallOp(loc, initFunc, {}).getResult();
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
-  if (builtinID == Builtin::BI__builtin_cpu_is) {
-    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_is");
-    return mlir::Value{};
-  }
-  if (builtinID == Builtin::BI__builtin_cpu_supports) {
-    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_supports");
-    return mlir::Value{};
-  }
-  if (builtinID == Builtin::BI__builtin_cpu_init) {
-    cgm.errorNYI(expr->getSourceRange(), "__builtin_cpu_init");
-    return mlir::Value{};
-  }
+  if (builtinID == Builtin::BI__builtin_cpu_is)
+    return emitX86CpuIs(expr);
+  if (builtinID == Builtin::BI__builtin_cpu_supports)
+    return emitX86CpuSupports(expr);
+  if (builtinID == Builtin::BI__builtin_cpu_init)
+    return emitX86CpuInit(getLoc(expr->getExprLoc()));
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.

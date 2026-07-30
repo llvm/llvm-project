@@ -27,6 +27,7 @@ from .types import (
     CompletionsArgs,
     ConfigurationDoneArgs,
     ContinueArgs,
+    ContinuedEvent,
     DataBreakpoint,
     DataBreakpointInfoArgs,
     DisassembleArgs,
@@ -1103,8 +1104,17 @@ class DAPTestSession(Session):
         return self.wait_for_event(MemoryEvent, after=after)
 
     def do_continue(self):
+        """Send a 'continueRequest' and wait for a 'ContinuedEvent',
+
+        Receiving the continue response does not mean the process continued,
+        It means we successfully sent the continue packet.
+        LLDB can continue asynchronously, so wait for the 'Continued' event.
+        """
         self.ensure_initialized()
-        return self.send_request(ContinueArgs()).result()
+        prior_event = self.last_event()
+        response = self.send_request(ContinueArgs()).result()
+        self.wait_for_event(ContinuedEvent, after=prior_event)
+        return response
 
     def continue_to_exit(self, exitCode: int = 0) -> ExitedEvent:
         continue_response = self.do_continue()
@@ -1583,17 +1593,22 @@ class DAPTestSession(Session):
         )
         return response.body.variables
 
-    def thread_context_from(self, thread_ref: int | StoppedEvent) -> ThreadContext:
-        if isinstance(thread_ref, StoppedEvent):
+    def thread_context_from(
+        self, thread_ref: int | StoppedEvent | InvalidatedEvent
+    ) -> ThreadContext:
+        if isinstance(thread_ref, (StoppedEvent, InvalidatedEvent)):
             self.test_case.assertIsNotNone(thread_ref.body.threadId)
             thread_id = cast(int, thread_ref.body.threadId)
         elif isinstance(thread_ref, int):
             thread_id = thread_ref
         else:
-            self.test_case.fail(f"cannot get thread context from '{type(thread_ref)}'.")
+            ref_type_name = type(thread_ref).__name__
+            self.test_case.fail(f"cannot get thread context from '{ref_type_name}'.")
         return ThreadContext(thread_id, self)
 
-    def top_frame_from(self, thread_ref: int | StoppedEvent) -> FrameContext:
+    def top_frame_from(
+        self, thread_ref: int | StoppedEvent | InvalidatedEvent
+    ) -> FrameContext:
         """Top FrameContext of the currently stopped thread."""
         return self.thread_context_from(thread_ref).top_frame()
 

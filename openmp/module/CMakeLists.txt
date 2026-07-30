@@ -26,7 +26,7 @@ if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   target_compile_options(libomp-mod PRIVATE -fno-range-check)
 endif ()
 
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+if (LIBOMP_TARGET_IS_GPU)
   target_compile_options(libomp-mod PRIVATE
     $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
   )

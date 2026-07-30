@@ -3985,6 +3985,12 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 LogicalResult tosa::ResizeOp::verify() {
   const Value input = getInput();
   const Value output = getOutput();
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
+
+  if (isa<BlockScaledType>(inputElementType) &&
+      getMode() != ResizeMode::NEAREST_NEIGHBOR)
+    return emitOpError("requires NEAREST_NEIGHBOR mode for block scaled input");
+
   const RankedTensorType inputType =
       llvm::dyn_cast<RankedTensorType>(input.getType());
   const RankedTensorType outputType =

@@ -263,11 +263,6 @@ public:
     return StructuredData::ObjectSP();
   }
 
-  virtual StructuredData::GenericSP
-  CreateScriptCommandObject(const char *class_name) {
-    return StructuredData::GenericSP();
-  }
-
   virtual StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec, lldb_private::Status &error) {
     return StructuredData::ObjectSP();
@@ -394,42 +389,6 @@ public:
     return false;
   }
 
-  virtual bool RunScriptBasedCommand(
-      StructuredData::GenericSP impl_obj_sp, llvm::StringRef args,
-      ScriptedCommandSynchronicity synchronicity,
-      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
-      const lldb_private::ExecutionContext &exe_ctx) {
-    return false;
-  }
-
-  virtual bool RunScriptBasedParsedCommand(
-      StructuredData::GenericSP impl_obj_sp, Args& args,
-      ScriptedCommandSynchronicity synchronicity,
-      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
-      const lldb_private::ExecutionContext &exe_ctx) {
-    return false;
-  }
-
-  virtual std::optional<std::string>
-  GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
-                                     Args &args) {
-    return std::nullopt;
-  }
-
-  virtual StructuredData::DictionarySP
-  HandleArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
-      size_t args_pos, size_t char_in_arg) {
-    return {};
-  }
-
-  virtual StructuredData::DictionarySP
-  HandleOptionArgumentCompletionForScriptedCommand(
-      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name,
-      size_t char_in_arg) {
-    return {};
-  }
-
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
@@ -464,43 +423,6 @@ public:
   }
 
   virtual bool GetDocumentationForItem(const char *item, std::string &dest) {
-    dest.clear();
-    return false;
-  }
-
-  virtual bool
-  GetShortHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
-                               std::string &dest) {
-    dest.clear();
-    return false;
-  }
-
-  virtual StructuredData::ObjectSP
-  GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
-    return {};
-  }
-
-  virtual StructuredData::ObjectSP
-  GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
-    return {};
-  }
-
-  virtual bool SetOptionValueForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
-      llvm::StringRef long_option, llvm::StringRef value) {
-    return false;
-  }
-
-  virtual void
-  OptionParsingStartedForCommandObject(StructuredData::GenericSP cmd_obj_sp) {}
-
-  virtual uint32_t
-  GetFlagsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
-    return 0;
-  }
-
-  virtual bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
-                                           std::string &dest) {
     dest.clear();
     return false;
   }
@@ -586,6 +508,15 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedCommandInterfaceSP CreateScriptedCommandInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedStringSummaryInterfaceSP
+  CreateScriptedStringSummaryInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -657,6 +588,12 @@ public:
 
   lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
       const lldb::SBBreakpointLocation &break_loc) const;
+
+  CommandReturnObject *GetOpaqueTypeFromSBCommandReturnObject(
+      const lldb::SBCommandReturnObject &cmd_retobj) const;
+
+  lldb::DebuggerSP
+  GetOpaqueTypeFromSBDebugger(const lldb::SBDebugger &debugger) const;
 
   lldb::ProcessAttachInfoSP
   GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;

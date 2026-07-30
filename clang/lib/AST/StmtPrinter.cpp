@@ -35,7 +35,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
@@ -43,7 +43,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -160,6 +159,8 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
+
+    void VisitBinComma(BinaryOperator *Node);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -1916,6 +1917,12 @@ void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());
+}
+
+void StmtPrinter::VisitBinComma(BinaryOperator *Node) {
+  PrintExpr(Node->getLHS());
+  OS << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
+  PrintExpr(Node->getRHS());
 }
 
 void StmtPrinter::VisitBinaryOperator(BinaryOperator *Node) {

@@ -25,14 +25,6 @@ void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
 
-// TODO: It seems that some old test frameworks does not use
-// add_libc_hermetic_test properly. Such that they won't get correct linkage
-// against the object containing this function. We create a dummy function that
-// always returns 0 to indicate a failure.
-[[gnu::weak]] unsigned long getauxval([[maybe_unused]] unsigned long id) {
-  return 0;
-}
-
 } // namespace LIBC_NAMESPACE_DECL
 
 constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
@@ -78,13 +70,16 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
-void *malloc(size_t s) {
-  // Keep the bump pointer aligned on an eight byte boundary.
-  s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+void *aligned_alloc(size_t align, size_t s) {
+  if (align & (align - 1)) // Must be power of 2
+    return nullptr;
+  s = ((s + align - 1) / align) * align;
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
+
+void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
 
 void free(void *) {}
 
@@ -134,7 +129,9 @@ void *operator new[](size_t size) { return malloc(size); }
 
 void operator delete(void *ptr) { free(ptr); }
 
-void operator delete(void *ptr, [[maybe_unused]] size_t size) { free(ptr); }
+void operator delete[](void *ptr) { free(ptr); }
+
+void operator delete(void *ptr, size_t) { free(ptr); }
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
