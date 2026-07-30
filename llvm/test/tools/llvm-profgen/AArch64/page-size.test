@@ -1,0 +1,33 @@
+; RUN: not llvm-profgen --perfscript=%S/Inputs/multi-load-segs.perfscript --binary=%S/Inputs/multi-load-segs.perfbin --output=%t --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0 --page-size=0 2>&1 | FileCheck %s --check-prefix=INVALID
+; RUN: not llvm-profgen --perfscript=%S/Inputs/multi-load-segs.perfscript --binary=%S/Inputs/multi-load-segs.perfbin --output=%t --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0 --page-size=3 2>&1 | FileCheck %s --check-prefix=INVALID
+; RUN: llvm-profgen --perfscript=%S/Inputs/multi-load-segs.perfscript --binary=%S/Inputs/multi-load-segs.perfbin --output=%t --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0 --page-size=4096
+; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --perfscript=%S/Inputs/multi-load-segs-64k.perfscript --binary=%S/Inputs/multi-load-segs.perfbin --output=%t --format=text --csspgo-preinliner=0 --gen-cs-nested-profile=0 --page-size=65536
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-64K
+
+;;  %S/Inputs/multi-load-segs.perfbin is an ELF image with two executable load segments.
+; running llvm-readelf -l %S/Inputs/multi-load-segs.perfbin gives:
+;;  LOAD           0x000000 0x0000000000200000 0x0000000000200000 0x00075c 0x00075c R   0x1000
+;;  LOAD           0x000760 0x0000000000201760 0x0000000000201760 0x0004c0 0x0004c0 R E 0x1000
+;;  LOAD           0x000c20 0x0000000000202c20 0x0000000000202c20 0x0001f0 0x0001f0 RW  0x1000
+;;  LOAD           0x000e10 0x0000000000203e10 0x0000000000203e10 0x000040 0x000058 RW  0x1000
+;;  LOAD           0x200000 0x0000000000400000 0x0000000000400000 0x0005e8 0x0005e8 R E 0x200000
+
+; INVALID: Number in -page-size=<num> must be positive power of two
+
+; CHECK:      [main:2 @ _Z10sort_arrayv:6 @ _Z11bubble_sortPii]:465:0
+; CHECK-NEXT:  4: 31
+; CHECK-NEXT:  5: 31
+; CHECK-NEXT:  7: 31
+; CHECK-NEXT:  8: 31
+; CHECK-NEXT:  65516: 31
+; CHECK-NEXT:    !Attributes: 1
+
+; CHECK-64K:      [main:2 @ _Z10sort_arrayv:6 @ _Z11bubble_sortPii]:465:0
+; CHECK-64K-NEXT:  4: 31
+; CHECK-64K-NEXT:  5: 31
+; CHECK-64K-NEXT:  7: 31
+; CHECK-64K-NEXT:  8: 31
+; CHECK-64K-NEXT:  65516: 31
+; CHECK-64K-NEXT:    !Attributes: 1
+
