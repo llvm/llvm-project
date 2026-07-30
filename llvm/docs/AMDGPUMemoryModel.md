@@ -331,6 +331,9 @@ there exists a visibility operation `Z` on write `W` such that:
 - `Z` is `R` itself, or,
 - `Z` precedes `R` in program order.
 
+A read `R` is *location-ordered* before an access (read and/or write) `X` to the
+same address if it happens-before `X`.
+
 The AMDGPU memory model overrides the definition of each byte in the
 {ref}`LLVM memory model<memmodel>` as follows.
 
@@ -343,7 +346,8 @@ For each byte of a read `R`, `R` may see any write to the same byte, except:
 
 - If a write `W1` is *location-ordered* before a write `W2`, and `W2` is
   *location-ordered* before a read `R`, then `R` may not see `W1`.
-- If a read `R` happens-before a write `W3`, then `R` may not see `W3`.
+- If a read `R` is *location-ordered* before a write `W3`, then `R` may not see
+  `W3`.
 
 The value returned by `R` is then defined as follows:
 
@@ -366,8 +370,8 @@ This section is informational.
 
 The following properties follow from the definitions above:
 
-1. **Happens-before is necessary for location-order.** A write `W` is
-   *location-ordered* before a read `R` only if `W` happens-before `R`.
+1. **Happens-before is necessary for location-order.** An access `X` is
+   *location-ordered* before an access `Y` only if `X` happens-before `Y`.
    This follows from the definition of availability and visibility operations,
    which always require a happens-before link with the preceding operation in
    the chain.
