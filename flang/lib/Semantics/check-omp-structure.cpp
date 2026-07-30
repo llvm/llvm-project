@@ -947,14 +947,25 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
 
 void OmpStructureChecker::CheckDirectiveInPureProcedure(
     parser::CharBlock source, llvm::omp::Directive id) {
-  // A directive that does not have the "pure" property is not permitted to
-  // appear in a Fortran PURE procedure, since it may introduce side effects.
-  if (llvm::omp::isDirectivePure(id)) {
+  const Scope &scope{context_.FindScope(source)};
+  if (!FindPureProcedureContaining(scope)) {
     return;
   }
-  const Scope &scope{context_.FindScope(source)};
-  if (FindPureProcedureContaining(scope)) {
-    unsigned version{context_.langOptions().OpenMPVersion};
+  unsigned version{context_.langOptions().OpenMPVersion};
+  // OpenMP 5.1 permits only SIMD and declarative directives in a PURE
+  // procedure; OpenMP 5.2 additionally permits metadirective, assume(s),
+  // nothing, error, and the loop-transforming constructs).
+  bool alwaysAllowed{id == llvm::omp::Directive::OMPD_simd ||
+      llvm::omp::getDirectiveCategory(id) == llvm::omp::Category::Declarative};
+  if (alwaysAllowed || (version >= 52 && llvm::omp::isDirectivePure(id))) {
+    return;
+  }
+  if (llvm::omp::isDirectivePure(id)) {
+    context_.Say(source,
+        "The OpenMP directive '%s' is not allowed in a PURE procedure in %s, %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), ThisVersion(version),
+        TryVersion(52));
+  } else {
     context_.Say(source,
         "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,
         parser::omp::GetUpperName(id, version));
