@@ -424,8 +424,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      std::chrono::microseconds(5),
-      process->GetUtilityExpressionTimeout() / 2));
+      std::chrono::seconds(5), process->GetUtilityExpressionTimeout() / 2));
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults result =
@@ -937,8 +936,7 @@ extern "C" {
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
-      std::chrono::microseconds(5),
-      process->GetUtilityExpressionTimeout() / 2));
+      std::chrono::seconds(5), process->GetUtilityExpressionTimeout() / 2));
 
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);
