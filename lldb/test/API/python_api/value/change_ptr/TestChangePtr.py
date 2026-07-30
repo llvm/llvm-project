@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class ChangePtrTest(TestBase):
-
     def test(self):
         self.build()
 
