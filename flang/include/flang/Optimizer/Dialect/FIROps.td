@@ -1544,6 +1544,10 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
   let results = (outs fir_TypeDescType);
 }
 
+//===----------------------------------------------------------------------===//
+// Record and array type operations
+//===----------------------------------------------------------------------===//
+
 def fir_ArrayCoorOp
     : fir_Op<"array_coor", [NoMemoryEffect, AttrSizedOperandSegments,
                             fir_FortranObjectViewOpInterface]> {
