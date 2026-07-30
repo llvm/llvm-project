@@ -1992,6 +1992,30 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
         *SemaRef.CurrentInstantiationScope->findInstantiationOf(D));
   }
 
+  // ***REVIEWER***: Essentially cloned from the above TemplateTemplateParmDecl
+  // logic. This seems like the actual root cause fix, but prior "correct seeming"
+  // changes i've made against template code was gratuitously wrong.
+  // Biggest question: is it correct to use !getInstantiationOfIfExists as the
+  // test for failure?
+  // Errrr, ***REVIEWER*** again: I thought this was specific to errors, but I
+  // managed to come up with a couple of valid code tests that trip this
+  // assertion.
+  if (BailOutOnIncomplete && isa<ParmVarDecl>(D) &&
+      SemaRef.CurrentInstantiationScope &&
+      !SemaRef.CurrentInstantiationScope->getInstantiationOfIfExists(D)) {
+    assert(!SemaRef.CodeSynthesisContexts.empty() &&
+           SemaRef.CodeSynthesisContexts.back().Kind ==
+               Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution &&
+           "***REVIEWER***: it seemed like this is only mean to happen during "
+           "substitution, but i based that on adding a __builtin_trap() and "
+           "then looking at a few of the resulting crashing tests and they "
+           "were all in this mode. Is that expected/correct? the assertion "
+           "doesn't fire on any of the template tests"
+           "");
+    IsIncomplete = true;
+    return nullptr;
+  }
+
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
 
