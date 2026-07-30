@@ -82,12 +82,17 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 declare target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32, i32, i32, i32, ptr)
 declare ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0), i32)
 
-; Byte-addressable VulkanBuffer getpointer is typed as i8, but typed
-; scalar loads/stores add an i8->T spv_ptrcast. Legalize that by storing
-; directly through the getpointer result.
+; Byte-addressable buffer tests model Clang's SPIR-V resource layout for HLSL
+; ByteAddressBuffer/RWByteAddressBuffer: the handle carries [0 x i8] as the
+; OpTypeRuntimeArray element type for storage-buffer blocks. That i8 names
+; byte-addressable layout in LLVM IR; it is not an HLSL surface type. Typed
+; HLSL accesses (e.g. Store(offset, uint)) lower to i32 load/store at a byte
+; offset in getpointer's index operand. emit-intrinsics tags getpointer as i8
+; from the layout, then inserts i8->T spv_ptrcast for the typed access;
+; legalize-pointer-cast removes the ptrcast and keeps the typed access.
 
-define spir_func void @byteBufferStore() #0 {
-; CHECK-LABEL: define spir_func void @byteBufferStore(
+define void @byteBufferStore() {
+; CHECK-LABEL: define void @byteBufferStore(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: store i32 42, ptr addrspace(11)
 entry:
@@ -97,8 +102,8 @@ entry:
   ret void
 }
 
-define spir_func void @byteBufferLoad() #0 {
-; CHECK-LABEL: define spir_func void @byteBufferLoad(
+define void @byteBufferLoad() {
+; CHECK-LABEL: define void @byteBufferLoad(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: load i32, ptr addrspace(11)
 entry:
@@ -113,8 +118,8 @@ entry:
 ; Regression for issue #192523: handle flows through memory before getpointer
 ; (as in local RWByteAddressBuffer arrays), then typed store hits i8->i32 ptrcast.
 
-define spir_func void @byteBufferStoreViaLoadedHandle() #0 {
-; CHECK-LABEL: define spir_func void @byteBufferStoreViaLoadedHandle(
+define void @byteBufferStoreViaLoadedHandle() {
+; CHECK-LABEL: define void @byteBufferStoreViaLoadedHandle(
 ; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
 ; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
 ; CHECK: store i32 42, ptr addrspace(11)
@@ -124,5 +129,19 @@ entry:
   %loaded = load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot, align 8
   %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %loaded, i32 0)
   store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadViaLoadedHandle() {
+; CHECK-LABEL: define void @byteBufferLoadViaLoadedHandle(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
+; CHECK: load i32, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  store target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, ptr @slot, align 8
+  %loaded = load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot, align 8
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %loaded, i32 0)
+  %val = load i32, ptr addrspace(11) %ptr, align 4
   ret void
 }
