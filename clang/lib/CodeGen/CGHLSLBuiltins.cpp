@@ -310,16 +310,6 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
-// Pick the atomic memory scope for an HLSL Interlocked* op by destination:
-// Workgroup for groupshared, Device otherwise (Vulkan forbids CrossDevice).
-static llvm::SyncScope::ID GetInterlockedScope(CodeGenFunction &CGF,
-                                               const LValue &DestLV) {
-  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
-                            ? "workgroup"
-                            : "device";
-  return CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
-}
-
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
@@ -331,8 +321,7 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
          "Intrinsic InterlockedOp value operand must be an integer");
 
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
-      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic,
-      GetInterlockedScope(CGF, DestLV));
+      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic);
 
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.

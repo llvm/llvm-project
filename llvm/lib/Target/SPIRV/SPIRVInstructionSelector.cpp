@@ -2102,9 +2102,6 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
-  // TODO: Like selectAtomicRMW, a relaxed shader atomic must not carry a
-  // storage-class bit (Vulkan rejects it). Drop StorageClass here when
-  // MemSem is None and STI.isShader() once such an atomic load is reachable.
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
@@ -2254,9 +2251,6 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
-  // TODO: Like selectAtomicRMW, a relaxed shader atomic must not carry a
-  // storage-class bit (Vulkan rejects it). Drop StorageClass here when
-  // MemSem is None and STI.isShader() once such an atomic store is reachable.
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
   MachineIRBuilder MIRBuilder(I);
 
@@ -2530,13 +2524,7 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
-  uint32_t OrderSem = static_cast<uint32_t>(getMemSemantics(AO));
-  // Vulkan forbids a storage-class semantics bit (e.g. WorkgroupMemory) with a
-  // relaxed order, so a relaxed shader atomic must carry no storage-class bit.
-  if (STI.isShader() &&
-      OrderSem == static_cast<uint32_t>(SPIRV::MemorySemantics::None))
-    ScSem = 0;
-  uint32_t MemSem = OrderSem | ScSem;
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO)) | ScSem;
   Register MemSemReg = buildI32Constant(MemSem, I);
 
   Register ValueReg = I.getOperand(2).getReg();

@@ -2599,9 +2599,6 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
-  // TODO: Like selectAtomicRMW, a relaxed shader atomic must not carry a
-  // storage-class bit (Vulkan rejects it). Drop ScSem for the success/failure
-  // semantics when the order is None and ST.isShader() once HLSL emits cmpxchg.
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
   Args.push_back(B.getInt32(

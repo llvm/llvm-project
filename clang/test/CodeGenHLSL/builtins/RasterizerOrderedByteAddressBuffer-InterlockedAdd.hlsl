@@ -13,7 +13,7 @@ RasterizerOrderedByteAddressBuffer ROVB : register(u1);
 // CHECK-LABEL: define void @{{.*}}test_rovb_int_2arg
 // DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
 // DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: atomicrmw add ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
+// DXCHECK: atomicrmw add ptr %[[PTR]], i32 %{{.*}} monotonic
 export void test_rovb_int_2arg(uint off, int v) {
   ROVB.InterlockedAdd(off, v);
 }
@@ -21,7 +21,7 @@ export void test_rovb_int_2arg(uint off, int v) {
 // CHECK-LABEL: define void @{{.*}}test_rovb_uint_3arg
 // DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
 // DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: %[[R:.*]] = atomicrmw add ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
+// DXCHECK: %[[R:.*]] = atomicrmw add ptr %[[PTR]], i32 %{{.*}} monotonic
 // DXCHECK: store i32 %[[R]], ptr {{.*}}
 export void test_rovb_uint_3arg(uint off, uint v, out uint orig) {
   ROVB.InterlockedAdd(off, v, orig);
@@ -30,7 +30,7 @@ export void test_rovb_uint_3arg(uint off, uint v, out uint orig) {
 // CHECK-LABEL: define void @{{.*}}test_rovb_int64_2arg
 // DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
 // DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: atomicrmw add ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
+// DXCHECK: atomicrmw add ptr %[[PTR]], i64 %{{.*}} monotonic
 export void test_rovb_int64_2arg(uint off, int64_t v) {
   ROVB.InterlockedAdd64(off, v);
 }
@@ -38,7 +38,7 @@ export void test_rovb_int64_2arg(uint off, int64_t v) {
 // CHECK-LABEL: define void @{{.*}}test_rovb_uint64_3arg
 // DXCHECK: %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 1), ptr {{.*}}
 // DXCHECK: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_1t.i32(target("dx.RawBuffer", i8, 1, 1) %[[HANDLE]], i32 %{{.*}})
-// DXCHECK: %[[R:.*]] = atomicrmw add ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
+// DXCHECK: %[[R:.*]] = atomicrmw add ptr %[[PTR]], i64 %{{.*}} monotonic
 // DXCHECK: store i64 %[[R]], ptr {{.*}}
 export void test_rovb_uint64_3arg(uint off, uint64_t v, out uint64_t orig) {
   ROVB.InterlockedAdd64(off, v, orig);
