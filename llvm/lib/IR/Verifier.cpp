@@ -818,7 +818,8 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   // An exemption to this is sectioned global variables with local linkage
   // and no uses. These are usually used for metadata.
   Check(!GVType->isSized() ||
-            (GV.use_empty() && GV.hasLocalLinkage() && GV.hasSection()) ||
+            (GV.hasLocalLinkage() && GV.hasSection() &&
+             GV.materialized_use_empty()) ||
             isUIntN(DL.getAddressSizeInBits(GV.getAddressSpace()),
                     GV.getGlobalSize(DL)),
         "Global variable is too large to fit into the address space", &GV,
