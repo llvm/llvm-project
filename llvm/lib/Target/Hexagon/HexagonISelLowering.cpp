@@ -2118,6 +2118,14 @@ void HexagonTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Value *UnderlyingObj =
         getUnderLyingObjectForBrevLdIntr(BasePtrVal, Info.offset, HasOffset);
+    // The underlying object is unknown if the base pointer could not be traced
+    // back to a pointer value. Also, unless the object is aligned to 64K, the
+    // low 16 bits of the base pointer are not known, and reversing them can
+    // produce an address anywhere in the surrounding 64K region, possibly
+    // outside of the object.
+    if (!UnderlyingObj->getType()->isPointerTy() ||
+        UnderlyingObj->getPointerAlignment(DL) < Align(65536))
+      HasOffset = false;
     if (HasOffset)
       Info.ptrVal = UnderlyingObj;
     Info.align = DL.getABITypeAlign(Info.memVT.getTypeForEVT(Cont));
