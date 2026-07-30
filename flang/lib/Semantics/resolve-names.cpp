@@ -10786,25 +10786,25 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // this does not require -fcuda: OpenACC + -gpu=mem:unified relies on
         // it, and cuf.alloc does not go through the CUDA Fortran
         // managed-descriptor pipeline that motivated the -fcuda gate.
-        auto boundIsNonConstant{[](const Bound &b) {
-          return !b.isExplicit() || !b.GetExplicit() ||
-              !evaluate::IsConstantExpr(*b.GetExplicit());
-        }};
-        bool hasDynamicExtent{false};
-        for (const ShapeSpec &ss : object->shape()) {
-          if (boundIsNonConstant(ss.lbound()) ||
-              boundIsNonConstant(ss.ubound())) {
-            hasDynamicExtent = true;
-            break;
+        std::optional<common::CUDADataAttr> attr;
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaUnified))
+          attr = common::CUDADataAttr::Unified;
+        else if (context().languageFeatures().IsEnabled(
+                     common::LanguageFeature::CudaManaged))
+          attr = common::CUDADataAttr::Managed;
+        if (attr) {
+          auto boundIsNonConstant{[](const Bound &b) {
+            return !b.isExplicit() || !b.GetExplicit() ||
+                !evaluate::IsConstantExpr(*b.GetExplicit());
+          }};
+          for (const ShapeSpec &ss : object->shape()) {
+            if (boundIsNonConstant(ss.lbound()) ||
+                boundIsNonConstant(ss.ubound())) {
+              object->set_cudaDataAttr(*attr);
+              break;
+            }
           }
-        }
-        if (hasDynamicExtent) {
-          if (context().languageFeatures().IsEnabled(
-                  common::LanguageFeature::CudaUnified))
-            object->set_cudaDataAttr(common::CUDADataAttr::Unified);
-          else if (context().languageFeatures().IsEnabled(
-                       common::LanguageFeature::CudaManaged))
-            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
         }
       }
     }
