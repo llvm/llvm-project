@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PATHCONF_UTILS_H
 #define LLVM_LIBC_SRC_UNISTD_PATHCONF_UTILS_H
 
+#include "hdr/types/struct_statfs.h"
 #include "src/__support/macros/config.h"
-#include "src/sys/statvfs/linux/statfs_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-long pathconfig(const statfs_utils::LinuxStatFs &s, int name);
+long pathconfig(const ::statfs &s, int name);
 
 } // namespace LIBC_NAMESPACE_DECL
 
