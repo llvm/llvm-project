@@ -39,6 +39,9 @@
 # CHECK-NEXT:         "codeDescription": {
 # CHECK-NEXT:           "href": "{{.*}}"
 # CHECK-NEXT:         },
+# CHECK-NEXT:         "data": {
+# CHECK-NEXT:           "clangdFixId": {{[0-9]+}}
+# CHECK-NEXT:         },
 # CHECK-NEXT:         "message": "No header providing \"Foo\" is directly included (fixes available)",
 # CHECK-NEXT:         "range": {
 # CHECK-NEXT:           "end": {
@@ -58,6 +61,9 @@
 # CHECK-NEXT:         "codeDescription": {
 # CHECK-NEXT:           "href": "{{.*}}"
 # CHECK-NEXT:         },
+# CHECK-NEXT:         "data": {
+# CHECK-NEXT:           "clangdFixId": {{[0-9]+}}
+# CHECK-NEXT:         },
 # CHECK-NEXT:         "message": "No header providing \"Bar\" is directly included (fixes available)",
 # CHECK-NEXT:         "range": {
 # CHECK-NEXT:           "end": {
@@ -76,6 +82,9 @@
 # CHECK-NEXT:         "code": "unused-includes",
 # CHECK-NEXT:         "codeDescription": {
 # CHECK-NEXT:           "href": "{{.*}}"
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "data": {
+# CHECK-NEXT:           "clangdFixId": {{[0-9]+}}
 # CHECK-NEXT:         },
 # CHECK-NEXT:         "message": "Included header all1.h is not used directly (fixes available)",
 # CHECK-NEXT:         "range": {
@@ -98,6 +107,9 @@
 # CHECK-NEXT:         "code": "unused-includes",
 # CHECK-NEXT:         "codeDescription": {
 # CHECK-NEXT:           "href": "{{.*}}"
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "data": {
+# CHECK-NEXT:           "clangdFixId": {{[0-9]+}}
 # CHECK-NEXT:         },
 # CHECK-NEXT:         "message": "Included header all2.h is not used directly (fixes available)",
 # CHECK-NEXT:         "range": {

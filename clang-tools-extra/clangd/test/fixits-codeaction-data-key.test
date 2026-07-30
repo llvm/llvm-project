@@ -1,0 +1,35 @@
+# Verifies that when an LSP client mutates the diagnostic message for display
+# (e.g. stripping clangd's "(fixes available)" suffix) but preserves the
+# `data` field per the LSP 3.16 spec, clangd still associates the diagnostic
+# with its cached fix-its on textDocument/codeAction.
+#
+# clangd assigns fix-it ids monotonically from 1 on each process start, so the
+# first published fix-bearing diagnostic gets clangdFixId 1.
+#
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument":{"codeAction":{"codeActionLiteralSupport":{}}}},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","text":"int main(int i, char **a) { if (i = 2) {}}"}}}
+#      CHECK:    "method": "textDocument/publishDiagnostics",
+# CHECK:           "clangdFixId": 1
+---
+# A code action request whose `context.diagnostics[0].message` has been
+# mutated by the client (no "(fixes available)" suffix), but whose `data`
+# carries the clangdFixId from the publishDiagnostics above. The id-based
+# lookup should match and return the fix-its.
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":0,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"Using the result of an assignment as a condition without parentheses", "code": "-Wparentheses", "source": "clang", "data": {"clangdFixId": 1}}]}}}
+#      CHECK:  "id": 2,
+# CHECK:         "kind": "quickfix",
+# CHECK-NEXT:    "title": "place parentheses around the assignment to silence this warning"
+---
+# Negative control: same mutated message WITHOUT the data field — the legacy
+# (range, message) lookup misses because the message no longer matches what
+# clangd cached, so no fix-its are returned.
+{"jsonrpc":"2.0","id":3,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":0,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"Using the result of an assignment as a condition without parentheses", "code": "-Wparentheses", "source": "clang"}]}}}
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": []
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
