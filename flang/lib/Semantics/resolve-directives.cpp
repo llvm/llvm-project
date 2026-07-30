@@ -180,10 +180,54 @@ protected:
   std::vector<DirContext> dirContext_; // used as a stack
 };
 
-class AccAttributeVisitor : DirectiveAttributeVisitor<llvm::acc::Directive> {
+class AccAttributeVisitor {
+private:
+  struct AccDataSharingEntry {
+    SymbolRef symbol;
+    Symbol::Flag flag;
+    const parser::AccObject *occurrence{nullptr};
+  };
+
+  struct AccDirContext {
+    AccDirContext(const parser::CharBlock &source, llvm::acc::Directive d,
+        Scope &s)
+        : directiveSource{source}, directive{d}, scope{s} {}
+    parser::CharBlock directiveSource;
+    llvm::acc::Directive directive;
+    Scope &scope;
+    Symbol::Flag defaultDSA{Symbol::Flag::AccShared};
+    DesignatorPathMap<AccDataSharingEntry> objectsWithDSA;
+    bool withinConstruct{false};
+    std::int64_t associatedLoopLevel{0};
+  };
+
+  AccDirContext &GetContext() {
+    CHECK(!dirContext_.empty());
+    return dirContext_.back();
+  }
+  const AccDirContext &GetContext() const {
+    CHECK(!dirContext_.empty());
+    return dirContext_.back();
+  }
+  Scope &currScope() { return GetContext().scope; }
+  bool WithinConstruct() const {
+    return !dirContext_.empty() && GetContext().withinConstruct;
+  }
+  void SetContextDefaultDSA(Symbol::Flag flag) {
+    GetContext().defaultDSA = flag;
+  }
+  void SetContextAssociatedLoopLevel(std::int64_t level) {
+    GetContext().associatedLoopLevel = level;
+  }
+  std::tuple<const parser::Name *, const parser::ScalarExpr *,
+      const parser::ScalarExpr *, const parser::ScalarExpr *>
+  GetLoopBounds(const parser::DoConstruct &);
+  static const parser::DoConstruct *GetDoConstructIf(
+      const parser::ExecutionPartConstruct &);
+
 public:
   explicit AccAttributeVisitor(SemanticsContext &context, Scope *topScope)
-      : DirectiveAttributeVisitor(context), topScope_(topScope) {}
+      : context_{context}, topScope_(topScope) {}
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
@@ -362,12 +406,6 @@ public:
   void Post(const parser::Name &);
 
 private:
-  struct AccDataSharingEntry {
-    SymbolRef symbol;
-    Symbol::Flag flag;
-    const parser::AccObject *occurrence{nullptr};
-  };
-
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive, Scope &);
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive);
   void PopAccContext();
@@ -413,7 +451,6 @@ private:
       bool warnSameKindDuplicate = true,
       std::optional<std::string> objectName = {},
       DesignatorPath designator = {});
-  void ClearAccDataSharingEntries() { accDataSharingEntries_.clear(); }
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -428,8 +465,8 @@ private:
   void ClearUseDeviceObjects() { useDeviceObjects_.clear(); }
   UnorderedSymbolSet useDeviceObjects_;
 
-  DesignatorPathMap<AccDataSharingEntry> accDataSharingEntries_;
-  std::vector<DesignatorPathMap<AccDataSharingEntry>> accObjectWithDSA_;
+  SemanticsContext &context_;
+  std::vector<AccDirContext> dirContext_; // used as a stack
   // Depth of the Expr, Variable, and ArrayElement nodes currently being
   // visited.  A Name reached at depth zero is a whole-object reference that no
   // precise Post handler covers (e.g. the object of an ALLOCATE, DEALLOCATE, or
@@ -1189,6 +1226,31 @@ Symbol *DirectiveAttributeVisitor<T>::DeclareAccessEntity(
   }
 }
 
+std::tuple<const parser::Name *, const parser::ScalarExpr *,
+    const parser::ScalarExpr *, const parser::ScalarExpr *>
+AccAttributeVisitor::GetLoopBounds(const parser::DoConstruct &x) {
+  using Bounds = parser::LoopControl::Bounds;
+  if (x.GetLoopControl()) {
+    if (const Bounds *b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+      const auto &step = b->Step();
+      return {&b->Name().thing, &b->Lower(), &b->Upper(),
+          step.has_value() ? &step.value() : nullptr};
+    }
+  } else {
+    context_
+        .Say(std::get<parser::Statement<parser::NonLabelDoStmt>>(x.t).source,
+            "Loop control is not present in the DO LOOP"_err_en_US)
+        .Attach(GetContext().directiveSource,
+            "associated with the enclosing LOOP construct"_en_US);
+  }
+  return {nullptr, nullptr, nullptr, nullptr};
+}
+
+const parser::DoConstruct *AccAttributeVisitor::GetDoConstructIf(
+    const parser::ExecutionPartConstruct &x) {
+  return parser::Unwrap<parser::DoConstruct>(x);
+}
+
 bool AccAttributeVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::AccBeginBlockDirective>(x.t)};
   const auto &blockDir{std::get<parser::AccBlockDirective>(beginBlockDir.t)};
@@ -1203,7 +1265,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
   default:
     break;
   }
-  ClearAccDataSharingEntries();
   ClearUseDeviceObjects();
   return true;
 }
@@ -1215,7 +1276,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCDeclarativeConstruct &x) {
         std::get<parser::AccDeclarativeDirective>(declConstruct->t)};
     PushAccContext(declDir.source, llvm::acc::Directive::ACCD_declare);
   }
-  ClearAccDataSharingEntries();
   return true;
 }
 
@@ -1287,7 +1347,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   if (loopDir.v == llvm::acc::Directive::ACCD_loop) {
     PushAccContext(loopDir.source, loopDir.v);
   }
-  ClearAccDataSharingEntries();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   CheckAssociatedLoop(*outer, HasForceCollapseModifier(clauseList));
@@ -1308,7 +1367,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCStandaloneConstruct &x) {
   default:
     break;
   }
-  ClearAccDataSharingEntries();
   return true;
 }
 
@@ -1516,7 +1574,6 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   CheckAssociatedLoop(*outer, HasForceCollapseModifier(clauseList));
-  ClearAccDataSharingEntries();
   return true;
 }
 
@@ -1613,7 +1670,6 @@ void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
 bool AccAttributeVisitor::Pre(const parser::OpenACCWaitConstruct &x) {
   const auto &verbatim{std::get<parser::Verbatim>(x.t)};
   PushAccContext(verbatim.source, llvm::acc::Directive::ACCD_wait);
-  ClearAccDataSharingEntries();
   return true;
 }
 
@@ -1631,15 +1687,12 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCAtomicConstruct &x) {
       },
       x.u);
   PushAccContext(verbatimSource, llvm::acc::Directive::ACCD_atomic);
-  ClearAccDataSharingEntries();
   return true;
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim{std::get<parser::Verbatim>(x.t)};
   PushAccContext(verbatim.source, llvm::acc::Directive::ACCD_cache);
-  ClearAccDataSharingEntries();
-
   const auto &objectListWithModifier =
       std::get<parser::AccObjectListWithModifier>(x.t);
   const auto &objectList =
@@ -1862,8 +1915,10 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
 
 void AccAttributeVisitor::PushAccContext(
     const parser::CharBlock &source, llvm::acc::Directive dir, Scope &scope) {
-  PushContext(source, dir, scope);
-  accObjectWithDSA_.emplace_back();
+  dirContext_.emplace_back(source, dir, scope);
+  if (dirContext_.size() > 1) {
+    GetContext().defaultDSA = dirContext_[dirContext_.size() - 2].defaultDSA;
+  }
 }
 
 void AccAttributeVisitor::PushAccContext(
@@ -1872,9 +1927,8 @@ void AccAttributeVisitor::PushAccContext(
 }
 
 void AccAttributeVisitor::PopAccContext() {
-  CHECK(!accObjectWithDSA_.empty());
-  accObjectWithDSA_.pop_back();
-  PopContext();
+  CHECK(!dirContext_.empty());
+  dirContext_.pop_back();
 }
 
 void AccAttributeVisitor::AddAccObjectWithDSA(
@@ -1883,16 +1937,14 @@ void AccAttributeVisitor::AddAccObjectWithDSA(
   if (designator.empty()) {
     designator.SetBase(NamedEntity{ultimate});
   }
-  AddToContextObjectWithDSA(ultimate, flag);
-  CHECK(!accObjectWithDSA_.empty());
-  accObjectWithDSA_.back().push_back(
+  GetContext().objectsWithDSA.push_back(
       std::move(designator), {ultimate, flag, nullptr});
 }
 
 bool AccAttributeVisitor::IsObjectWithVisibleDSA(const Symbol &symbol,
     const std::optional<DesignatorPath> &reference) const {
-  for (std::size_t i{accObjectWithDSA_.size()}; i != 0; --i) {
-    for (const auto &entry : accObjectWithDSA_[i - 1]) {
+  for (std::size_t i{dirContext_.size()}; i != 0; --i) {
+    for (const auto &entry : dirContext_[i - 1].objectsWithDSA) {
       if (&*entry.value.symbol != &symbol) {
         continue;
       }
@@ -2172,12 +2224,13 @@ void AccAttributeVisitor::ResolveAccObject(
               if (canCheckMultipleAppearances) {
                 const parser::Name &baseName{parser::GetFirstName(designator)};
                 if (baseName.symbol) {
-                  AddAccObjectWithDSA(
-                      *baseName.symbol, accFlag, designatorPath);
                   if (isDataSharing) {
                     CheckMultipleAppearances(baseName, *baseName.symbol,
                         accFlag, &accObject, true, designatorName,
                         designatorPath);
+                  } else {
+                    AddAccObjectWithDSA(
+                        *baseName.symbol, accFlag, designatorPath);
                   }
                 }
               }
@@ -2192,10 +2245,11 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{
                     DeclareOrMarkOtherAccessEntity(baseName, accFlag)}) {
-              AddAccObjectWithDSA(*symbol, accFlag, designatorPath);
               if (isDataSharing && canCheckMultipleAppearances) {
                 CheckMultipleAppearances(baseName, *symbol, accFlag, &accObject,
                     true, designatorName, designatorPath);
+              } else {
+                AddAccObjectWithDSA(*symbol, accFlag, designatorPath);
               }
             }
           },
@@ -2250,8 +2304,8 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     designator.SetBase(NamedEntity{*target});
   }
   const std::string displayName{objectName.value_or(name.ToString())};
-  for (auto iter{accDataSharingEntries_.begin()};
-      iter != accDataSharingEntries_.end();) {
+  auto &objectsWithDSA{GetContext().objectsWithDSA};
+  for (auto iter{objectsWithDSA.begin()}; iter != objectsWithDSA.end();) {
     AccDataSharingEntry &entry{iter->value};
     if (&*entry.symbol != target) {
       ++iter;
@@ -2290,7 +2344,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
       if (entry.occurrence) {
         context_.MarkAccObjectDuplicate(entry.occurrence);
       }
-      iter = accDataSharingEntries_.erase(iter);
+      iter = objectsWithDSA.erase(iter);
       continue;
     case DesignatorRelation::Overlaps:
       ++iter;
@@ -2299,7 +2353,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
       llvm_unreachable("disjoint relation handled above");
     }
   }
-  accDataSharingEntries_.push_back(
+  objectsWithDSA.push_back(
       std::move(designator), {*target, accFlag, occurrence});
 }
 

@@ -172,13 +172,12 @@ subroutine test_substring()
 end subroutine
 
 ! 9. Same array section in conflicting private and copy clauses.
-! TODO: cross-kind detection for array sections is not implemented; no error
-!       produced for 'a(1:n)' appearing in both copy and private.
 subroutine test_cross_kind_sections(n)
   implicit none
   integer, intent(in) :: n
   real :: a(n)
   integer :: i
+  !ERROR: 'a(1:n)' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop default(none) copy(a(1:n)) private(a(1:n))
   do i = 1, n
     a(i) = 0.0
