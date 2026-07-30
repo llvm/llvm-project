@@ -173,12 +173,11 @@ static SDValue handleCMSEValue(const SDValue &Value, const ISD::InputArg &Arg,
 }
 
 void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
-  if (VT != PromotedLdStVT) {
-    setOperationAction(ISD::LOAD, VT, Promote);
-    AddPromotedToType (ISD::LOAD, VT, PromotedLdStVT);
+  assert(VT.isVector() && "VT should be a vector type");
 
-    setOperationAction(ISD::STORE, VT, Promote);
-    AddPromotedToType (ISD::STORE, VT, PromotedLdStVT);
+  if (VT != PromotedLdStVT) {
+    setOperationPromotedToType(ISD::LOAD, VT, PromotedLdStVT);
+    setOperationPromotedToType(ISD::STORE, VT, PromotedLdStVT);
   }
 
   MVT ElemTy = VT.getVectorElementType();
