@@ -21,11 +21,17 @@
 #ifndef LLVM_SUPPORT_WINDOWSSUPPORT_H
 #define LLVM_SUPPORT_WINDOWSSUPPORT_H
 
+#if defined(__MINGW32__)
 // mingw-w64 tends to define it as 0x0502 in its headers.
 #undef _WIN32_WINNT
+#undef NTDDI_VERSION
+// Expose APIs from Windows 10 RS1. We only require Windows 7 at runtime, so
+// make sure that we only use such features optionally, with fallbacks where
+// relevant.
+#define _WIN32_WINNT 0x0a00
+#define NTDDI_VERSION 0x0a000002 // expose APIs from WIN10_RS1
+#endif
 
-// Require at least Windows 7 API.
-#define _WIN32_WINNT 0x0601
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
