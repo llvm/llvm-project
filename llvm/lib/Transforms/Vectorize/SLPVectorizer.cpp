@@ -5288,7 +5288,12 @@ private:
                       continue;
                     for (ScheduleCopyableData *CD :
                          getScheduleCopyableData(In, U.getOperandNo(), OpI)) {
-                      DecrUnsched(CD, /*IsControl=*/false);
+                      // Deps of reassoc scalars modeled as copyable tree
+                      // operands are released by the operand scan above;
+                      // release each remaining dep only once.
+                      if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
+                              .second)
+                        DecrUnsched(CD, /*IsControl=*/false);
                       ReleasedAsCopyable = true;
                     }
                   }
