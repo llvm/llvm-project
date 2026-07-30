@@ -582,10 +582,7 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   // true even if it is only really used in an outer loop's exit block, since
   // the loop is in LCSSA form.
   auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence.Step);
-  if (none_of(ComputedValue->users(), [Exit](User *U) {
-        auto *UI = dyn_cast<Instruction>(U);
-        return UI && UI->getParent() == Exit;
-      }))
+  if (Exit->phis().empty())
     return "Unable to find use of computed value in loop exit block";
 
   // Ensure nothing other than the computed value makes its way out of the loop.
