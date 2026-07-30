@@ -453,6 +453,8 @@ public:
   std::string AsFortran(int kind, bool minimal = false) const;
 
   /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  /// Note that for REAL(10), this is 16 because X87IntegerContainer specifies
+  /// an alignment of 16 bytes which adds 6 unitialized bytes of limbs.
   static constexpr std::size_t bytesStored() { return Word::bytesStored(); }
 
   /// De-serializes a real from \p raw. \p expectedSize must match the the

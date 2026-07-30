@@ -99,9 +99,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &, int kind) const;
 
   /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
-  /// Note that this can be different from `sizeof(*this)` because of padding
-  /// the compiler may introduce between the real and imageinary part.
-  /// FromRawBytes/StoreRawBytes assume a packed layout, without padding.
+  /// Note that for COMPLEX(10), this is 32.
   constexpr static std::size_t bytesStored() { return 2 * Part::bytesStored(); }
 
   /// De-serializes a complex from \p raw. \p expectedSize must match the the
