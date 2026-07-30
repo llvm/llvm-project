@@ -27,8 +27,8 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/CGPassBuilderOption.h"
-#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
+#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 
 using namespace llvm;
 
