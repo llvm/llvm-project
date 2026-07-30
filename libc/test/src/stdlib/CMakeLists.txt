@@ -405,6 +405,7 @@ add_libc_test(
     libc.src.unistd.close
     libc.src.unistd.getcwd
     libc.src.unistd.getpid
+    libc.src.unistd.symlinkat
     libc.src.unistd.unlinkat
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -530,8 +531,6 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
 
   add_libc_test(
     atexit_test
-    # TODO: Fix this test in hermetic mode.
-    UNIT_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS

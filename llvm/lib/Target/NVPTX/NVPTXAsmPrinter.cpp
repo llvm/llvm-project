@@ -339,9 +339,8 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
   case MachineOperand::MO_JumpTableIndex:
     // The jump table index names the .branchtargets list emitted for a brx.idx
-    // (see emitFunctionBodyStart); reference it by that label.
-    return GetSymbolRef(
-        OutContext.getOrCreateSymbol("$L_brx_" + Twine(MO.getIndex())));
+    // (see emitJumpTable); reference it by that label.
+    return GetSymbolRef(GetJTISymbol(MO.getIndex()));
   case MachineOperand::MO_GlobalAddress:
     return GetSymbolRef(getSymbol(MO.getGlobal()));
   case MachineOperand::MO_FPImmediate: {
@@ -540,24 +539,23 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
       << STI.getMaxRequiredAlignment() << " .b8 _[]";
 
   O << ")";
-  if (shouldEmitPTXNoReturn(&CB, TM))
+  if (shouldEmitPTXNoReturn(CB))
     O << " .noreturn";
   O << ";\n";
 }
 
 void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
-                                    unsigned MJTI, raw_ostream &O) const {
-  O << "$L_brx_" << MJTI << ":\n";
+                                    unsigned MJTI) const {
+  OutStreamer->emitLabel(GetJTISymbol(MJTI));
 
   if (MJT.MBBs.empty())
     return;
 
-  O << "\t.branchtargets\n\t\t";
-  interleave(
-      MJT.MBBs, O,
-      [&](const MachineBasicBlock *MBB) { MBB->getSymbol()->print(O, MAI); },
-      ",\n\t\t");
-  O << ";\n";
+  const auto Targets = to_vector(
+      map_range(MJT.MBBs, [](const MachineBasicBlock *MBB) -> const MCSymbol * {
+        return MBB->getSymbol();
+      }));
+  getTargetStreamer()->emitBranchTargetsDirective(Targets);
 }
 
 // Return true if MBB is the header of a loop marked with
@@ -597,7 +595,7 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
 void NVPTXAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   AsmPrinter::emitBasicBlockStart(MBB);
   if (isLoopHeaderOfNoUnroll(MBB))
-    OutStreamer->emitRawText(StringRef("\t.pragma \"nounroll\";\n"));
+    getTargetStreamer()->emitPragmaDirective("nounroll");
 }
 
 void NVPTXAsmPrinter::emitFunctionEntryLabel() {
@@ -628,7 +626,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
-  if (shouldEmitPTXNoReturn(F, TM))
+  if (shouldEmitPTXNoReturn(*F))
     O << ".noreturn";
 
   OutStreamer->emitRawText(O.str());
@@ -662,11 +660,11 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   for (const auto &[Id, CB] : MFI->getCallPrototypes())
     emitCallPrototype(*CB, Id, O);
 
+  OutStreamer->emitRawText(O.str());
+
   if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
     for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables()))
-      emitJumpTable(JT, Idx, O);
-
-  OutStreamer->emitRawText(O.str());
+      emitJumpTable(JT, Idx);
 }
 
 void NVPTXAsmPrinter::emitFunctionBodyEnd() {
@@ -674,21 +672,17 @@ void NVPTXAsmPrinter::emitFunctionBodyEnd() {
 }
 
 const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol() const {
-    SmallString<128> Str;
-    raw_svector_ostream(Str) << DEPOTNAME << getFunctionNumber();
-    return OutContext.getOrCreateSymbol(Str);
+  return OutContext.getOrCreateSymbol(DEPOTNAME + Twine(getFunctionNumber()));
 }
 
 void NVPTXAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   Register RegNo = MI->getOperand(0).getReg();
-  if (RegNo.isVirtual()) {
+  if (RegNo.isVirtual())
     OutStreamer->AddComment(Twine("implicit-def: ") +
                             getVirtualRegisterName(RegNo));
-  } else {
-    const NVPTXSubtarget &STI = MI->getMF()->getSubtarget<NVPTXSubtarget>();
+  else
     OutStreamer->AddComment(Twine("implicit-def: ") +
-                            STI.getRegisterInfo()->getName(RegNo));
-  }
+                            NVPTXInstPrinter::getRegisterName(RegNo));
   OutStreamer->addBlankLine();
 }
 
@@ -814,7 +808,7 @@ void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
   O << "\n";
   emitFunctionParamList(F, O);
   O << "\n";
-  if (shouldEmitPTXNoReturn(F, TM))
+  if (shouldEmitPTXNoReturn(*F))
     O << ".noreturn";
   O << ";\n";
 }
@@ -1049,15 +1043,8 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
 }
 
 void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-
-  MCSymbol *Name = getSymbol(&GA);
-
-  OS << ".alias " << Name->getName() << ", " << GA.getAliaseeObject()->getName()
-     << ";\n";
-
-  OutStreamer->emitRawText(OS.str());
+  getTargetStreamer()->emitAliasDirective(getSymbol(&GA),
+                                          getSymbol(GA.getAliaseeObject()));
 }
 
 NVPTXTargetStreamer *NVPTXAsmPrinter::getTargetStreamer() const {
@@ -1114,7 +1101,7 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   if (hasDebugInfo()) {
     TS->closeLastSection();
     // Emit empty .debug_macinfo section for better support of the empty files.
-    OutStreamer->emitRawText("\t.section\t.debug_macinfo\t{\t}");
+    TS->emitEmptySectionDirective(".debug_macinfo");
   }
 
   // Output last DWARF .file directives, if any.
@@ -1801,25 +1788,22 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
 void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
     const MachineFunction &MF) {
-  SmallString<128> Str;
-  raw_svector_ostream O(Str);
-
-  // Map the global virtual register number to a register class specific
-  // virtual register number starting from 1 with that class.
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  auto *TS = getTargetStreamer();
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  int64_t NumBytes = MFI.getStackSize();
-  if (NumBytes) {
-    O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
-      << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
-    const bool Is64Bit =
-        static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit();
-    const bool IsLocal64 =
-        MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_LOCAL) == 64;
-    O << "\t.reg .b" << (Is64Bit ? 64 : 32) << " \t%SP;\n"
-      << "\t.reg .b" << (IsLocal64 ? 64 : 32) << " \t%SPL;\n";
+  if (const int64_t NumBytes = MFI.getStackSize()) {
+    TS->emitLocalDirective(MFI.getMaxAlign(), getFunctionFrameSymbol(),
+                           NumBytes);
+
+    // Declare the frame pointers that NVPTXFrameLowering's prologue defines.
+    const NVPTXRegisterInfo *NRI =
+        MF.getSubtarget<NVPTXSubtarget>().getRegisterInfo();
+    for (const Register FrameReg :
+         {NRI->getFrameRegister(MF), NRI->getFrameLocalRegister(MF)})
+      TS->emitRegDirective(
+          NRI->getRegSizeInBits(FrameReg, *MRI).getFixedValue(),
+          NVPTXInstPrinter::getRegisterName(FrameReg));
   }
 
   // Go through all virtual registers to establish the mapping between the
@@ -1836,18 +1820,13 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit declaration of the virtual registers or 'physical' registers for
   // each register class
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (const TargetRegisterClass &RC : TRI->regclasses()) {
-    const unsigned N = VRegMapping[&RC].size();
-
     // Only declare those registers that may be used.
-    if (N) {
-      const StringRef RCName = getNVPTXRegClassName(&RC);
-      const StringRef RCStr = getNVPTXRegClassStr(&RC);
-      O << "\t.reg " << RCName << " \t" << RCStr << "<" << (N + 1) << ">;\n";
-    }
+    if (const unsigned N = VRegMapping[&RC].size())
+      TS->emitRegDirective(TRI->getRegSizeInBits(RC).getFixedValue(),
+                           getNVPTXRegClassStr(&RC), N + 1);
   }
-
-  OutStreamer->emitRawText(O.str());
 }
 
 /// Translate virtual register numbers in DebugInfo locations to their printed
@@ -2346,7 +2325,7 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
   case MachineOperand::MO_Register:
     if (MO.getReg().isPhysical()) {
       if (MO.getReg() == NVPTX::VRDepot)
-        O << DEPOTNAME << getFunctionNumber();
+        getFunctionFrameSymbol()->print(O, MAI);
       else
         O << NVPTXInstPrinter::getRegisterName(MO.getReg());
     } else {

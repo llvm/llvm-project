@@ -675,6 +675,148 @@ gpu.module @kernels {
 
 // -----
 
+// Bitwise reductions have no SPIR-V group op with Workgroup scope, so
+// gpu.all_reduce fails to legalize.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  gpu.func @and(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce and %arg {} : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+// Bitwise reductions have no SPIR-V group op with Workgroup scope, so
+// gpu.all_reduce fails to legalize.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  gpu.func @or(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce or %arg {} : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+// Bitwise reductions have no SPIR-V group op with Workgroup scope, so
+// gpu.all_reduce fails to legalize.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  gpu.func @xor(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.all_reduce'}}
+    %r0 = gpu.all_reduce xor %arg {} : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  // CHECK-LABEL:  spirv.func @and
+  //  CHECK-SAME: (%[[ARG:.*]]: i32)
+  gpu.func @and(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // CHECK: %{{.*}} = spirv.GroupNonUniformBitwiseAnd <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
+    %r0 = gpu.subgroup_reduce and %arg : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  // CHECK-LABEL:  spirv.func @or
+  //  CHECK-SAME: (%[[ARG:.*]]: i32)
+  gpu.func @or(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // CHECK: %{{.*}} = spirv.GroupNonUniformBitwiseOr <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
+    %r0 = gpu.subgroup_reduce or %arg : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  // CHECK-LABEL:  spirv.func @xor
+  //  CHECK-SAME: (%[[ARG:.*]]: i32)
+  gpu.func @xor(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // CHECK: %{{.*}} = spirv.GroupNonUniformBitwiseXor <Subgroup> <Reduce> %[[ARG]] : i32 -> i32
+    %r0 = gpu.subgroup_reduce xor %arg : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+// Bitwise reductions have no uniform SPIR-V group op, so a uniform request
+// fails to legalize.
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+gpu.module @kernels {
+  gpu.func @and(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
+    %r0 = gpu.subgroup_reduce and %arg uniform : (i32) -> (i32)
+    gpu.return
+  }
+}
+}
+
+// -----
+
 // TODO: Handle boolean reductions.
 
 module attributes {
