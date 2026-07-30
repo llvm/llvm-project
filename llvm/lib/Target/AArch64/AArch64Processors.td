@@ -1312,9 +1312,9 @@ def : ProcessorModel<"c1-nano", C1NanoModel,
                      ProcessorFeatures.C1Nano, [TuneC1Nano]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
-def : ProcessorModel<"cortex-a65", CortexA53Model, ProcessorFeatures.A65,
+def : ProcessorModel<"cortex-a65", CortexA65Model, ProcessorFeatures.A65,
                      [TuneA65]>;
-def : ProcessorModel<"cortex-a65ae", CortexA53Model, ProcessorFeatures.A65,
+def : ProcessorModel<"cortex-a65ae", CortexA65Model, ProcessorFeatures.A65,
                      [TuneA65]>;
 def : ProcessorModel<"cortex-a72", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA72]>;
@@ -1370,7 +1370,7 @@ def : ProcessorModel<"gb10", NeoverseV3Model, ProcessorFeatures.GB10,
                      [TuneX925]>;
 def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,
                      [TuneNeoverseV2]>;
-def : ProcessorModel<"neoverse-e1", CortexA53Model,
+def : ProcessorModel<"neoverse-e1", CortexA65Model,
                      ProcessorFeatures.NeoverseE1, [TuneNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
                      ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
