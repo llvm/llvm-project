@@ -1042,7 +1042,7 @@ public:
   LogicalResult
   matchAndRewrite(spirv::FModOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(op.getType());
+    Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
@@ -1068,8 +1068,8 @@ public:
   LogicalResult
   matchAndRewrite(spirv::SModOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcType = op.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
@@ -1084,12 +1084,8 @@ public:
     Value rem = LLVM::SRemOp::create(rewriter, loc, dstType, lhs, rhs);
     IntegerAttr zeroAttr = rewriter.getIntegerAttr(
         cast<IntegerType>(getElementTypeOrSelf(srcType)), 0);
-    Value zero;
-    if (vecSrcType)
-      zero = LLVM::ConstantOp::create(
-          rewriter, loc, dstType, SplatElementsAttr::get(vecSrcType, zeroAttr));
-    else
-      zero = LLVM::ConstantOp::create(rewriter, loc, dstType, zeroAttr);
+    Value zero =
+        createIntegerConstant(loc, srcType, dstType, rewriter, zeroAttr);
 
     Value remNonZero = LLVM::ICmpOp::create(rewriter, loc, cmpType,
                                             LLVM::ICmpPredicate::ne, rem, zero);
