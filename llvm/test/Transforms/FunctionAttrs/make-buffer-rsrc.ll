@@ -2,8 +2,6 @@
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck --check-prefixes=COMMON,FNATTRS %s
 ; RUN: opt -passes=attributor-light -S < %s | FileCheck --check-prefixes=COMMON,ATTRIBUTOR %s
 
-;; target triple = "amdgcn-amd-amdhsa"
-
 define amdgpu_kernel void @test_make_buffer_rsrc(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_make_buffer_rsrc

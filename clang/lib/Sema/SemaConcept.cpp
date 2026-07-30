@@ -17,6 +17,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TextNodeDumper.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -30,6 +31,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
@@ -276,6 +278,33 @@ public:
       return false;
     return true;
   }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    NonTypeTemplateParmDecl *NTTP =
+        dyn_cast<NonTypeTemplateParmDecl>(E->getDecl());
+    if (!NTTP)
+      return inherited::TransformDeclRefExpr(E);
+
+    assert(E->getTemplateArgs() == nullptr &&
+           "Template arguments for NTTP decl?");
+    auto *TSI = inherited::TransformType(NTTP->getTypeSourceInfo());
+    if (!TSI)
+      return ExprError();
+
+    auto *D = NonTypeTemplateParmDecl::Create(
+        SemaRef.getASTContext(), NTTP->getDeclContext(),
+        NTTP->getInnerLocStart(), NTTP->getLocation(),
+        NTTP->getDepth() + TemplateDepth, NTTP->getPosition(),
+        NTTP->getIdentifier(), TSI->getType(),
+        RemoveNonPackExpansionPacks ? false : NTTP->isParameterPack(), TSI);
+
+    return DeclRefExpr::Create(
+        SemaRef.getASTContext(), E->getQualifierLoc(),
+        E->getTemplateKeywordLoc(), D, E->refersToEnclosingVariableOrCapture(),
+        E->getNameInfo(), TSI->getType(), E->getValueKind(),
+        RemoveNonPackExpansionPacks ? NTTP : D,
+        /*TemplateArgs=*/nullptr, E->isNonOdrUse());
+  }
 };
 } // namespace
 
@@ -347,7 +376,14 @@ public:
       return true;
 
     TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
-    if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+    // In concept parameter mapping for fold expressions, packs that aren't
+    // expanded in place are treated as having non-pack dependency, so that
+    // a PackExpansionType won't prevent expanding the packs outside the
+    // TreeTransform. However we still need to check the pack at this point.
+    if ((NTTP->isParameterPack() ||
+         (E->getFoundDecl() && E->getFoundDecl() != E->getDecl() &&
+          E->getFoundDecl()->isParameterPack())) &&
+        SemaRef.ArgPackSubstIndex) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
       Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
@@ -491,6 +527,7 @@ public:
 class ConstraintSatisfactionChecker {
   Sema &S;
   const NamedDecl *Template;
+  const ConceptReference *TopLevelConceptId;
   SourceLocation TemplateNameLoc;
   UnsignedOrNone PackSubstitutionIndex;
   ConstraintSatisfaction &Satisfaction;
@@ -549,11 +586,13 @@ private:
 
 public:
   ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
+                                const ConceptReference *TopLevelConceptId,
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
                                 ConstraintSatisfaction &Satisfaction,
                                 bool BuildExpression)
-      : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
+      : S(SemaRef), Template(Template), TopLevelConceptId(TopLevelConceptId),
+        TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
         Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
@@ -681,6 +720,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   llvm::SaveAndRestore PushTemplateArgsCache(S.CurrentCachedTemplateArgs,
                                              &CachedTemplateArgs);
 
+  // We don't want the template argument substitution into parameter
+  // mappings to preserve the outer depths.
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
           SubstArgs)) {
@@ -730,9 +771,15 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
   std::optional<EnterExpressionEvaluationContext> EvaluationContext;
-  EvaluationContext.emplace(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-      Sema::ReuseLambdaContextDecl);
+  // The ConceptDecl as a ContextDecl ensures that, when evaluating constraints
+  // on transformed lambdas, we don't have extra outer template arguments.
+  if (ParentConcept)
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated, ParentConcept);
+  else
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        Sema::ReuseLambdaContextDecl);
 
   llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
@@ -746,17 +793,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   // i.e they should not have access to the current class object or its
   // non-public members.
   std::optional<Sema::ContextRAII> ConceptContext;
-  if (ParentConcept) {
+  if (ParentConcept)
     ConceptContext.emplace(S, ParentConcept->getDeclContext());
-    // FIXME: the evaluation context should learn to track template arguments
-    // separately from a Decl.
-    EvaluationContext.emplace(
-        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-        /*LambdaContextDecl=*/
-        ImplicitConceptSpecializationDecl::Create(
-            S.Context, ParentConcept->getDeclContext(),
-            ParentConcept->getBeginLoc(), SubstitutedOutermost));
-  }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
   ExprResult SubstitutedAtomicExpr = EvaluateAtomicConstraint(
@@ -915,8 +953,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
-        ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
-                                      UnsignedOrNone(I), Satisfaction,
+        ConstraintSatisfactionChecker(S, Template, TopLevelConceptId,
+                                      TemplateNameLoc, UnsignedOrNone(I),
+                                      Satisfaction,
                                       /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
     if (BuildExpression) {
@@ -1002,8 +1041,16 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
       const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
 
   TemplateArgumentListInfo OutArgs(Ori->LAngleLoc, Ori->RAngleLoc);
-  if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs, OutArgs) ||
-      Trap.hasErrorOccurred()) {
+
+  // There's a concern that even with the same concept, they may not have the
+  // same ConceptReference, if they come from modules.
+  if (TopLevelConceptId &&
+      ConceptId->getNamedConcept() == TopLevelConceptId->getNamedConcept()) {
+    for (auto &A : Ori->arguments())
+      OutArgs.addArgument(A);
+  } else if (S.SubstTemplateArguments(Ori->arguments(), *SubstitutedArgs,
+                                      OutArgs) ||
+             Trap.hasErrorOccurred()) {
     Satisfaction.IsSatisfied = false;
     if (!Trap.hasErrorOccurred())
       return ExprError();
@@ -1241,11 +1288,12 @@ static bool CheckConstraintSatisfaction(
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
 
-  ExprResult Res = ConstraintSatisfactionChecker(
-                       S, Template, TemplateIDRange.getBegin(),
-                       S.ArgPackSubstIndex, Satisfaction,
-                       /*BuildExpression=*/ConvertedExpr != nullptr)
-                       .Evaluate(*C, TemplateArgsLists);
+  ExprResult Res =
+      ConstraintSatisfactionChecker(
+          S, Template, TopLevelConceptId, TemplateIDRange.getBegin(),
+          S.ArgPackSubstIndex, Satisfaction,
+          /*BuildExpression=*/ConvertedExpr != nullptr)
+          .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;
@@ -2319,6 +2367,14 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
+    // Make sure that lambdas within template arguments live in a
+    // dependent context such that they are assured to be transformed during
+    // constraint evaluation.
+    EnterExpressionEvaluationContext EECtx(
+        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        const_cast<ImplicitConceptSpecializationDecl *>(
+            CSE->getSpecializationDecl()));
     SmallVector<TemplateArgument> InnerArgs(CSE->getTemplateArguments());
     ConceptDecl *Concept = CSE->getNamedConcept();
     if (RemovePacksForFoldExpr) {
@@ -2347,6 +2403,7 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConstraintInstantiation=*/true);
+    MLTAL.setRetainInnerDepths();
 
     return SubstituteParameterMappings(SemaRef, &MLTAL,
                                        CSE->getTemplateArgsAsWritten(),
@@ -2918,4 +2975,149 @@ bool SubsumptionChecker::Subsumes(Literal A, Literal B) {
         static_cast<const FoldExpandedConstraint *>(ReverseMap[B.Value]));
   }
   llvm_unreachable("unknown literal kind");
+}
+
+namespace {
+
+class DumpNormalizedConstraint {
+  raw_ostream &OS;
+  const PrintingPolicy &PP;
+  TextNodeDumper TD;
+
+public:
+  DumpNormalizedConstraint(raw_ostream &OS, ASTContext &Context)
+      : OS(OS), PP(Context.getPrintingPolicy()),
+        TD(OS, Context, /*ShowColors=*/false) {}
+
+  void dump(const NormalizedConstraint &N) {
+    TD.AddChild([&] { Traverse(N); });
+  }
+
+private:
+  void Traverse(const NormalizedConstraint &N) {
+    switch (N.getKind()) {
+    case NormalizedConstraint::ConstraintKind::Compound:
+      VisitCompound(static_cast<const CompoundConstraint &>(N));
+      break;
+    case NormalizedConstraint::ConstraintKind::Atomic:
+      VisitAtomic(static_cast<const AtomicConstraint &>(N));
+      break;
+    case NormalizedConstraint::ConstraintKind::ConceptId:
+      VisitConceptId(static_cast<const ConceptIdConstraint &>(N));
+      break;
+    case NormalizedConstraint::ConstraintKind::FoldExpanded:
+      VisitFoldExpanded(static_cast<const FoldExpandedConstraint &>(N));
+      break;
+    }
+  }
+
+  void WriteNodeHeader(const NormalizedConstraint &N, StringRef Kind) {
+    OS << Kind;
+    TD.dumpPointer(&N);
+    TD.dumpSourceRange(N.getSourceRange());
+  }
+
+  void WritePackIndex(const NormalizedConstraintWithParamMapping &N) {
+    if (auto Idx = N.getPackSubstitutionIndex())
+      OS << " SubstIndex=" << *Idx;
+  }
+
+  void VisitCompound(const CompoundConstraint &C) {
+    WriteNodeHeader(C, "CompoundConstraint");
+    OS << " "
+       << (C.getCompoundKind() == NormalizedConstraint::CCK_Conjunction
+               ? "Conjunction"
+               : "Disjunction");
+    TD.AddChild([&] { Traverse(C.getLHS()); });
+    TD.AddChild([&] { Traverse(C.getRHS()); });
+  }
+
+  void VisitAtomic(const AtomicConstraint &A) {
+    WriteNodeHeader(A, "AtomicConstraint");
+    WritePackIndex(A);
+    OS << " ";
+    A.getConstraintExpr()->printPretty(OS, /*Helper=*/nullptr, PP);
+    WriteParameterMapping(A);
+  }
+
+  void VisitConceptId(const ConceptIdConstraint &C) {
+    WriteNodeHeader(C, "ConceptIdConstraint");
+    WritePackIndex(C);
+    OS << " ";
+    if (auto *CSE = C.getConceptSpecializationExpr()) {
+      CSE->printPretty(OS, /*Helper=*/nullptr, PP);
+    } else {
+      C.getConceptId()->print(OS, PP);
+    }
+    WriteParameterMapping(C);
+    TD.AddChild([&] { Traverse(C.getNormalizedConstraint()); });
+  }
+
+  void VisitFoldExpanded(const FoldExpandedConstraint &F) {
+    WriteNodeHeader(F, "FoldExpandedConstraint");
+    OS << " "
+       << (F.getFoldOperator() == FoldExpandedConstraint::FoldOperatorKind::And
+               ? "And"
+               : "Or");
+    WritePackIndex(F);
+    OS << " ";
+    F.getPattern()->printPretty(OS, /*Helper=*/nullptr, PP);
+    WriteParameterMapping(F);
+    TD.AddChild([&] { Traverse(F.getNormalizedPattern()); });
+  }
+
+  void WriteParameterMapping(const NormalizedConstraintWithParamMapping &N) {
+    if (!N.hasParameterMapping() || N.mappingOccurenceList().none())
+      return;
+    TD.AddChild([this, Indexes(N.mappingOccurenceList()),
+                 IndexesForSub(N.mappingOccurenceListForSubsumption()),
+                 Mapping(N.getParameterMapping()),
+                 TPL(N.getUsedTemplateParamList())] {
+      OS << "ParameterMapping";
+      WriteOccurenceList("Indexes", Indexes);
+      WriteOccurenceList("IndexesForSubsumption", IndexesForSub);
+      unsigned Slot = 0;
+      for (unsigned ParamIndex : Indexes.set_bits()) {
+        TD.AddChild([this, Slot, ParamIndex, Mapping, TPL] {
+          assert(TPL && Slot < TPL->size());
+          const NamedDecl *Param = TPL->getParam(Slot);
+          OS << "#" << ParamIndex << ": <";
+          Param->print(OS, PP);
+          OS << "> -> ";
+          Mapping[Slot].getArgument().print(PP, OS,
+                                            /*IncludeType=*/false);
+          TD.AddChild([this, Slot, Mapping] {
+            const TemplateArgument &TA = Mapping[Slot].getArgument();
+            OS << "TemplateArgument " << TA.getKindName();
+            TD.dumpPointer(&TA);
+          });
+        });
+        ++Slot;
+      }
+    });
+  }
+
+  void WriteOccurenceList(StringRef Label,
+                          const NormalizedConstraint::OccurenceList &BV) {
+    if (BV.none())
+      return;
+    OS << " " << Label << "={"
+       << llvm::join(
+              llvm::map_range(
+                  llvm::make_range(BV.set_bits_begin(), BV.set_bits_end()),
+                  [](unsigned I) { return llvm::to_string(I); }),
+              ", ")
+       << '}';
+  }
+};
+
+} // namespace
+
+LLVM_DUMP_METHOD void NormalizedConstraint::dump(ASTContext &Context) const {
+  dump(llvm::errs(), Context);
+}
+
+LLVM_DUMP_METHOD void NormalizedConstraint::dump(llvm::raw_ostream &OS,
+                                                 ASTContext &Context) const {
+  return DumpNormalizedConstraint(OS, Context).dump(*this);
 }

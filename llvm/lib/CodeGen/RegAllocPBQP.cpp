@@ -546,11 +546,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<LiveStacksWrapperLegacy>();
   au.addPreserved<LiveStacksWrapperLegacy>();
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
-  au.addPreserved<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
-  au.addPreserved<MachineDominatorTreeWrapperPass>();
   au.addRequired<VirtRegMapWrapperLegacy>();
   au.addPreserved<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(au);

@@ -353,6 +353,7 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   // Use branch opcode to select appropriate Xqcicm instruction
   unsigned BCC = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
   std::optional<unsigned> CMovRegOpcode;
+  bool IsSigned = true;
   unsigned CMovImmOpcode;
   switch (BCC) {
   default:
@@ -382,26 +383,32 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     CMovImmOpcode = RISCV::QC_MVGEUI;
     break;
   case RISCV::QC_BEQI:
-    CMovImmOpcode = RISCV::QC_MVEQI;
-    break;
-  case RISCV::QC_BNEI:
     CMovImmOpcode = RISCV::QC_MVNEI;
     break;
-  case RISCV::QC_BLTI:
-    CMovImmOpcode = RISCV::QC_MVLTI;
+  case RISCV::QC_BNEI:
+    CMovImmOpcode = RISCV::QC_MVEQI;
     break;
-  case RISCV::QC_BGEI:
+  case RISCV::QC_BLTI:
     CMovImmOpcode = RISCV::QC_MVGEI;
     break;
+  case RISCV::QC_BGEI:
+    CMovImmOpcode = RISCV::QC_MVLTI;
+    break;
   case RISCV::QC_BLTUI:
-    CMovImmOpcode = RISCV::QC_MVLTUI;
+    CMovImmOpcode = RISCV::QC_MVGEUI;
+    IsSigned = false;
     break;
   case RISCV::QC_BGEUI:
-    CMovImmOpcode = RISCV::QC_MVGEUI;
+    CMovImmOpcode = RISCV::QC_MVLTUI;
+    IsSigned = false;
     break;
   }
 
-  if (RHS.isImm() && isInt<5>(RHS.getImm())) {
+  if (RHS.isImm()) {
+    if ((!isInt<5>(RHS.getImm()) || !IsSigned) &&
+        (!isUInt<5>(RHS.getImm()) || IsSigned))
+      return false;
+
     // $dst = PseudoCCMOVGPR $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
     // $dst = PseudoCCMOVGPRNoX0 $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
     // =>

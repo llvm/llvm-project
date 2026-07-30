@@ -930,16 +930,9 @@
 // CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-musl-mipsel.so.1"
 // CHECK-MIPS64EL-REDHAT-NOT: "--hash-style={{gnu|both}}"
 
-// Check that we pass --hash-style=both for pre-M Android versions and
-// --hash-style=gnu for newer Android versions.
+// Check that we pass --hash-style=gnu.
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=armv7-linux-android21 \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-L %s
-// CHECK-ANDROID-HASH-STYLE-L: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ANDROID-HASH-STYLE-L: "--hash-style=both"
-//
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=armv7-linux-android23 \
+// RUN:     --target=armv7-linux-android \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
@@ -958,16 +951,7 @@
 // CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
 
-// Check that we pass --pack-dyn-relocs=android for API 23-27 and not before.
-// RUN: %clang %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv7-linux-android22 \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-22 %s
-// CHECK-ANDROID-RELR-22: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=android"
-// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=relr"
-// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=android+relr"
-// CHECK-ANDROID-RELR-22-NOT: "--use-android-relr-tags"
-//
+// Check that we pass --pack-dyn-relocs=android for API pre 27.
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android23 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-23 %s

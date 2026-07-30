@@ -13,10 +13,8 @@ define void @test_reassoc_add(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarray
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -63,10 +61,8 @@ define void @test_reassoc_add_wrapflags(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw <2 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw <2 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -160,10 +156,8 @@ define void @test_reassoc_mul_wrapflags(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw <2 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -207,10 +201,8 @@ define void @test_reassoc_mul_fast(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %S
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -252,12 +244,9 @@ define void @test_reassoc_add_deep(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %D
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -290,5 +279,324 @@ entry:
 
   store double %add0, ptr %Sarray, align 8
   store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Both operands of the top-level add are themselves 2-term adds in every
+; lane (a balanced tree), so scanAssociativeOperands() used to leave this
+; alone entirely (both initial columns were independently peelable). Lane 0
+; pairs {A,B} then {C,D}; lane 1 pairs the same 4 terms as {B,D} then
+; {A,C}, a grouping ordinary per-level recursion cannot undo, since it can
+; only reorder operands within one node, never move a term across the
+; left/right subtree boundary. With balanced chains also flattened and
+; columns realigned by value family before the pairwise reorder, all 4
+; terms should still be loadable as plain contiguous vectors.
+;
+; S[0] = (A[0] + B[0]) + (C[0] + D[0])
+; S[1] = (B[1] + D[1]) + (A[1] + C[1])
+define void @test_reassoc_add_balanced_permuted(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_balanced_permuted(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds double, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %D0 = load double, ptr %Darray, align 8
+  %D1 = load double, ptr %idxD1, align 8
+
+  %addA0B0 = fadd fast double %A0, %B0
+  %addC0D0 = fadd fast double %C0, %D0
+  %add0 = fadd fast double %addA0B0, %addC0D0
+
+  %addB1D1 = fadd fast double %B1, %D1
+  %addA1C1 = fadd fast double %A1, %C1
+  %add1 = fadd fast double %addB1D1, %addA1C1
+
+  store double %add0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Same balanced shape as immediately above, but both lanes pair the same
+; terms the same way, so this was already vectorizable via ordinary
+; per-level recursion even before balanced chains were flattened too.
+; Flattening it into one reassociated node instead should not regress the
+; result: still 4 plain contiguous loads combined in 3 steps either way.
+;
+; S[0] = (A[0] + B[0]) + (C[0] + D[0])
+; S[1] = (A[1] + B[1]) + (C[1] + D[1])
+define void @test_reassoc_add_balanced_aligned(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_balanced_aligned(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds double, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds double, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds double, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds double, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds double, ptr %Sarray, i64 1
+
+  %A0 = load double, ptr %Aarray, align 8
+  %A1 = load double, ptr %idxA1, align 8
+
+  %B0 = load double, ptr %Barray, align 8
+  %B1 = load double, ptr %idxB1, align 8
+
+  %C0 = load double, ptr %Carray, align 8
+  %C1 = load double, ptr %idxC1, align 8
+
+  %D0 = load double, ptr %Darray, align 8
+  %D1 = load double, ptr %idxD1, align 8
+
+  %addA0B0 = fadd fast double %A0, %B0
+  %addC0D0 = fadd fast double %C0, %D0
+  %add0 = fadd fast double %addA0B0, %addC0D0
+
+  %addA1B1 = fadd fast double %A1, %B1
+  %addC1D1 = fadd fast double %C1, %D1
+  %add1 = fadd fast double %addA1B1, %addC1D1
+
+  store double %add0, ptr %Sarray, align 8
+  store double %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Same balanced+permuted shape as test_reassoc_add_balanced_permuted, but
+; with a bitwise opcode, to check the balanced-chain handling is not
+; Add/FAdd specific: isAssociative() also covers And/Or/Xor and Mul/FMul,
+; and And needs no fast-math or wrap flags to qualify.
+;
+; S[0] = (A[0] & B[0]) & (C[0] & D[0])
+; S[1] = (B[1] & D[1]) & (A[1] & C[1])
+define void @test_reassoc_and_balanced_permuted(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_and_balanced_permuted(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[CARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[DARRAY]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i32, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i32, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %C0 = load i32, ptr %Carray, align 4
+  %C1 = load i32, ptr %idxC1, align 4
+
+  %D0 = load i32, ptr %Darray, align 4
+  %D1 = load i32, ptr %idxD1, align 4
+
+  %andA0B0 = and i32 %A0, %B0
+  %andC0D0 = and i32 %C0, %D0
+  %and0 = and i32 %andA0B0, %andC0D0
+
+  %andB1D1 = and i32 %B1, %D1
+  %andA1C1 = and i32 %A1, %C1
+  %and1 = and i32 %andB1D1, %andA1C1
+
+  store i32 %and0, ptr %Sarray, align 4
+  store i32 %and1, ptr %idxS1, align 4
+  ret void
+}
+
+; An unbalanced 3-term chain like test_reassoc_add, but the third term is
+; the literal 0 (add's identity) instead of a third array, spread across a
+; different position per lane: lane 0 combines A and B first, then adds 0;
+; lane 1 combines B with 0 first, then adds A. This is the same shape (a
+; real value mixed with an unrelated identity placeholder in one column,
+; e.g. add(B, 0)) as a real gather-buildvector regression that combined
+; several unrelated `or`-with-0 expressions;
+;
+; S[0] = (A[0] + B[0]) + 0
+; S[1] = (B[1] + 0) + A[1]
+define void @test_reassoc_add_identity(ptr %Aarray, ptr %Barray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_identity(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+
+  %addA0B0 = add i32 %A0, %B0
+  %add0 = add i32 %addA0B0, 0
+
+  %addB10 = add i32 %B1, 0
+  %add1 = add i32 %addB10, %A1
+
+  store i32 %add0, ptr %Sarray, align 4
+  store i32 %add1, ptr %idxS1, align 4
+  ret void
+}
+
+; The same 4 load families per lane, but each lane's chain consumes them in
+; a different order: lane 0 is ((B+D)+C)+A, lane 1 is ((A+B)+C)+D. Peeling
+; goes through transient mixed columns (a load leaf against a nested add),
+; after which the columns realign into consecutive-load pairs.
+define void @test_reassoc_add_permuted_operands(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_permuted_operands(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i8, ptr [[SARRAY]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[BARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw <2 x i8> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw <2 x i8> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw <2 x i8> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 0
+; CHECK-NEXT:    store i8 [[TMP7]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
+; CHECK-NEXT:    store i8 [[TMP8]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i8, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i8, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i8, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i8, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i8, ptr %Sarray, i64 1
+
+  %A0 = load i8, ptr %Aarray, align 8
+  %A1 = load i8, ptr %idxA1, align 8
+
+  %B0 = load i8, ptr %Barray, align 8
+  %B1 = load i8, ptr %idxB1, align 8
+
+  %C0 = load i8, ptr %Carray, align 8
+  %C1 = load i8, ptr %idxC1, align 8
+
+  %D0 = load i8, ptr %Darray, align 8
+  %D1 = load i8, ptr %idxD1, align 8
+
+  %addB0D0 = add nuw nsw i8 %D0, %B0
+  %addA1B1 = add nuw nsw i8 %B1, %A1
+  %addB0C0D0 = add nuw nsw i8 %C0, %addB0D0
+  %addA1B1C1 = add nuw nsw i8 %addA1B1, %C1
+  %add0 = add nuw nsw i8 %addB0C0D0, %A0
+  %add1 = add nuw nsw i8 %D1, %addA1B1C1
+  store i8 %add0, ptr %Sarray, align 8
+  store i8 %add1, ptr %idxS1, align 8
+  ret void
+}
+
+; Shift leaves sit at different chain positions per lane (lane 0 slots 0,3;
+; lane 1 slots 0,1). Same-key shift columns are paired by the family of the
+; shift's own operand, so shlA* pairs with shlA* (consecutive loads) instead
+; of pairing by encounter order.
+define void @test_reassoc_add_shl_operands(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Darray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_add_shl_operands(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds i8, ptr [[BARRAY]], i64 1
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i8, ptr [[SARRAY]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load i8, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[AARRAY]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[CARRAY]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[DARRAY]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <2 x i8> [[TMP0]], splat (i8 3)
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[B1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <2 x i8> [[TMP4]], splat (i8 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = add nuw <2 x i8> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw <2 x i8> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw <2 x i8> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i8> [[TMP8]], i64 0
+; CHECK-NEXT:    store i8 [[TMP9]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i8> [[TMP8]], i64 1
+; CHECK-NEXT:    store i8 [[TMP10]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i8, ptr %Aarray, i64 1
+  %idxB1 = getelementptr inbounds i8, ptr %Barray, i64 1
+  %idxC1 = getelementptr inbounds i8, ptr %Carray, i64 1
+  %idxD1 = getelementptr inbounds i8, ptr %Darray, i64 1
+  %idxS1 = getelementptr inbounds i8, ptr %Sarray, i64 1
+
+  %A0 = load i8, ptr %Aarray, align 8
+  %A1 = load i8, ptr %idxA1, align 8
+
+  %B1 = load i8, ptr %idxB1, align 8
+
+  %C0 = load i8, ptr %Carray, align 8
+  %C1 = load i8, ptr %idxC1, align 8
+
+  %D0 = load i8, ptr %Darray, align 8
+  %D1 = load i8, ptr %idxD1, align 8
+
+  %shlA0 = shl nuw i8 %A0, 3
+  %shlA1 = shl nuw i8 %A1, 3
+  %shlB1 = shl nuw i8 %B1, 3
+  %shlC0 = shl nuw i8 %C0, 3
+
+  %addA0C0 = add nuw nsw i8 %shlA0, %C0
+  %addA1B1 = add nuw nsw i8 %shlB1, %shlA1
+  %addA0C0D0 = add nuw nsw i8 %addA0C0, %D0
+  %addA1B1C1 = add nuw nsw i8 %addA1B1, %C1
+  %add0 = add nuw nsw i8 %addA0C0D0, %shlC0
+  %add1 = add nuw nsw i8 %addA1B1C1, %D1
+  store i8 %add0, ptr %Sarray, align 8
+  store i8 %add1, ptr %idxS1, align 8
   ret void
 }

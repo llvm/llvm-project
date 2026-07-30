@@ -1,7 +1,7 @@
 # RUN: not llvm-mc -triple=riscv32 -mattr=+c,+f < %s 2>&1 | FileCheck %s
 
 ## FPRC
-c.flw  ft3, 8(a5) # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+c.flw  ft3, 8(a5) # CHECK: :[[@LINE]]:8: error: register must be a FPR
 
 ## uimm8_lsb00
 c.flwsp  fs1, 256(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 4 bytes in the range [0, 252]

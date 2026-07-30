@@ -5,6 +5,7 @@ add_flang_library(FIRTransforms
   AffineDemotion.cpp
   AffinePromotion.cpp
   AlgebraicSimplification.cpp
+  AllocationPlacement.cpp
   AnnotateConstant.cpp
   ArrayValueCopy.cpp
   ArrayValueCopy.cpp
@@ -28,6 +29,7 @@ add_flang_library(FIRTransforms
   ControlFlowConverter.cpp
   ConvertComplexPow.cpp
   DebugTypeGenerator.cpp
+  EmitMIFGlobalCtors.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
   FIRToMemRef.cpp
@@ -90,7 +92,6 @@ add_flang_library(FIRTransforms
   MLIRMathTransforms
   MLIRNVVMDialect
   MLIROpenACCDialect
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
   MLIRTransformUtils
 )

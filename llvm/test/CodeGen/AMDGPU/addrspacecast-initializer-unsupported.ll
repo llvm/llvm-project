@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-enable-lower-module-lds=false < %s 2> %t.err | FileCheck %s
+; RUN: not llc -mtriple=amdgpu6.00 -amdgpu-enable-lower-module-lds=false < %s 2> %t.err | FileCheck %s
 ; RUN: FileCheck -check-prefix=ERROR %s < %t.err
 
 ; ERROR: error: unsupported expression in static initializer: addrspacecast (ptr addrspace(3) @lds.arr to ptr addrspace(4))

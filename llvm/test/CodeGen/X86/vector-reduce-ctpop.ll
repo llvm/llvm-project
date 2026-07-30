@@ -377,7 +377,7 @@ define i32 @reduce_ctpop_v4i32(<4 x i32> %a0) nounwind {
 ; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmovdb %xmm0, %xmm0
+; AVX512VL-NEXT:    vpmovdw %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    retq
@@ -385,7 +385,7 @@ define i32 @reduce_ctpop_v4i32(<4 x i32> %a0) nounwind {
 ; AVX512VPOPCNT-LABEL: reduce_ctpop_v4i32:
 ; AVX512VPOPCNT:       # %bb.0:
 ; AVX512VPOPCNT-NEXT:    vpopcntd %xmm0, %xmm0
-; AVX512VPOPCNT-NEXT:    vpmovdb %xmm0, %xmm0
+; AVX512VPOPCNT-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX512VPOPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512VPOPCNT-NEXT:    vmovd %xmm0, %eax
@@ -939,7 +939,7 @@ define i64 @reduce_ctpop_v4i64(<4 x i64> %a0) nounwind {
 ; AVX512VL-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovqb %ymm0, %xmm0
+; AVX512VL-NEXT:    vpmovqw %ymm0, %xmm0
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
@@ -949,7 +949,7 @@ define i64 @reduce_ctpop_v4i64(<4 x i64> %a0) nounwind {
 ; AVX512VPOPCNT-LABEL: reduce_ctpop_v4i64:
 ; AVX512VPOPCNT:       # %bb.0:
 ; AVX512VPOPCNT-NEXT:    vpopcntq %ymm0, %ymm0
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm0, %xmm0
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm0, %xmm0
 ; AVX512VPOPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512VPOPCNT-NEXT:    vmovd %xmm0, %eax
@@ -5302,14 +5302,14 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VL-NEXT:    vpshufb %ymm7, %ymm10, %ymm7
 ; AVX512VL-NEXT:    vpaddb %ymm7, %ymm11, %ymm7
 ; AVX512VL-NEXT:    vpsadbw %ymm7, %ymm9, %ymm7
-; AVX512VL-NEXT:    vpmovqb %ymm0, %xmm0
-; AVX512VL-NEXT:    vpmovqb %ymm1, %xmm1
-; AVX512VL-NEXT:    vpmovqb %ymm2, %xmm2
-; AVX512VL-NEXT:    vpmovqb %ymm3, %xmm3
-; AVX512VL-NEXT:    vpmovqb %ymm4, %xmm4
-; AVX512VL-NEXT:    vpmovqb %ymm5, %xmm5
-; AVX512VL-NEXT:    vpmovqb %ymm6, %xmm6
-; AVX512VL-NEXT:    vpmovqb %ymm7, %xmm7
+; AVX512VL-NEXT:    vpmovqw %ymm0, %xmm0
+; AVX512VL-NEXT:    vpmovqw %ymm1, %xmm1
+; AVX512VL-NEXT:    vpmovqw %ymm2, %xmm2
+; AVX512VL-NEXT:    vpmovqw %ymm3, %xmm3
+; AVX512VL-NEXT:    vpmovqw %ymm4, %xmm4
+; AVX512VL-NEXT:    vpmovqw %ymm5, %xmm5
+; AVX512VL-NEXT:    vpmovqw %ymm6, %xmm6
+; AVX512VL-NEXT:    vpmovqw %ymm7, %xmm7
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm4
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm7, %ymm6, %ymm5
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4
@@ -5336,14 +5336,14 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VPOPCNT-NEXT:    vpopcntq %ymm5, %ymm5
 ; AVX512VPOPCNT-NEXT:    vpopcntq %ymm6, %ymm6
 ; AVX512VPOPCNT-NEXT:    vpopcntq %ymm7, %ymm7
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm0, %xmm0
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm1, %xmm1
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm3, %xmm3
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm4, %xmm4
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm5, %xmm5
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm6, %xmm6
-; AVX512VPOPCNT-NEXT:    vpmovqb %ymm7, %xmm7
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm0, %xmm0
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm1, %xmm1
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm2, %xmm2
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm3, %xmm3
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm4, %xmm4
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm5, %xmm5
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm6, %xmm6
+; AVX512VPOPCNT-NEXT:    vpmovqw %ymm7, %xmm7
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm4
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm7, %ymm6, %ymm5
 ; AVX512VPOPCNT-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4

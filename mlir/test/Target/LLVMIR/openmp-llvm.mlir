@@ -41,6 +41,30 @@ llvm.func @test_flush_construct(%arg0: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @test_error_construct
+llvm.func @test_error_construct(%msg : !llvm.ptr) {
+  // Severity is 1 for `warning` and 2 for `fatal`; the message is a pointer to
+  // a constant string, or a null pointer when absent.
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 1, ptr @{{.*}})
+  omp.error severity(warning) message("a warning")
+
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 2, ptr @{{.*}})
+  omp.error severity(fatal) message("fatal error")
+
+  // A runtime message is passed through as the supplied pointer operand.
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 1, ptr %{{.*}})
+  omp.error severity(warning) message_expr(%msg : !llvm.ptr)
+
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 2, ptr null)
+  omp.error severity(fatal)
+
+  // CHECK: call void @__kmpc_error(ptr @{{[0-9]+}}, i32 1, ptr null)
+  omp.error severity(warning)
+
+  // CHECK-NEXT:    ret void
+  llvm.return
+}
+
 // CHECK-LABEL: define void @test_omp_parallel_1()
 llvm.func @test_omp_parallel_1() -> () {
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_1:.*]])
@@ -743,6 +767,7 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @simd_linear
+// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %[[STEP:.*]], ptr %[[X:.*]])
 
 // CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
 // CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
@@ -758,8 +783,17 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i32 %omp_loop.iv, {{.*}}
 // CHECK: %[[ADD:.*]] = add i32 %[[LOAD]], %[[MUL]]
 // CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4, !llvm.access.group !1
+
+// CHECK: omp.region.cont:
+// CHECK: %[[VAL:.*]] = load i32, ptr %[[LINEAR_RESULT]]
+// CHECK-NEXT: %[[ADD:.*]] = add i32 %[[VAL]], %[[STEP]]
+// CHECK-NEXT: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]]
+// CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]]
+// CHECK-NEXT: store i32 %[[LOAD]], ptr %[[X]], align 4
   omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      llvm.store %iv, %x : i32, !llvm.ptr
+      llvm.store %iv, %x : i32, !llvm.ptr
       omp.yield
     }
   } {linear_var_types = [i32]}
@@ -827,6 +861,36 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
       omp.yield
     }
   } {linear_var_types = [f64]}
+  llvm.return
+}
+
+// -----
+
+// Test the update of omp.simd linear iteration variables, when nested inside
+// omp.wsloop.
+llvm.func @wsloop_simd_linear(%x : !llvm.ptr) {
+
+// CHECK-LABEL: @wsloop_simd_linear
+
+// CHECK: omp.wsloop.region:
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i32
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i32
+
+// CHECK: omp.region.cont2:
+// CHECK: %[[VAL:.*]] = load i32, ptr %[[LINEAR_RESULT]]
+// CHECK-NEXT: %[[ADD:.*]] = add i32 %[[VAL]], 25
+// CHECK-NEXT: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]]
+  %lb = llvm.mlir.constant(1 : i32) : i32
+  %ub = llvm.mlir.constant(100 : i32) : i32
+  %step = llvm.mlir.constant(25 : i32) : i32
+  omp.wsloop {
+    omp.simd linear(%x : !llvm.ptr = %step : i32) {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        llvm.store %iv, %x : i32, !llvm.ptr
+        omp.yield
+      }
+    } {linear_var_types = [i32], omp.composite}
+  } {omp.composite}
   llvm.return
 }
 
@@ -3556,7 +3620,7 @@ module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-module attributes {omp.flags = #omp.flags<>, omp.is_gpu = true} {}
+module attributes {omp.flags = #omp.flags<>, omp.is_target_device = true, omp.is_gpu = true} {}
 
 // -----
 
@@ -3566,7 +3630,7 @@ module attributes {omp.flags = #omp.flags<>, omp.is_gpu = true} {}
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
-module attributes {omp.flags = #omp.flags<openmp_device_version = 51>, omp.is_gpu = true} {}
+module attributes {omp.flags = #omp.flags<openmp_device_version = 51>, omp.is_target_device = true, omp.is_gpu = true} {}
 
 // -----
 
@@ -3577,13 +3641,13 @@ module attributes {omp.flags = #omp.flags<openmp_device_version = 51>, omp.is_gp
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>, omp.is_gpu = true} {}
+module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>, omp.is_target_device = true, omp.is_gpu = true} {}
 
 // -----
 
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
 // CHECK-NOT: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-module attributes {omp.version = #omp.version<version = 51>} {}
+module attributes {omp.version = #omp.version<version = 51>, omp.is_target_device = true} {}
 
 // -----
 // CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0

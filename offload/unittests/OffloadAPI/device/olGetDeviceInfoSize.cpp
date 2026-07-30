@@ -66,6 +66,7 @@ OL_DEVICE_INFO_SIZE_TEST_EQ(MaxClockFrequency, uint32_t,
                             OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY);
 OL_DEVICE_INFO_SIZE_TEST_EQ(MemoryClockRate, uint32_t,
                             OL_DEVICE_INFO_MEMORY_CLOCK_RATE);
+OL_DEVICE_INFO_SIZE_TEST_EQ(NumLanes, uint32_t, OL_DEVICE_INFO_NUM_LANES);
 OL_DEVICE_INFO_SIZE_TEST_EQ(AddressBits, uint32_t, OL_DEVICE_INFO_ADDRESS_BITS);
 OL_DEVICE_INFO_SIZE_TEST_EQ(MaxMemAllocSize, uint64_t,
                             OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE);

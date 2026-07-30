@@ -406,3 +406,102 @@ func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %co
   }
   return
 }
+
+// -----
+
+// A data entry op (acc.present) shared by an enclosing acc.data and a nested
+// acc.kernels that has an if clause. Lowering the kernels' if clause must not
+// erase or rewrite the present op that acc.data still uses (otherwise acc.data
+// ends up with a non data-entry op as its data operand and fails to verify).
+// CHECK-LABEL: func.func @test_kernels_if_shared_present
+func.func @test_kernels_if_shared_present(%arg0: memref<10xi32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  // CHECK: %[[PRESENT:.*]] = acc.present varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %present = acc.present varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // The enclosing acc.data must keep referencing the original present op.
+  // CHECK: acc.data dataOperands(%[[PRESENT]] : memref<10xi32>) {
+  acc.data dataOperands(%present : memref<10xi32>) {
+    // CHECK: scf.if %{{.*}} {
+    // The externally owned present op is referenced directly, not cloned/erased.
+    // CHECK-NOT: acc.present
+    // CHECK:   acc.kernels dataOperands(%[[PRESENT]] : memref<10xi32>)
+    // CHECK: } else {
+    // Host path uses the original variable, not the present result.
+    // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+    // CHECK: }
+    acc.kernels dataOperands(%present : memref<10xi32>) if(%cond) {
+      scf.for %i = %c0 to %c10 step %c1 {
+        memref.store %c0_i32, %present[%i] : memref<10xi32>
+      }
+      acc.terminator
+    }
+    acc.terminator
+  }
+  return
+}
+
+// -----
+
+// A data entry and exit shared by sibling compute constructs belong to their
+// surrounding scope. Neither conditional lowering may clone or erase them.
+// CHECK-LABEL: func.func @test_sibling_compute_shared_data
+func.func @test_sibling_compute_shared_data(%arg0: memref<10xi32>, %cond0: i1, %cond1: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel dataOperands(%[[COPYIN]] : memref<10xi32>)
+  // CHECK-NOT: acc.copyout
+  // CHECK: } else {
+  // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+  // CHECK: }
+  acc.parallel dataOperands(%copyin : memref<10xi32>) if(%cond0) {
+    memref.store %c0_i32, %copyin[%c0] : memref<10xi32>
+    acc.yield
+  }
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.serial dataOperands(%[[COPYIN]] : memref<10xi32>)
+  // CHECK-NOT: acc.copyout
+  // CHECK: } else {
+  // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+  // CHECK: }
+  acc.serial dataOperands(%copyin : memref<10xi32>) if(%cond1) {
+    memref.store %c0_i32, %copyin[%c0] : memref<10xi32>
+    acc.yield
+  }
+  // CHECK: acc.copyout accPtr(%[[COPYIN]] : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  acc.copyout accPtr(%copyin : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  return
+}
+
+// -----
+
+// Duplicate data operands must preserve their multiplicity without cloning or
+// erasing the same entry/exit operation more than once.
+// CHECK-LABEL: func.func @test_duplicate_data_operand
+func.func @test_duplicate_data_operand(%arg0: memref<10xi32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // CHECK-NOT: acc.copyin
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   %[[COPYIN:.*]] = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  // CHECK:   acc.parallel dataOperands(%[[COPYIN]], %[[COPYIN]] : memref<10xi32>, memref<10xi32>)
+  // CHECK:   acc.copyout accPtr(%[[COPYIN]] : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  // CHECK-NOT: acc.copyout
+  // CHECK: } else {
+  // CHECK:   memref.store %{{.*}}, %arg0[%{{.*}}] : memref<10xi32>
+  // CHECK: }
+  // CHECK-NOT: acc.copyout
+  // CHECK: return
+  acc.parallel dataOperands(%copyin, %copyin : memref<10xi32>, memref<10xi32>) if(%cond) {
+    memref.store %c0_i32, %copyin[%c0] : memref<10xi32>
+    acc.yield
+  }
+  acc.copyout accPtr(%copyin : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  return
+}

@@ -522,6 +522,15 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Extracting from X0_Pair may create copies from DUMMY_REG_PAIR_WITH_X0.
+  if (SrcReg == RISCV::DUMMY_REG_PAIR_WITH_X0 &&
+      RISCV::GPRRegClass.contains(DstReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
+        .addReg(RISCV::X0)
+        .addImm(0);
+    return;
+  }
+
   if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
@@ -3140,6 +3149,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_RTZARG:
           Ok = Imm == RISCVFPRndMode::RTZ;
           break;
+        case RISCVOp::OPERAND_SMTVType:
+          Ok = XSMTVTypeMode::isValidSMTVTypeMode(Imm);
+          break;
+        case RISCVOp::OPERAND_SMTI8:
+          Ok = Imm == XSMTVTypeMode::SMT_I8;
+          break;
         case RISCVOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
           break;
@@ -3962,9 +3977,11 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR64), Reg);
   } else if (RISCV::FPR128RegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR128), Reg);
+  } else if (RISCV::VRRegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
     llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for vector registers");
+        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
   }
 }
 
@@ -5522,10 +5539,9 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    if (II->mayStore()) {
-      SawStore = true;
+    II->isSafeToMove(SawStore);
+    if (SawStore)
       break;
-    }
   }
   return From.isSafeToMove(SawStore);
 }
