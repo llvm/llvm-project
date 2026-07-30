@@ -76,3 +76,34 @@ entry:
 }
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
+
+@.str = private unnamed_addr constant [4 x i8] c"Buf\00", align 1
+
+declare target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32, i32, i32, i32, ptr)
+declare ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0), i32)
+
+; Byte-addressable VulkanBuffer getpointer is typed as i8, but typed
+; scalar loads/stores add an i8->T spv_ptrcast. Legalize that by storing
+; directly through the getpointer result.
+
+define spir_func void @byteBufferStore() #0 {
+; CHECK-LABEL: define spir_func void @byteBufferStore(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i32 42, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define spir_func void @byteBufferLoad() #0 {
+; CHECK-LABEL: define spir_func void @byteBufferLoad(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i32, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load i32, ptr addrspace(11) %ptr, align 4
+  ret void
+}

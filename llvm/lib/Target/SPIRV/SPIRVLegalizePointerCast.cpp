@@ -222,15 +222,59 @@ class SPIRVLegalizePointerCastImpl {
     return std::make_pair(GEP, CurrentTy);
   }
 
+  // Returns the pointer operand of a load/store that uses a ptrcast.
+  static Value *getCastedPointerOperand(Instruction *MemI) {
+    if (auto *LI = dyn_cast<LoadInst>(MemI))
+      return LI->getPointerOperand();
+    if (auto *SI = dyn_cast<StoreInst>(MemI))
+      return SI->getPointerOperand();
+    if (auto *II = dyn_cast<IntrinsicInst>(MemI))
+      if (II->getIntrinsicID() == Intrinsic::spv_store)
+        return II->getArgOperand(1);
+    llvm_unreachable("Unexpected memory instruction being legalized.");
+  }
+
+  // Legalizes a reinterpretation ptrcast: the casted pointer's pointee type
+  // matches the access type but differs from the original pointer layout (e.g.
+  // byte-addressable i8 storage accessed as i32).
+  template <typename MemInstTy>
+  bool tryDirectReinterpretAccess(IRBuilder<> &B, Type *AccessTy,
+                                  Value *OriginalPtr, Value *CastedPtr,
+                                  Align Alignment, bool IsStore,
+                                  Value *StoreSrc, MemInstTy *BadMem) {
+    Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
+    if (!CastedElemTy || CastedElemTy != AccessTy)
+      return false;
+
+    GR->buildAssignPtr(B, CastedElemTy, OriginalPtr);
+    if (IsStore) {
+      StoreInst *SI = B.CreateStore(StoreSrc, OriginalPtr);
+      SI->setAlignment(Alignment);
+    } else {
+      LoadInst *LI = B.CreateLoad(AccessTy, OriginalPtr);
+      LI->setAlignment(Alignment);
+      buildAssignType(B, AccessTy, LI);
+      GR->replaceAllUsesWith(BadMem, LI, /* DeleteOld= */ true);
+      DeadInstructions.push_back(BadMem);
+    }
+    return true;
+  }
+
   // Builds a legalized load from a pointer, drilling down through
   // memory layouts to find a compatible type. Load flags will be
   // copied from |BadLoad|, which should be the load being legalized.
   Value *buildLegalizedLoad(IRBuilder<> &B, Type *ElementType, Value *Source,
-                            LoadInst *BadLoad) {
+                            LoadInst *BadLoad, Value *CastedPtr) {
     auto ResultOpt = getPointerToFirstCompatibleType(
         B, Source, BadLoad->getPointerOperandType(), ElementType, false);
-    assert(ResultOpt && "Failed to load from aggregate: "
-                        "Could not find compatible memory layout.");
+    if (!ResultOpt) {
+      if (tryDirectReinterpretAccess(
+              B, ElementType, Source, CastedPtr, BadLoad->getAlign(),
+              /*IsStore=*/false, /*StoreSrc=*/nullptr, BadLoad))
+        return nullptr;
+      llvm_unreachable("Failed to load from aggregate: "
+                       "Could not find compatible memory layout.");
+    }
     auto [GEP, CurrentTy] = *ResultOpt;
 
     auto *SAT = dyn_cast<ArrayType>(CurrentTy);
@@ -415,7 +459,10 @@ class SPIRVLegalizePointerCastImpl {
     Type *ToTy = GR->findDeducedElementType(CastedOperand);
     B.SetInsertPoint(LI);
 
-    Value *Output = buildLegalizedLoad(B, ToTy, OriginalOperand, LI);
+    Value *Output =
+        buildLegalizedLoad(B, ToTy, OriginalOperand, LI, CastedOperand);
+    if (!Output)
+      return;
 
     GR->replaceAllUsesWith(LI, Output, /* DeleteOld= */ true);
     DeadInstructions.push_back(LI);
@@ -513,11 +560,18 @@ class SPIRVLegalizePointerCastImpl {
   // Builds a legalized store to a pointer, drilling down through
   // memory layouts to find a compatible type.
   void buildLegalizedStore(IRBuilder<> &B, Value *Src, Value *Dst,
-                           Align Alignment) {
+                           Align Alignment, Value *CastedPtr,
+                           Instruction *BadStore) {
     auto ResultOpt = getPointerToFirstCompatibleType(B, Dst, Dst->getType(),
                                                      Src->getType(), true);
-    assert(ResultOpt && "Failed to store to aggregate: "
-                        "Could not find compatible memory layout.");
+    if (!ResultOpt) {
+      if (tryDirectReinterpretAccess(B, Src->getType(), Dst, CastedPtr,
+                                     Alignment,
+                                     /*IsStore=*/true, Src, BadStore))
+        return;
+      llvm_unreachable("Failed to store to aggregate: "
+                       "Could not find compatible memory layout.");
+    }
     auto [GEP, CurrentTy] = *ResultOpt;
 
     auto *DAT = dyn_cast<ArrayType>(CurrentTy);
@@ -552,7 +606,8 @@ class SPIRVLegalizePointerCastImpl {
   void transformStore(IRBuilder<> &B, Instruction *BadStore, Value *Src,
                       Value *Dst, Align Alignment) {
     B.SetInsertPoint(BadStore);
-    buildLegalizedStore(B, Src, Dst, Alignment);
+    buildLegalizedStore(B, Src, Dst, Alignment,
+                        getCastedPointerOperand(BadStore), BadStore);
     DeadInstructions.push_back(BadStore);
   }
 
