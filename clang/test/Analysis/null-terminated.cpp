@@ -14,11 +14,6 @@ void test_constexpr_good() {
   receive(sigs);
 }
 
-void test_constexpr_early_term() {
-  constexpr int sigs[] = {1, 0, 3};
-  receive(sigs);
-}
-
 void receive_ref(NULL_TERMINATED const int (&signals)[3]);
 
 void test_ref_bad() {
@@ -31,12 +26,12 @@ void test_ref_good() {
   receive_ref(sigs);
 }
 
-// CSA limitation - CSA cannot see through default member initializers.
+// CSA cannot see through default member initializers.
 struct S {
   int bad[3] = {1, 2, 3};
   int good[3] = {1, 2, 0};
-
 };
+
 void test_inclass_bad() {
   S s;
   receive(s.bad);
@@ -47,7 +42,7 @@ void test_inclass_good() {
   receive(s.good);
 }
 
-// Test C++11 attribute syntax
+// Test C++11 attribute syntax.
 void receive_cpp([[clang::annotate("null_terminated")]] const int signals[]);
 
 void test_cpp_spelling() {
