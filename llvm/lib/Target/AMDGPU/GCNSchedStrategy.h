@@ -15,6 +15,8 @@
 
 #include "GCNRegPressure.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -472,6 +474,65 @@ private:
   /// \returns true if this MI is a rewrite candidate.
   bool isRewriteCandidate(MachineInstr *MI) const;
 
+  /// Returns true if the src2 reaching defs \p DefIdxs of \p Src2Reg have a
+  /// conflict that prevents safe bridge-copy insertion after non-MAI defs.
+  ///
+  /// rewrite()'s design principle for src2: instead of reclassifying Src2Reg
+  /// to AGPR directly, Case 1 creates a fresh VGPR %MappedReg and inserts a
+  /// bridge COPY (Src2Reg → %MappedReg) after each non-MAI reaching def.  The
+  /// MFMA's src2 operand is then replaced with %MappedReg, which rewrite()
+  /// subsequently reclassifies to AGPR.  This preserves Src2Reg's VGPR class
+  /// for non-MFMA users while giving the MFMA an AGPR-class src2.
+  ///
+  /// For this strategy to be correct, every bridge COPY must produce a
+  /// well-defined %MappedReg at every src2 use site.  Two conditions break
+  /// this requirement:
+  /// Check 1: if a MAI def dominates a non-MAI def, the bridge copy after the
+  /// non-MAI def would need to partially update an already-AGPR register —
+  /// illegal for rewrite()'s COPY model.
+  /// Early-safe return: if all (MAI, non-MAI) pairs are parallel in the CFG
+  /// and every MAI def is itself a candidate, the non-MAI defs can be bridged
+  /// without conflict; Check 2 is skipped.
+  /// Check 2: on every path from the entry to a use of \p Src2Reg, some bridge
+  /// block in \p BridgeBlocks (a non-MAI def block of Src2Reg, where a bridge
+  /// copy is inserted) must be crossed; otherwise %MappedReg is undefined on
+  /// that path.  \p BridgeBlocks is precomputed in computeExclusionSet as the
+  /// union, over all candidates sharing Src2Reg, of the non-MAI reaching-def
+  /// blocks of their src2 — this is what rewrite() actually inserts copies
+  /// after, so a single candidate's own reaching defs are not enough.
+  /// Check 3: if \p RedefPartialBlocks (non-AGPR-form partial subreg
+  /// reaching-def blocks of Src2Reg) holds >=2 mutually non-dominating blocks
+  /// with no single block dominating all uses, redirecting uses to %MappedReg
+  /// splits the original Src2Reg live interval into disconnected components.
+  bool hasSrc2BridgeConflict(
+      ArrayRef<SlotIndex> DefIdxs, Register Src2Reg,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &BridgeBlocks,
+      const SmallPtrSetImpl<const MachineBasicBlock *> &RedefPartialBlocks)
+      const;
+
+  /// Returns true if reclassifying \p DstReg to AGPR would require bridge
+  /// copies beyond rewrite()'s capability (full-register copies only).
+  /// Phase 1: non-agnostic subreg writer (e.g. V_MOV) cannot write an AGPR
+  /// sub-register lane → conflict.  Agnostic writers (COPY/AV_MOV) lower to
+  /// v_accvgpr_write and are legal but their orphan uses are checked in
+  /// Phase 2. Phase 2: if an orphan use of an agnostic subreg def is
+  /// non-agnostic, it cannot legally source an AGPR sub-register lane →
+  /// conflict.
+  bool hasDstSubregConflict(Register DstReg, MachineInstr *MFMA);
+
+  /// Transitively exclude from \p ExcludedMFMAs any rewrite candidate whose
+  /// src2 is the dst of \p Root or of any already-excluded MFMA.
+  void
+  propagateExclusionForward(MachineInstr *Root,
+                            SmallPtrSetImpl<MachineInstr *> &ExcludedMFMAs);
+
+  /// Compute the set of rewrite candidates in \p RewriteSet that must be
+  /// excluded from rewriting due to src2 dominance conflicts or dst subreg
+  /// conflicts.  Exclusion propagates forward (dst→src2 chain) and backward
+  /// (MAI reaching-defs of a conflicted src2).  No IR is mutated.
+  SmallPtrSet<MachineInstr *, 16>
+  computeExclusionSet(const SmallSetVector<MachineInstr *, 16> &RewriteSet);
+
   /// Resets all candidates in \p RewriteCands back to VGPR form.
   void resetRewriteCandsToVGPR(
       ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands);
@@ -486,11 +547,35 @@ private:
   void findReachingUses(const MachineInstr *DefMI, LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
-  /// Returns true if the src2 register with reaching defs \p Src2ReachingDefs
-  /// has a use other than a group MFMA (in \p RewriteSet) or a copy, which
-  /// would keep it in VGPR form rather than let it be reclassified to AGPR.
-  bool hasUseRequiringVGPR(ArrayRef<SlotIndex> Src2ReachingDefs,
-                           const SmallPtrSetImpl<MachineInstr *> &RewriteSet);
+  /// Returns true if any reaching def of src2 (\p Src2ReachingDefs) has a use
+  /// that requires the def to stay in VGPR form: any use that is not a COPY and
+  /// not a rewritable MFMA candidate (in \p RewriteSet, which is already
+  /// post-exclusion). Excluded MFMAs are not being rewritten, so their src2
+  /// cannot be reclassified to AGPR.
+  bool
+  hasUseRequiringVGPR(ArrayRef<SlotIndex> Src2ReachingDefs,
+                      const SmallSetVector<MachineInstr *, 16> &RewriteSet);
+
+  /// The set of copy insertion points required to rewrite a single MFMA
+  /// candidate, shared by initHeuristics (cost estimate) and rewrite (actual
+  /// insertion) so both agree on exactly which copies are needed.
+  struct MFMACopyPlan {
+    /// Non-AGPR-form reaching defs of src2 that need a bridge COPY (Case 1).
+    SmallSetVector<MachineInstr *, 8> Src2DefsNeedingCopy;
+    /// Non-group reaching uses of the dst that need a copy (Case 2).
+    SmallSetVector<MachineOperand *, 8> DstUsesNeedingCopy;
+    /// Non-MAI reaching defs of those dst uses that need a copy (Case 3).
+    SmallSetVector<MachineInstr *, 8> DstUseDefsNeedingCopy;
+  };
+
+  /// Compute the copy plan for MFMA candidate \p MI. \p GroupSet is the
+  /// post-exclusion rewrite group and \p Src2Regs the candidate src2 registers
+  /// (both used to classify AGPR-form reaching defs); \p Src2NeedsVGPR forces
+  /// every src2 reaching def to be bridged.
+  MFMACopyPlan
+  analyzeCopyPoints(MachineInstr *MI,
+                    const SmallSetVector<MachineInstr *, 16> &GroupSet,
+                    const DenseSet<Register> &Src2Regs, bool Src2NeedsVGPR);
 
 public:
   bool initGCNSchedStage() override;
