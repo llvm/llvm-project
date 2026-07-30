@@ -131,7 +131,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(Self&&, const allocator_type&) (different allocs)", [=](auto& st) {
+  bench_non_empty("ctor(Self&&, const allocator_type&) (different allocs)", [=](auto& st) {
     using PMRContainer = adapt_operations<Container>::template rebind_alloc<
         std::pmr::polymorphic_allocator<typename Container::value_type>>;
 
@@ -493,11 +493,14 @@ void associative_container_benchmarks(std::string container) {
       st.ResumeTiming();
     }
   };
-  bench("insert(iterator, iterator) (all new keys, end)", [&](auto& state) { insert_iter_iter_bench(true, state); });
-  bench("insert(iterator, iterator) (all new keys, middle)",
-        [&](auto& state) { insert_iter_iter_bench(false, state); });
+  bench_non_empty("insert(iterator, iterator) (all new keys, end)", [&](auto& state) {
+    insert_iter_iter_bench(true, state);
+  });
+  bench_non_empty("insert(iterator, iterator) (all new keys, middle)", [&](auto& state) {
+    insert_iter_iter_bench(false, state);
+  });
 
-  bench("insert(iterator, iterator) (half new keys)", [=](auto& st) {
+  bench_non_empty("insert(iterator, iterator) (half new keys)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
 
@@ -521,7 +524,7 @@ void associative_container_benchmarks(std::string container) {
   });
 
   if constexpr (is_map_like) {
-    bench("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) {
+    bench_non_empty("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
       Container source(in.begin(), in.end());
@@ -540,7 +543,7 @@ void associative_container_benchmarks(std::string container) {
     });
 
 #if TEST_STD_VER >= 23
-    bench("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
+    bench_non_empty("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
       std::sort(keys.begin(), keys.end());
@@ -647,7 +650,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("erase(iterator, iterator) (erase half the container)", [=](auto& st) {
+  bench_non_empty("erase(iterator, iterator) (erase half the container)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container c(in.begin(), in.end());
