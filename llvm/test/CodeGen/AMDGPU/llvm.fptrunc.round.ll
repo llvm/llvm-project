@@ -156,9 +156,7 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_f32_to_v2f16_towardzero(float %a, f
 ;
 ; GISEL-LABEL: v_fptrunc_round_f32_to_v2f16_towardzero:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v0
-; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v1, v1, v0
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: v_fptrunc_round_f32_to_v2f16_towardzero:
@@ -232,7 +230,8 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_constant_to_v2f16_towardzero(float 
 ; GISEL-LABEL: v_fptrunc_round_constant_to_v2f16_towardzero:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v0
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, 1.0
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_lshl_or_b32 v0, 0x3c00, 16, v0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_constant_to_v2f16_towardzero:
@@ -744,9 +743,10 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_v2f32_to_v2f16_upward(<2 x float> %
 ; GISEL-LABEL: v_fptrunc_round_v2f32_to_v2f16_upward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v2f32_to_v2f16_upward:
@@ -796,9 +796,10 @@ define amdgpu_gs <2 x half> @v_fptrunc_round_v2f32_to_v2f16_downward(<2 x float>
 ; GISEL-LABEL: v_fptrunc_round_v2f32_to_v2f16_downward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v2f32_to_v2f16_downward:
@@ -877,19 +878,24 @@ define amdgpu_gs void @v_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
 ; GISEL-LABEL: v_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v2
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v7, v3
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v3
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 2
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v3
-; GISEL-NEXT:    v_pack_b32_f16 v3, v6, v7
-; GISEL-NEXT:    v_pack_b32_f16 v1, v1, v2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 1
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v7, v2
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v1, v6, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
-; GISEL-NEXT:    v_pk_add_f16 v0, v0, v3
-; GISEL-NEXT:    v_pk_add_f16 v0, v1, v0
+; GISEL-NEXT:    v_pk_add_f16 v0, v0, v1
+; GISEL-NEXT:    v_pk_add_f16 v0, v2, v0
 ; GISEL-NEXT:    global_store_dword v[4:5], v0, off
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -1315,12 +1321,13 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %
 ;
 ; GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -1375,12 +1382,13 @@ define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float>
 ;
 ; GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-NEXT:    v_lshlrev_b32_e64 v3, 16, s0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -1440,12 +1448,14 @@ define amdgpu_gs <4 x half> @v_fptrunc_round_v4f32_to_v4f16_upward(<4 x float> %
 ; GISEL-LABEL: v_fptrunc_round_v4f32_to_v4f16_upward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_pack_b32_f16 v1, v2, v3
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v4f32_to_v4f16_upward:
@@ -1506,12 +1516,14 @@ define amdgpu_gs <4 x half> @v_fptrunc_round_v4f32_to_v4f16_downward(<4 x float>
 ; GISEL-LABEL: v_fptrunc_round_v4f32_to_v4f16_downward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_pack_b32_f16 v1, v2, v3
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v4f32_to_v4f16_downward:
@@ -1587,18 +1599,22 @@ define amdgpu_gs <8 x half> @v_fptrunc_round_v8f32_to_v8f16_upward(<8 x float> %
 ; GISEL-LABEL: v_fptrunc_round_v8f32_to_v8f16_upward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_pack_b32_f16 v1, v2, v3
-; GISEL-NEXT:    v_pack_b32_f16 v2, v4, v5
-; GISEL-NEXT:    v_pack_b32_f16 v3, v6, v7
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v2, v5, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v3, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v8f32_to_v8f16_upward:
@@ -1683,18 +1699,22 @@ define amdgpu_gs <8 x half> @v_fptrunc_round_v8f32_to_v8f16_downward(<8 x float>
 ; GISEL-LABEL: v_fptrunc_round_v8f32_to_v8f16_downward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; GISEL-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
-; GISEL-NEXT:    v_pack_b32_f16 v1, v2, v3
-; GISEL-NEXT:    v_pack_b32_f16 v2, v4, v5
-; GISEL-NEXT:    v_pack_b32_f16 v3, v6, v7
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v2, v5, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-NEXT:    v_or_b32_sdwa v3, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-SDAG-LABEL: v_fptrunc_round_v8f32_to_v8f16_downward:

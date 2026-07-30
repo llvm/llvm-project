@@ -578,8 +578,8 @@ define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_f64(ptr addrspace
 
 ; GCN-LABEL: test_fold_canonicalize_fmul_value_f32_no_ieee:
 ; GCN: v_mul_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
-; GCN-NOT: v_mul
-; GCN-NOT: v_max
+; VI-NEXT: v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V]]
+; GFX9-NEXT: v_max_f32_e32 [[V]], [[V]], [[V]]
 ; GCN-NEXT: ; return
 define amdgpu_ps float @test_fold_canonicalize_fmul_value_f32_no_ieee(float %arg) {
 entry:
@@ -590,8 +590,8 @@ entry:
 
 ; GCN-LABEL: test_fold_canonicalize_fmul_nnan_value_f32_no_ieee:
 ; GCN: v_mul_f32_e32 [[V:v[0-9]+]], 0x41700000, v{{[0-9]+}}
-; GCN-NOT: v_mul
-; GCN-NOT: v_max
+; VI-NEXT: v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V]]
+; GFX9-NEXT: v_max_f32_e32 [[V]], [[V]], [[V]]
 ; GCN-NEXT: ; return
 define amdgpu_ps float @test_fold_canonicalize_fmul_nnan_value_f32_no_ieee(float %arg) {
 entry:
@@ -602,8 +602,8 @@ entry:
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_fdiv_value_f32_no_ieee:
 ; GCN: v_div_fixup_f32
-; GCN-NOT: v_max
-; GCN-NOT: v_mul
+; VI-NEXT: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+; GFX9-NEXT: v_max_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: ; return
 define amdgpu_ps float @test_fold_canonicalize_fdiv_value_f32_no_ieee(float %arg0) {
 entry:
@@ -684,17 +684,16 @@ define amdgpu_kernel void @test_fold_canonicalize_select_value_f32(ptr addrspace
 ; FIXME: canonicalize doens't work correctly without ieee_mode
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_minnum_value_no_ieee_mode:
-; GFX9-NOT: v0
-; GFX9-NOT: v1
 ; GFX9: v_min_f32_e32 v0, v0, v1
+; GFX9-NEXT: v_max_f32_e32 v0, v0, v0
 ; GFX9-NEXT: ; return to shader
 
 ; VI-FLUSH: v_min_f32_e32 v0, v0, v1
 ; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
 ; VI-FLUSH-NEXT: ; return
 
-; VI-DENORM-NOT: v0
 ; VI-DENORM: v_min_f32_e32 v0, v0, v1
+; VI-DENORM-NEXT: v_mul_f32_e32 v0, 1.0, v0
 ; VI-DENORM-NEXT: ; return
 define amdgpu_ps float @test_fold_canonicalize_minnum_value_no_ieee_mode(float %arg0, float %arg1) {
   %v = tail call float @llvm.minnum.f32(float %arg0, float %arg1)
@@ -721,7 +720,8 @@ define float @test_fold_canonicalize_minnum_value_ieee_mode(float %arg0, float %
 ; GCN-LABEL: {{^}}test_fold_canonicalize_minnum_value_no_ieee_mode_nnan:
 ; GCN: v_min_f32_e32 v0, v0, v1
 ; VI-FLUSH-NEXT: v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT: ; return
+; GFX9-NEXT: v_max_f32_e32 v0, v0, v0
+; GCN: ; return
 define amdgpu_ps float @test_fold_canonicalize_minnum_value_no_ieee_mode_nnan(float %arg0, float %arg1) #1 {
   %v = tail call float @llvm.minnum.f32(float %arg0, float %arg1)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)

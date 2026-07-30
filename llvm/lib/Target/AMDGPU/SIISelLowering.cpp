@@ -15960,8 +15960,37 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   if (MaxDepth == 0)
     return false;
 
+  // Prevent llvm.canonicalize from being silently dropped when the hardware
+  // won't quiet sNaN based on the following hardware sNaN quieting behavior.
+  //
+  // Pre-GFX12:
+  //   Always quiet: v_cvt_f16_f32, v_cvt_pkrtz_f16_f32, v_dot2_f32_f16,
+  //                 v_cvt_f32_ubyte{0-3} (integer->float, never produces NaN).
+  //   IEEE-dependent: all other float ops quiet sNaN only when MODE.IEEE=1.
+  //   Never quiets: DIV_SCALE passes sNaN through even at MODE.IEEE=1.
+  //
+  // GFX12+: all exception-producing ops unconditionally quiet sNaN regardless
+  // of MODE.IEEE.
+  const bool IsGFX12Plus = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12;
+  const bool QuietsSignalNaN =
+      IsGFX12Plus ||
+      DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>()->getMode().IEEE;
+
   switch (Opcode) {
-  // These will flush denorms if required.
+  // Unconditionally quiet sNaN (see comment above).
+  case ISD::FP_TO_FP16:
+  case AMDGPUISD::FP_TO_FP16:
+  case AMDGPUISD::CVT_PKRTZ_F16_F32:
+  case AMDGPUISD::CVT_F32_UBYTE0:
+  case AMDGPUISD::CVT_F32_UBYTE1:
+  case AMDGPUISD::CVT_F32_UBYTE2:
+  case AMDGPUISD::CVT_F32_UBYTE3:
+    return true;
+
+  // Passes sNaN through on pre-GFX12 even at ieee=1 (see comment above).
+  case AMDGPUISD::DIV_SCALE:
+    return IsGFX12Plus;
+
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
@@ -15975,7 +16004,6 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
   case ISD::FP16_TO_FP:
-  case ISD::FP_TO_FP16:
   case ISD::BF16_TO_FP:
   case ISD::FP_TO_BF16:
   case ISD::FLDEXP:
@@ -15988,19 +16016,12 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::LOG:
   case AMDGPUISD::EXP:
-  case AMDGPUISD::DIV_SCALE:
   case AMDGPUISD::DIV_FMAS:
   case AMDGPUISD::DIV_FIXUP:
   case AMDGPUISD::FRACT:
-  case AMDGPUISD::CVT_PKRTZ_F16_F32:
-  case AMDGPUISD::CVT_F32_UBYTE0:
-  case AMDGPUISD::CVT_F32_UBYTE1:
-  case AMDGPUISD::CVT_F32_UBYTE2:
-  case AMDGPUISD::CVT_F32_UBYTE3:
-  case AMDGPUISD::FP_TO_FP16:
   case AMDGPUISD::SIN_HW:
   case AMDGPUISD::COS_HW:
-    return true;
+    return QuietsSignalNaN;
 
   // It can/will be lowered or combined as a bit operation.
   // Need to check their input recursively to handle.
@@ -16026,7 +16047,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FSIN:
   case ISD::FCOS:
   case ISD::FSINCOS:
-    return Op.getValueType().getScalarType() != MVT::f16;
+    return Op.getValueType().getScalarType() != MVT::f16 && QuietsSignalNaN;
 
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
@@ -16036,17 +16057,20 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-  case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
   case AMDGPUISD::FMIN3:
   case AMDGPUISD::FMAXIMUM3:
   case AMDGPUISD::FMINIMUM3: {
+    // Only check denormals if sNaN quieting is guaranteed (see comment above).
+    if (!QuietsSignalNaN)
+      return false;
+    [[fallthrough]];
+  }
+  case AMDGPUISD::CLAMP: {
     // FIXME: Shouldn't treat the generic operations different based these.
     // However, we aren't really required to flush the result from
-    // minnum/maxnum..
-
-    // snans will be quieted, so we only need to worry about denormals.
+    // minnum/maxnum.
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(DAG, Op.getValueType()))
@@ -16114,8 +16138,10 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
-    case Intrinsic::amdgcn_frexp_mant:
     case Intrinsic::amdgcn_fdot2:
+      return true;
+    case Intrinsic::amdgcn_div_scale:
+      return IsGFX12Plus;
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_clamp:
@@ -16126,7 +16152,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_sqrt:
-      return true;
+    case Intrinsic::amdgcn_frexp_mant:
+      return QuietsSignalNaN;
     default:
       break;
     }
@@ -16166,7 +16193,23 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   if (MaxDepth == 0)
     return false;
 
+  // See the comment above the SDag isCanonicalized() for the hardware sNaN
+  // quieting behavior. The same rules apply here with GISel opcodes:
+  //   G_AMDGPU_CVT_F32_UBYTE{0-3}: always canonical (integer->float, no NaN).
+  //   amdgcn_cvt_pkrtz, amdgcn_cubeid, amdgcn_fdot2: always quiet sNaN.
+  //   amdgcn_div_scale: passes sNaN through on pre-GFX12.
+  //   All other ops: quiet sNaN only when MODE.IEEE=1 (or unconditionally on GFX12+).
+  const bool IsGFX12Plus = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12;
+  const bool QuietsSignalNaN =
+      IsGFX12Plus || MF.getInfo<SIMachineFunctionInfo>()->getMode().IEEE;
+
   switch (Opcode) {
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE0:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE1:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE3:
+    return true;
+
   case AMDGPU::G_FADD:
   case AMDGPU::G_FSUB:
   case AMDGPU::G_FMUL:
@@ -16189,11 +16232,8 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FLOG10:
   case AMDGPU::G_FPTRUNC:
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
-  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE0:
-  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE1:
-  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
-  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE3:
-    return true;
+    return QuietsSignalNaN;
+
   case AMDGPU::G_FNEG:
   case AMDGPU::G_FABS:
   case AMDGPU::G_FCOPYSIGN:
@@ -16206,6 +16246,8 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FMAXIMUM:
   case AMDGPU::G_FMINIMUMNUM:
   case AMDGPU::G_FMAXIMUMNUM: {
+    if (!QuietsSignalNaN)
+      return false;
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
@@ -16221,34 +16263,36 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT:
     switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
+    case Intrinsic::amdgcn_cvt_pkrtz:
+    case Intrinsic::amdgcn_cubeid:
+    case Intrinsic::amdgcn_fdot2:
+      return true;
+    case Intrinsic::amdgcn_div_scale:
+      return IsGFX12Plus;
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fmad_ftz:
-    case Intrinsic::amdgcn_sqrt:
     case Intrinsic::amdgcn_fmed3:
     case Intrinsic::amdgcn_sin:
     case Intrinsic::amdgcn_cos:
+    case Intrinsic::amdgcn_log_clamp:
+    case Intrinsic::amdgcn_div_fmas:
+    case Intrinsic::amdgcn_div_fixup:
+    case Intrinsic::amdgcn_fract:
+    case Intrinsic::amdgcn_cubema:
+    case Intrinsic::amdgcn_cubesc:
+    case Intrinsic::amdgcn_cubetc:
+    case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_tanh:
+    case Intrinsic::amdgcn_sqrt:
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
-    case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_rsq_legacy:
-    case Intrinsic::amdgcn_div_scale:
-    case Intrinsic::amdgcn_div_fmas:
-    case Intrinsic::amdgcn_div_fixup:
-    case Intrinsic::amdgcn_fract:
-    case Intrinsic::amdgcn_cvt_pkrtz:
-    case Intrinsic::amdgcn_cubeid:
-    case Intrinsic::amdgcn_cubema:
-    case Intrinsic::amdgcn_cubesc:
-    case Intrinsic::amdgcn_cubetc:
     case Intrinsic::amdgcn_frexp_mant:
-    case Intrinsic::amdgcn_fdot2:
-    case Intrinsic::amdgcn_trig_preop:
-    case Intrinsic::amdgcn_tanh:
-      return true;
+      return QuietsSignalNaN;
     default:
       break;
     }
