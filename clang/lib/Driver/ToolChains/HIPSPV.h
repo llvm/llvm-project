@@ -52,9 +52,12 @@ public:
                   const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
-    assert(HostTC);
-    return &HostTC->getTriple();
+    return HostTC ? &HostTC->getTriple() : nullptr;
   }
+
+  bool IsIntegratedBackendDefault() const override;
+  bool IsIntegratedBackendSupported() const override;
+  bool IsNonIntegratedBackendSupported() const override { return true; }
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,

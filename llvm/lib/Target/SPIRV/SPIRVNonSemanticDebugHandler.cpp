@@ -42,18 +42,19 @@ static std::optional<MCRegister> lookupOptReg(const MapT &Map,
 }
 
 /// Partition \p Ty into \p BasicTypes, \p PointerTypes, \p SubroutineTypes,
-/// \p VectorTypes, \p ArrayTypes, and \p CompositeTypes for NSDI emission. Used
-/// when iterating DebugInfoFinder.types(); each DI node is seen once, so no
-/// recursion into pointer bases. Non-pointer derived kinds are ignored because
-/// they are not yet supported. Only types that are supported (later used) are
-/// partitioned.
+/// \p VectorTypes, \p ArrayTypes, \p CompositeTypes, and \p TypedefTypes for
+/// NSDI emission. Used when iterating DebugInfoFinder.types(); each DI node is
+/// seen once, so no recursion into pointer bases. Other composites and the
+/// remaining derived kinds are ignored because they are not yet supported.
+/// Only types that are supported (later used) are partitioned.
 static void
 partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
                SmallVector<const DIDerivedType *> &PointerTypes,
                SmallVector<const DISubroutineType *> &SubroutineTypes,
                SmallVector<const DICompositeType *> &VectorTypes,
                SmallVector<const DICompositeType *> &ArrayTypes,
-               SmallVector<const DICompositeType *> &CompositeTypes) {
+               SmallVector<const DICompositeType *> &CompositeTypes,
+               SmallVector<const DIDerivedType *> &TypedefTypes) {
   if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
     BasicTypes.push_back(BT);
     return;
@@ -89,6 +90,8 @@ partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
   const auto *DT = dyn_cast<DIDerivedType>(Ty);
   if (DT && DT->getTag() == dwarf::DW_TAG_pointer_type)
     PointerTypes.push_back(DT);
+  else if (DT && DT->getTag() == dwarf::DW_TAG_typedef)
+    TypedefTypes.push_back(DT);
 }
 
 enum : uint32_t {
@@ -234,6 +237,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   VectorTypes.clear();
   ArrayTypes.clear();
   CompositeTypes.clear();
+  TypedefTypes.clear();
   SubprogramDeclarations.clear();
   GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
@@ -288,7 +292,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   Finder.processModule(*M);
   llvm::for_each(Finder.types(), [&](DIType *Ty) {
     partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes,
-                   ArrayTypes, CompositeTypes);
+                   ArrayTypes, CompositeTypes, TypedefTypes);
   });
 
   for (const DISubprogram *SP : Finder.subprograms()) {
@@ -893,6 +897,48 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
                      ExtInstSetReg, Ops, MAI);
 }
 
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypedef(
+    const DIDerivedType *TD, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  // The underlying (base) type must already be in DebugTypeRegs.
+  auto BaseRegOpt = lookupOptReg(DebugTypeRegs, TD->getBaseType());
+  if (!BaseRegOpt)
+    return std::nullopt;
+
+  MCRegister NameReg = getCachedOpStringReg(TD->getName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      TD->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(TD->getLine()), I32TypeReg, MAI);
+  // DIDerivedType typedefs carry no column, so emit 0.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+
+  // Parent must be a lexical scope. Valid NSDI lexical scopes are
+  // DebugCompilationUnit, DebugFunction, DebugLexicalBlock, or
+  // DebugTypeComposite.
+  //
+  // FIXME: We currently only emit DebugCompilationUnit, so the compile unit is
+  // the only parent available today.
+  MCRegister ParentReg;
+  if (const auto *Ty = dyn_cast_or_null<DIType>(TD->getScope()))
+    if (auto TyRegOpt = lookupOptReg(DebugTypeRegs, Ty))
+      ParentReg = *TyRegOpt;
+  if (!ParentReg.isValid()) {
+    assert(!CompileUnits.empty() &&
+           "emitDebugTypedef requires a compile unit for the Parent operand");
+    auto CURegOpt =
+        lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
+    assert(CURegOpt && "DebugCompilationUnit must be emitted before typedefs");
+    ParentReg = *CURegOpt;
+  }
+
+  return emitExtInst(
+      SPIRV::NonSemanticExtInst::DebugTypedef, VoidTypeReg, ExtInstSetReg,
+      {NameReg, *BaseRegOpt, SrcReg, LineReg, ColReg, ParentReg}, MAI);
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (CompileUnits.empty())
@@ -937,6 +983,12 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
       emitOpStringIfNew(M->getName(), MAI);
       emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
     }
+  }
+
+  // Cache the name and path OpStrings each DebugTypedef uses.
+  for (const DIDerivedType *TD : TypedefTypes) {
+    emitOpStringIfNew(TD->getName(), MAI);
+    emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
   }
 
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
@@ -1084,6 +1136,17 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
     if (auto FnTyReg =
             emitDebugTypeFunctionForSubroutineType(ST, ExtInstSetReg, MAI))
       DebugTypeRegs[ST] = *FnTyReg;
+  }
+
+  // Emit DebugTypedef for each typedef. Placed after the other type loops so a
+  // typedef can resolve its underlying type. A typedef whose base type is not
+  // emitted is skipped. A typedef whose base is another typedef emitted later
+  // in this same pass is also skipped, the emission-order gap tracked in
+  // https://github.com/llvm/llvm-project/issues/211850.
+  for (const DIDerivedType *TD : TypedefTypes) {
+    if (auto TDReg =
+            emitDebugTypedef(TD, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI))
+      DebugTypeRegs[TD] = *TDReg;
   }
 
   // Emit DebugFunctionDeclaration for DISubprogram declarations.

@@ -8,9 +8,13 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
+#include "llvm/ExecutionEngine/Orc/RTBridge/Calls.h"
+
 namespace llvm {
 namespace orc {
 namespace rt {
+
+MainCaller::~MainCaller() = default;
 
 const char *SimpleExecutorDylibManagerInstanceName =
     "__llvm_orc_SimpleExecutorDylibManager_Instance";

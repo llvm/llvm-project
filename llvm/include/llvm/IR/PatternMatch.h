@@ -46,10 +46,10 @@
 #include <cstdint>
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
