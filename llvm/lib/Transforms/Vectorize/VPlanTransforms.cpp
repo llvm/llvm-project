@@ -62,46 +62,6 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
   return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
-/// Replace unit-strided load/store recipe \p VPI by a widened consecutive
-/// memory recipe. If \p Reverse is true, adjust pointer creation, masks and
-/// values to match reverse access order.
-static void widenUnitStridedLoadStore(VPInstruction *VPI, bool Reverse,
-                                      bool IsPredicated) {
-  VPBuilder Builder(VPI);
-  Instruction *I = VPI->getUnderlyingInstr();
-  bool IsLoad = VPI->getOpcode() == Instruction::Load;
-  VPValue *Ptr = VPI->getOperand(!IsLoad);
-  Type *ScalarTy =
-      IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
-  VPValue *VectorPtr = Builder.createConsecutiveVectorPointer(
-      Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
-  VPValue *Mask = IsPredicated ? VPI->getMask() : nullptr;
-  if (Reverse && Mask)
-    Mask =
-        Builder.createNaryOp(VPInstruction::Reverse, Mask, VPI->getDebugLoc());
-
-  if (IsLoad) {
-    VPSingleDefRecipe *Load =
-        Builder.createWidenLoad(*cast<LoadInst>(I), VectorPtr, Mask,
-                                /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-    if (Reverse)
-      Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
-                                  VPI->getDebugLoc());
-    VPI->replaceAllUsesWith(Load);
-    VPI->eraseFromParent();
-    return;
-  }
-
-  VPValue *StoredVal = VPI->getOperand(0);
-  if (Reverse)
-    StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
-                                     VPI->getDebugLoc());
-
-  Builder.createWidenStore(*cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
-                           /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-  VPI->eraseFromParent();
-}
-
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
@@ -5528,8 +5488,37 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                 getLoadStoreAddressSpace(I)))
           return false;
 
-        widenUnitStridedLoadStore(VPI, Reverse, IsPredicated);
-        return true;
+        VPBuilder Builder(VPI);
+        VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
+            Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
+
+        VPValue *Mask = IsPredicated ? VPI->getMask() : nullptr;
+        // Reverse the mask so it matches the reversed access order.
+        if (Reverse && Mask)
+          Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask,
+                                      VPI->getDebugLoc());
+
+        if (IsLoad) {
+          VPSingleDefRecipe *Load = Builder.createWidenLoad(
+              *cast<LoadInst>(I), VectorPtr, Mask,
+              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+          // Reverse the loaded values back into program order.
+          if (Reverse)
+            Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
+                                        VPI->getDebugLoc());
+          return ReplaceWith(VPI, Load);
+        }
+
+        VPValue *StoredVal = VPI->getOperand(0);
+        if (Reverse)
+          // Reverse the stored values so they are written in descending order.
+          StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
+                                           VPI->getDebugLoc());
+
+        auto *StoreR = Builder.createWidenStore(
+            *cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
+            /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+        return ReplaceWith(VPI, StoreR);
       });
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
