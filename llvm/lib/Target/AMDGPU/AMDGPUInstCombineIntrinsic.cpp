@@ -2354,6 +2354,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
         OffsetIdx = 1;
         break;
       case Intrinsic::amdgcn_s_buffer_load:
+      case Intrinsic::amdgcn_ptr_s_buffer_load:
         // If resulting type is vec3, there is no point in trimming the
         // load with updated offset, as the vec3 would most likely be widened to
         // vec4 anyway during lowering.
@@ -2556,6 +2557,7 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_raw_tbuffer_load:
   case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
   case Intrinsic::amdgcn_s_buffer_load:
+  case Intrinsic::amdgcn_ptr_s_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
   case Intrinsic::amdgcn_struct_ptr_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load_format:

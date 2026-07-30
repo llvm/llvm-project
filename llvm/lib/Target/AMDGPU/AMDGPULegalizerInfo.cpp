@@ -7654,6 +7654,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   LLT Ty = B.getMRI()->getType(OrigDst);
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
+  bool HasMMO = !MI.memoperands_empty();
   unsigned Opc = 0;
   if (Size < 32 && ST.hasScalarSubwordLoads()) {
     assert(Size == 8 || Size == 16);
@@ -7680,22 +7681,23 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
     B.setInsertPt(B.getMBB(), MI);
   }
 
-  // FIXME: We don't really need this intermediate instruction. The intrinsic
-  // should be fixed to have a memory operand. Since it's readnone, we're not
-  // allowed to add one.
   MI.setDesc(B.getTII().get(Opc));
-  MI.removeOperand(1); // Remove intrinsic ID
+  MI.removeOperand(1);
+  castBufferRsrcArgToV4I32(MI, B, 1);
 
-  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  const unsigned MemSize = (Size + 7) / 8;
-  const Align MemAlign = B.getDataLayout().getABITypeAlign(
-      getTypeForLLT(Ty, MF.getFunction().getContext()));
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-          MachineMemOperand::MOInvariant,
-      MemSize, MemAlign);
-  MI.addMemOperand(MF, MMO);
+  if (!HasMMO) {
+    // Legacy intrinsic that doesn't take a pointer and so can't already have an
+    // MMO.
+    const unsigned MemSize = (Size + 7) / 8;
+    const Align MemAlign = B.getDataLayout().getABITypeAlign(
+        getTypeForLLT(Ty, MF.getFunction().getContext()));
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo(),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        MemSize, MemAlign);
+    MI.addMemOperand(MF, MMO);
+  }
   if (Dst != OrigDst) {
     MI.getOperand(0).setReg(Dst);
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
@@ -8467,6 +8469,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::amdgcn_s_buffer_load:
+  case Intrinsic::amdgcn_ptr_s_buffer_load:
     return legalizeSBufferLoad(Helper, MI);
   case Intrinsic::amdgcn_raw_buffer_store:
   case Intrinsic::amdgcn_raw_ptr_buffer_store:
