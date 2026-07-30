@@ -352,6 +352,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
+- Fixed an assertion failure in constant evaluation/AST parsing when encountering malformed struct and enum declarations with missing closing braces. (#GH118061)
 
 #### Bug Fixes to Compiler Builtins
 

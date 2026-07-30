@@ -18903,6 +18903,10 @@ CreateNewDecl:
     } else
       New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
                                cast_or_null<RecordDecl>(PrevDecl));
+
+    // Impossible to decl struct/union/class in enum
+    if (isa<EnumDecl>(SearchDC))
+      Invalid = true;
   }
 
   // Only C23 and later allow defining new types in 'offsetof()'.
