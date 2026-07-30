@@ -57,7 +57,7 @@ sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.10
 # CHECK-NEXT: IPC:               0.10
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      [1] Code Region - fmla-accumulator-q
 
@@ -81,7 +81,7 @@ sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.10
 # CHECK-NEXT: IPC:               0.10
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [3] Code Region - fmadd-addend
 
@@ -93,7 +93,7 @@ sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.10
 # CHECK-NEXT: IPC:               0.10
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      [4] Code Region - fmadd-multiplicand
 
@@ -105,7 +105,7 @@ sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.10
 # CHECK-NEXT: IPC:               0.10
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      [5] Code Region - mla-accumulator
 
@@ -117,7 +117,7 @@ sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.17
 # CHECK-NEXT: IPC:               0.17
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      [6] Code Region - mla-accumulator-q
 
@@ -141,7 +141,7 @@ sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.17
 # CHECK-NEXT: IPC:               0.17
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [8] Code Region - smlal-accumulator
 
