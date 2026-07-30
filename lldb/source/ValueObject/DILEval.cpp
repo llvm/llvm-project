@@ -1277,6 +1277,9 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "could not get the index as an integer", node.GetLocation());
 
+  // Reject negative indices before the swap below, so the diagnostic reports
+  // the range as the user wrote it. A negative index would also wrap to a huge
+  // offset in the uint32_t GetSyntheticBitFieldChild call below.
   if (first_index < 0 || last_index < 0) {
     std::string message =
         llvm::formatv("bitfield range {0}:{1} is not valid (negative index)",
@@ -1289,10 +1292,9 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
   if (first_index > last_index)
     std::swap(first_index, last_index);
 
-  // The underlying DataExtractor bitfield accessors only support extracting up
-  // to 64 bits at once (GetMaxU64Bitfield asserts bitfield_bit_size <= 64 and
-  // would otherwise perform an out-of-bounds shift). Reject oversized ranges
-  // here instead of crashing deep in the data layer.
+  // GetMaxU64Bitfield in the data layer only supports up to 64 bits (it asserts
+  // bitfield_bit_size <= 64 and otherwise shifts out of bounds), so reject a
+  // wider range here.
   if (last_index - first_index + 1 > 64) {
     std::string message =
         llvm::formatv("bitfield range {0}:{1} is not valid (more than 64 bits)",
@@ -1306,10 +1308,9 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
 
-  // The bitfield range must lie within the storage of the base object. A
-  // bit offset/size that extends past the base's bit size leads to an
-  // out-of-bounds shift when the value is later read or formatted (e.g. in
-  // DataExtractor::GetMaxU64Bitfield via DumpDataExtractor).
+  // The high index must lie within the base object's storage; a bit index past
+  // its bit size shifts out of bounds when the child is later read or formatted
+  // (GetMaxU64Bitfield).
   llvm::Expected<uint64_t> base_bit_size =
       base->GetCompilerType().GetBitSize(&m_stack_frame);
   if (!base_bit_size)
