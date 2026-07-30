@@ -47,9 +47,6 @@ jobs:
   release-man-pages-validate-input:
     name: Release Man Pages Validate Input
     runs-on: ubuntu-24.04
-    environment:
-      name: release
-      deployment: false
     permissions:
       contents: read
     steps:
@@ -58,13 +55,6 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             .github/workflows/
-
-      - name: Check Permissions
-        uses: ./.github/workflows/require-team-membership
-        with:
-          team-slug: llvm-release-managers
-          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
       - name: Validate Input
         uses: ./.github/workflows/validate-release-version
