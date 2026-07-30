@@ -6557,12 +6557,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
                                         BinOp, CostKind, FMF);
 }
 
-InstructionCost
-AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");

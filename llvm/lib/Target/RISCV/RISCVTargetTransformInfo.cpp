@@ -673,12 +673,14 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-InstructionCost
-RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                             VectorType *SrcTy, ArrayRef<int> Mask,
-                             TTI::TargetCostKind CostKind, int Index,
-                             VectorType *SubTp, ArrayRef<const Value *> Args,
-                             const Instruction *CxtI) const {
+InstructionCost RISCVTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded)
+    return TTI::TCC_Free;
+
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -997,17 +999,6 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   }
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
                                SubTp);
-}
-
-InstructionCost RISCVTTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
-    TTI::VectorInstrContext VIC) const {
-  if (VIC == TTI::VectorInstrContext::SplatOpFolded)
-    return TTI::TCC_Free;
-  return getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args,
-                        CxtI);
 }
 
 static unsigned isM1OrSmaller(MVT VT) {

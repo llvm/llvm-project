@@ -776,22 +776,13 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  virtual InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const {
+  virtual InstructionCost getShuffleCost(
+      TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+      ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+      VectorType *SubTp, ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
-  }
-
-  virtual InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args,
-                 const Instruction *CxtI, TTI::VectorInstrContext VIC) const {
-    (void)VIC;
-    return getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
-                          Args, CxtI);
   }
 
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
