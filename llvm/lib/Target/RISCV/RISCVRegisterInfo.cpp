@@ -442,7 +442,8 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   // after PEI, so MachineLateInstrsCleanup can CSE identical pseudos. The
   // pseudo is later expanded back to LUI+ADD.
   if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
-      SrcReg == getFrameRegister(MF) && isInt<32>(Val) && (Val & 0xFFF) == 0) {
+  if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
+      SrcReg == getFrameRegister(MF) && isShiftedInt<20, 12>(Val)) {
     BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUI), DestReg)
         .addReg(SrcReg)
         .addImm(static_cast<uint32_t>(Val) >> 12);
