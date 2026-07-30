@@ -858,6 +858,7 @@ add_header_macro(
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_storage
+    .llvm-libc-types.struct_ucred
 )
 
 add_header_macro(
