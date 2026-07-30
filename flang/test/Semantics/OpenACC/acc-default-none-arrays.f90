@@ -149,7 +149,20 @@ subroutine test_cross_kind_bare(n)
   !$acc end parallel loop
 end subroutine
 
-! 7. Substring in an OpenACC clause is disallowed.
+! 7. Data-sharing entries are scoped to one directive.  Reusing an object in a
+!    later, sequential region must not be diagnosed as a duplicate.
+subroutine test_sequential_regions_have_independent_data_sharing_entries()
+  implicit none
+  real :: a(10)
+  !$acc parallel copy(a)
+  a = 1.0
+  !$acc end parallel
+  !$acc parallel copy(a)
+  a = 2.0
+  !$acc end parallel
+end subroutine
+
+! 8. Substring in an OpenACC clause is disallowed.
 subroutine test_substring()
   implicit none
   character(len=10) :: str
@@ -158,7 +171,7 @@ subroutine test_substring()
   !$acc end parallel
 end subroutine
 
-! 8. Same array section in conflicting private and copy clauses.
+! 9. Same array section in conflicting private and copy clauses.
 ! TODO: cross-kind detection for array sections is not implemented; no error
 !       produced for 'a(1:n)' appearing in both copy and private.
 subroutine test_cross_kind_sections(n)
@@ -173,7 +186,7 @@ subroutine test_cross_kind_sections(n)
   !$acc end parallel loop
 end subroutine
 
-! 9. Different sections of the same array in conflicting copy and private clauses.
+! 10. Different sections of the same array in conflicting copy and private clauses.
 ! TODO: cross-kind detection for array sections is not implemented; no error
 !       produced for 'a' appearing in both copy and private.
 subroutine test_cross_kind_sections2(n)
