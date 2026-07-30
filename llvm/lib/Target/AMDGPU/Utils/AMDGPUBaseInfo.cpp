@@ -1086,25 +1086,11 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 
 TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
                               StringRef FeatureString) {
-  // xnack/sramecc are derived from capability features alone; the actual mode
-  // comes later from module flags / directives / e_flags. A target supporting
-  // xnack without on/off modes has it hardwired On (gfx1250).
-  bool SupportsXNACK = STI.getFeatureBits().test(FeatureSupportsXNACK);
-  bool XNACKOnOffModes = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
-
-  TargetIDSetting XnackSetting;
-  if (!SupportsXNACK)
-    XnackSetting = TargetIDSetting::Unsupported;
-  else if (XNACKOnOffModes)
-    XnackSetting = TargetIDSetting::Any;
-  else
-    XnackSetting = TargetIDSetting::On;
-
-  return TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                  XnackSetting,
-                  STI.getFeatureBits().test(FeatureSupportsSRAMECC)
-                      ? TargetIDSetting::Any
-                      : TargetIDSetting::Unsupported);
+  // In codegen the mode comes from module flags and FeatureString is empty, so
+  // the processor defaults apply. The assembler has no target directive, so it
+  // pins the mode via the +xnack/-xnack/+sramecc/-sramecc feature string.
+  return TargetID::createFromSubtargetFeatures(STI.getTargetTriple(),
+                                               STI.getCPU(), FeatureString);
 }
 
 namespace IsaInfo {
