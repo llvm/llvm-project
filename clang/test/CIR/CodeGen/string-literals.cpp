@@ -44,7 +44,8 @@ char const *array[] {
 
 wchar_t zeroPadding[20] = L"hi";
 // CIR: cir.global external @zeroPadding = #cir.const_array<[#cir.int<104> : !u32i, #cir.int<105> : !u32i], trailing_zeros> : !cir.array<!u32i x 20> 
-// LLVM: @zeroPadding = global [20 x i32] [i32 104, i32 105, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// CIR splits the wide string literal's trailing zeros; classic keeps it whole.
+// LLVM: @zeroPadding = global <{ i32, i32, [18 x i32] }> <{ i32 104, i32 105, [18 x i32] zeroinitializer }>
 // OGCG: @zeroPadding = global [20 x i32] [i32 104, i32 105, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
 
 // CIR: cir.global "private" constant cir_private dso_local @[[STR5_GLOBAL:.*]] = #cir.const_array<"abcd" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 5>
