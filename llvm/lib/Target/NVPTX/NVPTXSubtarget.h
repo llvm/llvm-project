@@ -85,6 +85,9 @@ public:
   bool hasUsedBytesMaskPragma() const {
     return hasFeature(NVPTX::SM50) && hasFeature(NVPTX::PTX83);
   }
+  bool hasAtomAddNoFTZ() const {
+    return hasFeature(NVPTX::SM90) && hasFeature(NVPTX::PTX94);
+  }
   bool hasAtomAddF64() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomScope() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomBitwise64() const { return hasFeature(NVPTX::SM32); }

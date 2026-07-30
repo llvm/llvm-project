@@ -110,16 +110,29 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
-// PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
+// PTX atom.add.f32 might not support FTZ behavior that matches the function's
 // (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
-// when they disagree. This option (enabled by default) allows using atom.add
-// anyway, trading correct denormal handling for the speed of the native
-// instruction.
-static cl::opt<bool> AllowFTZAtomics(
-    "nvptx-allow-ftz-atomics", cl::Hidden,
-    cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
-             "FTZ behavior does not match the function's denormal mode."),
-    cl::init(true));
+// when they disagree. This option controls whether to use atom.add anyway,
+// trading correct denormal handling for the speed of the native instruction.
+enum class AtomicAddBehavior { Strict, LegacyF32Add, Fast };
+static cl::opt<AtomicAddBehavior> FTZAtomics(
+    "nvptx-ftz-atomics", cl::Hidden,
+    cl::desc("NVPTX Specific: How to lower atomicrmw fadd"),
+    cl::init(AtomicAddBehavior::Fast),
+    cl::values(
+        clEnumValN(AtomicAddBehavior::Strict, "strict",
+                   "Conform to the function's denormal mode, using a CAS loop "
+                   "where no atom.add matches it. PTX has no flushing add for "
+                   "f64 or bf16, so those still use the native instruction."),
+        clEnumValN(AtomicAddBehavior::LegacyF32Add, "legacy-f32-add",
+                   "Never emit atom.add.noftz.f32; keep the pre-PTX 9.4 "
+                   "atom.add.f32 lowering for f32 even when it does not match "
+                   "the function's denormal mode. Otherwise as 'fast'."),
+        clEnumValN(
+            AtomicAddBehavior::Fast, "fast",
+            "As 'strict', except when no atom.add instruction with FTZ "
+            "behavior matching the function's denormal mode is available, in "
+            "which case use the non-conforming one (default)")));
 
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
@@ -159,6 +172,10 @@ bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
   return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
          DenormalMode::PreserveSign;
+}
+
+bool NVPTXTargetLowering::useLegacyF32AtomAdd() const {
+  return FTZAtomics == AtomicAddBehavior::LegacyF32Add;
 }
 
 static bool IsPTXVectorType(MVT VT) {
@@ -7729,28 +7746,43 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // by the weird FTZ behavior PTX atom.add has:
   //   - atom.add.f32 on global memory flushes denormals
   //   - atom.add.f32 on shared memory does not flush denormals
+  //   - atom.add.f32.noftz is supported for SM90+, PTX 9.4+
   //   - atom.add.f16 and atomic.add.bf16 never flush denormals
-  //
-  // We lower to atom.add only if the function's FTZ behavior matches that of
-  // atom.add; otherwise, we lower to a CAS loop. But we always allow
+  //   - atom.add.f64 never flushes denormals, and add.f64 never flushes denormals
+  // We lower to atom.add only if the function's FTZ behavior is natively supported. otherwise, we lower to a CAS loop. But we always allow
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
       AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
     const Function *F = AI->getFunction();
+    const bool AllowFTZAtomics = FTZAtomics != AtomicAddBehavior::Strict;
+    // AllowFTZAtomics forces atom.add regardless of a denormal mode mismatch
 
-    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
-                       DenormalMode::PreserveSign;
+      const auto Mode = F->getDenormalMode(APFloat::IEEEsingle());
+      const bool IEEE =
+          Mode.Input == DenormalMode::IEEE ||
+          Mode.Output == DenormalMode::IEEE; // must not flush denormals
+      const bool FTZ =
+          Mode.inputsAreZero(); // must have input denormals flushed
+      const bool NativeNoFTZ = STI.hasAtomAddNoFTZ();
       bool UseNative = AllowFTZAtomics;
+      // Generic has no case below, so it keeps UseNative = AllowFTZAtomics:
+      // when AtomicAddBehavior is strict we always generate a CmpXchg loop,
+      // whose non-atomic fadd is correctly lowered to ftz/noftz based on the
+      // function's DenormalMode.
+      // TODO: Handle cases where input mode and output mode are mismatched,
+      // once the bug is fixed in nonatomic add.
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
-        UseNative |= FTZ;
+        UseNative |= (NativeNoFTZ || !IEEE);
         break;
       case llvm::ADDRESS_SPACE_SHARED:
       case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
         UseNative |= !FTZ;
+        break;
+      case llvm::ADDRESS_SPACE_GENERIC:
+        UseNative |= (NativeNoFTZ && IEEE);
         break;
       }
       if (UseNative)
@@ -7759,17 +7791,20 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     if (Ty->isHalfTy()) {
       // atom.add.f16 never flushes denormals, so it only agrees with a
-      // function that is not in FTZ mode for f16.
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
-                       DenormalMode::PreserveSign;
+      // function that is not in FTZ mode for f16. The f32 denormal mode is
+      // irrelevant here.
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).inputsAreZero();
       if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
         return AtomicExpansionKind::None;
     }
 
-    if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
+    if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90) &&
+        STI.hasFeature(NVPTX::PTX78))
       return AtomicExpansionKind::None;
 
+    // We cannot support FTZ mode for fp64, as neither atom.add.f64 nor add.f64
+    // has an ftz mode that flushes denormals
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())
       return AtomicExpansionKind::None;
   }
