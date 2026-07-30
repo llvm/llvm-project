@@ -130,11 +130,11 @@ struct Test {
         lhs[i] = -1;
         assert(std::lexicographical_compare(
             policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))));
-        lhs[i] = i;
+        lhs[i] = static_cast<int>(i);
         rhs[i] = -1;
         assert(!std::lexicographical_compare(
             policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))));
-        rhs[i] = i;
+        rhs[i] = static_cast<int>(i);
       });
       assert(!std::lexicographical_compare(
           policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs))));

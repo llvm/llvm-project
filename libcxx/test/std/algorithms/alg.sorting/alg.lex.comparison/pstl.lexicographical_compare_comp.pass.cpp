@@ -161,7 +161,7 @@ struct Test {
             Iter2(std::begin(rhs)),
             Iter2(std::end(rhs)),
             Comp{}));
-        lhs[i] = i;
+        lhs[i] = static_cast<int>(i);
         rhs[i] = 10'000;
         assert(!std::lexicographical_compare(
             policy,
@@ -170,7 +170,7 @@ struct Test {
             Iter2(std::begin(rhs)),
             Iter2(std::end(rhs)),
             Comp{}));
-        rhs[i] = i;
+        rhs[i] = static_cast<int>(i);
       });
       assert(!std::lexicographical_compare(
           policy, Iter1(std::begin(lhs)), Iter1(std::end(lhs)), Iter2(std::begin(rhs)), Iter2(std::end(rhs)), Comp{}));
