@@ -22,6 +22,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIProgramInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -56,11 +57,6 @@ static cl::opt<bool>
                          cl::init(true), cl::Hidden);
 
 namespace {
-
-// Number of prefetch instructions to insert.
-// Each can prefetch up to 32 cachelines of 128 bytes = 4KiB.
-// 16 instructions cover 64KiB (the full ICache size).
-static constexpr unsigned MaxNumPrefetchInsts = 16;
 
 class SIPreEmitPeephole {
 private:
@@ -885,6 +881,16 @@ bool SIPreEmitPeephole::insertICachePrefetch(MachineFunction &MF) {
   if (!MFI->isEntryFunction())
     return false;
 
+  SIProgramInfo PI;
+  uint64_t ProgramSize = PI.getFunctionCodeSize(MF);
+  // The kernel descriptor can specify an instruction prefetch size of up to 256
+  // in INST_PREF_SIZE. At a granularity of 128B, this equals 32KiB of
+  // instructions that can be prefetched without inserting explicit prefetch
+  // instructions.
+  constexpr uint64_t MaxKDPrefetch = 1u << 15;
+  if (ProgramSize <= MaxKDPrefetch)
+    return false;
+
   MachineBasicBlock &EntryBB = MF.front();
   MachineBasicBlock::iterator InsertPt = EntryBB.begin();
 
@@ -907,20 +913,23 @@ bool SIPreEmitPeephole::insertICachePrefetch(MachineFunction &MF) {
 
   DebugLoc DL;
 
-  // Insert s_setreg_imm32_b32 to set MODE.SCALAR_PREFETCH_EN (bit 24).
-  // This ensures only the first wave in the WGP executes the prefetches.
-  // Insert it right before the prefetch instructions (after other MODE setup).
-  using namespace AMDGPU::Hwreg;
-  unsigned ModeRegEncoding = HwregEncoding::encode(ID_MODE, 24, 1);
-  BuildMI(EntryBB, InsertPt, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
-      .addImm(1) // Value to set (enable)
-      .addImm(ModeRegEncoding);
-
-  // Insert 16 s_prefetch_inst_pc_rel instructions.
-  // The offset and sdata operands are placeholders - the sdata operand stores
-  // the slot index (0-15). Both will be fixed up in AMDGPUAsmPrinter based on
-  // the actual code size.
-  for (unsigned I = 0; I < NumPrefetchInsts; ++I) {
+  // Calculate the number of prefetch instructions required for the current
+  // program size. Each prefetch can transfer 4KiB of instructions. Add
+  // some slack as inserting the prefetches and later transformations, e.g.,
+  // padding and alignment, will introduce additional bytes. The offset and
+  // sdata operands are placeholders - the sdata operand stores the slot index
+  // (0-15). Both will be fixed up in AMDGPUAsmPrinter based on the actual code
+  // size.
+  constexpr uint64_t PrefetchSlack = 2 * 1024;
+  constexpr uint64_t BytesPerPrefetch = 4 * 1024;
+  // Each prefetch can transfer up to 32 cachelines of 128 bytes = 4KiB.
+  // 16 instructions cover 64KiB (the full ICache size).
+  constexpr unsigned MaxNumPrefetchInsts = 16;
+  unsigned NumPrefetches =
+      llvm::divideCeil(ProgramSize + PrefetchSlack, BytesPerPrefetch);
+  // Limit to 16 prefetches at most, otherwise we'd exceed the cache size.
+  NumPrefetches = std::min(MaxNumPrefetchInsts, NumPrefetches);
+  for (unsigned I = 0; I < NumPrefetches; ++I) {
     BuildMI(EntryBB, InsertPt, DL, TII->get(AMDGPU::S_PREFETCH_INST_PC_REL))
         .addImm(0)                 // offset (placeholder, fixed up later)
         .addReg(AMDGPU::SGPR_NULL) // soffset
