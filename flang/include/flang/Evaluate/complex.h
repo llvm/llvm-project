@@ -118,7 +118,8 @@ public:
   /// Serializes this complex to \p dst. \p expectedSize must match the the
   /// number of bytes to be written. If \p changed points to a boolean, it will
   /// be set to true if any bytes at \p dst have changed.
-  void StoreRawBytes(void *dst, size_t expectedSize, bool *changed) const {
+  void StoreRawBytes(
+      void *dst, size_t expectedSize, bool *changed = nullptr) const {
     CHECK(expectedSize == bytesStored());
     re_.StoreRawBytes(dst, Part::bytesStored(), changed);
     im_.StoreRawBytes(static_cast<char *>(dst) + Part::bytesStored(),

@@ -79,6 +79,7 @@ inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
     return Scalar<FTN_T>{CastHostToFortran<typename FTN_T::Part>(std::real(x)),
         CastHostToFortran<typename FTN_T::Part>(std::imag(x))};
   } else {
+    static_assert(Scalar<FTN_T>::bytesStored() == sizeof(HostType<FTN_T>));
     return Scalar<FTN_T>::FromRawBytes(&x, sizeof(x));
   }
 }
@@ -87,12 +88,13 @@ inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
 template <typename FTN_T>
 inline constexpr HostType<FTN_T> CastFortranToHost(const Scalar<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
-  if constexpr (FTN_T::category == TypeCategory::Complex) {
+  if constexpr (FTN_T::category == TypeCategory::Complex &&
+      Scalar<FTN_T>::bytesStored() != sizeof(HostType<FTN_T>)) {
     using FortranPartType = typename FTN_T::Part;
     return HostType<FTN_T>{CastFortranToHost<FortranPartType>(x.REAL()),
         CastFortranToHost<FortranPartType>(x.AIMAG())};
   } else {
-    CHECK(x.bytesStored() == sizeof(HostType<FTN_T>));
+    static_assert(x.bytesStored() == sizeof(HostType<FTN_T>));
     HostType<FTN_T> result;
     x.StoreRawBytes(&result, sizeof(result));
     return result;
