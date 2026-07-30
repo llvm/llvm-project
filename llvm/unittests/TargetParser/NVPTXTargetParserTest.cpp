@@ -47,9 +47,9 @@ TEST(NVPTXTargetParserTest, ArchSuffix) {
   EXPECT_FALSE(NVPTX::isAcceleratedArch(NVPTX::GK_SM_100f));
 
   // Family-specific covers both 'f' and 'a' variants.
-  EXPECT_FALSE(NVPTX::isFamilySpecificArch(NVPTX::GK_SM_90));
+  EXPECT_FALSE(NVPTX::isFamilySpecificArch(NVPTX::GK_SM_100));
   EXPECT_TRUE(NVPTX::isFamilySpecificArch(NVPTX::GK_SM_100f));
-  EXPECT_TRUE(NVPTX::isFamilySpecificArch(NVPTX::GK_SM_90a));
+  EXPECT_TRUE(NVPTX::isFamilySpecificArch(NVPTX::GK_SM_100a));
 }
 
 // Every parseable name must round-trip back to the same canonical name.
