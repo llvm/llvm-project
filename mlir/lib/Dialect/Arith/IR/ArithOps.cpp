@@ -2284,9 +2284,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   if (auto resFloatType = dyn_cast<FloatType>(resType))
     return FloatAttr::get(resType,
                           APFloat(resFloatType.getFloatSemantics(), bits));
-  if (auto resIntType = dyn_cast<IntegerType>(resType))
-    return IntegerAttr::get(resType, bits);
-  return {};
+  return IntegerAttr::get(resType, bits);
 }
 
 void arith::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
