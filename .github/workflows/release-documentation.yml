@@ -158,7 +158,8 @@ jobs:
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
           cd www-releases
-          ls -ltr www-releases/$INPUT_RELEASE_VERSION/*
+          ls -ltr *
+          ls -ltr $INPUT_RELEASE_VERSION/*
           git checkout -b $INPUTS_RELEASE_VERSION
           git add $INPUTS_RELEASE_VERSION
           git config user.email "llvmbot@llvm.org"
