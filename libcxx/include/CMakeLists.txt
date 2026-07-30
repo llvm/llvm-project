@@ -575,6 +575,7 @@ set(files
   __math/hypot.h
   __math/inverse_hyperbolic_functions.h
   __math/inverse_trigonometric_functions.h
+  __math/lerp.h
   __math/logarithms.h
   __math/min_max.h
   __math/modulo.h

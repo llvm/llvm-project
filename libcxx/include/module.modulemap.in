@@ -59,6 +59,7 @@ module std_core {
     module hypot                            { header "__math/hypot.h" }
     module inverse_hyperbolic_functions     { header "__math/inverse_hyperbolic_functions.h" }
     module inverse_trigonometric_functions  { header "__math/inverse_trigonometric_functions.h" }
+    module lerp                             { header "__math/lerp.h" }
     module logarithms                       { header "__math/logarithms.h" }
     module min_max                          { header "__math/min_max.h" }
     module modulo                           { header "__math/modulo.h" }
