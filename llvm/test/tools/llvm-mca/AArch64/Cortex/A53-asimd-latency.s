@@ -310,17 +310,17 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        fcvtn2	v0.4s, v1.2d
 # CHECK-NEXT:  1      6     1.00                        fcvtxn	v0.2s, v1.2d
 # CHECK-NEXT:  1      6     0.50                        fcvtxn	s0, d1
-# CHECK-NEXT:  1      6     0.50                        frecpe	s0, s1
-# CHECK-NEXT:  1      6     0.50                        frecpe	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        frecpe	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        frecps	s0, s1, s2
-# CHECK-NEXT:  1      6     0.50                        frecps	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        frecps	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      17    13.00                       frsqrte	v0.2s, v1.2s
-# CHECK-NEXT:  1      17    13.00                       frsqrts	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     0.50                        frecpe	s0, s1
+# CHECK-NEXT:  1      4     0.50                        frecpe	v0.2s, v1.2s
+# CHECK-NEXT:  1      4     1.00                        frecpe	v0.4s, v1.4s
+# CHECK-NEXT:  1      8     0.50                        frecps	s0, s1, s2
+# CHECK-NEXT:  1      8     0.50                        frecps	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      8     1.00                        frecps	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     0.50                        frsqrte	v0.2s, v1.2s
+# CHECK-NEXT:  1      8     1.00                        frsqrts	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        frecpx	s0, s1
 # CHECK-NEXT:  1      6     0.50                        urecpe	v0.2s, v1.2s
-# CHECK-NEXT:  1      17    13.00                       ursqrte	v0.4s, v1.4s
+# CHECK-NEXT:  1      6     1.00                        ursqrte	v0.4s, v1.4s
 # CHECK-NEXT:  1      6     0.50                        fcmeq	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        fcmeq	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        facge	v0.2s, v1.2s, v2.2s
@@ -473,7 +473,7 @@ sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     143.50 143.50 131.50 131.50  -      -
+# CHECK-NEXT:  -      -      -      -     146.00 146.00 92.50  92.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -543,11 +543,11 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frecps	s0, s1, s2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frecps	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frecps	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrte	v0.2s, v1.2s
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     frsqrts	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frsqrte	v0.2s, v1.2s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     frsqrts	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frecpx	s0, s1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     urecpe	v0.2s, v1.2s
-# CHECK-NEXT:  -      -      -      -      -      -     13.00  13.00   -      -     ursqrte	v0.4s, v1.4s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ursqrte	v0.4s, v1.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcmeq	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fcmeq	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     facge	v0.2s, v1.2s, v2.2s
