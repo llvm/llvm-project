@@ -672,7 +672,10 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
+  if (isNonDataDep(Dep))
+    return false;
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
 
   // All checking functions assume that the 1st instr is a wildcard if it is

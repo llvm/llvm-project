@@ -1167,20 +1167,24 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
   Style.SortIncludes = {};
-  CHECK_PARSE(
-      "SortIncludes: true", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: true", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
               FormatStyle::SortIncludesOptions{});
-  CHECK_PARSE(
-      "SortIncludes: CaseInsensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/true, /*IgnoreExtension=*/false}));
-  CHECK_PARSE(
-      "SortIncludes: CaseSensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/true,
+                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+  CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false}));
+  CHECK_PARSE("SortIncludes: Natural", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/true}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
               FormatStyle::SortIncludesOptions{});
 
