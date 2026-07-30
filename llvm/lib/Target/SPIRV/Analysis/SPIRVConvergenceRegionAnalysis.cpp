@@ -239,10 +239,8 @@ private:
     ForwardPostOrderTraversal Traversal(*this, From);
     SmallVector<BasicBlock *, 16> PostOrder(Traversal.begin(), Traversal.end());
 
-    // Propagate reachability to a matching block backward: a block belongs
-    // to the output if it matches, or if one of its non-back-edge successors
-    // does. Successors precede predecessors in |PostOrder|, so a single
-    // linear scan is enough, no per-path recursion.
+    // |PostOrder| puts successors before predecessors, so reachability to a
+    // match propagates in one linear scan instead of per-path recursion.
     SmallPtrSet<BasicBlock *, 0> Output;
     for (auto *BB : PostOrder) {
       bool ReachesMatch = false;
@@ -256,8 +254,7 @@ private:
       if (isMatch(BB) || ReachesMatch)
         Output.insert(BB);
 
-      // Preserve whole-loop inclusion: a qualifying path crossing a loop
-      // header brings in the entire loop.
+      // A qualifying path through a loop header brings in the whole loop.
       if (ReachesMatch && LI.isLoopHeader(BB)) {
         auto *L = LI.getLoopFor(BB);
         for (auto *LoopBB : L->getBlocks())
