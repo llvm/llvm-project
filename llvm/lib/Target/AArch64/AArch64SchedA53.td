@@ -150,6 +150,16 @@ def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 17;
                                                       let ReleaseAtCycles = [13]; }
 def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 32;
                                                       let ReleaseAtCycles = [28]; }
+// Reciprocal / reciprocal-square-root Newton-Raphson step (FRECPS/FRSQRTS) and
+// estimate (FRECPE/FRSQRTE). Measured on Cortex-A53: the step is 8 cycles and
+// the estimate 4, not the flat 6 of WriteVd. These run on the FP/ASIMD ALU pipe,
+// so the Q-form variants keep the two-cycle datapath occupancy.
+def A53WriteFRecpStep  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8; }
+def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8;
+                                                         let ReleaseAtCycles = [2]; }
+def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4;
+                                                         let ReleaseAtCycles = [2]; }
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -321,7 +331,20 @@ def : InstRW<[A53WriteFDivSP], (instrs FDIVSrr)>;
 def : InstRW<[A53WriteFDivDP], (instrs FDIVDrr)>;
 def : InstRW<[A53WriteFDivSP], (instregex "^FDIVv.*32$")>;
 def : InstRW<[A53WriteFDivDP], (instregex "^FDIVv.*64$")>;
-def : InstRW<[A53WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
-def : InstRW<[A53WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
+// Match only the genuine square root (FSQRT*), not the reciprocal-square-root
+// step/estimate (FRSQRTS/FRSQRTE), which are handled below. Previously the
+// ".*SQRT.*" globs charged those the full square-root latency.
+def : InstRW<[A53WriteFSqrtSP], (instregex "^FSQRT.*32$")>;
+def : InstRW<[A53WriteFSqrtDP], (instregex "^FSQRT.*64$")>;
+
+// Reciprocal / rsqrt step and estimate (see the write classes above).
+def : InstRW<[A53WriteFRecpStep],
+      (instregex "^FR(ECP|SQRT)S(32|64|v2f32)$")>;
+def : InstRW<[A53WriteFRecpStepQ],
+      (instregex "^FR(ECP|SQRT)S(v2f64|v4f32)$")>;
+def : InstRW<[A53WriteFRecpEst],
+      (instregex "^FR(ECP|SQRT)E(v1i32|v1i64|v2f32)$")>;
+def : InstRW<[A53WriteFRecpEstQ],
+      (instregex "^FR(ECP|SQRT)E(v2f64|v4f32)$")>;
 
 }
