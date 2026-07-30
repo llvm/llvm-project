@@ -24,4 +24,5 @@ Source files that do not depend on CUDA or HIP spelling are compiled once and
 shared by both languages.
 
 The `cuda/` and `hip/` directories are kept in case there is ever a need for
-language-specific behavior.
+language-specific behavior. For now, the minimal differences between cuda and 
+hip are taken care of in cuda/hip_runtime.h after the generic parts are included.

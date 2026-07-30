@@ -9,6 +9,7 @@
 #include "LanguageLaunch.h"
 #include "State.h"
 
+#include <algorithm>
 #include <cstdio>
 
 using RuntimeState = llvm::offload::StateTy;
@@ -17,25 +18,25 @@ using ThreadState = llvm::offload::ThreadStateTy;
 extern "C" {
 
 /// Push call configuration for kernel launch
-unsigned __llvmPushCallConfiguration(dim3 __grid_size, dim3 __block_size,
-                                     size_t __shared_memory, void *__stream) {
+unsigned __llvmPushCallConfiguration(dim3 GridSize, dim3 BlockSize,
+                                     size_t SharedMemory, void *Stream) {
   CallConfigurationTy &CC = ThreadState::getCallConfiguration();
 
-  CC.GridSize = __grid_size;
-  CC.BlockSize = __block_size;
-  CC.SharedMemory = __shared_memory;
-  CC.Stream = __stream;
+  CC.GridSize = GridSize;
+  CC.BlockSize = BlockSize;
+  CC.SharedMemory = SharedMemory;
+  CC.Stream = Stream;
   return 0;
 }
 
 /// Pop call configuration for kernel launch
-unsigned __llvmPopCallConfiguration(dim3 *__grid_size, dim3 *__block_size,
-                                    size_t *__shared_memory, void **__stream) {
+unsigned __llvmPopCallConfiguration(dim3 *GridSize, dim3 *BlockSize,
+                                    size_t *SharedMemory, void **Stream) {
   CallConfigurationTy &CC = ThreadState::getCallConfiguration();
-  *__grid_size = CC.GridSize;
-  *__block_size = CC.BlockSize;
-  *__shared_memory = CC.SharedMemory;
-  *__stream = CC.Stream;
+  *GridSize = CC.GridSize;
+  *BlockSize = CC.BlockSize;
+  *SharedMemory = CC.SharedMemory;
+  *Stream = CC.Stream;
   return 0;
 }
 

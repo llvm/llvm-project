@@ -34,9 +34,7 @@ namespace offload {
 
 /// Opaque host-side key used to identify a registered kernel.
 ///
-/// This is the address emitted in the offload entry table for the kernel,
-/// not a device number or liboffload handle.  The runtime maps it to the
-/// loaded device symbol during registration and uses it again during launch.
+/// This is the address emitted in the offload entry table for the kernel
 using KernelIDTy = const void *;
 
 /// Per-thread state used by the language runtime entry points.
@@ -46,11 +44,20 @@ using KernelIDTy = const void *;
 struct ThreadStateTy {
   ~ThreadStateTy();
 
-  /// Return the default queue for the current stream mode.
+  /// Return the default queue for the current host thread
   static ol_queue_handle_t getDefaultQueue();
 
   /// Return the thread-local default device, or the first discovered device.
   static ol_device_handle_t getDefaultDevice();
+
+  /// Return the thread-local default device and write its number to \p
+  /// DeviceNo.
+  static ol_device_handle_t getDevice(int *DeviceNo);
+
+  /// Set the thread-local default device by device number.
+  ///
+  /// \returns the selected device, or nullptr if \p DeviceNo is invalid.
+  static ol_device_handle_t setDefaultDevice(int DeviceNo);
 
   /// Return the pending kernel launch configuration for this thread.
   static CallConfigurationTy &getCallConfiguration();
@@ -63,7 +70,7 @@ private:
 
   void createDefaultQueue(ol_device_handle_t Device);
 
-  ol_device_handle_t DefaultDevice = nullptr;
+  int DefaultDevice = 0;
   ol_queue_handle_t DefaultQueue = nullptr;
 
   CallConfigurationTy CC = {};
@@ -85,14 +92,6 @@ struct StateTy {
 
   /// Return the number of non-host devices available to kernel languages.
   static int getDeviceCount();
-
-  /// Return the thread-local default device and write its number to \p DeviceNo.
-  static ol_device_handle_t getDevice(int *DeviceNo);
-
-  /// Set the thread-local default device by device number.
-  ///
-  /// \returns the selected device, or nullptr if \p DeviceNo is invalid.
-  static ol_device_handle_t setDefaultDevice(int DeviceNo);
 
   /// Register \p Kernel for the host-side kernel identifier \p ID.
   ///

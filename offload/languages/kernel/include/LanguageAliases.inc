@@ -24,10 +24,11 @@
 #define LA_IMPL1(PREFIX, L, NAME) LA_IMPL2(PREFIX, L, NAME)
 #define LANGUAGE_NAME(PREFIX, NAME) LA_IMPL1(PREFIX, LANGUAGE, NAME)
 
-extern "C" void LANGUAGE_NAME(__, RegisterFunction)(
-    const char *Binary, const char *KernelID, char *KernelName,
-    const char *KernelName1, int ThreadLimit, uint3 *Tid, uint3 *Bid,
-    dim3 *BlockDim, dim3 *GridDim, int *WSize) {
+extern "C" void
+LANGUAGE_NAME(__, RegisterFunction)(const char *Binary, const char *KernelID,
+                                    char *KernelName, const char *KernelName1,
+                                    int ThreadLimit, uint3 *Tid, uint3 *Bid,
+                                    dim3 *BlockDim, dim3 *GridDim, int *WSize) {
   __llvmRegisterFunction(Binary, KernelID, KernelName, KernelName1, ThreadLimit,
                          Tid, Bid, BlockDim, GridDim, WSize);
 }
@@ -41,9 +42,11 @@ extern "C" void LANGUAGE_NAME(__, RegisterVar)(void **Data, char *HostVar,
                     Constant, Global);
 }
 
-extern "C" void LANGUAGE_NAME(__, RegisterManagedVar)(
-    void **Data, char *HostVar, char *DeviceAddress, const char *DeviceName,
-    size_t Size, unsigned Align) {
+extern "C" void LANGUAGE_NAME(__,
+                              RegisterManagedVar)(void **Data, char *HostVar,
+                                                  char *DeviceAddress,
+                                                  const char *DeviceName,
+                                                  size_t Size, unsigned Align) {
   __llvmRegisterManagedVar(Data, HostVar, DeviceAddress, DeviceName, Size,
                            Align);
 }
@@ -60,8 +63,9 @@ extern "C" void LANGUAGE_NAME(__, RegisterTexture)(
   __llvmRegisterTexture(Data, TexRef, DevPtr, Name, Dim, Norm, Ext);
 }
 
-extern "C" unsigned LANGUAGE_NAME(__, PopCallConfiguration)(
-    dim3 *GridSize, dim3 *BlockSize, size_t *SharedMemory, void **Stream) {
+extern "C" unsigned
+LANGUAGE_NAME(__, PopCallConfiguration)(dim3 *GridSize, dim3 *BlockSize,
+                                        size_t *SharedMemory, void **Stream) {
   return __llvmPopCallConfiguration(GridSize, BlockSize, SharedMemory, Stream);
 }
 

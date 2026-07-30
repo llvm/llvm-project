@@ -14,26 +14,17 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <mutex>
 
-#define CHECK_FATAL(Result, ...)                                               \
-  if (Result && Result->Code) {                                                \
-    llvm::errs() << __VA_ARGS__ << '\n';                                       \
-    abort();                                                                   \
-  }
-
 using namespace llvm;
 using namespace offload;
 
 // Weak so another runtime object can override the default stream mode.
 __attribute__((weak)) uint32_t PerThreadQueue = 0;
-
-thread_local CallConfigurationTy CC = {};
 
 // Process-wide singleton and thread-state registry.
 static std::mutex StateLock;
@@ -45,7 +36,9 @@ static std::mutex ThreadStatesLock;
 using ThreadStatesTy = SmallVector<ThreadStateTy *, 64>;
 static ThreadStatesTy *ThreadStatesPtr = nullptr;
 
-static void deleteThreadState() {
+static void deleteThreadStates() {
+  // Detach the registry before deletion because deleteThreadState may be called
+  // more than once via atexit and StateTy teardown.
   std::lock_guard<std::mutex> LG(ThreadStatesLock);
   ThreadStatesTy *ThreadStates = ThreadStatesPtr;
   ThreadStatesPtr = nullptr;
@@ -56,12 +49,14 @@ static void deleteThreadState() {
     delete TS;
   delete ThreadStates;
   ThreadState = nullptr;
+  ThreadStates = nullptr;
 }
 
 static void deleteState() {
   StateTy *ST = StatePtr.load();
   StatePtr.store(nullptr);
   delete ST;
+  StatePtr = nullptr;
 }
 
 static void destroyQueue(ol_queue_handle_t &Queue) {
@@ -81,15 +76,14 @@ namespace offload {
 ThreadStateTy::ThreadStateTy() {
   if (PerThreadQueue) [[unlikely]]
     createDefaultQueue(getDefaultDevice());
-  atexit(deleteThreadState);
+  atexit(deleteThreadStates);
 }
 ThreadStateTy::~ThreadStateTy() { destroyQueue(DefaultQueue); }
 
 ThreadStateTy &ThreadStateTy::get() {
-  auto *TS = ThreadState;
+  auto *&TS = ThreadState;
   if (!TS) {
     TS = new ThreadStateTy();
-    ThreadState = TS;
     std::lock_guard<std::mutex> LG(ThreadStatesLock);
     if (!ThreadStatesPtr)
       ThreadStatesPtr = new ThreadStatesTy;
@@ -99,14 +93,8 @@ ThreadStateTy &ThreadStateTy::get() {
 }
 
 ol_device_handle_t ThreadStateTy::getDefaultDevice() {
-  ol_device_handle_t DD = ThreadStateTy::get().DefaultDevice;
-  if (DD)
-    return DD;
-  for (ol_device_handle_t Device : StateTy::get().getDevices()) {
-    DD = Device;
-    break;
-  }
-  return DD;
+  int DD = ThreadStateTy::get().DefaultDevice;
+  return StateTy::get().getDevices()[DD];
 }
 
 ol_queue_handle_t ThreadStateTy::getDefaultQueue() {
@@ -119,10 +107,19 @@ CallConfigurationTy &ThreadStateTy::getCallConfiguration() {
   return ThreadStateTy::get().CC;
 }
 
-void ThreadStateTy::setDefaultDevice(ol_device_handle_t Device) {
-  ThreadStateTy &State = get();
-  State.DefaultDevice = Device;
-  State.createDefaultQueue(Device);
+ol_device_handle_t ThreadStateTy::setDefaultDevice(int DeviceNo) {
+  ArrayRef<ol_device_handle_t> Devices = StateTy::get().getDevices();
+  if (DeviceNo < 0 || DeviceNo >= static_cast<int>(Devices.size()))
+    return nullptr;
+  ThreadStateTy::get().DefaultDevice = DeviceNo;
+  ol_device_handle_t DD = Devices[DeviceNo];
+  ThreadStateTy::get().createDefaultQueue(DD);
+  return DD;
+}
+
+ol_device_handle_t ThreadStateTy::getDevice(int *DeviceNo) {
+  *DeviceNo = ThreadStateTy::get().DefaultDevice;
+  return ThreadStateTy::getDefaultDevice();
 }
 
 void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
@@ -154,28 +151,6 @@ ol_device_handle_t StateTy::getHostDevice() { return get().HostDevice; }
 int StateTy::getDeviceCount() {
   int DeviceCount = get().getDevices().size();
   return DeviceCount;
-}
-
-ol_device_handle_t StateTy::getDevice(int *DeviceNo) {
-  ol_device_handle_t DefaultDevice = ThreadStateTy::getDefaultDevice();
-  int DeviceCount = get().getDevices().size();
-  ArrayRef<ol_device_handle_t> Devices = get().getDevices();
-  for (int i = 0; i < DeviceCount; i++) {
-    if (Devices[i] == DefaultDevice) {
-      *DeviceNo = i;
-      return Devices[i];
-    }
-  }
-  return nullptr;
-}
-
-ol_device_handle_t StateTy::setDefaultDevice(int DeviceNo) {
-  ArrayRef<ol_device_handle_t> Devices = get().getDevices();
-  if (DeviceNo < 0 || DeviceNo >= static_cast<int>(Devices.size()))
-    return nullptr;
-  ol_device_handle_t Device = Devices[DeviceNo];
-  ThreadStateTy::setDefaultDevice(Device);
-  return Device;
 }
 
 ArrayRef<ol_device_handle_t> StateTy::getDevices() const { return Devices; }
@@ -282,7 +257,7 @@ StateTy::StateTy() {
 }
 
 StateTy::~StateTy() {
-  deleteThreadState();
+  deleteThreadStates();
   destroyQueue(DefaultQueue);
   destroyRegisteredPrograms();
   olShutDown();

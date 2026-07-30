@@ -11,8 +11,10 @@
 #endif
 
 // Rename the generic runtime API before declaring or defining language symbols.
+// clang-format off
 #include "DefineLanguageNames.inc"
 #include "LanguageRuntime.h"
+// clang-format on
 
 #include "State.h"
 #include "Types.h"
@@ -101,7 +103,7 @@ Error_t DeviceSynchronize() {
 }
 
 Error_t GetDevice(int *DeviceNo) {
-  ol_device_handle_t Device = RuntimeState::getDevice(DeviceNo);
+  ol_device_handle_t Device = ThreadState::getDevice(DeviceNo);
   if (!Device)
     return ErrorInvalidValue;
   return Success;
@@ -113,7 +115,7 @@ Error_t GetDeviceCount(int *Count) {
 }
 
 Error_t SetDevice(int DeviceNo) {
-  ol_device_handle_t Device = RuntimeState::setDefaultDevice(DeviceNo);
+  ol_device_handle_t Device = ThreadState::setDefaultDevice(DeviceNo);
   if (!Device)
     return ErrorInvalidValue;
   assert(Device == ThreadState::getDefaultDevice() &&
