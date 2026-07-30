@@ -110,6 +110,7 @@
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
+#include "UnsafeApiFunctionsCallsCheck.h"
 #include "UnsafeFunctionsCheck.h"
 #include "UnsafeToAllowExceptionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
@@ -319,6 +320,8 @@ public:
         "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UniquePtrArrayMismatchCheck>(
         "bugprone-unique-ptr-array-mismatch");
+    CheckFactories.registerCheck<UnsafeApiFunctionsCallsCheck>(
+        "bugprone-unsafe-api-functions-calls");
     CheckFactories.registerCheck<CrtpConstructorAccessibilityCheck>(
         "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(

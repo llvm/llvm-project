@@ -103,6 +103,13 @@ New checks
   Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
   ``ValueOr``) on optional types where the return type is expensive to copy.
 
+- New :doc:`bugprone-unsafe-api-functions-calls
+  <clang-tidy/checks/bugprone/bugprone-unsafe-api-functions-calls>`
+  check.
+
+  Checks for C standard function calls that are used in an undefined
+  or unsafe manner.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
