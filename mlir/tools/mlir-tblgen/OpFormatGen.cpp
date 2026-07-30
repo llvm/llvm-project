@@ -318,6 +318,10 @@ struct OperationFormat {
     std::optional<StringRef> getVarTransformer() const {
       return variableTransformer;
     }
+    /// Returns true if the type is parsed directly from the assembly format.
+    bool isDirectlyParsed() const {
+      return !builderIdx && !getVariable() && !getAttribute();
+    }
     void setResolver(ConstArgument arg, std::optional<StringRef> transformer) {
       resolver = arg;
       variableTransformer = transformer;
@@ -1890,19 +1894,22 @@ void OperationFormat::genParserOperandTypeResolution(
   // separately.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
     NamedTypeConstraint &operand = op.getOperand(i);
-    // Optional operands may not be present; guard resolution to avoid
-    // out-of-bounds access on the (potentially empty) types vector.
-    if (operand.isOptional())
+    TypeResolution &operandType = operandTypes[i];
+    // Inferred type resolution may access another optional variable's empty
+    // type vector. Directly parsed type ranges are safe and must always be
+    // resolved so that operand/type cardinality is validated.
+    bool guardOptionalOperand =
+        operand.isOptional() && !operandType.isDirectlyParsed();
+    if (guardOptionalOperand)
       body << "  if (!" << operand.name << "Operands.empty()) {\n";
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.
-    TypeResolution &operandType = operandTypes[i];
     emitTypeResolver(operandType, operand.name);
 
     body << ", " << operand.name
          << "OperandsLoc, result.operands))\n    return ::mlir::failure();\n";
-    if (operand.isOptional())
+    if (guardOptionalOperand)
       body << "  }\n";
   }
 }

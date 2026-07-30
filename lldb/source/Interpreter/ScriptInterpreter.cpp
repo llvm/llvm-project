@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "API/SBCommandReturnObjectImpl.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
@@ -94,6 +97,16 @@ lldb::BreakpointLocationSP
 ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
     const lldb::SBBreakpointLocation &break_loc) const {
   return break_loc.m_opaque_wp.lock();
+}
+
+CommandReturnObject *ScriptInterpreter::GetOpaqueTypeFromSBCommandReturnObject(
+    const lldb::SBCommandReturnObject &cmd_retobj) const {
+  return cmd_retobj.m_opaque_up->get();
+}
+
+lldb::DebuggerSP ScriptInterpreter::GetOpaqueTypeFromSBDebugger(
+    const lldb::SBDebugger &debugger) const {
+  return debugger.m_opaque_sp;
 }
 
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
@@ -221,6 +234,12 @@ ScriptInterpreter::ExtensionToString(lldb::ScriptedExtension extension) {
     return "ScriptedFrame";
   case eScriptedExtensionScriptedStackFrameRecognizer:
     return "ScriptedStackFrameRecognizer";
+  case eScriptedExtensionScriptedCommand:
+    return "ScriptedCommand";
+  case eScriptedExtensionParsedCommand:
+    return "ParsedCommand";
+  case eScriptedExtensionScriptedStringSummary:
+    return "ScriptedStringSummary";
   }
   llvm_unreachable("unhandled ScriptedExtension");
 }
@@ -241,6 +260,10 @@ ScriptInterpreter::StringToExtension(llvm::StringRef string) {
       .CaseLower("ScriptedFrame", eScriptedExtensionScriptedFrame)
       .CaseLower("ScriptedStackFrameRecognizer",
                  eScriptedExtensionScriptedStackFrameRecognizer)
+      .CaseLower("ScriptedCommand", eScriptedExtensionScriptedCommand)
+      .CaseLower("ParsedCommand", eScriptedExtensionParsedCommand)
+      .CaseLower("ScriptedStringSummary",
+                 eScriptedExtensionScriptedStringSummary)
       .Default(eScriptedExtensionInvalid);
 }
 

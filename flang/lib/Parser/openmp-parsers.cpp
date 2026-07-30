@@ -1416,8 +1416,10 @@ TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},
     maybe(":" >> nonemptyList(Parser<OmpAlignedClause::Modifier>{}))))
 
 TYPE_PARSER( //
-    construct<OmpUpdateClause>(parenthesized(Parser<OmpDependenceType>{})) ||
-    construct<OmpUpdateClause>(parenthesized(Parser<OmpTaskDependenceType>{})))
+    construct<OmpUpdateDependObjectsClause>(
+        parenthesized(Parser<OmpDependenceType>{})) ||
+    construct<OmpUpdateDependObjectsClause>(
+        parenthesized(Parser<OmpTaskDependenceType>{})))
 
 TYPE_PARSER(construct<OmpOrderClause>(
     maybe(nonemptyList(Parser<OmpOrderClause::Modifier>{}) / ":"),
@@ -1708,8 +1710,9 @@ TYPE_PARSER( //
     "UNIFORM" >> construct<OmpClause>(construct<OmpClause::Uniform>(
                      parenthesized(nonemptyList(name)))) ||
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
-    "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
-                    maybe(Parser<OmpUpdateClause>{}))) ||
+    "UPDATE" >> (construct<OmpClause>(construct<OmpClause::UpdateDependObjects>(
+                     Parser<OmpUpdateDependObjectsClause>{})) ||
+                    construct<OmpClause>(construct<OmpClause::Update>())) ||
     "WEAK" >> construct<OmpClause>(construct<OmpClause::Weak>()) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
