@@ -867,11 +867,8 @@ public:
     if (!makesAnnotationsFor(MRD))
       return;
 
-    // This can be helpful for debugging.
-    SMLoc CheckLoc = MRD.getCheckLoc();
-    // SM.PrintMessage(CheckLoc, SourceMgr::DK_Error, "PATTERN");
-
     // Get the buffer containing the pattern.
+    SMLoc CheckLoc = MRD.getCheckLoc();
     unsigned CheckBufferID = SM.FindBufferContainingLoc(CheckLoc);
     const MemoryBuffer *MB = SM.getMemoryBuffer(CheckBufferID);
     const char *BufStart = MB->getBufferStart();
