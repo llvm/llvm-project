@@ -339,7 +339,7 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
            "OpFunction is not in the front MBB of MF");
     emitOpLabel(*MI->getParent());
     if (NSDebugHandler && !isHidden())
-      NSDebugHandler->notifyEntryLabelEmitted(*MF, *MAI);
+      NSDebugHandler->notifyEntryLabelEmitted(*MF);
   }
 }
 

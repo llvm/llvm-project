@@ -1176,7 +1176,7 @@ void SPIRVNonSemanticDebugHandler::endInstruction() {
 }
 
 void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
-    const MachineFunction &MF, SPIRV::ModuleAnalysisInfo &MAI) {
+    const MachineFunction &MF) {
   if (!GlobalNSDIEnabled || DebugFunctionDefinitionEmitted || !CurrentMF)
     return;
 

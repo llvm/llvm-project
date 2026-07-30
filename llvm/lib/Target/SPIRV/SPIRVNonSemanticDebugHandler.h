@@ -200,8 +200,7 @@ public:
   void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Called after the synthesized entry \c OpLabel has been emitted.
-  void notifyEntryLabelEmitted(const MachineFunction &MF,
-                               SPIRV::ModuleAnalysisInfo &MAI);
+  void notifyEntryLabelEmitted(const MachineFunction &MF);
 
 protected:
   // All module-level output is driven by emitNonSemanticGlobalDebugInfo(),
