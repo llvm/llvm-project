@@ -26,16 +26,16 @@ operations are generated from. To define an operation one needs to specify:
     Instead of repeating the dialect in the op definition, a base class for the
     op dialect is commonly created that prepends the dialect namespace given an
     op name.
-*   The traits of the operation. These allow you to specify traits of the
-    operation, such as whether it has side effects or whether it should be
-    verified that the operands and result types are the same. These are backed
-    by C++ traits that perform the verification.
+*   The traits of the operation, such as whether it has side effects or whether
+    it should be verified that the operands and result types are the same. These
+    are backed by [C++ traits](https://en.cppreference.com/cpp/header/type_traits)
+    that perform the verification.
 *   The arguments of the operation. These are the input operands (values at
     runtime produced by other ops) and attributes (compile time known constant
     values that affect the behavior of the op) that are the inputs of/define the
     behavior of the operation. The input operands may be named, the attributes
     must be named.
-*   The result(s) of the operation. These may again named or not.
+*   The result(s) of the operation. These may again be named or not.
 *   Documentation of the operation. This includes a one-line summary as well as
     a longer human-readable description of the operation.
 *   Dialect specific information. Additional information could be added to the
@@ -163,7 +163,7 @@ use to collect all the generated patterns inside `patterns` and then use
 
 Many simple rewrites can be expressed with a `matchAndRewrite` style  of
 pattern, e.g. when converting a multiply by a power of two into a shift.  For
-these cases, the you can define the pattern as a simple function:
+these cases, you can define the pattern as a simple function:
 
 ```c++
 static LogicalResult
@@ -180,11 +180,10 @@ void populateRewrites(RewritePatternSet &patternSet) {
 }
 ```
 
-ODS provides a simple way to define a function-style canonicalization for your
-operation.  In the TableGen definition of the op, specify
-`let hasCanonicalizeMethod = 1;` and then implement the `canonicalize` method in
-your .cpp file:
-
+[ODS](../DefiningDialects/Operations.md) provides a simple
+way to define a function-style canonicalization for your operation. In the TableGen
+definition of the op, specify `let hasCanonicalizeMethod = 1;` and then implement
+the `canonicalize` method in your .cpp file:
 ```c++
 // Example from the CIRCT project which has a variadic integer multiply.
 LogicalResult circt::MulOp::canonicalize(MulOp op, PatternRewriter &rewriter) {
@@ -230,8 +229,8 @@ struct ConvertTFLeakyRelu : public RewritePattern {
 };
 ```
 
-In the C++ rewrite the static benefit of the rewrite pattern is specified at
-construction. While in the pattern generator a simple heuristic is currently
+In the C++ rewrite, the static benefit of the rewrite pattern is specified at 
+construction, while, in the pattern generator, a simple heuristic is currently 
 employed based around the number of ops matched and replaced.
 
 The above rule did not capture the matching operands/attributes, but in general
@@ -266,17 +265,17 @@ func.func @LeakyRelu(%arg0: tensor<1xf32>) -> tensor<1xf32> {
 ```
 
 The RUN command at the top results in running the `mlir-opt` binary (which is
-compiler writer tool to exercise different registered passes) to invoke the
-optimization pass this transform was added as part of on the current file and to
+a compiler writer tool to exercise different registered passes) to invoke the
+optimization pass that contains this transform on the current file and to
 verify its output using `FileCheck`. `FileCheck` is textual output verifier. In
-particular it uses the CHECK expressions to verify the given output is produced.
+particular, it uses the CHECK expressions to verify if the given output is produced.
 
-There can be multiple RUN commands with different corresponding CHECK prefixes.
-And in addition multiple independent tests separated by `// -----` and
-`mlir-opt` invoked with `-split-input-file` flag. This is especially useful for
+There can be multiple RUN commands with different corresponding CHECK prefixes and,
+additionally, multiple independent tests separated by `// -----` and `mlir-opt` 
+invoked with `-split-input-file` flag. This is especially useful for
 error testing.
 
-This results in very simple, directed testing without need to work around
+This results in very simple, directed testing without the need to work around
 constant propagation or other, unrelated, optimization passes.
 
 ## Adding optimization pass
