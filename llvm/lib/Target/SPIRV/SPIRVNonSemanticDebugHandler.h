@@ -46,7 +46,8 @@ class SPIRVSubtarget;
 ///   emitNonSemanticGlobalDebugInfo() -- emit DebugSource,
 ///                                       DebugCompilationUnit, DebugTypeBasic,
 ///                                       DebugTypePointer, DebugTypeFunction,
-///                                       DebugFunctionDeclaration.
+///                                       DebugFunctionDeclaration,
+///                                       DebugFunction.
 ///   beginFunctionImpl()              -- no-op (no per-function DI yet).
 ///   endFunctionImpl()                -- no-op.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
@@ -73,6 +74,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DICompositeType nodes with DW_TAG_structure_type, DW_TAG_class_type, or
   // DW_TAG_union_type, partitioned in beginModule() for DebugTypeComposite.
   SmallVector<const DICompositeType *> CompositeTypes;
+  // DIDerivedType nodes with DW_TAG_typedef, partitioned in beginModule() for
+  // DebugTypedef emission.
+  SmallVector<const DIDerivedType *> TypedefTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
@@ -81,6 +85,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DISubprogram nodes that are declarations only (!isDefinition()), collected
   // in beginModule() for DebugFunctionDeclaration emission.
   SmallVector<const DISubprogram *> SubprogramDeclarations;
+
+  // DISubprogram nodes that are definitions, collected in beginModule() for
+  // DebugFunction emission.
+  SmallVector<const DISubprogram *> SubprogramDefinitions;
 
   struct GlobalVariableDebugInfo {
     const DIExpression *Expr = nullptr;
@@ -165,7 +173,7 @@ public:
 
   /// Emit module-scope NSDI instructions (DebugSource, DebugCompilationUnit,
   /// DebugTypeBasic, DebugTypePointer, DebugTypeFunction,
-  /// DebugFunctionDeclaration). Called by
+  /// DebugFunctionDeclaration, DebugFunction). Called by
   /// SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
   /// outputModuleSection(MB_NonSemanticGlobalDI). Requires
   /// emitNonSemanticDebugStrings() to have run first when NSDI strings apply.
@@ -188,12 +196,13 @@ protected:
   void beginInstruction(const MachineInstr *MI) override {}
   void endInstruction() override {}
 
-  // TODO: Emit DebugFunction and DebugFunctionDefinition here once per-function
-  // NSDI emission is implemented. DebugHandlerBase::beginFunction() populates
-  // LScopes and DbgValues, which are needed for DebugLine emission. Do not
-  // override beginFunction() until that work is in place.
+  // TODO: Emit DebugFunctionDefinition here once per-function NSDI emission is
+  // implemented. DebugHandlerBase::beginFunction() populates LScopes and
+  // DbgValues, which are needed for DebugLine emission. Do not override
+  // beginFunction() until that work is in place.
   void beginFunctionImpl(const MachineFunction *MF) override {}
-  // TODO: Add per-function cleanup when DebugFunction emission is in place.
+  // TODO: Add per-function cleanup when DebugFunctionDefinition emission is in
+  // place.
   void endFunctionImpl(const MachineFunction *MF) override {}
 
 private:
@@ -281,12 +290,20 @@ private:
   /// DISubroutineType type, the signature type was not emitted in \c
   /// DebugTypeRegs, no path
   /// \c OpString was recorded for \p SP in section 7, or
-  /// \c resolveDebugFunctionDeclarationParent returns no id for the \c Parent
+  /// \c resolveDebugFunctionParent returns no id for the \c Parent
   /// operand.
   std::optional<MCRegister>
   emitDebugFunctionDeclaration(const DISubprogram *SP, MCRegister VoidTypeReg,
                                MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugFunction for a defining \c DISubprogram (\p SP must satisfy
+  /// \c isDefinition()).
+  std::optional<MCRegister> emitDebugFunction(const DISubprogram *SP,
+                                              MCRegister VoidTypeReg,
+                                              MCRegister I32TypeReg,
+                                              MCRegister ExtInstSetReg,
+                                              SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugGlobalVariable for the source global variable \p GV.
   ///
@@ -370,6 +387,21 @@ private:
       MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
       SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Emit \c DebugTypedef for the typedef derived type \p TD (a \c
+  /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,
+  /// Line, Column, Parent. Parent is the enclosing type when \c TD->getScope()
+  /// is an emitted \c DIType, otherwise the first module \c
+  /// DebugCompilationUnit.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p TD's base type has not been emitted into \c
+  /// DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypedef(const DIDerivedType *TD,
+                                             MCRegister VoidTypeReg,
+                                             MCRegister I32TypeReg,
+                                             MCRegister ExtInstSetReg,
+                                             SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for
   /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugTypeRegs; if the
@@ -404,15 +436,15 @@ private:
                                                MCRegister ExtInstSetReg,
                                                SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Resolve the \c Parent operand for \c DebugFunctionDeclaration: an emitted
-  /// debug type id when \c SP->getScope() is a \c DIType in \c DebugTypeRegs,
-  /// otherwise \c DebugCompilationUnit for \c SP->getUnit() (or the first
-  /// module CU when \c unit: is absent).
+  /// Resolve the \c Parent operand for \c DebugFunctionDeclaration and
+  /// \c DebugFunction: an emitted debug type id when \c SP->getScope() is a
+  /// \c DIType in \c DebugTypeRegs, otherwise \c DebugCompilationUnit for
+  /// \c SP->getUnit() (or the first module CU when \c unit: is absent).
   /// \returns \c std::nullopt when the scope requires a parent we cannot supply
   /// (non-file scope that is not a mapped \c DIType) or the CU has no emitted
   /// id.
   std::optional<MCRegister>
-  resolveDebugFunctionDeclarationParent(const DISubprogram *SP) const;
+  resolveDebugFunctionParent(const DISubprogram *SP) const;
 
   /// Resolve the \c Parent operand for a type instruction (\c
   /// DebugTypeComposite) from its \p Scope: an emitted debug type id when \p
