@@ -1853,6 +1853,35 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// IndirectGotoOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IndirectGotoOp : CIR_Op<"indirect_goto", [Terminator]> {
+  let summary = "Symbolic indirect goto";
+  let description = [{
+    Transfers control to the block whose address is held in `$addr`, the
+    void-pointer value of a `goto *expr;` (the GNU computed-goto extension).
+    Like `cir.goto`, it is symbolic: it references no successor block, so it is
+    valid inside any region even before `FlattenCFG` merges nested scopes.
+    `GotoSolver` runs after `FlattenCFG` and rewrites each `cir.indirect_goto`
+    into a `cir.br` to a shared block holding a `cir.indirect_br` over every
+    address-taken label.
+
+    Example:
+
+    ```mlir
+      %0 = cir.load %p : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+      cir.indirect_goto %0 : !cir.ptr<!void>
+    ```
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$addr);
+  let assemblyFormat = [{ $addr `:` qualified(type($addr)) attr-dict }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // LabelOp
 //===----------------------------------------------------------------------===//
 
@@ -1882,7 +1911,9 @@ class CIR_UnaryOp<string mnemonic, Type type, list<Trait> traits = []>
         DeclareOpInterfaceMethods<CIR_UnaryOpInterface>
       ], traits)>
 {
-  let arguments = (ins type:$input);
+  dag commonArgs = (ins type:$input);
+
+  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -2424,8 +2455,9 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   let summary = "Compare two values and produce a boolean result";
   let description = [{
     The `cir.cmp` operation compares two operands of the same type and produces
-    a `!cir.bool` result. It supports integral, floating-point, and pointer
-    types.
+    a `!cir.bool` result. It supports integral, boolean, floating-point, and
+    pointer types.  Booleans (including enums with a boolean underlying type)
+    are compared as unsigned integers.
 
     The following comparison predicates are available:
 
@@ -2563,16 +2595,20 @@ def CIR_MulOverflowOp : CIR_BinOpOverflow<"mul.overflow", [Commutative]> {
 
 // Base class for all CIR binary arithmetic/logic operations.
 // `type` constrains the lhs/rhs/result type.
-class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = []>
-    : CIR_Op<mnemonic, !listconcat([
-        NoMemoryEffect, SameOperandsAndResultType,
+class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
+                   bit hasNoMemoryEffect = 1>
+    : CIR_Op<mnemonic, !listconcat(
+      !if(hasNoMemoryEffect, [NoMemoryEffect], []), [
+        SameOperandsAndResultType,
         DeclareOpInterfaceMethods<CIR_BinaryOpInterface>
       ], traits)>
 {
-  let arguments = (ins
+  dag commonArgs = (ins
     type:$lhs,
     type:$rhs
   );
+
+  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -2747,11 +2783,38 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 // Floating-Point Binary Arithmetic Operations
 //===----------------------------------------------------------------------===//
 
+def CIR_FenvOpTrait : NativeOpTrait<"FenvOpTrait"> {
+  let cppNamespace = "::cir";
+}
+
+defvar CIR_FenvOpTraits = [
+  CIR_FPEnvConstrainedOpInterface,
+  ConditionallySpeculatable,
+  MemoryEffectsOpInterface,
+  CIR_FenvOpTrait
+];
+
+// Passed as CIR_BinaryOp's hasNoMemoryEffect: fenv ops compute effects
+// dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
+defvar CIR_DynamicMemoryEffects = 0;
+
 // Base class for floating-point binary arithmetic operations. The lhs, rhs,
 // and result must all be the same floating-point scalar or vector type.
+//
+// The optional `fenv` attribute describes constraints on the floating-point
+// handling of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
-                   !listconcat([Pure], traits)>;
+                   !listconcat(CIR_FenvOpTraits, traits),
+                   CIR_DynamicMemoryEffects> {
+  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
+}
 
 //===----------------------------------------------------------------------===//
 // FAddOp
@@ -6906,12 +6969,20 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 //===----------------------------------------------------------------------===//
 
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+    : CIR_Op<mnemonic,
+             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
-  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
+  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$src `:` type($src) attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src), [{
+      build($_builder, $_state, src, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
@@ -7166,9 +7237,10 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
 }
 
 class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure]>
+    : CIR_Op<mnemonic, CIR_FenvOpTraits>
 {
-  let arguments = (ins CIR_AnyFloatType:$src);
+  let arguments = (ins CIR_AnyFloatType:$src,
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_IntType:$result);
 
   let summary = [{
@@ -7179,6 +7251,12 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = [{
     $src `:` type($src) `->` type($result) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$src), [{
+      build($_builder, $_state, result, src, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
@@ -7217,14 +7295,16 @@ def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
 }
 
 class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+    : CIR_Op<mnemonic,
+             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)> {
   let summary = [{
     libc builtin equivalent ignoring floating-point exceptions and errno.
   }];
 
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
-    CIR_AnyFloatOrVecOfFloatType:$rhs
+    CIR_AnyFloatOrVecOfFloatType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -7232,6 +7312,13 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
@@ -7346,17 +7433,26 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
 }
 
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+    : CIR_Op<mnemonic,
+             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
-  let arguments = (ins 
+  let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
-    CIR_AnyFloatOrVecOfFloatType:$c
+    CIR_AnyFloatOrVecOfFloatType:$c,
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
-  
+
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
+                   "mlir::Value":$c), [{
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
@@ -8375,7 +8471,14 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Max", 6, "max">,
     I32EnumAttrCase<"Min", 7, "min">,
     I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
-    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">
+    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">,
+    // The primary difference between Max, Maximum, and MaximumNum is primarily
+    // about how they handle floating-point inputs. See the description of the
+    // CIR_AtomicFetchOp for more information.
+    I32EnumAttrCase<"Maximum", 10, "maximum">,
+    I32EnumAttrCase<"Minimum", 11, "minimum">,
+    I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
+    I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -8389,7 +8492,8 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
     `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
     opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, `min`,
-    `uinc_wrap`, and `udec_wrap`.
+    `uinc_wrap`, `udec_wrap`, `maximum`, `minimum`, `maximum_num`, and
+    `minimum_num`.
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation
@@ -8402,6 +8506,20 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     of this operation is the old value loaded from `ptr` before the binary
     operation. Otherwise, the result of this operation is the result of the
     binary operation.
+
+    The primary difference between `max`, `maximum`, and `maximum_num` is how
+    they handle floating-point inputs:
+
+    - `max` on floating-point inputs corresponds to the `atomicrmw fmax` LLVM
+      instruction.
+    - `maximum` corresponds to the `atomicrmw fmaximum` LLVM instruction.
+    - `maximum_num` corresponds to the `atomicrmw fmaximumnum` LLVM instruction.
+
+    Similar rules apply to `min`, `minimum`, and `minimum_num`. See the
+    reference for the LLVM instruction `atomicrmw` for more information.
+
+    The operation `maximum`, `minimum`, `maximum_num`, and `minimum_num` only
+    accept floating-point inputs.
 
     Example:
     %res = cir.atomic.fetch add seq_cst %ptr, %val

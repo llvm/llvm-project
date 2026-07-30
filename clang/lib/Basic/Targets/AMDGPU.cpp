@@ -291,12 +291,9 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       (getTriple().isAMDGCN() ? getArchNameAMDGCN(GPUKind)
                               : getArchNameR600(GPUKind));
 
-  // Sanitize the name of generic targets.
+  // Sanitize the name of generic targets, the only names containing '-'.
   // e.g. gfx10-1-generic -> gfx10_1_generic
-  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
-      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
-    llvm::replace(CanonName, '-', '_');
-  }
+  llvm::replace(CanonName, '-', '_');
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___

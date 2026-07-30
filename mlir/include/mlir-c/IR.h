@@ -140,6 +140,13 @@ mlirContextGetNumLoadedDialects(MlirContext context);
 MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
                                                            MlirStringRef name);
 
+/// Gets the dialect instance owned by the given context using the dialect
+/// namespace to identify it. If the dialect is not loaded by the context,
+/// returns null. Use mlirContextGetOrLoadDialect to load a dialect if it is
+/// registered with the context.
+MLIR_CAPI_EXPORTED MlirDialect mlirContextGetLoadedDialect(MlirContext context,
+                                                           MlirStringRef name);
+
 /// Set threading mode (must be set to false to mlir-print-ir-after-all).
 MLIR_CAPI_EXPORTED void mlirContextEnableMultithreading(MlirContext context,
                                                         bool enable);
