@@ -37,6 +37,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -192,6 +193,32 @@ Status PlatformWindows::ConnectRemote(Args &args) {
     m_remote_platform_sp.reset();
 
   return error;
+}
+
+static llvm::StringRef ExpressionResultAsString(ExpressionResults result) {
+  switch (result) {
+  case eExpressionCompleted:
+    return "completed";
+  case eExpressionSetupError:
+    return "setup error";
+  case eExpressionParseError:
+    return "parse error";
+  case eExpressionDiscarded:
+    return "discarded";
+  case eExpressionInterrupted:
+    return "interrupted";
+  case eExpressionHitBreakpoint:
+    return "hit breakpoint";
+  case eExpressionTimedOut:
+    return "timed out";
+  case eExpressionResultUnavailable:
+    return "result unavailable";
+  case eExpressionStoppedForDebug:
+    return "stopped for debug";
+  case eExpressionThreadVanished:
+    return "thread vanished";
+  }
+  return "unknown error";
 }
 
 uint32_t PlatformWindows::DoLoadImage(Process *process,
@@ -430,7 +457,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   if (result != eExpressionCompleted) {
     error = Status::FromError(diagnostics.GetAsError(
         eExpressionSetupError,
-        "LoadLibrary error: failed to execute LoadLibrary helper:"));
+        llvm::formatv("LoadLibrary error: failed to execute LoadLibrary helper "
+                      "({0}):",
+                      ExpressionResultAsString(result))
+            .str()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -936,7 +966,10 @@ extern "C" {
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);
   if (result != eExpressionCompleted)
-    return value ? value->GetError().Clone() : Status("unknown error");
+    return value ? value->GetError().Clone()
+                 : Status::FromErrorStringWithFormatv(
+                       "failed to execute loader helper ({0})",
+                       ExpressionResultAsString(result));
 
   if (value && value->GetError().Fail())
     return value->GetError().Clone();
