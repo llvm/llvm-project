@@ -41,8 +41,26 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
 
   auto vptr = vtable_info.addr.GetLoadAddress(&m_process->GetTarget());
 
-  // NOTE: vptr points at the 'address point', not the vtable itself
-  auto vtable = vptr - m_process->GetAddressByteSize() * 2;
+  // An object's vptr points to the vtable's address point, not necessarily to
+  // the beginning of the vtable. Under the Itanium C++ ABI, the entries around
+  // the address point are laid out as follows:
+  //
+  // https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-components
+  //   [vcall offsets, if any]
+  //   [vbase offsets, if any]
+  //   [offset-to-top]
+  //   [typeinfo pointer]
+  //   <address point / vptr>
+  //   [virtual function entries...]
+  //
+  // Subtracting two entries from the vptr therefore reaches the offset-to-top
+  // entry, but not necessarily the vtable base. Optional vcall and vbase offset
+  // entries may precede it, and their number cannot be determined from the vptr
+  // alone.
+  //
+  // In such cases, this calculation does not yield the address represented by
+  // __clang_vtable, so the lookup will fail.
+  auto maybeVTableBase = vptr - m_process->GetAddressByteSize() * 2;
 
   VariableList vars;
 
@@ -57,15 +75,30 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
 
   for (lldb::VariableSP var : vars) {
     auto valobj = ValueObjectVariable::Create(m_process, var);
-    if (valobj->GetLoadAddress() != vtable)
+    if (valobj->GetLoadAddress() != maybeVTableBase)
       continue;
 
     auto type_sp = var->GetEnclosingType();
-    if (!type_sp)
-      continue;
+    if (!type_sp) {
+      LLDB_LOGF(log,
+                "0x%16.16" PRIx64 ": Found __clang_vtable at 0x%16.16" PRIx64
+                ", but not the enclosing type!\n",
+                in_value.GetPointerValue().address, valobj->GetLoadAddress());
 
-    if (!TypeSystemClang::IsCXXClassType(type_sp->GetForwardCompilerType()))
+      // Failure to find the type is either an error in the debug info, or the
+      // symptom of a module with debug kind info which doesn't support this
+      // sort of lookup. Carry on
       continue;
+    }
+
+    if (!TypeSystemClang::IsCXXClassType(type_sp->GetForwardCompilerType())) {
+      LLDB_LOGF(log,
+                "0x%16.16" PRIx64 ": Found __clang_vtable at 0x%16.16" PRIx64
+                " for '%s' which is not a CXXClassType. Ignoring\n",
+                in_value.GetPointerValue().address, valobj->GetLoadAddress(),
+                type_sp->GetQualifiedName().AsCString(""));
+      continue;
+    }
 
     LLDB_LOGF(log,
               "0x%16.16" PRIx64
