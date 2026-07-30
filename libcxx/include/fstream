@@ -430,7 +430,7 @@ private:
   void __write_mode();
 
   _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
-  _LIBCPP_HIDE_FROM_ABI static pos_type __ftell(FILE* __file);
+  _LIBCPP_HIDE_FROM_ABI static off_type __ftell(FILE* __file);
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
@@ -479,6 +479,90 @@ private:
                        // choice since we couldn't commit the contents of the put area
     }
     return traits_type::eof();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI pos_type __seek_from_begin(off_type __off, off_type __byte_off) {
+    if (__off < 0)
+      return pos_type(off_type(-1));
+
+    pos_type __success_pos = __off;
+    __success_pos.state(__st_);
+
+    // If we're not always noconv or have a write buffer sync and seek.
+    // TODO: We don't have to sync() even if we're not always_noconv.
+    if (!__always_noconv_ || (__cm_ & ios::out)) {
+      if (sync() || __fseek(__file_, __byte_off, SEEK_SET))
+        return pos_type(off_type(-1));
+      return __success_pos;
+    }
+
+    off_type __file_pos    = __ftell(__file_);
+    auto __buffer_base_pos = __file_pos - (this->egptr() - this->eback());
+
+    // If the new position is within the buffer we can just move the current read pointer
+    if (__off >= __buffer_base_pos && __off <= __file_pos) {
+      this->setg(this->eback(), this->eback() + (__off - __buffer_base_pos), this->egptr());
+      return __success_pos;
+    } else {
+      // Otherwise drop the buffer and seek to the requested position in the underlying C stream. This is the expensive
+      // path, since it performs a syscall.
+      this->setg(nullptr, nullptr, nullptr);
+      __cm_ = 0;
+      if (__fseek(__file_, __byte_off, SEEK_SET))
+        return pos_type(off_type(-1));
+      return __success_pos;
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI pos_type __seek_from_current(off_type __off, off_type __byte_off) {
+    // If we're not always noconv or have a write buffer sync and seek.
+    // TODO: We don't have to sync() even if we're not always_noconv.
+    // TODO: We don't have to sync() if `(__cm_ & ios::out) && __off == 0`.
+    if (!__always_noconv_ || (__cm_ & ios::out)) {
+      if (sync() || __fseek(__file_, __byte_off, SEEK_CUR))
+        return pos_type(off_type(-1));
+      pos_type __r = __ftell(__file_);
+      __r.state(__st_);
+      return __r;
+    }
+
+    // If the new position is within the buffer we can just move the current read pointer
+    if (__off < 0 ? this->gptr() - this->eback() <= __off : this->egptr() - this->gptr() >= __off) {
+      this->__gbump_ptrdiff(__off);
+
+      pos_type __ret = __ftell(__file_) - (this->egptr() - this->gptr());
+      __ret.state(__st_);
+      return __ret;
+    } else {
+      // Otherwise seek to the requested position in the underlying C stream and drop the buffer. This is the expensive
+      // path, since it performs a syscall.
+      if (__fseek(__file_, __byte_off - (this->egptr() - this->gptr()), SEEK_CUR))
+        return pos_type(off_type(-1));
+      this->setg(nullptr, nullptr, nullptr);
+      __cm_          = 0;
+      pos_type __ret = __ftell(__file_);
+      __ret.state(__st_);
+      return __ret;
+    }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI pos_type __seek_from_end(off_type __off, off_type __byte_off) {
+    // If we're not always noconv or have a write buffer sync and seek.
+    if (!__always_noconv_ || (__cm_ & ios::out)) {
+      if (sync() || __fseek(__file_, __byte_off, SEEK_END))
+        return pos_type(off_type(-1));
+      pos_type __r = __ftell(__file_);
+      __r.state(__st_);
+      return __r;
+    }
+
+    this->setg(nullptr, nullptr, nullptr);
+    __cm_ = 0;
+    if (__fseek(__file_, __byte_off, SEEK_END))
+      return pos_type(off_type(-1));
+    pos_type __ret = __ftell(__file_);
+    __ret.state(__st_);
+    return __ret;
   }
 };
 
@@ -1036,28 +1120,19 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
     std::__throw_bad_cast();
 
   int __width = __cv_->encoding();
-  if (__file_ == nullptr || (__width <= 0 && __off != 0) || sync())
+  if (__file_ == nullptr || (__width <= 0 && __off != 0))
     return pos_type(off_type(-1));
-  // __width > 0 || __off == 0
-  int __whence;
+
+  auto __byte_off = __width <= 0 ? 0 : __width * __off;
+
   switch (__way) {
-  case ios_base::beg:
-    __whence = SEEK_SET;
-    break;
-  case ios_base::cur:
-    __whence = SEEK_CUR;
-    break;
-  case ios_base::end:
-    __whence = SEEK_END;
-    break;
-  default:
-    return pos_type(off_type(-1));
+  case ios::beg:
+    return __seek_from_begin(__off, __byte_off);
+  case ios::cur:
+    return __seek_from_current(__off, __byte_off);
+  case ios::end:
+    return __seek_from_end(__off, __byte_off);
   }
-  if (__fseek(__file_, __width > 0 ? __width * __off : 0, __whence))
-    return pos_type(off_type(-1));
-  pos_type __r = __ftell(__file_);
-  __r.state(__st_);
-  return __r;
 }
 
 template <class _CharT, class _Traits>
@@ -1072,7 +1147,7 @@ int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int
 }
 
 template <class _CharT, class _Traits>
-typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
+typename basic_filebuf<_CharT, _Traits>::off_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
 #    if defined(_LIBCPP_MSVCRT_LIKE)
   return _ftelli64(__file);
 #    elif _LIBCPP_LIBC_NEWLIB
