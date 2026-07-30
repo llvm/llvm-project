@@ -120,12 +120,6 @@ private:
     /// Returns true if this insert point is set.
     operator bool() const { return Block; }
 
-    /// Clears Block and Point.
-    void clear() {
-      Block = nullptr;
-      Point = {};
-    }
-
     VPBasicBlock *getBlock() const { return Block; }
 
     operator VPRecipeBase *() const {
