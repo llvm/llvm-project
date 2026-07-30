@@ -4750,8 +4750,8 @@ multiclass store_pn_x2_sme2<ValueType Ty, SDPatternOperator Store,
 
 multiclass store_pn_x4_sme2<ValueType Ty, SDPatternOperator Store,
                              Instruction RegImmPseudo> {
-  let AddedComplexity = 2 in
   // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in
   def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
               aarch64svcount:$PNg,
               (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
