@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
-#include "L0Defs.h"
 #include "L0Event.h"
-#include "L0Trace.h"
 #include "PluginInterface.h"
 
 #include <mutex>
@@ -69,10 +67,11 @@ public:
     return dataSubmitImpl(TgtPtr, HstPtr, Size);
   }
 
+  // Enqueue a memory fill command. Supports arbitrary pattern sizes, including
+  // non-power-of-two sizes, by falling back to a less performant software fill
+  // if necessary.
   Error memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                   size_t Size) {
-    return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
-  }
+                   size_t Size);
 
   Error memoryPrefetch(const void *Ptr, size_t Size) {
     if (Size == 0)
@@ -153,6 +152,16 @@ public:
   virtual Error appendWaitOnEventImpl(ze_event_handle_t Event) {
     return CmdList->appendWaitOnEvent(Event);
   }
+
+private:
+  /// Fallback fill for host-accessible target memory: replicate the pattern
+  /// directly on the host with std::copy_n.
+  Error memoryFillHostImpl(void *Ptr, const void *Pattern, size_t PatternSize,
+                           size_t Size);
+  /// Fallback fill for non-host-accessible target memory: seed the pattern
+  /// once and grow the filled region via device copies, doubling each time.
+  Error memoryFillReplicateImpl(void *Ptr, const void *Pattern,
+                                size_t PatternSize, size_t Size);
 };
 
 class L0AsyncQueueTy : public L0QueueTy {

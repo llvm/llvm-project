@@ -2258,8 +2258,11 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
          "Invalid VECTOR_SHUFFLE");
 
   // Canonicalize shuffle undef, undef -> undef
-  if (N1.isUndef() && N2.isUndef())
+  if (N1.isUndef() && N2.isUndef()) {
+    if (N1.getOpcode() == ISD::POISON && N2.getOpcode() == ISD::POISON)
+      return getPOISON(VT);
     return getUNDEF(VT);
+  }
 
   // Validate that all indices in Mask are within the range of the elements
   // input to the shuffle.
@@ -2271,9 +2274,9 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   // Copy the mask so we can do any needed cleanup.
   SmallVector<int, 8> MaskVec(Mask);
 
-  // Canonicalize shuffle v, v -> v, undef
+  // Canonicalize shuffle v, v -> v, poison
   if (N1 == N2) {
-    N2 = getUNDEF(VT);
+    N2 = getPOISON(VT);
     for (int i = 0; i != NElts; ++i)
       if (MaskVec[i] >= NElts) MaskVec[i] -= NElts;
   }
@@ -2312,8 +2315,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
       BlendSplat(N2BV, NElts);
   }
 
-  // Canonicalize all index into lhs, -> shuffle lhs, undef
-  // Canonicalize all index into rhs, -> shuffle rhs, undef
+  // Canonicalize all index into lhs, -> shuffle lhs, poison
+  // Canonicalize all index into rhs, -> shuffle rhs, poison
   bool AllLHS = true, AllRHS = true;
   bool N2Undef = N2.isUndef();
   for (int i = 0; i != NElts; ++i) {
@@ -2327,18 +2330,21 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
     }
   }
   if (AllLHS && AllRHS)
-    return getUNDEF(VT);
+    return getPOISON(VT);
   if (AllLHS && !N2Undef)
-    N2 = getUNDEF(VT);
+    N2 = getPOISON(VT);
   if (AllRHS) {
-    N1 = getUNDEF(VT);
+    N1 = getPOISON(VT);
     commuteShuffle(N1, N2, MaskVec);
   }
   // Reset our undef status after accounting for the mask.
   N2Undef = N2.isUndef();
   // Re-check whether both sides ended up undef.
-  if (N1.isUndef() && N2Undef)
+  if (N1.isUndef() && N2Undef) {
+    if (N1.getOpcode() == ISD::POISON && N2.getOpcode() == ISD::POISON)
+      return getPOISON(VT);
     return getUNDEF(VT);
+  }
 
   // If Identity shuffle return that node.
   bool Identity = true, AllSame = true;
@@ -2364,7 +2370,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
       SDValue Splat = BV->getSplatValue(&UndefElements);
       // If this is a splat of an undef, shuffling it is also undef.
       if (Splat && Splat.isUndef())
-        return getUNDEF(VT);
+        return Splat.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
 
       bool SameNumElts =
           V.getValueType().getVectorNumElements() == VT.getVectorNumElements();
@@ -7140,6 +7146,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
   case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
@@ -7836,7 +7846,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     // Constant fold integer vector reductions with constant BUILD_VECTORs.
     if ((Opcode == ISD::VECREDUCE_ADD || Opcode == ISD::VECREDUCE_SMAX ||
          Opcode == ISD::VECREDUCE_SMIN || Opcode == ISD::VECREDUCE_UMAX ||
-         Opcode == ISD::VECREDUCE_UMIN) &&
+         Opcode == ISD::VECREDUCE_UMIN || Opcode == ISD::VECREDUCE_MUL ||
+         Opcode == ISD::VECREDUCE_OR || Opcode == ISD::VECREDUCE_XOR ||
+         Opcode == ISD::VECREDUCE_AND) &&
         ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
       unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
@@ -9602,7 +9614,7 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
       }
     }
   }
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  return DAG.getTokenFactor(dl, OutChains);
 }
 
 static SDValue getMemmoveLoadsAndStores(
@@ -9713,7 +9725,7 @@ static SDValue getMemmoveLoadsAndStores(
     LoadChains.push_back(Value.getValue(1));
     SrcOff += VTSize;
   }
-  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
+  Chain = DAG.getTokenFactor(dl, LoadChains);
   OutChains.clear();
   uint64_t DstOff = 0;
   for (unsigned i = 0; i < NumMemOps; i++) {
@@ -9755,7 +9767,7 @@ static SDValue getMemmoveLoadsAndStores(
     DstOff += VTSize;
   }
 
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  return DAG.getTokenFactor(dl, OutChains);
 }
 
 /// Lower the call to 'memset' intrinsic function into a series of store
@@ -9910,7 +9922,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   assert(Size == 0 && "Target's findOptimalMemOpLowering did not specify "
                       "stores that exactly cover the memset size");
 
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  return DAG.getTokenFactor(dl, OutChains);
 }
 
 static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
@@ -10462,6 +10474,15 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
   for (const SDValue &Op : Ops)
     VTs.push_back(Op.getValueType());
   return getNode(ISD::MERGE_VALUES, dl, getVTList(VTs), Ops);
+}
+
+SDValue SelectionDAG::getErrorMergeValues(ArrayRef<EVT> ResultTypes,
+                                          SDValue Chain, const SDLoc &dl) {
+  SmallVector<SDValue, 4> RetValues;
+  RetValues.reserve(ResultTypes.size());
+  for (EVT VT : ResultTypes)
+    RetValues.push_back(VT == MVT::Other ? Chain : getPOISON(VT));
+  return getMergeValues(RetValues, dl);
 }
 
 SDValue SelectionDAG::getMemIntrinsicNode(
@@ -14321,7 +14342,8 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       break;
     }
     case ISD::VSELECT:
-      Scalars.push_back(getNode(ISD::SELECT, dl, EltVT, Operands));
+      Scalars.push_back(
+          getNode(ISD::SELECT, dl, EltVT, Operands, N->getFlags()));
       break;
     case ISD::SHL:
     case ISD::SRA:

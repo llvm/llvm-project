@@ -232,30 +232,6 @@ poly64x2_t test_vld1q_p64(poly64_t const * ptr) {
   return vld1q_p64(ptr);
 }
 
-// CHECK-LABEL: define dso_local void @test_vst1_p64(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], <1 x i64> noundef [[VAL:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[VAL]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    store <1 x i64> [[TMP1]], ptr [[PTR]], align 8
-// CHECK-NEXT:    ret void
-//
-void test_vst1_p64(poly64_t * ptr, poly64x1_t val) {
-  return vst1_p64(ptr, val);
-}
-
-// CHECK-LABEL: define dso_local void @test_vst1q_p64(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], <2 x i64> noundef [[VAL:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[VAL]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr [[PTR]], align 8
-// CHECK-NEXT:    ret void
-//
-void test_vst1q_p64(poly64_t * ptr, poly64x2_t val) {
-  return vst1q_p64(ptr, val);
-}
-
 // CHECK-LABEL: define dso_local %struct.poly64x1x2_t @test_vld2_p64(
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

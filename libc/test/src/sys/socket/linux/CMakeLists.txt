@@ -166,6 +166,7 @@ add_libc_unittest(
   DEPENDS
     libc.hdr.sys_socket_macros
     libc.src.errno.errno
+    libc.src.sys.socket.send
     libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socketpair
     libc.src.unistd.close

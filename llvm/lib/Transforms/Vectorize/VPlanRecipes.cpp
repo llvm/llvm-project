@@ -331,7 +331,12 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    dump();
+    if (VPSlotTracker *SlotTracker = Ctx.getSlotTracker()) {
+      print(dbgs(), "", *SlotTracker);
+      dbgs() << "\n";
+    } else {
+      dump();
+    }
   });
   return RecipeCost;
 }
@@ -665,8 +670,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ReductionStartVector:
     return 3;
   case Instruction::Call:
-    return getCalledFnOperandIndex(ArrayRef<VPValue *>(op_begin(), op_end())) +
-           1;
+    return getCalledFnOperandIndex(operands()) + 1;
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
@@ -1618,6 +1622,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
@@ -1649,8 +1654,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
     return !Attrs.getMemoryEffects().doesNotAccessMemory();
   }
   case Instruction::Call:
-    return !getCalledFunction(ArrayRef<VPValue *>(op_begin(), op_end()))
-                ->doesNotAccessMemory();
+    return !getCalledFunction(operands())->doesNotAccessMemory();
   default:
     return true;
   }
@@ -2215,7 +2219,7 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
   O << "call";
   printFlags(O);
-  O << " @" << CalledFn->getName() << "(";
+  O << "@" << CalledFn->getName() << "(";
   interleaveComma(args(), O, [&O, &SlotTracker](VPValue *Op) {
     Op->printAsOperand(O, SlotTracker);
   });
@@ -2957,6 +2961,26 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
+InstructionCost
+VPWidenIntOrFpInductionRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // A widened induction generates a vector phi and increments it by the
+  // splatted step each iteration.
+  // TODO: Also handle truncated inductions.
+  assert(!getTruncInst() &&
+         "truncated inductions should be costed by the legacy model");
+  const InductionDescriptor &ID = getInductionDescriptor();
+  InstructionCost Cost = Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+  Type *StepTy = getScalarType();
+  unsigned IncOpc = ID.getKind() == InductionDescriptor::IK_IntInduction
+                        ? Instruction::Add
+                        : ID.getInductionOpcode();
+  assert(IncOpc != Instruction::BinaryOpsEnd &&
+         "induction must have a valid increment opcode");
+  return Cost + Ctx.TTI.getArithmeticInstrCost(IncOpc, toVectorTy(StepTy, VF),
+                                               Ctx.CostKind);
+}
+
 InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   // The cost model for this is modelled on expandVPDerivedIV in
@@ -3010,7 +3034,7 @@ InstructionCost VPDerivedIVRecipe::computeCost(ElementCount VF,
     unsigned IndexTySize = IndexTy->getScalarSizeInBits();
     if ((NeedsAdd || NeedsMul || NeedsShl) && StepTySize != IndexTySize) {
       unsigned CastOpc =
-          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::SExt;
+          StepTySize < IndexTySize ? Instruction::Trunc : Instruction::ZExt;
       Cost += Ctx.TTI.getCastInstrCost(
           CastOpc, StepTy, IndexTy, TTI::CastContextHint::None, Ctx.CostKind);
     }
@@ -3039,7 +3063,8 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = DERIVED-IV ";
+  O << " = DERIVED-IV";
+  printFlags(O);
   getStartValue()->printAsOperand(O, SlotTracker);
   O << " + ";
   getOperand(1)->printAsOperand(O, SlotTracker);
@@ -3228,6 +3253,8 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-end-pointer";
   printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -3257,6 +3284,8 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer";
   printFlags(O);
+  getSourceElementType()->print(O);
+  O << ", ";
   printOperands(O, SlotTracker);
 }
 #endif

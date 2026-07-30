@@ -117,6 +117,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1007,6 +1008,14 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             "smaller",
             CurrentMD);
     }
+
+    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
+         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expected one operand for llvm.loop.distribute metadata",
+            CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
@@ -1990,6 +1999,26 @@ Verifier::visitModuleFlag(const MDNode *Op,
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value, "wchar_size metadata requires constant integer argument");
+  }
+
+  if (ID->getString() == "long-double-type") {
+    Check(MFB == Module::Error,
+          "long-double-type module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "long-double-type metadata requires a string argument");
+    if (Value)
+      Check(parseLongDoubleFormat(Value->getString()).has_value(),
+            "invalid long-double-type metadata value", Op);
+  }
+
+  if (ID->getString() == "float-abi") {
+    Check(MFB == Module::Error,
+          "float-abi module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "float-abi metadata requires a string argument");
+    if (Value)
+      Check(FloatABI::parseABIType(Value->getString()).has_value(),
+            "invalid float-abi metadata value", Op);
   }
 
   if (ID->getString() == "Linker Options") {
@@ -4590,6 +4619,8 @@ void Verifier::visitLoadInst(LoadInst &LI) {
 
     Type *ScalarTy = ElTy;
     if (LI.isElementwise()) {
+      Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise load cannot be sequentially consistent.", &LI);
       auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
       Check(VecTy,
             "atomic elementwise load operand must have fixed vector type!", &LI,
@@ -4723,30 +4754,31 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Type *ScalarTy = ElTy;
+  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
+    Check(RMWI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+          "atomicrmw elementwise cannot be sequentially consistent.", &RMWI);
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
-    if (VecTy)
-      ScalarTy = VecTy->getElementType();
   }
 
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
-              ScalarTy->isPointerTy(),
+    Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
+           ElTy->isPtrOrPtrVectorTy()),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer or floating point type!",
+              " operand must be an integer type, a floating-point type, a "
+              "pointer type, or a fixed vector of any of these types!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isFPOrFPVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have floating-point or fixed vector of "
               "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isIntOrIntVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);

@@ -1627,7 +1627,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // LoopInfo should not be valid, confirm that.
   if (UnrollVerifyLoopInfo)
-    LI->verify(*DT);
+    LI->verify();
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
@@ -1719,10 +1719,17 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions.
-  // TODO: Handle any-of and find-last reductions.
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK))
+  static const auto ValidRKs = {
+      RecurKind::Add,         RecurKind::Mul,      RecurKind::Or,
+      RecurKind::And,         RecurKind::Xor,      RecurKind::SMin,
+      RecurKind::SMax,        RecurKind::UMin,     RecurKind::UMax,
+      RecurKind::FAdd,        RecurKind::FMul,     RecurKind::FMin,
+      RecurKind::FMax,        RecurKind::FMinNum,  RecurKind::FMaxNum,
+      RecurKind::FMinimum,    RecurKind::FMaximum, RecurKind::FMinimumNum,
+      RecurKind::FMaximumNum, RecurKind::FMulAdd};
+  // Skip unsupported reductions, including sub, any-of and find-last.
+  // TODO: Handle sub, any-of and find-last reductions.
+  if (!any_of(ValidRKs, equal_to(RK)))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
