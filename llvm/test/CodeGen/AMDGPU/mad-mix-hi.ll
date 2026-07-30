@@ -707,24 +707,14 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX11-TRUE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
-; GISEL-GFX11-TRUE16:       ; %bb.0:
-; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v1, v0, v1, v2 op_sel_hi:[1,1,1]
-; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX11-TRUE16-NEXT:    global_store_d16_hi_b16 v[0:1], v1, off dlc
-; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GISEL-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX11-FAKE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
-; GISEL-GFX11-FAKE16:       ; %bb.0:
-; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-FAKE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
-; GISEL-GFX11-FAKE16-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GISEL-GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v3, off dlc
-; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GISEL-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GISEL-GFX11-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; GISEL-GFX11-NEXT:    global_store_b16 v[0:1], v3, off dlc
+; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
 ; GISEL-VI:       ; %bb.0:

@@ -348,8 +348,9 @@ private:
   ComplexRendererFns selectSMRDBufferImm32(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferSgprImm(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned> selectVOP3PMadMixModsImpl(MachineOperand &Root,
-                                                          bool &Matched) const;
+  std::pair<Register, unsigned>
+  selectVOP3PMadMixModsImpl(MachineOperand &Root, bool &Matched,
+                            bool &NeedsWiden) const;
   ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
 

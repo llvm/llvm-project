@@ -7186,11 +7186,10 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
 
-static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *MI,
-                                         MachineRegisterInfo &MRI,
-                                         const SIInstrInfo &TII,
-                                         const AMDGPUSubtarget &ST) {
-  MachineIRBuilder B(*MI);
+// Place a 16-bit source into the low half of a new 32-bit VGPR
+static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *InsertPt,
+                                         MachineRegisterInfo &MRI) {
+  MachineIRBuilder B(*InsertPt);
 
   // Create an vgpr_16 for the hi16 part using IMPLICIT_DEF
   Register ImpdefReg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
@@ -7209,8 +7208,10 @@ static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *MI,
 
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
-                                                     bool &Matched) const {
+                                                     bool &Matched,
+                                                     bool &NeedsWiden) const {
   Matched = false;
+  NeedsWiden = false;
 
   Register Src;
   unsigned Mods;
@@ -7248,14 +7249,21 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
 
     Mods |= SISrcMods::OP_SEL_1;
 
+    // The instruction reads a 32-bit source and selects a half of it
+    // so we search for that 32-bit source
+    Register Src32;
     if (isExtractHiElt(*MRI, Src, Src)) {
+      // Src is now the 32-bit source and op_sel picks its high half.
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
+    } else if (mi_match(Src, *MRI, m_GTrunc(m_Reg(Src32))) &&
+               MRI->getType(Src32) == LLT::scalar(32)) {
+      // Technically a 16-bit source, but the trunc is redundant
+      Src = Src32;
+    } else {
+      // In True16, the source is genuinely 16 bits wide so we widen it
+      NeedsWiden = Subtarget->useRealTrue16Insts();
     }
-
-    if (Subtarget->useRealTrue16Insts())
-      Src = createVOP3PSrc32FromLo16(Src, Root.getParent(), *MRI, TII,
-                                     *Subtarget);
 
     Matched = true;
   }
@@ -7269,12 +7277,19 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsExt(
   Register Src;
   unsigned Mods;
   bool Matched;
-  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
+  bool NeedsWiden;
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched, NeedsWiden);
   if (!Matched)
     return {};
 
+  MachineRegisterInfo *RegInfo = MRI;
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        Register Reg = Src;
+        if (NeedsWiden)
+          Reg = createVOP3PSrc32FromLo16(Src, MIB.getInstr(), *RegInfo);
+        MIB.addReg(Reg);
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7284,10 +7299,17 @@ AMDGPUInstructionSelector::selectVOP3PMadMixMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   bool Matched;
-  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
+  bool NeedsWiden;
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched, NeedsWiden);
 
+  MachineRegisterInfo *RegInfo = MRI;
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        Register Reg = Src;
+        if (NeedsWiden)
+          Reg = createVOP3PSrc32FromLo16(Src, MIB.getInstr(), *RegInfo);
+        MIB.addReg(Reg);
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
