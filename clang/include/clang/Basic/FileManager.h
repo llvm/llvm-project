@@ -327,6 +327,11 @@ private:
   StringRef getCanonicalName(const void *Entry, StringRef Name);
 
 public:
+  /// Programmatically invalidates and clears all cached SeenFileEntries
+  /// matching the given Filename (normalized and checked as absolute path) to
+  /// force VFS re-lookups.
+  void invalidateFileCache(StringRef Filename);
+
   void PrintStats() const;
 
   /// Import statistics from a child FileManager and add them to this current
