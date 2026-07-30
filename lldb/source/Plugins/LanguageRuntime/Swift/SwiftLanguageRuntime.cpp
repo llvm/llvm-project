@@ -513,12 +513,17 @@ void SwiftLanguageRuntime::SetupReflection() {
 
   auto &triple = exe_module->GetArchitecture().GetTriple();
   uint32_t ptr_size = m_process->GetAddressByteSize();
+  // FIXME: We should have a way to support a mixed embedded/regular swift
+  // program, as embedded swift is a per CU property. rdar://183664838
+  auto flavor = target.IsEmbeddedSwift()
+                    ? swift::Mangle::ManglingFlavor::Embedded
+                    : swift::Mangle::ManglingFlavor::Default;
   LLDB_LOG(log, "Initializing a {0}-bit reflection context ({1}) for \"{2}\"",
            ptr_size * 8, triple.str(), objc_interop_msg);
   if (ptr_size == 4 || ptr_size == 8)
     m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext(
         ptr_size, this->GetMemoryReader(), objc_interop,
-        GetSwiftMetadataCache());
+        GetSwiftMetadataCache(), flavor);
   if (!m_reflection_ctx)
     LLDB_LOG(log, "Could not initialize reflection context for \"{0}\"",
              triple.str());

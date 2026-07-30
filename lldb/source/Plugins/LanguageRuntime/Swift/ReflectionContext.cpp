@@ -108,8 +108,9 @@ class TargetReflectionContext : public ReflectionContextInterface {
 public:
   TargetReflectionContext(
       std::shared_ptr<swift::reflection::MemoryReader> reader,
-      SwiftMetadataCache *swift_metadata_cache)
-      : m_reflection_ctx(reader, swift_metadata_cache, &m_forwader),
+      SwiftMetadataCache *swift_metadata_cache,
+      swift::Mangle::ManglingFlavor flavor)
+      : m_reflection_ctx(reader, swift_metadata_cache, &m_forwader, flavor),
         m_type_converter(m_reflection_ctx.getBuilder().getTypeConverter()) {
     m_type_converter.enableErrorCache();
   }
@@ -515,7 +516,8 @@ namespace lldb_private {
 std::unique_ptr<ReflectionContextInterface>
 ReflectionContextInterface::CreateReflectionContext(
     uint8_t ptr_size, std::shared_ptr<swift::remote::MemoryReader> reader,
-    bool ObjCInterop, SwiftMetadataCache *swift_metadata_cache) {
+    bool ObjCInterop, SwiftMetadataCache *swift_metadata_cache,
+    swift::Mangle::ManglingFlavor flavor) {
   using ReflectionContext32ObjCInterop = TargetReflectionContext<
       swift::reflection::ReflectionContext<
           swift::External<swift::WithObjCInterop<swift::RuntimeTarget<4>>>>,
@@ -535,16 +537,16 @@ ReflectionContextInterface::CreateReflectionContext(
   if (ptr_size == 4) {
     if (ObjCInterop)
       return std::make_unique<ReflectionContext32ObjCInterop>(
-          reader, swift_metadata_cache);
+          reader, swift_metadata_cache, flavor);
     return std::make_unique<ReflectionContext32NoObjCInterop>(
-        reader, swift_metadata_cache);
+        reader, swift_metadata_cache, flavor);
   }
   if (ptr_size == 8) {
     if (ObjCInterop)
       return std::make_unique<ReflectionContext64ObjCInterop>(
-          reader, swift_metadata_cache);
+          reader, swift_metadata_cache, flavor);
     return std::make_unique<ReflectionContext64NoObjCInterop>(
-        reader, swift_metadata_cache);
+        reader, swift_metadata_cache, flavor);
   }
   return {};
 }
