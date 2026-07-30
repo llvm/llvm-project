@@ -11,8 +11,7 @@ define i1 @ult_query_via_signed_system(i64 %a, i64 %b, i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_1]])
 ; CHECK-NEXT:    [[PRE_2:%.*]] = icmp slt i64 [[A]], [[N]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[S]], [[N]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pre.0 = icmp sgt i64 %b, -1
   call void @llvm.assume(i1 %pre.0)
@@ -37,8 +36,7 @@ define i1 @uge_query_via_signed_system(i64 %a, i64 %b, i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_1]])
 ; CHECK-NEXT:    [[PRE_2:%.*]] = icmp slt i64 [[A]], [[N]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[S]], [[N]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pre.0 = icmp sgt i64 %b, -1
   call void @llvm.assume(i1 %pre.0)
