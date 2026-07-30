@@ -619,8 +619,11 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       //
       //     if (IsNamelistNameOrSlash(io)) return false;   // no value
       //
-      // With &group set, that empty-value probe works for scalars as well as
-      // sequences.
+      // With &group set, the empty-value probe works for scalars as
+      // well as sequences.  This implements Flang's NAMELIST extension
+      // that accepts an empty scalar assignment (e.g. `l=` immediately
+      // followed by the next name-value pair or the group terminator)
+      // as "keep current value" — see flang/docs/Extensions.md.
       listInput->ResetForNextNamelistItem(&group);
       if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor) &&
           handler.InError()) {
