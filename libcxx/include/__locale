@@ -15,6 +15,7 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 
+#  include <__fwd/ios.h>
 #  include <__locale_dir/locale_base_api.h>
 #  include <__memory/addressof.h>
 #  include <__memory/shared_count.h>
@@ -26,6 +27,7 @@
 #  include <clocale>
 #  include <cstdint>
 #  include <cstdlib>
+#  include <stdexcept>
 #  include <string>
 #  include <text_encoding>
 
