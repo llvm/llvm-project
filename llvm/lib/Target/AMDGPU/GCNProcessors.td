@@ -398,3 +398,9 @@ def GFX13_GENERIC : AMDGPUProcessorModel<"gfx13-generic", GFX12SpeedModel,
   let ArchFeatures = ArchFeaturesW32Wgp;
   let CoveredGPUs = [GFX1310];
 }
+
+// The gfx6/gfx7/gfx8 families have no "gfxN-generic" target, so their major
+// subarch (AMDGPUSubArch6/7/8) is declared here for getMajorSubArch.
+def : AMDGPUFamily<"6", [GFX600, GFX601, GFX602]>;
+def : AMDGPUFamily<"7", [GFX700, GFX701, GFX702, GFX703, GFX704, GFX705]>;
+def : AMDGPUFamily<"8", [GFX801, GFX802, GFX803, GFX805]>;

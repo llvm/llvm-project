@@ -2637,13 +2637,7 @@ def ARMSystemLibrary
            EABIHalfConvertCalls,
            GNUEABIHalfConvertCalls,
            ARMDoubleToHalfCalls,
-
-           LibcallImpls<(add AEABIOverrides),
-             RuntimeLibcallAvailability<
-               (all_of (any_of (not (any_of IsTargetAEABI, IsTargetGNUAEABI,
-                                            IsTargetMuslAEABI, IsOSFuchsia, IsAndroid)),
-                               (not IsAAPCS_ABI)),
-                       (not IsOSWindows))>>,
+           LibcallImpls<(add AEABIOverrides), isNotOSWindows>,
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallAvailability<
