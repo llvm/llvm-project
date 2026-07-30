@@ -35,10 +35,10 @@ enum GPUKind : uint32_t {
   // Not specified processor.
   GK_NONE = 0,
 
-#define R600_GPU(NAME, ENUM, FEATURES) ENUM,
+#define GET_R600_GPU_ENUM
 #include "llvm/TargetParser/R600TargetParserDef.inc"
 
-#define AMDGPU_GPU(NAME, ENUM) ENUM,
+#define GET_AMDGPU_GPU_ENUM
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 };
 
@@ -144,6 +144,10 @@ LLVM_ABI StringRef getArchNameR600(GPUKind AK);
 /// subarch. The major-only subarches map to their generic/lowest
 /// representative, matching the default subtarget for an unspecified -mcpu.
 LLVM_ABI StringRef getArchNameFromSubArch(Triple::SubArchType SubArch);
+
+/// Returns the triple subarch name for an AMDGPU subarch, e.g.
+/// AMDGPUSubArch900 -> "amdgpu9.00". Returns "amdgpu" for NoSubArch.
+LLVM_ABI StringRef getSubArchName(Triple::SubArchType SubArch);
 LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);

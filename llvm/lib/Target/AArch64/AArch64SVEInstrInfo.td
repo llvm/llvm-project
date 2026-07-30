@@ -4136,6 +4136,34 @@ let Predicates = [HasSVE2_or_SME] in {
   defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;
   defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt", int_aarch64_sve_usubwt>;
 
+  def : Pat<(add nxv8i16:$Acc, (sext_inreg nxv8i16:$Input, nxv8i8)),
+            (SADDWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(add nxv4i32:$Acc, (sext_inreg nxv4i32:$Input, nxv4i16)),
+            (SADDWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(add nxv2i64:$Acc, (sext_inreg nxv2i64:$Input, nxv2i32)),
+            (SADDWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(sub nxv8i16:$Acc, (sext_inreg nxv8i16:$Input, nxv8i8)),
+            (SSUBWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(sub nxv4i32:$Acc, (sext_inreg nxv4i32:$Input, nxv4i16)),
+            (SSUBWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(sub nxv2i64:$Acc, (sext_inreg nxv2i64:$Input, nxv2i32)),
+            (SSUBWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(add nxv8i16:$Acc, (and nxv8i16:$Input, (splat_vector (i32 0xFF)))),
+            (UADDWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(add nxv4i32:$Acc, (and nxv4i32:$Input, (splat_vector (i32 0xFFFF)))),
+            (UADDWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(add nxv2i64:$Acc, (and nxv2i64:$Input, (splat_vector (i64 0xFFFFFFFF)))),
+            (UADDWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(sub nxv8i16:$Acc, (and nxv8i16:$Input, (splat_vector (i32 0xFF)))),
+            (USUBWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(sub nxv4i32:$Acc, (and nxv4i32:$Input, (splat_vector (i32 0xFFFF)))),
+            (USUBWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(sub nxv2i64:$Acc, (and nxv2i64:$Input, (splat_vector (i64 0xFFFFFFFF)))),
+            (USUBWB_ZZZ_D $Acc, $Input)>;
+
   def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
             (UADDWT_ZZZ_D (UADDWB_ZZZ_D $Acc, $Input), $Input)>;
   def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
