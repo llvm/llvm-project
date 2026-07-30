@@ -588,6 +588,14 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
       }))
     return "Unable to find use of computed value in loop exit block";
 
+  // Ensure nothing other than the computed value makes its way out of the loop.
+  // Since the loop is in LCSSA form, this is as simple as checking the PHI
+  // nodes in the exit block.
+  if (any_of(Exit->phis(), [Latch, ComputedValue](PHINode &PN) {
+        return PN.getIncomingValueForBlock(Latch) != ComputedValue;
+      }))
+    return "Found stray incoming values in loop exit block";
+
   assert(ConditionalRecurrence.ExtraConst &&
          "Expected ExtraConst in conditional recurrence");
   const APInt &GenPoly = *ConditionalRecurrence.ExtraConst;
@@ -604,16 +612,6 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
     Roots.push_back(SimpleRecurrence.BO);
   if (containsUnreachable(L, Roots))
     return "Found stray unvisited instructions";
-
-  // Ensure nothing other than the computed value makes its way out of the loop.
-  // Since the loop is in LCSSA form, this is as simple as checking the PHI
-  // nodes in the exit block.
-  for (PHINode &PN : L.getExitBlock()->phis()) {
-    for (auto &Incoming : PN.incoming_values()) {
-      if (Incoming.get() != ComputedValue)
-        return "Found stray incoming values in loop exit block";
-    }
-  }
 
   return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *IsBigEndian, LHSAux);
 }
