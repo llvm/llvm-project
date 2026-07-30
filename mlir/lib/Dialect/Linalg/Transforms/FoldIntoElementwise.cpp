@@ -81,6 +81,7 @@ struct FoldIntoElementwisePattern : public OpInterfaceRewritePattern<LinalgOp> {
     SmallVector<AffineMap> originalMaps = op.getIndexingMapsArray();
     newMaps.append(originalMaps.begin() + op.getNumDpsInputs(),
                    originalMaps.end());
+
     // The maps of the rewritten op must still determine bounds for every loop
     // dimension. Folding a broadcast can otherwise drop the only map result
     // that covers a dimension.
