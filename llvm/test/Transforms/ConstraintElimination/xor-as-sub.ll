@@ -12,8 +12,7 @@ define i1 @xor_neg_one_signed(i16 %count, i16 %i) {
 ; CHECK-NEXT:    [[PRE_2:%.*]] = icmp slt i16 [[I]], [[COUNT]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i16 [[I]], -1
 ; CHECK-NEXT:    [[IDX:%.*]] = add nsw i16 [[COUNT]], [[NEG]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i16 [[IDX]], [[COUNT]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %pre.0 = icmp sgt i16 %count, -1

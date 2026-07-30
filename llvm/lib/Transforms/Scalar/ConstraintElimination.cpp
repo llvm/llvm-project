@@ -552,6 +552,14 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
     }
 
+    // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
+    if (match(V, m_Not(m_Value(Op0)))) {
+      Decomposition Result(-1);
+      if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
+        return Result;
+      return V;
+    }
+
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
       auto ResA = decompose(Op0, Info, IsSigned, DL);
       auto ResB = decompose(Op1, Info, IsSigned, DL);
