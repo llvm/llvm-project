@@ -222,8 +222,8 @@ public:
   template <typename A>
   bool Pre(const parser::LoopBounds<parser::ScalarName, A> &x) {
     if (!dirContext_.empty() && GetContext().withinConstruct) {
-      if (auto *symbol{ResolveAcc(
-              x.Name().thing, Symbol::Flag::AccPrivate, currScope())}) {
+      if (auto *symbol{DeclareOrMarkOtherAccessEntity(
+              x.Name().thing, Symbol::Flag::AccPrivate)}) {
         AddAccObjectWithDSA(*symbol, Symbol::Flag::AccPrivate);
       }
     }
@@ -366,7 +366,6 @@ private:
     SymbolRef symbol;
     Symbol::Flag flag;
     const parser::AccObject *occurrence{nullptr};
-    std::string objectName;
   };
 
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive, Scope &);
@@ -379,6 +378,7 @@ private:
   void AdjustAccSymbolReference(const parser::Name &);
   void CheckAccDefaultNoneReference(
       const parser::Name &, std::optional<DesignatorPath> = std::nullopt);
+  template <typename A> void CheckAccDefaultNoneReferenceIn(const A &);
 
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::AccClauseList &);
   bool HasForceCollapseModifier(const parser::AccClauseList &);
@@ -403,8 +403,6 @@ private:
   void CheckAssociatedLoop(const parser::DoConstruct &, bool forceCollapsed);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
-  Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
-  Symbol *ResolveAcc(Symbol &, Symbol::Flag, Scope &);
   Symbol *ResolveName(const parser::Name &);
   Symbol *ResolveFctName(const parser::Name &);
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
@@ -1773,7 +1771,8 @@ void AccAttributeVisitor::CheckAssociatedLoop(
           if (level <= 0)
             return;
           if (ivName && lower && upper) {
-            if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
+            if (auto *symbol{
+                    DeclareOrMarkOtherAccessEntity(*ivName, flag)}) {
               if (auto lowerExpr{semantics::AnalyzeExpr(context_, *lower)}) {
                 semantics::UnorderedSymbolSet lowerSyms =
                     evaluate::CollectSymbols(*lowerExpr);
@@ -1886,8 +1885,8 @@ void AccAttributeVisitor::AddAccObjectWithDSA(
   }
   AddToContextObjectWithDSA(ultimate, flag);
   CHECK(!accObjectWithDSA_.empty());
-  accObjectWithDSA_.back().push_back(std::move(designator),
-      {ultimate, flag, nullptr, ultimate.name().ToString()});
+  accObjectWithDSA_.back().push_back(
+      std::move(designator), {ultimate, flag, nullptr});
 }
 
 bool AccAttributeVisitor::IsObjectWithVisibleDSA(const Symbol &symbol,
@@ -1929,15 +1928,6 @@ static bool IsAccScalar(const Symbol &symbol) {
   const auto *det{symbol.detailsIf<ObjectEntityDetails>()};
   return det && !det->IsArray();
 }
-
-static std::optional<DesignatorPath> GetDesignatorPath(
-    SemanticsContext &, const parser::Designator &);
-static std::optional<DesignatorPath> GetDesignatorPath(
-    SemanticsContext &, const parser::FunctionReference &);
-static bool AddDesignatorPath(
-    SemanticsContext &, const parser::DataRef &, DesignatorPath &);
-static std::optional<std::vector<evaluate::Subscript>> AnalyzeSectionSubscripts(
-    SemanticsContext &, const std::list<parser::SectionSubscript> &);
 
 void AccAttributeVisitor::AdjustAccSymbolReference(const parser::Name &name) {
   if (!name.symbol || !WithinConstruct()) {
@@ -2012,17 +2002,17 @@ bool AccAttributeVisitor::Pre(const parser::Expr &) {
   return true;
 }
 
-void AccAttributeVisitor::Post(const parser::Expr &expr) {
-  --referenceContextDepth_;
+template <typename A>
+void AccAttributeVisitor::CheckAccDefaultNoneReferenceIn(const A &x) {
   if (const auto *designator{
-          std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
+          std::get_if<common::Indirection<parser::Designator>>(&x.u)}) {
     std::optional<DesignatorPath> designatorPath{
         GetDesignatorPath(context_, designator->value())};
     CheckAccDefaultNoneReference(
         parser::GetFirstName(designator->value()), designatorPath);
   } else if (const auto *functionReference{
                  std::get_if<common::Indirection<parser::FunctionReference>>(
-                     &expr.u)}) {
+                     &x.u)}) {
     const parser::Name &name{parser::GetFirstName(functionReference->value())};
     if (WithinConstruct() && GetContext().defaultDSA == Symbol::Flag::AccNone &&
         name.symbol && name.symbol->has<ObjectEntityDetails>()) {
@@ -2032,6 +2022,11 @@ void AccAttributeVisitor::Post(const parser::Expr &expr) {
       }
     }
   }
+}
+
+void AccAttributeVisitor::Post(const parser::Expr &expr) {
+  --referenceContextDepth_;
+  CheckAccDefaultNoneReferenceIn(expr);
 }
 
 bool AccAttributeVisitor::Pre(const parser::Variable &) {
@@ -2041,24 +2036,7 @@ bool AccAttributeVisitor::Pre(const parser::Variable &) {
 
 void AccAttributeVisitor::Post(const parser::Variable &variable) {
   --referenceContextDepth_;
-  if (const auto *designator{
-          std::get_if<common::Indirection<parser::Designator>>(&variable.u)}) {
-    std::optional<DesignatorPath> designatorPath{
-        GetDesignatorPath(context_, designator->value())};
-    CheckAccDefaultNoneReference(
-        parser::GetFirstName(designator->value()), designatorPath);
-  } else if (const auto *functionReference{
-                 std::get_if<common::Indirection<parser::FunctionReference>>(
-                     &variable.u)}) {
-    const parser::Name &name{parser::GetFirstName(functionReference->value())};
-    if (WithinConstruct() && GetContext().defaultDSA == Symbol::Flag::AccNone &&
-        name.symbol && name.symbol->has<ObjectEntityDetails>()) {
-      if (std::optional<DesignatorPath> designatorPath{
-              GetDesignatorPath(context_, functionReference->value())}) {
-        CheckAccDefaultNoneReference(name, designatorPath);
-      }
-    }
-  }
+  CheckAccDefaultNoneReferenceIn(variable);
 }
 
 bool AccAttributeVisitor::Pre(const parser::ArrayElement &) {
@@ -2068,14 +2046,10 @@ bool AccAttributeVisitor::Pre(const parser::ArrayElement &) {
 
 void AccAttributeVisitor::Post(const parser::ArrayElement &arrayElement) {
   --referenceContextDepth_;
-  DesignatorPath path;
-  if (AddDesignatorPath(context_, arrayElement.Base(), path)) {
-    if (auto subscripts{
-            AnalyzeSectionSubscripts(context_, arrayElement.Subscripts())}) {
-      path.AddSubscripts(std::move(*subscripts));
-      CheckAccDefaultNoneReference(
-          parser::GetFirstName(arrayElement.Base()), path);
-    }
+  if (std::optional<DesignatorPath> path{
+          GetDesignatorPath(context_, arrayElement)}) {
+    CheckAccDefaultNoneReference(
+        parser::GetFirstName(arrayElement.Base()), *path);
   }
 }
 
@@ -2154,170 +2128,6 @@ static bool ContainsStructureComponent(const parser::Designator &designator) {
       designator.u);
 }
 
-template <typename A>
-static std::optional<evaluate::Expr<evaluate::SubscriptInteger>>
-AnalyzeSubscriptExpr(SemanticsContext &context, const A &expr) {
-  if (auto value{EvaluateInt64(context, expr)}) {
-    return evaluate::Expr<evaluate::SubscriptInteger>{*value};
-  }
-  if (MaybeExpr maybe{evaluate::Fold(
-          context.foldingContext(), AnalyzeExpr(context, expr))}) {
-    if (auto *intExpr{
-            evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
-                maybe)}) {
-      return evaluate::ConvertToType<evaluate::SubscriptInteger>(
-          std::move(*intExpr));
-    }
-  }
-  return std::nullopt;
-}
-
-static std::optional<evaluate::Subscript> AnalyzeSectionSubscript(
-    SemanticsContext &context, const parser::SectionSubscript &subscript) {
-  return common::visit(
-      common::visitors{
-          [&](const parser::SubscriptTriplet &triplet)
-              -> std::optional<evaluate::Subscript> {
-            const auto &lower{std::get<0>(triplet.t)};
-            const auto &upper{std::get<1>(triplet.t)};
-            const auto &stride{std::get<2>(triplet.t)};
-            auto lowerExpr{
-                lower ? AnalyzeSubscriptExpr(context, *lower) : std::nullopt};
-            auto upperExpr{
-                upper ? AnalyzeSubscriptExpr(context, *upper) : std::nullopt};
-            auto strideExpr{
-                stride ? AnalyzeSubscriptExpr(context, *stride) : std::nullopt};
-            if ((lower && !lowerExpr) || (upper && !upperExpr) ||
-                (stride && !strideExpr)) {
-              return std::nullopt;
-            }
-            auto result{evaluate::Triplet{std::move(lowerExpr),
-                std::move(upperExpr), std::move(strideExpr)}};
-            return evaluate::Subscript{std::move(result)};
-          },
-          [&](const parser::IntExpr &expr)
-              -> std::optional<evaluate::Subscript> {
-            if (auto subscript{AnalyzeSubscriptExpr(context, expr)}) {
-              return evaluate::Subscript{std::move(*subscript)};
-            }
-            return std::nullopt;
-          },
-      },
-      subscript.u);
-}
-
-static std::optional<std::vector<evaluate::Subscript>> AnalyzeSectionSubscripts(
-    SemanticsContext &context,
-    const std::list<parser::SectionSubscript> &list) {
-  std::vector<evaluate::Subscript> subscripts;
-  for (const parser::SectionSubscript &subscript : list) {
-    if (auto analyzed{AnalyzeSectionSubscript(context, subscript)}) {
-      subscripts.push_back(std::move(*analyzed));
-    } else {
-      return std::nullopt;
-    }
-  }
-  return subscripts;
-}
-
-static bool AddDesignatorPath(SemanticsContext &context,
-    const parser::DataRef &dataRef, DesignatorPath &path) {
-  return common::visit(
-      common::visitors{
-          [&](const parser::Name &name) {
-            if (!name.symbol) {
-              return false;
-            }
-            path.SetBase(NamedEntity{name.symbol->GetUltimate()});
-            return true;
-          },
-          [&](const common::Indirection<parser::StructureComponent>
-                  &component) {
-            if (!AddDesignatorPath(context, component.value().Base(), path)) {
-              return false;
-            }
-            if (const parser::Name &name{component.value().Component()};
-                name.symbol) {
-              path.AddComponent(name.symbol->GetUltimate());
-              return true;
-            }
-            return false;
-          },
-          [&](const common::Indirection<parser::ArrayElement> &arrayElement) {
-            if (!AddDesignatorPath(
-                    context, arrayElement.value().Base(), path)) {
-              return false;
-            }
-            if (auto subscripts{AnalyzeSectionSubscripts(
-                    context, arrayElement.value().Subscripts())}) {
-              path.AddSubscripts(std::move(*subscripts));
-              return true;
-            }
-            return false;
-          },
-          [&](const common::Indirection<parser::CoindexedNamedObject>
-                  &coindexed) {
-            return AddDesignatorPath(
-                context, std::get<parser::DataRef>(coindexed.value().t), path);
-          },
-      },
-      dataRef.u);
-}
-
-static std::optional<DesignatorPath> GetDesignatorPath(
-    SemanticsContext &context, const parser::Designator &designator) {
-  DesignatorPath path;
-  bool ok{common::visit(common::visitors{
-                            [&](const parser::DataRef &dataRef) {
-                              return AddDesignatorPath(context, dataRef, path);
-                            },
-                            [&](const parser::Substring &substring) {
-                              return AddDesignatorPath(context,
-                                  std::get<parser::DataRef>(substring.t), path);
-                            },
-                        },
-      designator.u)};
-  if (ok && !path.empty()) {
-    return path;
-  }
-  return std::nullopt;
-}
-
-static std::optional<DesignatorPath> GetDesignatorPath(
-    SemanticsContext &context, const parser::FunctionReference &funcRef) {
-  const auto &call{funcRef.v};
-  const auto &procedureDesignator{
-      std::get<parser::ProcedureDesignator>(call.t)};
-  const auto *name{std::get_if<parser::Name>(&procedureDesignator.u)};
-  if (!name || !name->symbol || !name->symbol->has<ObjectEntityDetails>()) {
-    return std::nullopt;
-  }
-  std::vector<evaluate::Subscript> subscripts;
-  for (const parser::ActualArgSpec &arg :
-      std::get<std::list<parser::ActualArgSpec>>(call.t)) {
-    if (std::get<std::optional<parser::Keyword>>(arg.t)) {
-      return std::nullopt;
-    }
-    const auto *expr{std::get_if<common::Indirection<parser::Expr>>(
-        &std::get<parser::ActualArg>(arg.t).u)};
-    if (!expr) {
-      return std::nullopt;
-    }
-    if (auto subscript{AnalyzeSubscriptExpr(context, expr->value())}) {
-      subscripts.emplace_back(std::move(*subscript));
-    } else {
-      return std::nullopt;
-    }
-  }
-  if (subscripts.empty()) {
-    return std::nullopt;
-  }
-  DesignatorPath path;
-  path.SetBase(NamedEntity{name->symbol->GetUltimate()});
-  path.AddSubscripts(std::move(subscripts));
-  return path;
-}
-
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
@@ -2380,7 +2190,8 @@ void AccAttributeVisitor::ResolveAccObject(
             // TODO: Multiple array sections of the same array with different
             // data mapping attributes is not currently supported.
             const parser::Name &baseName{parser::GetFirstName(designator)};
-            if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
+            if (auto *symbol{
+                    DeclareOrMarkOtherAccessEntity(baseName, accFlag)}) {
               AddAccObjectWithDSA(*symbol, accFlag, designatorPath);
               if (isDataSharing && canCheckMultipleAppearances) {
                 CheckMultipleAppearances(baseName, *symbol, accFlag, &accObject,
@@ -2394,7 +2205,7 @@ void AccAttributeVisitor::ResolveAccObject(
                   name, *symbol, Symbol::Flag::AccCommonBlock);
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
-                        ResolveAcc(*object, accFlag, currScope())}) {
+                        DeclareOrMarkOtherAccessEntity(*object, accFlag)}) {
                   AddAccObjectWithDSA(*resolvedObject, accFlag);
                 }
               }
@@ -2406,16 +2217,6 @@ void AccAttributeVisitor::ResolveAccObject(
           },
       },
       accObject.u);
-}
-
-Symbol *AccAttributeVisitor::ResolveAcc(
-    const parser::Name &name, Symbol::Flag accFlag, Scope &scope) {
-  return DeclareOrMarkOtherAccessEntity(name, accFlag);
-}
-
-Symbol *AccAttributeVisitor::ResolveAcc(
-    Symbol &symbol, Symbol::Flag accFlag, Scope &scope) {
-  return DeclareOrMarkOtherAccessEntity(symbol, accFlag);
 }
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
@@ -2499,7 +2300,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     }
   }
   accDataSharingEntries_.push_back(
-      std::move(designator), {*target, accFlag, occurrence, displayName});
+      std::move(designator), {*target, accFlag, occurrence});
 }
 
 #ifndef NDEBUG
