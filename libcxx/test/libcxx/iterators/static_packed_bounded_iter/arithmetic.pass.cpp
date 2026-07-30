@@ -8,7 +8,7 @@
 
 // REQUIRES: std-at-least-c++26
 
-// template <class _Iterator>
+// template <class _Ptr, class _Tag, size_t _RangeCapacity>
 // class __static_packed_bounded_iter;
 //
 // Arithmetic operators
