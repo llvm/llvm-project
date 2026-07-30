@@ -94,28 +94,6 @@ Error RISCVCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   return Error::success();
 }
 
-void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
-  // TODO: RISCVPreRAExpandPseudoPass
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO: RISCVMergeBaseOffsetOptPass
-    // TODO: RISCVPreAllocZilsdOptPass
-  }
-
-  // TODO: RISCVInsertReadWriteCSRPass
-  // TODO: RISCVInsertWriteVXRMPass
-  // TODO: RISCVLandingPadSetupPass
-
-  // TODO: MachinePipelinerPass (no new pass manager port exists yet)
-
-  // TODO: RISCVVMV0EliminationPass
-}
-
-void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO: RISCVRedundantCopyEliminationPass
-  }
-}
-
 void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) const {
   // It's beneficial to reduce the VL to enable more
@@ -140,6 +118,30 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     // TODO: RISCVOptWInstrsPass
   }
 }
+
+void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
+  // TODO: RISCVPreRAExpandPseudoPass
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO: RISCVMergeBaseOffsetOptPass
+    // TODO: RISCVPreAllocZilsdOptPass
+  }
+
+  // TODO: RISCVInsertReadWriteCSRPass
+  // TODO: RISCVInsertWriteVXRMPass
+  // TODO: RISCVLandingPadSetupPass
+
+  // TODO: MachinePipelinerPass (no new pass manager port exists yet)
+
+  // TODO: RISCVVMV0EliminationPass
+}
+
+void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO: RISCVRedundantCopyEliminationPass
+  }
+}
+
+
 
 void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   // TODO: RISCVPostRAExpandPseudoPass
