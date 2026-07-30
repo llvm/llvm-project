@@ -1,0 +1,94 @@
+# RUN: llc -mtriple=armv4t-none-eabi -mattr=+thumb-mode -run-pass=arm-postra-peephole -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            test_basic_sink
+# CHECK-LABEL: name: test_basic_sink
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    
+    ; CHECK: renamable $r1 = COPY renamable $r3
+    ; CHECK-NEXT: tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r1 = COPY renamable $r3
+    tBcc %bb.0, 1 /* CC::ne */, killed $cpsr
+    tB %bb.0, 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_multiple_copies
+# CHECK-LABEL: name: test_multiple_copies
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    
+    ; CHECK: renamable $r1 = COPY renamable $r3
+    ; CHECK-NEXT: renamable $r2 = COPY renamable $r3
+    ; CHECK-NEXT: tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r1 = COPY renamable $r3
+    renamable $r2 = COPY renamable $r3
+    tBcc %bb.0, 1 /* CC::ne */, killed $cpsr
+    tB %bb.0, 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_stop_modify_operand
+# CHECK-LABEL: name: test_stop_modify_operand
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    
+    ; CHECK: tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: renamable $r3 = COPY renamable $r1
+    tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r3 = COPY renamable $r1
+    tBcc %bb.0, 1 /* CC::ne */, killed $cpsr
+    tB %bb.0, 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_stop_reads_cpsr
+# CHECK-LABEL: name: test_stop_reads_cpsr
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    
+    ; CHECK: tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: renamable $r1 = COPY renamable $r3, implicit $cpsr
+    tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r1 = COPY renamable $r3, implicit $cpsr
+    tBcc %bb.0, 1 /* CC::ne */, killed $cpsr
+    tB %bb.0, 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_stop_writes_cpsr
+# CHECK-LABEL: name: test_stop_writes_cpsr
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    
+    ; CHECK: tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: renamable $r1 = COPY renamable $r3, implicit-def $cpsr
+    tCMPr renamable $r3, renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r1 = COPY renamable $r3, implicit-def $cpsr
+    tBcc %bb.0, 1 /* CC::ne */, killed $cpsr
+    tB %bb.0, 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_tCMPi8
+# CHECK-LABEL: name: test_tCMPi8
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    
+    ; CHECK: renamable $r1 = COPY renamable $r3
+    ; CHECK-NEXT: tCMPi8 renamable $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tCMPi8 renamable $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r1 = COPY renamable $r3
+    tBcc %bb.0, 1 /* CC::ne */, killed $cpsr
+    tB %bb.0, 14 /* CC::al */, $noreg
+
+...

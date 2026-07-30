@@ -107,6 +107,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
   initializeARMBlockPlacementPass(Registry);
+  initializeARMPostRAPeepholePass(Registry);
   initializeMVEGatherScatterLoweringPass(Registry);
   initializeARMSLSHardeningPass(Registry);
   initializeMVELaneInterleavingPass(Registry);
@@ -312,6 +313,7 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -474,6 +476,12 @@ void ARMPassConfig::addPreRegAlloc() {
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
+  }
+}
+
+void ARMPassConfig::addPostRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createARMPostRAPeepholePass());
   }
 }
 
