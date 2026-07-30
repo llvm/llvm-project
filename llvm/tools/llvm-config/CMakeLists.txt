@@ -15,6 +15,7 @@ add_llvm_tool(llvm-config
   # want to build an entire native libLLVM.so in addition to the cross one just
   # for the native `llvm-config`!
   DISABLE_LLVM_LINK_LLVM_DYLIB
+  DISABLE_PCH_REUSE
   )
 
 # Compute the substitution values for various items.
@@ -88,7 +89,7 @@ llvm_expand_pseudo_components(LLVM_DYLIB_COMPONENTS_expanded "${LLVM_DYLIB_COMPO
 configure_file(${BUILDVARIABLES_SRCPATH} ${BUILDVARIABLES_OBJPATH} @ONLY)
 
 # Set build-time environment(s).
-add_compile_definitions(CMAKE_CFG_INTDIR="$<CONFIG>")
+target_compile_definitions(llvm-config PRIVATE CMAKE_CFG_INTDIR="$<CONFIG>")
 
 if(LLVM_ENABLE_MODULES)
   target_compile_options(llvm-config PUBLIC

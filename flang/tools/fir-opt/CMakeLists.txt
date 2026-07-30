@@ -1,5 +1,8 @@
 add_flang_tool(fir-opt fir-opt.cpp)
 llvm_update_compile_flags(fir-opt)
+if(FLANG_INCLUDE_TESTS)
+  target_compile_definitions(fir-opt PRIVATE FLANG_INCLUDE_TESTS=1)
+endif()
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
