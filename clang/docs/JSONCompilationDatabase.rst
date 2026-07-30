@@ -39,6 +39,7 @@ works) with the option ``CMAKE_EXPORT_COMPILE_COMMANDS``.
 
 For projects on Linux, there is an alternative to intercept compiler
 calls with a tool called `Bear <https://github.com/rizsotto/Bear>`_.
+There is also another one called `basset <https://github.com/i-ky/basset>`_.
 
 `Bazel <https://bazel.build>`_ can export a compilation database via
 `this extractor extension
