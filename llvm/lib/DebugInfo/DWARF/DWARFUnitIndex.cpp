@@ -159,6 +159,8 @@ bool DWARFUnitIndex::parseImpl(DataExtractor IndexData) {
     auto Index = IndexData.getU32(&Offset);
     if (!Index)
       continue;
+    if (Index > Header.NumUnits)
+      return false;
     Rows[i].Index = this;
     Rows[i].Contributions =
         std::make_unique<Entry::SectionContribution[]>(Header.NumColumns);
