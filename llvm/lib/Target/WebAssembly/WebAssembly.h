@@ -237,7 +237,6 @@ public:
 };
 
 FunctionPass *createWebAssemblyLateEHPrepareLegacyPass();
-ModulePass *createWebAssemblyGlobalsTaggingPass();
 
 class WebAssemblyCFGSortPass
     : public RequiredPassInfoMixin<WebAssemblyCFGSortPass> {
@@ -309,6 +308,9 @@ public:
 };
 
 ModulePass *createWebAssemblyMCLowerPreLegacyPass();
+
+FunctionPass *createWebAssemblyStackTaggingPass();
+ModulePass *createWebAssemblyGlobalsTaggingPass();
 
 // PassRegistry initialization declarations.
 void initializeWebAssemblyOptimizeReturnedLegacyPass(PassRegistry &);
