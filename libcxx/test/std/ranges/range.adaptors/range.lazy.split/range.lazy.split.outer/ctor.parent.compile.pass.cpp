@@ -13,11 +13,12 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
+#include <concepts>
 #include <ranges>
-#include <type_traits>
 
 #include "../types.h"
 
 static_assert(!std::ranges::forward_range<SplitViewInput>);
-static_assert(!std::is_constructible_v<OuterIterInput, SplitViewInput&>);
-static_assert(!std::is_convertible_v<SplitViewInput&, OuterIterInput>);
+
+static_assert(!std::constructible_from<OuterIterInput, SplitViewInput&>);
+static_assert(!std::convertible_to<SplitViewInput&, OuterIterInput>);

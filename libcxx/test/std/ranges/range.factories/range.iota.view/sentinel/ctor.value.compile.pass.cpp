@@ -12,11 +12,12 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
+#include <concepts>
 #include <ranges>
-#include <type_traits>
 
 #include "../types.h"
 
 using Sent = std::ranges::sentinel_t<std::ranges::iota_view<SomeInt, IntSentinelWith<SomeInt>>>;
-static_assert(!std::is_constructible_v<Sent, IntSentinelWith<SomeInt>>);
-static_assert(!std::is_convertible_v<IntSentinelWith<SomeInt>, Sent>);
+
+static_assert(!std::constructible_from<Sent, IntSentinelWith<SomeInt>>);
+static_assert(!std::convertible_to<IntSentinelWith<SomeInt>, Sent>);

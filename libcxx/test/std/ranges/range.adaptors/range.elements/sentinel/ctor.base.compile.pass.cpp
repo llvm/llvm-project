@@ -12,8 +12,8 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
+#include <concepts>
 #include <ranges>
-#include <type_traits>
 
 struct Sent {
   int i;
@@ -28,5 +28,5 @@ struct Range : std::ranges::view_base {
 
 using ElementsView = std::ranges::elements_view<Range, 0>;
 
-static_assert(!std::is_constructible_v<std::ranges::sentinel_t<ElementsView>, Sent>);
-static_assert(!std::is_convertible_v<Sent, std::ranges::sentinel_t<ElementsView>>);
+static_assert(!std::constructible_from<std::ranges::sentinel_t<ElementsView>, Sent>);
+static_assert(!std::convertible_to<Sent, std::ranges::sentinel_t<ElementsView>>);

@@ -13,10 +13,11 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
+#include <concepts>
 #include <ranges>
-#include <type_traits>
 
 #include "../types.h"
 
 static_assert(std::ranges::forward_range<SplitViewForward>);
-static_assert(!std::is_constructible_v<OuterIterForward, SplitViewForward&, std::ranges::iterator_t<ForwardView>>);
+
+static_assert(!std::constructible_from<OuterIterForward, SplitViewForward&, std::ranges::iterator_t<ForwardView>>);

@@ -12,12 +12,13 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
+#include <concepts>
 #include <ranges>
 
 #include "../types.h"
 
-static_assert(!std::is_constructible_v<InnerIterConst, OuterIterConst>);
-static_assert(!std::is_convertible_v<InnerIterConst, OuterIterConst>);
+static_assert(!std::constructible_from<InnerIterConst, OuterIterConst>);
+static_assert(!std::convertible_to<InnerIterConst, OuterIterConst>);
 
-static_assert(!std::is_constructible_v<InnerIterNonConst, OuterIterNonConst>);
-static_assert(!std::is_convertible_v<InnerIterNonConst, OuterIterNonConst>);
+static_assert(!std::constructible_from<InnerIterNonConst, OuterIterNonConst>);
+static_assert(!std::convertible_to<InnerIterNonConst, OuterIterNonConst>);

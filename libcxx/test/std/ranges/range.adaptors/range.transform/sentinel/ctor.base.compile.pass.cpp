@@ -12,6 +12,7 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
+#include <concepts>
 #include <ranges>
 
 #include "test_iterators.h"
@@ -21,5 +22,5 @@ using BaseSent      = std::ranges::sentinel_t<SizedSentinelView>;
 using TransformView = std::ranges::transform_view<SizedSentinelView, PlusOne>;
 using TransformSent = std::ranges::sentinel_t<TransformView>;
 
-static_assert(!std::is_constructible_v<TransformSent, BaseSent>);
-static_assert(!std::is_convertible_v<BaseSent, TransformSent>);
+static_assert(!std::constructible_from<TransformSent, BaseSent>);
+static_assert(!std::convertible_to<BaseSent, TransformSent>);
