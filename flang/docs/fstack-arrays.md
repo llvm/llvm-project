@@ -1,4 +1,13 @@
 # Stack arrays pass
+
+> **Note**
+> The heap-to-stack (`stack-arrays`) and stack-to-heap (`memory-allocation-opt`)
+> transformations have been unified into a single policy-driven pass,
+> `allocation-placement`, which is now the default in the FIR optimizer
+> pipeline. The [Unified allocation-placement pass](#unified-allocation-placement-pass)
+> section below describes the current behavior and options; the rest of this
+> document describes the heap-to-stack analysis that the unified pass reuses.
+
 ## Problem Description
 In gfortran, `-fstack-arrays` will cause all local arrays, including those of
 unknown size, to be allocated from stack memory. Gfortran enables this flag by
@@ -161,3 +170,58 @@ heap allocated array temporaries are detected and converted by the new pass.
 
 Another test will check that `allocate` statements in source code will not be
 moved to the stack.
+
+## Unified allocation-placement pass
+The heap-to-stack transformation described above and the stack-to-heap
+transformation previously performed by the `memory-allocation-opt` pass have been
+merged into a single pass, `allocation-placement`. Instead of running one of two
+opposing passes depending on the value of `-fstack-arrays`, the pipeline always
+runs `allocation-placement`, which decides, per array allocation, whether it
+should live on the stack (`fir.alloca`) or on the heap (`fir.allocmem`) and
+rewrites it accordingly. Heap-to-stack rewrites still reuse the analysis and
+rewrite pattern described above, so they are only performed where the allocation
+is provably freed on all paths through the function.
+
+### Placement policy
+The decision is made by a policy function taking a few facts about each
+allocation (whether it currently lives on the stack, whether it is a compiler
+temporary or a user variable, whether it has a runtime-determined size, and its
+constant byte size when known) together with a set of tunable thresholds:
+
+- `small-array-threshold` (default 64 bytes): constant-size arrays up to this
+  size are considered "small".
+- `total-stack-limit` (default 4 MiB): per-function budget for small arrays
+  placed on the stack.
+
+With `-fno-stack-arrays` (the default), the policy is:
+
+- Runtime-sized arrays (automatic arrays, dynamic temporaries) are placed on the
+  heap.
+- Small constant-size arrays (user variables and temporaries) are placed on the
+  stack while the per-function stack budget allows it.
+- Large constant-size arrays are placed on the stack for user variables and on
+  the heap for compiler temporaries.
+
+With `-fstack-arrays`, the policy places every array on the stack on a
+best-effort basis (heap-to-stack rewrites still only happen where they are
+provably safe).
+
+A compiler temporary is distinguished from a user variable by the absence of a
+uniqued name (`uniqName`) on the allocation: user variables always carry one.
+
+### Customizing the policy
+The default policy can be fully overridden through a hook with the same signature
+as the default decision function. A hook may, for example, apply different
+thresholds inside device routines or parallel regions, and then delegate back to
+the default decision function. This keeps the pass generic while allowing
+target- or region-specific placement strategies to be layered on top.
+
+### Options
+- `-fstack-arrays` / `-fno-stack-arrays`: select the stack-arrays strategy or the
+  default size/kind-based policy.
+- `-allocation-placement-small-array-size` / `-allocation-placement-stack-limit`:
+  tune the "small array" byte-size threshold and the per-function stack budget.
+- `-disable-allocation-placement`: skip the pass entirely (no stack/heap
+  rewriting).
+- `-enable-allocation-placement=false`: fall back to the legacy `stack-arrays`
+  and `memory-allocation-opt` passes for A/B comparison.

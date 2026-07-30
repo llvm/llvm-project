@@ -57,9 +57,13 @@ extern llvm::cl::opt<bool> disableFirMao;
 extern llvm::cl::opt<bool> enableFirLICM;
 extern llvm::cl::opt<bool> useOldAliasTags;
 
-/// Experimental option to replace the stack-arrays and memory-allocation-opt
-/// passes with the unified allocation-placement pass.
+/// Use the unified allocation-placement pass instead of the legacy stack-arrays
+/// and memory-allocation-opt passes. Enabled by default; set to false to fall
+/// back to the legacy passes.
 extern llvm::cl::opt<bool> enableAllocationPlacement;
+
+/// Skip the allocation-placement pass entirely (no stack/heap rewriting).
+extern llvm::cl::opt<bool> disableAllocationPlacement;
 
 /// Constant-size arrays up to this many bytes are considered "small" and placed
 /// on the stack by the allocation-placement pass.

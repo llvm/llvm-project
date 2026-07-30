@@ -110,7 +110,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   MemoryAllocationOpt
+// PASSES-NEXT:   AllocationPlacement
 
 // PASSES-NEXT: Inliner
 // PASSES-NEXT: SimplifyRegionLite
