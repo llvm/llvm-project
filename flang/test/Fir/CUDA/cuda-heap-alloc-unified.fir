@@ -1,6 +1,7 @@
 // RUN: fir-opt --memory-allocation-opt %s | FileCheck %s --check-prefix=HEAP
 // RUN: fir-opt --stack-arrays %s | FileCheck %s --check-prefix=HEAP
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefix=LLVM
+// RUN: fir-opt --fir-to-llvm-ir=unified-heap-alloc-suffix=_pool %s | FileCheck %s --check-prefix=SUFFIX
 
 // Under fir.cuda_heap_alloc = "unified", named automatic arrays move to the
 // heap and are marked. Only marked allocations use malloc_unified: memory the
@@ -64,6 +65,10 @@ func.func @device_vla(%arg0: index) attributes {cuf.proc_attr = #cuf.cuda_proc<g
 // LLVM-LABEL: llvm.func @marked_heap(
 // LLVM: llvm.call @malloc_unified(
 // LLVM: llvm.call @free_unified(
+// The entry point names are the libc name plus a configurable suffix.
+// SUFFIX-LABEL: llvm.func @marked_heap(
+// SUFFIX: llvm.call @malloc_pool(
+// SUFFIX: llvm.call @free_pool(
 func.func @marked_heap(%n: index) {
   %0 = fir.allocmem !fir.array<?xf32>, %n {fir.cuda_heap_alloc = "unified"}
   fir.freemem %0 {fir.cuda_heap_alloc = "unified"} : !fir.heap<!fir.array<?xf32>>
