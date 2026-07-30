@@ -2601,6 +2601,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
+    // Lower scalar bf16 arithmetic by widening to a vector op and extracting
+    // the low element.
+    setOperationAction(ISD::FADD, MVT::bf16, Custom);
+    setOperationAction(ISD::FSUB, MVT::bf16, Custom);
+    setOperationAction(ISD::FMUL, MVT::bf16, Custom);
+    setOperationAction(ISD::FDIV, MVT::bf16, Custom);
+    setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
+    setOperationAction(ISD::FMA, MVT::bf16, Custom);
+
     setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
     setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
     setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
@@ -3997,7 +4006,7 @@ static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if the value of any element in Mask is the zero sentinel value.
 static bool isAnyZero(ArrayRef<int> Mask) {
-  return llvm::is_contained(Mask, SM_SentinelZero);
+  return llvm::any_of(Mask, equal_to(SM_SentinelZero));
 }
 
 /// Return true if Val is undef or if its value falls within the
@@ -34531,6 +34540,29 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     N->dump(&DAG);
 #endif
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FSQRT:
+  case ISD::FDIV:
+  case ISD::FMA: {
+    assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
+    // AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
+    // soft-promoted-half type, so scalar ops would otherwise be promoted to
+    // f32. Instead widen each operand to a v8bf16 vector, perform the legal
+    // packed operation, and extract the low element afterwards.
+    SmallVector<SDValue, 3> VecOps;
+    for (const SDValue &Op : N->ops()) {
+      SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
+      SDValue VecF16 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, AsF16);
+      VecOps.push_back(DAG.getBitcast(MVT::v8bf16, VecF16));
+    }
+    SDValue Vec =
+        DAG.getNode(N->getOpcode(), dl, MVT::v8bf16, VecOps, N->getFlags());
+    Results.push_back(DAG.getExtractVectorElt(dl, MVT::bf16, Vec, 0));
+    return;
+  }
   case X86ISD::CVTPH2PS: {
     EVT VT = N->getValueType(0);
     SDValue Lo, Hi;
