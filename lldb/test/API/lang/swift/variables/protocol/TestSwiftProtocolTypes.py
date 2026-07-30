@@ -19,7 +19,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftProtocolTypes(TestBase):
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_swift_protocol_types(self):
         """Test support for protocol types"""

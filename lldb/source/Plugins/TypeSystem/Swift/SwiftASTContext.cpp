@@ -3860,8 +3860,10 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
 
   // Every time the triple is changed the LangOpts must be updated
   // too, because Swift default-initializes the EnableObjCInterop
-  // flag based on the triple.
-  GetLanguageOptions().EnableObjCInterop = triple.isOSDarwin();
+  // flag based on the triple. Embedded Swift is the one exception.
+  GetLanguageOptions().EnableObjCInterop =
+      triple.isOSDarwin() &&
+      !GetLanguageOptions().hasFeature(swift::Feature::Embedded);
   return true;
 }
 
