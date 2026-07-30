@@ -28,7 +28,8 @@ public:
   // sometimes stack slots. The unsigned values are divided into these ranges:
   //
   //   0           Not a register, can be used as a sentinel.
-  //   [1;2^30)    Physical registers assigned by TableGen.
+  //   [1;2^28)    Physical registers assigned by TableGen.
+  //   [2^28;2^30) Unused.
   //   [2^30;2^31) Stack slots. (Rarely used.)
   //   [2^31;2^32) Virtual registers assigned by MachineRegisterInfo.
   //
@@ -104,10 +105,7 @@ public:
   /// Utility to check-convert this value to a MCRegister. The caller is
   /// expected to have already validated that this Register is, indeed,
   /// physical.
-  MCRegister asMCReg() const {
-    assert(!isValid() || isPhysical());
-    return MCRegister(Reg);
-  }
+  MCRegister asMCReg() const { return MCRegister::from(Reg); }
 
   constexpr bool isValid() const { return Reg != MCRegister::NoRegister; }
 
