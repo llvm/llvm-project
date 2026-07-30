@@ -2489,6 +2489,11 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
                       << IndexMap << '\n');
 
     for (auto &In : B) {
+      // Debug instructions do not generate any code, and their operands
+      // (including frame index operands) must not affect the decisions made
+      // by this optimization.
+      if (In.isDebugInstr())
+        continue;
       int LFI, SFI;
       bool Load = HII.isLoadFromStackSlot(In, LFI) && !HII.isPredicated(In);
       bool Store = HII.isStoreToStackSlot(In, SFI) && !HII.isPredicated(In);
