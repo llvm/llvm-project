@@ -110,32 +110,6 @@ def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
-  let summary = "Convert array value operations to memory operations.";
-  let description = [{
-    Transform the set of array value primitives to a memory-based array
-    representation.
-
-    The Ops `array_load`, `array_store`, `array_fetch`, and `array_update` are
-    used to manage abstract aggregate array values. A simple analysis is done
-    to determine if there are potential dependences between these operations.
-    If not, these array operations can be lowered to work directly on the memory
-    representation. If there is a potential conflict, a temporary is created
-    along with appropriate copy-in/copy-out operations. Here, a more refined
-    analysis might be deployed, such as using the affine framework.
-
-    This pass is required before code gen to the LLVM IR dialect.
-  }];
-  let constructor = "::fir::createArrayValueCopyPass()";
-  let dependentDialects = [ "fir::FIROpsDialect" ];
-  let options = [
-    Option<"optimizeConflicts", "optimize-conflicts", "bool",
-           /*default=*/"false",
-           "do more detailed conflict analysis to reduce the number "
-           "of temporaries">
-  ];
-}
-
 def CharacterConversion : Pass<"character-conversion"> {
   let summary = "Convert CHARACTER entities with different KINDs";
   let description = [{
