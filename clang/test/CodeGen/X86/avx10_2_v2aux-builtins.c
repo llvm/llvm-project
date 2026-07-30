@@ -6,8 +6,9 @@
 #include <immintrin.h>
 
 //
-// Group A: VCVTPS2BF8 / VCVTPS2BF8S / VCVTPS2HF8 / VCVTPS2HF8S /
-//          VCVTROPS2HF8 / VCVTROPS2HF8S
+// Convert from FP32 to FP8
+// VCVTPS2BF8 / VCVTPS2BF8S / VCVTPS2HF8 / VCVTPS2HF8S /
+// VCVTROPS2HF8 / VCVTROPS2HF8S
 //
 
 // VCVTPS2BF8 - 128-bit
@@ -407,8 +408,9 @@ __m128i test_mm512_maskz_cvts_rops_hf8(__mmask16 __U, __m512 __A) {
 }
 
 //
-// Group B: VCVTBIASPS2BF8 / VCVTBIASPS2BF8S / VCVTBIASPS2HF8 /
-//          VCVTBIASPS2HF8S
+// Convert from FP32 to FP8 with bias
+// VCVTBIASPS2BF8 / VCVTBIASPS2BF8S / VCVTBIASPS2HF8 /
+// VCVTBIASPS2HF8S
 //
 
 // VCVTBIASPS2BF8 - 128-bit
@@ -676,7 +678,8 @@ __m128i test_mm512_maskz_cvts_biasps_hf8(__mmask16 __U, __m512i __A, __m512 __B)
 }
 
 //
-// Group C: VCVTBF82PS / VCVTHF82PS
+// Convert from FP8 to FP32
+// VCVTBF82PS / VCVTHF82PS
 //
 
 // VCVTBF82PS - 128-bit
@@ -812,7 +815,8 @@ __m512 test_mm512_maskz_cvthf8_ps(__mmask16 __U, __m128i __A) {
 }
 
 //
-// Group D: VCVTBF82BF4S / VCVTHF82BF4S (FP8 to FP4 truncating conversions)
+// Convert from FP8 to FP4
+// VCVTBF82BF4S / VCVTHF82BF4S
 //
 
 // VCVTBF82BF4S - register forms
@@ -896,7 +900,8 @@ void test_mm512_cvthf8_bf4s_storeu(void *__P, __m512i __A) {
 }
 
 //
-// Group E: VCVTBF82BF6S / VCVTHF82HF6S
+// Convert from FP8 to FP6
+// VCVTBF82BF6S / VCVTHF82HF6S
 //
 
 // VCVTBF82BF6S
@@ -940,7 +945,8 @@ __m512i test_mm512_cvthf8_hf6s(__m512i __A) {
 }
 
 //
-// Group F: VCVTBF42HF8 / VCVTBF62HF8 / VCVTHF62HF8
+// Convert from FP4 to FP8
+// VCVTBF42HF8
 //
 
 // VCVTBF42HF8 - 128-bit
@@ -1008,6 +1014,11 @@ __m512i test_mm512_maskz_cvtbf4_hf8(__mmask64 __U, __m256i __A) {
   // CHECK: select <64 x i1> %{{.*}}, <64 x i8> [[RES]], <64 x i8> %{{.*}}
   return _mm512_maskz_cvtbf4_hf8(__U, __A);
 }
+
+//
+// Convert from FP6 to FP8
+// VCVTBF62HF8 / VCVTHF62HF8
+//
 
 // VCVTBF62HF8 - 128-bit
 
@@ -1142,7 +1153,8 @@ __m512i test_mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 }
 
 //
-// Group H: VUNPACKB
+// Unpack to Byte
+// VUNPACKB
 //
 
 // VUNPACKB - 128-bit
@@ -1212,8 +1224,71 @@ __m512i test_mm512_maskz_unpackb_epi8(__mmask64 __U, __m512i __A) {
 }
 
 //
-// VPMOVSSDB - Symmetric Signed Saturation DWord to Byte (memory store)
+// Down convert DWord to Byte with symmetric signed saturation
+// VPMOVSSDB
 //
+
+// VPMOVSSDB - 128-bit
+
+__m128i test_mm_cvtss_epi32_epi8(__m128i __A) {
+  // CHECK-LABEL: @test_mm_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
+  return _mm_cvtss_epi32_epi8(__A);
+}
+
+__m128i test_mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm_mask_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  return _mm_mask_cvtss_epi32_epi8(__W, __U, __A);
+}
+
+__m128i test_mm_maskz_cvtss_epi32_epi8(__mmask8 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm_maskz_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.128(<4 x i32> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  return _mm_maskz_cvtss_epi32_epi8(__U, __A);
+}
+
+// VPMOVSSDB - 256-bit
+
+__m128i test_mm256_cvtss_epi32_epi8(__m256i __A) {
+  // CHECK-LABEL: @test_mm256_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
+  return _mm256_cvtss_epi32_epi8(__A);
+}
+
+__m128i test_mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
+  // CHECK-LABEL: @test_mm256_mask_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  return _mm256_mask_cvtss_epi32_epi8(__W, __U, __A);
+}
+
+__m128i test_mm256_maskz_cvtss_epi32_epi8(__mmask8 __U, __m256i __A) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.256(<8 x i32> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  return _mm256_maskz_cvtss_epi32_epi8(__U, __A);
+}
+
+// VPMOVSSDB - 512-bit
+
+__m128i test_mm512_cvtss_epi32_epi8(__m512i __A) {
+  // CHECK-LABEL: @test_mm512_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %{{.*}}, <16 x i8> %{{.*}}, i16 -1)
+  return _mm512_cvtss_epi32_epi8(__A);
+}
+
+__m128i test_mm512_mask_cvtss_epi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_mask_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %{{.*}}, <16 x i8> %{{.*}}, i16 %{{.*}})
+  return _mm512_mask_cvtss_epi32_epi8(__W, __U, __A);
+}
+
+__m128i test_mm512_maskz_cvtss_epi32_epi8(__mmask16 __U, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_maskz_cvtss_epi32_epi8(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %{{.*}}, <16 x i8> %{{.*}}, i16 %{{.*}})
+  return _mm512_maskz_cvtss_epi32_epi8(__U, __A);
+}
+
+// VPMOVSSDB - memory store
 
 void test_mm_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_cvtss_epi32_storeu_epi8(

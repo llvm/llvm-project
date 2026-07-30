@@ -2271,6 +2271,12 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
   Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
+  bool HasLeaf24Subleaf1 =
+      HasLeaf24 && EAX >= 1 &&
+      !getX86CpuIDAndInfoEx(0x24, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["avx10v2aux"] =
+      HasAVX10 && HasLeaf24Subleaf1 && ((ECX >> 3) & 1) && HasAVX512Save;
+
   return Features;
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))

@@ -193,15 +193,3 @@ unsigned char test_lwpins64(unsigned long long data2, unsigned long long data1, 
 void test_lwpval64(unsigned long long data2, unsigned long long data1, unsigned int flags) {
   __builtin_ia32_lwpval64(data2, data1, flags); // expected-error {{argument to '__builtin_ia32_lwpval64' must be a constant integer}}
 }
-
-__m128i test__builtin_ia32_vunpackb128(__m128i __a) {
-  return __builtin_ia32_vunpackb128(__a, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
-}
-
-__m256i test__builtin_ia32_vunpackb256(__m256i __a) {
-  return __builtin_ia32_vunpackb256(__a, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
-}
-
-__m512i test__builtin_ia32_vunpackb512(__m512i __a) {
-  return __builtin_ia32_vunpackb512(__a, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
-}

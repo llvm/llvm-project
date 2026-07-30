@@ -657,7 +657,7 @@ _mm512_maskz_cvts_biasps_hf8(__mmask16 __U, __m512i __A, __m512 __B) {
 /// \returns
 ///    A 512-bit vector of [16 x float] containing the converted values.
 static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvtbf8_ps(__m128i __A) {
-  return (__m512)__builtin_ia32_vcvtbf8_2ps512((__v16qi)__A);
+  return (__m512)__builtin_ia32_vcvtbf82ps_512((__v16qi)__A);
 }
 
 /// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
@@ -716,7 +716,7 @@ _mm512_maskz_cvtbf8_ps(__mmask16 __U, __m128i __A) {
 /// \returns
 ///    A 512-bit vector of [16 x float] containing the converted values.
 static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_cvthf8_ps(__m128i __A) {
-  return (__m512)__builtin_ia32_vcvthf8_2ps512((__v16qi)__A);
+  return (__m512)__builtin_ia32_vcvthf82ps_512((__v16qi)__A);
 }
 
 /// Convert packed HF8 (8-bit) floating-point elements in \a __A to packed
@@ -776,7 +776,7 @@ _mm512_maskz_cvthf8_ps(__mmask16 __U, __m128i __A) {
 ///    A 512-bit vector of [64 x i8] containing the converted BF6 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_cvtbf8_bf6s(__m512i __A) {
-  return (__m512i)__builtin_ia32_vcvtbf82bf6s512((__v64qi)__A);
+  return (__m512i)__builtin_ia32_vcvtbf82bf6s_512((__v64qi)__A);
 }
 
 /// Convert packed HF8 (8-bit) floating-point elements in \a __A to packed
@@ -793,7 +793,7 @@ _mm512_cvtbf8_bf6s(__m512i __A) {
 ///    A 512-bit vector of [64 x i8] containing the converted HF6 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_cvthf8_hf6s(__m512i __A) {
-  return (__m512i)__builtin_ia32_vcvthf82hf6s512((__v64qi)__A);
+  return (__m512i)__builtin_ia32_vcvthf82hf6s_512((__v64qi)__A);
 }
 
 /// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
@@ -810,7 +810,7 @@ _mm512_cvthf8_hf6s(__m512i __A) {
 ///    A 256-bit vector of [32 x i8] containing the converted BF4 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS512
 _mm512_cvtbf8_bf4s(__m512i __A) {
-  return (__m256i)__builtin_ia32_vcvtbf82bf4s512((__v64qi)__A);
+  return (__m256i)__builtin_ia32_vcvtbf82bf4s_512((__v64qi)__A);
 }
 
 /// Convert packed HF8 (8-bit) floating-point elements in \a __A to packed
@@ -827,7 +827,7 @@ _mm512_cvtbf8_bf4s(__m512i __A) {
 ///    A 256-bit vector of [32 x i8] containing the converted BF4 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS512
 _mm512_cvthf8_bf4s(__m512i __A) {
-  return (__m256i)__builtin_ia32_vcvthf82bf4s512((__v64qi)__A);
+  return (__m256i)__builtin_ia32_vcvthf82bf4s_512((__v64qi)__A);
 }
 
 /// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
@@ -845,7 +845,7 @@ _mm512_cvthf8_bf4s(__m512i __A) {
 ///    A 512-bit vector of [64 x i8] containing BF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS512
 _mm512_cvtbf8_bf4s_storeu(void *__P, __m512i __A) {
-  __builtin_ia32_vcvtbf82bf4s512mem(__P, (__v64qi)__A);
+  __builtin_ia32_vcvtbf82bf4s_512_mem(__P, (__v64qi)__A);
 }
 
 /// Convert packed HF8 (8-bit) floating-point elements in \a __A to packed
@@ -863,7 +863,7 @@ _mm512_cvtbf8_bf4s_storeu(void *__P, __m512i __A) {
 ///    A 512-bit vector of [64 x i8] containing HF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS512
 _mm512_cvthf8_bf4s_storeu(void *__P, __m512i __A) {
-  __builtin_ia32_vcvthf82bf4s512mem(__P, (__v64qi)__A);
+  __builtin_ia32_vcvthf82bf4s_512_mem(__P, (__v64qi)__A);
 }
 
 /// Convert packed BF4 (4-bit) floating-point elements in \a __A to packed
@@ -879,7 +879,7 @@ _mm512_cvthf8_bf4s_storeu(void *__P, __m512i __A) {
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the converted HF8 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512 _mm512_cvtbf4_hf8(__m256i __A) {
-  return (__m512i)__builtin_ia32_vcvtbf42hf8512((__v32qi)__A);
+  return (__m512i)__builtin_ia32_vcvtbf42hf8_512((__v32qi)__A);
 }
 
 /// Convert packed BF4 (4-bit) floating-point elements in \a __A to packed
@@ -937,7 +937,7 @@ _mm512_maskz_cvtbf4_hf8(__mmask64 __U, __m256i __A) {
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the converted HF8 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512 _mm512_cvtbf6_hf8(__m512i __A) {
-  return (__m512i)__builtin_ia32_vcvtbf62hf8512((__v64qi)__A);
+  return (__m512i)__builtin_ia32_vcvtbf62hf8_512((__v64qi)__A);
 }
 
 /// Convert packed BF6 (6-bit) floating-point elements in \a __A to packed
@@ -995,7 +995,7 @@ _mm512_maskz_cvtbf6_hf8(__mmask64 __U, __m512i __A) {
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the converted HF8 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512 _mm512_cvthf6_hf8(__m512i __A) {
-  return (__m512i)__builtin_ia32_vcvthf62hf8512((__v64qi)__A);
+  return (__m512i)__builtin_ia32_vcvthf62hf8_512((__v64qi)__A);
 }
 
 /// Convert packed HF6 (6-bit) floating-point elements in \a __A to packed

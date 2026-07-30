@@ -386,6 +386,11 @@
 // AVX10_2: "-target-feature" "+avx10.2"
 // NO-AVX10_2: "-target-feature" "-avx10.2"
 
+// RUN: %clang --target=i386 -mavx10v2aux %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_V2_AUX %s
+// RUN: %clang --target=i386 -mno-avx10v2aux %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_V2_AUX %s
+// AVX10_V2_AUX: "-target-feature" "+avx10v2aux"
+// NO-AVX10_V2_AUX: "-target-feature" "-avx10v2aux"
+
 // RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
 // USERMSR: "-target-feature" "+usermsr"

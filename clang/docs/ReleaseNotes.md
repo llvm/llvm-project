@@ -970,6 +970,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   - Support intrinsic of `_mm256_maskz_bitrev_epi8`.
   - Support intrinsic of `_mm_bitrev_epi8`.
   - Support intrinsic of `_mm256_bitrev_epi8`.
+- Support ISA of `AVX10_V2_AUX` (`-mavx10v2aux`).
 - Removed support for `AMX-TF32` (`-mamx-tf32`) and `TMMULTF32PS` instruction.
 
 #### Arm and AArch64 Support

@@ -15,7 +15,7 @@
 // AVX10 V2 AUX Multiclass Definitions
 //===----------------------------------------------------------------------===//
 
-// Group A multiclass: PS(f32) -> i8 truncating conversion (quarter-size output)
+// Convert from FP32 to FP8: truncating conversion, quarter-size output
 // Output is always xmm for all VL variants.
 // Adapts avx512_vcvt_fp for each VL level with explicit dest/src type mappings.
 multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
@@ -126,7 +126,7 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
             (!cast<Instruction>(NAME # "Z128rmbkz") VK4WM:$mask, addr:$src)>;
 }
 
-// Group B multiclass: 3-operand bias PS(f32) -> i8 conversion (quarter-size output)
+// Convert from FP32 to FP8 with bias: 3-operand, quarter-size output
 // bias + f32 source -> i8 dest
 // Reuses avx10_convert_3op_packed from X86InstrAVX10.td for each VL variant.
 multiclass avx10_v2aux_cvt_3op_ps<bits<8> opc, string OpcodeStr,
@@ -224,7 +224,7 @@ multiclass avx10_v2aux_cvt_3op_ps<bits<8> opc, string OpcodeStr,
                                 VR128X:$src1, addr:$src2)>;
 }
 
-// Group C multiclass: i8 -> f32 expanding conversion (4x expansion, no broadcast)
+// Convert from FP8 to FP32: expanding conversion (4x, no broadcast)
 multiclass avx10_v2aux_cvt_2op_i8_to_f32<bits<8> opc, string OpcodeStr,
                                          SDNode OpNode> {
   defm Z : avx10_convert_2op_nomb_packed<opc, OpcodeStr, v16f32_info,
@@ -238,86 +238,122 @@ multiclass avx10_v2aux_cvt_2op_i8_to_f32<bits<8> opc, string OpcodeStr,
                                             WriteCvtPH2PSZ>, EVEX_V256;
 }
 
-// Group D multiclass: Truncating conversion (reg/mem dest, no masking)
+// Convert from FP8 to FP4: truncating conversion (reg/mem dest, no masking)
 // Uses MRMDestReg/MRMDestMem since destination can be memory operand.
 // Source is in reg field, destination is in r/m field.
-multiclass avx10_v2aux_cvt_trunc<bits<8> opc, string OpcodeStr,
-                                  X86VectorVTInfo SrcInfo,
-                                  X86VectorVTInfo DestInfo,
-                                  X86MemOperand x86memop,
-                                  SDPatternOperator OpNode> {
+multiclass avx10_v2aux_cvt_trunc_base<bits<8> opc, string OpcodeStr,
+                                      X86VectorVTInfo _src,
+                                      X86VectorVTInfo _dest,
+                                      X86MemOperand x86memop,
+                                      X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in {
-    def rr : I<opc, MRMDestReg, (outs DestInfo.RC:$dst),
-               (ins SrcInfo.RC:$src),
+    def rr : I<opc, MRMDestReg, (outs _dest.RC:$dst),
+               (ins _src.RC:$src),
                OpcodeStr # "\t{$src, $dst|$dst, $src}", []>,
-               EVEX, Sched<[WriteCvtPH2PSZ]>;
+             Sched<[sched]>, EVEX, EVEX_CD8<8, CD8VH>;
     let mayStore = 1 in
-    def mr : I<opc, MRMDestMem, (outs),
-               (ins x86memop:$dst, SrcInfo.RC:$src),
-               OpcodeStr # "\t{$src, $dst|$dst, $src}", []>,
-               EVEX, Sched<[WriteCvtPH2PSZ.Folded]>;
+      def mr : I<opc, MRMDestMem, (outs),
+                 (ins x86memop:$dst, _src.RC:$src),
+                 OpcodeStr # "\t{$src, $dst|$dst, $src}", []>,
+               Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VH>;
   }
 
-  // Intrinsic pattern
-  def : Pat<(DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src))),
-            (!cast<Instruction>(NAME # "rr") SrcInfo.RC:$src)>;
+  def : Pat<(_dest.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_src.Size)
+                        (_src.VT _src.RC:$src))),
+            (!cast<Instruction>(NAME # "rr") _src.RC:$src)>;
+  def : Pat<(!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_src.Size#"_mem")
+                addr:$dst, (_src.VT _src.RC:$src)),
+            (!cast<Instruction>(NAME # "mr") addr:$dst, _src.RC:$src)>;
 }
 
-// Group F helper: expanding conversion with masking, no broadcast (reg+mem)
-multiclass avx10_v2aux_cvt_expand_masked<bits<8> opc, string OpcodeStr,
-                                         X86VectorVTInfo _dest,
-                                         X86VectorVTInfo _src,
-                                         X86MemOperand x86memop,
-                                         SDPatternOperator OpNode> {
-  let ExeDomain = _dest.ExeDomain in {
-    defm rr : AVX512_maskable<opc, MRMSrcReg, _dest,
-                (outs _dest.RC:$dst),
-                (ins _src.RC:$src),
-                OpcodeStr, "$src", "$src",
-                (_dest.VT (OpNode (_src.VT _src.RC:$src)))>,
-               EVEX, Sched<[WriteCvtPH2PSZ]>;
-    let mayLoad = 1 in
-    defm rm : AVX512_maskable<opc, MRMSrcMem, _dest,
-                (outs _dest.RC:$dst),
-                (ins x86memop:$src),
-                OpcodeStr, "$src", "$src",
-                (_dest.VT (OpNode (_src.VT (load addr:$src))))>,
-               EVEX, Sched<[WriteCvtPH2PSZ.Folded]>;
-  }
+multiclass avx10_v2aux_cvt_trunc_b<bits<8> opc, string OpcodeStr> {
+  defm Z    : avx10_v2aux_cvt_trunc_base<opc, OpcodeStr, v64i8_info,
+                                         v32i8x_info, i256mem,
+                                         WriteCvtPH2PSZ>, EVEX_V512;
+  defm Z256 : avx10_v2aux_cvt_trunc_base<opc, OpcodeStr, v32i8x_info,
+                                         v16i8x_info, i128mem,
+                                         WriteCvtPH2PSY>, EVEX_V256;
+  defm Z128 : avx10_v2aux_cvt_trunc_base<opc, OpcodeStr, v16i8x_info,
+                                         v16i8x_info, i64mem,
+                                         WriteCvtPH2PS>, EVEX_V128;
 }
 
-// Group F helper: widening conversion with masking (reg-only, 6-bit to 8-bit)
-multiclass avx10_v2aux_cvt_widen_masked<bits<8> opc, string OpcodeStr,
-                                        X86VectorVTInfo _,
-                                        SDPatternOperator OpNode> {
+// Convert from FP4 to FP8: expanding with masking, no broadcast (reg+mem)
+multiclass avx10_v2aux_cvt_expand_masked_base<bits<8> opc, string OpcodeStr,
+                                              X86VectorVTInfo _,
+                                              X86VectorVTInfo _src,
+                                              X86MemOperand x86memop,
+                                              X86FoldableSchedWrite sched> {
   let ExeDomain = _.ExeDomain in {
-    defm rr : AVX512_maskable<opc, MRMSrcReg, _,
-                (outs _.RC:$dst),
-                (ins _.RC:$src),
-                OpcodeStr, "$src", "$src",
-                (_.VT (OpNode (_.VT _.RC:$src)))>,
-               EVEX, Sched<[WriteCvtPH2PSZ]>;
+    defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                              (ins _src.RC:$src),
+                              OpcodeStr, "$src", "$src",
+                              (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                                     (_src.VT _src.RC:$src)))>,
+                              Sched<[sched]>, EVEX, EVEX_CD8<8, CD8VH>;
+    let mayLoad = 1 in
+      defm rm : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                                (ins x86memop:$src),
+                                OpcodeStr, "$src", "$src",
+                                (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                                       (_src.VT (load addr:$src))))>,
+                                Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VH>;
   }
 }
 
-// Group H multiclass: Byte unpack with immediate
+multiclass avx10_v2aux_cvt_expand_masked_b<bits<8> opc, string OpcodeStr> {
+  defm Z    : avx10_v2aux_cvt_expand_masked_base<opc, OpcodeStr, v64i8_info,
+                                                 v32i8x_info, f256mem,
+                                                 WriteCvtPH2PSZ>, EVEX_V512;
+  defm Z256 : avx10_v2aux_cvt_expand_masked_base<opc, OpcodeStr, v32i8x_info,
+                                                 v16i8x_info, f128mem,
+                                                 WriteCvtPH2PSY>, EVEX_V256;
+  defm Z128 : avx10_v2aux_cvt_expand_masked_base<opc, OpcodeStr, v16i8x_info,
+                                                 v16i8x_info, f64mem,
+                                                 WriteCvtPH2PS>, EVEX_V128;
+}
+
+// Convert from FP6 to FP8: widening conversion with masking (reg-only)
+multiclass avx10_v2aux_cvt_widen_masked_base<bits<8> opc, string OpcodeStr,
+                                             X86VectorVTInfo _,
+                                             X86FoldableSchedWrite sched> {
+  let ExeDomain = _.ExeDomain in {
+    defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                              (ins _.RC:$src),
+                              OpcodeStr, "$src", "$src",
+                              (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                                     (_.VT _.RC:$src)))>,
+                              Sched<[sched]>, EVEX;
+  }
+}
+
+multiclass avx10_v2aux_cvt_widen_masked_b<bits<8> opc, string OpcodeStr> {
+  defm Z    : avx10_v2aux_cvt_widen_masked_base<opc, OpcodeStr, v64i8_info,
+                                                WriteCvtPH2PSZ>, EVEX_V512;
+  defm Z256 : avx10_v2aux_cvt_widen_masked_base<opc, OpcodeStr, v32i8x_info,
+                                                WriteCvtPH2PSY>, EVEX_V256;
+  defm Z128 : avx10_v2aux_cvt_widen_masked_base<opc, OpcodeStr, v16i8x_info,
+                                                WriteCvtPH2PS>, EVEX_V128;
+}
+
+// Unpack to Byte: byte unpack with immediate
 multiclass avx10_v2aux_shuffle_base<bits<8> opc, string OpcodeStr,
                                     X86VectorVTInfo _,
                                     X86FoldableSchedWrite sched> {
   let ImmT = Imm8 in {
     defm rri : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                    (ins _.RC:$src1, u8imm:$src2),
-                    OpcodeStr, "$src2, $src1", "$src1, $src2",
-                    (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
-                            (_.VT _.RC:$src1), (i8 timm:$src2)))>,
-                    Sched<[sched]>, EVEX, EVEX_CD8<8, CD8VF>;
+                               (ins _.RC:$src1, u8imm:$src2),
+                               OpcodeStr, "$src2, $src1", "$src1, $src2",
+                               (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                                      (_.VT _.RC:$src1), (i8 timm:$src2)))>,
+                               Sched<[sched]>, EVEX, EVEX_CD8<8, CD8VF>;
     let mayLoad = 1 in
       defm rmi : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                      (ins _.MemOp:$src1, u8imm:$src2),
-                      OpcodeStr, "$src2, $src1", "$src1, $src2",
-                      (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
-                              (_.VT (load addr:$src1)), (i8 timm:$src2)))>,
-                      Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VF>;
+                                 (ins _.MemOp:$src1, u8imm:$src2),
+                                 OpcodeStr, "$src2, $src1", "$src1, $src2",
+                                 (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                                        (_.VT (load addr:$src1)), (i8 timm:$src2)))>,
+                                 Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VF>;
   }
 }
 
@@ -335,7 +371,7 @@ multiclass avx10_v2aux_shuffle_b<bits<8> opc, string OpcodeStr> {
 //===----------------------------------------------------------------------===//
 
 //-------------------------------------------------
-// Group A: PS->8bit truncating conversions
+// Convert from FP32 to FP8
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {
@@ -360,7 +396,7 @@ let Predicates = [HasAVX10_V2_AUX] in {
 }
 
 //-------------------------------------------------
-// Group B: Bias PS->8bit conversions (3-operand)
+// Convert from FP32 to FP8 with bias
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {
@@ -383,7 +419,7 @@ let Predicates = [HasAVX10_V2_AUX] in {
 }
 
 //-------------------------------------------------
-// Group C: 8bit->PS expanding conversions
+// Convert from FP8 to FP32
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {
@@ -396,148 +432,71 @@ let Predicates = [HasAVX10_V2_AUX] in {
 }
 
 //-------------------------------------------------
-// Group D: BF8/HF8->BF4S truncating conversions
+// Convert from FP8 to FP4
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {
-  defm VCVTBF82BF4SZ    : avx10_v2aux_cvt_trunc<0x3D, "vcvtbf82bf4s",
-                                                v64i8_info, v32i8x_info, i256mem,
-                                                int_x86_avx10_vcvtbf82bf4s_512>,
-                          T_MAP5, XS, REX_W, EVEX_V512, EVEX_CD8<8, CD8VH>;
-  defm VCVTBF82BF4SZ256 : avx10_v2aux_cvt_trunc<0x3D, "vcvtbf82bf4s",
-                                                v32i8x_info, v16i8x_info, i128mem,
-                                                int_x86_avx10_vcvtbf82bf4s_256>,
-                          T_MAP5, XS, REX_W, EVEX_V256, EVEX_CD8<8, CD8VH>;
-  defm VCVTBF82BF4SZ128 : avx10_v2aux_cvt_trunc<0x3D, "vcvtbf82bf4s",
-                                                v16i8x_info, v16i8x_info, i64mem,
-                                                int_x86_avx10_vcvtbf82bf4s_128>,
-                          T_MAP5, XS, REX_W, EVEX_V128, EVEX_CD8<8, CD8VH>;
-
-  defm VCVTHF82BF4SZ    : avx10_v2aux_cvt_trunc<0x3D, "vcvthf82bf4s",
-                                                v64i8_info, v32i8x_info, i256mem,
-                                                int_x86_avx10_vcvthf82bf4s_512>,
-                          T_MAP5, XS, EVEX_V512, EVEX_CD8<8, CD8VH>;
-  defm VCVTHF82BF4SZ256 : avx10_v2aux_cvt_trunc<0x3D, "vcvthf82bf4s",
-                                                v32i8x_info, v16i8x_info, i128mem,
-                                                int_x86_avx10_vcvthf82bf4s_256>,
-                          T_MAP5, XS, EVEX_V256, EVEX_CD8<8, CD8VH>;
-  defm VCVTHF82BF4SZ128 : avx10_v2aux_cvt_trunc<0x3D, "vcvthf82bf4s",
-                                                v16i8x_info, v16i8x_info, i64mem,
-                                                int_x86_avx10_vcvthf82bf4s_128>,
-                          T_MAP5, XS, EVEX_V128, EVEX_CD8<8, CD8VH>;
-
-  // Memory store patterns for VCVTBF82BF4S
-  def : Pat<(int_x86_avx10_vcvtbf82bf4s_512_mem addr:$dst, VR512:$src),
-            (VCVTBF82BF4SZmr addr:$dst, VR512:$src)>;
-  def : Pat<(int_x86_avx10_vcvtbf82bf4s_256_mem addr:$dst, VR256X:$src),
-            (VCVTBF82BF4SZ256mr addr:$dst, VR256X:$src)>;
-  def : Pat<(int_x86_avx10_vcvtbf82bf4s_128_mem addr:$dst, VR128X:$src),
-            (VCVTBF82BF4SZ128mr addr:$dst, VR128X:$src)>;
-
-  // Memory store patterns for VCVTHF82BF4S
-  def : Pat<(int_x86_avx10_vcvthf82bf4s_512_mem addr:$dst, VR512:$src),
-            (VCVTHF82BF4SZmr addr:$dst, VR512:$src)>;
-  def : Pat<(int_x86_avx10_vcvthf82bf4s_256_mem addr:$dst, VR256X:$src),
-            (VCVTHF82BF4SZ256mr addr:$dst, VR256X:$src)>;
-  def : Pat<(int_x86_avx10_vcvthf82bf4s_128_mem addr:$dst, VR128X:$src),
-            (VCVTHF82BF4SZ128mr addr:$dst, VR128X:$src)>;
+  defm VCVTBF82BF4S : avx10_v2aux_cvt_trunc_b<0x3D, "vcvtbf82bf4s">,
+                      T_MAP5, XS, REX_W;
+  defm VCVTHF82BF4S : avx10_v2aux_cvt_trunc_b<0x3D, "vcvthf82bf4s">,
+                      T_MAP5, XS;
 }
 
 //-------------------------------------------------
-// Group E: Narrowing reg-only conversions (8-bit to 6-bit, no masking)
+// Convert from FP8 to FP6
 //-------------------------------------------------
 
-// Group E multiclass: Narrowing conversion reg-only (no masking, 8-bit to 6-bit)
-multiclass avx10_v2aux_cvt_narrow<bits<8> opc, string OpcodeStr,
-                                  X86VectorVTInfo Info,
-                                  SDPatternOperator OpNode> {
-  let hasSideEffects = 0 in {
-    def rr : I<opc, MRMSrcReg, (outs Info.RC:$dst),
-               (ins Info.RC:$src),
-               OpcodeStr # "\t{$src, $dst|$dst, $src}", []>,
-             EVEX, Sched<[WriteCvtPH2PSZ]>;
-  }
+// Convert from FP8 to FP6: narrowing conversion, reg-only, no masking
+multiclass avx10_v2aux_cvt_narrow_base<bits<8> opc, string OpcodeStr,
+                                       X86VectorVTInfo _,
+                                       X86FoldableSchedWrite sched> {
+  def rr : I<opc, MRMSrcReg, (outs _.RC:$dst),
+             (ins _.RC:$src),
+             OpcodeStr # "\t{$src, $dst|$dst, $src}",
+             [(set _.RC:$dst,
+               (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                       (_.VT _.RC:$src))))]>,
+           EVEX, Sched<[sched]>;
+}
 
-  // Intrinsic pattern
-  def : Pat<(Info.VT (OpNode (Info.VT Info.RC:$src))),
-            (!cast<Instruction>(NAME # "rr") Info.RC:$src)>;
+multiclass avx10_v2aux_cvt_narrow_b<bits<8> opc, string OpcodeStr> {
+  defm Z    : avx10_v2aux_cvt_narrow_base<opc, OpcodeStr, v64i8_info,
+                                          WriteCvtPH2PSZ>, EVEX_V512;
+  defm Z256 : avx10_v2aux_cvt_narrow_base<opc, OpcodeStr, v32i8x_info,
+                                          WriteCvtPH2PSY>, EVEX_V256;
+  defm Z128 : avx10_v2aux_cvt_narrow_base<opc, OpcodeStr, v16i8x_info,
+                                          WriteCvtPH2PS>, EVEX_V128;
 }
 
 let Predicates = [HasAVX10_V2_AUX] in {
-  defm VCVTBF82BF6SZ    : avx10_v2aux_cvt_narrow<0x3E, "vcvtbf82bf6s",
-                                                 v64i8_info, int_x86_avx10_vcvtbf82bf6s_512>,
-                          T_MAP5, XS, REX_W, EVEX_V512;
-  defm VCVTBF82BF6SZ256 : avx10_v2aux_cvt_narrow<0x3E, "vcvtbf82bf6s",
-                                                 v32i8x_info, int_x86_avx10_vcvtbf82bf6s_256>,
-                          T_MAP5, XS, REX_W, EVEX_V256;
-  defm VCVTBF82BF6SZ128 : avx10_v2aux_cvt_narrow<0x3E, "vcvtbf82bf6s",
-                                                 v16i8x_info, int_x86_avx10_vcvtbf82bf6s_128>,
-                          T_MAP5, XS, REX_W, EVEX_V128;
-
-  defm VCVTHF82HF6SZ    : avx10_v2aux_cvt_narrow<0x3C, "vcvthf82hf6s",
-                                                 v64i8_info, int_x86_avx10_vcvthf82hf6s_512>,
-                          T_MAP5, XS, EVEX_V512;
-  defm VCVTHF82HF6SZ256 : avx10_v2aux_cvt_narrow<0x3C, "vcvthf82hf6s",
-                                                 v32i8x_info, int_x86_avx10_vcvthf82hf6s_256>,
-                          T_MAP5, XS, EVEX_V256;
-  defm VCVTHF82HF6SZ128 : avx10_v2aux_cvt_narrow<0x3C, "vcvthf82hf6s",
-                                                 v16i8x_info, int_x86_avx10_vcvthf82hf6s_128>,
-                          T_MAP5, XS, EVEX_V128;
+  defm VCVTBF82BF6S : avx10_v2aux_cvt_narrow_b<0x3E, "vcvtbf82bf6s">,
+                      T_MAP5, XS, REX_W;
+  defm VCVTHF82HF6S : avx10_v2aux_cvt_narrow_b<0x3C, "vcvthf82hf6s">,
+                      T_MAP5, XS;
 }
 
 //-------------------------------------------------
-// Group F: Expanding/widening conversions with masking
+// Convert from FP4 to FP8 and from FP6 to FP8
 //-------------------------------------------------
 
 // VCVTBF42HF8: expanding (2x), with masking, no broadcast
 // Z128: xmm{k}{z}, xmm/m64  Z256: ymm{k}{z}, xmm/m128  Z: zmm{k}{z}, ymm/m256
 let Predicates = [HasAVX10_V2_AUX] in {
-  defm VCVTBF42HF8Z : avx10_v2aux_cvt_expand_masked<0x37, "vcvtbf42hf8",
-                                                    v64i8_info, v32i8x_info, f256mem,
-                                                    int_x86_avx10_vcvtbf42hf8_512>,
-                      T_MAP5, PS, EVEX_V512, EVEX_CD8<8, CD8VH>;
-  defm VCVTBF42HF8Z128 : avx10_v2aux_cvt_expand_masked<0x37, "vcvtbf42hf8",
-                                                       v16i8x_info, v16i8x_info, f64mem,
-                                                       int_x86_avx10_vcvtbf42hf8_128>,
-                         T_MAP5, PS, EVEX_V128, EVEX_CD8<8, CD8VH>;
-  defm VCVTBF42HF8Z256 : avx10_v2aux_cvt_expand_masked<0x37, "vcvtbf42hf8",
-                                                       v32i8x_info, v16i8x_info, f128mem,
-                                                       int_x86_avx10_vcvtbf42hf8_256>,
-                         T_MAP5, PS, EVEX_V256, EVEX_CD8<8, CD8VH>;
+  defm VCVTBF42HF8 : avx10_v2aux_cvt_expand_masked_b<0x37, "vcvtbf42hf8">,
+                     T_MAP5, PS;
 }
 let Predicates = [HasAVX10_V2_AUX] in {
-  // VCVTBF62HF8: widening (6-bit to 8-bit) with masking, reg-only (66.MAP5.W1)
-  defm VCVTBF62HF8Z    : avx10_v2aux_cvt_widen_masked<0x37, "vcvtbf62hf8",
-                                                      v64i8_info,
-                                                      int_x86_avx10_vcvtbf62hf8_512>,
-                         T_MAP5, PD, REX_W, EVEX_V512;
-  defm VCVTBF62HF8Z256 : avx10_v2aux_cvt_widen_masked<0x37, "vcvtbf62hf8",
-                                                      v32i8x_info,
-                                                      int_x86_avx10_vcvtbf62hf8_256>,
-                         T_MAP5, PD, REX_W, EVEX_V256;
-  defm VCVTBF62HF8Z128 : avx10_v2aux_cvt_widen_masked<0x37, "vcvtbf62hf8",
-                                                      v16i8x_info,
-                                                      int_x86_avx10_vcvtbf62hf8_128>,
-                         T_MAP5, PD, REX_W, EVEX_V128;
+  // VCVTBF62HF8: widening (6-bit to 8-bit) with masking, reg-only
+  defm VCVTBF62HF8 : avx10_v2aux_cvt_widen_masked_b<0x37, "vcvtbf62hf8">,
+                     T_MAP5, PD, REX_W;
 
-  // VCVTHF62HF8: widening (6-bit to 8-bit) with masking, reg-only (66.MAP5.W0)
-  defm VCVTHF62HF8Z    : avx10_v2aux_cvt_widen_masked<0x37, "vcvthf62hf8",
-                                                      v64i8_info,
-                                                      int_x86_avx10_vcvthf62hf8_512>,
-                         T_MAP5, PD, EVEX_V512;
-  defm VCVTHF62HF8Z256 : avx10_v2aux_cvt_widen_masked<0x37, "vcvthf62hf8",
-                                                      v32i8x_info,
-                                                      int_x86_avx10_vcvthf62hf8_256>,
-                         T_MAP5, PD, EVEX_V256;
-  defm VCVTHF62HF8Z128 : avx10_v2aux_cvt_widen_masked<0x37, "vcvthf62hf8",
-                                                      v16i8x_info,
-                                                      int_x86_avx10_vcvthf62hf8_128>,
-                         T_MAP5, PD, EVEX_V128;
+  // VCVTHF62HF8: widening (6-bit to 8-bit) with masking, reg-only
+  defm VCVTHF62HF8 : avx10_v2aux_cvt_widen_masked_b<0x37, "vcvthf62hf8">,
+                     T_MAP5, PD;
 }
 
 //-------------------------------------------------
-// Group G: VPMOVSSDB - Integer DWord->Byte symmetric signed saturation
-// F3.0F38.W0 0x41
+// Down convert DWord to Byte with symmetric signed saturation
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {
@@ -557,7 +516,7 @@ let Predicates = [HasAVX10_V2_AUX] in {
 }
 
 //-------------------------------------------------
-// Group H: VUNPACKB - Byte unpack with immediate
+// Unpack to Byte
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {

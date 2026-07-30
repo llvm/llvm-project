@@ -5200,151 +5200,151 @@ let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in
 
 // VCVTBF82PS
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf8_2ps128 : X86Builtin<"_Vector<4, float>(_Vector<16, char>)">;
+  def vcvtbf82ps_128 : X86Builtin<"_Vector<4, float>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf8_2ps256 : X86Builtin<"_Vector<8, float>(_Vector<16, char>)">;
+  def vcvtbf82ps_256 : X86Builtin<"_Vector<8, float>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf8_2ps512 : X86Builtin<"_Vector<16, float>(_Vector<16, char>)">;
+  def vcvtbf82ps_512 : X86Builtin<"_Vector<16, float>(_Vector<16, char>)">;
 }
 
 // VCVTHF82PS
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvthf8_2ps128 : X86Builtin<"_Vector<4, float>(_Vector<16, char>)">;
+  def vcvthf82ps_128 : X86Builtin<"_Vector<4, float>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvthf8_2ps256 : X86Builtin<"_Vector<8, float>(_Vector<16, char>)">;
+  def vcvthf82ps_256 : X86Builtin<"_Vector<8, float>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvthf8_2ps512 : X86Builtin<"_Vector<16, float>(_Vector<16, char>)">;
+  def vcvthf82ps_512 : X86Builtin<"_Vector<16, float>(_Vector<16, char>)">;
 }
 
 // Group E: Same-size reg-only conversions (no masking)
 
 // VCVTBF82BF6S
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf82bf6s128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvtbf82bf6s_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf82bf6s256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
+  def vcvtbf82bf6s_256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf82bf6s512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
+  def vcvtbf82bf6s_512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
 }
 
 // VCVTHF82HF6S
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvthf82hf6s128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvthf82hf6s_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvthf82hf6s256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
+  def vcvthf82hf6s_256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvthf82hf6s512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
+  def vcvthf82hf6s_512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
 }
 
 // Group F: Expanding/same-size conversions (no masking in intrinsic; use selectb for masking)
 
 // VCVTBF42HF8
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf42hf8128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvtbf42hf8_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf42hf8256 : X86Builtin<"_Vector<32, char>(_Vector<16, char>)">;
+  def vcvtbf42hf8_256 : X86Builtin<"_Vector<32, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf42hf8512 : X86Builtin<"_Vector<64, char>(_Vector<32, char>)">;
+  def vcvtbf42hf8_512 : X86Builtin<"_Vector<64, char>(_Vector<32, char>)">;
 }
 
 // VCVTBF62HF8
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf62hf8128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvtbf62hf8_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf62hf8256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
+  def vcvtbf62hf8_256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf62hf8512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
+  def vcvtbf62hf8_512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
 }
 
 // VCVTHF62HF8
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvthf62hf8128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvthf62hf8_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvthf62hf8256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
+  def vcvthf62hf8_256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvthf62hf8512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
+  def vcvthf62hf8_512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>)">;
 }
 
 // Group D: VCVTBF82BF4S / VCVTHF82BF4S - FP8 to FP4 truncating conversions
 
 // VCVTBF82BF4S - FP8 E5M2 to FP4 E2M1 with saturation (output is half size)
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf82bf4s128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvtbf82bf4s_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf82bf4s256 : X86Builtin<"_Vector<16, char>(_Vector<32, char>)">;
+  def vcvtbf82bf4s_256 : X86Builtin<"_Vector<16, char>(_Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf82bf4s512 : X86Builtin<"_Vector<32, char>(_Vector<64, char>)">;
+  def vcvtbf82bf4s_512 : X86Builtin<"_Vector<32, char>(_Vector<64, char>)">;
 }
 
 // VCVTBF82BF4S memory store variants (no masking - spec does not support masks)
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvtbf82bf4s128mem : X86Builtin<"void(void *, _Vector<16, char>)">;
+  def vcvtbf82bf4s_128_mem : X86Builtin<"void(void *, _Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtbf82bf4s256mem : X86Builtin<"void(void *, _Vector<32, char>)">;
+  def vcvtbf82bf4s_256_mem : X86Builtin<"void(void *, _Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvtbf82bf4s512mem : X86Builtin<"void(void *, _Vector<64, char>)">;
+  def vcvtbf82bf4s_512_mem : X86Builtin<"void(void *, _Vector<64, char>)">;
 }
 
 // VCVTHF82BF4S - FP8 E4M3 to FP4 E2M1 with saturation (output is half size)
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvthf82bf4s128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
+  def vcvthf82bf4s_128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvthf82bf4s256 : X86Builtin<"_Vector<16, char>(_Vector<32, char>)">;
+  def vcvthf82bf4s_256 : X86Builtin<"_Vector<16, char>(_Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvthf82bf4s512 : X86Builtin<"_Vector<32, char>(_Vector<64, char>)">;
+  def vcvthf82bf4s_512 : X86Builtin<"_Vector<32, char>(_Vector<64, char>)">;
 }
 
 // VCVTHF82BF4S memory store variants (no masking - spec does not support masks)
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vcvthf82bf4s128mem : X86Builtin<"void(void *, _Vector<16, char>)">;
+  def vcvthf82bf4s_128_mem : X86Builtin<"void(void *, _Vector<16, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvthf82bf4s256mem : X86Builtin<"void(void *, _Vector<32, char>)">;
+  def vcvthf82bf4s_256_mem : X86Builtin<"void(void *, _Vector<32, char>)">;
 }
 
 let Features = "avx10v2aux", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vcvthf82bf4s512mem : X86Builtin<"void(void *, _Vector<64, char>)">;
+  def vcvthf82bf4s_512_mem : X86Builtin<"void(void *, _Vector<64, char>)">;
 }
 
 // Group H: VUNPACKB - Byte unpack with immediate (no masking in intrinsic)
