@@ -20,7 +20,7 @@
 #   * pip install --user -r ./llvm/docs/requirements.txt
 #===------------------------------------------------------------------------===#
 
-set -ex
+set -e
 
 builddir=docs-build
 srcdir=$(readlink -f $(dirname "$(readlink -f "$0")")/../..)
