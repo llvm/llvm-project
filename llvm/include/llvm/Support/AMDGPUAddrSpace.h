@@ -196,6 +196,7 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
+  case VGPR:
     return -1;
   default:
     return 0;
