@@ -257,3 +257,4 @@ Detailed Usage
 ~~~~~~~~~~~~~~
 
 For extended documentation please refer to the `official site of CodeChecker <https://github.com/Ericsson/codechecker/blob/master/docs/usage.md>`_!
+

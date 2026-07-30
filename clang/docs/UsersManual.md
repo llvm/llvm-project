@@ -334,11 +334,10 @@ effect on formatting a simple conversion diagnostic, follow:
   ```
 
 - **sarif**: Emit diagnostics as a [SARIF](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) JSON
-  document. This is useful when diagnostics are consumed by tools, including AI
-  agents. SARIF diagnostics are written to standard error.
-  `-fno-caret-diagnostics` suppresses the final diagnostic summary so that
-  standard error contains a standalone JSON document. Suppress the existing
-  SARIF-stability warning too when capturing a standalone JSON document:
+  document. SARIF diagnostics are written to standard error.
+
+  `-Wno-sarif-format-unstable -fno-caret-diagnostics` can be added to disable extraeneous
+  prints if a standalone JSON file is desired.
 
   ```console
   clang -fdiagnostics-format=sarif -Wno-sarif-format-unstable -fno-caret-diagnostics t.c 2> diagnostics.sarif
