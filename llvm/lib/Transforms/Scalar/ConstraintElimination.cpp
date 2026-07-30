@@ -1812,9 +1812,11 @@ void ConstraintInfo::tightenBoundUsingNe(
 
     // If the system implies `A >= B` then together with `A != B` we get the
     // strict `A > B`; symmetrically `A <= B` becomes `A < B`.
-    for (CmpInst::Predicate NonStrict :
-         {IsSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE,
-          IsSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE}) {
+    CmpInst::Predicate GEPred =
+        IsSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+    CmpInst::Predicate LEPred =
+        IsSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+    for (CmpInst::Predicate NonStrict : {GEPred, LEPred}) {
       if (!doesHold(NonStrict, A, B))
         continue;
       CmpInst::Predicate Strict = CmpInst::getStrictPredicate(NonStrict);
