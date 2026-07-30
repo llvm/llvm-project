@@ -12,6 +12,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.libgen
     libc.include.malloc
     libc.include.math
+    libc.include.poll
+    libc.include.paths
     libc.include.search
     libc.include.setjmp
     libc.include.stdbit
@@ -20,7 +22,9 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdlib
     libc.include.string
     libc.include.strings
+    libc.include.sys_cdefs
     libc.include.uchar
+    libc.include.values
     libc.include.wchar
     libc.include.wctype
     libc.include.sys_param

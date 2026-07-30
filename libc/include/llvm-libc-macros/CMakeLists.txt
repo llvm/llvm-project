@@ -43,6 +43,18 @@ add_macro_header(
 )
 
 add_macro_header(
+  paths_macros
+  HDR
+    paths-macros.h
+)
+
+add_macro_header(
+  sys_cdefs_macros
+  HDR
+    sys-cdefs-macros.h
+)
+
+add_macro_header(
   assert_macros
   HDR
     assert-macros.h
@@ -145,6 +157,15 @@ add_macro_header(
   limits_macros
   HDR
     limits-macros.h
+)
+
+add_macro_header(
+  values_macros
+  HDR
+    values-macros.h
+  DEPENDS
+    .limits_macros
+    .float_macros
 )
 
 add_macro_header(

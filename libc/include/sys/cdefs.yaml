@@ -1,0 +1,10 @@
+header: sys/cdefs.h
+standards:
+  - gnu
+macros:
+  - macro_name: __BEGIN_DECLS
+    macro_header: sys-cdefs-macros.h
+  - macro_name: __END_DECLS
+    macro_header: sys-cdefs-macros.h
+  - macro_name: __THROW
+    macro_header: sys-cdefs-macros.h

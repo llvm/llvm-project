@@ -217,6 +217,22 @@ add_header(
 )
 
 add_header_macro(
+  paths
+  ../libc/include/paths.yaml
+  paths.h
+  DEPENDS
+    .llvm-libc-macros.paths_macros
+)
+
+add_header_macro(
+  values
+  ../libc/include/values.yaml
+  values.h
+  DEPENDS
+    .llvm-libc-macros.values_macros
+)
+
+add_header_macro(
   sysexits
   ../libc/include/sysexits.yaml
   sysexits.h
@@ -745,6 +761,14 @@ add_header(
     sys/queue.h
   DEPENDS
     .llvm-libc-macros.sys_queue_macros
+)
+
+add_header_macro(
+  sys_cdefs
+  ../libc/include/sys/cdefs.yaml
+  sys/cdefs.h
+  DEPENDS
+    .llvm-libc-macros.sys_cdefs_macros
 )
 
 add_header_macro(
