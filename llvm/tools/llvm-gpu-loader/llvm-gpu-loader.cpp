@@ -229,10 +229,9 @@ int main(int argc, const char **argv, const char **envp) {
           ELF::convertEMachineToArchName(ElfOrErr->getHeader().e_machine)
               .data()));
     }
+    InitArgs.NumPlatforms = 1;
+    InitArgs.Platforms = &Backend;
   }
-
-  InitArgs.NumPlatforms = 1;
-  InitArgs.Platforms = &Backend;
 
   SmallVector<const char *> NewArgv = {File.c_str()};
   llvm::transform(Args, std::back_inserter(NewArgv),
