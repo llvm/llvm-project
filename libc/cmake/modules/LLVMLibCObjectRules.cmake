@@ -400,7 +400,7 @@ function(create_entrypoint_object fq_target_name)
       # Until this is fixed upstream, we use -fno-caret-diagnostics to surpress
       # these.
       COMMAND ${LLVM_LIBC_CLANG_TIDY}
-              "--extra-arg=-fno-caret-diagnostics" --quiet
+              "--extra-arg=-fno-caret-diagnostics" --quiet --fix
               # Path to directory containing compile_commands.json
               -p ${PROJECT_BINARY_DIR}
               ${ADD_ENTRYPOINT_OBJ_SRCS}
