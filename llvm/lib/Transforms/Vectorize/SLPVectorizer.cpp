@@ -22667,7 +22667,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               return TTI->canSplatOperand(UserTE->getOpcode(),
                                           TE->UserTreeIndex.EdgeIdx);
             }))
-          ShuffleBuilder.addContextHint(TTI::VectorInstrContext::SplatOp);
+          ShuffleBuilder.addContextHint(TTI::VectorInstrContext::SplatOpFolded);
       }
     }
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size());

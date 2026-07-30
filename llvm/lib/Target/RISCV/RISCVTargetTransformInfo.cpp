@@ -1004,7 +1004,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
     ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
     VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
     TTI::VectorInstrContext VIC) const {
-  if (VIC == TTI::VectorInstrContext::SplatOp)
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded)
     return TTI::TCC_Free;
   return getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args,
                         CxtI);
@@ -2575,7 +2575,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   // Scalar splat operand can be folded for vector ops that support splatting
   // the scalar operand, so the explicit insertelement is free in this context.
   if (Opcode == Instruction::InsertElement &&
-      VIC == TTI::VectorInstrContext::SplatOp)
+      VIC == TTI::VectorInstrContext::SplatOpFolded)
     return TTI::TCC_Free;
 
   // Legalize the type.
