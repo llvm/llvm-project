@@ -1461,6 +1461,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("RawStringFormats", Style.RawStringFormats);
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
+    IO.mapOptional("ReflowCommentsNoStar", Style.ReflowCommentsNoStar);
     IO.mapOptional("RemoveBracesLLVM", Style.RemoveBracesLLVM);
     IO.mapOptional("RemoveEmptyLinesInUnwrappedLines",
                    Style.RemoveEmptyLinesInUnwrappedLines);
