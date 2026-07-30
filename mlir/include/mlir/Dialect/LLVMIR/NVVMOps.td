@@ -383,16 +383,22 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     `BasicPtxBuilderInterface` to abstract away low-level details of 
     PTX assembly formatting.
 
-    The `predicate` attribute is used to specify a predicate for the 
+    The `predicate` attribute is used to specify a predicate for the
     PTX instruction.
+
+    The `memory_clobber` attribute appends a "~{memory}" clobber to the
+    constraints of the generated inline assembly. Set it when the PTX reads
+    or writes memory beyond its listed operands (e.g. stores, atomics, or
+    instructions with acquire/release semantics such as mbarrier), so that
+    LLVM does not reorder memory accesses across the inline assembly.
 
     Example 1: Read-only Parameters
     ```mlir
-    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count) : !llvm.ptr, i32
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" ro(%barrier_gen, %count : !llvm.ptr, i32) memory_clobber
 
     // Lowers to:
-    llvm.inline_asm has_side_effects asm_dialect = att 
-      "mbarrier.init.b64 [$0], $1;", "l,r" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
+    llvm.inline_asm has_side_effects asm_dialect = att
+      "mbarrier.init.b64 [$0], $1;", "l,r,~{memory}" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
     ```
 
     Example 2: Read-only and Write-only Parameters
@@ -416,22 +422,24 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     ```
   }];
 
-  let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
-                       Variadic<AnyType>:$readWriteArgs, 
+  let arguments = (ins Variadic<AnyType>:$readOnlyArgs,
+                       Variadic<AnyType>:$readWriteArgs,
                        StrAttr:$ptxCode,
-                       PtxPredicate:$predicate);
-                      
+                       PtxPredicate:$predicate,
+                       UnitAttr:$memoryClobber);
+
   let results = (outs Variadic<AnyType>:$writeOnlyArgs);
-  
+
   let assemblyFormat = [{
     $ptxCode
     ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
     ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
-    (`,` `predicate` `=` $predicate^)? 
+    ( `memory_clobber` $memoryClobber^ )?
+    (`,` `predicate` `=` $predicate^)?
     attr-dict
     ( `->` type($writeOnlyArgs)^ )?
   }];
-  
+
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       StringRef ptxInstStr = getPtxCode();
@@ -441,6 +449,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
 
   let extraClassDeclaration = [{
     bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
+    bool hasMemoryClobber() { return getMemoryClobber(); }
   }];
 }
 
