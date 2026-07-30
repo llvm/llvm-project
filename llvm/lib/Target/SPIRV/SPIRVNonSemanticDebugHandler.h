@@ -73,6 +73,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DICompositeType nodes with DW_TAG_structure_type, DW_TAG_class_type, or
   // DW_TAG_union_type, partitioned in beginModule() for DebugTypeComposite.
   SmallVector<const DICompositeType *> CompositeTypes;
+  // DIDerivedType nodes with DW_TAG_typedef, partitioned in beginModule() for
+  // DebugTypedef emission.
+  SmallVector<const DIDerivedType *> TypedefTypes;
 
   // Filled in emitNonSemanticGlobalDebugInfo(): DI types to their result
   // registers.
@@ -369,6 +372,21 @@ private:
       const DICompositeType *CT, ArrayRef<MCRegister> MemberRegs,
       MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
       SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugTypedef for the typedef derived type \p TD (a \c
+  /// DIDerivedType with \c DW_TAG_typedef). Operands: Name, Base Type, Source,
+  /// Line, Column, Parent. Parent is the enclosing type when \c TD->getScope()
+  /// is an emitted \c DIType, otherwise the first module \c
+  /// DebugCompilationUnit.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p TD's base type has not been emitted into \c
+  /// DebugTypeRegs.
+  std::optional<MCRegister> emitDebugTypedef(const DIDerivedType *TD,
+                                             MCRegister VoidTypeReg,
+                                             MCRegister I32TypeReg,
+                                             MCRegister ExtInstSetReg,
+                                             SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for
