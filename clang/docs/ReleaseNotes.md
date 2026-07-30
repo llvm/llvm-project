@@ -870,6 +870,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
