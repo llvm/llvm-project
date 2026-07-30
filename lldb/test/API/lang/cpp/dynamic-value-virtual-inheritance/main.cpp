@@ -19,7 +19,9 @@ template <typename A, int B> struct Complicated : virtual public Base {
   bool is_complicated = true;
 };
 
-template <typename A> struct Evil : public Templated<int, double>, public Complicated<Pair<Interface, int>, 42> {
+template <typename A>
+struct Evil : public Templated<int, double>,
+              public Complicated<Pair<Interface, int>, 42> {
   bool is_evil = true;
 };
 
