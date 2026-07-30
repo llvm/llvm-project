@@ -2347,7 +2347,7 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       getTypes().getCIRGenRecordLayout(currentClass);
 
   // The field is declared directly in this class.
-  if (field->getParent() == currentClass) {
+  if (astContext.isSameEntity(field->getParent(), currentClass)) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
