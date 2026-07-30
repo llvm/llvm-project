@@ -23,7 +23,6 @@
 #include <__type_traits/is_pointer.h>
 
 #include <cstdint>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -66,17 +65,16 @@ private:
 
   union {
     pointer __ptr_;
-    alignas(_Ptr) unsigned char __data_[sizeof(_Ptr)];
+    alignas(pointer) uintptr_t __data_;
   };
 
-  uintptr_t __as_num() const { return std::bit_cast<uintptr_t>(__data_); }
-  uintptr_t __count() const { return __as_num() & __count_mask_; }
+  uintptr_t __count() const { return __data_ & __count_mask_; }
 
   constexpr _Ptr __current() const {
     if consteval {
       return __ptr_;
     } else {
-      return std::bit_cast<pointer>(__as_num() & __ptr_mask_) + __count();
+      return std::bit_cast<pointer>(__data_ & __ptr_mask_) + __count();
     }
   }
 
@@ -84,15 +82,13 @@ private:
     if consteval {
       __ptr_ += __n;
     } else {
-      uintptr_t __num = __as_num() + __n;
-      __builtin_memcpy(__data_, &__num, sizeof(__data_));
+      __data_ += __n;
     }
   }
 
   constexpr explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
-    if !consteval {
-      __update(0);
-    }
+    _LIBCPP_ASSERT_INTERNAL(
+        (__p & __count_mask_) == 0, "static_packed_bounded_iter: Expected alignment bits of ptr to be 0");
   }
 
 public:
