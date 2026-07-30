@@ -3091,14 +3091,18 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
 
 TypeSP
 TypeSystemSwiftTypeRef::FindBuiltinTypeInModule(ConstString mangled_name) {
-  // The same lookup BuildDeclContext() uses for a mangling that demangles to a
-  // builtin type name.
   std::vector<CompilerContext> context = {
-      {CompilerContextKind::Module, ConstString("Builtin")},
       {CompilerContextKind::AnyType, mangled_name}};
-  return FindTypeInModule(
-      context, GetModule(),
-      SwiftLanguageRuntime::GetManglingFlavor(mangled_name.GetStringRef()));
+  TypeQuery query(context, TypeQueryOptions::e_find_one);
+  query.SetLanguages(TypeSystemSwift::GetSupportedLanguagesForTypes());
+
+  TypeResults results;
+  if (auto *M = GetModule())
+    M->FindTypes(query, results);
+
+  if (results.Done(query))
+    return results.GetFirstType();
+  return {};
 }
 
 // Tests
