@@ -263,32 +263,10 @@ processReturnLikeOp(OpTy ret, mlir::Value newArg,
     rewriter.replaceOpWithNewOp<OpTy>(ret);
   }
   // Delete result old local storage if unused.
-  if (resultStorage) {
-    if (auto alloc = resultStorage.getDefiningOp<fir::AllocaOp>()) {
+  if (resultStorage)
+    if (auto alloc = resultStorage.getDefiningOp<fir::AllocaOp>())
       if (alloc->use_empty())
         rewriter.eraseOp(alloc);
-    } else if (auto convert = resultStorage.getDefiningOp<fir::ConvertOp>()) {
-      // Result storage may have been promoted to the heap: it then looks like
-      // convert(allocmem) with a matching freemem(allocmem). Delete the three
-      // ops together (the result buffer is now the caller-owned argument and
-      // must not be freed here).
-      if (auto allocmem = convert.getValue().getDefiningOp<fir::AllocMemOp>()) {
-        fir::FreeMemOp freemem;
-        for (mlir::Operation *user : allocmem->getUsers())
-          if (auto fm = mlir::dyn_cast<fir::FreeMemOp>(user))
-            freemem = fm;
-        if (freemem && convert->use_empty() &&
-            llvm::all_of(allocmem->getUsers(), [&](mlir::Operation *user) {
-              return user == convert.getOperation() ||
-                     user == freemem.getOperation();
-            })) {
-          rewriter.eraseOp(convert);
-          rewriter.eraseOp(freemem);
-          rewriter.eraseOp(allocmem);
-        }
-      }
-    }
-  }
   return mlir::success();
 }
 
