@@ -11,8 +11,6 @@
 ; CHECK-DAG: %[[#gs]] = OpVariable %[[#PtrWG]] Workgroup
 
 ; No Linkage capability and no LinkageAttributes decoration may be present.
-; A NOT-only prefix scans the whole module (the capability and decoration
-; sections precede the OpVariable definition in SPIR-V layout).
 ; CHECK-NOT: OpCapability Linkage
 ; CHECK-NOT: LinkageAttributes
 
