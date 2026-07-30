@@ -116,6 +116,7 @@ def PAUnsupported : AArch64Unsupported;
 
 include "AArch64SchedA320.td"
 include "AArch64SchedA53.td"
+include "AArch64SchedA65.td"
 include "AArch64SchedA55.td"
 include "AArch64SchedA510.td"
 include "AArch64SchedA57.td"
