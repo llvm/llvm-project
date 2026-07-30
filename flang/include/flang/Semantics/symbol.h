@@ -469,12 +469,23 @@ public:
   void set_cudaDataAttr(std::optional<common::CUDADataAttr> attr) {
     cudaDataAttr_ = attr;
   }
+  // Specification expressions from the bounds of a zero-size explicit-shape
+  // bounds array (F2023).  The entity is scalar, so these bounds are not
+  // part of shape(), but they are still specification expressions that must be
+  // validated during declaration checking, when the scope is fully resolved.
+  void add_droppedBoundToCheck(Bound &&bound) {
+    droppedBoundsToCheck_.emplace_back(std::move(bound));
+  }
+  const std::list<Bound> &droppedBoundsToCheck() const {
+    return droppedBoundsToCheck_;
+  }
 
 private:
   MaybeExpr init_;
   const parser::Expr *unanalyzedPDTComponentInit_{nullptr};
   ArraySpec shape_;
   ArraySpec coshape_;
+  std::list<Bound> droppedBoundsToCheck_;
   common::IgnoreTKRSet ignoreTKR_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   std::optional<common::CUDADataAttr> cudaDataAttr_;

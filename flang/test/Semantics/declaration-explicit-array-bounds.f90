@@ -51,11 +51,39 @@ contains
   impure integer function impf()
     impf = 1
   end function
+  impure function impureZeroSize() result(r)
+    integer :: r(0)
+  end function
 end module
 subroutine s1()
   use m
   !ERROR: Invalid specification expression: reference to impure function 'impf'
   integer :: z(impf() : [integer::])
+  ! A bare zero-size upper bound declares a scalar (implicit lower bound 1),
+  ! but the bound is still a specification expression: the deferred check must
+  ! reject the impure function reference.
+  !ERROR: Invalid specification expression: reference to impure function 'impurezerosize'
+  integer :: z2(impureZeroSize())
+  ! Both bounds of a zero-size explicit-shape-bounds-spec are still validated,
+  ! even though the entity is scalar.
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  !ERROR: Invalid specification expression: reference to impure function 'impurezerosize'
+  integer :: z3(impf() : impureZeroSize())
+end subroutine
+! The bounds of a zero-size (scalar) declaration are validated during
+! declaration checking, when the scope is complete -- not during name
+! resolution.  The later DATA statement makes 'k' saved and initialized;
+! because the check happens once the scope is final, the zero-size case (zero)
+! reports the same portability warning as the ordinary broadcast case
+! (nonzero).  Checking 'k' early, before DATA had been processed, would have
+! diagnosed these two declarations inconsistently.
+subroutine timing()
+  integer :: k
+  !PORTABILITY: specification expression refers to local object 'k' (initialized and saved) [-Wsaved-local-in-spec-expr]
+  integer :: zero(k : [integer::])
+  !PORTABILITY: specification expression refers to local object 'k' (initialized and saved) [-Wsaved-local-in-spec-expr]
+  integer :: nonzero(k : [1, 2])
+  data k / 5 /
 end subroutine
 subroutine bar(n, bounds, rank_bounds)
   integer, intent(IN) :: n 

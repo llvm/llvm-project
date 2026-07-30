@@ -9,7 +9,6 @@
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
-#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
@@ -192,6 +191,12 @@ public:
   ArraySpec AnalyzeDeferredShapeSpecList(const parser::DeferredShapeSpecList &);
   ArraySpec Analyze(const parser::ComponentArraySpec &);
   ArraySpec Analyze(const parser::CoarraySpec &);
+  // Bounds of a zero-size explicit-shape bounds array (F2023).  The entity is
+  // scalar, so these are dropped from the shape, but they remain specification
+  // expressions to be validated during declaration checking.
+  std::list<Bound> TakeDroppedBoundsToCheck() {
+    return std::move(droppedBoundsToCheck_);
+  }
 
 private:
   SemanticsContext &context_;
@@ -199,6 +204,10 @@ private:
   // Set when an explicit-shape-bounds-spec with a zero-size bounds array
   // legitimately produces a scalar (rank 0), leaving arraySpec_ empty.
   bool zeroRankExplicitBounds_{false};
+  // Bounds dropped from a scalar (zero-size bounds array) declaration's shape,
+  // retained as specification expressions to be validated during declaration
+  // checking.
+  std::list<Bound> droppedBoundsToCheck_;
 
   template <typename T> void Analyze(const std::list<T> &list) {
     for (const auto &elem : list) {
@@ -227,9 +236,13 @@ private:
       const parser::ExplicitShapeBoundsSpec &x);
 };
 
-ArraySpec AnalyzeArraySpec(
-    SemanticsContext &context, const parser::ArraySpec &arraySpec) {
-  return ArraySpecAnalyzer{context}.Analyze(arraySpec);
+ArraySpec AnalyzeArraySpec(SemanticsContext &context,
+    const parser::ArraySpec &arraySpec,
+    std::list<Bound> &droppedBoundsToCheck) {
+  ArraySpecAnalyzer analyzer{context};
+  ArraySpec result{analyzer.Analyze(arraySpec)};
+  droppedBoundsToCheck = analyzer.TakeDroppedBoundsToCheck();
+  return result;
 }
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &context, const parser::ComponentArraySpec &arraySpec) {
@@ -369,8 +382,11 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
                 },
       x.u);
   // arraySpec_ may legitimately be empty when an explicit-shape-bounds-spec
-  // has a zero-size bounds array, which declares a scalar (rank 0).
-  CHECK(!arraySpec_.empty() || zeroRankExplicitBounds_);
+  // has a zero-size bounds array, which declares a scalar (rank 0).  It may
+  // also be empty on an error path, where a fatal diagnostic has already been
+  // emitted and we are only continuing far enough to surface it.
+  CHECK(context_.AnyFatalError() || !arraySpec_.empty() ||
+      zeroRankExplicitBounds_);
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
@@ -508,27 +524,6 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
   // i.e. the entity is scalar.
   std::int64_t numDims{ubIsRank1 ? *ubExtent : (lbIsRank1 ? *lbExtent : 0)};
 
-  // A zero-sized rank-1 bounds array makes the entity a scalar, so neither
-  // bound is emitted into a ShapeSpec.  The per-ShapeSpec specification-
-  // expression checks in declaration checking would therefore never see these
-  // bounds, letting invalid ones slip through (impure function references,
-  // local objects, and other restricted expressions).  Validate them here
-  // instead; any diagnostic rejects the declaration.
-  if (numDims == 0) {
-    const Scope &scope{context_.FindScope(parser::FindSourceLocation(x))};
-    auto checkBound{[&](const Bound &bound, parser::CharBlock at) {
-      if (const auto &expr{bound.GetExplicit()}) {
-        auto restorer{context_.foldingContext().messages().SetLocation(at)};
-        evaluate::CheckSpecificationExpr(*expr, scope,
-            context_.foldingContext(), /*forElementalFunctionResult=*/false);
-      }
-    }};
-    checkBound(ubResult->first, parser::FindSourceLocation(upperBound));
-    if (lbResult) {
-      checkBound(lbResult->first, parser::FindSourceLocation(*lowerBoundOpt));
-    }
-  }
-
   // numDims is the rank determined from the bounds array(s) (already validated
   // above to agree in size when both are rank-1).  Reject a rank above the
   // maximum here, in signed 64-bit arithmetic, before numDims is narrowed to
@@ -555,16 +550,12 @@ ArraySpecAnalyzer::CheckExplicitShapeBoundsSpec(
 
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   auto result{CheckExplicitShapeBoundsSpec(x)};
-  // Every path that results in result being false emits an error. In the event
-  // that we bail early without emitting an error, we silently pass the fallback
-  // Bound{1} WITHOUT failing. This check ensures that if we failed, we emitted
-  // an error message. This way we can pass the
-  //   CHECK(!arraySpec_.empty());
-  // in Analyze(ArraySpec). If we don't, it'll crash before getting to emit
-  // the real (user) error messages.
+  // Every path that yields no result has already emitted a fatal diagnostic.
+  // Leave arraySpec_ empty and return; the CHECK in Analyze(ArraySpec) permits
+  // an empty spec once a fatal error has been recorded, so the real (user)
+  // error messages surface instead of an internal-error abort.
   if (!result) {
     CHECK(context_.AnyFatalError());
-    arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
     return;
   }
   // For rank-1 bounds, emit N ShapeSpecs each wrapping a scalar
@@ -573,8 +564,15 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   int numDims = static_cast<int>(result->numDims);
   if (numDims == 0) {
     // A zero-size bounds array declares a scalar (rank 0); leave arraySpec_
-    // empty and record that the empty result is intentional.
+    // empty and record that the empty result is intentional.  The bounds are
+    // not part of the shape, but they are still specification expressions;
+    // stash them so declaration checking validates them once the scope is
+    // fully resolved (see ObjectEntityDetails::droppedBoundsToCheck()).
     zeroRankExplicitBounds_ = true;
+    droppedBoundsToCheck_.push_back(std::move(result->ubound));
+    if (result->lbound) {
+      droppedBoundsToCheck_.push_back(std::move(*result->lbound));
+    }
     return;
   }
   for (int dim = 0; dim < numDims; ++dim) {

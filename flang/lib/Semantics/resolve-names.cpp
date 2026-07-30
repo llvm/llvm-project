@@ -460,15 +460,23 @@ protected:
   const ArraySpec &arraySpec();
   void set_arraySpec(const ArraySpec arraySpec) { arraySpec_ = arraySpec; }
   const ArraySpec &coarraySpec();
+  std::list<Bound> &droppedBoundsToCheck() { return droppedBoundsToCheck_; }
   void BeginArraySpec();
   void EndArraySpec();
-  void ClearArraySpec() { arraySpec_.clear(); }
+  void ClearArraySpec() {
+    arraySpec_.clear();
+    droppedBoundsToCheck_.clear();
+  }
   void ClearCoarraySpec() { coarraySpec_.clear(); }
 
 private:
   // arraySpec_/coarraySpec_ are populated from any ArraySpec/CoarraySpec
   ArraySpec arraySpec_;
   ArraySpec coarraySpec_;
+  // Bounds of a zero-size explicit-shape bounds array (F2023): the entity is
+  // scalar, so these specification expressions are stashed here and validated
+  // later rather than stored in the shape.
+  std::list<Bound> droppedBoundsToCheck_;
   // When an ArraySpec is under an AttrSpec or ComponentAttrSpec, it is moved
   // into attrArraySpec_
   ArraySpec attrArraySpec_;
@@ -2935,7 +2943,7 @@ void ArraySpecVisitor::Post(const parser::RankClause &x) {
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
   CHECK(arraySpec_.empty());
-  arraySpec_ = AnalyzeArraySpec(context(), x);
+  arraySpec_ = AnalyzeArraySpec(context(), x, droppedBoundsToCheck_);
 }
 void ArraySpecVisitor::Post(const parser::ComponentArraySpec &x) {
   CHECK(arraySpec_.empty());
@@ -2963,6 +2971,7 @@ void ArraySpecVisitor::EndArraySpec() {
   CHECK(coarraySpec_.empty());
   attrArraySpec_.clear();
   attrCoarraySpec_.clear();
+  droppedBoundsToCheck_.clear();
 }
 void ArraySpecVisitor::PostAttrSpec() {
   // Save dimension/codimension from attrs so we can process array/coarray-spec
@@ -6477,7 +6486,11 @@ void DeclarationVisitor::Post(const parser::ObjectDecl &x) {
 // Declare an entity not yet known to be an object or proc.
 Symbol &DeclarationVisitor::DeclareUnknownEntity(
     const parser::Name &name, Attrs attrs) {
-  if (!arraySpec().empty() || !coarraySpec().empty()) {
+  if (!arraySpec().empty() || !coarraySpec().empty() ||
+      !droppedBoundsToCheck().empty()) {
+    // A zero-size explicit-shape bounds array (F2023) declares a scalar with an
+    // empty arraySpec, but still carries deferred bound checks that must be
+    // stashed on an ObjectEntityDetails, so route it to DeclareObjectEntity.
     return DeclareObjectEntity(name, attrs);
   } else {
     Symbol &symbol{DeclareEntity<EntityDetails>(name, attrs)};
@@ -6606,6 +6619,12 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
       } else {
         details->set_coshape(coarraySpec());
       }
+    }
+    // Stash bounds from a zero-size explicit-shape bounds array (F2023).  The
+    // entity is scalar, so these are not part of its shape, but they are still
+    // specification expressions to be validated during declaration checking.
+    for (Bound &bound : droppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(std::move(bound));
     }
     SetBindNameOn(symbol);
   }
