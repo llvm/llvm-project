@@ -61,39 +61,31 @@ public:
   using value_type        = iter_value_t<_Ptr>;
 
 private:
-  static constexpr size_t __bits_available_ = std::countr_zero(_LIBCPP_ALIGNOF(value_type));
-  static constexpr uintptr_t __count_mask_  = (1 << __bits_available_) - 1;
-  static constexpr uintptr_t __ptr_mask_    = ~__count_mask_;
-
-  struct __count_rep {
-    uintptr_t __count_ : __bits_available_;
-  };
-
-  union __rep {
-    uintptr_t __value_;
-    __count_rep __crep_;
-  };
+  static constexpr uintptr_t __count_mask_ = (1 << std::countr_zero(_LIBCPP_ALIGNOF(value_type))) - 1;
+  static constexpr uintptr_t __ptr_mask_   = ~__count_mask_;
 
   union {
     pointer __ptr_;
-    __rep __underlying_;
+    alignas(_Ptr) unsigned char __data_[sizeof(_Ptr)];
   };
+
+  uintptr_t __as_num() const { return std::bit_cast<uintptr_t>(__data_); }
+  uintptr_t __count() const { return __as_num() & __count_mask_; }
 
   constexpr _Ptr __current() const {
     if consteval {
       return __ptr_;
     } else {
-      return std::bit_cast<pointer>(__underlying_.__value_ & __ptr_mask_) + __count();
+      return std::bit_cast<pointer>(__as_num() & __ptr_mask_) + __count();
     }
   }
-
-  constexpr uintptr_t __count() const { return __underlying_.__crep_.__count_; }
 
   constexpr void __update(difference_type __n) {
     if consteval {
       __ptr_ += __n;
     } else {
-      __underlying_.__crep_.__count_ += __n;
+      uintptr_t __num = __as_num() + __n;
+      __builtin_memcpy(__data_, &__num, sizeof(__data_));
     }
   }
 
@@ -114,11 +106,7 @@ public:
   template <class _Ptr2>
     requires is_convertible_v<_Ptr2, _Ptr>
   constexpr __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag, _RangeCapacity>& __y)
-      : __ptr_(__y.__ptr_) {
-    if !consteval {
-      __underlying_.__crep_.__count_ = __y.__count();
-    }
-  }
+      : __ptr_(__y.__ptr_) {}
 
   [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
     if !consteval {
