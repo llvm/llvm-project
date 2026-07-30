@@ -5203,7 +5203,6 @@ void CodeGenFunction::EmitCallArgs(
     // Reverse the writebacks to match the MSVC ABI.
     Args.reverseWritebacks();
   }
-
 }
 
 namespace {
@@ -5304,7 +5303,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
 
   if (IsBypassed && HasAggregateEvalKind) {
-    LValue LV = getPreEvaluatedTemporary(cast<MaterializeTemporaryExpr>(SubExpr));
+    LValue LV =
+        getPreEvaluatedTemporary(cast<MaterializeTemporaryExpr>(SubExpr));
     args.addUncopiedAggregate(LV, type);
     args.back().setMoveExpr(MoveExpr);
     return;
@@ -5671,7 +5671,6 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
       MaxVectorWidth = std::max(MaxVectorWidth, getMaxVectorWidth(I));
   return MaxVectorWidth;
 }
-
 
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,

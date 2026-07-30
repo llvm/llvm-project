@@ -6284,7 +6284,8 @@ static void disableCopyElision(Expr *E) {
   }
 }
 
-static ExprResult InitializeAndBypassArg(Sema &S, const InitializedEntity &Entity,
+static ExprResult InitializeAndBypassArg(Sema &S,
+                                         const InitializedEntity &Entity,
                                          Expr *Arg, bool NeedsBypass,
                                          bool IsListInitialization,
                                          bool AllowExplicit) {
@@ -6309,7 +6310,8 @@ static ExprResult InitializeAndBypassArg(Sema &S, const InitializedEntity &Entit
         Arg->getType()->isRecordType() || Arg->getType()->isAnyComplexType();
     if (IsAggregate)
       disableCopyElision(Result);
-    Result = CoroutineSuspendParameterBypassExpr::Create(S.Context, PreBypassArg, Result);
+    Result = CoroutineSuspendParameterBypassExpr::Create(S.Context,
+                                                         PreBypassArg, Result);
   }
   return Result;
 }
@@ -6406,8 +6408,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       }
       bool NeedsBypass = CallUsesInAlloca && CallHasSuspend &&
                          (!ProtoArgType->isReferenceType() || Arg->isPRValue());
-      ExprResult ArgE = InitializeAndBypassArg(*this, Entity, Arg, NeedsBypass,
-                                               IsListInitialization, AllowExplicit);
+      ExprResult ArgE = InitializeAndBypassArg(
+          *this, Entity, Arg, NeedsBypass, IsListInitialization, AllowExplicit);
       if (ArgE.isInvalid())
         return true;
       Arg = ArgE.getAs<Expr>();
@@ -6452,11 +6454,13 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         Invalid |= Arg.isInvalid();
         if (!Arg.isInvalid()) {
           Expr *E = Arg.get();
-          bool NeedsBypass = CallUsesInAlloca && CallHasSuspend && E->isPRValue();
+          bool NeedsBypass =
+              CallUsesInAlloca && CallHasSuspend && E->isPRValue();
           if (NeedsBypass) {
             InitializedEntity ArgEntity =
                 InitializedEntity::InitializeTemporary(E->getType());
-            ExprResult ArgE = InitializeAndBypassArg(*this, ArgEntity, E, true, false, false);
+            ExprResult ArgE =
+                InitializeAndBypassArg(*this, ArgEntity, E, true, false, false);
             if (!ArgE.isInvalid())
               E = ArgE.getAs<Expr>();
           }
