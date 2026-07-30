@@ -1863,8 +1863,8 @@ define amdgpu_kernel void @v_clamp_constant_preserve_f32(ptr addrspace(1) %out) 
   ret void
 }
 
-define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(ptr addrspace(1) %out) #0 {
-; GFX6-LABEL: v_clamp_constant_preserve_denorm_f32:
+define amdgpu_kernel void @v_clamp_constant_flush_denorm_f32(ptr addrspace(1) %out) #0 {
+; GFX6-LABEL: v_clamp_constant_flush_denorm_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
@@ -1875,7 +1875,7 @@ define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(ptr addrspace(1)
 ; GFX6-NEXT:    buffer_store_dword v1, v[0:1], s[0:3], 0 addr64
 ; GFX6-NEXT:    s_endpgm
 ;
-; GFX8-LABEL: v_clamp_constant_preserve_denorm_f32:
+; GFX8-LABEL: v_clamp_constant_flush_denorm_f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1887,7 +1887,7 @@ define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(ptr addrspace(1)
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: v_clamp_constant_preserve_denorm_f32:
+; GFX9-LABEL: v_clamp_constant_flush_denorm_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -1896,7 +1896,7 @@ define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(ptr addrspace(1)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_clamp_constant_preserve_denorm_f32:
+; GFX11-LABEL: v_clamp_constant_flush_denorm_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
@@ -1906,7 +1906,7 @@ define amdgpu_kernel void @v_clamp_constant_preserve_denorm_f32(ptr addrspace(1)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: v_clamp_constant_preserve_denorm_f32:
+; GFX12-LABEL: v_clamp_constant_flush_denorm_f32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
