@@ -152,7 +152,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
 
     // Resume the debug loop.
     ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
+        m_session_data->m_debugger->GetActiveException();
     if (active_exception) {
       // Resume the process and continue processing debug events.  Mask the
       // exception so that from the process's view, there is no indication that
