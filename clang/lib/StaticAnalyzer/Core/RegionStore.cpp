@@ -829,6 +829,27 @@ public: // Part of public interface to class.
       }
     }
   }
+
+  void iterClusterBindings(Store store, const MemRegion *BaseRegion,
+                           ClusterBindingsHandler &f) override {
+    assert(BaseRegion == BaseRegion->getBaseRegion() &&
+           "Should only be called for base regions");
+    RegionBindingsRef B = getRegionBindings(store);
+    const ClusterBindings *Cluster = B.lookup(BaseRegion);
+    if (!Cluster)
+      return;
+    for (const auto &[Key, Value] : *Cluster) {
+      // Incorporate the offset.
+      std::optional<uint64_t> BitOffset;
+      if (!Key.hasSymbolicOffset())
+        BitOffset = Key.getOffset();
+      BindingKind Kind =
+          Key.isDirect() ? BindingKind::Direct : BindingKind::Default;
+      if (!f.HandleBinding(*this, store, Key.getRegion(), BitOffset, Kind,
+                           Value))
+        return;
+    }
+  }
 };
 
 } // end anonymous namespace
