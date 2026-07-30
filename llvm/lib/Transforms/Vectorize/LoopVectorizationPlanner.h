@@ -97,8 +97,7 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
-public:
-  /// InsertPoint - A saved insertion point.
+private:
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
     VPBasicBlock::iterator Point;
@@ -136,7 +135,6 @@ public:
     template <typename T> void insert(T &R) { return Block->insert(R, Point); }
   };
 
-private:
   VPInsertPoint InsertPt;
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
