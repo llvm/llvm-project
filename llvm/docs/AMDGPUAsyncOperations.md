@@ -32,7 +32,7 @@ Produces an asyncmark and appends it to the current sequence.
 Ensures that the length of the current sequence is at most `N` by removing
 asyncmarks from the start of the sequence if it is more than `N`.
 
-### Completion
+### Completion of Asyncmarks
 
 An `asyncmark()` operation `X` that produces an asyncmark `M` is
 *completed-at* a `wait.asyncmark()` operation `Y` in the same function body
@@ -52,13 +52,16 @@ the thread can use an asyncmark to ensure that the async operation is
 An async operation `A` *initiated-by* an instruction `I` is *completed-at* some
 `wait.asyncmark()` operation `Y` if there exists an `asyncmark()` operation `X`
 such that:
-  - `I` is *program-ordered* before `X`, and
-  - `X` is *completed-at* `Y`.
+- `I` is *program-ordered* before `X`, and
+- `X` is *completed-at* `Y`.
 
 ### happens-before
 
-If an async operation `A` is *completed-at* a `wait.asyncmark()` operation `Y`,
-then `A` *happens-before* `Y`.
+When an instruction `I` initiates an async operation `A`, `I` *happens-before*
+`A`.
+
+If `A` is *completed-at* a `wait.asyncmark()` operation `Y`, then `A`
+*happens-before* `Y`.
 
 ## Examples
 
