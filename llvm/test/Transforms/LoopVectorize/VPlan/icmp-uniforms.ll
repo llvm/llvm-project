@@ -8,8 +8,6 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; PR30627. Check that a compare instruction with more than one use is not
 ; recognized as uniform and is vectorized.
 ;
-; CHECK-NOT: Found uniform instruction: %cond = icmp slt i64 %i.next, %n
-;
 define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF

@@ -1149,13 +1149,7 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
   if (!R)
     return *this;
 
-  const Record::Field *F = nullptr;
-  for (auto &It : R->fields()) {
-    if (It.Offset == Offset) {
-      F = &It;
-      break;
-    }
-  }
+  const Record::Field *F = R->findField(Offset);
   if (!F)
     return *this;
 
