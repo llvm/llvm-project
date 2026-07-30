@@ -595,8 +595,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 ///        splat (i1 true))
 /// ```
 bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
-  auto *BinOp = dyn_cast<BinaryOperator>(&I);
-  if (!BinOp || BinOp->getOpcode() != Instruction::Or)
+  if (I.getOpcode() != Instruction::Or)
     return false;
 
   // The vector being checked (%vec in the example).
@@ -604,12 +603,16 @@ bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
   // The values being searched for (e.g, 100, 32, 10).
   SmallSetVector<Constant *, 16> SearchValues;
 
-  SmallPtrSet<Value *, 4> Visited;
-  SmallVector<Value *> Worklist = {BinOp->getOperand(0), BinOp->getOperand(1)};
   unsigned NumVisited = 0;
+  InstructionCost OldCost = 0;
+  SmallPtrSet<Value *, 4> Visited;
+  SmallVector<Value *> Worklist = {&I};
   while (!Worklist.empty()) {
     auto *Op = dyn_cast<Instruction>(Worklist.pop_back_val());
-    if (++NumVisited >= MaxInstrsToScan || !Op || !Op->hasOneUse())
+    if (!Op || ++NumVisited >= MaxInstrsToScan)
+      return false;
+
+    if (Op != &I && !Op->hasOneUse())
       return false;
 
     if (!Visited.insert(Op).second)
@@ -617,10 +620,10 @@ bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
 
     Constant *C;
     Value *Source = nullptr;
-    // TODO: Extend to "not equals" compares.
     if (match(Op, m_c_SpecificICmp(CmpInst::ICMP_EQ, m_Value(Source),
                                    m_ConstantSplat(m_Constant(C)))) &&
         !C->getType()->isPointerTy()) {
+      // TODO: Extend to "not equals" compares.
       SearchValues.insert(C);
     } else if (match(Op, m_Intrinsic<Intrinsic::experimental_vector_match>(
                              m_Value(Source), m_Constant(C),
@@ -646,31 +649,21 @@ bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
       CompareSource = Source;
     else if (Source && CompareSource != Source)
       return false;
+
+    OldCost += TTI.getInstructionCost(Op, CostKind);
   }
 
   if (SearchValues.size() <= 1)
     return false;
 
-  auto *ResultTy = cast<VectorType>(BinOp->getType());
+  auto *ResultTy = cast<VectorType>(I.getType());
   auto *SrcType = cast<VectorType>(CompareSource->getType());
-
-  // Cost the old code as-if it were all a chain of compares. It could include
-  // a match, but that will always be replaced with another match (with a
-  // needle size >= to the current match).
-  InstructionCost OldCost =
-      TTI.getCmpSelInstrCost(Instruction::ICmp, SrcType, ResultTy,
-                             CmpInst::ICMP_EQ, CostKind) *
-      SearchValues.size();
-  OldCost += TTI.getArithmeticInstrCost(Instruction::Or, ResultTy, CostKind) *
-             (SearchValues.size() - 1);
-
   ElementCount SrcElts = SrcType->getElementCount();
 
+  // Look for a match needle size (up to the size of SrcType) that's profitable.
   InstructionCost NewCost;
   Constant *NeedleVector;
   SmallVector<Constant *> MatchValues(SearchValues.getArrayRef());
-
-  // Look for a match needle size (up to the size of SrcType) that's profitable.
   do {
     NeedleVector = ConstantVector::get(MatchValues);
     IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_match, ResultTy,
@@ -679,9 +672,8 @@ bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
     if (NewCost < OldCost)
       break;
 
-    // Pad the needle by duplicating the first element.
-    unsigned PadValues = NextPowerOf2(MatchValues.size()) - MatchValues.size();
-    MatchValues.append(SmallVector<Constant *>(PadValues, MatchValues[0]));
+    // Extend the needle vector by duplicating the first element.
+    MatchValues.resize(NextPowerOf2(MatchValues.size()), MatchValues[0]);
   } while (MatchValues.size() <= SrcElts.getKnownMinValue());
 
   if (NewCost >= OldCost)
