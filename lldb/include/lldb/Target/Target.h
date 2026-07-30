@@ -187,6 +187,8 @@ public:
 
   FileSpec GetSaveJITObjectsDir() const;
 
+  FileSpecList GetSourceFileSearchPaths() const;
+
   bool GetEnableSyntheticValue() const;
 
   bool ShowHexVariableValuesWithLeadingZeroes() const;
@@ -667,6 +669,23 @@ public:
   static ArchSpec GetDefaultArchitecture();
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
+
+  /// Search target.source-file-search-paths for \a original_file using suffix
+  /// matching. Progressively strips leading path components from the original
+  /// path and checks whether the remainder exists under each search path.
+  ///
+  /// For example, given original_file "/build/src/lib/foo.cpp" and search
+  /// path "/home/user/project", this tries:
+  ///   /home/user/project/src/lib/foo.cpp
+  ///   /home/user/project/lib/foo.cpp
+  ///   /home/user/project/foo.cpp
+  /// and returns the first match found.
+  ///
+  /// When a match is found, a source mapping is automatically added to
+  /// target.source-map so that subsequent lookups for files with the same
+  /// prefix are resolved without repeating the filesystem search.
+  std::optional<FileSpec>
+  FindFileInSourceFileSearchPaths(const FileSpec &original_file);
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
 
