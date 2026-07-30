@@ -62,6 +62,50 @@ LogicalResult AtomicAndOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.AtomicCompareExchangeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareExchangeOp::verify() {
+  if (failed(verifyMemorySemantics(getOperation(), getEqualSemantics())))
+    return failure();
+  return verifyMemorySemantics(getOperation(), getUnequalSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicCompareExchangeWeakOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareExchangeWeakOp::verify() {
+  if (failed(verifyMemorySemantics(getOperation(), getEqualSemantics())))
+    return failure();
+  return verifyMemorySemantics(getOperation(), getUnequalSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicExchangeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicExchangeOp::verify() {
+  return verifyMemorySemantics(getOperation(), getSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicLoadOp::verify() {
+  return verifyMemorySemantics(getOperation(), getSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicStoreOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicStoreOp::verify() {
+  return verifyMemorySemantics(getOperation(), getSemantics());
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.AtomicIAddOp
 //===----------------------------------------------------------------------===//
 
