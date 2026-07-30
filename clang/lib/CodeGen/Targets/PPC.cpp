@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -1046,17 +1047,19 @@ void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
   if (CGM.getTypes().isLongDoubleReferenced()) {
     llvm::LLVMContext &Ctx = CGM.getLLVMContext();
     const auto *flt = &CGM.getTarget().getLongDoubleFormat();
-    StringRef Type;
+    std::optional<llvm::LongDoubleFormat> Format;
     if (flt == &llvm::APFloat::PPCDoubleDouble())
-      Type = "ppc_fp128";
+      Format = llvm::LongDoubleFormat::PPCDoubleDouble;
     else if (flt == &llvm::APFloat::IEEEquad())
-      Type = "fp128";
+      Format = llvm::LongDoubleFormat::IEEEquad;
     else if (flt == &llvm::APFloat::IEEEdouble())
-      Type = "double";
+      Format = llvm::LongDoubleFormat::IEEEdouble;
 
-    if (!Type.empty())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "long-double-type",
-                                    llvm::MDString::get(Ctx, Type));
+    if (Format) {
+      CGM.getModule().addModuleFlag(
+          llvm::Module::Error, "long-double-type",
+          llvm::MDString::get(Ctx, llvm::getLongDoubleFormatName(*Format)));
+    }
   }
 }
 

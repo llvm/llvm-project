@@ -46,6 +46,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -6639,13 +6640,15 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       // soft/hard ABI flag, so leave a valid value alone. Map any other value
       // (including unrecognized ones, which were never valid) to the default.
       if (!FloatABI::parseABIType(Format)) {
-        StringRef NewType = StringSwitch<StringRef>(Format)
-                                .Case("ieeequad", "fp128")
-                                .Case("ieeedouble", "double")
-                                .Default("ppc_fp128");
-        Metadata *Ops[3] = {Op->getOperand(0),
-                            MDString::get(M.getContext(), "long-double-type"),
-                            MDString::get(M.getContext(), NewType)};
+        LongDoubleFormat NewFormat =
+            StringSwitch<LongDoubleFormat>(Format)
+                .Case("ieeequad", LongDoubleFormat::IEEEquad)
+                .Case("ieeedouble", LongDoubleFormat::IEEEdouble)
+                .Default(LongDoubleFormat::PPCDoubleDouble);
+        Metadata *Ops[3] = {
+            Op->getOperand(0),
+            MDString::get(M.getContext(), "long-double-type"),
+            MDString::get(M.getContext(), getLongDoubleFormatName(NewFormat))};
         ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
         Changed = true;
       }
