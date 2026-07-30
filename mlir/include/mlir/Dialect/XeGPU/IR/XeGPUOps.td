@@ -1500,70 +1500,76 @@ def XeGPU_TruncfOp
   let hasVerifier = 1;
 }
 
-def XeGPU_BitcastShuffleOp
-    : XeGPU_Op<"bitcast_shuffle", [Pure]> {
-  let summary = "Bit-preserving type conversion and re-distribution of a "
-                "subgroup's fragments across its lanes.";
+def XeGPU_LaneShuffleOp
+    : XeGPU_Op<"lane_shuffle", [Pure, AllTypesMatch<["source", "result"]>]> {
+  let summary = "Re-distributes a subgroup's fragments across its lanes.";
 
   let description = [{
-    `xegpu.bitcast_shuffle` is a lane-level operation. The `source` operand is
-    the fragment (a scalar or 1D vector) held by one lane, and the `result` is
-    the fragment that lane holds afterwards. It reinterprets the fragments as a
-    different element type, possibly with a different number of elements per
-    lane, and at the same time re-distributes the data across the lanes of the
-    subgroup.
+    `xegpu.lane_shuffle` is a lane-level operation. The `source` operand is the
+    fragment (a 1D vector) held by one lane, and the `result` is the fragment
+    that lane holds afterwards. It re-distributes the elements across the lanes
+    of the subgroup without changing their type, so `source` and `result` have
+    the same type.
 
-    Both `source` and `result` must be a scalar or a 1D vector of numerical
-    type, and they must have a different type. When they have the same number of
-    elements the operation degenerates into a plain bitcast. Otherwise the total
-    number of bits per lane must be equal on both sides.
+    Let `S` be the subgroup size and `N` the number of elements per lane, so the
+    subgroup collectively holds `S * N` elements. Number these elements by their
+    logical position `0 .. S*N-1`. The `mode` selects which of the two
+    orientations of the `S x N` (lane, element) index grid the operation maps
+    between:
 
-    For example, consider `vector<2xi16> -> i32` with a subgroup size of 8. Each
-    lane's `source` is a `vector<2xi16>` of two 16-bit half-words, so the
-    subgroup holds 8 * 2 = 16 half-words in total. Number these half-words 0..15
-    and denote a lane's `source` as `<a,b>`, so lane `i` starts with half-words
-    `<2*i, 2*i+1>`. The `result` `i32` holds two packed half-words, denoted
-    `a|b` (`a` in the low bits, `b` in the high bits):
+    * `pack`: element `j` of lane `i` holds logical position `j * S + i` before
+      the operation and `i * N + j` after it. A lane's elements end up at
+      consecutive logical positions.
+    * `unpack`: the reverse mapping. A lane's elements end up strided by `S`.
+
+    The two modes are exact inverses, so shuffling one way and then the other
+    yields the original fragments.
+
+    For example, consider `vector<2xi16>` with a subgroup size of 8, denoting a
+    lane's fragment as `<a,b>`. In `pack` mode:
 
     ```
     lane:       0      1      2      3      4      5      6      7
-    source:   <0,1>  <2,3>  <4,5>  <6,7>  <8,9> <10,11> <12,13> <14,15>
-    result:    0|2    4|6   8|10   12|14   1|3    5|7    9|11   13|15
+    source:   <0,8>  <1,9>  <2,10> <3,11> <4,12> <5,13> <6,14> <7,15>
+    result:   <0,1>  <2,3>  <4,5>  <6,7>  <8,9> <10,11> <12,13> <14,15>
     ```
 
-    The half-words are gathered one `source` element position at a time, in
-    lane order: first every lane's element 0 (half-words 0, 2, 4, ..., 14), then
-    every lane's element 1 (half-words 1, 3, 5, ..., 15). This sequence is then
-    handed back out two half-words per lane, in lane order, to form each lane's
-    `result`. In general each lane's two result half-words come from two
-    different lanes' `source` fragments -- that is the cross-lane shuffle.
+    In general each lane's result elements come from `N` different lanes'
+    `source` fragments -- that is the cross-lane shuffle.
 
-    The reverse pair `i32 -> vector<2xi16>` undoes this exactly, so bitcasting
-    to one type and back yields the original fragments.
+    This operation implements the `xegpu.convert_layout` semantics at the lane
+    level, for the case where the `lane_layout` is the same but the `lane_data`
+    is different.
 
     The operation assumes a full subgroup (the subgroup size equals the maximum
     subgroup size) and that all lanes execute the same dynamic instance of the
     operation; otherwise the behavior is undefined.
+
+    Arguments:
+    - `source`: The 1D vector fragment held by one lane.
+    - `mode`: The direction of the shuffle, either `pack` or `unpack`.
   }];
 
-  let arguments = (ins XeGPU_BitcastShuffleType:$source);
-  let results = (outs XeGPU_BitcastShuffleType:$result);
+  let arguments = (ins XeGPU_LaneShuffleType:$source,
+                       XeGPU_LaneShuffleModeAttr:$mode);
+  let results = (outs XeGPU_LaneShuffleType:$result);
 
   let extraClassDeclaration = [{
-    Type getSourceType() {
-      return getSource().getType();
+    VectorType getSourceType() {
+      return llvm::cast<VectorType>(getSource().getType());
     }
 
-    Type getResultType() {
-      return getResult().getType();
+    VectorType getResultType() {
+      return llvm::cast<VectorType>(getResult().getType());
     }
   }];
 
   let assemblyFormat = [{
-    $source attr-dict `:` type($source) `->` type($result)
+    $source $mode attr-dict `:` type($source)
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,

@@ -694,16 +694,9 @@ func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
 }
 
 // -----
-func.func @bitcast_shuffle_same_type(%a: vector<2xi16>) {
-  // expected-error@+1 {{op source and result must have different types}}
-  %1 = xegpu.bitcast_shuffle %a : vector<2xi16> -> vector<2xi16>
-  return
-}
-
-// -----
-func.func @bitcast_shuffle_size_mismatch(%a: i32) {
-  // expected-error@+1 {{op source and result must have the same total size in bits}}
-  %1 = xegpu.bitcast_shuffle %a : i32 -> vector<4xi16>
+func.func @lane_shuffle_single_element(%a: vector<1xi32>) {
+  // expected-error@+1 {{op requires a source vector with at least 2 elements}}
+  %1 = xegpu.lane_shuffle %a pack : vector<1xi32>
   return
 }
 

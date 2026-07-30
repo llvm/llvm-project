@@ -697,31 +697,38 @@ gpu.func @truncf(%a: vector<8x16xf16>) {
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @bitcast_shuffle_scalar_to_vector_16
-gpu.func @bitcast_shuffle_scalar_to_vector_16(%a: i32) {
-  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : i32 -> vector<2xi16>
-  %1 = xegpu.bitcast_shuffle %a : i32 -> vector<2xi16>
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_16
+gpu.func @lane_shuffle_pack_16(%a: vector<2xi16>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<2xi16>
+  %1 = xegpu.lane_shuffle %a pack : vector<2xi16>
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @bitcast_shuffle_vector_16_to_scalar
-gpu.func @bitcast_shuffle_vector_16_to_scalar(%a: vector<2xi16>) {
-  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : vector<2xi16> -> i32
-  %1 = xegpu.bitcast_shuffle %a : vector<2xi16> -> i32
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_16
+gpu.func @lane_shuffle_unpack_16(%a: vector<2xi16>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<2xi16>
+  %1 = xegpu.lane_shuffle %a unpack : vector<2xi16>
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @bitcast_shuffle_scalar_to_vector_8
-gpu.func @bitcast_shuffle_scalar_to_vector_8(%a: i32) {
-  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : i32 -> vector<4xi8>
-  %1 = xegpu.bitcast_shuffle %a : i32 -> vector<4xi8>
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_8
+gpu.func @lane_shuffle_pack_8(%a: vector<4xi8>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xi8>
+  %1 = xegpu.lane_shuffle %a pack : vector<4xi8>
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @bitcast_shuffle_vector_8_to_scalar
-gpu.func @bitcast_shuffle_vector_8_to_scalar(%a: vector<4xi8>) {
-  // CHECK: %{{.+}} = xegpu.bitcast_shuffle %{{.+}} : vector<4xi8> -> i32
-  %1 = xegpu.bitcast_shuffle %a : vector<4xi8> -> i32
+// CHECK-LABEL: gpu.func @lane_shuffle_unpack_8
+gpu.func @lane_shuffle_unpack_8(%a: vector<4xi8>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} unpack : vector<4xi8>
+  %1 = xegpu.lane_shuffle %a unpack : vector<4xi8>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @lane_shuffle_pack_f8
+gpu.func @lane_shuffle_pack_f8(%a: vector<4xf8E5M2>) {
+  // CHECK: %{{.+}} = xegpu.lane_shuffle %{{.+}} pack : vector<4xf8E5M2>
+  %1 = xegpu.lane_shuffle %a pack : vector<4xf8E5M2>
   gpu.return
 }
 
