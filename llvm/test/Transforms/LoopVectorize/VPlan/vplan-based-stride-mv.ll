@@ -30,11 +30,9 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -43,7 +41,7 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -52,7 +50,7 @@ define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -163,11 +161,9 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<1>, ir<8>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -176,7 +172,7 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -185,7 +181,7 @@ define void @byte_gep_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -238,8 +234,7 @@ define void @byte_gep_under_scaled_stride(ptr noalias %p.out, ptr %p, i64 %strid
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -248,7 +243,7 @@ define void @byte_gep_under_scaled_stride(ptr noalias %p.out, ptr %p, i64 %strid
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -257,7 +252,7 @@ define void @byte_gep_under_scaled_stride(ptr noalias %p.out, ptr %p, i64 %strid
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -313,8 +308,7 @@ define void @byte_gep_under_scaled_stride_extra_narrow_use(ptr noalias %p.out, p
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%ld>, ir<2>
 ; CHECK-NEXT:      EMIT ir<%val> = select ir<%stride.i1>, ir<%ld>, ir<%mul>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -323,7 +317,7 @@ define void @byte_gep_under_scaled_stride_extra_narrow_use(ptr noalias %p.out, p
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -332,7 +326,7 @@ define void @byte_gep_under_scaled_stride_extra_narrow_use(ptr noalias %p.out, p
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -390,8 +384,7 @@ define void @byte_gep_over_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -400,7 +393,7 @@ define void @byte_gep_over_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -409,7 +402,7 @@ define void @byte_gep_over_scaled_stride(ptr noalias %p.out, ptr %p, i64 %stride
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -462,8 +455,7 @@ define void @byte_gep_non_power_of_two_scaled_stride(ptr noalias %p.out, ptr %p,
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -472,7 +464,7 @@ define void @byte_gep_non_power_of_two_scaled_stride(ptr noalias %p.out, ptr %p,
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -481,7 +473,7 @@ define void @byte_gep_non_power_of_two_scaled_stride(ptr noalias %p.out, ptr %p,
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -532,8 +524,7 @@ define void @byte_gep_nonscaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -542,7 +533,7 @@ define void @byte_gep_nonscaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -551,7 +542,7 @@ define void @byte_gep_nonscaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -604,8 +595,7 @@ define void @byte_gep_negated_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -614,7 +604,7 @@ define void @byte_gep_negated_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -623,7 +613,7 @@ define void @byte_gep_negated_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -678,14 +668,11 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld0>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP6]]>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld1>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -694,7 +681,7 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -703,7 +690,7 @@ define void @shared_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -763,14 +750,11 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld0>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP8]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld1>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP9]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP10]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -779,7 +763,7 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -788,7 +772,7 @@ define void @independent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stri
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -848,13 +832,11 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; CHECK-NEXT:      EMIT ir<%idx1> = mul ir<%iv>, ir<%stride1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld0>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -863,7 +845,7 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -872,7 +854,7 @@ define void @dependent_strides(ptr noalias %p.out, ptr %p0, ptr %p1, i64 %stride
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -936,12 +918,10 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld1>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -950,7 +930,7 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -959,7 +939,7 @@ define void @dependent_strides_reverse_order(ptr noalias %p.out, ptr %p0, ptr %p
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1019,8 +999,7 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1.ext> = sext ir<%ld1> to i64
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1.ext>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1029,7 +1008,7 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1038,7 +1017,7 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1098,8 +1077,7 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1.ext>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1108,7 +1086,7 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1117,7 +1095,7 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1179,14 +1157,11 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%gep.ld0>, ir<1>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld0>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld0> = load vp<[[VP6]]>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld1>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld1> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1195,7 +1170,7 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1204,7 +1179,7 @@ define void @strided_interleave(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1264,11 +1239,9 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld.base> = getelementptr ir<%p>, ir<%offset>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%gep.ld.base>, ir<%mul>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1277,7 +1250,7 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1286,7 +1259,7 @@ define void @in_loop_base(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset) 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1343,11 +1316,9 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%mul>, ir<%offset>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1356,7 +1327,7 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1365,7 +1336,7 @@ define void @base_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride, i64 %offset
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1419,8 +1390,7 @@ define void @non_invariant_uniform_base(ptr noalias %p.out, ptr %p, i64 %stride)
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1429,7 +1399,7 @@ define void @non_invariant_uniform_base(ptr noalias %p.out, ptr %p, i64 %stride)
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1438,7 +1408,7 @@ define void @non_invariant_uniform_base(ptr noalias %p.out, ptr %p, i64 %stride)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1493,8 +1463,7 @@ define void @non_invariant_uniform_stride(ptr noalias %p.out, ptr %p, ptr %p.uni
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1503,7 +1472,7 @@ define void @non_invariant_uniform_stride(ptr noalias %p.out, ptr %p, ptr %p.uni
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1512,7 +1481,7 @@ define void @non_invariant_uniform_stride(ptr noalias %p.out, ptr %p, ptr %p.uni
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1574,11 +1543,9 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1587,7 +1554,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1596,7 +1563,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1648,8 +1615,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%stride>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1658,7 +1624,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1667,7 +1633,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1720,8 +1686,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1730,7 +1695,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1739,7 +1704,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1797,11 +1762,9 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1810,7 +1773,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1819,7 +1782,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1875,11 +1838,9 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1888,7 +1849,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1897,7 +1858,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1986,15 +1947,12 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.ld2> = getelementptr ir<%p2>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld2>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld2> = load vp<[[VP8]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld2> = load ir<%gep.ld2>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld>, ir<%ld2>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2003,7 +1961,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2012,7 +1970,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP11]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2069,8 +2027,7 @@ define void @actual_stride_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%base>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2079,7 +2036,7 @@ define void @actual_stride_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2088,7 +2045,7 @@ define void @actual_stride_not_in_ir(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2144,11 +2101,9 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<42>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2157,7 +2112,7 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2166,7 +2121,7 @@ define void @nd_array_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2218,8 +2173,7 @@ define void @nd_array_non_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<%idx>, ir<42>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2228,7 +2182,7 @@ define void @nd_array_non_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2237,7 +2191,7 @@ define void @nd_array_non_last_idx(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2287,8 +2241,7 @@ define void @nd_array_multiple_idxs(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<1>, ir<%idx>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2297,7 +2250,7 @@ define void @nd_array_multiple_idxs(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2306,7 +2259,7 @@ define void @nd_array_multiple_idxs(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2360,11 +2313,9 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2373,7 +2324,7 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2382,7 +2333,7 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2437,11 +2388,9 @@ define void @trunc_stride(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i32, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i32, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2450,7 +2399,7 @@ define void @trunc_stride(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2459,7 +2408,7 @@ define void @trunc_stride(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2514,8 +2463,7 @@ define void @trunc_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stri
 ; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%ld>, ir<2>
 ; CHECK-NEXT:      EMIT ir<%val> = select ir<%stride.i1>, ir<%ld>, ir<%mul>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i32, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2524,7 +2472,7 @@ define void @trunc_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stri
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2533,7 +2481,7 @@ define void @trunc_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stri
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2598,14 +2546,11 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:      EMIT ir<%idx.ext> = mul ir<%iv.ext>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.trunc> = getelementptr ir<%p0>, ir<%idx.trunc>
 ; CHECK-NEXT:      EMIT ir<%gep.ext> = getelementptr ir<%p0>, ir<%idx.ext>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i32, ir<%gep.trunc>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld.trunc> = load vp<[[VP6]]>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i32, ir<%gep.ext>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld.ext> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld.trunc> = load ir<%gep.trunc>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld.ext> = load ir<%gep.ext>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld.trunc>, ir<%ld.ext>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i32, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2614,7 +2559,7 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2623,7 +2568,7 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2765,8 +2710,7 @@ define void @stride_poison(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2775,7 +2719,7 @@ define void @stride_poison(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2784,7 +2728,7 @@ define void @stride_poison(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2837,11 +2781,9 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2850,7 +2792,7 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2859,7 +2801,7 @@ define void @basic_strided_store(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2913,14 +2855,11 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%ld>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%gep.ptr.st> = getelementptr ir<%p.ptr.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ptr, ir<%gep.ptr.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%gep.ld>
+; CHECK-NEXT:      EMIT store ir<%gep.ld>, ir<%gep.ptr.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -2929,7 +2868,7 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -2938,7 +2877,7 @@ define void @ptr_vec_use(ptr noalias %p.out, ptr noalias %p.ptr.out, ptr %p, i64
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -2995,12 +2934,10 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%val> = mul ir<%ld>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -3009,7 +2946,7 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -3018,7 +2955,7 @@ define void @stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -3074,12 +3011,10 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:      EMIT ir<%iv.times.stride> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%iv.times.stride>, ir<42>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer i64, ir<%gep.ld>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ld> = load vp<[[VP6]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%val> = mul ir<%ld>, ir<%idx>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%val>
+; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -3088,7 +3023,7 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -3097,7 +3032,7 @@ define void @offset_stride_idx_vec_use(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -3180,8 +3115,7 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:      ir<%iv.0> = WIDEN-INDUCTION ir<1>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      ir<%iv.1> = WIDEN-INDUCTION ir<0>, vp<[[VP3]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv.1>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer float, ir<%gep.dst>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<0.000000e+00>
+; CHECK-NEXT:      EMIT store ir<0.000000e+00>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT ir<%iv.1.next> = add ir<%iv.1>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT ir<%iv.0.next> = add ir<%iv.0>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.0.next>, ir<100>
@@ -3192,8 +3126,8 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv.0>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = exiting-iv-value ir<%iv.1>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv.0>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv.1>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP4]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -3202,8 +3136,8 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<%start.ext>, ir-bb<entry> ], [ ir<%start.ext>, strides.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP11]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<%start.ext>, ir-bb<entry> ], [ ir<%start.ext>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
