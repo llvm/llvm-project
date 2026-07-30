@@ -416,7 +416,7 @@ public:
     return true;
   }
 
-bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
     auto startLoc = E->getSelectorStartLoc();
     // Identify the selector and the method declaration
     if (auto *Method = E->getMethodDecl()) {
@@ -447,7 +447,6 @@ bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
     return true;
   }
 
-
   bool VisitObjCPropertyDecl(clang::ObjCPropertyDecl *PD) {
     reportType(PD->getLocation(), PD);
     return true;
@@ -476,7 +475,7 @@ bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
     }
 
     // Report the receiver to ensure its declaring header is kept.
-   if (E->isObjectReceiver()) {
+    if (E->isObjectReceiver()) {
       QualType Type = E->getBase()->IgnoreImpCasts()->getType();
       if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
         if (auto *Interface = ObjCPtr->getInterfaceDecl()) {
