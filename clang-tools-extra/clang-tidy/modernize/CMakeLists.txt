@@ -35,6 +35,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseBoolLiteralsCheck.cpp
   UseConstraintsCheck.cpp
   UseDefaultMemberInitCheck.cpp
+  UseDigitSeparatorCheck.cpp
   UseDesignatedInitializersCheck.cpp
   UseEmplaceCheck.cpp
   UseEqualsDefaultCheck.cpp
