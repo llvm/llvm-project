@@ -437,7 +437,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     }
   }
 
-  // Emit a PseudoAddUI instead of LUI+ADD when the offset is a multiple of
+  // Emit a PseudoAddUpperImm instead of LUI+ADD when the offset is a multiple of
   // 4096 and the source is the frame register. The frame register is invariant
   // after PEI, so MachineLateInstrsCleanup can CSE identical pseudos. The
   // pseudo is later expanded back to LUI+ADD.

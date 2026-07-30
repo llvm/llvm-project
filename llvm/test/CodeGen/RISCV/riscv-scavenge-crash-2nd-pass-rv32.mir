@@ -63,7 +63,7 @@ body:             |
     ; CHECK-NEXT: $x10 = frame-setup ADDI killed $x10, -1168
     ; CHECK-NEXT: $x2 = frame-setup SUB $x2, killed $x10
     ; CHECK-NEXT: renamable $x10 = ADDI $x8, -440
-    ; CHECK-NEXT: $x11 = PseudoAddUI $x8, 1048574
+    ; CHECK-NEXT: $x11 = PseudoAddUpperImm $x8, 1048574
     ; CHECK-NEXT: $x11 = LW killed $x11, 1420
     ; CHECK-NEXT: renamable $x12 = LW undef renamable $x10, 1
     ; CHECK-NEXT: renamable $x13 = LW undef renamable $x10, 9
@@ -91,7 +91,7 @@ body:             |
     ; CHECK-NEXT: renamable $x27 = LW undef renamable $x10, 101
     ; CHECK-NEXT: renamable $x1 = LW undef renamable $x10, 105
     ; CHECK-NEXT: SW killed $x11, $x8, -56 :: (store (s32) into %stack.17)
-    ; CHECK-NEXT: $x11 = PseudoAddUI $x8, 1048575
+    ; CHECK-NEXT: $x11 = PseudoAddUpperImm $x8, 1048575
     ; CHECK-NEXT: SW $x10, killed $x11, -472
     ; CHECK-NEXT: $x11 = LW $x8, -56 :: (load (s32) from %stack.17)
     ; CHECK-NEXT: SW killed renamable $x1, undef renamable $x11, 105
