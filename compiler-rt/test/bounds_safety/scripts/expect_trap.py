@@ -453,6 +453,44 @@ def check_trap(lldb, process, expectation, verify_source, merged_traps=False,
     return 0
 
 
+def resume_and_expect_clean_exit(lldb, process):
+    """Resume a process stopped at a soft trap and require a clean exit.
+
+    Soft traps are non-fatal: after the trap is validated the process must run
+    to completion and exit with status 0. This is what distinguishes a soft
+    trap from a hard trap and is what catches miscompiles that turn a soft trap
+    into a fatal one. Assumes exactly one soft trap fires before exit (we do not
+    yet support multiple verify expectations); a second stop is reported as a
+    failure rather than silently passing.
+    """
+    # LLDBProcessContextManager runs in synchronous mode (SetAsync(False)), so
+    # Continue() blocks until the process next stops or exits.
+    error = process.Continue()
+    if error.Fail():
+        log.error("failed to resume process after soft trap: %s", error)
+        return 1
+
+    state = process.GetState()
+    if state != lldb.eStateExited:
+        log.error(
+            "process did not exit after soft trap (state=%s); the soft trap "
+            "may have become fatal", state,
+        )
+        log_stop_info(process.GetSelectedThread())
+        return 1
+
+    exit_status = process.GetExitStatus()
+    if exit_status != 0:
+        log.error(
+            "process exited with status %d after soft trap (expected 0)",
+            exit_status,
+        )
+        return 1
+
+    log.info("Process exited cleanly after soft trap")
+    return 0
+
+
 def run_debugger(binary, args, lldb_python_path, verify_source, verify_prefix,
                   merged_traps=False, soft_traps=False):
     # Parse and validate verify comments before launching the debugger so we
@@ -513,10 +551,21 @@ def run_debugger(binary, args, lldb_python_path, verify_source, verify_prefix,
             return 1
 
         if soft_traps and not has_plugin:
-            return check_soft_trap_no_plugin(lldb, ctx.process, expectation,
-                                             verify_source)
-        return check_trap(lldb, ctx.process, expectation, verify_source,
-                          merged_traps, soft_traps)
+            rc = check_soft_trap_no_plugin(lldb, ctx.process, expectation,
+                                           verify_source)
+        else:
+            rc = check_trap(lldb, ctx.process, expectation, verify_source,
+                            merged_traps, soft_traps)
+        if rc != 0:
+            return rc
+
+        # Hard/merged traps: stopping at the trap is the entire check.
+        if not soft_traps:
+            return 0
+
+        # Soft traps are non-fatal: after validating the trap the process must
+        # resume and run to a clean exit.
+        return resume_and_expect_clean_exit(lldb, ctx.process)
 
 
 def main():
