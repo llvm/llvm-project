@@ -76,7 +76,7 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
-def SelectOpsConversion : Pass<"fir-select-ops-conversion"> {
+def SelectOpsConversion : Pass<"fir-select-ops-conversion", "::mlir::func::FuncOp"> {
   let summary = "Lower fir.select / fir.select_case / fir.select_rank to cf.*";
 
   let description = [{
