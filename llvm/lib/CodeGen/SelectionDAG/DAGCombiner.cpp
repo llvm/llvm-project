@@ -1376,11 +1376,11 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
   if (sd_match(N0,
                m_OneUse(m_c_BinOp(
                    Opc, m_Value(RedA, m_OneUse(m_UnaryOp(RedOpc, m_Value(A)))),
-                   m_Value(B, m_Invert(m_UnaryOp(RedOpc, m_Value())))))) &&
+                   m_Value(B, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) &&
       sd_match(N1,
                m_OneUse(m_c_BinOp(
                    Opc, m_Value(RedB, m_OneUse(m_UnaryOp(RedOpc, m_Value(C)))),
-                   m_Value(D, m_Invert(m_UnaryOp(RedOpc, m_Value())))))) &&
+                   m_Value(D, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) &&
       A.getValueType() == C.getValueType() &&
       hasOperation(Opc, A.getValueType()) &&
       TLI.shouldReassociateReduction(RedOpc, VT)) {
@@ -1413,7 +1413,7 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
             Chain,
             m_OneUse(m_c_BinOp(
                 Opc, m_Value(RedY, m_OneUse(m_UnaryOp(RedOpc, m_Value(Y)))),
-                m_Value(Z, m_Invert(m_UnaryOp(RedOpc, m_Value())))))) ||
+                m_Value(Z, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) ||
         X.getValueType() != Y.getValueType() ||
         !hasOperation(Opc, X.getValueType()) ||
         !TLI.shouldReassociateReduction(RedOpc, VT))

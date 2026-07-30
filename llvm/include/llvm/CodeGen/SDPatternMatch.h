@@ -208,7 +208,7 @@ template <typename Pred> struct Not {
 template <typename Pred> Not(const Pred &P) -> Not<Pred>;
 
 /// Match if the inner pattern does NOT match.
-template <typename Pred> inline Not<Pred> m_Invert(const Pred &P) {
+template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
   return Not{P};
 }
 
@@ -221,7 +221,7 @@ template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
 }
 
 template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
-  return m_Invert(m_AnyOf(preds...));
+  return m_Unless(m_AnyOf(preds...));
 }
 
 inline Opcode_match m_SpecificOpc(unsigned Opcode) {
