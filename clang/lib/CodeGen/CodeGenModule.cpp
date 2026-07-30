@@ -3703,13 +3703,16 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   if (List.empty())
     return;
 
-  // Convert List to what ConstantArray needs.
-  SmallVector<llvm::Constant*, 8> UsedArray;
-  UsedArray.resize(List.size());
-  for (unsigned i = 0, e = List.size(); i != e; ++i) {
-    UsedArray[i] =
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            cast<llvm::Constant>(&*List[i]), CGM.Int8PtrTy);
+  // Convert List to what ConstantArray needs. A used global may have been
+  // deleted after it was added to the list (e.g. when its home module keeps
+  // accumulating declarations after an erroneous incremental parse), leaving
+  // a null value handle behind; skip those entries.
+  SmallVector<llvm::Constant *, 8> UsedArray;
+  UsedArray.reserve(List.size());
+  for (const llvm::WeakTrackingVH &VH : List) {
+    if (llvm::Value *V = VH)
+      UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          cast<llvm::Constant>(V), CGM.Int8PtrTy));
   }
 
   if (UsedArray.empty())

@@ -4861,7 +4861,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FPTOSI_SAT:
     return lowerFPTOINT_SAT(MI);
   case G_FPEXT:
-    return lowerFPExtAndTruncMem(MI);
+    return lowerFPEXT(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI);
   case G_FPOWI:
@@ -7711,7 +7711,7 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // cttz(Hi:Lo) -> Lo == 0 ? (cttz(Hi) + NarrowSize) : cttz(Lo)
     auto C_0 = B.buildConstant(NarrowTy, 0);
-    auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
+    auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1),
                                 UnmergeSrc.getReg(0), C_0);
     auto HiCTTZ = IsUndef ? B.buildCTTZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(1))
                           : B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
@@ -8795,6 +8795,41 @@ LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
   return Legalized;
 }
 
+// Expand a bf16 -> f32/f64 fpext with a shift and bitcast. This is based on the
+// SDAG ISD::BF16_TO_FP lowering.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPEXT_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(SrcTy.getScalarType().isBFloat16() &&
+         "expected a bf16 source for bf16 fpext lowering");
+
+  LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+  LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+  LLT F32Ty = SrcTy.changeElementType(LLT::float32());
+
+  auto SrcI =
+      MIRBuilder.buildAnyExt(I32Ty, MIRBuilder.buildBitcast(I16Ty, SrcReg));
+  auto Shl =
+      MIRBuilder.buildShl(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+
+  if (DstTy.getScalarType().isFloat32())
+    MIRBuilder.buildBitcast(DstReg, Shl);
+  else
+    MIRBuilder.buildFPExt(DstReg, MIRBuilder.buildBitcast(F32Ty, Shl));
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPEXT(MachineInstr &MI) {
+  auto [DstTy, SrcTy] = MI.getFirst2LLTs();
+  if (SrcTy.getScalarType().isBFloat16() &&
+      (DstTy.getScalarType().isFloat32() || DstTy.getScalarType().isFloat64()))
+    return lowerFPEXT_BF16(MI);
+
+  return lowerFPExtAndTruncMem(MI);
+}
+
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
@@ -8954,6 +8989,65 @@ LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
   return Legalized;
 }
 
+// Round a wide fp value to ResultTy's element size, forcing inexact
+// results to the odd value so a subsequent narrowing round is correct. This
+// avoids double-rounding when narrowing e.g. f64 -> f32 -> bf16. See Boldo &
+// Melquiond, "When double rounding is odd" (2005).
+Register LegalizerHelper::lowerRoundInexactToOdd(LLT ResultTy, Register Op) {
+  LLT OperandTy = MRI.getType(Op);
+  if (OperandTy.getScalarType() == ResultTy.getScalarType())
+    return Op;
+
+  LLT ResultIntTy =
+      ResultTy.changeElementType(LLT::integer(ResultTy.getScalarSizeInBits()));
+  LLT ResultCCTy = ResultTy.changeElementType(LLT::integer(1));
+  LLT OperandCCTy = OperandTy.changeElementType(LLT::integer(1));
+
+  auto Narrow = MIRBuilder.buildFPTrunc(ResultTy, Op);
+  auto NarrowAsWide = MIRBuilder.buildFPExt(OperandTy, Narrow);
+
+  auto NarrowBits = MIRBuilder.buildBitcast(ResultIntTy, Narrow);
+  auto One = MIRBuilder.buildConstant(ResultIntTy, 1);
+  auto NegativeOne = MIRBuilder.buildConstant(ResultIntTy, -1);
+  auto Zero = MIRBuilder.buildConstant(ResultIntTy, 0);
+  auto And = MIRBuilder.buildAnd(ResultIntTy, NarrowBits, One);
+  // The result is already odd so we don't need to do anything.
+  auto AlreadyOdd =
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, ResultCCTy, And, Zero);
+
+  // We keep results which are exact, odd or NaN.
+  auto KeepNarrow =
+      MIRBuilder.buildFCmp(CmpInst::FCMP_UEQ, OperandCCTy, Op, NarrowAsWide);
+  KeepNarrow = MIRBuilder.buildOr(OperandCCTy, KeepNarrow, AlreadyOdd);
+  // We morally performed a round-down if AbsNarrow is smaller than AbsWide.
+  auto AbsWide = MIRBuilder.buildFAbs(OperandTy, Op);
+  auto AbsNarrowAsWide = MIRBuilder.buildFAbs(OperandTy, NarrowAsWide);
+  auto NarrowIsRd = MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, OperandCCTy,
+                                         AbsWide, AbsNarrowAsWide);
+  // If narrow is the rounded-down value, pick the rounded-up value as it will
+  // be odd; otherwise adjust down.
+  auto Adjust =
+      MIRBuilder.buildSelect(ResultIntTy, NarrowIsRd, One, NegativeOne);
+  auto Adjusted = MIRBuilder.buildAdd(ResultIntTy, NarrowBits, Adjust);
+  auto Res =
+      MIRBuilder.buildSelect(ResultIntTy, KeepNarrow, NarrowBits, Adjusted);
+  return MIRBuilder.buildBitcast(ResultTy, Res).getReg(0);
+}
+
+// f64 -> bf16 conversion, correcting for double rounding.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC_F64_TO_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(DstTy.getScalarType() == LLT::bfloat16() &&
+         SrcTy.getScalarType() == LLT::float64());
+
+  LLT F32Ty = SrcTy.changeElementType(LLT::float32());
+  Register OddF32 = lowerRoundInexactToOdd(F32Ty, SrcReg);
+  MIRBuilder.buildFPTrunc(DstReg, OddF32, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   auto [DstTy, SrcTy] = MI.getFirst2LLTs();
@@ -8962,6 +9056,9 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
 
   if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat32())
     return lowerFPTRUNC_F32_TO_BF16(MI);
+
+  if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat64())
+    return lowerFPTRUNC_F64_TO_BF16(MI);
 
   return lowerFPExtAndTruncMem(MI);
 }

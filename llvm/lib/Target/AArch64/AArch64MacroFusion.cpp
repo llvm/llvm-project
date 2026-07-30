@@ -13,10 +13,29 @@
 
 #include "AArch64MacroFusion.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
+#define DEBUG_TYPE "aarch64-macro-fusion"
+
 using namespace llvm;
+
+STATISTIC(NumFusedArithmeticBcc, "Number of arithmetic-Bcc fusions");
+STATISTIC(NumFusedArithmeticCbz, "Number of arithmetic-Cbz fusions");
+STATISTIC(NumFusedAES, "Number of AES fusions");
+STATISTIC(NumFusedCryptoEOR, "Number of crypto-EOR fusions");
+STATISTIC(NumFusedAdrpAdd, "Number of ADRP-ADD fusions");
+STATISTIC(NumFusedLiterals, "Number of literal-generation fusions");
+STATISTIC(NumFusedAddress, "Number of address-generation load/store fusions");
+STATISTIC(NumFusedCmpCSel, "Number of compare-CSEL fusions");
+STATISTIC(NumFusedFCmpFCSel, "Number of FP-compare-FCSEL fusions");
+STATISTIC(NumFusedCmpCSet, "Number of compare-CSET fusions");
+STATISTIC(NumFusedArithmeticLogic, "Number of arithmetic-logic fusions");
+STATISTIC(NumFusedAddSub2RegAndConstOne,
+          "Number of add/sub-two-register-and-constant-one fusions");
+STATISTIC(NumFusedAppleSMECompute, "Number of Apple SME compute fusions");
+STATISTIC(NumFusedFMinFMax, "Number of FMIN-FMAX fusions");
 
 /// CMN, CMP, TST followed by Bcc
 static bool isArithmeticBccPair(const MachineInstr *FirstMI,
@@ -605,49 +624,129 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
+// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
+static bool isFMinFMax(unsigned Opcode) {
+  switch (Opcode) {
+  // Scalar.
+  case AArch64::FMAXHrr:
+  case AArch64::FMAXSrr:
+  case AArch64::FMAXDrr:
+  case AArch64::FMINHrr:
+  case AArch64::FMINSrr:
+  case AArch64::FMINDrr:
+  // Vector.
+  case AArch64::FMAXv4f16:
+  case AArch64::FMAXv8f16:
+  case AArch64::FMAXv2f32:
+  case AArch64::FMAXv4f32:
+  case AArch64::FMAXv2f64:
+  case AArch64::FMINv4f16:
+  case AArch64::FMINv8f16:
+  case AArch64::FMINv2f32:
+  case AArch64::FMINv4f32:
+  case AArch64::FMINv2f64:
+    return true;
+  }
+  return false;
+}
+
+// FMIN + FMAX.
+static bool isFMinFMaxPair(const MachineInstr *FirstMI,
+                           const MachineInstr &SecondMI) {
+  if (!isFMinFMax(SecondMI.getOpcode()))
+    return false;
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  if (!isFMinFMax(FirstMI->getOpcode()))
+    return false;
+
+  return mayHaveWAWDependency(*FirstMI, SecondMI);
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
   // All checking functions assume that the 1st instr is a wildcard if it is
   // unspecified.
+
+  // FuseAppleSMECompute does not require a specific dependency kind
+  if (ST.hasFuseAppleSMECompute() &&
+      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
+    ++NumFusedAppleSMECompute;
+    return true;
+  }
+
+  // All the other fusions require RAW dependency
+  if (isNonDataDep(Dep))
+    return false;
+
   if (ST.hasCmpBccFusion() || ST.hasArithmeticBccFusion()) {
     bool CmpOnly = !ST.hasArithmeticBccFusion();
-    if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly))
+    if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly)) {
+      ++NumFusedArithmeticBcc;
       return true;
+    }
   }
-  if (ST.hasArithmeticCbzFusion() && isArithmeticCbzPair(FirstMI, SecondMI))
+  if (ST.hasArithmeticCbzFusion() && isArithmeticCbzPair(FirstMI, SecondMI)) {
+    ++NumFusedArithmeticCbz;
     return true;
-  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI)) {
+    ++NumFusedAES;
     return true;
-  if (ST.hasFuseCryptoEOR() && isCryptoEORPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseCryptoEOR() && isCryptoEORPair(FirstMI, SecondMI)) {
+    ++NumFusedCryptoEOR;
     return true;
-  if (ST.hasFuseAdrpAdd() && isAdrpAddPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseAdrpAdd() && isAdrpAddPair(FirstMI, SecondMI)) {
+    ++NumFusedAdrpAdd;
     return true;
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+    ++NumFusedLiterals;
     return true;
-  if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI)) {
+    ++NumFusedAddress;
     return true;
-  if (ST.hasFuseCmpCSel() && isCmpCSelPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseCmpCSel() && isCmpCSelPair(FirstMI, SecondMI)) {
+    ++NumFusedCmpCSel;
     return true;
-  if (ST.hasFuseFCmpFCSel() && isFCmpFCSelPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseFCmpFCSel() && isFCmpFCSelPair(FirstMI, SecondMI)) {
+    ++NumFusedFCmpFCSel;
     return true;
-  if (ST.hasFuseCmpCSet() && isCmpCSetPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseCmpCSet() && isCmpCSetPair(FirstMI, SecondMI)) {
+    ++NumFusedCmpCSet;
     return true;
-  if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI))
+  }
+  if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI)) {
+    ++NumFusedArithmeticLogic;
     return true;
+  }
   if (ST.hasFuseAddSub2RegAndConstOne() &&
-      isAddSub2RegAndConstOnePair(FirstMI, SecondMI))
+      isAddSub2RegAndConstOnePair(FirstMI, SecondMI)) {
+    ++NumFusedAddSub2RegAndConstOne;
     return true;
-  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
-  if (ST.hasFuseAppleSMECompute() &&
-      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI))
+  }
+  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {
+    ++NumFusedFMinFMax;
     return true;
+  }
 
   return false;
 }
