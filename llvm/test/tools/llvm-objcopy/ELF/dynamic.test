@@ -1,0 +1,27 @@
+# RUN: llvm-objcopy %p/Inputs/dynamic.so %t
+# RUN: llvm-readobj --dynamic-table %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck --check-prefix=LINK %s
+
+#CHECK: DynamicSection [
+#CHECK-NEXT:  Tag                Type                 Name/Value
+#CHECK-NEXT:  0x0000000000000006 SYMTAB               0x1C8
+#CHECK-NEXT:  0x000000000000000B SYMENT               24
+#CHECK-NEXT:  0x0000000000000005 STRTAB               0x210
+#CHECK-NEXT:  0x000000000000000A STRSZ                5
+#CHECK-NEXT:  0x0000000000000004 HASH                 0x1F8
+#CHECK-NEXT:  0x0000000000000000 NULL                 0x0
+#CHECK-NEXT:]
+
+#LINK:         Index: 3
+#LINK-NEXT:    Name: .dynstr
+
+#LINK:         Name: .dynamic
+#LINK-NEXT:    Type: SHT_DYNAMIC
+#LINK-NEXT:    Flags [
+#LINK-NEXT:      SHF_ALLOC
+#LINK-NEXT:      SHF_WRITE
+#LINK-NEXT:    ]
+#LINK-NEXT:    Address:
+#LINK-NEXT:    Offset:
+#LINK-NEXT:    Size:
+#LINK-NEXT:    Link: 3

@@ -1,0 +1,140 @@
+; RUN: llvm-profdata overlap --sample %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-0.proftext | FileCheck %s --check-prefix=OVERLAP0  --match-full-lines --strict-whitespace
+; OVERLAP0:Program level:
+; OVERLAP0:  Whole program profile similarity: 100.000%
+; OVERLAP0:  Whole program sample overlap: 100.000%
+; OVERLAP0:    percentage of samples unique in base profile: 0.000%
+; OVERLAP0:    percentage of samples unique in test profile: 0.000%
+; OVERLAP0:    total samples in base profile: 13943
+; OVERLAP0:    total samples in test profile: 13943
+; OVERLAP0:  Function overlap: 100.000%
+; OVERLAP0:    overlap functions: 4
+; OVERLAP0:    functions unique in base profile: 0
+; OVERLAP0:    functions unique in test profile: 0
+; OVERLAP0:  Hot-function overlap: 100.000%
+; OVERLAP0:    overlap hot functions: 4
+; OVERLAP0:    hot functions unique in base profile: 0
+; OVERLAP0:    hot functions unique in test profile: 0
+; OVERLAP0:  Hot-block overlap: 100.000%
+; OVERLAP0:    overlap hot blocks: 12
+; OVERLAP0:    hot blocks unique in base profile: 0
+; OVERLAP0:    hot blocks unique in test profile: 0
+
+; RUN: llvm-profdata overlap --sample %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-1.proftext | FileCheck %s --check-prefix=OVERLAP1  --match-full-lines --strict-whitespace
+; OVERLAP1:Program level:
+; OVERLAP1:  Whole program profile similarity: 100.000%
+; OVERLAP1:  Whole program sample overlap: 10.000%
+; OVERLAP1:    percentage of samples unique in base profile: 0.000%
+; OVERLAP1:    percentage of samples unique in test profile: 0.000%
+; OVERLAP1:    total samples in base profile: 13943
+; OVERLAP1:    total samples in test profile: 139430
+; OVERLAP1:  Function overlap: 100.000%
+; OVERLAP1:    overlap functions: 4
+; OVERLAP1:    functions unique in base profile: 0
+; OVERLAP1:    functions unique in test profile: 0
+; OVERLAP1:  Hot-function overlap: 100.000%
+; OVERLAP1:    overlap hot functions: 4
+; OVERLAP1:    hot functions unique in base profile: 0
+; OVERLAP1:    hot functions unique in test profile: 0
+; OVERLAP1:  Hot-block overlap: 100.000%
+; OVERLAP1:    overlap hot blocks: 12
+; OVERLAP1:    hot blocks unique in base profile: 0
+; OVERLAP1:    hot blocks unique in test profile: 0
+
+; RUN: llvm-profdata overlap --sample --similarity-cutoff=800000 %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-2.proftext | FileCheck %s --check-prefix=OVERLAP2  --match-full-lines --strict-whitespace
+; OVERLAP2:Program level:
+; OVERLAP2:  Whole program profile similarity: 63.720%
+; OVERLAP2:  Whole program sample overlap: 29.649%
+; OVERLAP2:    percentage of samples unique in base profile: 0.000%
+; OVERLAP2:    percentage of samples unique in test profile: 0.000%
+; OVERLAP2:    total samples in base profile: 13943
+; OVERLAP2:    total samples in test profile: 4134
+; OVERLAP2:  Function overlap: 100.000%
+; OVERLAP2:    overlap functions: 4
+; OVERLAP2:    functions unique in base profile: 0
+; OVERLAP2:    functions unique in test profile: 0
+; OVERLAP2:  Hot-function overlap: 100.000%
+; OVERLAP2:    overlap hot functions: 4
+; OVERLAP2:    hot functions unique in base profile: 0
+; OVERLAP2:    hot functions unique in test profile: 0
+; OVERLAP2:  Hot-block overlap: 100.000%
+; OVERLAP2:    overlap hot blocks: 12
+; OVERLAP2:    hot blocks unique in base profile: 0
+; OVERLAP2:    hot blocks unique in test profile: 0
+; OVERLAP2:Function-level details:
+; OVERLAP2:Base weight    Test weight    Similarity   Overlap   Base unique   Test unique   Base samples   Test samples   Function name
+; OVERLAP2:78.15%         26.29%         48.09%       9.98%     0.00%         0.00%         10896          1087           main
+; OVERLAP2:10.31%         34.76%         75.55%       100.00%   0.00%         0.00%         1437           1437           _Z3bari
+
+; RUN: llvm-profdata overlap --sample --value-cutoff=1000 %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-3.proftext | FileCheck %s --check-prefix=OVERLAP3  --match-full-lines --strict-whitespace
+; OVERLAP3:Program level:
+; OVERLAP3:  Whole program profile similarity: 14.301%
+; OVERLAP3:  Whole program sample overlap: 6.040%
+; OVERLAP3:    percentage of samples unique in base profile: 82.522%
+; OVERLAP3:    percentage of samples unique in test profile: 88.216%
+; OVERLAP3:    total samples in base profile: 13943
+; OVERLAP3:    total samples in test profile: 13043
+; OVERLAP3:  Function overlap: 33.333%
+; OVERLAP3:    overlap functions: 2
+; OVERLAP3:    functions unique in base profile: 2
+; OVERLAP3:    functions unique in test profile: 2
+; OVERLAP3:  Hot-function overlap: 16.667%
+; OVERLAP3:    overlap hot functions: 1
+; OVERLAP3:    hot functions unique in base profile: 3
+; OVERLAP3:    hot functions unique in test profile: 2
+; OVERLAP3:  Hot-block overlap: 4.545%
+; OVERLAP3:    overlap hot blocks: 1
+; OVERLAP3:    hot blocks unique in base profile: 11
+; OVERLAP3:    hot blocks unique in test profile: 10
+; OVERLAP3:Function-level details:
+; OVERLAP3:Base weight    Test weight    Similarity   Overlap   Base unique   Test unique   Base samples   Test samples   Function name
+; OVERLAP3:10.31%         11.02%         99.29%       100.00%   0.00%         0.00%         1437           1437           _Z3bari
+; OVERLAP3:0.00%          83.54%         0.00%        0.00%     0.00%         100.00%       0              10896          main2
+
+; RUN: llvm-profdata overlap --sample --function=main %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-4.proftext | FileCheck %s --check-prefix=OVERLAP4  --match-full-lines --strict-whitespace
+; OVERLAP4:Program level:
+; OVERLAP4:  Whole program profile similarity: 17.302%
+; OVERLAP4:  Whole program sample overlap: 8.134%
+; OVERLAP4:    percentage of samples unique in base profile: 73.542%
+; OVERLAP4:    percentage of samples unique in test profile: 82.209%
+; OVERLAP4:    total samples in base profile: 13943
+; OVERLAP4:    total samples in test profile: 10213
+; OVERLAP4:  Function overlap: 100.000%
+; OVERLAP4:    overlap functions: 4
+; OVERLAP4:    functions unique in base profile: 0
+; OVERLAP4:    functions unique in test profile: 0
+; OVERLAP4:  Hot-function overlap: 100.000%
+; OVERLAP4:    overlap hot functions: 4
+; OVERLAP4:    hot functions unique in base profile: 0
+; OVERLAP4:    hot functions unique in test profile: 0
+; OVERLAP4:  Hot-block overlap: 14.286%
+; OVERLAP4:    overlap hot blocks: 3
+; OVERLAP4:    hot blocks unique in base profile: 9
+; OVERLAP4:    hot blocks unique in test profile: 9
+; OVERLAP4:Function-level details:
+; OVERLAP4:Base weight    Test weight    Similarity   Overlap   Base unique   Test unique   Base samples   Test samples   Function name
+; OVERLAP4:78.15%         70.17%         23.33%       11.18%    66.14%        74.64%        10896          7166           main
+
+; RUN: llvm-profdata overlap --sample %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-5.proftext | FileCheck %s --check-prefix=OVERLAP5  --match-full-lines --strict-whitespace
+; OVERLAP5:Sum of sample counts for profile {{.*}}/Inputs/sample-overlap-5.proftext is 0.
+
+
+; RUN: llvm-profdata overlap --sample %S/Inputs/cs-sample.proftext %S/Inputs/cs-sample.proftext | FileCheck %s --check-prefix=CS  --match-full-lines --strict-whitespace
+; CS:Program level:
+; CS:  Whole program profile similarity: 100.000%
+; CS:  Whole program sample overlap: 100.000%
+; CS:    percentage of samples unique in base profile: 0.000%
+; CS:    percentage of samples unique in test profile: 0.000%
+; CS:    total samples in base profile: 772562
+; CS:    total samples in test profile: 772562
+; CS:  Function overlap: 100.000%
+; CS:    overlap functions: 8
+; CS:    functions unique in base profile: 0
+; CS:    functions unique in test profile: 0
+; CS:  Hot-function overlap: 100.000%
+; CS:    overlap hot functions: 2
+; CS:    hot functions unique in base profile: 0
+; CS:    hot functions unique in test profile: 0
+; CS:  Hot-block overlap: 100.000%
+; CS:    overlap hot blocks: 6
+; CS:    hot blocks unique in base profile: 0
+; CS:    hot blocks unique in test profile: 0

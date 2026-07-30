@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-gen-mux -o - %s -verify-machineinstrs | FileCheck %s
+# Make sure this verifies correctly.
+# CHECK: PS_jmpret killed $r31, implicit-def $pc
+---
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $d0, $d1, $d2, $d3
+
+    $p0 = C2_cmpeqi killed $r4, 128
+    $d4 = A2_tfrpi 0
+    $r3 = A2_tfrsi 0
+    $r4 = A2_tfrsi 0
+    $r7 = A2_tfrt $p0, $r0
+    $p1 = C2_cmpeqp $d0, killed $d4
+    $r8 = A2_tfrt $p0, killed $r0
+    $r9 = A2_tfrt $p0, killed $r1
+    $r7 = A2_tfrf $p0, $r3, implicit killed $r7
+    $r9 = A2_tfrf $p0, killed $r3, implicit killed $r9
+    $r8 = C2_cmoveif killed $p0, 1, implicit killed $r8
+    $d0 = A4_combineri killed $r4, 0
+    $r2 = A2_tfrt $p1, killed $r7, implicit killed $r2
+    $r3 = A2_tfr killed $r9
+    $r2 = A2_tfrf killed $p1, killed $r8, implicit killed $r2
+    S2_storerd_io killed $r6, 0, killed $d1
+    S2_storerd_io killed $r5, 0, killed $d0
+    PS_jmpret $r31, implicit-def $pc
+...
+

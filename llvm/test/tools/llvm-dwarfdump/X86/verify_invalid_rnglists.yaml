@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
+
+#      CHECK: Verifying non-dwo Units...
+# CHECK-NEXT: Verifying unit: 1 / 1, "/tmp/main.c"
+# CHECK-NEXT: error: DW_AT_ranges offset is beyond .debug_rnglists bounds: 0x00001000
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str:
+    - ''
+    - /tmp/main.c
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000

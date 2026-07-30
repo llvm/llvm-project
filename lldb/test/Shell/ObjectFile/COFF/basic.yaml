@@ -1,0 +1,234 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Plugin name: COFF
+# CHECK: Architecture: x86_64-unknown-windows-msvc
+
+# CHECK: Executable: false
+# CHECK: Stripped: false
+# CHECK: Type: object file
+# CHECK: Strata: user
+
+# CHECK: Name: .text
+# CHECK: Type: code
+
+# CHECK: Name: .data
+# CHECK: Type: data
+
+# CHECK: Name: .bss
+# CHECK: Type: zero-fill
+
+# CHECK: Name: .rdata
+# CHECK: Type: data
+
+# CHECK: Name: .debug_abbrev
+# CHECK: Type: dwarf-abbrev
+
+# CHECK: Name: .debug_info
+# CHECK: Type: dwarf-info
+
+# CHECK: Name: .debug_str
+# CHECK: Type: dwarf-str
+
+# CHECK: Name: .debug_line
+# CHECK: Type: dwarf-line
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+    SizeOfRawData:   0
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     31343A34313A303700
+  - Name:            .debug_abbrev
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     011101250E1305030E10171B0E0000023400030E49133F193A0B3B0B02180000030101491300000421004913370B000005260049130000062400030E3E0B0B0B0000072400030E0B0B3E0B000000
+  - Name:            .debug_info
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     4F0000000400000000000801000000000C00320000000000000034000000023F00000033000000010109030000000000000000033F000000044B0000000900054400000006490000000601074E000000080700
+    Relocations:
+      - VirtualAddress:  6
+        SymbolName:      .debug_abbrev
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  12
+        SymbolName:      .debug_str
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  18
+        SymbolName:      .debug_str
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  22
+        SymbolName:      .debug_line
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  26
+        SymbolName:      .debug_str
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  31
+        SymbolName:      .debug_str
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  43
+        SymbolName:      timestamp
+        Type:            IMAGE_REL_AMD64_ADDR64
+      - VirtualAddress:  69
+        SymbolName:      .debug_str
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  76
+        SymbolName:      .debug_str
+        Type:            IMAGE_REL_AMD64_SECREL
+  - Name:            .debug_str
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     4170706C6520636C616E672076657273696F6E2031342E302E332028636C616E672D313430332E302E32322E31342E3129002D002F7661722F656D7074790074696D657374616D700063686172005F5F41525241595F53495A455F545950455F5F00
+  - Name:            .debug_line
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     2500000004001F000000010101FB0E0D000101010100000001000001003C737464696E3E0000000000
+  - Name:            .llvm_addrsig
+    Characteristics: [ IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     ''
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            .data
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            .bss
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          3
+  - Name:            .rdata
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          9
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        479132390
+      Number:          4
+  - Name:            .debug_abbrev
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          78
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        937319867
+      Number:          5
+  - Name:            .debug_info
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          83
+      NumberOfRelocations: 9
+      NumberOfLinenumbers: 0
+      CheckSum:        1429914004
+      Number:          6
+  - Name:            .debug_str
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          98
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        580727506
+      Number:          7
+  - Name:            .debug_line
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          41
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2878960311
+      Number:          8
+  - Name:            .llvm_addrsig
+    Value:           0
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          9
+  - Name:            '@feat.00'
+    Value:           0
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            timestamp
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .file
+    Value:           0
+    SectionNumber:   -2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_FILE
+    File:            '-'
+...

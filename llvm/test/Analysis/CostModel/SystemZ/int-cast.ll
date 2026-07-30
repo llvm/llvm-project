@@ -1,0 +1,199 @@
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+
+define void @sext() {
+  %v0 = sext i8 undef to i16
+  %v1 = sext i8 undef to i32
+  %v2 = sext i8 undef to i64
+  %v3 = sext i16 undef to i32
+  %v4 = sext i16 undef to i64
+  %v5 = sext i32 undef to i64
+  %v6 = sext <2 x i8> undef to <2 x i16>
+  %v7 = sext <2 x i8> undef to <2 x i32>
+  %v8 = sext <2 x i8> undef to <2 x i64>
+  %v9 = sext <2 x i16> undef to <2 x i32>
+  %v10 = sext <2 x i16> undef to <2 x i64>
+  %v11 = sext <2 x i32> undef to <2 x i64>
+  %v12 = sext <4 x i8> undef to <4 x i16>
+  %v13 = sext <4 x i8> undef to <4 x i32>
+  %v14 = sext <4 x i8> undef to <4 x i64>
+  %v15 = sext <4 x i16> undef to <4 x i32>
+  %v16 = sext <4 x i16> undef to <4 x i64>
+  %v17 = sext <4 x i32> undef to <4 x i64>
+  %v18 = sext <8 x i8> undef to <8 x i16>
+  %v19 = sext <8 x i8> undef to <8 x i32>
+  %v20 = sext <8 x i8> undef to <8 x i64>
+  %v21 = sext <8 x i16> undef to <8 x i32>
+  %v22 = sext <8 x i16> undef to <8 x i64>
+  %v23 = sext <8 x i32> undef to <8 x i64>
+  %v24 = sext <16 x i8> undef to <16 x i16>
+  %v25 = sext <16 x i8> undef to <16 x i32>
+  %v26 = sext <16 x i8> undef to <16 x i64>
+  %v27 = sext <16 x i16> undef to <16 x i32>
+  %v28 = sext <16 x i16> undef to <16 x i64>
+  %v29 = sext <16 x i32> undef to <16 x i64>
+
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v0 = sext i8 undef to i16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v1 = sext i8 undef to i32
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v2 = sext i8 undef to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v3 = sext i16 undef to i32
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v4 = sext i16 undef to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v5 = sext i32 undef to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v6 = sext <2 x i8> undef to <2 x i16>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v7 = sext <2 x i8> undef to <2 x i32>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v8 = sext <2 x i8> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v9 = sext <2 x i16> undef to <2 x i32>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v10 = sext <2 x i16> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v11 = sext <2 x i32> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v12 = sext <4 x i8> undef to <4 x i16>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v13 = sext <4 x i8> undef to <4 x i32>
+; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v14 = sext <4 x i8> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v15 = sext <4 x i16> undef to <4 x i32>
+; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v16 = sext <4 x i16> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v17 = sext <4 x i32> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v18 = sext <8 x i8> undef to <8 x i16>
+; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %v19 = sext <8 x i8> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 15 for instruction:   %v20 = sext <8 x i8> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v21 = sext <8 x i16> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 11 for instruction:   %v22 = sext <8 x i16> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v23 = sext <8 x i32> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v24 = sext <16 x i8> undef to <16 x i16>
+; CHECK: Cost Model: Found an estimated cost of 11 for instruction:   %v25 = sext <16 x i8> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 31 for instruction:   %v26 = sext <16 x i8> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v27 = sext <16 x i16> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 22 for instruction:   %v28 = sext <16 x i16> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %v29 = sext <16 x i32> undef to <16 x i64>
+
+ ret void
+}
+
+define void @zext() {
+  %v0 = zext i8 undef to i16
+  %v1 = zext i8 undef to i32
+  %v2 = zext i8 undef to i64
+  %v3 = zext i16 undef to i32
+  %v4 = zext i16 undef to i64
+  %v5 = zext i32 undef to i64
+  %v6 = zext <2 x i8> undef to <2 x i16>
+  %v7 = zext <2 x i8> undef to <2 x i32>
+  %v8 = zext <2 x i8> undef to <2 x i64>
+  %v9 = zext <2 x i16> undef to <2 x i32>
+  %v10 = zext <2 x i16> undef to <2 x i64>
+  %v11 = zext <2 x i32> undef to <2 x i64>
+  %v12 = zext <4 x i8> undef to <4 x i16>
+  %v13 = zext <4 x i8> undef to <4 x i32>
+  %v14 = zext <4 x i8> undef to <4 x i64>
+  %v15 = zext <4 x i16> undef to <4 x i32>
+  %v16 = zext <4 x i16> undef to <4 x i64>
+  %v17 = zext <4 x i32> undef to <4 x i64>
+  %v18 = zext <8 x i8> undef to <8 x i16>
+  %v19 = zext <8 x i8> undef to <8 x i32>
+  %v20 = zext <8 x i8> undef to <8 x i64>
+  %v21 = zext <8 x i16> undef to <8 x i32>
+  %v22 = zext <8 x i16> undef to <8 x i64>
+  %v23 = zext <8 x i32> undef to <8 x i64>
+  %v24 = zext <16 x i8> undef to <16 x i16>
+  %v25 = zext <16 x i8> undef to <16 x i32>
+  %v26 = zext <16 x i8> undef to <16 x i64>
+  %v27 = zext <16 x i16> undef to <16 x i32>
+  %v28 = zext <16 x i16> undef to <16 x i64>
+  %v29 = zext <16 x i32> undef to <16 x i64>
+
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v0 = zext i8 undef to i16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v1 = zext i8 undef to i32
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v2 = zext i8 undef to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v3 = zext i16 undef to i32
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v4 = zext i16 undef to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v5 = zext i32 undef to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v6 = zext <2 x i8> undef to <2 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v7 = zext <2 x i8> undef to <2 x i32>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v8 = zext <2 x i8> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v9 = zext <2 x i16> undef to <2 x i32>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v10 = zext <2 x i16> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v11 = zext <2 x i32> undef to <2 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v12 = zext <4 x i8> undef to <4 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v13 = zext <4 x i8> undef to <4 x i32>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v14 = zext <4 x i8> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v15 = zext <4 x i16> undef to <4 x i32>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v16 = zext <4 x i16> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v17 = zext <4 x i32> undef to <4 x i64>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v18 = zext <8 x i8> undef to <8 x i16>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v19 = zext <8 x i8> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v20 = zext <8 x i8> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v21 = zext <8 x i16> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v22 = zext <8 x i16> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v23 = zext <8 x i32> undef to <8 x i64>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v24 = zext <16 x i8> undef to <16 x i16>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v25 = zext <16 x i8> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v26 = zext <16 x i8> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v27 = zext <16 x i16> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v28 = zext <16 x i16> undef to <16 x i64>
+; CHECK: Cost Model: Found an estimated cost of 8 for instruction:   %v29 = zext <16 x i32> undef to <16 x i64>
+
+ ret void
+}
+
+define void @trunc() {
+  %v0 = trunc i16 undef to i8
+  %v1 = trunc i32 undef to i16
+  %v2 = trunc i32 undef to i8
+  %v3 = trunc i64 undef to i32
+  %v4 = trunc i64 undef to i16
+  %v5 = trunc i64 undef to i8
+  %v6 = trunc <2 x i16> undef to <2 x i8>
+  %v7 = trunc <2 x i32> undef to <2 x i16>
+  %v8 = trunc <2 x i32> undef to <2 x i8>
+  %v9 = trunc <2 x i64> undef to <2 x i32>
+  %v10 = trunc <2 x i64> undef to <2 x i16>
+  %v11 = trunc <2 x i64> undef to <2 x i8>
+  %v12 = trunc <4 x i16> undef to <4 x i8>
+  %v13 = trunc <4 x i32> undef to <4 x i16>
+  %v14 = trunc <4 x i32> undef to <4 x i8>
+  %v15 = trunc <4 x i64> undef to <4 x i32>
+  %v16 = trunc <4 x i64> undef to <4 x i16>
+  %v17 = trunc <4 x i64> undef to <4 x i8>
+  %v18 = trunc <8 x i16> undef to <8 x i8>
+  %v19 = trunc <8 x i32> undef to <8 x i16>
+  %v20 = trunc <8 x i32> undef to <8 x i8>
+  %v21 = trunc <8 x i64> undef to <8 x i32>
+  %v22 = trunc <8 x i64> undef to <8 x i16>
+  %v23 = trunc <8 x i64> undef to <8 x i8>
+  %v24 = trunc <16 x i16> undef to <16 x i8>
+  %v25 = trunc <16 x i32> undef to <16 x i16>
+  %v26 = trunc <16 x i32> undef to <16 x i8>
+  %v27 = trunc <16 x i64> undef to <16 x i32>
+  %v28 = trunc <16 x i64> undef to <16 x i16>
+  %v29 = trunc <16 x i64> undef to <16 x i8>
+
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %v0 = trunc i16 undef to i8
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %v1 = trunc i32 undef to i16
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %v2 = trunc i32 undef to i8
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %v3 = trunc i64 undef to i32
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %v4 = trunc i64 undef to i16
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %v5 = trunc i64 undef to i8
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v6 = trunc <2 x i16> undef to <2 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v7 = trunc <2 x i32> undef to <2 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v8 = trunc <2 x i32> undef to <2 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v9 = trunc <2 x i64> undef to <2 x i32>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v10 = trunc <2 x i64> undef to <2 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v11 = trunc <2 x i64> undef to <2 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v12 = trunc <4 x i16> undef to <4 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v13 = trunc <4 x i32> undef to <4 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v14 = trunc <4 x i32> undef to <4 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v15 = trunc <4 x i64> undef to <4 x i32>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v16 = trunc <4 x i64> undef to <4 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v17 = trunc <4 x i64> undef to <4 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v18 = trunc <8 x i16> undef to <8 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v19 = trunc <8 x i32> undef to <8 x i16>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v20 = trunc <8 x i32> undef to <8 x i8>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v21 = trunc <8 x i64> undef to <8 x i32>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v22 = trunc <8 x i64> undef to <8 x i16>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v23 = trunc <8 x i64> undef to <8 x i8>
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %v24 = trunc <16 x i16> undef to <16 x i8>
+; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %v25 = trunc <16 x i32> undef to <16 x i16>
+; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %v26 = trunc <16 x i32> undef to <16 x i8>
+; CHECK: Cost Model: Found an estimated cost of 4 for instruction:   %v27 = trunc <16 x i64> undef to <16 x i32>
+; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %v28 = trunc <16 x i64> undef to <16 x i16>
+; CHECK: Cost Model: Found an estimated cost of 7 for instruction:   %v29 = trunc <16 x i64> undef to <16 x i8>
+
+ ret void
+}

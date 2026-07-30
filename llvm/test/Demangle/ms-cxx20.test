@@ -1,0 +1,12 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+??__LA@@QEAA?AUno_suspend@@XZ
+; CHECK: struct no_suspend __cdecl A::operator co_await(void)
+
+??__MS@@QEAA?AVstrong_ordering@std@@AEBU0@@Z'
+; CHECK: class std::strong_ordering __cdecl S::operator<=>(struct S const &)
+
+?f@@YAX_Q@Z
+; CHECK: void __cdecl f(char8_t)

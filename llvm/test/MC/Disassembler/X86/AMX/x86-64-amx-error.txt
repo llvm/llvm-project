@@ -1,0 +1,4 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 2>&1 | FileCheck %s
+
+# CHECK: invalid instruction encoding
+0xc4,0xe2,0x1a,0x5c,0xf5

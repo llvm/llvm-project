@@ -1,0 +1,150 @@
+; These tests are based on clang/test/CodeGenCXX/mangle-ms-cxx11.cpp
+
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?a@FTypeWithQuals@@3U?$S@$$A8@@BAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) const> FTypeWithQuals::a
+
+?b@FTypeWithQuals@@3U?$S@$$A8@@CAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) volatile> FTypeWithQuals::b
+
+?c@FTypeWithQuals@@3U?$S@$$A8@@IAAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) __restrict> FTypeWithQuals::c
+
+?d@FTypeWithQuals@@3U?$S@$$A8@@GBAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) const &> FTypeWithQuals::d
+
+?e@FTypeWithQuals@@3U?$S@$$A8@@GCAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) volatile &> FTypeWithQuals::e
+
+?f@FTypeWithQuals@@3U?$S@$$A8@@IGAAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) __restrict &> FTypeWithQuals::f
+
+?g@FTypeWithQuals@@3U?$S@$$A8@@HBAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) const &&> FTypeWithQuals::g
+
+?h@FTypeWithQuals@@3U?$S@$$A8@@HCAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) volatile &&> FTypeWithQuals::h
+
+?i@FTypeWithQuals@@3U?$S@$$A8@@IHAAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) __restrict &&> FTypeWithQuals::i
+
+?j@FTypeWithQuals@@3U?$S@$$A6AHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void)> FTypeWithQuals::j
+
+?k@FTypeWithQuals@@3U?$S@$$A8@@GAAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) &> FTypeWithQuals::k
+
+?l@FTypeWithQuals@@3U?$S@$$A8@@HAAHXZ@1@A
+; CHECK: struct FTypeWithQuals::S<int __cdecl(void) &&> FTypeWithQuals::l
+
+?Char16Var@@3_SA
+; CHECK: char16_t Char16Var
+
+?Char32Var@@3_UA
+; CHECK: char32_t Char32Var
+
+?LRef@@YAXAAH@Z
+; CHECK: void __cdecl LRef(int &)
+
+?RRef@@YAH$$QAH@Z
+; CHECK: int __cdecl RRef(int &&)
+
+?Null@@YAX$$T@Z
+; CHECK: void __cdecl Null(std::nullptr_t)
+
+?fun@PR18022@@YA?AU<unnamed-type-a>@1@U21@0@Z
+; CHECK: struct PR18022::<unnamed-type-a> __cdecl PR18022::fun(struct PR18022::<unnamed-type-a>, struct PR18022::<unnamed-type-a>)
+
+; First, we have the static local variable of type "<lambda_1>" inside of "define_lambda".
+; decltype(lambda), where lambda = [] { static int local=42; return 42; };
+?lambda@?1??define_lambda@@YAHXZ@4V<lambda_1>@?0??1@YAHXZ@A
+; CHECK: class `int __cdecl define_lambda(void)'::`1'::<lambda_1> `int __cdecl define_lambda(void)'::`2'::lambda
+
+; Next, we have the "operator()" for "<lambda_1>" which is inside of "define_lambda".
+??R<lambda_1>@?0??define_lambda@@YAHXZ@QBE@XZ
+; CHECK: __thiscall `int __cdecl define_lambda(void)'::`1'::<lambda_1>::operator()(void) const
+
+; Finally, we have the local which is inside of "<lambda_1>" which is inside of "define_lambda".
+?local@?2???R<lambda_1>@?0??define_lambda@@YAHXZ@QBE@XZ@4HA
+; CHECK: __thiscall `int __cdecl define_lambda(void)'::`1'::<lambda_1>::operator()(void) const
+
+??$use_lambda_arg@V<lambda_1>@?0??call_with_lambda_arg1@@YAXXZ@@@YAXV<lambda_1>@?0??call_with_lambda_arg1@@YAXXZ@@Z
+; CHECK: void __cdecl use_lambda_arg<class `void __cdecl call_with_lambda_arg1(void)'::`1'::<lambda_1>>(class `void __cdecl call_with_lambda_arg1(void)'::`1'::<lambda_1>)
+
+?foo@A@PR19361@@QIGAEXXZ
+; CHECK: void __thiscall PR19361::A::foo(void) __restrict &
+
+?foo@A@PR19361@@QIHAEXXZ
+; CHECK: void __thiscall PR19361::A::foo(void) __restrict &&
+
+??__K_deg@@YAHO@Z
+; CHECK: int __cdecl operator ""_deg(long double)
+
+??$templ_fun_with_pack@$S@@YAXXZ
+; CHECK: void __cdecl templ_fun_with_pack<>(void)
+
+; $$Z is a parameter pack separator.
+??$func@H$$ZH@@YAHAEBU?$Foo@H@@0@Z
+; CHECK: int __cdecl func<int, int>(struct Foo<int> const &, struct Foo<int> const &)
+
+??$templ_fun_with_ty_pack@$$$V@@YAXXZ
+; CHECK: void __cdecl templ_fun_with_ty_pack<>(void)
+??$templ_fun_with_ty_pack@$$V@@YAXXZ
+; CHECK: void __cdecl templ_fun_with_ty_pack<>(void)
+
+??$f@$$YAliasA@PR20047@@@PR20047@@YAXXZ
+; CHECK: void __cdecl PR20047::f<PR20047::AliasA>(void)
+
+?f@UnnamedType@@YAXAAU<unnamed-type-TD>@A@1@@Z
+; CHECK: void __cdecl UnnamedType::f(struct UnnamedType::A::<unnamed-type-TD> &)
+
+?f@UnnamedType@@YAXPAW4<unnamed-type-e>@?$B@H@1@@Z
+; CHECK: void __cdecl UnnamedType::f(enum UnnamedType::B<int>::<unnamed-type-e> *)
+
+??$f@W4<unnamed-type-E>@?1??g@PR24651@@YAXXZ@@PR24651@@YAXW4<unnamed-type-E>@?1??g@0@YAXXZ@@Z
+; CHECK: void __cdecl PR24651::f<enum `void __cdecl PR24651::g(void)'::`2'::<unnamed-type-E>>(enum `void __cdecl PR24651::g(void)'::`2'::<unnamed-type-E>)
+
+??$f@T<unnamed-type-$S1>@PR18204@@@PR18204@@YAHPAT<unnamed-type-$S1>@0@@Z
+; CHECK: int __cdecl PR18204::f<union PR18204::<unnamed-type-$S1>>(union PR18204::<unnamed-type-$S1> *)
+
+??R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z
+; CHECK: public: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const
+
+??R<lambda_1>@?0???R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z@QBE@H@Z
+; CHECK: public: __thiscall `public: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const'::`1'::<lambda_1>::operator()(int) const
+
+?unaligned_foo1@@YAPFAHXZ
+; CHECK: int __unaligned * __cdecl unaligned_foo1(void)
+
+?unaligned_foo2@@YAPFAPFAHXZ
+; CHECK: int __unaligned *__unaligned * __cdecl unaligned_foo2(void)
+
+?unaligned_foo3@@YAHXZ
+; CHECK: int __cdecl unaligned_foo3(void)
+
+?unaligned_foo4@@YAXPFAH@Z
+; CHECK: void __cdecl unaligned_foo4(int __unaligned *)
+
+?unaligned_foo5@@YAXPIFAH@Z
+; CHECK: void __cdecl unaligned_foo5(int __unaligned *__restrict)
+
+??$unaligned_foo6@PAH@@YAPAHPAH@Z
+; CHECK: int * __cdecl unaligned_foo6<int *>(int *)
+
+??$unaligned_foo6@PFAH@@YAPFAHPFAH@Z
+; CHECK: int __unaligned * __cdecl unaligned_foo6<int __unaligned *>(int __unaligned *)
+
+?unaligned_foo8@unaligned_foo8_S@@QFCEXXZ
+; CHECK: void __thiscall unaligned_foo8_S::unaligned_foo8(void) volatile __unaligned
+
+??R<lambda_1>@x@A@PR31197@@QBE@XZ
+; CHECK: __thiscall PR31197::A::x::<lambda_1>::operator()(void) const
+
+?white@?1???R<lambda_1>@x@A@PR31197@@QBE@XZ@4HA
+; CHECK: int `public: __thiscall PR31197::A::x::<lambda_1>::operator()(void) const'::`2'::white
+
+?f@@YAXW4<unnamed-enum-enumerator>@@@Z
+; CHECK: void __cdecl f(enum <unnamed-enum-enumerator>)

@@ -1,0 +1,31 @@
+# These spawn another process so they're rather expensive. Not many.
+
+# LDR/STR: undefined if option field is 10x or 00x.
+# RUN: echo "0x00 0x08 0x20 0xf8" | llvm-mc -triple arm64 -disassemble 2>&1 | FileCheck %s
+# RUN: echo "0x00 0x88 0x20 0xf8" | llvm-mc -triple arm64 -disassemble 2>&1 | FileCheck %s
+
+# Instructions notionally in the add/sub (extended register) sheet, but with
+# invalid shift amount or "opt" field.
+# RUN: echo "0x00 0x10 0xa0 0x0b" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+# RUN: echo "0x00 0x10 0x60 0x0b" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+# RUN: echo "0x00 0x14 0x20 0x0b" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+
+# MOVK with sf == 0 and hw<1> == 1 is unallocated.
+# RUN: echo "0x00 0x00 0xc0 0x72" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+
+# ADD/SUB (shifted register) are reserved if shift == '11' or sf == '0' and imm6<5> == '1'.
+# RUN: echo "0x00 0x00 0xc0 0xeb" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+# RUN: echo "0x00 0x80 0x80 0x6b" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+
+# UBFM is undefined when s == 0 and imms<5> or immr<5> is 1.
+# RUN: echo "0x00 0x80 0x00 0x53" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+
+# EXT on vectors of i8 must have imm<3> = 0.
+# RUN: echo "0x00 0x40 0x00 0x2e" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+
+# SCVTF on fixed point W-registers is undefined if scale<5> == 0.
+# Same with FCVTZS and FCVTZU.
+# RUN: echo "0x00 0x00 0x02 0x1e" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+# RUN: echo "0x00 0x00 0x18 0x1e" | llvm-mc -triple=arm64 -disassemble 2>&1 | FileCheck %s
+
+# CHECK: invalid instruction encoding

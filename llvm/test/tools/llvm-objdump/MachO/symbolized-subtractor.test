@@ -1,0 +1,10 @@
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho -d - | FileCheck %s
+
+nop
+x:
+leaq	x-y(%rax), %rbx
+.data
+y:
+.quad 0
+
+# CHECK: leaq	x-y(%rax), %rbx

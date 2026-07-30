@@ -1,0 +1,31 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for lanai target.
+
+# RUN: yaml2obj %s -o %t-lanai.o
+# RUN: llvm-readobj -r --expand-relocs %t-lanai.o | FileCheck %s
+
+# CHECK: Type: R_LANAI_NONE (0)
+# CHECK: Type: R_LANAI_21 (1)
+# CHECK: Type: R_LANAI_21_F (2)
+# CHECK: Type: R_LANAI_25 (3)
+# CHECK: Type: R_LANAI_32 (4)
+# CHECK: Type: R_LANAI_HI16 (5)
+# CHECK: Type: R_LANAI_LO16 (6)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_LANAI
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+      - Type: R_LANAI_NONE
+      - Type: R_LANAI_21
+      - Type: R_LANAI_21_F
+      - Type: R_LANAI_25
+      - Type: R_LANAI_32
+      - Type: R_LANAI_HI16
+      - Type: R_LANAI_LO16

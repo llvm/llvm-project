@@ -1,0 +1,8 @@
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH=1 not %clang -fsyntax-only -x c /dev/null -lstdc++ 2>&1 | FileCheck %s
+
+// FIXME: Investigating. "fatal error: file 'nul' modified since it was first processed"
+// UNSUPPORTED: system-windows
+
+// CHECK: PLEASE submit a bug report to {{.*}} and include the crash backtrace and dumped files.
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
+// CHECK-NEXT: note: diagnostic msg: {{.*}}null-{{.*}}.c

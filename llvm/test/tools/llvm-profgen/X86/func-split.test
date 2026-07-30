@@ -1,0 +1,69 @@
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/func-split.perfscript --binary=%S/Inputs/func-split.perfbin --output=%t --ignore-stack-samples --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
+
+;CHECK: [foo]:409:0
+;CHECK:  2.1: 27
+;CHECK:  3: 27
+;CHECK:  3.1: 2 bar:2
+;CHECK:  3.2: 26
+;CHECK: [foo:3.1 @ bar]:8:0
+;CHECK:  1: 1
+;CHECK:  5: 1
+;CHECK: [bar]:0:1
+
+;CHECK-NOT: foo.cold
+
+;CHECK-STRIP-CTX: foo:1334:0
+;CHECK-STRIP-CTX:  0: 0
+;CHECK-STRIP-CTX:  2.1: 27
+;CHECK-STRIP-CTX:  3: 27
+;CHECK-STRIP-CTX:  3.1: 1 bar:1
+;CHECK-STRIP-CTX:  3.2: 26
+;CHECK-STRIP-CTX:  4: 0
+;CHECK-STRIP-CTX: bar:27:1
+;CHECK-STRIP-CTX:  1: 1
+;CHECK-STRIP-CTX:  5: 1
+
+;CHECK-STRIP-CTX-NOT: foo.cold
+
+
+; clang -g -O3 -fdebug-info-for-profiling func-split.c -mllvm -mfs-count-threshold=0
+; -fprofile-sample-use=profile.txt -fno-inline -mllvm --enable-split-machine-functions=1
+
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91 == 0) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+
+; profile.txt:
+
+foo:106269:0
+ 2.1: 2268
+ 2.2: 2217
+ 3: 2268
+ 3.1: 1 bar:1
+ 3.2: 2192
+bar:1032:1
+ 0: 24
+ 1: 24
+ 2: 16
+ 4: 8
+ 5: 24

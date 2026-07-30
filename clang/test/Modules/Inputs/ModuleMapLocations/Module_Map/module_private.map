@@ -1,0 +1,3 @@
+module module_map.Private {
+  header "private.h"
+}

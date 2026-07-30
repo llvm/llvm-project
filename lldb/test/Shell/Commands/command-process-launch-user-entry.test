@@ -1,0 +1,8 @@
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+process launch -m
+# CHECK-LABEL: process launch -m
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = one-shot breakpoint 1
+# CHECK:   frame #0: {{.*}}`main at main.c

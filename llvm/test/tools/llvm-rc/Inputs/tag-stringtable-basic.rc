@@ -1,0 +1,46 @@
+STRINGTABLE
+VERSION 32
+CHARACTERISTICS 0x32 {
+  0 "a"
+}
+
+// Commas are optional, so we make sure to test both cases.
+STRINGTABLE {
+  1, "b"
+  16, "bb"
+}
+
+STRINGTABLE
+VERSION 100
+LANGUAGE 4, 7 {
+  16 "hel" "lo"
+  17 "wor" L"ld"
+}
+
+STRINGTABLE
+VERSION 50
+CHARACTERISTICS 0x32 {
+  17 "cc"
+  32 "ccc"
+  2 "c"
+}
+
+STRINGTABLE {
+  3 "d"
+  4 ""
+  8 ""
+}
+
+STRINGTABLE
+VERSION 101
+LANGUAGE 4, 7 {
+  -1 & 65535 "minus one"
+}
+
+STRINGTABLE
+CHARACTERISTICS 10
+LANGUAGE 4, 7 {
+  23 "something else"
+  65529 "large number"
+}
+

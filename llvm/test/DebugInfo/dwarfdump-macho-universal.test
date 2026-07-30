@@ -1,0 +1,17 @@
+Reuse a test input from dsymutil, it's perfect for what we want to exercise
+RUN: llvm-dwarfdump -v %S/Inputs/fat-test.o --debug-info | FileCheck %s
+
+CHECK: fat-test.o(x86_64):	file format Mach-O 64-bit x86-64
+CHECK: DW_TAG_variable
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK: DW_AT_name {{.*}} "x86_64_var"
+
+CHECK: fat-test.o(i386):	file format Mach-O 32-bit i386
+CHECK: DW_TAG_variable
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK: DW_AT_name {{.*}} "i386_var"
+
+CHECK: fat-test.o(x86_64h):	file format Mach-O 64-bit x86-64
+CHECK: DW_TAG_variable
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK: DW_AT_name {{.*}} "x86_64h_var"

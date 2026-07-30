@@ -1,0 +1,12 @@
+def pre_flight(test):
+    __import__("lldb")
+    __import__("lldbtest")
+    print "\nRunning pre-flight function:"
+    print "for test case:", test
+
+def post_flight(test):
+    __import__("lldb")
+    __import__("lldbtest")
+    print "\nRunning post-flight function:"
+    print "for test case:", test
+

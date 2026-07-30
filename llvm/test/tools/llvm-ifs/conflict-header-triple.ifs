@@ -1,0 +1,12 @@
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s %S/object.ifs 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# CHECK-IFS: error: Interface Stub: Target Mismatch.
+# CHECK-IFS-NEXT: Filenames:
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target:          mips-unknown-linux
+Symbols:
+  - { Name: a, Type: Func }
+...

@@ -1,0 +1,10 @@
+RUN: llvm-cvtres /timestamp:0x12345678 /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=1TO8
+
+1TO8: TimeDateStamp: 1979-09-05 22:51:36 (0x12345678)
+
+
+RUN: not llvm-cvtres /timestamp:0x123456789 /out:%t \
+RUN:     %p/Inputs/test_resource.res 2>&1 | FileCheck %s --check-prefix=ERR
+
+ERR: invalid timestamp: 0x123456789.  Expected 32-bit integer

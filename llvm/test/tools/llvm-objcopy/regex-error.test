@@ -1,0 +1,13 @@
+## Test if providing objcopy with an invalid regex generates an error.
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: not llvm-objcopy --regex --strip-symbol='[^)\' %t /dev/null 2>&1 | FileCheck %s
+# CHECK: error: cannot compile regular expression '[^)\'
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64

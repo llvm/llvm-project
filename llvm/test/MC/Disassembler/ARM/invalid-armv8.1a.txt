@@ -1,0 +1,83 @@
+# RUN: not llvm-mc -triple armv8 -mattr=+v8.1a --disassemble < %s 2>&1 | FileCheck %s
+
+# Check, if sizes 00 and 11 are undefined for RDMA
+[0x12,0x0b,0x01,0xf3] # vqrdmlah.s8   d0, d1, d2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x12,0x0b,0x01,0xf3] # vqrdmlah.s8   d0, d1, d2
+# CHECK-NEXT:  ^
+
+[0x12,0x0b,0x31,0xf3] # vqrdmlah.s64  d0, d1, d2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x12,0x0b,0x31,0xf3] # vqrdmlah.s64  d0, d1, d2
+# CHECK-NEXT:  ^
+
+[0x54,0x0b,0x02,0xf3] # vqrdmlah.s8   q0, q1, q2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x54,0x0b,0x02,0xf3] # vqrdmlah.s8   q0, q1, q2
+# CHECK-NEXT:  ^
+
+[0x54,0x0b,0x32,0xf3] # vqrdmlah.s64  q2, q3, q0
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x54,0x0b,0x32,0xf3] # vqrdmlah.s64  q2, q3, q0
+# CHECK-NEXT:  ^
+
+[0x15,0x7c,0x06,0xf3] # vqrdmlsh.s8   d0, d1, d2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x15,0x7c,0x06,0xf3] # vqrdmlsh.s8   d0, d1, d2
+# CHECK-NEXT:  ^
+
+[0x15,0x7c,0x36,0xf3] # vqrdmlsh.s64  d0, d1, d2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x15,0x7c,0x36,0xf3] # vqrdmlsh.s64  d0, d1, d2
+# CHECK-NEXT:  ^
+
+[0x54,0x0c,0x02,0xf3] # vqrdmlsh.s8   q0, q1, q2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x54,0x0c,0x02,0xf3] # vqrdmlsh.s8   q0, q1, q2
+# CHECK-NEXT:  ^
+
+[0x54,0x0c,0x32,0xf3] # vqrdmlsh.s64  q0, q1, q2
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x54,0x0c,0x32,0xf3] # vqrdmlsh.s64  q0, q1, q2
+# CHECK-NEXT:  ^
+
+[0x42,0x0e,0x81,0xf2] # vqrdmlah.s8   d0, d1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0e,0x81,0xf2] # vqrdmlah.s8   d0, d1, d2[0]
+# CHECK-NEXT:  ^
+
+[0x42,0x0e,0xb1,0xf2] # vqrdmlah.s64  d0, d1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0e,0xb1,0xf2] # vqrdmlah.s64  d0, d1, d2[0]
+# CHECK-NEXT:  ^
+
+[0x42,0x0e,0x82,0xf3] # vqrdmlah.s8   q0, q1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0e,0x82,0xf3] # vqrdmlah.s8   q0, q1, d2[0]
+# CHECK-NEXT:  ^
+
+[0x42,0x0e,0xb2,0xf3] # vqrdmlah.s64  q0, q1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0e,0xb2,0xf3] # vqrdmlah.s64  q0, q1, d2[0]
+# CHECK-NEXT:  ^
+
+
+[0x42,0x0f,0x81,0xf2] # vqrdmlsh.s8   d0, d1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0f,0x81,0xf2] # vqrdmlsh.s8   d0, d1, d2[0]
+# CHECK-NEXT:  ^
+
+[0x42,0x0f,0xb1,0xf2] # vqrdmlsh.s64  d0, d1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0f,0xb1,0xf2] # vqrdmlsh.s64  d0, d1, d2[0]
+# CHECK-NEXT:  ^
+
+[0x42,0x0f,0x82,0xf3] # vqrdmlsh.s8   q0, q1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0f,0x82,0xf3] # vqrdmlsh.s8   q0, q1, d2[0]
+# CHECK-NEXT:  ^
+
+[0x42,0x0f,0xb2,0xf3] # vqrdmlsh.s64  q0, q1, d2[0]
+# CHECK:      warning: invalid instruction encoding
+# CHECK-NEXT: [0x42,0x0f,0xb2,0xf3] # vqrdmlsh.s64  q0, q1, d2[0]
+# CHECK-NEXT:  ^

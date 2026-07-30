@@ -1,0 +1,69 @@
+; RUN: llvm-pdbutil bytes -stream-data=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=STREAM %s
+; RUN: llvm-pdbutil bytes -stream-data=100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALIDSTREAM %s
+; RUN: llvm-pdbutil bytes -stream-data=1,100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=BOTH %s
+
+; RUN: llvm-pdbutil bytes -stream-data=1:10 %p/Inputs/empty.pdb | FileCheck --check-prefix=OFFSET %s
+; RUN: llvm-pdbutil bytes -stream-data=1@20 %p/Inputs/empty.pdb | FileCheck --check-prefix=SIZED %s
+; RUN: llvm-pdbutil bytes -stream-data=1:8@20 %p/Inputs/empty.pdb | FileCheck --check-prefix=SLICE %s
+; RUN: llvm-pdbutil bytes -stream-data=1:0x8@0x14 %p/Inputs/empty.pdb | FileCheck --check-prefix=SLICE %s
+; RUN: llvm-pdbutil bytes -stream-data=2:4050@100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=DISCONTINUITY %s
+
+STREAM:                             Stream Data
+STREAM-NEXT: ============================================================
+STREAM-NEXT:   Stream 1: PDB Stream (dumping 118 / 118 bytes)
+STREAM-NEXT:     Data (
+STREAM-NEXT:       13000: 942E3101 E207E554 01000000 0B355641 86A0A249 896F9988 FAE52FF0 22000000  |..1....T.....5VA...I.o..../."...|
+STREAM-NEXT:       13020: 2F4C696E 6B496E66 6F002F6E 616D6573 002F7372 632F6865 61646572 626C6F63  |/LinkInfo./names./src/headerbloc|
+STREAM-NEXT:       13040: 6B000300 00000600 00000100 00001A00 00000000 00001100 00000900 00000A00  |k...............................|
+STREAM-NEXT:       13060: 00000D00 00000000 00000500 00000000 00004191 3201                        |..................A.2.|
+STREAM-NEXT:     )
+
+INVALIDSTREAM:                             Stream Data
+INVALIDSTREAM-NEXT: ============================================================
+INVALIDSTREAM-NEXT:   Stream 100: Not present
+
+BOTH:                             Stream Data
+BOTH-NEXT: ============================================================
+BOTH-NEXT:   Stream 1: PDB Stream (dumping 118 / 118 bytes)
+BOTH-NEXT:     Data (
+BOTH-NEXT:       13000: 942E3101 E207E554 01000000 0B355641 86A0A249 896F9988 FAE52FF0 22000000  |..1....T.....5VA...I.o..../."...|
+BOTH-NEXT:       13020: 2F4C696E 6B496E66 6F002F6E 616D6573 002F7372 632F6865 61646572 626C6F63  |/LinkInfo./names./src/headerbloc|
+BOTH-NEXT:       13040: 6B000300 00000600 00000100 00001A00 00000000 00001100 00000900 00000A00  |k...............................|
+BOTH-NEXT:       13060: 00000D00 00000000 00000500 00000000 00004191 3201                        |..................A.2.|
+BOTH-NEXT:     )
+BOTH-NEXT:   Stream 100: Not present
+
+OFFSET:                             Stream Data
+OFFSET-NEXT: ============================================================
+OFFSET-NEXT:   Stream 1: PDB Stream (dumping 108 / 118 bytes)
+OFFSET-NEXT:     Data (
+OFFSET-NEXT:       1300A: 00000B35 564186A0 A249896F 9988FAE5 2FF02200 00002F4C 696E6B49 6E666F00  |...5VA...I.o..../.".../LinkInfo.|
+OFFSET-NEXT:       1302A: 2F6E616D 6573002F 7372632F 68656164 6572626C 6F636B00 03000000 06000000  |/names./src/headerblock.........|
+OFFSET-NEXT:       1304A: 01000000 1A000000 00000000 11000000 09000000 0A000000 0D000000 00000000  |................................|
+OFFSET-NEXT:       1306A: 05000000 00000000 41913201                                               |........A.2.|
+OFFSET-NEXT:     )
+
+SIZED:                             Stream Data
+SIZED-NEXT: ============================================================
+SIZED-NEXT:   Stream 1: PDB Stream (dumping 20 / 118 bytes)
+SIZED-NEXT:     Data (
+SIZED-NEXT:       13000: 942E3101 E207E554 01000000 0B355641 86A0A249                           |..1....T.....5VA...I|
+SIZED-NEXT:     )
+
+SLICE:                             Stream Data
+SLICE-NEXT: ============================================================
+SLICE-NEXT:   Stream 1: PDB Stream (dumping 20 / 118 bytes)
+SLICE-NEXT:     Data (
+SLICE-NEXT:       13008: 01000000 0B355641 86A0A249 896F9988 FAE52FF0                             |.....5VA...I.o..../.|
+SLICE-NEXT:     )
+
+DISCONTINUITY:                              Stream Data
+DISCONTINUITY-NEXT: ============================================================
+DISCONTINUITY-NEXT:   Stream 2: TPI Stream (dumping 100 / 5,392 bytes)
+DISCONTINUITY-NEXT:     Data (
+DISCONTINUITY-NEXT:       12FD2: 65537472 75637455 73616765 00F10215 03000480 00002000 654C6F63 616C5573  |eStructUsage.......... .eLocalUs|
+DISCONTINUITY-NEXT:       12FF2: 61676500 F2F10215 03000480 0000                                          |age...........|
+DISCONTINUITY-NEXT:       -------------------------------------------------<discontinuity>--------------------------------------------------
+DISCONTINUITY-NEXT:       11000: 40006550 726F7065 72747955 73616765 00F3F2F1 02150300 04800000 80006545  |@.ePropertyUsage..............eE|
+DISCONTINUITY-NEXT:       11020: 76656E74 55736167 6500F2F1 02150300 04800000 0001                        |ventUsage.............|
+DISCONTINUITY-NEXT:     )

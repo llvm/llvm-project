@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+key:    # Comment
+        # lines
+  value
+

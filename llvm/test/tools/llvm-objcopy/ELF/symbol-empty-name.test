@@ -1,0 +1,46 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
+
+## Check that all values of the null symbol are zeroes.
+
+# CHECK:      Symbols [
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name:  (0)
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: Undefined (0x0)
+# CHECK-NEXT:  }
+
+## Check we emit a zero in st_name field when a symbol has no name.
+
+# CHECK:       Name: .text (0)
+# CHECK-NEXT:   Value: 0x0
+# CHECK-NEXT:   Size: 0
+# CHECK-NEXT:   Binding: Local (0x0)
+# CHECK-NEXT:   Type: Section (0x3)
+# CHECK-NEXT:   Other: 0
+# CHECK-NEXT:   Section: .text (0x1)
+# CHECK-NEXT: }
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    ""
+    Type:    STT_SECTION
+    Section: .text
+# We need to have a named symbol, otherwise the original
+# issue that was fixed is not reproduced by this test.
+  - Name:    foo
+    Binding: STB_GLOBAL

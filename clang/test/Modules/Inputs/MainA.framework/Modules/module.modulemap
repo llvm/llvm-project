@@ -1,0 +1,12 @@
+framework module MainA {
+  umbrella header "Main.h"
+
+  module * { export * }
+  export *
+
+  framework module Sub {
+    umbrella header "Sub.h"
+    module * { export * }
+    export *
+  }
+}

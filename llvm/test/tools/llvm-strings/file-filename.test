@@ -1,0 +1,10 @@
+## Show that --print-file-name prints the name of the file before each line in
+## the output.
+
+RUN: echo abcd > %t
+RUN: echo efg >> %t
+RUN: echo hijk >> %t
+RUN: llvm-strings -f %t | FileCheck %s --strict-whitespace -DFILE=%t
+RUN: llvm-strings --print-file-name %t | FileCheck %s --strict-whitespace -DFILE=%t
+CHECK:      [[FILE]]: abcd
+CHECK-NEXT: [[FILE]]: hijk

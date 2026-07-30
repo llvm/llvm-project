@@ -1,0 +1,24 @@
+# RUN: llc -mtriple x86_64-linux-gnu -run-pass mir-canonicalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple x86_64-linux-gnu -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs %s -o - | FileCheck %s
+
+...
+---
+name: f
+stack:
+  - { id: 0, size: 4 }
+  - { id: 1, size: 4 }
+fixedStack:
+  - { id: 0, offset: 0, size: 4 }
+  - { id: 1, offset: 0, size: 4 }
+body: |
+  bb.1:
+    ; CHECK: _1:_(p0) = G_FRAME_INDEX %stack.{{[0-1]}}
+    ; CHECK: _1:_(p0) = G_FRAME_INDEX %stack.{{[0-1]}}
+    ; CHECK: _1:gr32 = MOV32rm %fixed-stack.{{[0-1]}}
+    ; CHECK: _1:gr32 = MOV32rm %fixed-stack.{{[0-1]}}
+    %1:_(p0) = G_FRAME_INDEX %stack.0
+    %2:_(p0) = G_FRAME_INDEX %stack.1
+    %3:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _
+    %4:gr32 = MOV32rm %fixed-stack.1, 1, _, 0, _
+
+...

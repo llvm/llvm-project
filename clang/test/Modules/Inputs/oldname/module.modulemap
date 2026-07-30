@@ -1,0 +1,4 @@
+module NewName {
+  header "new_name.h"
+  export *
+}

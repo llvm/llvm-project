@@ -1,0 +1,4 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a --disassemble < %s | FileCheck %s
+
+[0x43,0x07,0x38,0xd5]
+# CHECK: mrs x3, ID_AA64MMFR2_EL1

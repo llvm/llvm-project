@@ -1,0 +1,28 @@
+# RUN: llvm-mc -triple=ve --show-encoding < %s \
+# RUN:     | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+# RUN: llvm-mc -triple=ve -filetype=obj < %s | llvm-objdump -d - \
+# RUN:     | FileCheck %s --check-prefixes=CHECK-INST
+
+# CHECK-INST: vseq %v11
+# CHECK-ENCODING: encoding: [0x00,0x00,0x00,0x0b,0x00,0x00,0x00,0x99]
+vseq %v11
+
+# CHECK-INST: vseq %vix
+# CHECK-ENCODING: encoding: [0x00,0x00,0x00,0xff,0x00,0x00,0x00,0x99]
+vseq %vix
+
+# CHECK-INST: pvseq.lo %vix
+# CHECK-ENCODING: encoding: [0x00,0x00,0x00,0xff,0x00,0x00,0x40,0x99]
+pvseq.lo %vix
+
+# CHECK-INST: pvseq.lo %v11, %vm11
+# CHECK-ENCODING: encoding: [0x00,0x00,0x00,0x0b,0x00,0x00,0x4b,0x99]
+pvseq.lo %v11, %vm11
+
+# CHECK-INST: pvseq.up %v11, %vm11
+# CHECK-ENCODING: encoding: [0x00,0x00,0x00,0x0b,0x00,0x00,0x8b,0x99]
+pvseq.up %v11, %vm11
+
+# CHECK-INST: pvseq %v12, %vm12
+# CHECK-ENCODING: encoding: [0x00,0x00,0x00,0x0c,0x00,0x00,0xcc,0x99]
+pvseq %v12, %vm12

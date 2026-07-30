@@ -1,0 +1,139 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: llvm-readtapi -merge %t/i386.tbd %t/x86_64.tbd %t/arm64.tbd --filetype tbd-v5 -o %t/out.tbd -compact 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -merge %t/i386.tbd %t/x86_64.tbd %t/arm64.tbd --filetype=tbd-v5 --o %t/out.tbd -compact 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/out.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty 
+
+; CHECK-NOT: error 
+; CHECK-NOT: warning
+
+;--- expected.tbd
+{
+    "main_library": {
+        "allowable_clients": [{ "clients": ["ClientAll"] }],
+        "exported_symbols": [
+            {
+                "data": {
+                    "global": ["_sym1"],
+                    "objc_class": ["_A"],
+                    "thread_local": ["_tlv1"],
+                    "weak": ["_weak1"]
+                }
+            },
+            {
+                "data": {
+                    "objc_ivar": ["_A._ivar1"]
+                },
+                "targets": [ "x86_64-macos", "arm64-macos" ]
+            }
+        ],
+        "install_names": [
+            { "name": "/usr/lib/libfat.dylib" }
+        ],
+        "reexported_libraries": [
+            {
+                "names": [ "/usr/lib/liball.dylib" ]
+            }
+        ],
+        "target_info": [
+            { "target": "i386-macos" },
+            {
+                "min_deployment": "13.1",
+                "target": "x86_64-macos"
+            },
+            {
+                "target": "arm64-macos"
+            }
+        ]
+    },
+    "tapi_tbd_version": 5
+}
+
+
+;--- i386.tbd
+--- !tapi-tbd-v3
+archs:           [ i386 ]
+platform:        macosx
+install-name:    /usr/lib/libfat.dylib
+exports:         
+  - archs:           [ i386 ]
+    allowable-clients: [ ClientAll ]
+    re-exports:      [ /usr/lib/liball.dylib ]
+    symbols:         [ _sym1 ]
+    objc-classes:    [ _A ]
+    weak-def-symbols: [ _weak1 ]
+    thread-local-symbols: [ _tlv1 ]
+...
+
+;--- x86_64.tbd
+{
+  "main_library": {
+    "allowable_clients": [
+      {
+        "clients": [
+          "ClientAll"
+        ]
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "_sym1"
+          ],
+          "objc_class": [
+            "_A"
+          ],
+          "objc_ivar": [
+            "_A._ivar1"
+          ],
+          "thread_local": [
+            "_tlv1"
+          ],
+          "weak": [
+            "_weak1"
+          ]
+        }
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/libfat.dylib"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/usr/lib/liball.dylib"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- arm64.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-macos ]
+install-name:    '/usr/lib/libfat.dylib'
+allowable-clients:
+  - targets:         [ arm64-macos ]
+    clients:         [ ClientAll ]
+reexported-libraries:
+  - targets:         [ arm64-macos ]
+    libraries:       [ '/usr/lib/liball.dylib' ]
+exports:
+  - targets:         [ arm64-macos ]
+    symbols:         [ _sym1 ]
+    objc-classes:    [ _A ]
+    objc-ivars:      [ _A._ivar1 ]
+    weak-symbols:    [ _weak1 ]
+    thread-local-symbols: [ _tlv1 ]
+...

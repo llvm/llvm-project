@@ -1,0 +1,9 @@
+module def { header "def.h" export * }
+module update { header "update.h" export * }
+
+module a1 { header "a1.h" export * }
+module a2 { header "a2.h" export * }
+module b1 { header "b1.h" export * }
+module b2 { header "b2.h" export * }
+module merge { header "merge.h" export * }
+module c { header "c.h" export * }

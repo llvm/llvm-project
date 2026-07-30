@@ -1,0 +1,1 @@
+RUN: llc -O0 -mtriple=sparc -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll

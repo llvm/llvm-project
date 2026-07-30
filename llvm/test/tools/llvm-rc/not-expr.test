@@ -1,0 +1,20 @@
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/not-expr.rc
+; RUN: llvm-readobj %t | FileCheck %s --check-prefix=NOTEXPR
+
+; NOTEXPR: Resource type (int): DIALOG (ID 5)
+; NOTEXPR-NEXT: Resource name (string): NOT
+; NOTEXPR-NEXT: Data version: 0
+; NOTEXPR-NEXT: Memory flags: 0x1030
+; NOTEXPR-NEXT: Language ID: 1033
+; NOTEXPR-NEXT: Version (major): 0
+; NOTEXPR-NEXT: Version (minor): 0
+; NOTEXPR-NEXT: Characteristics: 0
+; NOTEXPR-NEXT: Data size: 96
+; NOTEXPR-NEXT: Data: (
+; NOTEXPR-NEXT:   0000: 0100FFFF 04000000 F7FFFFFF 03FF00FF  |................|
+; NOTEXPR-NEXT:   0010: 02000000 02003C00 03000000 00000000  |......<.........|
+; NOTEXPR-NEXT:   0020: 00000000 00000000 22000050 00000A00  |........"..P....|
+; NOTEXPR-NEXT:   0030: 00000000 00000000 FFFF8000 00000000  |................|
+; NOTEXPR-NEXT:   0040: 00000000 00000000 01000050 00000000  |...........P....|
+; NOTEXPR-NEXT:   0050: 00000000 01000000 FFFF8000 00000000  |................|
+; NOTEXPR-NEXT: )

@@ -1,0 +1,153 @@
+## Show that llvm-readobj/llvm-readelf tools sometimes can dump the
+## dynamic table when it is not in a PT_DYNAMIC segment.
+
+## Case 1: The dynamic table found using the dynamic program header is corrupted
+##         (<size of data> % <size of dynamic entry> != 0). So the table is taken
+##         from the section header.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-readobj --dynamic-table %t1.o 2>&1 \
+# RUN:   | FileCheck -DFILE=%t1.o --check-prefixes=WARNING1,LLVM1 %s
+# RUN: llvm-readelf --dynamic-table %t1.o 2>&1 \
+# RUN:   | FileCheck -DFILE=%t1.o --check-prefixes=WARNING1,GNU1 %s
+
+# WARNING1: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 is not contained within the PT_DYNAMIC segment
+# WARNING1: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x1){{$}}
+# WARNING1: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
+# WARNING1: warning: '[[FILE]]': PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used
+
+# LLVM1:      DynamicSection [ (2 entries)
+# LLVM1-NEXT:   Tag                Type     Name/Value
+# LLVM1-NEXT:   0x0000000000000018 BIND_NOW 0x1
+# LLVM1-NEXT:   0x0000000000000000 NULL     0x0
+# LLVM1-NEXT: ]
+
+# GNU1:      Dynamic section at offset 0x{{.*}} contains 2 entries:
+# GNU1-NEXT:   Tag                Type       Name/Value
+# GNU1-NEXT:   0x0000000000000018 (BIND_NOW) 0x1
+# GNU1-NEXT:   0x0000000000000000 (NULL)     0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_ALLOC]
+    Address: 0x1000
+    AddressAlign: 0x1000
+    Entries:
+      - Tag:   DT_BIND_NOW
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC]
+    Address: 0x1100
+    AddressAlign: 0x100
+    Content: "00"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+
+## Case 2: The dynamic table found using the dynamic program header is different from the
+##         table found using the section header table.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-readobj --dynamic-table %t2.o 2>&1 \
+# RUN:   | FileCheck -DFILE=%t2.o --check-prefixes=WARNING2,LLVM2 %s
+# RUN: llvm-readelf --dynamic-table %t2.o 2>&1 \
+# RUN:   | FileCheck -DFILE=%t2.o --check-prefixes=WARNING2,GNU2 %s
+
+# WARNING2: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 is not contained within the PT_DYNAMIC segment
+# WARNING2: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
+
+# LLVM2:      DynamicSection [ (1 entries)
+# LLVM2-NEXT:   Tag                Type     Name/Value
+# LLVM2-NEXT:   0x0000000000000000 NULL     0x0
+# LLVM2-NEXT: ]
+
+# GNU2:      Dynamic section at offset 0x{{.*}} contains 1 entries:
+# GNU2-NEXT:   Tag                Type       Name/Value
+# GNU2-NEXT:   0x0000000000000000 (NULL)     0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_ALLOC]
+    Address: 0x1000
+    AddressAlign: 0x1000
+    Entries:
+      - Tag:   DT_BIND_NOW
+        Value: 0x1
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC]
+    Address: 0x1100
+    AddressAlign: 0x100
+    Content: "00000000000000000000000000000000"
+ProgramHeaders:
+  - Type:      PT_LOAD
+    VAddr:     0x1000
+    FirstSec:  .dynamic
+    LastSec:   .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+
+## Case 3: Both dynamic tables found using SHT_DYNAMIC/PT_DYNAMIC are corrupted.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readobj --dynamic-table %t3.o 2>&1 \
+# RUN:   | FileCheck -DFILE=%t3.o --check-prefix=WARNING3 --implicit-check-not="Dynamic" %s
+# RUN: llvm-readelf --dynamic-table %t3.o 2>&1 \
+# RUN:   | FileCheck -DFILE=%t3.o --check-prefix=WARNING3 --implicit-check-not="Dynamic" %s
+
+# WARNING3: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x1){{$}}
+# WARNING3: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
+# WARNING3: warning: '[[FILE]]': no valid dynamic table was found
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_ALLOC]
+    Address: 0x1000
+    AddressAlign: 0x1000
+    Content: "00"
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC]
+    Address: 0x1100
+    AddressAlign: 0x100
+    Content: "00"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text

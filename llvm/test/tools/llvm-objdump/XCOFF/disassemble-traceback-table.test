@@ -1,0 +1,115 @@
+## Test that "llvm-objdump --traceback-table" decodes the ControlledStorageInfo,
+## AllocaRegister, and extension table of the traceback table.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump -d --traceback-table --symbol-description %t.o | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s
+
+## Show that --traceback-table implies --disassemble.
+# RUN: llvm-objdump --traceback-table --symbol-description %t.o | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "9421ffc0000000000000204080000201000000000000000400064164644e756d0000000093e1fffc0000000000002a6080c202072c90000000000004000000036f0000010000000a000001000003666f6f1f0203c000000000002000000000000000000000000000010000000000000100000000000000000000000000123400000000"
+Symbols:
+  - Name:            .AddNum
+    Value:           0
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SectionOrLength:        0x24
+        SymbolAlignmentAndType: 0x21
+        StorageMappingClass:    XMC_PR
+  - Name:            .foo
+    Value:           0x24
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SectionOrLength:        0x5F
+        SymbolAlignmentAndType: 0x21
+        StorageMappingClass:    XMC_PR
+
+## The above .text section data is generated using the compiler command:
+##   xlc -o test.o -c test.c
+## We also modified the binary content of the traceback table in the object file to add vector information
+## for function "foo", including ControlledStorageInfo, AllocaRegister, and ExtensionTable.
+
+## test.c:
+## int AddNum(int i,intj) {
+##  return i+j;
+## }
+
+## float foo(int i1,float f1,double d1,int i2, float f2) {
+##    return i1+f1+d1+i2+f2;
+##   }
+
+# CHECK:00000000 (idx: 0) .AddNum[PR]:
+# CHECK-NEXT:       0: 94 21 ff c0  	stwu 1, -64(1)
+# CHECK-NEXT:       4: 00 00 00 00  	# Traceback table start
+# CHECK-NEXT:       8: 00           	# Version = 0
+# CHECK-NEXT:       9: 00           	# Language = C
+# CHECK-NEXT:       a: 20           	# -isGlobalLinkage, -isOutOfLineEpilogOrPrologue
+# CHECK-NEXT:                       	  +hasTraceBackTableOffset, -isInternalProcedure
+# CHECK-NEXT:                       	  -hasControlledStorage, -isTOCless
+# CHECK-NEXT:                       	  -isFloatingPointPresent
+# CHECK-NEXT:                       	  -isFloatingPointOperationLogOrAbortEnabled
+# CHECK-NEXT:       b: 40           	# -isInterruptHandler, +isFuncNamePresent, -isAllocaUsed
+# CHECK-NEXT:                       	  OnConditionDirective = 0, -isCRSaved, -isLRSaved
+# CHECK-NEXT:       c: 80           	# +isBackChainStored, -isFixup, NumOfFPRsSaved = 0
+# CHECK-NEXT:       d: 00           	# -hasExtensionTable, -hasVectorInfo, NumOfGPRsSaved = 0
+# CHECK-NEXT:       e: 02           	# NumberOfFixedParms = 2
+# CHECK-NEXT:       f: 01           	# NumberOfFPParms = 0, +hasParmsOnStack
+# CHECK-NEXT:      10: 00 00 00 00  	# ParmsType = i, i
+# CHECK-NEXT:      14: 00 00 00 04  	# TraceBackTableOffset = 4
+# CHECK-NEXT:      18: 00 06        	# FunctionNameLen = 6
+# CHECK-NEXT:      1a: 41 64 64 4e  	# FunctionName = AddNum
+# CHECK-NEXT:      1e: 75 6d        
+# CHECK-NEXT:      20: 00 00 00 00  	# Padding
+
+# CHECK:00000024 (idx: 2) .foo[PR]:
+# CHECK-NEXT:      24: 93 e1 ff fc  	stw 31, -4(1)
+# CHECK-NEXT:      28: 00 00 00 00  	# Traceback table start
+# CHECK-NEXT:      2c: 00           	# Version = 0
+# CHECK-NEXT:      2d: 00           	# Language = C
+# CHECK-NEXT:      2e: 2a           	# -isGlobalLinkage, -isOutOfLineEpilogOrPrologue
+# CHECK-NEXT:                       	  +hasTraceBackTableOffset, -isInternalProcedure
+# CHECK-NEXT:                       	  +hasControlledStorage, -isTOCless
+# CHECK-NEXT:                       	  +isFloatingPointPresent
+# CHECK-NEXT:                       	  -isFloatingPointOperationLogOrAbortEnabled
+# CHECK-NEXT:      2f: 60           	# -isInterruptHandler, +isFuncNamePresent, +isAllocaUsed
+# CHECK-NEXT:                       	  OnConditionDirective = 0, -isCRSaved, -isLRSaved
+# CHECK-NEXT:      30: 80           	# +isBackChainStored, -isFixup, NumOfFPRsSaved = 0
+# CHECK-NEXT:      31: c2           	# +hasExtensionTable, +hasVectorInfo, NumOfGPRsSaved = 2
+# CHECK-NEXT:      32: 02           	# NumberOfFixedParms = 2
+# CHECK-NEXT:      33: 07           	# NumberOfFPParms = 3, +hasParmsOnStack
+# CHECK-NEXT:      34: 2c 90 00 00  	# ParmsType = i, f, d, i, f, v
+# CHECK-NEXT:      38: 00 00 00 04  	# TraceBackTableOffset = 4
+# CHECK-NEXT:      3c: 00 00 00 03  	# NumOfCtlAnchors = 3
+# CHECK-NEXT:      40: 6f 00 00 01  	# ControlledStorageInfoDisp[0] = 1862270977
+# CHECK-NEXT:      44: 00 00 00 0a  	  ControlledStorageInfoDisp[1] = 10
+# CHECK-NEXT:      48: 00 00 01 00  	  ControlledStorageInfoDisp[2] = 256
+# CHECK-NEXT:      4c: 00 03        	# FunctionNameLen = 3
+# CHECK-NEXT:      4e: 66 6f 6f     	# FunctionName = foo
+# CHECK-NEXT:      51: 1f           	# AllocaRegister = 31
+# CHECK-NEXT:      52: 02           	# NumberOfVRSaved = 0, +isVRSavedOnStack, -hasVarArgs
+# CHECK-NEXT:      53: 03           	# NumberOfVectorParms = 1, +hasVMXInstruction
+# CHECK-NEXT:      54: c0 00 00 00  	# VectorParmsInfoString = vf
+# CHECK-NEXT:      58: 00 00        	# Padding
+# CHECK-NEXT:      5a: 20           	# ExtensionTable = TB_SSP_CANARY
+# CHECK-NEXT:      5b: 00           	# Padding
+# CHECK-NEXT:        ...
+# CHECK-NEXT:      68: 01 00 00 00  
+# CHECK-NEXT:      6c: 00 00 00 01  
+# CHECK-NEXT:      70: 00 00 00 00  
+# CHECK-NEXT:        ...
+# CHECK-NEXT:      7c: 00 12 34 00  
+# CHECK-NEXT:      80: 00 00 00     

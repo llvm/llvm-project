@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets %s -o - | FileCheck %s
+# Check that we can expand a mux with a global as an immediate operand.
+# CHECK: C2_cmoveif undef %0:predregs, @G
+
+--- |
+  @G = global i32 0, align 4
+  define void @fred() { ret void }
+...
+---
+name: fred
+tracksRegLiveness: true
+
+registers:
+  - { id: 0, class: predregs }
+  - { id: 1, class: intregs }
+body: |
+  bb.1:
+    %1 = IMPLICIT_DEF
+    %1 = C2_muxir undef %0, %1, @G
+    $r0 = COPY %1
+...

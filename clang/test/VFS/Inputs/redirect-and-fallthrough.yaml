@@ -1,0 +1,11 @@
+{
+  'redirecting-with': 'fallthrough',
+  'fallthrough': true,
+  'roots': [
+    {
+      'type': 'directory-remap',
+      'name': '//root/a',
+      'external-contents': '//root/b'
+    }
+  ]
+}

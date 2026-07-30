@@ -1,0 +1,4 @@
+RUN: llvm-symbolizer --obj=%p/Inputs/dwo-test 0x400514 | FileCheck %s
+
+CHECK: main
+CHECK-NEXT: llvm-symbolizer-dwo-test.cc:11

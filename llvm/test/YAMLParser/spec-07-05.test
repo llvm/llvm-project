@@ -1,0 +1,8 @@
+# RUN: not yaml-bench -canonical %s 2>&1 | FileCheck %s
+#
+# We don't currently parse TAG directives.
+# CHECK: error: Unexpected token
+
+%TAG ! !foo
+%TAG ! !foo
+bar

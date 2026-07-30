@@ -1,0 +1,7 @@
+# Make sure lldb resolves the target path.
+# RUN: mkdir -p %t/foo
+# RUN: cd %t/foo
+# RUN: %clang_host %p/Inputs/hello.c -g -o a.out
+# RUN: %lldb -b a.out | FileCheck %s
+
+# CHECK: Current executable set to '{{.*}}foo{{[/\\\\]+}}a.out'

@@ -1,0 +1,39 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
+--- |
+  define void @mismatched_range_type() {
+    ret void
+  }
+
+  !0 = !{i64 -4294967295, i64 4294967296}
+
+...
+---
+name:            mismatched_range_type
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %1:_(s32) = COPY $vgpr0
+    %2:_(s32) = COPY $vgpr1
+    %0:_(p1) = G_MERGE_VALUES %1(s32), %2(s32)
+
+    ; CHECK: Bad machine code: range is incompatible with the result type
+    %3:_(<2 x s32>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
+
+    ; CHECK: Bad machine code: range is incompatible with the result type
+    %4:_(p0) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
+
+    ; CHECK: Bad machine code: range is incompatible with the result type
+    %5:_(<2 x p0>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
+
+    ; CHECK: Bad machine code: range is incompatible with the result type
+    %6:_(<3 x s64>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
+
+    ; CHECK: Bad machine code: range is incompatible with the result type
+    %7:_(<3 x s64>) = G_LOAD %0(p1) :: (volatile load (<2 x s64>), align 4, !range !0, addrspace 1)
+
+    $vgpr0_vgpr1 = COPY %3
+    SI_RETURN implicit $vgpr0_vgpr1
+
+...

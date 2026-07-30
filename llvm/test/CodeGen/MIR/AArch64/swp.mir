@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+--- |
+  define i32 @swp(ptr %addr) #0 {
+  entry:
+    %0 = atomicrmw xchg ptr %addr, i32 1 monotonic
+    ret i32 %0
+  }
+
+  attributes #0 = { "target-features"="+lse" }
+...
+---
+name:            swp
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64common }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: swp
+    ; CHECK: {{[0-9]+}}:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
+    %0:gpr64common = COPY $x0
+    %1:gpr32 = MOVi32imm 1
+    %2:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
+    $w0 = COPY %2
+    RET_ReallyLR implicit $w0
+...

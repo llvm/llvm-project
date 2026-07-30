@@ -1,0 +1,24 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+--- |
+  define i64 @test(i64 %x) #0 {
+  entry:
+    %asm = tail call i64 asm sideeffect "$foo", "=r,0"(i64 %x) nounwind
+    ret i64 %asm
+  }
+
+  attributes #0 = { nounwind }
+...
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+
+  ; CHECK: [[@LINE+1]]:83: the tied-def operand #3 is already tied with another register operand
+    INLINEASM &"$foo", 1, 2818058, def $rdi, 2147483657, killed $rdi(tied-def 3), killed $rdi(tied-def 3)
+    $rax = COPY killed $rdi
+    RET64 killed $rax
+...

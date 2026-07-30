@@ -1,0 +1,11 @@
+module Main.Private {
+  umbrella header "MainPriv.h"
+  module * { export * }
+  export *
+}
+
+module Main.Sub.Private {
+  umbrella header "SubPriv.h"
+  module * { export * }
+  export *
+}

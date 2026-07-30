@@ -1,0 +1,3 @@
+source list -n main
+source list -n OvlGlobalFn
+quit

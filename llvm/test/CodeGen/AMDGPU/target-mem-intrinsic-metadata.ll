@@ -1,0 +1,22 @@
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.04 -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.04 -stop-before=machine-scheduler < %s | FileCheck -enable-var-scope -check-prefixes=MIR,GISEL %s
+
+; Make sure !noalias metadata is passed through from target intrinsics
+
+; MIR-LABEL: name: ds_append_noalias
+; SDAG: DS_APPEND {{.*}} :: (load store (s32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
+; GISEL: DS_APPEND {{.*}} :: (load store (i32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
+define amdgpu_kernel void @ds_append_noalias() {
+  %lds = load ptr addrspace(3), ptr addrspace(1) null
+  %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %lds, i1 false), !noalias !0
+  store i32 %val, ptr addrspace(1) null, align 4
+  ret void
+}
+
+declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #0
+
+attributes #0 = { argmemonly convergent nounwind willreturn }
+
+!0 = !{!1}
+!1 = distinct !{!1, !2}
+!2 = distinct !{!2}

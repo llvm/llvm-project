@@ -1,0 +1,7 @@
+This directory contains tests for the MIR file format parser and printer. It
+was necessary to split the tests across different targets as no single target
+covers all features available in machine IR.
+
+Tests for codegen passes should NOT be here but in test/CodeGen/sometarget. As
+a rule of thumb this directory should only contain tests using
+'llc -run-pass none'.

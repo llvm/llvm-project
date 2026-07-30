@@ -1,0 +1,18 @@
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         4C00
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         0111
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         5100
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         636CFF
+...

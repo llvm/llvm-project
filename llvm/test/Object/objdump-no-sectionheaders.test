@@ -1,0 +1,59 @@
+## Check llvm-objdump -h can handle ELF files without section info.
+## Only PT_LOAD segments with the PF_X flag will be displayed as fake sections.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -h %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name          Size     VMA              Type
+# CHECK-NEXT:   0 PT_LOAD#1     00000100 0000000000400000 TEXT
+# CHECK-NEXT:   1 PT_LOAD#3     00000200 0000000000600400 TEXT
+# CHECK-NOT:  {{.}}
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_CORE
+  Machine:         EM_X86_64
+Sections:
+  - Type:            SectionHeaderTable
+    NoHeaders:       true
+  - Type:            Fill
+    Name:            code1
+    Pattern:         "cc"
+    Size:            0x100
+    Offset:          0x200
+  - Type:            Fill
+    Name:            data1
+    Pattern:         "aa55"
+    Size:            0x100
+    Offset:          0x300
+  - Type:            Fill
+    Name:            code2
+    Pattern:         "ff"
+    Size:            0x200
+    Offset:          0x400
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_X ]
+    VAddr:           0x400000
+    MemSize:         0x100
+  - Type:            PT_LOAD
+    Flags:           [ PF_X ]
+    VAddr:           0x400000
+    MemSize:         0x100
+    FirstSec:        code1
+    LastSec:         code1
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    VAddr:           0x500300
+    MemSize:         0x100
+    FirstSec:        data1
+    LastSec:         data1
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_X ]
+    VAddr:           0x600400
+    MemSize:         0x200
+    FirstSec:        code2
+    LastSec:         code2

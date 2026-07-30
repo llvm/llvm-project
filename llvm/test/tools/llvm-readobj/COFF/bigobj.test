@@ -1,0 +1,140 @@
+RUN: llvm-readobj --file-headers --sections --symbols --relocations %p/Inputs/bigobj.coff-x86-64 | FileCheck %s
+
+CHECK:      File: {{(.*[/\\])?}}bigobj.coff-x86-64
+CHECK-NEXT: Format: COFF-x86-64
+CHECK-NEXT: Arch: x86_64
+CHECK-NEXT: AddressSize: 64bit
+CHECK-NEXT: ImageFileHeader {
+CHECK-NEXT:   Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+CHECK-NEXT:   SectionCount: 3
+CHECK-NEXT:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:   PointerToSymbolTable: 0xB0
+CHECK-NEXT:   SymbolCount: 8
+CHECK-NEXT:   StringTableSize: 4
+CHECK-NEXT:   OptionalHeaderSize: 0
+CHECK-NEXT:   Characteristics [ (0x0)
+CHECK-NEXT:   ]
+CHECK-NEXT: }
+CHECK-NEXT: Sections [
+CHECK-NEXT:   Section {
+CHECK-NEXT:     Number: 1
+CHECK-NEXT:     Name: .text (2E 74 65 78 74 00 00 00)
+CHECK-NEXT:     VirtualSize: 0x0
+CHECK-NEXT:     VirtualAddress: 0x0
+CHECK-NEXT:     RawDataSize: 0
+CHECK-NEXT:     PointerToRawData: 0x0
+CHECK-NEXT:     PointerToRelocations: 0x0
+CHECK-NEXT:     PointerToLineNumbers: 0x0
+CHECK-NEXT:     RelocationCount: 0
+CHECK-NEXT:     LineNumberCount: 0
+CHECK-NEXT:     Characteristics [ (0x60500020)
+CHECK-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+CHECK-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+CHECK-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+CHECK-NEXT:     ]
+CHECK-NEXT:   }
+CHECK-NEXT:   Section {
+CHECK-NEXT:     Number: 2
+CHECK-NEXT:     Name: .data (2E 64 61 74 61 00 00 00)
+CHECK-NEXT:     VirtualSize: 0x0
+CHECK-NEXT:     VirtualAddress: 0x0
+CHECK-NEXT:     RawDataSize: 0
+CHECK-NEXT:     PointerToRawData: 0x0
+CHECK-NEXT:     PointerToRelocations: 0x0
+CHECK-NEXT:     PointerToLineNumbers: 0x0
+CHECK-NEXT:     RelocationCount: 0
+CHECK-NEXT:     LineNumberCount: 0
+CHECK-NEXT:     Characteristics [ (0xC0500040)
+CHECK-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+CHECK-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+CHECK-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+CHECK-NEXT:     ]
+CHECK-NEXT:   }
+CHECK-NEXT:   Section {
+CHECK-NEXT:     Number: 3
+CHECK-NEXT:     Name: .bss (2E 62 73 73 00 00 00 00)
+CHECK-NEXT:     VirtualSize: 0x0
+CHECK-NEXT:     VirtualAddress: 0x0
+CHECK-NEXT:     RawDataSize: 0
+CHECK-NEXT:     PointerToRawData: 0x0
+CHECK-NEXT:     PointerToRelocations: 0x0
+CHECK-NEXT:     PointerToLineNumbers: 0x0
+CHECK-NEXT:     RelocationCount: 0
+CHECK-NEXT:     LineNumberCount: 0
+CHECK-NEXT:     Characteristics [ (0xC0500080)
+CHECK-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+CHECK-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+CHECK-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+CHECK-NEXT:     ]
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Relocations [
+CHECK-NEXT: ]
+CHECK-NEXT: Symbols [
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: .file
+CHECK-NEXT:     Value: 0
+CHECK-NEXT:     Section:  IMAGE_SYM_DEBUG (-2)
+CHECK-NEXT:     BaseType: Null (0x0)
+CHECK-NEXT:     ComplexType: Null (0x0)
+CHECK-NEXT:     StorageClass: File (0x67)
+CHECK-NEXT:     AuxSymbolCount: 1
+CHECK-NEXT:     AuxFileRecord {
+CHECK-NEXT:       FileName: fake
+CHECK-NEXT:     }
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: .text
+CHECK-NEXT:     Value: 0
+CHECK-NEXT:     Section: .text (1)
+CHECK-NEXT:     BaseType: Null (0x0)
+CHECK-NEXT:     ComplexType: Null (0x0)
+CHECK-NEXT:     StorageClass: Static (0x3)
+CHECK-NEXT:     AuxSymbolCount: 1
+CHECK-NEXT:     AuxSectionDef {
+CHECK-NEXT:       Length: 0
+CHECK-NEXT:       RelocationCount: 0
+CHECK-NEXT:       LineNumberCount: 0
+CHECK-NEXT:       Checksum: 0x0
+CHECK-NEXT:       Number: 0
+CHECK-NEXT:       Selection: 0x0
+CHECK-NEXT:     }
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: .data
+CHECK-NEXT:     Value: 0
+CHECK-NEXT:     Section: .data (2)
+CHECK-NEXT:     BaseType: Null (0x0)
+CHECK-NEXT:     ComplexType: Null (0x0)
+CHECK-NEXT:     StorageClass: Static (0x3)
+CHECK-NEXT:     AuxSymbolCount: 1
+CHECK-NEXT:     AuxSectionDef {
+CHECK-NEXT:       Length: 0
+CHECK-NEXT:       RelocationCount: 0
+CHECK-NEXT:       LineNumberCount: 0
+CHECK-NEXT:       Checksum: 0x0
+CHECK-NEXT:       Number: 0
+CHECK-NEXT:       Selection: 0x0
+CHECK-NEXT:     }
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: .bss
+CHECK-NEXT:     Value: 0
+CHECK-NEXT:     Section: .bss (3)
+CHECK-NEXT:     BaseType: Null (0x0)
+CHECK-NEXT:     ComplexType: Null (0x0)
+CHECK-NEXT:     StorageClass: Static (0x3)
+CHECK-NEXT:     AuxSymbolCount: 1
+CHECK-NEXT:     AuxSectionDef {
+CHECK-NEXT:       Length: 0
+CHECK-NEXT:       RelocationCount: 0
+CHECK-NEXT:       LineNumberCount: 0
+CHECK-NEXT:       Checksum: 0x0
+CHECK-NEXT:       Number: 0
+CHECK-NEXT:       Selection: 0x0
+CHECK-NEXT:     }
+CHECK-NEXT:   }
+CHECK-NEXT: ]

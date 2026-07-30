@@ -1,0 +1,24 @@
+# REQUIRES: x86
+
+# Some targets do not have the .size directive.
+# RUN: %clang -target x86_64-unknown-unknown-elf %S/Inputs/symbol-binding.s -c -o %t.o
+# RUN: %lldb %t.o -s %s -o quit | FileCheck %s
+
+image lookup --address 4
+# CHECK: Summary: symbol-binding.test.tmp.o`case1_global
+image lookup --address 5
+# CHECK: Summary: symbol-binding.test.tmp.o`case2_weak
+image lookup --address 6
+# CHECK: Summary: symbol-binding.test.tmp.o`case3_global
+image dump symtab
+# CHECK:     Index   UserID DSX Type            File Address/Value Load Address       Size               Flags      Name
+# CHECK-NEXT:------- ------ --- --------------- ------------------ ------------------ ------------------ ---------- ----------------------------------
+# CHECK-NEXT:[    0]      1     Code            0x0000000000000001                    0x0000000000000002 0x00000000 sizeless
+# CHECK-NEXT:[    1]      2     Code            0x0000000000000001                    0x0000000000000002 0x00000000 sizeful
+# CHECK-NEXT:[    2]      3     Code            0x0000000000000003                    0x0000000000000001 0x00000000 sizeend
+# CHECK-NEXT:[    3]      4     Code            0x0000000000000004                    0x0000000000000001 0x00000000 case1_local
+# CHECK-NEXT:[    4]      5     Code            0x0000000000000005                    0x0000000000000001 0x00000000 case2_local
+# CHECK-NEXT:[    5]      6   X Code            0x0000000000000004                    0x0000000000000001 0x00000010 case1_global
+# CHECK-NEXT:[    6]      7     Code            0x0000000000000005                    0x0000000000000001 0x00000020 case2_weak
+# CHECK-NEXT:[    7]      8     Code            0x0000000000000006                    0x0000000000000001 0x00000020 case3_weak
+# CHECK-NEXT:[    8]      9   X Code            0x0000000000000006                    0x0000000000000001 0x00000010 case3_global

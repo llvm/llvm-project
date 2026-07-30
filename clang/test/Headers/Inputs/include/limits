@@ -1,0 +1,10 @@
+#pragma once
+
+namespace std
+{
+struct __numeric_limits_base
+  {};
+template<typename _Tp>
+  struct numeric_limits : public __numeric_limits_base
+    {};
+}

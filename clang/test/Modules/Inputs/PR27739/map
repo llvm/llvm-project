@@ -1,0 +1,20 @@
+#ifndef _GLIBCXX_MAP
+#define _GLIBCXX_MAP
+struct basic_string {
+  basic_string(char *);
+} typedef string;
+
+template <typename> class D;
+template <typename _Elements> struct D {
+  _Elements _M_;
+  D(D &) = default;
+};
+
+template <typename _Elements> D<_Elements &&> forward_as_tuple(_Elements);
+
+template <typename _Key, typename _Tp> struct map {
+  _Tp operator[](_Key p1) {
+    auto b = &forward_as_tuple(p1);
+  }
+};
+#endif

@@ -1,0 +1,184 @@
+# Test that obj2yaml + yaml2obj can round-trip mach-o executables with
+#  raw __LINKEDIT segments.
+#
+# RUN: yaml2obj %s | obj2yaml --raw-segment=data --raw-segment=linkedit | FileCheck %s
+#
+# This file was produced using:
+#   echo "int ext;" > a.c
+#   xcrun --sdk iphoneos clang -target arm64-apple-ios15.1 -o a.o a.c -c
+#   xcrun --sdk iphoneos clang -target arm64-apple-ios15.1 -dynamiclib a.o -o liba.dylib -install_name @executable_path/liba.dylib
+#   echo "extern int ext;" > b.c
+#   echo "int padding;" >> b.c
+#   echo "int *p = &ext + 4;" >> b.c
+#   xcrun --sdk iphoneos clang -target arm64-apple-ios15.1 -o b.o b.c -c
+#   xcrun --sdk iphoneos clang -target arm64-apple-ios15.1 -dynamiclib b.o -o libfixups.dylib -install_name @executable_path/libfixups.dylib -L. -la
+#
+# CHECK:      - sectname:        __data
+# CHECK:        segname:         __DATA
+# CHECK:        content:         '0000001000000080'
+# CHECK: __LINKEDIT:      0000000020000000480000004C000000010000000100000000000000000000000300000000000000100000000000000018000000004006000040000000000000000000000100000001020000005F6578740000000000000000015F700006040080800100000000000000000000000000020000000F02000000400000000000000500000001000001000000000000000020005F70005F65787400000000000000
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           16
+  sizeofcmds:      816
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x4000
+        size:            0
+        offset:          0x4000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x4000
+        size:            8
+        offset:          0x4000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000001000000080'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          32768
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        160
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         64
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@executable_path/libfixups.dylib'
+    ZeroPadBytes:    8
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         32768
+    datasize:        88
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         32856
+    datasize:        16
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32880
+    nsyms:           2
+    stroff:          32912
+    strsize:         16
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            56F7BCE0-C1A7-38E3-A90D-742D8E3D5FA9
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        2
+    minos:           983296
+    sdk:             983552
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         46596096
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_ENCRYPTION_INFO_64
+    cmdsize:         24
+    cryptoff:        16384
+    cryptsize:       0
+    cryptid:         0
+    pad:             0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@executable_path/liba.dylib'
+    ZeroPadBytes:    5
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 85917696
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32872
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32880
+    datasize:        0
+__LINKEDIT:      0000000020000000480000004C000000010000000100000000000000000000000300000000000000100000000000000018000000004006000040000000000000000000000100000001020000005F6578740000000000000000015F700006040080800100000000000000000000000000020000000F02000000400000000000000500000001000001000000000000000020005F70005F65787400000000000000
+...

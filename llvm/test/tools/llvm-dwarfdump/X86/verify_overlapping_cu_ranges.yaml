@@ -1,0 +1,251 @@
+# This test verifies that if a DW_TAG_compile_unit has DW_AT_ranges that
+# overlap, that it doesn't end up producing invalid errors claiming a child
+# DW_TAG_subprogram DIE is not in the parant (CU) ranges. Prior to the commit
+# that fixed this, a loop was iterating over all DW_AT_ranges for a DIE and
+# stopping the loop if any intersecting ranges were found. This would cause
+# the DW_TAG_subprogram DIEs, like "stripped2" and "main", to improperly report
+# that they were not contained in the parent's address ranges
+#
+# The DWARF looks like:
+# 0x0000000b: DW_TAG_compile_unit
+#               DW_AT_name	("/tmp/main.c")
+#               DW_AT_language	(DW_LANG_C)
+#               DW_AT_low_pc	(0x0000000000000000)
+#               DW_AT_ranges	(0x00000000
+#                  [0x0000000000002000, 0x0000000000003000)
+#                  [0x0000000000000000, 0x0000000000000020)
+#                  [0x0000000000000000, 0x0000000000000030)
+#                  [0x0000000000001000, 0x0000000000002000))
+#
+# 0x0000001e:   DW_TAG_subprogram
+#                 DW_AT_name	("stripped1")
+#                 DW_AT_low_pc	(0x0000000000000000)
+#                 DW_AT_high_pc	(0x0000000000000020)
+#
+# 0x0000002f:   DW_TAG_subprogram
+#                 DW_AT_name	("stripped2")
+#                 DW_AT_low_pc	(0x0000000000000000)
+#                 DW_AT_high_pc	(0x0000000000000030)
+#
+# 0x00000044:   DW_TAG_subprogram
+#                 DW_AT_name	("main")
+#                 DW_AT_low_pc	(0x0000000000001000)
+#                 DW_AT_high_pc	(0x0000000000002000)
+#
+# 0x00000055:   DW_TAG_subprogram
+#                 DW_AT_name	("foo")
+#                 DW_AT_low_pc	(0x0000000000002000)
+#                 DW_AT_high_pc	(0x0000000000003000)
+#
+# 0x00000066:   NULL
+
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
+
+# CHECK: error: DIE has overlapping ranges in DW_AT_ranges attribute: [0x0000000000000000, 0x0000000000000020) and [0x0000000000000000, 0x0000000000000030)
+
+# CHECK: 0x0000000b:   DW_TAG_compile_unit
+# CHECK-NEXT:                DW_AT_name      [DW_FORM_strp] ( .debug_str[0x00000001] = "/tmp/main.c")
+# CHECK-NEXT:                DW_AT_language  [DW_FORM_data2] (DW_LANG_C)
+# CHECK-NEXT:                DW_AT_low_pc    [DW_FORM_addr] (0x0000000000000000)
+# CHECK-NEXT:                DW_AT_ranges    [DW_FORM_sec_offset] (0x00000000
+# CHECK-NEXT:                   [0x0000000000002000, 0x0000000000003000)
+# CHECK-NEXT:                   [0x0000000000000000, 0x0000000000000020)
+# CHECK-NEXT:                   [0x0000000000000000, 0x0000000000000030)
+# CHECK-NEXT:                   [0x0000000000001000, 0x0000000000002000))
+
+# CHECK: error: DIEs have overlapping address ranges:
+# CHECK: 0x0000002f: DW_TAG_subprogram
+# CHECK-NEXT:              DW_AT_name        [DW_FORM_strp] ( .debug_str[0x00000017] = "stripped2")
+# CHECK-NEXT:              DW_AT_low_pc      [DW_FORM_addr] (0x0000000000000000)
+# CHECK-NEXT:              DW_AT_high_pc     [DW_FORM_addr] (0x0000000000000030)
+
+# CHECK: 0x0000001e: DW_TAG_subprogram
+# CHECK-NEXT:              DW_AT_name        [DW_FORM_strp] ( .debug_str[0x0000000d] = "stripped1")
+# CHECK-NEXT:              DW_AT_low_pc      [DW_FORM_addr] (0x0000000000000000)
+# CHECK-NEXT:              DW_AT_high_pc     [DW_FORM_data4] (0x00000020)
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      464
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          261
+    fileoff:         528
+    filesize:        261
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x0000000000000000
+        size:            36
+        offset:          0x00000210
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x0000000000000024
+        size:            103
+        offset:          0x00000234
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_ranges
+        segname:         __DWARF
+        addr:            0x000000000000008B
+        size:            80
+        offset:          0x0000029B
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x00000000000000DB
+        size:            42
+        offset:          0x000002EB
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          792
+    strsize:         8
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         34734080
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         792
+    datasize:        0
+LinkEditData:
+  StringTable:
+    - ' '
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - stripped1
+    - stripped2
+    - main
+    - foo
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_ranges:
+    - Offset:          0x00000000
+      AddrSize:        0x08
+      Entries:
+        - LowOffset:       0x0000000000002000
+          HighOffset:      0x0000000000003000
+        - LowOffset:       0x0000000000000000
+          HighOffset:      0x0000000000000020
+        - LowOffset:       0x0000000000000000
+          HighOffset:      0x0000000000000030
+        - LowOffset:       0x0000000000001000
+          HighOffset:      0x0000000000002000
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000002
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000020
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000017
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000030
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000021
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000026
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000000
+...

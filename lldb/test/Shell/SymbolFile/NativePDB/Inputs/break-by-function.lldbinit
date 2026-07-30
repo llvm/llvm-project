@@ -1,0 +1,6 @@
+break set -n main
+break set -n OvlGlobalFn
+break set -n StaticFn
+break set -n DoesntExist
+break list
+quit

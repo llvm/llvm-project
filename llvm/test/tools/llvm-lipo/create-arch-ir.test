@@ -1,0 +1,9 @@
+# RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-armv7.o
+# RUN: llvm-as %p/Inputs/arm64-ios.ll -o %t-arm64.o
+
+# RUN: llvm-lipo %t-armv7.o %t-arm64.o -create -output %t-universal.o
+# RUN: llvm-lipo -arch armv7 %t-armv7.o -arch arm64 %t-arm64.o -create -output %t-universal-1.o
+# RUN: cmp %t-universal.o %t-universal-1.o
+#
+# RUN: not llvm-lipo -arch armv7 %t-arm64.o -create -output /dev/null 2>&1 | FileCheck --check-prefix=ARCH_NOT_MATCHED %s
+# ARCH_NOT_MATCHED: error: specified architecture: armv7 for file: {{.*}} does not match the file's architecture (arm64)

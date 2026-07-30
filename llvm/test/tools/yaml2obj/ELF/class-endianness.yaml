@@ -1,0 +1,33 @@
+## Check we can produce 32/64 bits outputs with a different endianness.
+
+# RUN: yaml2obj -D BITS=64 -D ENCODE=LSB %s | llvm-readobj --file-headers - | \
+# RUN:   FileCheck %s --check-prefix=LE64
+# RUN: yaml2obj -D BITS=64 -D ENCODE=MSB %s | llvm-readobj --file-headers - | \
+# RUN:   FileCheck %s --check-prefix=BE64
+# RUN: yaml2obj -D BITS=32 -D ENCODE=LSB %s | llvm-readobj --file-headers - | \
+# RUN:   FileCheck %s --check-prefix=LE32
+# RUN: yaml2obj -D BITS=32 -D ENCODE=MSB %s | llvm-readobj --file-headers - | \
+# RUN:   FileCheck %s --check-prefix=BE32
+
+# LE64:      Class: 64-bit (0x2)
+# LE64-NEXT: DataEncoding: LittleEndian (0x1)
+
+# BE64:      Class: 64-bit (0x2)
+# BE64-NEXT: DataEncoding: BigEndian (0x2)
+
+# LE32:      Class: 32-bit (0x1)
+# LE32-NEXT: DataEncoding: LittleEndian (0x1)
+
+# BE32:      Class: 32-bit (0x1)
+# BE32-NEXT: DataEncoding: BigEndian (0x2)
+
+# RUN: not yaml2obj --docnum=1 -D BITS=16 -D ENCODE=LSB %s 2>&1 | FileCheck --check-prefix=BAD %s
+# RUN: not yaml2obj --docnum=1 -D BITS=32 -D ENCODE= %s 2>&1 | FileCheck --check-prefix=BAD %s
+
+# BAD: error: unknown enumerated scalar
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2[[ENCODE]]
+  Type:  ET_EXEC

@@ -1,0 +1,12 @@
+# RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
+
+# CHECK: lsl.l #5, %d1
+0xeb 0x89
+# CHECK: lsr.l #5, %d1
+0xea 0x89
+# CHECK: asr.l #5, %d1
+0xea 0x81
+# CHECK: rol.l #5, %d1
+0xeb 0x99
+# CHECK: ror.l #5, %d1
+0xea 0x99

@@ -1,0 +1,549 @@
+# We want to preserve areas in segments that are not covered by section headers.
+# This test shows that we do this for areas at the start of a segment, between
+# sections in a segment, and after all sections in a segment.
+# To create inputs with arbitrary data in segments, not covered by sections, we
+# use yaml2obj to create segments with sections covering all areas, then remove
+# some sections in those segments, and finally write over the areas of the
+# removed sections using python.
+
+# blob* sections are the sections that will be removed to create unlabelled
+# areas and then overwritten with data to show we preserve the data.
+
+# RUN: yaml2obj %s -o %t.base
+# RUN: llvm-objcopy %t.base %t.stripped --regex -R blob.*
+# Show that the removal leaves the bytes as zeroes, as desired, for all our
+# test cases.
+# RUN: od -t x1 -j 0x2000 -N 28 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK1 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2100 -N 12 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK2 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2200 -N 4  %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK3 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2300 -N 12 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK4 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x3000 -N 68 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK5 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x4000 -N 60 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK6 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x5000 -N 60 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK7 -DPATTERN="00 00 00 00"
+
+# RUN: cp %t.stripped %t.in
+# RUN: echo "with open('%/t.in', 'rb+') as input:"                                 > %t.py
+# RUN: echo "  for offset in ["                                                   >> %t.py
+# RUN: echo "   0x2000, 0x2008, 0x200C, 0x2018, 0x2104, 0x2300,"                  >> %t.py
+# RUN: echo "   0x3008, 0x3010, 0x3018, 0x3020, 0x3028, 0x302C, 0x3034, 0x303C,"  >> %t.py
+# RUN: echo "   0x4000, 0x4008, 0x4010, 0x4014, 0x401C, 0x4024, 0x4034,"          >> %t.py
+# RUN: echo "   0x5000, 0x5008, 0x5010, 0x501C, 0x5024, 0x502C, 0x5030, 0x5038]:" >> %t.py
+# RUN: echo "    input.seek(offset)"                                              >> %t.py
+# RUN: echo "    input.write(bytearray.fromhex('DEADBEEF'))"                      >> %t.py
+# RUN: %python %t.py
+# RUN: llvm-objcopy %t.in %t.out
+# RUN: od -t x1 -j 0x2000 -N 28 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK1 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2100 -N 12 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK2 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2200 -N 4  %t.out | FileCheck %s --ignore-case --check-prefix=CHECK3 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2300 -N 12 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK4 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x3000 -N 68 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK5 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x4000 -N 60 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK6 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x5000 -N 60 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK7 -DPATTERN="de ad be ef"
+
+# CHECK1:      [[PATTERN]] 11 22 33 44 [[PATTERN]] [[PATTERN]]
+# CHECK1-NEXT: 00 00 00 00 55 66 77 88 [[PATTERN]]
+# CHECK2:      99 00 aa bb [[PATTERN]] cc dd ee ff
+# CHECK3:      fe fe fe fe
+# CHECK4:      [[PATTERN]] 00 00 00 00 00 00 00 00
+# CHECK5:      ff ff ee ee dd dd cc cc [[PATTERN]] bb bb aa aa
+# CHECK5-NEXT: [[PATTERN]] 00 00 99 99 [[PATTERN]] 88 88 77 77
+# CHECK5-NEXT: [[PATTERN]] 66 66 55 55 [[PATTERN]] [[PATTERN]]
+# CHECK5-NEXT: 44 44 33 33 [[PATTERN]] 22 22 11 11 [[PATTERN]]
+# CHECK5-NEXT: 00 11 22 33
+# CHECK6:      [[PATTERN]] 44 55 66 77 [[PATTERN]] 88 99 aa bb
+# CHECK6-NEXT: [[PATTERN]] [[PATTERN]] cc dd ee ff [[PATTERN]]
+# CHECK6-NEXT: ff ee dd cc [[PATTERN]] bb aa 99 88 77 66 55 44
+# CHECK6-NEXT: 33 22 11 00 [[PATTERN]] 11 11 11 11
+# CHECK7:      [[PATTERN]] 12 34 56 78 [[PATTERN]] 90 ab cd ef
+# CHECK7-NEXT: [[PATTERN]] fe dc ba 09 87 65 43 21 [[PATTERN]]
+# CHECK7-NEXT: 22 22 22 22 [[PATTERN]] 33 33 33 33 [[PATTERN]]
+# CHECK7-NEXT: [[PATTERN]] 44 44 44 44 [[PATTERN]]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: blob1
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x2000
+    AddressAlign: 0x2000
+  - Name: section1
+    Type: SHT_PROGBITS
+    Address: 0x2004
+    Content: '11223344'
+  - Name: blob2
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x2008
+  - Name: section2
+    Type: SHT_NOBITS
+    Size: 4
+    Address: 0x200C
+  - Name: blob3
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x2010
+  - Name: section3
+    Type: SHT_PROGBITS
+    Content: '55667788'
+    Address: 0x2014
+  - Name: blob4
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x2018
+  - Name: section4
+    Type: SHT_PROGBITS
+    Content: '9900aabb'
+    Address: 0x2100
+    AddressAlign: 0x100
+  - Name: blob5
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x2104
+  - Name: section5
+    Type: SHT_PROGBITS
+    Address: 0x2108
+    Content: 'ccddeeff'
+  - Name: section6
+    Type: SHT_PROGBITS
+    Content: 'fefefefe'
+    Address: 0x2200
+    AddressAlign: 0x100
+  - Name: blob6
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x2300
+    AddressAlign: 0x100
+  - Name: sectionA
+    Type: SHT_PROGBITS
+    Content: 'ffffeeee'
+    Address: 0x3000
+    AddressAlign: 0x1000
+  - Name: sectionB
+    Type: SHT_PROGBITS
+    Content: 'ddddcccc'
+    Address: 0x3004
+  - Name: blobA
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x3008
+  - Name: sectionC
+    Type: SHT_PROGBITS
+    Content: 'bbbbaaaa'
+    Address: 0x300C
+  - Name: blobB
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x3010
+  - Name: sectionD
+    Type: SHT_PROGBITS
+    Content: '00009999'
+    Address: 0x3014
+  - Name: blobC
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x3018
+  - Name: sectionE
+    Type: SHT_PROGBITS
+    Content: '88887777'
+    Address: 0x301C
+  - Name: blobD
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x3020
+  - Name: sectionF
+    Type: SHT_PROGBITS
+    Content: '66665555'
+    Address: 0x3024
+  - Name: blobE
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x3028
+  - Name: blobF
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x302C
+  - Name: sectionG
+    Type: SHT_PROGBITS
+    Content: '44443333'
+    Address: 0x3030
+  - Name: blobG
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x3034
+  - Name: sectionH
+    Type: SHT_PROGBITS
+    Content: '22221111'
+    Address: 0x3038
+  - Name: blobH
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x303C
+  - Name: sectionI
+    Type: SHT_PROGBITS
+    Content: '00112233'
+    Address: 0x3040
+  - Name: blobz
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x4000
+    AddressAlign: 0x1000
+  - Name: sectionz
+    Type: SHT_PROGBITS
+    Content: '44556677'
+    Address: 0x4004
+  - Name: bloby
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x4008
+  - Name: sectiony
+    Type: SHT_PROGBITS
+    Content: '8899aabb'
+    Address: 0x400C
+  - Name: blobx
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x4010
+  - Name: blobw
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x4014
+  - Name: sectionx
+    Type: SHT_PROGBITS
+    Content: 'ccddeeff'
+    Address: 0x4018
+  - Name: blobv
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x401C
+  - Name: sectionw
+    Type: SHT_PROGBITS
+    Content: 'ffeeddcc'
+    Address: 0x4020
+  - Name: blobu
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x4024
+  - Name: sectionv
+    Type: SHT_PROGBITS
+    Content: 'bbaa9988'
+    Address: 0x4028
+  - Name: sectionu
+    Type: SHT_PROGBITS
+    Content: '77665544'
+    Address: 0x402C
+  - Name: sectiont
+    Type: SHT_PROGBITS
+    Content: '33221100'
+    Address: 0x4030
+  - Name: blobt
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x4034
+  - Name: sections
+    Type: SHT_PROGBITS
+    Content: '11111111'
+    Address: 0x4038
+  - Name: bloba
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x5000
+    AddressAlign: 0x1000
+  - Name: sectiona
+    Type: SHT_PROGBITS
+    Content: '12345678'
+    Address: 0x5004
+  - Name: blobb
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x5008
+  - Name: sectionb
+    Type: SHT_PROGBITS
+    Content: '90abcdef'
+    Address: 0x500C
+  - Name: blobc
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x5010
+  - Name: sectionc
+    Type: SHT_PROGBITS
+    Content: 'fedcba09'
+    Address: 0x5014
+  - Name: sectiond
+    Type: SHT_PROGBITS
+    Content: '87654321'
+    Address: 0x5018
+  - Name: blobd
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x501C
+  - Name: sectione
+    Type: SHT_PROGBITS
+    Content: '22222222'
+    Address: 0x5020
+  - Name: blobe
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x5024
+  - Name: sectionf
+    Type: SHT_PROGBITS
+    Content: '33333333'
+    Address: 0x5028
+  - Name: blobf
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x502C
+  - Name: blobg
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x5030
+  - Name: sectiong
+    Type: SHT_PROGBITS
+    Content: '44444444'
+    Address: 0x5034
+  - Name: blobh
+    Type: SHT_PROGBITS
+    Content: 'abbababa'
+    Address: 0x5038
+ProgramHeaders:
+  # First segment has unlabelled space at start and end.
+  - Type:     0x6ABCDEF0 # Non-specific segment type.
+    VAddr:    0x2000
+    Align:    0x2000
+    FirstSec: blob1
+    LastSec:  blob4
+  # Second segment has sections at start and end.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x2100
+    Align:    0x100
+    FirstSec: section4
+    LastSec:  section5
+  # Third segment is all covered by a section.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x2200
+    Align:    0x100
+    FirstSec: section6
+    LastSec:  section6
+  # Fourth segment has no sections (after removing blob headers).
+  - Type:     0x6ABCDEF0
+    VAddr:    0x2300
+    Align:    0x100
+    FirstSec: blob6
+    LastSec:  blob6
+  # Fifth segment is empty.
+  - Type:   0x6ABCDEF0
+    VAddr:  0x2308
+    Offset: 0x2308
+  # The next few segments test behaviour of fully nested segments.
+  # Sixth segment is the "parent" segment.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3000
+    Align:    0x1000
+    FirstSec: sectionA
+    LastSec:  sectionI
+  # Seventh segment is empty and nested.
+  - Type:   0x6ABCDEF0
+    VAddr:  0x3002
+    Offset: 0x3002
+  # Eighth segment contains only a section and is nested.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3004
+    FirstSec: sectionB
+    LastSec:  sectionB
+  # Ninth segment contains only unlabelled space and is nested.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3008
+    FirstSec: blobA
+    LastSec:  blobA
+  # Tenth segment contains two sections with space between and is nested.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x300C
+    FirstSec: sectionC
+    LastSec:  sectionD
+  # Eleventh segment contains two sections with space between and at ends and is nested.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x3018
+    FirstSec: blobC
+    LastSec:  blobE
+  # Twelfth segment contains one section with space at ends adjacent to space in parent segment.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x302E
+    Offset:   0x302E
+    FileSize: 8
+    FirstSec: sectionG
+    LastSec:  sectionG
+  # Thirteenth segment contains overlaps sections at either end in parent segment.
+  - Type:     0x6ABCDEF0
+    VAddr:    0x303A
+    Offset:   0x303A
+    FileSize: 0x8
+    FirstSec: blobH
+    LastSec:  blobH
+
+  # The next batch of segments are segments that only partially overlap other segments.
+
+  # Segment14: |-unlabelled-|-Sec-|
+  # Segment15:           |--|-Sec-|-unlabelled-|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4000
+    FirstSec: blobz
+    LastSec:  sectionz
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4002
+    Offset:   0x4002
+    FirstSec: sectionz
+    LastSec:  bloby
+
+  # Segment16: |-Sec-|--|
+  # Segment17:    |--|----unlabelled---|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x400C
+    FileSize: 6
+    FirstSec: sectiony
+    LastSec:  sectiony
+  - Type:     0x6ABCDEF0
+    VAddr:    0x400E
+    Offset:   0x400E
+    FirstSec: blobx
+    LastSec:  blobx
+
+  # Segment18: |-unlabelled-|-Sec-|
+  # Segment19:              |-Sec-|-unlabelled-|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4014
+    FirstSec: blobw
+    LastSec:  sectionx
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4018
+    FirstSec: sectionx
+    LastSec:  blobv
+
+  # Segment20: |-Sec-|
+  # Segment21:    |--|-unlabelled-|-Sec-|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4020
+    FirstSec: sectionw
+    LastSec:  sectionw
+
+  - Type:   0x6ABCDEF0
+    VAddr:  0x4022
+    Offset: 0x4022
+    FirstSec: blobu
+    LastSec:  sectionv
+
+  # Segment22: |-Sec-|
+  # Segment23:    |--|-Sec-|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x402C
+    FirstSec: sectionu
+    LastSec:  sectionu
+  - Type:     0x6ABCDEF0
+    VAddr:    0x402E
+    Offset:   0x402E
+    FirstSec: sectiont
+    LastSec:  sectiont
+
+  # Segment24: |-unlabelled-|--|
+  # Segment25:              |--Sec--|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4034
+    FileSize: 6
+    FirstSec: blobt
+    LastSec:  blobt
+  - Type:     0x6ABCDEF0
+    VAddr:    0x4038
+    FirstSec: sections
+    LastSec:  sections
+
+  # The next batch of segments represent groups of three nested/overlapping segments,
+  # with one parent segment containing two overlapping segments.
+
+  # Segment26: |-unlabelled-|-Sec-|-unlabelled-|
+  # Segment27: |------------|--|
+  # Segment28:              |-Sec-|------------|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5000
+    Align:    0x1000
+    FirstSec: bloba
+    LastSec:  blobb
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5000
+    FileSize: 6
+    FirstSec: bloba
+    LastSec:  bloba
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5004
+    FirstSec: sectiona
+    LastSec:  blobb
+
+  # Segment29: |-Sec-|-unlabelled-|-Sec-|
+  # Segment30: |-Sec-|--------|
+  # Segment31:          |---------|-Sec-|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x500C
+    FirstSec: sectionb
+    LastSec:  sectionc
+  - Type:     0x6ABCDEF0
+    VAddr:    0x500C
+    FileSize: 7
+    FirstSec: sectionb
+    LastSec:  sectionb
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5011
+    Offset:   0x5011
+    FirstSec: sectionc
+    LastSec:  sectionc
+
+  # Segment32: |-Sec-|-unlabelled-|-Sec-|
+  # Segment33: |-Sec-|------------|
+  # Segment34:       |------------|-Sec-|
+  - Type:    0x6ABCDEF0
+    VAddr:   0x5018
+    FirstSec: sectiond
+    LastSec:  sectione
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5018
+    FirstSec: sectiond
+    LastSec:  blobd
+  - Type:     0x6ABCDEF0
+    VAddr:    0x501C
+    FirstSec: blobd
+    LastSec:  sectione
+
+  # Segment35: |-unlabelled-|-Sec-|-unlabelled-|
+  # Segment36: |------------|-Sec-|
+  # Segment37:              |-Sec-|------------|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5024
+    FirstSec: blobe
+    LastSec:  blobf
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5024
+    FirstSec: blobe
+    LastSec:  sectionf
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5028
+    FirstSec: sectionf
+    LastSec:  blobf
+
+  # Segment38: |-unlabelled-|-Sec-|-unlabelled-|
+  # Segment39: |------------|---|
+  # Segment40:                |---|------------|
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5030
+    FirstSec: blobg
+    LastSec:  blobh
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5030
+    FileSize: 7
+    FirstSec: blobg
+    LastSec:  blobg
+  - Type:     0x6ABCDEF0
+    VAddr:    0x5035
+    Offset:   0x5035
+    FirstSec: blobh
+    LastSec:  blobh

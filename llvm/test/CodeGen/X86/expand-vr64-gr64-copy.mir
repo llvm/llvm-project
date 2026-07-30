@@ -1,0 +1,31 @@
+# RUN: llc -run-pass postrapseudos -mtriple=x86_64-unknown-unknown -mattr=+mmx -o - %s | FileCheck %s
+# This test verifies that the ExpandPostRA pass expands the GR64 <-> VR64
+# copies into appropriate MMX_MOV instructions.
+
+--- |
+
+  define <2 x i32> @test_paddw(<2 x i32> %a) nounwind readnone {
+  entry:
+    %0 = bitcast <2 x i32> %a to <1 x i64>
+    %1 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %0, <1 x i64> %0)
+    %2 = bitcast <1 x i64> %1 to <2 x i32>
+    ret <2 x i32> %2
+  }
+
+...
+---
+name:            test_paddw
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $xmm0
+    $mm0 = MMX_MOVDQ2Qrr killed $xmm0
+    $mm0 = MMX_PADDWrr killed $mm0, $mm0
+  ; Inserted dummy copy here, for test:
+  ; CHECK:      $rax = MMX_MOVD64from64rr $mm0
+  ; CHECK-NEXT: $mm0 = MMX_MOVD64to64rr $rax
+    $rax = COPY $mm0
+    $mm0 = COPY $rax
+    $xmm0 = MMX_MOVQ2DQrr killed $mm0
+    RET 0, $xmm0
+...

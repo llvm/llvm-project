@@ -1,0 +1,12 @@
+Test several edge cases with unusual name table data in ExtBinary format.
+
+1- Multiple fixed-length MD5 name tables. Reading a new table should clear the content from old table, and a valid name index for the old name table should become invalid if the new name table has fewer entries.
+RUN: not llvm-profdata show --sample %p/Inputs/sample-multiple-nametables.profdata
+
+2- Multiple name tables, the first one has an empty string, the second one tricks the reader into expecting fixed-length MD5 values. Reader should not attempt "lazy loading" of the MD5 string in this case.
+RUN: not llvm-profdata show --sample %p/Inputs/sample-nametable-empty-string.profdata
+
+3- The data of the name table is placed after the data of the profiles. The reader should handle it correctly.
+RUN: llvm-profdata merge --sample --text %p/Inputs/sample-nametable-after-samples.profdata | FileCheck %s
+CHECK: 18446744073709551613:2:9
+

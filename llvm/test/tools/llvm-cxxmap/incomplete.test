@@ -1,0 +1,2 @@
+RUN: llvm-cxxmap %S/Inputs/before.sym %S/Inputs/incomplete.sym -r %S/Inputs/remap.map -o /dev/null -Wincomplete 2>&1 | FileCheck %s
+CHECK: warning: {{.*}}:2: no new symbol matches old symbol _ZN1N1fENS_1X1YE

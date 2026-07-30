@@ -1,0 +1,127 @@
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK-DAG: OpName [[ADD:%.*]] "test_add"
+; CHECK-DAG: OpName [[SUB:%.*]] "test_sub"
+; CHECK-DAG: OpName [[MIN:%.*]] "test_min"
+; CHECK-DAG: OpName [[MAX:%.*]] "test_max"
+; CHECK-DAG: OpName [[UMIN:%.*]] "test_umin"
+; CHECK-DAG: OpName [[UMAX:%.*]] "test_umax"
+; CHECK-DAG: OpName [[AND:%.*]] "test_and"
+; CHECK-DAG: OpName [[OR:%.*]] "test_or"
+; CHECK-DAG: OpName [[XOR:%.*]] "test_xor"
+
+; CHECK-DAG: [[I32Ty:%.*]] = OpTypeInt 32 0
+; CHECK-DAG: [[PtrI32Ty:%.*]] = OpTypePointer Function [[I32Ty]]
+;; AllSvmDevices scope is encoded with constant 0
+; CHECK-DAG: [[SCOPE:%.*]] = OpConstantNull [[I32Ty]]
+;; "sequentially consistent" maps to constant 16
+; CHECK-DAG: [[SEQ:%.*]] = OpConstant [[I32Ty]] 16
+
+; CHECK:      [[ADD]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicIAdd [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_add(ptr %ptr, i32 %val) {
+  %r = atomicrmw add ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[SUB]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicISub [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_sub(ptr %ptr, i32 %val) {
+  %r = atomicrmw sub ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[MIN]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicSMin [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_min(ptr %ptr, i32 %val) {
+  %r = atomicrmw min ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[MAX]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicSMax [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_max(ptr %ptr, i32 %val) {
+  %r = atomicrmw max ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[UMIN]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicUMin [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_umin(ptr %ptr, i32 %val) {
+  %r = atomicrmw umin ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[UMAX]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicUMax [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_umax(ptr %ptr, i32 %val) {
+  %r = atomicrmw umax ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[AND]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicAnd [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_and(ptr %ptr, i32 %val) {
+  %r = atomicrmw and ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[OR]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicOr [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_or(ptr %ptr, i32 %val) {
+  %r = atomicrmw or ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}
+
+; CHECK:      [[XOR]] = OpFunction [[I32Ty]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[PtrI32Ty]]
+; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter [[I32Ty]]
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpAtomicXor [[I32Ty]] [[A]] [[SCOPE]] [[SEQ]] [[B]]
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i32 @test_xor(ptr %ptr, i32 %val) {
+  %r = atomicrmw xor ptr %ptr, i32 %val seq_cst
+  ret i32 %r
+}

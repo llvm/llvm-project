@@ -1,0 +1,120 @@
+# RUN: llc -emit-call-site-info -start-before=livedebugvalues -stop-after=machineverifier -o - %s \
+# RUN:   | FileCheck %s -check-prefix=MIR
+
+# RUN: llc -emit-call-site-info -start-before=livedebugvalues -filetype=obj -o - %s \
+# RUN:   | llvm-dwarfdump - | FileCheck %s -check-prefix=DWARF -implicit-check-not=DW_OP_entry_value
+
+# // Original Source
+# struct fat_ptr {
+#   int *ptr, *low, *high;
+# };
+# extern int baz(int x);
+# int bar(struct fat_ptr f) {
+#   return baz(baz(*f.ptr));
+# }
+
+# MIR:      renamable $w0 = LDRWui killed renamable $x8
+# MIR-NEXT: DBG_VALUE $x0, 0, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
+# MIR-NEXT: BL @baz
+# MIR-NEXT: frame-destroy LDPXpost
+# MIR-NEXT: TCRETURNdi @baz
+
+# After w0 is clobbered, we should get an indirect parameter entry value for "f".
+
+# DWARF: DW_TAG_subprogram
+# DWARF: DW_TAG_formal_parameter
+# DWARF-NEXT: DW_AT_location
+# DWARF-NEXT: [0x0000000000000000, 0x0000000000000010): DW_OP_breg0 W0+0
+# DWARF-NEXT: [0x0000000000000010, 0x000000000000001c): DW_OP_entry_value(DW_OP_reg0 W0))
+# DWARF-NEXT: DW_AT_name    ("f")
+
+# DWARF: DW_TAG_subprogram
+# DWARF:       DW_AT_name ("baz")
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64-apple-ios10.0.0"
+
+  %struct.fat_ptr = type { ptr, ptr, ptr }
+
+  define i32 @bar(ptr nocapture readonly %f) local_unnamed_addr !dbg !13 {
+  entry:
+    call void @llvm.dbg.declare(metadata ptr %f, metadata !23, metadata !DIExpression()), !dbg !24
+    %ptr2 = bitcast ptr %f to ptr, !dbg !25
+    %0 = load ptr, ptr %ptr2, align 8, !dbg !25
+    %1 = load i32, ptr %0, align 4, !dbg !31
+    %call = tail call i32 @baz(i32 %1), !dbg !34
+    %call1 = tail call i32 @baz(i32 %call), !dbg !35
+    ret i32 %call1, !dbg !36
+  }
+
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+  declare !dbg !4 i32 @baz(i32) local_unnamed_addr optsize
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10, !11}
+  !llvm.ident = !{!12}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None, sysroot: "/")
+  !1 = !DIFile(filename: "indirect.c", directory: "/tmp/fatptr")
+  !2 = !{}
+  !4 = !DISubprogram(name: "baz", scope: !1, file: !1, line: 4, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 7, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{i32 7, !"PIC Level", i32 2}
+  !12 = !{!"clang"}
+  !13 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 5, type: !14, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !22)
+  !14 = !DISubroutineType(types: !15)
+  !15 = !{!7, !16}
+  !16 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "fat_ptr", file: !1, line: 1, size: 192, elements: !17)
+  !17 = !{!18, !20, !21}
+  !18 = !DIDerivedType(tag: DW_TAG_member, name: "ptr", scope: !16, file: !1, line: 2, baseType: !19, size: 64)
+  !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
+  !20 = !DIDerivedType(tag: DW_TAG_member, name: "low", scope: !16, file: !1, line: 2, baseType: !19, size: 64, offset: 64)
+  !21 = !DIDerivedType(tag: DW_TAG_member, name: "high", scope: !16, file: !1, line: 2, baseType: !19, size: 64, offset: 128)
+  !22 = !{!23}
+  !23 = !DILocalVariable(name: "f", arg: 1, scope: !13, file: !1, line: 5, type: !16)
+  !24 = !DILocation(line: 5, column: 24, scope: !13)
+  !25 = !DILocation(line: 6, column: 23, scope: !13)
+  !31 = !DILocation(line: 6, column: 20, scope: !13)
+  !34 = !DILocation(line: 6, column: 16, scope: !13)
+  !35 = !DILocation(line: 6, column: 12, scope: !13)
+  !36 = !DILocation(line: 6, column: 5, scope: !13)
+
+...
+---
+name:            bar
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 8, fwdArgRegs:
+      - { arg: 0, reg: '$w0' } }
+  - { bb: 0, offset: 10, fwdArgRegs:
+      - { arg: 0, reg: '$w0' } }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $lr
+
+    DBG_VALUE $x0, 0, !23, !DIExpression(), debug-location !24
+    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !25
+    frame-setup CFI_INSTRUCTION offset $w29, -16, debug-location !25
+    renamable $x8 = LDRXui killed renamable $x0, 0, debug-location !25 :: (load (s64) from %ir.ptr2)
+    renamable $w0 = LDRWui killed renamable $x8, 0, debug-location !31 :: (load (s32) from %ir.0)
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0, debug-location !34
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !35 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    TCRETURNdi @baz, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, debug-location !35
+
+...

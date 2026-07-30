@@ -1,0 +1,4 @@
+module PreferredNameModule {
+  header "gmodules-preferred-name-typedef.h"
+  export *
+}

@@ -1,0 +1,81 @@
+## Test the behavior of the symbol reference section.
+
+## Case1: a symbol can reference a section by SectionName or SectionIndex.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj %t1 -s | FileCheck %s --check-prefix=CASE1
+
+# CASE1:      Symbols [
+# CASE1-NEXT:   Symbol {
+# CASE1-NEXT:     Index: 0
+# CASE1-NEXT:     Name: 
+# CASE1-NEXT:     Value: 0x0
+# CASE1-NEXT:     Section: .text
+# CASE1-NEXT:     Type: 0x0
+# CASE1-NEXT:     StorageClass: C_NULL (0x0)
+# CASE1-NEXT:     NumberOfAuxEntries: 0
+# CASE1-NEXT:   }
+# CASE1-NEXT:   Symbol {
+# CASE1-NEXT:     Index: 1
+# CASE1-NEXT:     Name: 
+# CASE1-NEXT:     Value: 0x0
+# CASE1-NEXT:     Section: .text
+# CASE1-NEXT:     Type: 0x0
+# CASE1-NEXT:     StorageClass: C_NULL (0x0)
+# CASE1-NEXT:     NumberOfAuxEntries: 0
+# CASE1-NEXT:   }
+# CASE1-NEXT: ]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name: .text
+Symbols:
+  - Section: .text
+  - SectionIndex: 1
+
+## Case 2: a symbol can reference a section by both SectionName and SectionIndex.
+# RUN: yaml2obj --docnum=2 -DSECNAME='.text' -DSECINDEX=1 %s -o %t2
+# RUN: llvm-readobj %t2 -s | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      Symbols [
+# CASE2-NEXT:   Symbol {
+# CASE2-NEXT:     Index: 0
+# CASE2-NEXT:     Name: 
+# CASE2-NEXT:     Value: 0x0
+# CASE2-NEXT:     Section: .text
+# CASE2-NEXT:     Type: 0x0
+# CASE2-NEXT:     StorageClass: C_NULL (0x0)
+# CASE2-NEXT:     NumberOfAuxEntries: 0
+# CASE2-NEXT:   }
+# CASE2-NEXT: ]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name: .text
+Symbols:
+  - Section:      [[SECNAME=<none>]]
+    SectionIndex: [[SECINDEX=<none>]]
+
+## Case3: if both Section and SectionIndex are specified, but the two
+##        values refer to different sections, an error will be reported.
+# RUN: not yaml2obj --docnum=2 -DSECNAME='.text' -DSECINDEX=0 %s -o %t3 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CASE3
+
+# CASE3: the SectionName .text and the SectionIndex (0) refer to different sections
+
+## Case4: yaml2obj allows the specification of an invalid SectionIndex.
+## TODO: the error message should include the symbol name or index.
+# RUN: yaml2obj --docnum=2 -DSECINDEX=2 %s -o %t4
+# RUN: not llvm-readobj %t4 -s 2>&1 | FileCheck %s --check-prefix=CASE4
+
+# CASE4: the section index (2) is invalid
+
+## Case 5: if a symbol references a non-existent section by SectionName,
+##         an error will be reported.
+# RUN: not yaml2obj --docnum=2 -DSECNAME='.data' %s -o %t5 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CASE5
+
+# CASE5: the SectionName .data specified in the symbol does not exist

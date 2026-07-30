@@ -1,0 +1,50 @@
+## Check that we print 'u' for unique symbols
+## and 'U' for a unique symbol without a section.
+# RUN: yaml2obj %s | llvm-nm - | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .nobits
+    Type:  SHT_NOBITS
+  - Name:  .progbits
+    Type:  SHT_PROGBITS
+  - Name:  .progbits_alloc
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC]
+  - Name:  .progbits_alloc_write
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_WRITE]
+  - Name:  .progbits_execinstr
+    Type:  SHT_PROGBITS
+    Flags: [SHF_EXECINSTR]
+Symbols:
+  - Name:    nosection
+    Binding: STB_GNU_UNIQUE
+  - Name:    nobits
+    Section: .nobits
+    Binding: STB_GNU_UNIQUE
+  - Name:    progbits
+    Section: .progbits
+    Binding: STB_GNU_UNIQUE
+  - Name:    progbits_alloc
+    Section: .progbits_alloc
+    Binding: STB_GNU_UNIQUE
+  - Name:    progbits_alloc_write
+    Section: .progbits_alloc_write
+    Binding: STB_GNU_UNIQUE
+  - Name:    progbits_execinstr
+    Section: .progbits_execinstr
+    Binding: STB_GNU_UNIQUE
+...
+
+# CHECK: 0000000000000000 u nobits
+# CHECK:                  U nosection
+# CHECK: 0000000000000000 u progbits
+# CHECK: 0000000000000000 u progbits_alloc
+# CHECK: 0000000000000000 u progbits_alloc_write
+# CHECK: 0000000000000000 u progbits_execinstr

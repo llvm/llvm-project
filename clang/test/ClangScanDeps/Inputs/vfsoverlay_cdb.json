@@ -1,0 +1,12 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/vfsoverlay_input.cpp -IInputs -ivfsoverlay DIR/vfsoverlay.yaml",
+  "file": "DIR/vfsoverlay_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /IInputs -Xclang -ivfsoverlay -Xclang DIR/vfsoverlay.yaml -- DIR/vfsoverlay_input_clangcl.cpp",
+  "file": "DIR/vfsoverlay_input_clangcl.cpp"
+}
+]

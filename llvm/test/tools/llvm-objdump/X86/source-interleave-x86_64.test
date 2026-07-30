@@ -1,0 +1,18 @@
+# RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t.ll
+# RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+# RUN: llvm-objdump -d -l %t.o >%t0
+# RUN: llvm-objdump -dl %t.o >%t1
+# RUN: llvm-objdump -d -S %t.o >%t2
+# RUN: llvm-objdump -dS %t.o >%t3
+# RUN: cmp %t0 %t1
+# RUN: cmp %t2 %t3
+# RUN: FileCheck --check-prefix=LINES %s < %t0
+# RUN: FileCheck --check-prefix=SOURCE --strict-whitespace %s < %t2
+
+# LINES: <main>:
+# LINES-NEXT: ; main():
+# LINES-NEXT: ; {{.+}}source-interleave-x86_64.c:6
+
+# SOURCE: <main>:
+# SOURCE-NEXT: ; int main() {
+# SOURCE:      ;   int *b = &a;

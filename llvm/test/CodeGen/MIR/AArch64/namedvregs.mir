@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -run-pass none %s | FileCheck %s
+...
+---
+name: namedVRegFunc
+body:             |
+  bb.0:
+    liveins: $x0, $w0, $d0, $d1
+    %0:fpr64 = COPY $d0
+    %1:fpr64 = COPY $d1
+
+    ;CHECK: %foo:gpr32 = COPY $w0
+    ;CHECK: %bar:gpr32 = COPY $x0
+    ;CHECK: %foobar:gpr32 = COPY %foo
+    ;CHECK: COPY %foobar
+    ;CHECK: %baz:gpr32 = COPY
+    ;CHECK: $w0 = COPY %baz
+
+    %foo:gpr32 = COPY $w0
+    %bar:gpr32 = COPY $x0
+    %foobar:gpr32 = COPY %foo
+    %2:gpr32 = COPY %foobar
+    %baz:gpr32 = COPY %2
+    $w0 = COPY %baz
+    RET_ReallyLR implicit $w0
+
+...

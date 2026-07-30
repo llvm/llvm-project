@@ -1,0 +1,30 @@
+# This makefile aims to make the binaries as small as possible, for us not to
+# upload huge binary blobs in the repo.
+# The binary should have debug symbols because stack unwinding doesn't work
+# correctly using the information in the Minidump only. Also we want to evaluate
+# local variables, etc.
+# Breakpad compiles as a static library, so statically linking against it
+# makes the binary huge.
+# Dynamically linking to it does improve things, but we are still #include-ing
+# breakpad headers (which is a lot of source code for which we generate debug
+# symbols)
+# So, install_breakpad.cpp does the #include-ing and defines a global function
+# "InstallBreakpad" that does all the exception handler registration.
+# We compile install_breakpad to object file and then link it, alongside the
+# static libbreakpad, into a shared library.
+# Then the binaries dynamically link to that lib.
+# The other optimisation is not using the standard library (hence the _start
+# instead of main). We only link dynamically to some standard libraries.
+# This way we have a tiny binary (~8K) that has debug symbols and uses breakpad
+# to generate a Minidump when the binary crashes/requests such.
+#
+CC=g++
+CC_TYPE=gcc
+FLAGS=-g --std=c++11
+INCLUDE=-I$HOME/breakpad/src/src/
+LINK=-L. -lbreakpad -lpthread -nostdlib -lc -lstdc++ -lgcc_s -fno-exceptions
+all:
+	$(CC) $(FLAGS) -fPIC -c install_breakpad.cpp $(INCLUDE) -o install_breakpad.o
+	ld -shared install_breakpad.o libbreakpad_client.a -o libbreakpad.so
+	$(CC) $(FLAGS) -o linux-x86_64 linux-x86_64.cpp $(LINK)
+	$(CC) $(FLAGS) -o linux-x86_64_not_crashed linux-x86_64_not_crashed.cpp $(LINK)

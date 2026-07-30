@@ -1,0 +1,45 @@
+{
+  'version': 0,
+  'case-sensitive': 'false',
+  'use-external-names' : 'false',
+  'roots': [
+    {
+      'type': 'directory',
+      'name': "TEST_DIR/Z.framework/Headers",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "Z.h",
+          'external-contents': "TEST_DIR/flat-header-path/Z.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "TEST_DIR/Z.framework/PrivateHeaders",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "ZPriv.h",
+          'external-contents': "TEST_DIR/flat-header-path/ZPriv.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "TEST_DIR/Z.framework/Modules",
+      'contents': [
+        {
+          'type': 'file',
+          'name': "module.modulemap",
+          'external-contents': "TEST_DIR/flat-header-path/Z.modulemap"
+        },
+        {
+          'type': 'file',
+          'name': "module.private.modulemap",
+          'external-contents': "TEST_DIR/flat-header-path/Z.private.modulemap"
+        }
+      ]
+    }
+  ]
+}

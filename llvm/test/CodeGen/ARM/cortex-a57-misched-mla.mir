@@ -1,0 +1,34 @@
+# REQUIRES: asserts
+# RUN: llc -mcpu=cortex-a57 -mtriple=thumb -enable-misched -run-pass=machine-scheduler -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s
+
+# CHECK-LABEL: ********** MI Scheduling **********
+# CHECK:       %[[RES:[0-9]+]]:rgpr = t2MLA
+# CHECK-NEXT:  # preds left
+# CHECK-NEXT:  # succs left
+# CHECK-NEXT:  # rdefs left
+# CHECK-NEXT:  Latency : 3
+# CHECK-NEXT:  Depth
+# CHECK-NEXT:  Height
+# CHECK-NEXT:  Predecessors:
+# CHECK-NEXT:    SU({{.*}}): Data Latency=1 Reg=
+# CHECK-NEXT:    SU({{.*}}): Data Latency=1 Reg=
+# CHECK-NEXT:  Successors:
+# CHECK-NEXT:    SU([[SMLA_SU:[0-9]+]]): Data Latency=1 Reg=%[[RES]]
+# CHECK-NEXT:  Pressure Diff
+# CHECK-NEXT:  Single Issue : false;
+# CHECK-NEXT:  SU([[SMLA_SU]]): {{.*}} = t2SMLAL %{{[0-9]+}}:rgpr, %{{[0-9]+}}:rgpr, %{{[0-9]+}}:rgpr(tied-def 0), %[[RES]]:rgpr(tied-def 1), 14, $noreg
+
+name:            test_smlal_forwarding
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r1, $r3, $r4, $r5, $r6
+    %1:rgpr = COPY $r1
+    %3:rgpr = COPY $r3
+    %4:rgpr = COPY $r4
+    %5:rgpr = COPY $r5
+    %6:rgpr = COPY $r6
+    %3:rgpr = t2MLA %4:rgpr, %1:rgpr, %4:rgpr, 14, $noreg
+    %6:rgpr, %5:rgpr = t2SMLAL %5:rgpr, %6:rgpr, %4:rgpr, %3:rgpr, 14, $noreg
+    $r0 = COPY %6:rgpr
+    BX_RET 14, $noreg, implicit $r0

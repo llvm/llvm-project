@@ -1,0 +1,17 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser preserves unnamed LLVM IR block
+# references.
+
+--- |
+
+  define i32 @foo() {
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+body: |
+  ; CHECK: bb.0 (%ir-block.0):
+  bb.0 (%ir-block.0):
+...

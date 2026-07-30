@@ -1,0 +1,61 @@
+## Show that llvm-strings can handle the -t/--radix switch properly.
+
+RUN: split-file --no-leading-lines %s %t
+#--- a.txt
+one
+two
+three
+four
+five
+six
+seven
+eight
+nine
+ten
+#--- end
+
+RUN: llvm-strings %t/a.txt | FileCheck %s -check-prefix CHECK-NONE --implicit-check-not={{.}}
+RUN: llvm-strings -t d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace --implicit-check-not={{.}}
+RUN: llvm-strings -t o %t/a.txt | FileCheck %s -check-prefix CHECK-OCT --strict-whitespace --implicit-check-not={{.}}
+RUN: llvm-strings -t x %t/a.txt | FileCheck %s -check-prefix CHECK-HEX --strict-whitespace --implicit-check-not={{.}}
+
+## Show --radix works too.
+RUN: llvm-strings --radix d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+RUN: llvm-strings --radix o %t/a.txt | FileCheck %s -check-prefix CHECK-OCT --strict-whitespace
+RUN: llvm-strings --radix x %t/a.txt | FileCheck %s -check-prefix CHECK-HEX --strict-whitespace
+
+## Show different syntaxes work.
+RUN: llvm-strings --radix=d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+RUN: llvm-strings -t d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+
+CHECK-NONE: {{^}}three
+CHECK-NONE: {{^}}four
+CHECK-NONE: {{^}}five
+CHECK-NONE: {{^}}seven
+CHECK-NONE: {{^}}eight
+CHECK-NONE: {{^}}nine
+
+CHECK-DEC: {{^}}      8 three
+CHECK-DEC: {{^}}     14 four
+CHECK-DEC: {{^}}     19 five
+CHECK-DEC: {{^}}     28 seven
+CHECK-DEC: {{^}}     34 eight
+CHECK-DEC: {{^}}     40 nine
+
+CHECK-OCT: {{^}}     10 three
+CHECK-OCT: {{^}}     16 four
+CHECK-OCT: {{^}}     23 five
+CHECK-OCT: {{^}}     34 seven
+CHECK-OCT: {{^}}     42 eight
+CHECK-OCT: {{^}}     50 nine
+
+CHECK-HEX: {{^}}      8 three
+CHECK-HEX: {{^}}      e four
+CHECK-HEX: {{^}}     13 five
+CHECK-HEX: {{^}}     1c seven
+CHECK-HEX: {{^}}     22 eight
+CHECK-HEX: {{^}}     28 nine
+
+## Show that an invalid value is rejected.
+RUN: not llvm-strings --radix z %t/a.txt 2>&1 | FileCheck %s --check-prefix=INVALID
+INVALID: error: --radix value should be one of: '' (no offset), 'o' (octal), 'd' (decimal), 'x' (hexadecimal)

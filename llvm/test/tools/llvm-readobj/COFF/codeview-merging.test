@@ -1,0 +1,113 @@
+# To regenerate t1.obj and t2.obj, run the following:
+# $ cat t.cpp
+# #ifdef CONFIG1
+# struct A;
+# struct B {
+#   A *a;
+# };
+# int f(A *a);
+# int g(B *b) { return f(b->a); }
+# #else
+# struct B;
+# struct A {
+#   B *b;
+# };
+# int g(B *b);
+# int f(A *a) { return g(a->b); }
+# #endif
+# $ cl -c -DCONFIG1 -Z7 t.cpp -Fot1.obj && cl -c -Z7 t.cpp -Fot2.obj
+
+RUN: llvm-readobj --codeview %S/Inputs/codeview-merging-1.obj | FileCheck %s --check-prefix=OBJ1
+RUN: llvm-readobj --codeview %S/Inputs/codeview-merging-2.obj | FileCheck %s --check-prefix=OBJ2
+RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-merging-1.obj %S/Inputs/codeview-merging-2.obj | FileCheck %s
+
+OBJ1:       Procedure ({{.*}}) {
+OBJ1-NEXT:    TypeLeafKind: LF_PROCEDURE (0x1008)
+OBJ1-NEXT:    ReturnType: int (0x74)
+OBJ1-NEXT:    CallingConvention: NearC (0x0)
+OBJ1-NEXT:    FunctionOptions [ (0x0)
+OBJ1-NEXT:    ]
+OBJ1-NEXT:    NumParameters: 1
+OBJ1-NEXT:    ArgListType: (A*) (0x1002)
+OBJ1-NEXT:  }
+OBJ1:       FuncId (0x100D) {
+OBJ1-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ1-NEXT:    ParentScope: 0x0
+OBJ1-NEXT:    FunctionType: int (B*) (0x100C)
+OBJ1-NEXT:    Name: g
+OBJ1-NEXT:  }
+OBJ1-NEXT:  FuncId (0x100E) {
+OBJ1-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ1-NEXT:    ParentScope: 0x0
+OBJ1-NEXT:    FunctionType: int (A*) (0x1003)
+OBJ1-NEXT:    Name: f
+OBJ1-NEXT:  }
+OBJ1-NOT: FuncId
+
+OBJ2:       FuncId (0x100D) {
+OBJ2-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ2-NEXT:    ParentScope: 0x0
+OBJ2-NEXT:    FunctionType: int (A*) (0x100C)
+OBJ2-NEXT:    Name: f
+OBJ2-NEXT:  }
+
+OBJ2:       FuncId (0x1069) {
+OBJ2-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+OBJ2-NEXT:    ParentScope: 0x0
+OBJ2-NEXT:    FunctionType: int (B*) (0x1003)
+OBJ2-NEXT:    Name: g
+OBJ2-NEXT:  }
+OBJ2-NOT: FuncId
+
+CHECK: MergedTypeStream [
+CHECK:       Procedure ({{.*}}) {
+CHECK-NEXT:    TypeLeafKind: LF_PROCEDURE (0x1008)
+CHECK-NEXT:    ReturnType: int (0x74)
+CHECK-NEXT:    CallingConvention: NearC (0x0)
+CHECK-NEXT:    FunctionOptions [ (0x0)
+CHECK-NEXT:    ]
+CHECK-NEXT:    NumParameters: 1
+CHECK-NEXT:    ArgListType: (A*) (0x1002)
+CHECK-NEXT:  }
+CHECK:       Struct (0x1007) {
+CHECK-NEXT:    TypeLeafKind: LF_STRUCTURE (0x1505)
+CHECK-NEXT:    MemberCount: 1
+CHECK-NEXT:    Properties [ (0x200)
+CHECK-NEXT:      HasUniqueName (0x200)
+CHECK-NEXT:    ]
+CHECK-NEXT:    FieldList: <field list> (0x1006)
+CHECK-NEXT:    DerivedFrom: 0x0
+CHECK-NEXT:    VShape: 0x0
+CHECK-NEXT:    SizeOf: 8
+CHECK-NEXT:    Name: B
+CHECK-NEXT:    LinkageName: .?AUB@@
+CHECK-NEXT:  }
+CHECK: ]
+
+CHECK: MergedIDStream [
+CHECK-NEXT:  StringId (0x1000) {
+CHECK-NEXT:    TypeLeafKind: LF_STRING_ID (0x1605)
+CHECK-NEXT:    Id: 0x0
+CHECK-NEXT:    StringData: d:\src\llvm\build\t.cpp
+CHECK-NEXT:  }
+# Test that we contextually dump item ids and type ids from different databases.
+CHECK-NEXT:  UdtSourceLine (0x1001) {
+CHECK-NEXT:    TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+CHECK-NEXT:    UDT: B (0x1007)
+CHECK-NEXT:    SourceFile: d:\src\llvm\build\t.cpp (0x1000)
+CHECK-NEXT:    LineNumber: 3
+CHECK-NEXT:  }
+CHECK:       FuncId (0x1002) {
+CHECK-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+CHECK-NEXT:    ParentScope: 0x0
+CHECK-NEXT:    FunctionType: int (B*)
+CHECK-NEXT:    Name: g
+CHECK-NEXT:  }
+CHECK-NEXT:  FuncId (0x1003) {
+CHECK-NEXT:    TypeLeafKind: LF_FUNC_ID (0x1601)
+CHECK-NEXT:    ParentScope: 0x0
+CHECK-NEXT:    FunctionType: int (A*)
+CHECK-NEXT:    Name: f
+CHECK-NEXT:  }
+CHECK-NOT: FuncId
+CHECK: ]

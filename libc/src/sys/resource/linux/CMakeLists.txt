@@ -1,0 +1,23 @@
+add_entrypoint_object(
+  getrlimit
+  SRCS
+    getrlimit.cpp
+  HDRS
+    ../getrlimit.h
+  DEPENDS
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  setrlimit
+  SRCS
+    setrlimit.cpp
+  HDRS
+    ../setrlimit.h
+  DEPENDS
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
+    libc.src.errno.errno
+)

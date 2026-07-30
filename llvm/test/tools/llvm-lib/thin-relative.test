@@ -1,0 +1,13 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t/foo
+RUN: cd %t
+
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o foo/obj.o %S/Inputs/a.s
+
+RUN: llvm-lib -out:archive.a -llvmlibthin foo/obj.o
+RUN: llvm-ar t archive.a | FileCheck %s --check-prefix=PARENT-DIR --match-full-lines
+PARENT-DIR: foo/obj.o
+
+RUN: llvm-lib -out:foo/archive.a -llvmlibthin foo/obj.o
+RUN: llvm-ar t foo/archive.a | FileCheck %s --check-prefix=SAME-DIR --match-full-lines
+SAME-DIR: foo/obj.o

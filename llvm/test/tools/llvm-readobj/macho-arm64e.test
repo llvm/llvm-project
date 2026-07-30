@@ -1,0 +1,17 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -h %t.o | FileCheck %s
+
+# CHECK: Magic: Magic64 (0xFEEDFACF)
+# CHECK: CpuType: Arm64 (0x100000C)
+# CHECK: CpuSubType: CPU_SUBTYPE_ARM64E (0x2)
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000002
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000

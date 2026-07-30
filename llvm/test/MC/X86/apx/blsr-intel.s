@@ -1,0 +1,49 @@
+# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+
+# CHECK: {nf}	blsr	edx, ecx
+# CHECK: encoding: [0x62,0xf2,0x6c,0x0c,0xf3,0xc9]
+         {nf}	blsr	edx, ecx
+
+# CHECK: {evex}	blsr	edx, ecx
+# CHECK: encoding: [0x62,0xf2,0x6c,0x08,0xf3,0xc9]
+         {evex}	blsr	edx, ecx
+
+# CHECK: {nf}	blsr	r15, r9
+# CHECK: encoding: [0x62,0xd2,0x84,0x0c,0xf3,0xc9]
+         {nf}	blsr	r15, r9
+
+# CHECK: {evex}	blsr	r15, r9
+# CHECK: encoding: [0x62,0xd2,0x84,0x08,0xf3,0xc9]
+         {evex}	blsr	r15, r9
+
+# CHECK: {nf}	blsr	ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x74,0x0c,0xf3,0x4c,0x98,0x7b]
+         {nf}	blsr	ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	blsr	ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x74,0x08,0xf3,0x4c,0x98,0x7b]
+         {evex}	blsr	ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {nf}	blsr	r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0xb4,0x0c,0xf3,0x4c,0x98,0x7b]
+         {nf}	blsr	r9, qword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	blsr	r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0xb4,0x08,0xf3,0x4c,0x98,0x7b]
+         {evex}	blsr	r9, qword ptr [rax + 4*rbx + 123]
+
+# CHECK: blsr	r22d, r18d
+# CHECK: encoding: [0x62,0xfa,0x4c,0x00,0xf3,0xca]
+         blsr	r22d, r18d
+
+# CHECK: blsr	r23, r19
+# CHECK: encoding: [0x62,0xfa,0xc4,0x00,0xf3,0xcb]
+         blsr	r23, r19
+
+# CHECK: blsr	r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9a,0x68,0x00,0xf3,0x8c,0xac,0x23,0x01,0x00,0x00]
+         blsr	r18d, dword ptr [r28 + 4*r29 + 291]
+
+# CHECK: blsr	r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9a,0xe0,0x00,0xf3,0x8c,0xac,0x23,0x01,0x00,0x00]
+         blsr	r19, qword ptr [r28 + 4*r29 + 291]

@@ -1,0 +1,135 @@
+## Check we are able to dump the SHT_NULL section at
+## index 0 when it has custom section fields.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=FIRST-SEC
+
+# FIRST-SEC:      --- !ELF
+# FIRST-SEC-NEXT: FileHeader:
+# FIRST-SEC-NEXT:   Class: ELFCLASS64
+# FIRST-SEC-NEXT:   Data:  ELFDATA2LSB
+# FIRST-SEC-NEXT:   Type:  ET_REL
+# FIRST-SEC-NEXT: Sections:
+# FIRST-SEC-NEXT:   - Type:         SHT_NULL
+# FIRST-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
+# FIRST-SEC-NEXT:     Address:      0x6
+# FIRST-SEC-NEXT:     Link:         .foo
+# FIRST-SEC-NEXT:     AddressAlign: 0x3
+# FIRST-SEC-NEXT:     EntSize:      0x5
+# FIRST-SEC-NEXT:     Size:         0x4
+# FIRST-SEC-NEXT:     Info:         0x2
+# FIRST-SEC-NEXT:   - Name:         .foo
+# FIRST-SEC-NEXT:     Type:         SHT_PROGBITS
+# FIRST-SEC-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:         SHT_NULL
+    Name:         ''
+    Flags:        [ SHF_ALLOC ]
+    Link:         1
+    Info:         2
+    AddressAlign: 0x3
+    Size:         0x4
+    EntSize:      0x5
+    Address:      0x6
+  - Type: SHT_PROGBITS
+    Name: .foo
+
+## Check we are able to dump the SHT_NULL section with a non-zero index.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=SECOND-SEC
+
+# SECOND-SEC:      --- !ELF
+# SECOND-SEC-NEXT: FileHeader:
+# SECOND-SEC-NEXT:   Class: ELFCLASS64
+# SECOND-SEC-NEXT:   Data:  ELFDATA2LSB
+# SECOND-SEC-NEXT:   Type:  ET_REL
+# SECOND-SEC-NEXT: Sections:
+# SECOND-SEC-NEXT:   - Name:         .foo
+# SECOND-SEC-NEXT:     Type:         SHT_PROGBITS
+# SECOND-SEC-NEXT:   - Type:         SHT_NULL
+# SECOND-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
+# SECOND-SEC-NEXT:     Address:      0x6
+# SECOND-SEC-NEXT:     Link:         .foo
+# SECOND-SEC-NEXT:     AddressAlign: 0x3
+# SECOND-SEC-NEXT:     EntSize:      0x5
+# SECOND-SEC-NEXT:     Content:      '00000000'
+# SECOND-SEC-NEXT:     Info:         0x2
+# SECOND-SEC-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SHT_PROGBITS
+    Name: .foo
+  - Type:         SHT_NULL
+    Name:         ''
+    Flags:        [ SHF_ALLOC ]
+    Link:         1
+    Info:         2
+    AddressAlign: 0x3
+    Size:         0x4
+    EntSize:      0x5
+    Address:      0x6
+
+## Check we do not dump the SHT_NULL section with index 0
+## when it does not have any custom fields.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=NULL-SEC
+
+# NULL-SEC:      --- !ELF
+# NULL-SEC-NEXT: FileHeader:
+# NULL-SEC-NEXT:   Class: ELFCLASS64
+# NULL-SEC-NEXT:   Data:  ELFDATA2LSB
+# NULL-SEC-NEXT:   Type:  ET_REL
+# NULL-SEC-NEXT: Sections:
+# NULL-SEC-NEXT:   - Name: .foo
+# NULL-SEC-NEXT:     Type: SHT_PROGBITS
+# NULL-SEC-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SHT_NULL
+  - Type: SHT_PROGBITS
+    Name: .foo
+
+## Check we dump SHT_NULL sections which are not at the beginning
+## of the section list even if they don't have any non-null fields.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=NULL-SEC-MIDDLE
+
+# NULL-SEC-MIDDLE:      --- !ELF
+# NULL-SEC-MIDDLE-NEXT: FileHeader:
+# NULL-SEC-MIDDLE-NEXT:   Class: ELFCLASS64
+# NULL-SEC-MIDDLE-NEXT:   Data:  ELFDATA2LSB
+# NULL-SEC-MIDDLE-NEXT:   Type:  ET_REL
+# NULL-SEC-MIDDLE-NEXT: Sections:
+# NULL-SEC-MIDDLE-NEXT:   - Name: .foo
+# NULL-SEC-MIDDLE-NEXT:     Type: SHT_PROGBITS
+# NULL-SEC-MIDDLE-NEXT:   - Type: SHT_NULL
+# NULL-SEC-MIDDLE-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SHT_PROGBITS
+    Name: .foo
+  - Type: SHT_NULL

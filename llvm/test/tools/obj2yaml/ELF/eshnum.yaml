@@ -1,0 +1,67 @@
+## Test cases related to the value of the e_shnum field of the ELF header live here.
+
+## Normally an object that does not have sections has e_shnum == 0.
+## Also, e_shnum might be 0, when the the number of entries in the section
+## header table is larger than or equal to SHN_LORESERVE (0xff00). In this case
+## the real number of entries in the section header table is held in the sh_size
+## member of the initial entry in the section header table.
+
+## In the test case below we have an object that has e_shnum = 0 and the real
+## number of sections is written to the sh_size member of the initial entry in
+## the section header table. Check that we emit the `EShNum` key properly.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=PRESERVE
+
+# PRESERVE:      --- !ELF
+# PRESERVE-NEXT: FileHeader:
+# PRESERVE-NEXT:   Class:  ELFCLASS64
+# PRESERVE-NEXT:   Data:   ELFDATA2LSB
+# PRESERVE-NEXT:   Type:   ET_REL
+# PRESERVE-NEXT:   EShNum: 0x0
+# PRESERVE-NEXT: Sections:
+# PRESERVE-NEXT:   - Type: SHT_NULL
+# PRESERVE-NEXT:     Size: 0x3
+# PRESERVE-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:  ELFCLASS64
+  Data:   ELFDATA2LSB
+  Type:   ET_REL
+  EShNum: 0x0
+  EShOff: [[ESHOFF=<none>]]
+Sections:
+ - Type: SHT_NULL
+## 3 sections total: SHT_NULL + 2 implicit sections: .strtab and .shstrtab.
+   Size: [[SIZE=0x3]]
+
+## In the test case below we have an object with a non-zero section header table
+## file offset and an initial entry in the section header table with sh_size of 0.
+## Here we check that we are able to dump such objects properly.
+
+# RUN: yaml2obj %s -DSIZE=0x0 -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=NO-SECTIONS
+
+# NO-SECTIONS:      --- !ELF
+# NO-SECTIONS-NEXT: FileHeader:
+# NO-SECTIONS-NEXT:   Class:  ELFCLASS64
+# NO-SECTIONS-NEXT:   Data:   ELFDATA2LSB
+# NO-SECTIONS-NEXT:   Type:   ET_REL
+# NO-SECTIONS-NEXT:   EShNum: 0x0
+## Note: yaml2obj will create the SHT_NULL section with sh_size = 0 implicitly.
+# NO-SECTIONS-NEXT: ...
+
+## In the test case below we have an object without a section header table and e_shnum == 0.
+## Document how we dump it.
+## FIXME: we should emit the `SectionHeaderTable` key with `NoHeaders=true` for this case.
+
+# RUN: yaml2obj %s -DESHOFF=0x0 -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=NO-HEADERS
+
+# NO-HEADERS:      --- !ELF
+# NO-HEADERS-NEXT: FileHeader:
+# NO-HEADERS-NEXT:   Class: ELFCLASS64
+# NO-HEADERS-NEXT:   Data:  ELFDATA2LSB
+# NO-HEADERS-NEXT:   Type:  ET_REL
+# NO-HEADERS-NEXT: ...

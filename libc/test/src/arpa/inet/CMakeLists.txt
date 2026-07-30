@@ -1,0 +1,95 @@
+add_custom_target(libc_arpa_inet_unittests)
+
+add_libc_unittest(
+  htonl
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    htonl_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.ntohl
+)
+
+add_libc_unittest(
+  htons
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    htons_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.ntohs
+)
+
+add_libc_unittest(
+  inet_addr
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_addr_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.inet_addr
+)
+
+add_libc_unittest(
+  inet_aton
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_aton_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.inet_aton
+)
+
+add_libc_unittest(
+  inet_ntoa
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_ntoa_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.inet_ntoa
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.endian_internal
+)
+
+add_libc_unittest(
+  inet_ntop
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_ntop_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.inet_ntop
+    libc.hdr.errno_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_in_addr
+    libc.hdr.types.struct_in6_addr
+    libc.src.__support.common
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  ntohl
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    ntohl_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.htonl
+    libc.src.arpa.inet.ntohl
+)
+
+add_libc_unittest(
+  ntohs
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    ntohs_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.ntohs
+)

@@ -1,0 +1,36 @@
+# REQUIRES: zlib
+
+## In this test, we check how llvm-objcopy handles compression/decompression
+## of debug sections included in a COMDAT group.
+
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
+
+## Check compression of debug sections.
+# RUN: llvm-objcopy --compress-debug-sections %t.o %t-compressed.o
+# RUN: llvm-readobj -S --section-groups %t-compressed.o | \
+# RUN:   FileCheck %s --check-prefixes=CHECK,COMPRESS
+
+## Check decompression of debug sections.
+# RUN: llvm-objcopy --decompress-debug-sections %t-compressed.o %t-decompressed.o
+# RUN: llvm-readobj --section-groups %t-decompressed.o | \
+# RUN:   FileCheck %s --check-prefixes=CHECK,DECOMPRESS
+
+# COMPRESS:      Name: .debug_in_group
+# COMPRESS-NEXT: Type: SHT_PROGBITS
+# COMPRESS-NEXT: Flags [
+# COMPRESS-NEXT:   SHF_COMPRESSED
+# COMPRESS-NEXT:   SHF_GROUP
+# COMPRESS-NEXT: ]
+
+# CHECK:           Group {
+# CHECK-NEXT:        Name: .group
+# CHECK-NEXT:        Index:
+# CHECK-NEXT:        Link:
+# CHECK-NEXT:        Info:
+# CHECK-NEXT:        Type: COMDAT
+# CHECK-NEXT:        Signature: groupname
+# CHECK-NEXT:        Section(s) in group [
+# CHECK-NEXT:          .text.in.group
+# COMPRESS-NEXT:       .debug_in_group
+# DECOMPRESS-NEXT:     .debug_in_group
+# CHECK-NEXT:        ]

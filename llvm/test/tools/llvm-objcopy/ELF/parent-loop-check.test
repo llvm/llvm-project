@@ -1,0 +1,47 @@
+# This test has a subtle purpose. Because of the specifics of the layout
+# algorithm if we're not careful cycles can occur when we resolve the order
+# that we should layout segments in. In this test we're making sure that the
+# PT_LOAD segment won't set the PT_NOTE segment as the first to be laid out
+# while the PT_NOTE segment sets the PT_LOAD load to be the first to be laid
+# out. This problem becomes visible if the layout of the file changes due to
+# the removal of a section. We use -O binary here because removing a section
+# in this way won't cause the location of the PT_LOAD segment to change if we
+# don't.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -R .note -O binary %t %t2
+# RUN: od -Ax -t x1 %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .note
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Content:         "32323232"
+    Size:            32
+  - Name:            .rodata
+    Flags:           [ SHF_ALLOC ]
+    Type:            SHT_PROGBITS
+    Address:         0x1020
+    Size:            4064
+    Content:         "DEADBEEF"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .note
+    LastSec:  .rodata
+  - Type:     PT_NOTE
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .note
+    LastSec:  .note
+
+# CHECK: 000000 de ad be ef

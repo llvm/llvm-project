@@ -1,0 +1,10 @@
+# CLRBHB is optional for all v8a/v9a, mandatory for 8.9a/9.4a.
+# Should disassemble to hint #22 if the feature is not present.
+# RUN: llvm-mc %s -disassemble -triple=thumbv8a | FileCheck %s --check-prefix=HINT_22
+# RUN: llvm-mc %s -disassemble -triple=thumbv8a -mattr=+clrbhb | FileCheck %s --check-prefix=CLRBHB
+# RUN: llvm-mc %s -disassemble -triple=thumbv8.9a | FileCheck %s --check-prefix=CLRBHB
+# RUN: llvm-mc %s -disassemble -triple=thumbv8.9a -mattr=-clrbhb | FileCheck %s --check-prefix=HINT_22
+
+[0xaf,0xf3,0x16,0x80]
+# CLRBHB: clrbhb
+# HINT_22: hint.w #22

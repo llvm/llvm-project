@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -j .test1 -j .test2 %t %t2
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test1
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test2
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .test3
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+
+# CHECK: SectionHeaderCount: 4
+
+# CHECK:     Name: .test1
+# CHECK:     Name: .test2
+# CHECK:     Name: .shstrtab

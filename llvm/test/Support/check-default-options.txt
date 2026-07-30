@@ -1,0 +1,7 @@
+# RUN: llvm-readobj --help | FileCheck --check-prefix=CHECK-READOBJ %s
+# RUN: llvm-tblgen --help-hidden %t | FileCheck --check-prefix=CHECK-TBLGEN %s
+# RUN: llvm-opt-report --help-hidden %t | FileCheck --check-prefix=CHECK-OPT-RPT %s
+
+# CHECK-READOBJ: -h    Alias for --file-header
+# CHECK-TBLGEN:  -h  - Alias for --help
+# CHECK-OPT-RPT: -h  - Alias for --help

@@ -1,0 +1,13 @@
+## Test the creation warning and supression of that warning.
+
+RUN: touch %t1.txt
+RUN: touch %t2.txt
+
+RUN: rm -f %t.warning.ar
+RUN: llvm-ar r %t.warning.ar %t1.txt %t2.txt 2>&1 \
+RUN:   | FileCheck %s -DOUTPUT=%t.warning.ar
+
+CHECK: warning: creating [[OUTPUT]]
+
+RUN: rm -f %t.supressed.ar
+RUN: llvm-ar cr %t.supressed.ar %t1.txt %t2.txt 2>&1 | count 0

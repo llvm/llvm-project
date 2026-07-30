@@ -1,0 +1,14 @@
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: llvm-readobj -h %t.wasm \
+# RUN:  | FileCheck %s -DFILE=%t.wasm --strict-whitespace --match-full-lines
+
+#      CHECK:File: [[FILE]]
+# CHECK-NEXT:Format: WASM
+# CHECK-NEXT:Arch: wasm32
+# CHECK-NEXT:AddressSize: 32bit
+# CHECK-NEXT:Version: 0x1
+# CHECK-NOT:{{.}}
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001

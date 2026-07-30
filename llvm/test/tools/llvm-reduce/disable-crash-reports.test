@@ -1,0 +1,12 @@
+# RUN: llvm-reduce --delta-passes=global-variables --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=INTERESTING %s
+
+# RUN: env LLVM_DISABLE_CRASH_REPORT=0 llvm-reduce --delta-passes=global-variables -o %t --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=INTERESTING %s
+
+# RUN: not llvm-reduce --preserve-debug-environment --delta-passes=global-variables -o %t --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=NOTINTERESTING %s
+
+# RUN: env LLVM_DISABLE_CRASH_REPORT=0 not llvm-reduce --preserve-debug-environment --delta-passes=global-variables -o %t --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=NOTINTERESTING %s
+
+# RUN: env LLVM_DISABLE_CRASH_REPORT=1 LLVM_DISABLE_SYMBOLIZATION=1 llvm-reduce --preserve-debug-environment --delta-passes=global-variables -o %t --test %python --test-arg %p/Inputs/test-crash-vars.py %p/Inputs/test-output-format.ll 2>&1 | FileCheck -check-prefix=INTERESTING %s
+
+INTERESTING: Done reducing! Reduced testcase:
+NOTINTERESTING: Input isn't interesting! Verify interesting-ness test

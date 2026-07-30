@@ -1,0 +1,112 @@
+// RUN: %exploded_graph_rewriter -d %s | FileCheck %s
+
+Node0x1 [shape=record,label=
+ "{
+    { "node_id": 1,
+      "pointer": "0x1",
+      "has_report": false,
+      "is_sink": false,
+      "state_id": 2,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
+      "program_state": {
+        "environment": null,
+        "constraints": null,
+        "dynamic_types": null,        
+        "checker_messages": null,
+        "store": {
+          "pointer": "0x2",
+          "items": [
+            {
+              "cluster": "x",
+              "pointer": "0x3",
+              "items": [
+                {
+                  "kind": "Default",
+                  "offset": 0,
+                  "value": "Undefined"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+\l}"];
+
+Node0x1 -> Node0x4;
+
+// CHECK: Node0x4 [
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td><font color="red">-</font></td>
+// CHECK-SAME:   <td align="left">x</td><td align="left">0</td>
+// CHECK-SAME:   <td align="left">(<i>Default</i>)</td>
+// CHECK-SAME:   <td align="left">Undefined</td>
+// CHECK-SAME: </tr>
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td><font color="forestgreen">+</font></td>
+// CHECK-SAME:   <td align="left">x</td>
+// CHECK-SAME:   <td align="left">0</td>
+// CHECK-SAME:   <td align="left">(<i>Default</i>)</td>
+// CHECK-SAME:   <td align="left">Unknown</td>
+// CHECK-SAME: </tr>
+Node0x4 [shape=record,label=
+ "{
+    {
+      "state_id": 5,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
+      "program_state": {
+        "environment": null,
+        "constraints": null,
+        "dynamic_types": null,        
+        "checker_messages": null,
+        "store": {
+          "pointer": "0x5",
+          "items": [
+            {
+              "cluster": "x",
+              "pointer": "0x3",
+              "items": [
+                {
+                  "kind": "Default",
+                  "offset": 0,
+                  "value": "Unknown"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+\l}"];
+
+Node0x4 -> Node0x6;
+
+Node0x6 [shape=record,label=
+ "{
+    {
+      "state_id": 7,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
+      "program_state": null
+    }
+\l}"];

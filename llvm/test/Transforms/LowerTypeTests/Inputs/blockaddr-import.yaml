@@ -1,0 +1,9 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+CfiFunctionDefs:
+- Name: m
+  GUID: 2799708793537531759
+CfiFunctionDecls: null

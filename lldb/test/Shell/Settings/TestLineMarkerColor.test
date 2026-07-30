@@ -1,0 +1,17 @@
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb -x -b -s %s %t.out | FileCheck %s
+settings set use-color true
+settings set stop-show-line-ansi-prefix "prefix"
+settings set stop-show-line-ansi-suffix "suffix"
+b foo
+run
+c
+settings set stop-show-line-ansi-prefix ${ansi.fg.green}
+settings set stop-show-line-ansi-suffix ${ansi.normal}
+run
+q
+
+# Check the ASCII escape code
+# CHECK-NOT: prefix->suffix
+# CHECK: ->
+# CHECK: {{.*}}->{{.*}}

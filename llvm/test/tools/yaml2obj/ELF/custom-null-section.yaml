@@ -1,0 +1,221 @@
+## In this test we check that can redefine the null section in the YAML.
+
+## Test the default output first.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --sections %t1 | FileCheck %s --check-prefix=DEFAULT
+
+# DEFAULT:      Section Headers:
+# DEFAULT-NEXT:  [Nr] Name      Type   Address          Off    Size   ES Flg Lk Inf Al
+# DEFAULT-NEXT:  [ 0]           NULL   0000000000000000 000000 000000 00 0   0  0
+# DEFAULT-NEXT:  [ 1] .strtab   STRTAB 0000000000000000 000040 000001 00 0   0  1
+# DEFAULT-NEXT:  [ 2] .shstrtab STRTAB 0000000000000000 000041 000013 00 0   0  1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+
+## Now define a SHT_NULL section with fields all zeroed.
+## In this case it is equal to the section created by default.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf --sections %t2 | FileCheck %s --check-prefix=DEFAULT
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:         SHT_NULL
+    Name:         ''
+    Flags:        [ ]
+    AddressAlign: 0x0
+    Size:         0x0
+    EntSize:      0x0
+    Link:         0
+    Info:         0
+    Address:      0x0
+
+## Check we can redefine fields of the first SHT_NULL section.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=REDEF
+
+# REDEF:      Section Headers:
+# REDEF-NEXT:  [Nr] Name Type Address          Off    Size   ES Flg Lk Inf Al
+# REDEF-NEXT:  [ 0] .foo NULL 0000000000000006 000000 000002 03   A 4   5  1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:         SHT_NULL
+    Name:         .foo
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x1
+    Size:         0x2
+    EntSize:      0x3
+    Link:         4
+    Info:         5
+    Address:      0x6
+
+## Check that file size does not change if we redefine the Size
+## of the first SHT_NULL section.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: wc -c < %t3 > %t.txt
+# RUN: wc -c < %t4 >> %t.txt
+# RUN: FileCheck %s --input-file=%t.txt --check-prefix=SIZE
+
+# SIZE: [[FILESIZE:.*]]
+# SIZE: [[FILESIZE]]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:         SHT_NULL
+    Name:         .foo
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x1
+    Size:         0xFFFF
+    EntSize:      0x3
+    Link:         4
+    Info:         5
+    Address:      0x6
+
+## Check we are still able to describe other sections too.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readelf --sections %t5 | FileCheck %s --check-prefix=OTHER-SECTION
+
+# OTHER-SECTION:      Section Headers:
+# OTHER-SECTION-NEXT:   [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# OTHER-SECTION-NEXT:   [ 0]           NULL     0000000000000000 000000 000000 00 0   0  0
+# OTHER-SECTION-NEXT:   [ 1] foo       PROGBITS 0000000000000000 000040 000000 00 0   0  0
+# OTHER-SECTION-NEXT:   [ 2] .strtab   STRTAB   0000000000000000 000040 000001 00 0   0  1
+# OTHER-SECTION-NEXT:   [ 3] .shstrtab STRTAB   0000000000000000 000041 000017 00 0   0  1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:         SHT_NULL
+    Name:         ''
+    Flags:        [ ]
+    AddressAlign: 0x0
+    Size:         0x0
+    EntSize:      0x0
+    Link:         0
+  - Type: SHT_PROGBITS
+    Name: 'foo'
+
+## Check we report an error if null section sh_link field refers to an unknown section.
+
+# RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=CASE4
+
+# CASE4:      error: unknown section referenced: '.foo' by YAML section '(index 0)'
+# CASE4-NEXT: error: unknown section referenced: '.bar' by YAML section '(index 1)'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SHT_NULL
+    Link: .foo
+  - Type: SHT_NULL
+    Link: .bar
+
+## Check that null section fields are set to zero, if they are unspecified.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readelf --sections %t7 | FileCheck %s --check-prefix=DEFAULT
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SHT_NULL
+
+## Check we do not crash if we have more than one SHT_NULL section.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readelf --sections %t8 | FileCheck %s --check-prefix=MULTIPLE
+
+# MULTIPLE:      Section Headers:
+# MULTIPLE-NEXT:  [Nr] Name Type Address          Off    Size   ES Flg Lk Inf Al
+# MULTIPLE-NEXT:  [ 0]      NULL 0000000000000000 000000 000000 00 0   0  0
+# MULTIPLE-NEXT:  [ 1] .foo NULL 0000000000000123 000040 000020 10 A   1  2   0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SHT_NULL
+  - Type:    SHT_NULL
+    Name:    .foo
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x20
+    EntSize: 0x10
+    Link:    1
+    Info:    2
+    Address: 0x123
+
+## Check we can override the sh_offset/sh_size fields of the first SHT_NULL section if requested.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9
+# RUN: llvm-readelf --sections %t9 | FileCheck %s --check-prefix=OVERRIDE
+
+# OVERRIDE:      Section Headers:
+# OVERRIDE-NEXT:  [Nr] Name Type Address          Off    Size   ES Flg Lk Inf Al
+# OVERRIDE-NEXT:  [ 0]      NULL 0000000000000000 000007 000008 00   0 0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:     SHT_NULL
+    Size:     0x2
+    ShOffset: 0x7
+    ShSize:   0x8
+
+## Check that we can set an offset for the SHT_NULL section explicitly using the "Offset" key.
+## Check it affects the section header table offset.
+# RUN: yaml2obj --docnum=10 %s -DOFFSET=0x100 -o %t10
+# RUN: llvm-readelf --headers --sections %t10 | FileCheck %s --check-prefix=EXPLICIT-OFFSET-A
+# RUN: yaml2obj --docnum=10 %s -DOFFSET=0x200 -o %t11
+# RUN: llvm-readelf --headers --sections %t11 | FileCheck %s --check-prefix=EXPLICIT-OFFSET-B
+
+# EXPLICIT-OFFSET-A:      Start of section headers: 280 (bytes into file)
+# EXPLICIT-OFFSET-A:      [Nr] Name  Type Address          Off
+# EXPLICIT-OFFSET-A-NEXT: [ 0]       NULL 0000000000000000 000100
+
+# EXPLICIT-OFFSET-B:      Start of section headers: 536 (bytes into file)
+# EXPLICIT-OFFSET-B:      [Nr] Name  Type Address          Off
+# EXPLICIT-OFFSET-B-NEXT: [ 0]       NULL 0000000000000000 000200
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:   SHT_NULL
+    Offset: [[OFFSET]]

@@ -1,0 +1,42 @@
+# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve -show-encoding %s 2> %t | FileCheck --check-prefix=CHECK %s
+# RUN: FileCheck --check-prefix=STDERR < %t %s
+
+[0x5e 0xea 0x6d 0xcf]
+# CHECK: sqrshr  lr, r12  @ encoding: [0x5e,0xea,0x2d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5e 0xea 0xad 0xcf]
+# CHECK: sqrshr  lr, r12  @ encoding: [0x5e,0xea,0x2d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5e 0xea 0xed 0xcf]
+# CHECK: sqrshr  lr, r12  @ encoding: [0x5e,0xea,0x2d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5e 0xea 0x2d 0xce]
+# CHECK: sqrshr  lr, r12  @ encoding: [0x5e,0xea,0x2d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x51 0xea 0x2d 0x1f]
+# CHECK: sqrshr  r1, r1  @ encoding: [0x51,0xea,0x2d,0x1f]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5e 0xea 0x4d 0xcf]
+# CHECK: uqrshl  lr, r12  @ encoding: [0x5e,0xea,0x0d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5b 0xea 0x8d 0xcf]
+# CHECK: uqrshl  r11, r12  @ encoding: [0x5b,0xea,0x0d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5e 0xea 0xcd 0xcf]
+# CHECK: uqrshl  lr, r12  @ encoding: [0x5e,0xea,0x0d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x5b 0xea 0x0d 0xce]
+# CHECK: uqrshl  r11, r12  @ encoding: [0x5b,0xea,0x0d,0xcf]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding
+
+[0x53 0xea 0x0d 0x3f]
+# CHECK: uqrshl  r3, r3  @ encoding: [0x53,0xea,0x0d,0x3f]
+# STDERR: [[@LINE-2]]:2: warning: potentially undefined instruction encoding

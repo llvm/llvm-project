@@ -1,0 +1,80 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:LLVM Loop Optimization Discussion
+X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VTIMEZONE
+TZID:America/New_York
+X-LIC-LOCATION:America/New_York
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20240904T110000
+DTEND;TZID=America/New_York:20240904T120000
+RRULE:FREQ=MONTHLY;BYDAY=1WE
+DTSTAMP:20240821T160951Z
+UID:58h3f0kd3aooohmeii0johh23c@google.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/fmz-gspu-odg
+CREATED:20240821T151507Z
+DESCRIPTION:LLVM Loop Optimization Discussion<br>Video call link: <a href="
+ https://meet.google.com/fmz-gspu-odg" target="_blank">https://meet.google.c
+ om/fmz-gspu-odg</a><br>Agenda/Minutes/Discussion: <a href="https://docs.goo
+ gle.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit?usp=sh
+ aring" class="pastedDriveLink-0">https://docs.google.com/document/d/1sdzoyB
+ 11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit?usp=sharing</a>\n\n-::~:~::~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-\
+ nJoin with Google Meet: https://meet.google.com/fmz-gspu-odg\nOr dial: (DE)
+  +49 40 8081617343 PIN: 948106286#\nMore phone numbers: https://tel.meet/fm
+ z-gspu-odg?pin=6273693382184&hs=7\n\nLearn more about Meet at: https://supp
+ ort.google.com/a/users/answer/9282720\n\nPlease do not edit this section.\n
+ -::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~
+ :~:~::~:~::-
+LAST-MODIFIED:20240821T160941Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:LLVM Loop Optimization Discussion
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20240904T110000
+DTEND;TZID=America/New_York:20240904T120000
+DTSTAMP:20240821T160951Z
+UID:58h3f0kd3aooohmeii0johh23c@google.com
+X-GOOGLE-CONFERENCE:https://meet.google.com/fmz-gspu-odg
+RECURRENCE-ID;TZID=America/New_York:20240904T110000
+CREATED:20240821T151507Z
+DESCRIPTION:LLVM Loop Optimization Discussion<br>Video call link: <a href="
+ https://meet.google.com/fmz-gspu-odg" target="_blank">https://meet.google.c
+ om/fmz-gspu-odg</a><br>Agenda/Minutes/Discussion: <a href="https://docs.goo
+ gle.com/document/d/1sdzoyB11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit?usp=sh
+ aring" class="pastedDriveLink-0">https://docs.google.com/document/d/1sdzoyB
+ 11s0ccTZ3fobqctDpgJmRoFcz0sviKxqczs4g/edit?usp=sharing</a>\n\n-::~:~::~:~:~
+ :~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-\
+ nJoin with Google Meet: https://meet.google.com/fmz-gspu-odg\nOr dial: (DE)
+  +49 40 8081617343 PIN: 948106286#\nMore phone numbers: https://tel.meet/fm
+ z-gspu-odg?pin=6273693382184&hs=7\n\nLearn more about Meet at: https://supp
+ ort.google.com/a/users/answer/9282720\n\nPlease do not edit this section.\n
+ -::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~
+ :~:~::~:~::-
+LAST-MODIFIED:20240821T160941Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:LLVM Loop Optimization Discussion
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR

@@ -1,0 +1,31 @@
+# Check that the extra operand for the full register added by RegAlloc does
+# not have a latency that interferes with the latency adjustment
+# (ReadAdvance) for the MSY register operand.
+
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=machine-scheduler \
+# RUN:  -debug-only=machine-scheduler -o - 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK: ScheduleDAGMI::schedule starting
+# CHECK: SU(4): renamable $r2l = MSR renamable $r2l(tied-def 0), renamable $r2l
+# CHECK:   Latency : 6
+# CHECK: SU(5): renamable $r2l = MSY renamable $r2l(tied-def 0), renamable $r1d, -4, $noreg, implicit $r2d
+# CHECK:   Predecessors:
+# CHECK:     SU(4): Data Latency=2 Reg=$r2l
+# CHECK:     SU(4): Data Latency=0 Reg=$r2d
+
+---
+name:            Perl_do_sv_dump
+alignment:       16
+tracksRegLiveness: true
+body:             |
+    bb.0 :
+    %1:addr64bit = IMPLICIT_DEF
+    %2:addr64bit = IMPLICIT_DEF
+    %3:vr64bit = IMPLICIT_DEF
+
+    bb.1 :
+    %2:addr64bit = ALGFI %2, 4294967291, implicit-def dead $cc
+    %2.subreg_l32:addr64bit = MSR %2.subreg_l32, %2.subreg_l32
+    %2.subreg_l32:addr64bit = MSY %2.subreg_l32, %1, -4, $noreg
+...

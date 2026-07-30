@@ -1,0 +1,19 @@
+# UNSUPPORTED: system-windows
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
+# RUN: FileCheck %s < %t.err
+
+---
+MultilibVersion: 1.0
+
+Groups:
+- Name: group1
+  Type: Nonsense
+
+Variants:
+- Dir: testdir1
+  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Group: nonexistent_group_name
+
+# CHECK: error: unknown enumerated scalar
+# CHECK: error: multilib "testdir1" specifies undefined group name "nonexistent_group_name"

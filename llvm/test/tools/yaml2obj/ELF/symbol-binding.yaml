@@ -1,0 +1,31 @@
+## Check we can set different bindings for symbols.
+
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name:    local_symbol
+    Type:    STT_OBJECT
+    Binding: STB_LOCAL
+  - Name:    global_symbol
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+  - Name:    weak_symbol
+    Type:    STT_OBJECT
+    Binding: STB_WEAK
+
+# CHECK: Symbol {
+# CHECK:   Name:  (0)
+# CHECK: Symbol {
+# CHECK:   Name: local_symbol
+# CHECK:   Binding: Local
+# CHECK: Symbol {
+# CHECK:   Name: global_symbol
+# CHECK:   Binding: Global
+# CHECK: Symbol {
+# CHECK:   Name: weak_symbol
+# CHECK:   Binding: Weak

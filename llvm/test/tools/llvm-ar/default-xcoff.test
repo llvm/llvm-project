@@ -1,0 +1,7 @@
+;; Test llvm-ar uses the big archive format for XCOFF object files by default. 
+; RUN: yaml2obj %S/Inputs/xcoff.yaml -o %t.obj
+; RUN: rm -f %t.ar
+; RUN: llvm-ar cr %t.ar %t.obj
+; RUN: FileCheck %s --input-file=%t.ar
+
+; CHECK:  bigaf

@@ -1,0 +1,141 @@
+
+<html>
+<title>s.swift</title>
+<meta charset="utf-8" />
+<head>
+<link rel='stylesheet' type='text/css' href='style.css'>
+<script type="text/javascript">
+/* Simple helper to show/hide the expanded message of a remark. */
+function toggleExpandedMessage(e) {
+  var FullTextElems = e.parentElement.parentElement.getElementsByClassName("full-info");
+  if (!FullTextElems || FullTextElems.length < 1) {
+      return false;
+  }
+  var FullText = FullTextElems[0];
+  if (FullText.style.display == 'none') {
+    e.innerHTML = '-';
+    FullText.style.display = 'block';
+  } else {
+    e.innerHTML = '+';
+    FullText.style.display = 'none';
+  }
+}
+</script>
+</head>
+<body>
+<div class="centered">
+<table class="source">
+<thead>
+<tr>
+<th style="width: 2%">Line</td>
+<th style="width: 3%">Hotness</td>
+<th style="width: 10%">Optimization</td>
+<th style="width: 70%">Source</td>
+<th style="width: 15%">Inline Context</td>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td><a name="L1">1</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>infix operator •: AdditionPrecedence</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L2">2</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre></pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L3">3</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>func • (a: Int, b: Int) -> Int {</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L4">4</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>  return a * b</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L5">5</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>}</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L6">6</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre></pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L7">7</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>@inline(never)</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L8">8</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>func g(a: Int) -> Int{</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L9">9</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>  return a + 1</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L10">10</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>}</pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L11">11</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre></pre></div></td>
+</tr>
+
+<tr>
+<td><a name="L12">12</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre>let i = g(a: 1 • 2)</pre></div></td>
+</tr>
+
+<tr>
+<td></td>
+<td></td>
+<td class="column-entry-green">sil-inliner</td>
+<td><pre style="display:inline">               </pre><span class="column-entry-yellow"> <a href="s.swift.html#L3">&quot;s.• infix(_:_:)&quot;</a> inlined into &quot;main&quot; (cost = 2, benefit = 40)&nbsp;</span></td>
+<td class="column-entry-yellow">main</td>
+</tr>
+
+<tr>
+<td><a name="L13">13</a></td>
+<td></td>
+<td></td>
+<td><div class="highlight"><pre></pre></div></td>
+</tr>
+
+</tbody>
+</table>
+</body>
+</html>

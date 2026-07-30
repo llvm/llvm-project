@@ -1,0 +1,62 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file -contents %t | FileCheck %s
+
+## Test that R_ARM_ABS32 relocations are resolved in .debug_info sections on aarch32.
+## REL-type relocations store implicit addend as signed values inline.
+## We relocate the symbol foo with 4 different addends and bar once in the .debug_info section.
+## Results that exceed the 32-bit range or overflow are logged and ignored.
+
+# CHECK:      Name: .debug_info
+# CHECK:      Data:  (
+#
+#              Addends: Zero     Positive Negative Overflow Out-of-range
+#                       00000000 04030201 D6FFFFFF D5FFFFFF FFFFFF7F
+# CHECK-NEXT:     0000: 2A000000 2E030201 00000000 D5FFFFFF FFFFFF7F
+# CHECK-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_EABI_VER5 ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    Content:         0000000004030201D6FFFFFFD5FFFFFFFFFFFF7F
+  - Name:            .rel.debug_info
+    Type:            SHT_REL
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x0
+        Symbol:          foo
+        Type:            R_ARM_ABS32
+      - Offset:          0x4
+        Symbol:          foo
+        Type:            R_ARM_ABS32
+      - Offset:          0x8
+        Symbol:          foo
+        Type:            R_ARM_ABS32
+      - Offset:          0xC
+        Symbol:          foo
+        Type:            R_ARM_ABS32
+      - Offset:          0x10
+        Symbol:          bar
+        Type:            R_ARM_ABS32
+Symbols:
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .debug_info
+    Value:           0x0000002A
+  - Name:            bar
+    Type:            STT_FUNC
+    Section:         .debug_info
+    Value:           0xFF000000
+...

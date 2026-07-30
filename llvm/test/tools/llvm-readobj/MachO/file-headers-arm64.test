@@ -1,0 +1,43 @@
+## Check subtype Arm64-ALL:
+# RUN: yaml2obj %s -o %t.arm64-all -DSUBTYPE=0x0
+# RUN: llvm-readobj -h %t.arm64-all \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64-all --check-prefix=ARM64 -DSUBTYPE="CPU_SUBTYPE_ARM64_ALL (0x0)"
+
+## Check subtype Arm64-V8:
+# RUN: yaml2obj %s -o %t.arm64-v8 -DSUBTYPE=0x1
+# RUN: llvm-readobj -h %t.arm64-v8 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64-v8 --check-prefix=ARM64 -DSUBTYPE="CPU_SUBTYPE_ARM64_V8 (0x1)"
+
+## Check subtype Arm64E:
+# RUN: yaml2obj %s -o %t.arm64e -DSUBTYPE=0x2
+# RUN: llvm-readobj -h %t.arm64e \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64e --check-prefix=ARM64 -DSUBTYPE="CPU_SUBTYPE_ARM64E (0x2)"
+
+#      ARM64:File: [[FILE]]
+# ARM64-NEXT:Format: Mach-O arm64
+# ARM64-NEXT:Arch: aarch64
+# ARM64-NEXT:AddressSize: 64bit
+# ARM64-NEXT:MachHeader {
+# ARM64-NEXT:  Magic: Magic64 (0xFEEDFACF)
+# ARM64-NEXT:  CpuType: Arm64 (0x100000C)
+# ARM64-NEXT:  CpuSubType: [[SUBTYPE]]
+# ARM64-NEXT:  FileType: Relocatable (0x1)
+# ARM64-NEXT:  NumOfLoadCommands: 0
+# ARM64-NEXT:  SizeOfLoadCommands: 0
+# ARM64-NEXT:  Flags [ (0x0)
+# ARM64-NEXT:  ]
+# ARM64-NEXT:  Reserved: 0x0
+# ARM64-NEXT:}
+# ARM64-NOT:{{.}}
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      [[SUBTYPE]]
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
+...

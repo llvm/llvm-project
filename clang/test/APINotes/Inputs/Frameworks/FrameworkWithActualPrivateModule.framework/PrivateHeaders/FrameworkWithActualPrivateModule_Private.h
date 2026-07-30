@@ -1,0 +1,2 @@
+#include <FrameworkWithActualPrivateModule/FrameworkWithActualPrivateModule.h>
+extern int FrameworkWithActualPrivateModule_Private;

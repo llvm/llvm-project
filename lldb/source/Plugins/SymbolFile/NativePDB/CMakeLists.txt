@@ -1,0 +1,27 @@
+add_lldb_library(lldbPluginSymbolFileNativePDB
+  CodeViewRegisterMapping.cpp
+  CompileUnitIndex.cpp
+  DWARFLocationExpression.cpp
+  PdbAstBuilderClang.cpp
+  PdbFPOProgramToDWARFExpression.cpp
+  PdbIndex.cpp
+  PdbSymUid.cpp
+  PdbUtil.cpp
+  SymbolFileNativePDB.cpp
+  UdtRecordCompleter.cpp
+
+  LINK_COMPONENTS
+    DebugInfoCodeView
+    DebugInfoPDB
+    Support
+    TargetParser
+  LINK_LIBS
+    lldbCore
+    lldbSymbol
+    lldbUtility
+    lldbPluginTypeSystemClang
+    lldbPluginObjectFilePDB
+  CLANG_LIBS
+    clangAST
+    clangLex
+  )

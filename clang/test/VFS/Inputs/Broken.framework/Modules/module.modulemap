@@ -1,0 +1,6 @@
+framework module Broken [extern_c] {
+  umbrella "Headers"
+  export *
+  module * { export * }
+}
+
