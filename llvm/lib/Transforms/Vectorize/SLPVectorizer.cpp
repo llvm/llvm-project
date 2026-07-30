@@ -635,7 +635,10 @@ public:
     const auto *II = dyn_cast<IntrinsicInst>(I);
     const auto *IOp = dyn_cast<IntrinsicInst>(Op);
     if (II || IOp)
-      return II && IOp && II->getIntrinsicID() == IOp->getIntrinsicID();
+      return II && IOp &&
+             isEquivalentIntrinsicID(II->getIntrinsicID(),
+                                     IOp->getIntrinsicID()) !=
+                 Intrinsic::not_intrinsic;
     return true;
   }
 
@@ -1049,7 +1052,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
         auto *CallBase = cast<CallInst>(MainOp);
-        if (Call->getCalledFunction() != CallBase->getCalledFunction())
+        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
+        Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, BaseID);
+        if (Call->getCalledFunction() != CallBase->getCalledFunction() &&
+            isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
+                Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (Call->hasOperandBundles() &&
             (!CallBase->hasOperandBundles() ||
@@ -1058,8 +1065,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                          CallBase->op_begin() +
                              CallBase->getBundleOperandsStartIndex())))
           return InstructionsState::invalid();
-        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
-        if (ID != BaseID)
+        if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
@@ -1086,6 +1092,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     assert(MainOp && "Cannot find MainOp with Opcode from BinOpHelper.");
     AltOp = findInstructionWithOpcode(VL, BinOpHelper.getAltOpcode());
     assert(AltOp && "Cannot find AltOp with Opcode from BinOpHelper.");
+  } else if (auto *CB = dyn_cast<CallInst>(MainOp);
+             CB &&
+             getVectorIntrinsicIDForCall(CB, &TLI) == Intrinsic::fmuladd) {
+    // fma and fmuladd share a single vector fma node; use the fma as the
+    // representative so the fused form is not weakened to fmuladd.
+    auto *It = find_if(VL, [&](Value *V) {
+      auto *CI = dyn_cast<CallInst>(V);
+      return CI && getVectorIntrinsicIDForCall(CI, &TLI) == Intrinsic::fma;
+    });
+    if (It != VL.end())
+      MainOp = AltOp = cast<Instruction>(*It);
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");
@@ -5502,25 +5519,28 @@ private:
           if (!AreAllBundlesScheduled(SD, SDBundles))
             continue;
           SD->setScheduled(/*Scheduled=*/true);
+          Instruction *In = SD->getInst();
+          // The instruction may also belong to tree entries that do not need
+          // scheduling (e.g. all their values are used outside the block), so
+          // no schedule bundle is registered for them. Such an entry can still
+          // model one of this instruction's operands as a copyable element, or
+          // model the instruction itself as an expanded binop, registered on
+          // that non-scheduled parent edge. That dependency would never be
+          // decremented when the instruction is scheduled through a different
+          // bundle, leaving the operand's bundle permanently unscheduled and
+          // tripping the unscheduled-deps assertion. Add pseudo-bundles for
+          // these missing tree entries, so their operand dependencies are
+          // decremented here as well. Real operand dependencies are protected
+          // against double counting by the per-operand use counter.
           if (isa<ScheduleCopyableData>(SD) ||
-              ScheduleCopyableDataMap.empty()) {
+              (ScheduleCopyableDataMap.empty() &&
+               none_of(R.getTreeEntries(In), [&](const TreeEntry *TE) {
+                 return TE->isExpandedBinOp(In);
+               }))) {
             ProcessBundleMember(SD, isa<ScheduleCopyableData>(SD) ? &Bundle
                                                                   : SDBundles);
             continue;
           }
-          // The instruction may also belong to tree entries that do not need
-          // scheduling (e.g. all their values are used outside the block), so
-          // no schedule bundle is registered for them. Such an entry can still
-          // model one of this instruction's operands as a copyable element,
-          // registered on that non-scheduled parent edge. That copyable would
-          // never be decremented when the instruction is scheduled through a
-          // different bundle, leaving the copyable's bundle permanently
-          // unscheduled and tripping the unscheduled-deps assertion. Add
-          // pseudo-bundles for these missing tree entries, so their copyable
-          // operand dependencies are decremented here as well. Real operand
-          // dependencies are protected against double counting by the
-          // per-operand use counter in ProcessBundleMember.
-          Instruction *In = SD->getInst();
           SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
           SmallVector<ScheduleBundle *> AllBundles(SDBundles.begin(),
                                                    SDBundles.end());
@@ -9953,6 +9973,8 @@ static std::pair<size_t, size_t> generateKeySubkey(
     } else if (auto *Call = dyn_cast<CallInst>(I)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, TLI);
       if (isTriviallyVectorizable(ID)) {
+        if (ID == Intrinsic::fmuladd)
+          ID = Intrinsic::fma;
         SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(ID));
       } else if (!VFDatabase(*Call).getMappings(*Call).empty()) {
         SubKey = hash_combine(hash_value(I->getOpcode()),
@@ -10698,13 +10720,18 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI))
         ScalarArgs[J] = CI->getArgOperand(J);
     for (Value *V : VL) {
-      // A copyable element stands in for the call via a substituted
-      // idempotent operand, so it is exempt from the checks below.
-      if (S.isCopyableElement(V))
+      // Skip copyables (idempotent stand-ins) and poisons.
+      if (isa<PoisonValue>(V) || S.isCopyableElement(V))
         continue;
       CallInst *CI2 = dyn_cast<CallInst>(V);
-      if (!CI2 || CI2->getCalledFunction() != F ||
-          getVectorIntrinsicIDForCall(CI2, TLI) != ID ||
+      Intrinsic::ID ID2 = CI2 ? getVectorIntrinsicIDForCall(CI2, TLI)
+                              : Intrinsic::not_intrinsic;
+      Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, ID2);
+      if (!CI2 ||
+          (CI2->getCalledFunction() != F &&
+           isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
+               Intrinsic::not_intrinsic) ||
+          (ID != ID2 && Equivalent == Intrinsic::not_intrinsic) ||
           (VecFunc &&
            VecFunc != VFDatabase(*CI2).getVectorizedFunction(Shape)) ||
           !CI->hasIdenticalOperandBundleSchema(*CI2)) {
@@ -11298,10 +11325,12 @@ class InstructionsCompatibilityAnalysis {
   }
 
   /// Checks if \p I can be the main op for copyable analysis: a supported
-  /// binary operator or an integer min/max intrinsic, the only call with a
-  /// well-defined idempotent value (FP min/max lacks one because of NaNs).
+  /// binary operator, fmuladd, or an integer min/max intrinsic, the only
+  /// call with a well-defined idempotent value (FP min/max lacks one because of
+  /// NaNs).
   static bool isSupportedMainOp(Instruction *I) {
-    return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I);
+    return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
+           RecurrenceDescriptor::isFMulAddIntrinsic(I);
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -11431,6 +11460,11 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
+    // fmuladd(0.0, -0.0, V) == V.
+    if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
+      Type *Ty = MainOp->getType();
+      return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
+    }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     return {V, selectBestIdempotentValue()};
   }
@@ -11944,14 +11978,18 @@ public:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
-        // Instruction::Call returns above before reaching this switch.
+        // Calls (min/max, fmuladd) return above before reaching this switch.
         llvm_unreachable("Unexpected instruction.");
       }
       if (VectorCost > ScalarCost)
         return OrigS;
       return S;
     }
-    assert(Operands.size() == 2 && "Unexpected number of operands!");
+    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    assert((Operands.size() == 2 ||
+            (Operands.size() == 3 &&
+             RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
+           "Unexpected number of operands!");
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
     if (CopyableNum < VL.size() / 2)
@@ -11967,7 +12005,7 @@ public:
       return OrigS;
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
-    if (isCommutative(MainOp)) {
+    if (Operands.size() == 2 && isCommutative(MainOp)) {
       Value *BestFrontOp = nullptr;
       for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
         // Make instructions the first operands.
@@ -12000,8 +12038,10 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized.
-    if (count_if(Operands.back(), IsaPred<Instruction>) > 1)
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
+    // is checked below and may legitimately hold many instructions.
+    if (Operands.size() == 2 &&
+        count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
     auto CheckOperand = [&](ArrayRef<Value *> Ops) {
       if (allConstant(Ops) || isSplat(Ops))
@@ -12036,7 +12076,9 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    if (!CheckOperand(Operands.front()))
+    // Check the addend for fmuladd, first operand otherwise.
+    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
+                                           : Operands.back()))
       return OrigS;
 
     return S;
@@ -12049,10 +12091,12 @@ public:
     if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
-      // Min/max is commutative, so this yields 2 args and never counts the
-      // trailing callee operand.
+      // Excludes the trailing callee operand (2 for min/max, 3 for fmuladd).
+      // getNumberOfPotentiallyCommutativeOps collapses fmuladd to 2 and must
+      // not be used here. Only the 2-operand case is commutative-normalized.
+      auto *CI = dyn_cast<CallInst>(MainOp);
       const unsigned NumMainOpOperands =
-          ::getNumberOfPotentiallyCommutativeOps(MainOp);
+          CI ? CI->arg_size() : MainOp->getNumOperands();
       const bool IsCommutative =
           isCommutative(MainOp) && NumMainOpOperands == 2;
       Operands.assign(NumMainOpOperands,
@@ -23115,6 +23159,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           // Follow all insert element instructions from the current buildvector
           // sequence.
           Instruction *Ins = VL0;
+          Instruction *Op;
           do {
             std::optional<unsigned> InsertIdx = getElementIndex(Ins);
             if (!InsertIdx)
@@ -23123,9 +23168,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
+            Op = Ins;
             Ins =
                 dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
-          } while (Ins);
+          } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
           SmallBitVector IsFirstPoison =
@@ -24510,7 +24556,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
         {DominatorTree::Insert, BB, ScalarBB},
         {DominatorTree::Insert, VecBB, Tail},
         {DominatorTree::Insert, ScalarBB, Tail}};
+    // Term (e.g. a switch) may have multiple edges to the same successor;
+    // dedupe so each distinct successor gets exactly one Insert/Delete pair.
+    SmallPtrSet<BasicBlock *, 4> UniqueSuccs;
     for (BasicBlock *Succ : successors(Term)) {
+      if (!UniqueSuccs.insert(Succ).second)
+        continue;
       Updates.push_back({DominatorTree::Insert, Tail, Succ});
       Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
@@ -30752,8 +30803,8 @@ public:
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for ordered reduction\n");
-      if (Cost > -SLPCostThreshold/* ||
-          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)*/) {
+      if (Cost > -SLPCostThreshold ||
+          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)) {
         if (Cost.isValid())
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",

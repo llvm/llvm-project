@@ -2671,6 +2671,44 @@ define <2 x i16> @test_pmerge_mvmn_i16x2(<2 x i16> %rs2, <2 x i16> %rs1, <2 x i1
   ret <2 x i16> %res
 }
 
+; Packed sign and zero extend
+define <2 x i16> @test_psext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_psext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %shl = shl <2 x i16> %a, splat (i16 8)
+  %res = ashr <2 x i16> %shl, splat (i16 8)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pzext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_pzext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pzext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = and <2 x i16> %a, splat (i16 255)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_riscv_psext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_riscv_psext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_riscv_pzext_b_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: test_riscv_pzext_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pzext.h.b a0, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pzext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
 ; Packed absolute difference sum
 define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_pabdsumu_u8x4_u32:
@@ -2735,4 +2773,22 @@ define <2 x i16> @test_undef_v2i16() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
   ret <2 x i16> undef
+}
+
+define <2 x i16> @test_pmulq_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulq_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulq.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulq.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulqr_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulqr_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulqr.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
 }

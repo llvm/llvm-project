@@ -24,6 +24,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Casting.h"
@@ -50,6 +51,12 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "register-info-emitter"
+
+STATISTIC(NumExplicitRegClasses, "Number of explicit register classes");
+STATISTIC(NumSynthesizedRegClasses, "Number of synthesized register classes");
+STATISTIC(NumRegPressureSets, "Number of register pressure sets");
+
 static cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
 
 static cl::opt<bool>
@@ -70,6 +77,14 @@ public:
   RegisterInfoEmitter(const RecordKeeper &R)
       : Records(R), Target(R), RegBank(Target.getRegBank()) {
     RegBank.computeDerivedInfo();
+
+    const auto &RegClasses = RegBank.getRegClasses();
+    NumExplicitRegClasses =
+        llvm::count_if(RegClasses, [](const CodeGenRegisterClass &RC) {
+          return RC.getDef() != nullptr;
+        });
+    NumSynthesizedRegClasses = RegClasses.size() - NumExplicitRegClasses;
+    NumRegPressureSets = RegBank.getNumRegPressureSets();
   }
 
   // runEnums - Print out enum values for all of the registers.
@@ -221,22 +236,34 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
                                               StringRef ClassName) {
   unsigned NumRCs = RegBank.getRegClasses().size();
   unsigned NumSets = RegBank.getNumRegPressureSets();
+  std::vector<std::pair<const CodeGenRegisterClass *, unsigned>> PSetRegClasses(
+      NumSets);
 
   OS << "/// Get the weight in units of pressure for this register class.\n"
      << "const RegClassWeight &" << ClassName << "::\n"
      << "getRegClassWeight(const TargetRegisterClass *RC) const {\n"
      << "  static const RegClassWeight RCWeightTable[] = {\n";
-  for (const auto &RC : RegBank.getRegClasses()) {
+  for (const auto &[RCIdx, RC] : enumerate(RegBank.getRegClasses())) {
     const CodeGenRegister::Vec &Regs = RC.getMembers();
     OS << "    {" << RC.getWeight(RegBank) << ", ";
+    unsigned WeightLimit = 0;
     if (Regs.empty() || RC.Artificial)
       OS << '0';
     else {
       std::vector<unsigned> RegUnits;
       RC.buildRegUnitSet(RegBank, RegUnits);
-      OS << RegBank.getRegUnitSetWeight(RegUnits);
+      WeightLimit = RegBank.getRegUnitSetWeight(RegUnits);
+      OS << WeightLimit;
     }
     OS << "},  \t// " << RC.getName() << "\n";
+    for (unsigned PSetID : RegBank.getRCPressureSetIDs(RCIdx)) {
+      unsigned PSetIdx = RegBank.getRegPressureSet(PSetID).Order;
+      auto &[LargestRC, LargestWeightLimit] = PSetRegClasses[PSetIdx];
+      if (!LargestRC || WeightLimit > LargestWeightLimit) {
+        LargestRC = &RC;
+        LargestWeightLimit = WeightLimit;
+      }
+    }
   }
   OS << "  };\n"
      << "  return RCWeightTable[RC->getID()];\n"
@@ -304,6 +331,22 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
   }
   OS << "  };\n"
      << "  return PressureLimitTable[Idx];\n"
+     << "}\n\n";
+
+  OS << "/// Get the register class for this pressure set with the largest\n"
+     << "/// `RegClassWeight::WeightLimit`.\n"
+     << "const TargetRegisterClass *" << ClassName << "::\n"
+     << "getLargestRegClassForRegPressureSet(unsigned Idx) const {\n"
+     << "  static const " << getMinimalTypeForRange(NumRCs - 1, 32)
+     << " PSetRegClassTable[] = {\n";
+  for (unsigned i = 0; i < NumSets; ++i) {
+    const CodeGenRegisterClass *RC = PSetRegClasses[i].first;
+    assert(RC && "register pressure set has no register class");
+    OS << "    " << RC->getQualifiedIdName() << ",  \t// " << i << ": "
+       << RegBank.getRegSetAt(i).Name << "\n";
+  }
+  OS << "  };\n"
+     << "  return getRegClass(PSetRegClassTable[Idx]);\n"
      << "}\n\n";
 
   SequenceToOffsetTable<std::vector<int>> PSetsSeqs(/*Terminator=*/-1);
@@ -1386,6 +1429,8 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
      << "  const char *getRegPressureSetName(unsigned Idx) const override;\n"
      << "  unsigned getRegPressureSetLimit(const MachineFunction &MF, unsigned "
         "Idx) const override;\n"
+     << "  const TargetRegisterClass *getLargestRegClassForRegPressureSet("
+        "unsigned Idx) const override;\n"
      << "  const int *getRegClassPressureSets("
      << "const TargetRegisterClass *RC) const override;\n"
      << "  const int *getRegUnitPressureSets("

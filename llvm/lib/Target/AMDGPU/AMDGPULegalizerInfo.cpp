@@ -301,6 +301,7 @@ constexpr LLT F32 = LLT::float32();
 constexpr LLT F64 = LLT::float64();
 constexpr LLT V2F16 = LLT::fixed_vector(2, F16);
 constexpr LLT V2BF16 = LLT::fixed_vector(2, BF16);
+constexpr LLT V2F32 = LLT::fixed_vector(2, F32);
 
 constexpr LLT S1 = LLT::scalar(1);
 constexpr LLT S8 = LLT::scalar(8);
@@ -1147,16 +1148,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst()) {
-    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}})
-        .clampMaxNumElements(0, S16, 2);
+    FPTruncActions.legalFor({{F32, F64}, {F16, F32}, {V2F16, V2F32}})
+        .clampMaxNumElements(0, F16, 2);
   } else {
-    FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
+    FPTruncActions.legalFor({{F32, F64}, {F16, F32}});
   }
-  FPTruncActions.scalarize(0).lower();
+  FPTruncActions.lowerFor({{BF16, F32}, {BF16, F64}, {F16, F64}}).scalarize(0);
 
   getActionDefinitionsBuilder(G_FPEXT)
-      .legalFor({{S64, S32}, {S32, S16}})
-      .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32))
+      .legalFor({{F64, F32}, {F32, F16}})
+      .narrowScalarFor({{F64, F16}}, changeElementSizeTo(0, F32))
+      .lowerFor({{F32, BF16}, {F64, BF16}})
       .scalarize(0);
 
   auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});

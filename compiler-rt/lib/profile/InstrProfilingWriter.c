@@ -13,7 +13,11 @@
 /* For _alloca */
 #include <malloc.h>
 #endif
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/systm.h>
+#else
 #include <string.h>
+#endif
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"

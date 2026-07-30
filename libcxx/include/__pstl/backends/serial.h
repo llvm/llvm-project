@@ -13,6 +13,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/mismatch.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
@@ -52,6 +53,25 @@ struct __find_if<__serial_backend_tag, _ExecutionPolicy> {
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     return std::find_if(std::move(__first), std::move(__last), std::forward<_Pred>(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __mismatch<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<pair<_ForwardIterator1, _ForwardIterator2>>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Predicate&& __pred) const noexcept {
+    return std::mismatch(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::forward<_Predicate>(__pred));
   }
 };
 

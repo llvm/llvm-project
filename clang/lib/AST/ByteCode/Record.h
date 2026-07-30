@@ -93,6 +93,9 @@ public:
 
   unsigned getNumFields() const { return Fields.size(); }
   const Field *getField(unsigned I) const { return &Fields[I]; }
+  /// Find a field with the given offset.
+  /// This does a linear search, so use sparingly.
+  const Field *findField(unsigned Offset) const;
   /// Returns a field.
   const Field *getField(const FieldDecl *FD) const {
     return &Fields[FD->getFieldIndex()];

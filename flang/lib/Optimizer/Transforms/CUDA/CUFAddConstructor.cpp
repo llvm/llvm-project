@@ -77,7 +77,7 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
 /// Return true if \p hostGlobal is a host module-scope global that has been
 /// mirrored in the GPU module as an external (no-body) declaration by the
 /// CUFDeviceGlobal pass under -gpu=mem:unified. Such globals must be
-/// registered with the CUDA driver via CUFRegisterExternalVariable so the
+/// registered with the CUDA driver via cuf.register_variable_static so the
 /// device-side `.extern` symbol resolves to the host pointer at module-load
 /// time and HMM/ATS handles migration.
 static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
@@ -173,8 +173,7 @@ static uint64_t getGlobalSizeInBytes(mlir::Location loc,
 /// Emit a call to a CUF registration runtime function with the canonical
 /// (module, addr, name, size) signature, where addr is the address of \p
 /// addrGlobal taken via fir.address_of and name/size describe \p nameGlobal.
-/// Used both for CUFRegisterVariable / CUFRegisterManagedVariable / and
-/// CUFRegisterExternalVariable.
+/// Used both for CUFRegisterVariable / CUFRegisterManagedVariable.
 static void
 emitCUFRegistrationCall(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::Type idxTy, const mlir::DataLayout &dl,
@@ -384,7 +383,9 @@ struct CUFAddConstructor
               // Under -gpu=mem:unified, also register the global as
               // device-resident so a matching host symbol from another
               // translation unit is not treated as host memory.
-              if (cudaUnified) {
+              if (cudaUnified &&
+                  attr.getValue() != cuf::DataAttribute::Constant &&
+                  attr.getValue() != cuf::DataAttribute::Device) {
                 uint64_t szBytes = getGlobalSizeInBytes(
                     loc, *dl, kindMap, typeConverter, globalOp);
                 cuf::RegisterVariableStaticOp::create(
@@ -410,12 +411,13 @@ struct CUFAddConstructor
           for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
             if (!isCudaUnifiedExternalGlobal(globalOp, gpuSymTable))
               continue;
-            auto func = fir::runtime::getRuntimeFunc<mkRTKey(
-                CUFRegisterExternalVariable)>(loc, builder);
-            emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
-                                    typeConverter, registeredMod, func,
-                                    /*addrGlobal=*/globalOp,
-                                    /*nameGlobal=*/globalOp);
+            uint64_t szBytes = getGlobalSizeInBytes(loc, *dl, kindMap,
+                                                    typeConverter, globalOp);
+            cuf::RegisterVariableStaticOp::create(
+                builder, loc,
+                mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
+                builder.getStringAttr(globalOp.getSymName()),
+                builder.getI64IntegerAttr(szBytes));
           }
         }
 
@@ -443,7 +445,7 @@ struct CUFAddConstructor
         mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
-    priorities.push_back(0);
+    priorities.push_back(priority);
     data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),

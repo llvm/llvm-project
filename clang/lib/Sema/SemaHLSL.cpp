@@ -4574,10 +4574,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
-  case Builtin::BI__builtin_hlsl_interlocked_or: {
+  case Builtin::BI__builtin_hlsl_interlocked_or:
+  case Builtin::BI__builtin_hlsl_interlocked_xor: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
-    // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
-    // When reached via the synthesized `InterlockedAdd` overload set in
+    // to `__builtin_hlsl_interlocked_op` bypass argument checking entirely.
+    // When reached via the synthesized `InterlockedOp` overload set in
     // HLSLExternalSemaSource, overload resolution has already enforced the
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
@@ -4598,6 +4599,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                    diag::err_builtin_invalid_arg_type)
           << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
           << DestTy;
+      return true;
+    }
+
+    // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
+    // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared
+    // on SM 6.6+, so this defensive check only fires for direct builtin
+    // calls; skip synthetic invocations (invalid source location).
+    const TargetInfo &TI = SemaRef.Context.getTargetInfo();
+    if (TheCall->getBeginLoc().isValid() &&
+        TI.getTriple().getArch() == llvm::Triple::dxil &&
+        SemaRef.Context.getTypeSize(DestTy) == 64 &&
+        TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
+          << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
       return true;
     }
 
