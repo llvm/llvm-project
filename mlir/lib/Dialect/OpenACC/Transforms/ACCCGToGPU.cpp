@@ -777,9 +777,23 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
 std::optional<int64_t>
 ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
                                               MemRefType baseTy) {
-  // Cross-thread array reduction accumulators must stay per-thread.
-  if (perThreadArrayReductionAccum(privateLocal.getResult()))
-    return std::nullopt;
+  // Cross-thread array reduction accumulators must stay per-thread when their
+  // storage scope includes thread_x. Gang-/worker-scoped array temps remain
+  // eligible for shared memory.
+  if (perThreadArrayReductionAccum(privateLocal.getResult())) {
+    bool storageHasThreadX = true;
+    if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal)) {
+      storageHasThreadX =
+          llvm::any_of(dims.getArray(), [](auto d) { return d.isThreadX(); });
+    } else if (GPUParallelDimsAttr dims =
+                   getPrivatizeOp(privateLocal, computeRegion)
+                       .getParDimsAttr()) {
+      storageHasThreadX =
+          llvm::any_of(dims.getArray(), [](auto d) { return d.isThreadX(); });
+    }
+    if (storageHasThreadX)
+      return std::nullopt;
+  }
   ModuleOp module = computeRegion->getParentOfType<ModuleOp>();
   FailureOr<bool> isCandidate = isPrivateLocalSharedMemoryCandidate(
       privateLocal, computeRegion, module, defaultPolicy, &accSupport);
@@ -2707,10 +2721,21 @@ void ACCCGToGPULowering::processPrivateLocal(
   } else {
     // Hoisted acc.privatize: allocate per-thread stack storage in the launch
     // body. Cross-thread array reduction accumulators are per-thread too, so
-    // the accumulate can reduce each element across threads.
+    // the accumulate can reduce each element across threads. Skip when storage
+    // par_dims lack thread_x (gang-/worker-scoped array temp).
     acc::ReductionAccumulateArrayOp arrayAccum =
         perThreadArrayReductionAccum(privateLocal.getResult());
-    if ((isThreadXPrivatize(privatizeOp) || arrayAccum) &&
+    auto storageHasThreadX = [&]() {
+      if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal))
+        return llvm::any_of(dims.getArray(),
+                            [](auto d) { return d.isThreadX(); });
+      if (GPUParallelDimsAttr dims = privatizeOp.getParDimsAttr())
+        return llvm::any_of(dims.getArray(),
+                            [](auto d) { return d.isThreadX(); });
+      return true;
+    };
+    if ((isThreadXPrivatize(privatizeOp) ||
+         (arrayAccum && storageHasThreadX())) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
@@ -2798,8 +2823,18 @@ void ACCCGToGPULowering::processPrivateLocal(
       parDimsPair = computeActiveAndInactiveParDims(privateLocal, nullptr);
   acc::ReductionAccumulateArrayOp arrayAccum =
       perThreadArrayReductionAccum(privateLocal.getResult());
+  auto storageHasThreadX = [&]() {
+    if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal))
+      return llvm::any_of(dims.getArray(),
+                          [](auto d) { return d.isThreadX(); });
+    if (GPUParallelDimsAttr dims =
+            getPrivatizeOp(privateLocal, computeRegion).getParDimsAttr())
+      return llvm::any_of(dims.getArray(),
+                          [](auto d) { return d.isThreadX(); });
+    return true;
+  };
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
-    if ((parDim.isThreadX() || arrayAccum) &&
+    if ((parDim.isThreadX() || (arrayAccum && storageHasThreadX())) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
@@ -3526,30 +3561,63 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
 
   // Per-element gpu.all_reduce is only correct when each thread owns its own
   // accumulator copy. For a statically-shaped accumulator, classify from the
-  // operand: an explicit shared allocation is block-shared regardless of size,
-  // and anything else (a per-thread stack alloca, or a view over one) is
-  // per-thread when it fits the per-thread stack budget and block-shared when
-  // it is too large. For a dynamically-shaped accumulator the type conveys no
-  // size, so classify from par_dims (which the producer sets to the reduction's
-  // actual parallel scope): a thread dimension means per-thread storage.
+  // operand: an explicit shared/heap allocation is block-shared regardless of
+  // size, and a stack alloca (or a view over one) is per-thread when it fits
+  // the per-thread stack budget. Storage `acc.par_dims` without thread_x means
+  // gang-/worker-scoped privacy (shared among vector lanes) even if the type
+  // would fit on the stack. For a dynamically-shaped accumulator the type
+  // conveys no size, so classify from storage/accumulate thread_x dims.
+  auto storageIsThreadXPrivate = [&](Value v) -> bool {
+    if (acc::PrivateLocalOp privateLocal = getPrivateLocalForMemref(v)) {
+      if (GPUParallelDimsAttr dims = getParDimsAttr(privateLocal)) {
+        return llvm::any_of(dims.getArray(),
+                            [](auto d) { return d.isThreadX(); });
+      }
+      if (acc::PrivatizeOp privatize =
+              getPrivatizeOp(privateLocal, computeRegion)) {
+        if (GPUParallelDimsAttr dims = privatize.getParDimsAttr()) {
+          return llvm::any_of(dims.getArray(),
+                              [](auto d) { return d.isThreadX(); });
+        }
+      }
+    }
+    if (Operation *root = unwrapMemRefConversion(v).getDefiningOp()) {
+      if (GPUParallelDimsAttr dims = getParDimsAttr(root)) {
+        return llvm::any_of(dims.getArray(),
+                            [](auto d) { return d.isThreadX(); });
+      }
+    }
+    return true;
+  };
   bool isPerThreadPrivate;
+  Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
+  bool isSharedStorage = isa_and_nonnull<memref::AllocOp>(rootOp) ||
+                         isa_and_nonnull<acc::GPUSharedMemoryOp>(rootOp);
+  if (auto addrSpace = dyn_cast_if_present<gpu::AddressSpaceAttr>(
+          memrefTy.getMemorySpace())) {
+    isSharedStorage |=
+        addrSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
+  }
   if (memrefTy.hasStaticShape()) {
-    Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
     isPerThreadPrivate =
-        !isa_and_nonnull<memref::AllocOp>(rootOp) &&
-        canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack);
+        !isSharedStorage &&
+        canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack) &&
+        storageIsThreadXPrivate(op.getMemref());
   } else {
-    isPerThreadPrivate = llvm::any_of(
-        op.getParDims().getArray(),
-        [](mlir::acc::GPUParallelDimAttr d) { return d.isThreadX(); });
+    isPerThreadPrivate = !isSharedStorage &&
+                         storageIsThreadXPrivate(op.getMemref()) &&
+                         llvm::any_of(op.getParDims().getArray(),
+                                      [](mlir::acc::GPUParallelDimAttr d) {
+                                        return d.isThreadX();
+                                      });
   }
   if (!isPerThreadPrivate) {
-    // Block-shared accumulator: no-op only when the accumulate spans a block
-    // dim (threads distribute distinct elements, so the block partial is in
-    // place and the atomic combine finishes it). A thread-only shared
-    // reduction, where several threads reduce into the same element, is not yet
-    // supported.
-    if (hasBlockDim) {
+    // Block-shared accumulator: no-op when the accumulate spans a block dim or
+    // sits in block context (threads already hold the block partial; the
+    // atomic combine finishes across blocks). A thread-only shared reduction
+    // with no block context, where several threads reduce into the same
+    // element, is not yet supported.
+    if (hasBlockDim || reductionHasBlockContext(op)) {
       eraseDeadBounds();
     } else {
       (void)accSupport.emitNYI(
