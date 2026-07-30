@@ -3,6 +3,7 @@
 define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: MemorySSA for function: crc16.le.tc8
 ; CHECK:         %tbl.ptradd = getelementptr inbounds i16, ptr @.crctable, i64 %indexer.ext
+; CHECK-NEXT:  ; MemoryUse({{.*}})
 ; CHECK-NEXT:    %tbl.ld = load i16, ptr %tbl.ptradd, align 2
 ;
 entry:
