@@ -10,6 +10,7 @@
 #define _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
