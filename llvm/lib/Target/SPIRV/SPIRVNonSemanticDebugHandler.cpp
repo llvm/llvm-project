@@ -12,6 +12,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfo.h"
@@ -41,17 +42,19 @@ static std::optional<MCRegister> lookupOptReg(const MapT &Map,
 }
 
 /// Partition \p Ty into \p BasicTypes, \p PointerTypes, \p SubroutineTypes,
-/// and \p VectorTypes for NSDI emission. Used when iterating
-/// DebugInfoFinder.types(); each DI node is seen once, so no recursion into
-/// pointer bases. Other composites and non-pointer derived kinds are ignored
-/// because they are not yet supported. Only types that are supported (later
-/// used) are partitioned.
+/// \p VectorTypes, \p ArrayTypes, \p CompositeTypes, and \p TypedefTypes for
+/// NSDI emission. Used when iterating DebugInfoFinder.types(); each DI node is
+/// seen once, so no recursion into pointer bases. Other composites and the
+/// remaining derived kinds are ignored because they are not yet supported.
+/// Only types that are supported (later used) are partitioned.
 static void
 partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
                SmallVector<const DIDerivedType *> &PointerTypes,
                SmallVector<const DISubroutineType *> &SubroutineTypes,
                SmallVector<const DICompositeType *> &VectorTypes,
-               SmallVector<const DICompositeType *> &ArrayTypes) {
+               SmallVector<const DICompositeType *> &ArrayTypes,
+               SmallVector<const DICompositeType *> &CompositeTypes,
+               SmallVector<const DIDerivedType *> &TypedefTypes) {
   if (const auto *BT = dyn_cast<DIBasicType>(Ty)) {
     BasicTypes.push_back(BT);
     return;
@@ -77,12 +80,18 @@ partitionTypes(const DIType *Ty, SmallVector<const DIBasicType *> &BasicTypes,
         VectorTypes.push_back(CT);
       else
         ArrayTypes.push_back(CT);
+    } else if (CT->getTag() == dwarf::DW_TAG_structure_type ||
+               CT->getTag() == dwarf::DW_TAG_class_type ||
+               CT->getTag() == dwarf::DW_TAG_union_type) {
+      CompositeTypes.push_back(CT);
     }
     return;
   }
   const auto *DT = dyn_cast<DIDerivedType>(Ty);
   if (DT && DT->getTag() == dwarf::DW_TAG_pointer_type)
     PointerTypes.push_back(DT);
+  else if (DT && DT->getTag() == dwarf::DW_TAG_typedef)
+    TypedefTypes.push_back(DT);
 }
 
 enum : uint32_t {
@@ -168,6 +177,22 @@ static uint32_t transDebugFlags(const DINode *DN) {
   return Flags;
 }
 
+// Map a DWARF composite tag to a NonSemantic.Shader.DebugInfo Composite Type
+// value: Class 0, Structure 1, Union 2.
+static uint32_t mapCompositeTypeTag(unsigned Tag) {
+  switch (Tag) {
+  case dwarf::DW_TAG_class_type:
+    return 0;
+  case dwarf::DW_TAG_structure_type:
+    return 1;
+  case dwarf::DW_TAG_union_type:
+    return 2;
+  default:
+    reportFatalInternalError("unexpected DWARF composite tag " + Twine(Tag) +
+                             ". Expecting 0, 1 or 2");
+  }
+}
+
 } // namespace
 
 SPIRVNonSemanticDebugHandler::SPIRVNonSemanticDebugHandler(AsmPrinter &AP)
@@ -211,7 +236,10 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   SubroutineTypes.clear();
   VectorTypes.clear();
   ArrayTypes.clear();
+  CompositeTypes.clear();
+  TypedefTypes.clear();
   SubprogramDeclarations.clear();
+  SubprogramDefinitions.clear();
   GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
   ScopeToPathOpStringReg.clear();
@@ -265,11 +293,13 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   Finder.processModule(*M);
   llvm::for_each(Finder.types(), [&](DIType *Ty) {
     partitionTypes(Ty, BasicTypes, PointerTypes, SubroutineTypes, VectorTypes,
-                   ArrayTypes);
+                   ArrayTypes, CompositeTypes, TypedefTypes);
   });
 
   for (const DISubprogram *SP : Finder.subprograms()) {
-    if (!SP->isDefinition())
+    if (SP->isDefinition())
+      SubprogramDefinitions.push_back(SP);
+    else
       SubprogramDeclarations.push_back(SP);
   }
 
@@ -350,6 +380,14 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedOpStringReg(StringRef S) {
   assert(It != OpStringContentCache.end() &&
          "NSDI OpString missing from cache; emitNonSemanticDebugStrings must "
          "cache every string used in section 10");
+  return It->second;
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::emitAndCacheScopePathOpStringReg(
+    const DIScope *Scope, SPIRV::ModuleAnalysisInfo &MAI) {
+  auto [It, Inserted] = ScopeToPathOpStringReg.try_emplace(Scope, MCRegister());
+  if (Inserted)
+    It->second = emitOpStringIfNew(getDebugFullPath(Scope), MAI);
   return It->second;
 }
 
@@ -534,7 +572,7 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
 std::optional<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
+SPIRVNonSemanticDebugHandler::resolveDebugFunctionParent(
     const DISubprogram *SP) const {
   const DIScope *Scope = SP->getScope();
   if (Scope && !isa<DIFile>(Scope)) {
@@ -554,6 +592,21 @@ SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
   return lookupOptReg(CUToCompilationUnitDbgReg, ParentCU);
 }
 
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveTypeScopeParent(
+    const DIScope *Scope) const {
+  // When the scope is itself a type (e.g. a struct nested in another struct),
+  // the parent is that enclosing type's debug id.
+  if (const auto *Ty = dyn_cast_or_null<DIType>(Scope))
+    return lookupOptReg(DebugTypeRegs, Ty);
+
+  // For a file, compile-unit, namespace, or absent scope, the parent is the
+  // first module DebugCompilationUnit.
+  if (CompileUnits.empty())
+    return std::nullopt;
+
+  return lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
+}
+
 std::optional<MCRegister>
 SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
     const DISubprogram *SP, MCRegister VoidTypeReg, MCRegister I32TypeReg,
@@ -570,7 +623,7 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
     return std::nullopt;
   MCRegister FnTyReg = *FnTyRegOpt;
 
-  auto ParentRegOpt = resolveDebugFunctionDeclarationParent(SP);
+  auto ParentRegOpt = resolveDebugFunctionParent(SP);
   if (!ParentRegOpt)
     return std::nullopt;
 
@@ -598,6 +651,49 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
                      {NameReg, FnTyReg, SrcReg, LineReg, ColReg, ParentReg,
                       LinkageReg, FlagsReg},
                      MAI);
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugFunction(
+    const DISubprogram *SP, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  assert(SP && "SP must not be null in emitDebugFunction");
+  assert(SP->isDefinition() && "SP must be a definition in emitDebugFunction");
+
+  const DISubroutineType *ST = SP->getType();
+  auto FnTyRegOpt = lookupOptReg(DebugTypeRegs, ST);
+  if (!FnTyRegOpt)
+    return std::nullopt;
+
+  auto ParentRegOpt = resolveDebugFunctionParent(SP);
+  if (!ParentRegOpt)
+    return std::nullopt;
+
+  MCRegister NameReg = getCachedOpStringReg(SP->getName());
+  MCRegister LinkageReg = getCachedOpStringReg(SP->getLinkageName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(SP);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(SP->getLine()), I32TypeReg, MAI);
+  // LLVM's DISubprogram has no column field but SPIR-V expects one in
+  // DebugFunction.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(SP), I32TypeReg, MAI);
+  MCRegister ScopeLineReg = emitOpConstantI32(
+      static_cast<uint32_t>(SP->getScopeLine()), I32TypeReg, MAI);
+
+  SmallVector<MCRegister, 10> Ops = {NameReg,    *FnTyRegOpt, SrcReg,
+                                     LineReg,    ColReg,      *ParentRegOpt,
+                                     LinkageReg, FlagsReg,    ScopeLineReg};
+
+  if (const DISubprogram *Decl = SP->getDeclaration()) {
+    if (auto DeclRegOpt = lookupOptReg(DebugFunctionDeclarationRegs, Decl))
+      Ops.push_back(*DeclRegOpt);
+  }
+
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugFunction, VoidTypeReg,
+                     ExtInstSetReg, Ops, MAI);
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
@@ -770,6 +866,125 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
                      ExtInstSetReg, Ops, MAI);
 }
 
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
+    const DIDerivedType *M, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  // The member type must already be in DebugTypeRegs.
+  auto TyRegOpt = lookupOptReg(DebugTypeRegs, M->getBaseType());
+  if (!TyRegOpt)
+    return std::nullopt;
+
+  MCRegister NameReg = getCachedOpStringReg(M->getName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      M->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(M->getLine()), I32TypeReg, MAI);
+
+  // DIDerivedType members carry no column, so emit 0.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+  MCRegister OffsetReg = emitOpConstantI32(
+      static_cast<uint32_t>(M->getOffsetInBits()), I32TypeReg, MAI);
+  MCRegister SizeReg = emitOpConstantI32(
+      static_cast<uint32_t>(M->getSizeInBits()), I32TypeReg, MAI);
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(M), I32TypeReg, MAI);
+
+  // In NonSemantic.Shader.DebugInfo a DebugTypeMember has no Parent operand:
+  // only the composite references its members. This is by design, it drops the
+  // Parent that OpenCL.DebugInfo.100 had, and it avoids a composite/member
+  // reference cycle.
+  //
+  // FIXME: Static members are not handled yet: their constant initializer is
+  // available but is not emitted as the optional Value operand, and under DWARF
+  // 5 a static member is tagged DW_TAG_variable, which the caller's member loop
+  // skips.
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeMember, VoidTypeReg,
+                     ExtInstSetReg,
+                     {NameReg, *TyRegOpt, SrcReg, LineReg, ColReg, OffsetReg,
+                      SizeReg, FlagsReg},
+                     MAI);
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
+    const DICompositeType *CT, ArrayRef<MCRegister> MemberRegs,
+    MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  auto ParentRegOpt = resolveTypeScopeParent(CT->getScope());
+  if (!ParentRegOpt)
+    return std::nullopt;
+
+  MCRegister NameReg = getCachedOpStringReg(CT->getName());
+  MCRegister LinkageReg = getCachedOpStringReg(CT->getIdentifier());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      CT->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+
+  MCRegister TagReg =
+      emitOpConstantI32(mapCompositeTypeTag(CT->getTag()), I32TypeReg, MAI);
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(CT->getLine()), I32TypeReg, MAI);
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+
+  // A forward declaration has no known size or members: Size is DebugInfoNone.
+  MCRegister SizeReg = CachedDebugInfoNoneReg;
+  if (!CT->isForwardDecl())
+    SizeReg = emitOpConstantI32(static_cast<uint32_t>(CT->getSizeInBits()),
+                                I32TypeReg, MAI);
+
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(CT), I32TypeReg, MAI);
+
+  SmallVector<MCRegister> Ops = {NameReg,    TagReg,  SrcReg,
+                                 LineReg,    ColReg,  *ParentRegOpt,
+                                 LinkageReg, SizeReg, FlagsReg};
+  Ops.append(MemberRegs.begin(), MemberRegs.end());
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeComposite, VoidTypeReg,
+                     ExtInstSetReg, Ops, MAI);
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypedef(
+    const DIDerivedType *TD, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  // The underlying (base) type must already be in DebugTypeRegs.
+  auto BaseRegOpt = lookupOptReg(DebugTypeRegs, TD->getBaseType());
+  if (!BaseRegOpt)
+    return std::nullopt;
+
+  MCRegister NameReg = getCachedOpStringReg(TD->getName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      TD->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(TD->getLine()), I32TypeReg, MAI);
+  // DIDerivedType typedefs carry no column, so emit 0.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+
+  // Parent must be a lexical scope. Valid NSDI lexical scopes are
+  // DebugCompilationUnit, DebugFunction, DebugLexicalBlock, or
+  // DebugTypeComposite.
+  //
+  // FIXME: We currently only emit DebugCompilationUnit, so the compile unit is
+  // the only parent available today.
+  MCRegister ParentReg;
+  if (const auto *Ty = dyn_cast_or_null<DIType>(TD->getScope()))
+    if (auto TyRegOpt = lookupOptReg(DebugTypeRegs, Ty))
+      ParentReg = *TyRegOpt;
+  if (!ParentReg.isValid()) {
+    assert(!CompileUnits.empty() &&
+           "emitDebugTypedef requires a compile unit for the Parent operand");
+    auto CURegOpt =
+        lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
+    assert(CURegOpt && "DebugCompilationUnit must be emitted before typedefs");
+    ParentReg = *CURegOpt;
+  }
+
+  return emitExtInst(
+      SPIRV::NonSemanticExtInst::DebugTypedef, VoidTypeReg, ExtInstSetReg,
+      {NameReg, *BaseRegOpt, SrcReg, LineReg, ColReg, ParentReg}, MAI);
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (CompileUnits.empty())
@@ -794,19 +1009,39 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DIBasicType *BT : BasicTypes)
     emitOpStringIfNew(BT->getName(), MAI);
 
-  for (const DISubprogram *SP : SubprogramDeclarations) {
+  for (const DISubprogram *SP : concat<const DISubprogram *>(
+           SubprogramDeclarations, SubprogramDefinitions)) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
-    ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
+    emitAndCacheScopePathOpStringReg(SP, MAI);
+  }
+
+  // Cache the OpStrings each DebugTypeComposite and its DebugTypeMembers use:
+  // the composite name, identifier (linkage name), and path, plus each member
+  // name and path.
+  for (const DICompositeType *CT : CompositeTypes) {
+    emitOpStringIfNew(CT->getName(), MAI);
+    emitOpStringIfNew(CT->getIdentifier(), MAI);
+    emitAndCacheScopePathOpStringReg(CT->getFile(), MAI);
+    for (const DINode *Element : CT->getElements()) {
+      const auto *M = dyn_cast<DIDerivedType>(Element);
+      if (!M || M->getTag() != dwarf::DW_TAG_member)
+        continue;
+      emitOpStringIfNew(M->getName(), MAI);
+      emitAndCacheScopePathOpStringReg(M->getFile(), MAI);
+    }
+  }
+
+  // Cache the name and path OpStrings each DebugTypedef uses.
+  for (const DIDerivedType *TD : TypedefTypes) {
+    emitOpStringIfNew(TD->getName(), MAI);
+    emitAndCacheScopePathOpStringReg(TD->getFile(), MAI);
   }
 
   for (const auto &[GV, _] : GlobalVariableDebugInfoMap) {
     emitOpStringIfNew(GV->getName(), MAI);
     emitOpStringIfNew(GV->getLinkageName(), MAI);
-    SmallString<128> Path = getDebugFullPath(GV->getFile());
-    MCRegister PathReg = emitOpStringIfNew(Path, MAI);
-    if (const DIFile *F = GV->getFile())
-      ScopeToPathOpStringReg[F] = PathReg;
+    emitAndCacheScopePathOpStringReg(GV->getFile(), MAI);
   }
 
   CachedEmptyStringReg = emitOpStringIfNew("", MAI);
@@ -950,12 +1185,46 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
       DebugTypeRegs[ST] = *FnTyReg;
   }
 
+  // Emit DebugTypedef for each typedef. Placed after the other type loops so a
+  // typedef can resolve its underlying type. A typedef whose base type is not
+  // emitted is skipped. A typedef whose base is another typedef emitted later
+  // in this same pass is also skipped, the emission-order gap tracked in
+  // https://github.com/llvm/llvm-project/issues/211850.
+  for (const DIDerivedType *TD : TypedefTypes) {
+    if (auto TDReg =
+            emitDebugTypedef(TD, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI))
+      DebugTypeRegs[TD] = *TDReg;
+  }
+
   // Emit DebugFunctionDeclaration for DISubprogram declarations.
   for (const DISubprogram *SP : SubprogramDeclarations) {
     if (auto DeclReg = emitDebugFunctionDeclaration(SP, VoidTypeReg, I32TypeReg,
                                                     ExtInstSetReg, MAI))
       DebugFunctionDeclarationRegs[SP] = *DeclReg;
   }
+
+  // Emit DebugTypeMember and DebugTypeComposite for each struct, class, or
+  // union. Each member is emitted before the composite that lists it, so the
+  // Members operand references already-defined ids. A member whose type is not
+  // in DebugTypeRegs is skipped.
+  for (const DICompositeType *CT : CompositeTypes) {
+    SmallVector<MCRegister> MemberRegs;
+    for (const DINode *Element : CT->getElements()) {
+      const auto *M = dyn_cast<DIDerivedType>(Element);
+      if (!M || M->getTag() != dwarf::DW_TAG_member)
+        continue;
+      if (auto MemberReg = emitDebugTypeMember(M, VoidTypeReg, I32TypeReg,
+                                               ExtInstSetReg, MAI))
+        MemberRegs.push_back(*MemberReg);
+    }
+    if (auto CompReg = emitDebugTypeComposite(CT, MemberRegs, VoidTypeReg,
+                                              I32TypeReg, ExtInstSetReg, MAI))
+      DebugTypeRegs[CT] = *CompReg;
+  }
+
+  // Emit DebugFunction for DISubprogram definitions.
+  for (const DISubprogram *SP : SubprogramDefinitions)
+    emitDebugFunction(SP, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
 
   // Emit DebugGlobalVariable for each collected DIGlobalVariable.
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)

@@ -591,15 +591,14 @@ public:
       : __base_(allocator_arg_t(), __a, __value_init{}) {}
 
   // tuple(const T&...) constructors (including allocator_arg_t variants)
-  template <template <class...> class _And = _And,
-            __enable_if_t< _And< _BoolConstant<sizeof...(_Tp) >= 1>, is_copy_constructible<_Tp>... >::value, int> = 0>
+  template <template <class...> class _And = _And, __enable_if_t<_And<is_copy_constructible<_Tp>...>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_And<is_convertible<const _Tp&, _Tp>...>::value)
       tuple(const _Tp&... __t) noexcept(_And<is_nothrow_copy_constructible<_Tp>...>::value)
       : __base_(__forward_args{}, __t...) {}
 
   template <class _Alloc,
-            template <class...> class _And = _And,
-            __enable_if_t< _And< _BoolConstant<sizeof...(_Tp) >= 1>, is_copy_constructible<_Tp>... >::value, int> = 0>
+            template <class...> class _And                                 = _And,
+            __enable_if_t<_And<is_copy_constructible<_Tp>...>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!_And<is_convertible<const _Tp&, _Tp>...>::value)
       tuple(allocator_arg_t, const _Alloc& __a, const _Tp&... __t)
       : __base_(allocator_arg_t(), __a, __forward_args{}, __t...) {}
@@ -612,9 +611,8 @@ public:
 
   template <class... _Up>
   struct _EnableUTypesCtor
-      : _And< _BoolConstant<sizeof...(_Tp) >= 1>,
-              _Not<_IsThisTuple<_Up...> >, // extension to allow mis-behaved user constructors
-              is_constructible<_Tp, _Up>... > {};
+      : _And<_Not<_IsThisTuple<_Up...> >, // extension to allow mis-behaved user constructors
+             is_constructible<_Tp, _Up>... > {};
 
   template <class... _Up,
             __enable_if_t< _And< _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> >::value,
