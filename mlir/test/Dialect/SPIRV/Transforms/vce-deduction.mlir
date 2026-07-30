@@ -27,7 +27,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.5, [Shader, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_ballot(%predicate : i1) -> vector<4xi32> "None" {
-    %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
     spirv.ReturnValue %0: vector<4xi32>
   }
 }
