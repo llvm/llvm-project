@@ -898,9 +898,8 @@ bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
   if (!ShouldErase && !ShouldAlias && !ShouldThunk)
     return false;
 
-  if (MergeProfile) {
+  if (MergeProfile)
     mergeEntryCountsAndImportsInto(*F, *G);
-  }
 
   if (ShouldErase) {
     G->eraseFromParent();
@@ -1016,9 +1015,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       return;
     }
 
-    if (writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true)) {
+    if (writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true))
       ++NumFunctionsMerged;
-    }
   }
 }
 
