@@ -1432,6 +1432,18 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
+// Check if any of the symbols part of the expression has the CUDA managed
+// attribute.
+template <typename A> inline bool HasCUDAManagedSymbols(const A &expr) {
+  return GetNbOfCUDAManagedSymbols(expr) > 0;
+}
+
+// Check if any of the symbols part of the expression has a CUDA device
+// attribute other than unified.
+template <typename A> inline bool HasCUDANonUnifiedSymbols(const A &expr) {
+  return GetNbOfCUDANonUnifiedSymbols(expr) > 0;
+}
+
 // True for a whole reference to a managed array: a whole array variable, or a
 // whole array component that itself has the managed attribute (a%b where b is
 // managed). An array section, an array element, a component of a managed object
@@ -1460,11 +1472,11 @@ template <typename A> inline bool IsWholeManagedArray(const A &expr) {
 // Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols{GetNbOfCUDAManagedSymbols(lhs)};
+  // Unified data is left out of these counts and checks so that it is handled
+  // as host data.
+  bool lhsHasManaged{HasCUDAManagedSymbols(lhs)};
+  bool lhsIsHost{!HasCUDANonUnifiedSymbols(lhs)};
   int rhsNbManagedSymbols{GetNbOfCUDAManagedSymbols(rhs)};
-  // Unified data is left out of these counts so that it is handled as host
-  // data.
-  int lhsNbSymbols{GetNbOfCUDANonUnifiedSymbols(lhs)};
   int rhsNbSymbols{GetNbOfCUDANonUnifiedSymbols(rhs)};
 
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
@@ -1482,7 +1494,7 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
   // The host cannot reach device or constant data, unlike managed and unified
   // data, so an assignment with such a side is a copy, sections included.
-  bool lhsIsDeviceOnly{lhsNbManagedSymbols == 0 && lhsNbSymbols > 0};
+  bool lhsIsDeviceOnly{!lhsHasManaged && !lhsIsHost};
   // The right-hand side can be an expression, so one device operand is enough.
   bool rhsHasDeviceOnly{rhsNbSymbols > rhsNbManagedSymbols};
 
@@ -1498,16 +1510,15 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   // - A managed left-hand side assigned from host data. Whole arrays are copied
   //   by the early return above.
   if ((IsAllocatableDesignator(lhs) && !lhsIsDeviceOnly && !rhsHasDeviceOnly &&
-          (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
-      (lhsNbManagedSymbols >= 1 && !rhsHasDeviceOnly &&
-          !(wholeLhs || wholeRhs)) ||
-      (lhsNbSymbols == 0 && rhsNbManagedSymbols >= 1 && !rhsHasDeviceOnly &&
+          (lhsHasManaged || rhsNbManagedSymbols >= 1)) ||
+      (lhsHasManaged && !rhsHasDeviceOnly && !(wholeLhs || wholeRhs)) ||
+      (lhsIsHost && rhsNbManagedSymbols >= 1 && !rhsHasDeviceOnly &&
           !wholeRhs) ||
       (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) && !lhsIsDeviceOnly) ||
-      (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
+      (lhsHasManaged && rhsNbSymbols == 0)) {
     return false;
   }
-  return lhsNbSymbols > 0 || rhsNbSymbols > 0;
+  return !lhsIsHost || rhsNbSymbols > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
