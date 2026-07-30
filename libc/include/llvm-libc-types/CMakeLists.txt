@@ -308,6 +308,16 @@ DEPENDS
   .fsblkcnt_t
   .fsfilcnt_t
 )
+add_header(fsid_t HDR fsid_t.h)
+add_header(
+  struct_statfs
+HDR
+  struct_statfs.h
+DEPENDS
+  .fsblkcnt_t
+  .fsfilcnt_t
+  .fsid_t
+)
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
 add_header(int_hk_t HDR int_hk_t.h)
