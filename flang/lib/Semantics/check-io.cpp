@@ -1448,7 +1448,7 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
           if (const Symbol *bad{
                   FindEnumerationTypeComponent(which, derived, scope)}) {
             context_.Say(namelistLocation,
-                "Namelist group object '%s' has a direct component '%s' of enumeration type"_err_en_US,
+                "Namelist group object '%s' has a component '%s' of enumeration type"_err_en_US,
                 object.name(), bad->name());
           }
         }
