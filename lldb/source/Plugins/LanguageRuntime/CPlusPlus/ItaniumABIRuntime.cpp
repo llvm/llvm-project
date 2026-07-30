@@ -39,28 +39,7 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
   if (!module_sp)
     return TypeAndOrName();
 
-  auto vptr = vtable_info.addr.GetLoadAddress(&m_process->GetTarget());
-
-  // An object's vptr points to the vtable's address point, not necessarily to
-  // the beginning of the vtable. Under the Itanium C++ ABI, the entries around
-  // the address point are laid out as follows:
-  //
-  // https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-components
-  //   [vcall offsets, if any]
-  //   [vbase offsets, if any]
-  //   [offset-to-top]
-  //   [typeinfo pointer]
-  //   <address point / vptr>
-  //   [virtual function entries...]
-  //
-  // Subtracting two entries from the vptr therefore reaches the offset-to-top
-  // entry, but not necessarily the vtable base. Optional vcall and vbase offset
-  // entries may precede it, and their number cannot be determined from the vptr
-  // alone.
-  //
-  // In such cases, this calculation does not yield the address represented by
-  // __clang_vtable, so the lookup will fail.
-  auto maybeVTableBase = vptr - m_process->GetAddressByteSize() * 2;
+  auto vtableBase = vtable_info.symbol->GetLoadAddress(&m_process->GetTarget());
 
   VariableList vars;
 
@@ -75,7 +54,7 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
 
   for (lldb::VariableSP var : vars) {
     auto valobj = ValueObjectVariable::Create(m_process, var);
-    if (valobj->GetLoadAddress() != maybeVTableBase)
+    if (valobj->GetLoadAddress() != vtableBase)
       continue;
 
     auto type_sp = var->GetEnclosingType();
