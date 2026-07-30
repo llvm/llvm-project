@@ -1,10 +1,6 @@
-; HLSL `groupshared` variables are emitted by clang as external, hidden globals
-; in the Workgroup storage class (a declaration, since shared memory has no
-; initializer). getSpirvLinkageTypeFor must NOT give such module-internal
-; storage-class declarations Import linkage: doing so decorates them with
-; LinkageAttributes and forces OpCapability Linkage, which is illegal in a
-; Vulkan shader. Verify no Linkage capability / decoration is emitted while the
-; variable is still materialized as a Workgroup OpVariable.
+; HLSL `groupshared` variables are emitted as external Workgroup declarations.
+; getSpirvLinkageTypeFor must not give them Import linkage, which would add a
+; LinkageAttributes decoration and force OpCapability Linkage (illegal in Vulkan).
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
