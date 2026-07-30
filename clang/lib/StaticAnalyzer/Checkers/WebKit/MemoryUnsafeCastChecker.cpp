@@ -279,9 +279,9 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
       anyOf(callExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
             cxxConstructExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
             objcMessageExpr(hasAnyArgument(CastArgFromIdToSpecificType)));
-  auto MatchesCallArgFromId = match(
-      stmt(forEachDescendant(stmt(MatchCallArgFromId))), *D->getBody(),
-      AM.getASTContext());
+  auto MatchesCallArgFromId =
+      match(stmt(forEachDescendant(stmt(MatchCallArgFromId))), *D->getBody(),
+            AM.getASTContext());
   for (BoundNodes Match : MatchesCallArgFromId)
     emitDiagnosticsIdArg(Match, BR, ADC, this, BT);
 }
