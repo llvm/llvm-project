@@ -2221,13 +2221,10 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     const auto &SrcMMO = **std::next(MI.memoperands_begin());
     MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
     unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
-    // FIXME: SelectionDAG always passes true for 'IsVolatile', apparently
-    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
-    // the same thing here.
     return findGISelOptimalMemOpLowering(
         MemOps, Limit,
         MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
-                    SrcAlign, /*IsVolatile=*/true),
+                    SrcAlign, IsVolatile),
         DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
         MF.getFunction().getAttributes(), TLI);
   }

@@ -30,9 +30,8 @@ try.cont:                                         ; preds = %entry, %catch.start
 }
 
 declare void @foo()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 declare ptr @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-

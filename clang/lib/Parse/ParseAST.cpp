@@ -155,7 +155,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
       }
       return M;
     });
-    P.Initialize();
+    P.ConsumeToken();
     Parser::DeclGroupPtrTy ADecl;
     Sema::ModuleImportState ImportState;
     EnterExpressionEvaluationContext PotentiallyEvaluated(

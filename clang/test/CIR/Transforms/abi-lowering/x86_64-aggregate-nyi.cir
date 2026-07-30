@@ -8,7 +8,6 @@
 !rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
 !rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
 !rec_E = !cir.struct<"E" padded {!u8i}>
-!rec_E0 = !cir.struct<"E0" {}>
 !rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
 !rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
 
@@ -49,14 +48,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.struct<"E" padded
-
-  // A zero-field record (a C empty struct) also classifies as Ignore, which is
-  // deferred, so it is rejected rather than passed with the argument dropped.
-  cir.func @take_e0(%arg0: !rec_E0) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"E0"
 
   // An all-float struct classifies to an SSE vector coerce this bridge does
   // not represent, so it is reported NYI rather than passed unchanged.

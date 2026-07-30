@@ -2343,17 +2343,16 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __init_with_size(_InputIterator __first, _Sentinel __last, size_type __sz);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20
+  [[__deprecated__("use __grow_by_without_replace")]] _LIBCPP_CONSTEXPR_SINCE_CXX20
 #  if _LIBCPP_ABI_VERSION >= 2 //  We want to use the function in the dylib in ABIv1
   _LIBCPP_HIDE_FROM_ABI
 #  endif
-  _LIBCPP_DEPRECATED_("use __grow_by_without_replace") void __grow_by(
-      size_type __old_cap,
-      size_type __delta_cap,
-      size_type __old_sz,
-      size_type __n_copy,
-      size_type __n_del,
-      size_type __n_add = 0);
+  void __grow_by(size_type __old_cap,
+                 size_type __delta_cap,
+                 size_type __old_sz,
+                 size_type __n_copy,
+                 size_type __n_del,
+                 size_type __n_add = 0);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __grow_by_without_replace(
       size_type __old_cap,
       size_type __delta_cap,
@@ -2682,7 +2681,7 @@ void _LIBCPP_CONSTEXPR_SINCE_CXX20
 #  if _LIBCPP_ABI_VERSION >= 2 // We want to use the function in the dylib in ABIv1
 _LIBCPP_HIDE_FROM_ABI
 #  endif
-_LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Traits, _Allocator>::__grow_by(
+basic_string<_CharT, _Traits, _Allocator>::__grow_by(
     size_type __old_cap,
     size_type __delta_cap,
     size_type __old_sz,

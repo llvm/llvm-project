@@ -1359,9 +1359,11 @@ EMPTY_CLASS(AssumedRankSpec);
 
 // R815 array-spec ->
 //        explicit-shape-spec-list | explicit-shape-bounds-spec |
-//        assumed-shape-spec-list | deferred-shape-spec-list |
-//        assumed-size-spec | implied-shape-spec |
+//        assumed-shape-spec-list | assumed-shape-bounds-spec |
+//        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
+
+WRAPPER_CLASS(AssumedShapeBoundsSpec, IntExpr);
 
 struct ExplicitShapeBoundsSpec {
   TUPLE_CLASS_BOILERPLATE(ExplicitShapeBoundsSpec);
@@ -1371,8 +1373,8 @@ struct ExplicitShapeBoundsSpec {
 struct ArraySpec {
   UNION_CLASS_BOILERPLATE(ArraySpec);
   std::variant<std::list<ExplicitShapeSpec>, ExplicitShapeBoundsSpec,
-      std::list<AssumedShapeSpec>, DeferredShapeSpecList, AssumedSizeSpec,
-      ImpliedShapeSpec, AssumedRankSpec>
+      std::list<AssumedShapeSpec>, AssumedShapeBoundsSpec,
+      DeferredShapeSpecList, AssumedSizeSpec, ImpliedShapeSpec, AssumedRankSpec>
       u;
 };
 
@@ -4521,17 +4523,9 @@ struct OmpApplyClause {
 // data-sharing-attribute ->
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
-//
-// When used in METADIRECTIVE:
-// default-clause ->
-//    DEFAULT(directive-specification)              // since 5.0, until 5.1
-// See also otherwise-clause.
 struct OmpDefaultClause {
   ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
-  UNION_CLASS_BOILERPLATE(OmpDefaultClause);
-  std::variant<DataSharingAttribute,
-      common::Indirection<OmpDirectiveSpecification>>
-      u;
+  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]
@@ -4550,6 +4544,16 @@ struct OmpDefaultmapClause {
       Default, Present)
   MODIFIER_BOILERPLATE(OmpVariableCategory);
   std::tuple<ImplicitBehavior, MODIFIERS()> t;
+};
+
+// Ref: [5.0:56-57], [5.1:60-62]
+//
+// default-clause ->
+//    DEFAULT(directive-specification)              // since 5.0, until 5.1
+// See also otherwise-clause.
+struct OmpDefaultVariantClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDefaultVariantClause, common::Indirection<OmpDirectiveSpecification>);
 };
 
 // Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:91-93]
@@ -5109,8 +5113,8 @@ struct OmpUnifiedSharedMemoryClause {
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->
 //    UPDATE(task-dependence-type)                  // since 5.2
-struct OmpUpdateClause {
-  UNION_CLASS_BOILERPLATE(OmpUpdateClause);
+struct OmpUpdateDependObjectsClause {
+  UNION_CLASS_BOILERPLATE(OmpUpdateDependObjectsClause);
   // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };
