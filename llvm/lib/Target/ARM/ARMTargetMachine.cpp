@@ -227,8 +227,6 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (SoftFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  FloatABI::ABIType FloatABI = Options.FloatABIType;
-
   // Use the optminsize to identify the subtarget, but don't use it in the
   // feature string.
   std::string Key = CPU + FS;
@@ -239,6 +237,10 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
+  FloatABI::ABIType FloatABI = this->Options.FloatABIType;
+
+  // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
+  // registers, but no floating-point hardware (mve+nofp)
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
 
   auto &I = SubtargetMap[Key];
