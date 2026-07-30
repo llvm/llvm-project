@@ -218,12 +218,6 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool supportsWGP() const {
-    if (HasGFX1250Insts)
-      return false;
-    return getGeneration() >= GFX10;
-  }
-
   bool hasHWFP64() const { return HasFP64; }
 
   bool hasAddr64() const {

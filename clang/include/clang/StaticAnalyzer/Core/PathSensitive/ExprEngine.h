@@ -388,8 +388,8 @@ public:
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
-  void processCFGBlockEntrance(const BlockEdge &L, const BlockEntrance &BE,
-                               NodeBuilder &Builder, ExplodedNode *Pred);
+  void processCFGBlockEntrance(const BlockEntrance &BE, NodeBuilder &Builder,
+                               ExplodedNode *Pred);
 
   void runCheckersForBlockEntrance(const BlockEntrance &Entrance,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst);
