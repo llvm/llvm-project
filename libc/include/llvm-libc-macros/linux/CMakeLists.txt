@@ -5,6 +5,12 @@ add_header(
 )
 
 add_header(
+  dirent_macros
+  HDR
+    dirent-macros.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h

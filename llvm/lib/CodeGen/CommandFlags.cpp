@@ -800,12 +800,6 @@ codegen::createTargetMachineForTriple(const Triple &TargetTriple,
   return std::unique_ptr<TargetMachine>(Target);
 }
 
-Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(StringRef TargetTriple,
-                                      CodeGenOptLevel OptLevel) {
-  return createTargetMachineForTriple(Triple(TargetTriple), OptLevel);
-}
-
 void codegen::MaybeEnableStatistics() {
   if (getSaveStats() == SaveStatsMode::None)
     return;

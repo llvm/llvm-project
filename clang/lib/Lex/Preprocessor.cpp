@@ -159,6 +159,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_AbnormalTermination = nullptr;
   }
 
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
+
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
   IncrementalProcessing = LangOpts.IncrementalExtensions;

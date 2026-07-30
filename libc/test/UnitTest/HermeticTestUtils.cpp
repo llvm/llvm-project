@@ -73,7 +73,9 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 void *aligned_alloc(size_t align, size_t s) {
   if (align & (align - 1)) // Must be power of 2
     return nullptr;
-  s = ((s + align - 1) / align) * align;
+  uintptr_t ptr_val = reinterpret_cast<uintptr_t>(ptr);
+  uintptr_t aligned_ptr_val = ((ptr_val + align - 1) / align) * align;
+  ptr = reinterpret_cast<uint8_t *>(aligned_ptr_val);
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;

@@ -242,6 +242,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
+  pm.addPass(fir::createSelectOpsConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
   // Optimize redundant array repacking operations,

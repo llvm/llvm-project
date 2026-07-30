@@ -20,9 +20,9 @@
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm::VPlanPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);

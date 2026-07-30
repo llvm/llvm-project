@@ -246,51 +246,8 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       break;
     }
     break;
-  case Triple::amdgpu: {
-    if (SubArch < Triple::FirstAMDGPUSubArch ||
-        SubArch > Triple::LastAMDGPUSubArch)
-      break;
-
-    static const StringLiteral AMDGPUSubArchNames[Triple::LastAMDGPUSubArch -
-                                                  Triple::FirstAMDGPUSubArch +
-                                                  1] = {
-        "amdgpu6",     "amdgpu6.00",  "amdgpu6.01",  "amdgpu6.02",
-
-        "amdgpu7",     "amdgpu7.00",  "amdgpu7.01",  "amdgpu7.02",
-        "amdgpu7.03",  "amdgpu7.04",  "amdgpu7.05",
-
-        "amdgpu8",     "amdgpu8.01",  "amdgpu8.02",  "amdgpu8.03",
-        "amdgpu8.05",
-
-        "amdgpu8.10",
-
-        "amdgpu9",     "amdgpu9.00",  "amdgpu9.02",  "amdgpu9.04",
-        "amdgpu9.06",  "amdgpu9.09",  "amdgpu9.0c",
-
-        "amdgpu9.08",  "amdgpu9.0a",
-
-        "amdgpu9.4",   "amdgpu9.42",  "amdgpu9.50",
-
-        "amdgpu10.1",  "amdgpu10.10", "amdgpu10.11", "amdgpu10.12",
-        "amdgpu10.13",
-
-        "amdgpu10.3",  "amdgpu10.30", "amdgpu10.31", "amdgpu10.32",
-        "amdgpu10.33", "amdgpu10.34", "amdgpu10.35", "amdgpu10.36",
-
-        "amdgpu11",    "amdgpu11.00", "amdgpu11.01", "amdgpu11.02",
-        "amdgpu11.03", "amdgpu11.50", "amdgpu11.51", "amdgpu11.52",
-        "amdgpu11.53", "amdgpu11.54",
-
-        "amdgpu11.7",  "amdgpu11.70", "amdgpu11.71", "amdgpu11.72",
-
-        "amdgpu12",    "amdgpu12.00", "amdgpu12.01",
-
-        "amdgpu12.5",  "amdgpu12.50", "amdgpu12.51",
-
-        "amdgpu13",    "amdgpu13.10"};
-
-    return AMDGPUSubArchNames[SubArch - Triple::FirstAMDGPUSubArch];
-  }
+  case Triple::amdgpu:
+    return AMDGPU::getSubArchName(SubArch);
   default:
     break;
   }

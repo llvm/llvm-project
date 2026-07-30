@@ -6541,8 +6541,6 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   SDLoc DL(SVN);
   unsigned NumElts = VT.getVectorNumElements();
   ArrayRef<int> Mask = SVN->getMask();
-  if (V2.isUndef())
-    return SDValue();
 
   // A splat operand's lanes are all equal, so a lane selecting from it matches
   // any of its positions. This covers the zero operand XformToShuffleWithZero
@@ -6551,38 +6549,59 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   bool V1IsSplat = DAG.isSplatValue(V1);
   bool V2IsSplat = DAG.isSplatValue(V2);
 
-  // Match the packed pair shuffle forms:
-  //   <V1Start, N+V2Start, V1Start+2, N+V2Start+2, ...>
-  // where each start is 0 for even lanes or 1 for odd lanes. This covers all
-  // four PPAIRE/PPAIREO/PPAIROE/PPAIRO combinations. Trailing lanes may be
-  // undef when a 4-byte source was widened to v8i8.
-  auto IsStrided = [&](unsigned V1Start, unsigned V2Start) {
-    for (unsigned I = 0; I != NumElts / 2; ++I) {
-      int M0 = Mask[2 * I];
-      int M1 = Mask[2 * I + 1];
-      if (M0 >= 0 &&
-          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(V1Start + 2 * I)))
-        return false;
-      if (M1 >= 0 && (V2IsSplat ? M1 < (int)NumElts
-                                : M1 != (int)(NumElts + V2Start + 2 * I)))
-        return false;
-    }
-    return true;
-  };
+  // Walk the mask once, tracking the operand feeding the destination's even
+  // lanes (index 0) and the operand feeding its odd lanes (index 1) — either
+  // may turn out to be V1 or V2 — along with whether each pulls the even or
+  // odd element out of its pair. All even (resp. odd) lanes must agree on
+  // both the operand and the parity used; a splat operand's lanes are all
+  // equal so it never constrains the parity.
+  SDValue Src[2];
+  std::optional<bool> Parity[2];
+  for (unsigned I = 0; I != NumElts; ++I) {
+    int M = Mask[I];
+    if (M < 0)
+      continue;
+    unsigned Lane = I % 2;
+    bool FromV1 = (unsigned)M < NumElts;
+    SDValue Cand = FromV1 ? V1 : V2;
+    unsigned Local = (unsigned)M % NumElts;
+    if (!Src[Lane])
+      Src[Lane] = Cand;
+    else if (Src[Lane] != Cand)
+      return SDValue();
 
-  unsigned Opc;
-  if (IsStrided(0, 0))
-    Opc = RISCVISD::PPAIRE;
-  else if (IsStrided(1, 1))
-    Opc = RISCVISD::PPAIRO;
-  else if (IsStrided(0, 1))
-    Opc = RISCVISD::PPAIREO;
-  else if (IsStrided(1, 0))
-    Opc = RISCVISD::PPAIROE;
-  else
+    // Splats don't constrain parity.
+    if (FromV1 ? V1IsSplat : V2IsSplat)
+      continue;
+
+    // The index must be from the even/odd element of its pair.
+    if (Local / 2 != I / 2)
+      return SDValue();
+
+    bool P = Local % 2;
+    if (!Parity[Lane])
+      Parity[Lane] = P;
+    else if (*Parity[Lane] != P)
+      return SDValue();
+  }
+
+  // Make sure we have a source for both lanes.
+  if (!Src[0] || !Src[1])
     return SDValue();
 
-  return DAG.getNode(Opc, DL, VT, V1, V2);
+  bool EvenIsOdd = Parity[0].value_or(false);
+  bool OddIsOdd = Parity[1].value_or(false);
+  unsigned Opc;
+  if (!EvenIsOdd && !OddIsOdd)
+    Opc = RISCVISD::PPAIRE;
+  else if (EvenIsOdd && OddIsOdd)
+    Opc = RISCVISD::PPAIRO;
+  else if (!EvenIsOdd && OddIsOdd)
+    Opc = RISCVISD::PPAIREO;
+  else
+    Opc = RISCVISD::PPAIROE;
+
+  return DAG.getNode(Opc, DL, VT, Src[0], Src[1]);
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,

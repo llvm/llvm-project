@@ -206,7 +206,7 @@ int main(int argc, const char **argv, const char **envp) {
     handleError(errorCodeToError(EC));
   MemoryBufferRef Image = **ImageOrErr;
 
-  ol_platform_backend_t Backend;
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
 
   file_magic Magic = identify_magic(Image.getBuffer());
@@ -229,6 +229,9 @@ int main(int argc, const char **argv, const char **envp) {
           ELF::convertEMachineToArchName(ElfOrErr->getHeader().e_machine)
               .data()));
     }
+  }
+
+  if (Backend != OL_PLATFORM_BACKEND_UNKNOWN) {
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
   }

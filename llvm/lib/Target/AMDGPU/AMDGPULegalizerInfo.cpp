@@ -294,7 +294,6 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
   };
 }
 
-const LLT I16 = LLT::integer(16);
 constexpr LLT F16 = LLT::float16();
 constexpr LLT BF16 = LLT::bfloat16();
 constexpr LLT F32 = LLT::float32();
@@ -302,6 +301,7 @@ constexpr LLT F64 = LLT::float64();
 constexpr LLT V2F16 = LLT::fixed_vector(2, F16);
 constexpr LLT V2BF16 = LLT::fixed_vector(2, BF16);
 constexpr LLT V2F32 = LLT::fixed_vector(2, F32);
+constexpr LLT V2F64 = LLT::fixed_vector(2, F64);
 
 constexpr LLT S1 = LLT::scalar(1);
 constexpr LLT S8 = LLT::scalar(8);
@@ -740,6 +740,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                                      V2S64};
 
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
+  const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
+  const LLT I1 = LLT::integer(1);
+  const LLT I16 = LLT::integer(16);
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+  const LLT V2I16 = LLT::fixed_vector(2, I16);
 
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
 
@@ -979,10 +985,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({CodePtr});
 
-  auto &FPOpActions = getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
-      G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
-    .legalFor({S32, S64});
+  auto &FPOpActions =
+      getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
+                                   G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
+          .legalFor({F32, F64});
   auto &TrigActions = getActionDefinitionsBuilder({G_FSIN, G_FCOS})
     .customFor({S32, S64});
   auto &FDIVActions = getActionDefinitionsBuilder(G_FDIV)
@@ -990,27 +996,27 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.has16BitInsts()) {
     if (ST.hasVOP3PInsts())
-      FPOpActions.legalFor({S16, V2S16});
+      FPOpActions.legalFor({F16, V2F16});
     else
-      FPOpActions.legalFor({S16});
+      FPOpActions.legalFor({F16});
 
     TrigActions.customFor({S16});
     FDIVActions.customFor({S16});
   }
 
   if (ST.hasPackedFP32Ops()) {
-    FPOpActions.legalFor({V2S32});
-    FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
+    FPOpActions.legalFor({V2F32});
+    FPOpActions.clampMaxNumElementsStrict(0, F32, 2);
   }
 
   if (ST.hasPackedFP64Ops()) {
-    FPOpActions.legalFor({V2S64});
-    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+    FPOpActions.legalFor({V2F64});
+    FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
 
   if (ST.hasPackedFP64Ops()) {
-    FPOpActions.legalFor({V2S64});
-    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+    FPOpActions.legalFor({V2F64});
+    FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
 
   auto &MinNumMaxNumIeee =
@@ -1057,11 +1063,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasVOP3PInsts())
-    FPOpActions.clampMaxNumElementsStrict(0, S16, 2);
+    FPOpActions.clampMaxNumElementsStrict(0, F16, 2);
 
-  FPOpActions
-    .scalarize(0)
-    .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
+  FPOpActions.scalarize(0);
+  if (!ST.has16BitInsts())
+    FPOpActions.minScalar(0, F32);
 
   TrigActions
     .scalarize(0)
@@ -1164,25 +1170,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
   if (ST.has16BitInsts()) {
     FSubActions
-      // Use actual fsub instruction
-      .legalFor({S32, S16})
-      // Must use fadd + fneg
-      .lowerFor({S64, V2S16});
+        // Use actual fsub instruction
+        .legalFor({F32, F16})
+        // Must use fadd + fneg
+        .lowerFor({F64, V2F16});
   } else {
     FSubActions
-      // Use actual fsub instruction
-      .legalFor({S32})
-      // Must use fadd + fneg
-      .lowerFor({S64, S16, V2S16});
+        // Use actual fsub instruction
+        .legalFor({F32})
+        // Must use fadd + fneg
+        .lowerFor({F64, F16, V2F16});
   }
 
   if (ST.hasPackedFP32Ops())
-    FSubActions.lowerFor({V2S32}).clampMaxNumElements(0, S32, 2);
+    FSubActions.lowerFor({V2F32}).clampMaxNumElements(0, F32, 2);
 
-  FSubActions
-    .clampMaxNumElements(0, S16, 2)
-    .scalarize(0)
-    .clampScalar(0, S32, S64);
+  FSubActions.clampMaxNumElements(0, F16, 2).scalarize(0).clampScalar(0, F32,
+                                                                      F64);
 
   // Whether this is legal depends on the floating point mode for the function.
   auto &FMad = getActionDefinitionsBuilder(G_FMAD);
@@ -1224,48 +1228,45 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-                    .legalFor({{S32, S32}, {S64, S32}})
-                    .widenScalarFor({{S16, S32}}, changeElementSizeTo(0, S32))
-                    .lowerIf(typeIs(1, S1))
-                    .customFor({{S32, S64}, {S64, S64}});
+                    .legalFor({{F32, I32}, {F64, I32}})
+                    .widenScalarFor({{F16, I32}}, changeElementSizeTo(0, F32))
+                    .lowerIf(typeIs(1, I1))
+                    .customFor({{F32, I64}, {F64, I64}});
   if (ST.has16BitInsts())
-    IToFP.legalFor({{S16, S16}});
-  IToFP.clampScalar(1, S32, S64)
-       .minScalar(0, S32)
-       .scalarize(0)
-       .widenScalarToNextPow2(1);
+    IToFP.legalFor({{F16, I16}});
+  IToFP.clampScalar(1, I32, I64)
+      .minScalar(0, F32)
+      .scalarize(0)
+      .widenScalarToNextPow2(1);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-                    .legalFor({{S32, S32}, {S32, S64}})
-                    .customFor({{S64, S32}, {S64, S64}})
-                    .widenScalarFor({{S32, S16}}, changeElementSizeTo(1, S32))
-                    .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32));
+                    .legalFor({{I32, F32}, {I32, F64}})
+                    .customFor({{I64, F32}, {I64, F64}})
+                    .widenScalarFor({{I32, F16}}, changeElementSizeTo(1, F32))
+                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
   if (ST.has16BitInsts())
-    FPToI.legalFor({{S16, S16}});
+    FPToI.legalFor({{I16, F16}});
   else
-    FPToI.minScalar(1, S32);
+    FPToI.minScalar(1, F32);
 
-  FPToI.minScalar(0, S32)
-       .widenScalarToNextPow2(0, 32)
-       .scalarize(0)
-       .lower();
+  FPToI.minScalar(0, I32).widenScalarToNextPow2(0, 32).scalarize(0).lower();
 
   // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-    .legalFor({{S32, S32}, {S32, S64}, {S16, S32}})
-    .legalFor(ST.has16BitInsts(), {{S16, S16}})
-    .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}})
-    .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32));
+    .legalFor({{I32, F32}, {I32, F64}, {I16, F32}})
+    .legalFor(ST.has16BitInsts(), {{I16, F16}})
+    .legalFor(ST.hasVCvtPkIU16F32(), {{V2I16, V2F32}})
+    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
 
   // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())
-    FPToISat.minScalarIf(typeIs(1, S16), 0, S16);
+    FPToISat.minScalarIf(typeIs(1, F16), 0, I16);
 
   if (ST.hasVCvtPkIU16F32())
-    FPToISat.clampMaxNumElements(0, S16, 2);
+    FPToISat.clampMaxNumElements(0, I16, 2);
 
-  FPToISat.minScalar(1, S32);
-  FPToISat.minScalar(0, S32)
+  FPToISat.minScalar(1, F32);
+  FPToISat.minScalar(0, I32)
        .widenScalarToNextPow2(0, 32)
        .scalarize(0)
        .lower();
@@ -1277,7 +1278,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder(G_INTRINSIC_FPTRUNC_ROUND)
-      .legalFor({S16, S32})
+      .legalFor({F16, F32})
       .scalarize(0)
       .lower();
 
@@ -1364,15 +1365,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // FIXME: fpow has a selection pattern that should move to custom lowering.
   auto &ExpOps = getActionDefinitionsBuilder(G_FPOW);
   if (ST.has16BitInsts())
-    ExpOps.customFor({{S32}, {S16}});
+    ExpOps.customFor({{F32}, {F16}});
   else
-    ExpOps.customFor({S32});
-  ExpOps.clampScalar(0, MinScalarFPTy, S32)
-        .scalarize(0);
+    ExpOps.customFor({F32});
+  ExpOps.clampScalar(0, MinExtendedFPTy, F32).scalarize(0);
 
   getActionDefinitionsBuilder(G_FPOWI)
-    .clampScalar(0, MinScalarFPTy, S32)
-    .lower();
+      .clampScalar(0, MinExtendedFPTy, F32)
+      .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {S16})
@@ -7654,6 +7654,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   LLT Ty = B.getMRI()->getType(OrigDst);
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
+  bool HasMMO = !MI.memoperands_empty();
   unsigned Opc = 0;
   if (Size < 32 && ST.hasScalarSubwordLoads()) {
     assert(Size == 8 || Size == 16);
@@ -7680,22 +7681,23 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
     B.setInsertPt(B.getMBB(), MI);
   }
 
-  // FIXME: We don't really need this intermediate instruction. The intrinsic
-  // should be fixed to have a memory operand. Since it's readnone, we're not
-  // allowed to add one.
   MI.setDesc(B.getTII().get(Opc));
-  MI.removeOperand(1); // Remove intrinsic ID
+  MI.removeOperand(1);
+  castBufferRsrcArgToV4I32(MI, B, 1);
 
-  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  const unsigned MemSize = (Size + 7) / 8;
-  const Align MemAlign = B.getDataLayout().getABITypeAlign(
-      getTypeForLLT(Ty, MF.getFunction().getContext()));
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-          MachineMemOperand::MOInvariant,
-      MemSize, MemAlign);
-  MI.addMemOperand(MF, MMO);
+  if (!HasMMO) {
+    // Legacy intrinsic that doesn't take a pointer and so can't already have an
+    // MMO.
+    const unsigned MemSize = (Size + 7) / 8;
+    const Align MemAlign = B.getDataLayout().getABITypeAlign(
+        getTypeForLLT(Ty, MF.getFunction().getContext()));
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo(),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        MemSize, MemAlign);
+    MI.addMemOperand(MF, MMO);
+  }
   if (Dst != OrigDst) {
     MI.getOperand(0).setReg(Dst);
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
@@ -8467,6 +8469,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::amdgcn_s_buffer_load:
+  case Intrinsic::amdgcn_ptr_s_buffer_load:
     return legalizeSBufferLoad(Helper, MI);
   case Intrinsic::amdgcn_raw_buffer_store:
   case Intrinsic::amdgcn_raw_ptr_buffer_store:

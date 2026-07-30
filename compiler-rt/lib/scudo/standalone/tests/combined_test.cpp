@@ -560,7 +560,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
         EXPECT_NE(std::find(V->begin(), V->end(), P), V->end());
       },
       reinterpret_cast<void *>(&V));
-  Allocator->enable();
+  Allocator->enable(/*IsChild*/ false);
   for (auto P : V)
     Allocator->deallocate(P, Origin);
 }
@@ -1348,7 +1348,7 @@ void VerifyIterateOverUsableSize(AllocatorT &Allocator) {
         (*Pointers)[reinterpret_cast<void *>(Base)] = Size;
       },
       reinterpret_cast<void *>(&Pointers));
-  Allocator.enable();
+  Allocator.enable(/*IsChild*/ false);
 
   for (auto [Ptr, IterateSize] : Pointers) {
     EXPECT_NE(0U, IterateSize)
@@ -1538,7 +1538,7 @@ TEST(ScudoCombinedTest, QuarantineIterateOverChunks) {
         (*Pointers)[Base] = Size;
       },
       reinterpret_cast<void *>(&Pointers));
-  Allocator->enable();
+  Allocator->enable(/*IsChild*/ false);
 
   for (const auto [Base, Size] : Pointers) {
     EXPECT_TRUE(false) << "Unexpected pointer found in iterateOverChunks "
@@ -2206,7 +2206,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
     pid_t Pid = fork();
     if (Pid == 0) {
       // Child process: enable the allocator and allocate.
-      Allocator->enable();
+      Allocator->enable(/*IsChild*/ true);
       for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
         const scudo::uptr Size = 1UL << SizeLog;
         void *P = Allocator->allocate(Size, Origin);
@@ -2221,7 +2221,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
       _exit(10);
     }
     // Parent process: enable the allocator and wait for child.
-    Allocator->enable();
+    Allocator->enable(/*IsChild*/ false);
     EXPECT_NE(-1, Pid);
     int Status;
     EXPECT_EQ(Pid, waitpid(Pid, &Status, 0));

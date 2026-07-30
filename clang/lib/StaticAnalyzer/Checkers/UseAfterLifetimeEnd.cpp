@@ -1,5 +1,6 @@
 #include "LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 
 using namespace clang;
@@ -8,7 +9,7 @@ using namespace ento;
 namespace {
 class UseAfterLifetimeEnd : public Checker<check::EndFunction> {
 public:
-  void reportDanglingSource(const MemRegion *Source, ExplodedNode *N,
+  void reportDanglingSource(const MemRegion *Source, SVal Val, ExplodedNode *N,
                             CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   const BugType BugMsg{this, "UseAfterLifetimeEnd", "LifetimeBound"};
@@ -38,18 +39,19 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
   if (ExplodedNode *N =
           C.generateNonFatalErrorNode(State, C.getPredecessor())) {
     for (const MemRegion *R : RetValRegion)
-      reportDanglingSource(R, N, C);
+      reportDanglingSource(R, RetVal, N, C);
   }
 }
 
 void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
-                                               ExplodedNode *N,
+                                               SVal RetVal, ExplodedNode *N,
                                                CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
-      (llvm::Twine("Returning value bound to '") + Source->getString() +
-       "' that will go out of scope"),
+      (llvm::Twine("Returning value bound to ") +
+       lifetime_modeling::getRegionName(Source) + " that will go out of scope"),
       N);
+  bugreporter::trackStoredValue(RetVal, Source, *BR);
   C.emitReport(std::move(BR));
 }
 

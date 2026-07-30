@@ -105,8 +105,8 @@ function(_get_common_test_compile_options output_var c_test flags)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
-function(_get_hermetic_test_compile_options output_var)
-  _get_common_test_compile_options(compile_options "" "")
+function(_get_hermetic_test_compile_options output_var flags)
+  _get_common_test_compile_options(compile_options "" "${flags}")
   libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
@@ -763,7 +763,7 @@ function(add_libc_hermetic test_name)
     "HERMETIC_TEST"
     "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -876,7 +876,7 @@ function(add_libc_hermetic test_name)
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_FLAGS}")
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options}
                          ${HERMETIC_TEST_COMPILE_OPTIONS})

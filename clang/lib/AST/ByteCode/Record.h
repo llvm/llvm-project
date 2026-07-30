@@ -116,6 +116,7 @@ public:
   /// Returns a base descriptor.
   const Base *getBase(const RecordDecl *RD) const;
   const Base *getBaseOrNull(const RecordDecl *RD) const;
+  const Base *findBase(unsigned Offset) const;
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {

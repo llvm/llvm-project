@@ -685,6 +685,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(*arg);
   }
 
+  python::PythonObject Transform(const TypeSummaryOptions &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -695,6 +699,14 @@ protected:
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
   }
+
+  // Read-only arguments (passed as `const T&`) have nothing to write back:
+  // there's no `T` value to reassign into a const reference, and no
+  // `ExtractValueFromPythonObject<T>` specialization should be required just
+  // to satisfy this round-trip for a value the callee never mutates.
+  template <typename T>
+  void ReverseTransform(const T &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {}
 
   void ReverseTransform(bool &original_arg,
                         python::PythonObject transformed_arg, Status &error) {

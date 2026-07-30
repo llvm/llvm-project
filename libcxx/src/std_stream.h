@@ -57,7 +57,7 @@ private:
   bool __last_consumed_is_next_;
   bool __always_noconv_;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
 #else
   static constexpr bool __is_win32api_wide_char = false;
@@ -262,7 +262,7 @@ private:
   state_type* __st_;
   bool __always_noconv_;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
 #else
   static constexpr bool __is_win32api_wide_char = false;

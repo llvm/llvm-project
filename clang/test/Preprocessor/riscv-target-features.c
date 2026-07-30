@@ -129,6 +129,7 @@
 // CHECK-NOT: __riscv_zihintpause {{.*$}}
 // CHECK-NOT: __riscv_zihpm {{.*$}}
 // CHECK-NOT: __riscv_zilsd {{.*$}}
+// CHECK-NOT: __riscv_zilx {{.*$}}
 // CHECK-NOT: __riscv_zimop {{.*$}}
 // CHECK-NOT: __riscv_zk {{.*$}}
 // CHECK-NOT: __riscv_zkn {{.*$}}

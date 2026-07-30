@@ -476,35 +476,13 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       std::vector<const RuntimeLibcallImpl *> &Funcs = FuncsWithCC.LibcallImpls;
 
-      // Ensure we only emit a unique implementation per libcall in the
-      // selection table.
-      //
-      // FIXME: We need to generate separate functions for
-      // is-libcall-available and should-libcall-be-used to avoid this.
-      //
-      // This also makes it annoying to make use of the default set, since the
-      // entries from the default set may win over the replacements unless
-      // they are explicitly removed.
+      // This table records which implementations are available, not which one
+      // is selected, so a libcall may legitimately have more than one available
+      // implementation
       stable_sort(Funcs, [](const RuntimeLibcallImpl *A,
                             const RuntimeLibcallImpl *B) {
         return A->getProvides()->getEnumVal() < B->getProvides()->getEnumVal();
       });
-
-      auto UniqueI = llvm::unique(
-          Funcs, [&](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
-            if (A->getProvides() == B->getProvides()) {
-              PrintWarning(R->getLoc(),
-                           Twine("conflicting implementations for libcall " +
-                                 A->getProvides()->getName() + ": " +
-                                 A->getLibcallFuncName() + ", " +
-                                 B->getLibcallFuncName()));
-              return true;
-            }
-
-            return false;
-          });
-
-      Funcs.erase(UniqueI, Funcs.end());
 
       OS << indent(IndentDepth + 2)
          << "static const RTLIB::LibcallImpl LibraryCalls";

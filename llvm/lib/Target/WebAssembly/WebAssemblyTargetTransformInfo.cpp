@@ -82,7 +82,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
 
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
     switch (Opcode) {
     case Instruction::LShr:
     case Instruction::AShr:
@@ -92,7 +92,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       // approximation.
       if (!Op2Info.isUniform())
         Cost =
-            cast<FixedVectorType>(VTy)->getNumElements() *
+            VTy->getNumElements() *
             (TargetTransformInfo::TCC_Basic +
              getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind) +
              TargetTransformInfo::TCC_Basic);

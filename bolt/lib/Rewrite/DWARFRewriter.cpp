@@ -589,40 +589,28 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
         }
     if (RefAddrAbbrevs.empty())
       continue;
-    // Track CUs involved in cross-CU references via DW_FORM_ref_addr.
-    uint64_t DIEOffset = CU->getOffset() + CU->getHeaderSize();
-    const uint64_t NextCUOffset = CU->getNextUnitOffset();
-    DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
-    DWARFDebugInfoEntry DIEEntry;
-    // extractFast() here only attributes are inspected here, so ParentIdx is
-    // passed as a dummy value.
-    while (DIEOffset < NextCUOffset) {
-      if (!DIEEntry.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
-                                /*ParentIdx=*/0))
-        break;
-      const DWARFAbbreviationDeclaration *Abbrev =
-          DIEEntry.getAbbreviationDeclarationPtr();
-      if (Abbrev) {
-        if (RefAddrAbbrevs.count(Abbrev)) {
-          DWARFDie Die(CU, &DIEEntry);
-          for (const DWARFAttribute &Attr : Die.attributes()) {
-            if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
-              continue;
-            auto OptRef = Attr.Value.getAsDebugInfoReference();
-            if (!OptRef)
-              continue;
-            DWARFUnit *TargetCU = DwCtx.getUnitForOffset(*OptRef);
-            if (!TargetCU || TargetCU == CU)
-              continue;
-            if (CrossRefSet.insert(CU).second)
-              EC.insert(CU);
-            if (CrossRefSet.insert(TargetCU).second)
-              EC.insert(TargetCU);
-            EC.unionSets(CU, TargetCU);
-          }
-        }
+    // Track CUs involved in cross-CU references via DW_FORM_ref_addr. Only DIE
+    // attributes are inspected, so forEachDIEInUnit streams the DIEs without
+    // materializing the unit's full DIE vector.
+    forEachDIEInUnit(*CU, [&](const DWARFDie &Die) {
+      if (!RefAddrAbbrevs.count(Die.getAbbreviationDeclarationPtr()))
+        return;
+      for (const DWARFAttribute &Attr : Die.attributes()) {
+        if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
+          continue;
+        auto OptRef = Attr.Value.getAsDebugInfoReference();
+        if (!OptRef)
+          continue;
+        DWARFUnit *TargetCU = DwCtx.getUnitForOffset(*OptRef);
+        if (!TargetCU || TargetCU == CU)
+          continue;
+        if (CrossRefSet.insert(CU).second)
+          EC.insert(CU);
+        if (CrossRefSet.insert(TargetCU).second)
+          EC.insert(TargetCU);
+        EC.unionSets(CU, TargetCU);
       }
-    }
+    });
   }
 
   DenseMap<DWARFUnit *, SmallVector<DWARFUnit *>> MembersByLeader;

@@ -74,6 +74,15 @@ const Record::Base *Record::getBase(QualType T) const {
   return nullptr;
 }
 
+const Record::Base *Record::findBase(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Bases,
+          [=](const Record::Base &B) -> bool { return B.Offset == Offset; });
+      It != Bases.end())
+    return &*It;
+  return nullptr;
+}
+
 const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
   auto It = VirtualBaseMap.find(FD);
   if (It == VirtualBaseMap.end())

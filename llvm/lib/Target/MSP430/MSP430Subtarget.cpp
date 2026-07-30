@@ -131,4 +131,71 @@ void MSP430Subtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
       Info.setLibcallImpl(LC.Op, LC.Impl);
     }
   }
+
+  // The generic soft-float/integer helper routines (__addsf3, __divli, ...)
+  // exist in msp430 libgcc alongside the __mspabi_* variants, so both are
+  // available. The __mspabi_* variants are the one that should be used.
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } EABISelected[] = {
+      // Floating point conversions - EABI Table 6.
+      {RTLIB::FPROUND_F64_F32, RTLIB::impl___mspabi_cvtdf},
+      {RTLIB::FPEXT_F32_F64, RTLIB::impl___mspabi_cvtfd},
+      {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___mspabi_fixdli},
+      {RTLIB::FPTOSINT_F64_I64, RTLIB::impl___mspabi_fixdlli},
+      {RTLIB::FPTOUINT_F64_I32, RTLIB::impl___mspabi_fixdul},
+      {RTLIB::FPTOUINT_F64_I64, RTLIB::impl___mspabi_fixdull},
+      {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___mspabi_fixfli},
+      {RTLIB::FPTOSINT_F32_I64, RTLIB::impl___mspabi_fixflli},
+      {RTLIB::FPTOUINT_F32_I32, RTLIB::impl___mspabi_fixful},
+      {RTLIB::FPTOUINT_F32_I64, RTLIB::impl___mspabi_fixfull},
+      {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___mspabi_fltlid},
+      {RTLIB::SINTTOFP_I64_F64, RTLIB::impl___mspabi_fltllid},
+      {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___mspabi_fltuld},
+      {RTLIB::UINTTOFP_I64_F64, RTLIB::impl___mspabi_fltulld},
+      {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___mspabi_fltlif},
+      {RTLIB::SINTTOFP_I64_F32, RTLIB::impl___mspabi_fltllif},
+      {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___mspabi_fltulf},
+      {RTLIB::UINTTOFP_I64_F32, RTLIB::impl___mspabi_fltullf},
+      // Floating point comparisons - EABI Table 7.
+      {RTLIB::OEQ_F64, RTLIB::impl___mspabi_cmpd__oeq},
+      {RTLIB::OGE_F64, RTLIB::impl___mspabi_cmpd__oge},
+      {RTLIB::OLT_F64, RTLIB::impl___mspabi_cmpd__olt},
+      {RTLIB::OLE_F64, RTLIB::impl___mspabi_cmpd__ole},
+      {RTLIB::OGT_F64, RTLIB::impl___mspabi_cmpd__ogt},
+      {RTLIB::OEQ_F32, RTLIB::impl___mspabi_cmpf__oeq},
+      {RTLIB::UNE_F32, RTLIB::impl___mspabi_cmpf__une},
+      {RTLIB::OGE_F32, RTLIB::impl___mspabi_cmpf__oge},
+      {RTLIB::OLT_F32, RTLIB::impl___mspabi_cmpf__olt},
+      {RTLIB::OLE_F32, RTLIB::impl___mspabi_cmpf__ole},
+      {RTLIB::OGT_F32, RTLIB::impl___mspabi_cmpf__ogt},
+      // Floating point arithmetic - EABI Table 8.
+      {RTLIB::ADD_F64, RTLIB::impl___mspabi_addd},
+      {RTLIB::SUB_F64, RTLIB::impl___mspabi_subd},
+      {RTLIB::MUL_F64, RTLIB::impl___mspabi_mpyd},
+      {RTLIB::DIV_F64, RTLIB::impl___mspabi_divd},
+      {RTLIB::ADD_F32, RTLIB::impl___mspabi_addf},
+      {RTLIB::SUB_F32, RTLIB::impl___mspabi_subf},
+      {RTLIB::MUL_F32, RTLIB::impl___mspabi_mpyf},
+      {RTLIB::DIV_F32, RTLIB::impl___mspabi_divf},
+      // Universal Integer Operations - EABI Table 9.
+      {RTLIB::SDIV_I16, RTLIB::impl___mspabi_divi},
+      {RTLIB::SDIV_I32, RTLIB::impl___mspabi_divli},
+      {RTLIB::SDIV_I64, RTLIB::impl___mspabi_divlli},
+      {RTLIB::UDIV_I16, RTLIB::impl___mspabi_divu},
+      {RTLIB::UDIV_I32, RTLIB::impl___mspabi_divul},
+      {RTLIB::UDIV_I64, RTLIB::impl___mspabi_divull},
+      {RTLIB::SREM_I16, RTLIB::impl___mspabi_remi},
+      {RTLIB::SREM_I32, RTLIB::impl___mspabi_remli},
+      {RTLIB::SREM_I64, RTLIB::impl___mspabi_remlli},
+      {RTLIB::UREM_I16, RTLIB::impl___mspabi_remu},
+      {RTLIB::UREM_I32, RTLIB::impl___mspabi_remul},
+      {RTLIB::UREM_I64, RTLIB::impl___mspabi_remull},
+      // Bitwise Operations - EABI Table 10.
+      {RTLIB::SHL_I32, RTLIB::impl___mspabi_slll},
+      {RTLIB::SRA_I32, RTLIB::impl___mspabi_sral},
+  };
+  for (const auto &LC : EABISelected)
+    Info.setLibcallImpl(LC.Op, LC.Impl);
 }

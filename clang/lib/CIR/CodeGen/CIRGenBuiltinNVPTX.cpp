@@ -64,6 +64,19 @@ static mlir::Value makeScopedAtomicRMW(CIRGenFunction &cgf,
   return rmwi->getResult(0);
 }
 
+static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
+                                        const CallExpr *expr,
+                                        cir::SyncScopeKind scope) {
+  auto &builder = cgf.getBuilder();
+  Address destAddr = cgf.emitPointerWithAlignment(expr->getArg(0));
+  mlir::Value destValue = destAddr.emitRawPointer();
+  mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
+  auto xchg = cir::AtomicXchgOp::create(
+      builder, cgf.getLoc(expr->getSourceRange()), destValue, val,
+      cir::MemOrder::Relaxed, scope, /*is_volatile=*/false);
+  return xchg.getResult();
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   switch (builtinId) {
@@ -105,10 +118,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_xchg_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeScopedAtomicXchg(*this, expr, cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_max_gen_i:
   case NVPTX::BI__nvvm_atom_max_gen_l:
   case NVPTX::BI__nvvm_atom_max_gen_ll:
@@ -257,17 +267,11 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cta_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_cta_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_cta_xchg_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeScopedAtomicXchg(*this, expr, cir::SyncScopeKind::Workgroup);
   case NVPTX::BI__nvvm_atom_sys_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_sys_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_sys_xchg_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeScopedAtomicXchg(*this, expr, cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_cta_max_gen_i:
   case NVPTX::BI__nvvm_atom_cta_max_gen_ui:
   case NVPTX::BI__nvvm_atom_cta_max_gen_l:

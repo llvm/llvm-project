@@ -7,6 +7,8 @@
 // RUN:   | FileCheck %t/alias-shadows-processor.td -DFILE=%t/alias-shadows-processor.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-isa-version.td 2>&1 \
 // RUN:   | FileCheck %t/bad-isa-version.td -DFILE=%t/bad-isa-version.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-stepping.td 2>&1 \
+// RUN:   | FileCheck %t/bad-stepping.td -DFILE=%t/bad-stepping.td --implicit-check-not="error:"
 
 // Verify the validation performed by the -gen-amdgpu-target-def backend.
 
@@ -18,6 +20,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -33,6 +36,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 
 def DupA : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -48,6 +52,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -63,8 +68,24 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 // A malformed IsaVersion is reported (not asserted), so this stays a clean
 // diagnostic in release builds.
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' must have a 3-element [major, minor, stepping] IsaVersion
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0]>;
+
+//--- bad-stepping.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+// The stepping must fit in a single hex digit so it can be spelled in the
+// triple subarch name (e.g. "amdgpu9.0c").
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' stepping must be a single hex digit
+def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 16]>;

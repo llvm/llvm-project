@@ -2042,7 +2042,7 @@ let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in
+let SubtargetPredicate = HasPopsExitingWaveID in
 def : GCNPat<
   (int_amdgcn_pops_exiting_wave_id),
   (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))

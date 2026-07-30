@@ -448,6 +448,7 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
     return false;
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_common_block:
+  case dwarf::DW_TAG_enumeration_type:
   case dwarf::DW_TAG_lexical_block:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subprogram:

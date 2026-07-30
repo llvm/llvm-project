@@ -45,6 +45,12 @@ inline constexpr int UsesLimit = 64;
 /// expressions).
 bool isConstant(Value *V);
 
+/// \returns True if \p V is the integer identity constant for binary \p Opcode
+/// (e.g. 0 for add, 1 for mul, all-ones for and). Floating-point identities are
+/// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
+/// returns for FAdd/FMul, whose identity fast-math may break anyway.
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type
 /// or extractvalue instruction.

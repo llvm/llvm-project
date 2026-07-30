@@ -66,22 +66,22 @@ def SDTSBufferLoad : SDTypeProfile<1, 3,
      SDTCisVT<3, i32>]>; // cachepolicy
 
 def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD", SDTSBufferLoad,
-                            [SDNPMayLoad, SDNPMemOperand]>;
+                            [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_byte : SDNode<"AMDGPUISD::SBUFFER_LOAD_BYTE", SDTSBufferLoad,
-                                 [SDNPMayLoad, SDNPMemOperand]>;
+                                 [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_ubyte
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_UBYTE", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_short
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_SHORT", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_ushort
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_USHORT", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
   SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i16>]>,

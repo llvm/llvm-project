@@ -267,8 +267,11 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    if (getTriple().isAMDGCN())
-      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(), Name);
+    if (getTriple().isAMDGCN()) {
+      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
+                                                Name) &&
+             !llvm::AMDGPU::isPseudoTarget(Name);
+    }
     return llvm::AMDGPU::parseArchR600(Name) != llvm::AMDGPU::GK_NONE;
   }
 
@@ -278,9 +281,9 @@ public:
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-      // Reject a CPU whose subarch is incompatible with the triple's subarch.
       return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
-                                                GPUKind);
+                                                GPUKind) &&
+             !llvm::AMDGPU::isPseudoTarget(GPUKind);
     }
     GPUKind = llvm::AMDGPU::parseArchR600(Name);
     GPUFeatures = llvm::AMDGPU::getArchAttrR600(GPUKind);

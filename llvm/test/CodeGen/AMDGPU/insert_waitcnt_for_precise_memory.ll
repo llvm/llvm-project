@@ -620,12 +620,12 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
   ret void
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32)
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32)
 
 ; from smrd.ll
 ; covers s_buffer_load
 ;
-define amdgpu_ps float @smrd_sgpr_offset(<4 x i32> inreg %desc, i32 inreg %offset) #0 {
+define amdgpu_ps float @smrd_sgpr_offset(ptr addrspace(8) inreg %desc, i32 inreg %offset) #0 {
 ; GFX9-LABEL: smrd_sgpr_offset:
 ; GFX9:       ; %bb.0: ; %main_body
 ; GFX9-NEXT:    s_buffer_load_dword s0, s[0:3], s4 offset:0x0
@@ -672,7 +672,7 @@ define amdgpu_ps float @smrd_sgpr_offset(<4 x i32> inreg %desc, i32 inreg %offse
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
-  %r = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %offset, i32 0)
+  %r = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %desc, i32 %offset, i32 0), !invariant.load !{}
   ret float %r
 }
 

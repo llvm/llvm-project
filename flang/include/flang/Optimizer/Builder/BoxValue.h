@@ -25,7 +25,6 @@
 
 namespace fir {
 class FirOpBuilder;
-class ArrayLoadOp;
 
 class ArrayBoxValue;
 class BoxValue;
@@ -453,11 +452,6 @@ namespace factory {
 llvm::SmallVector<mlir::Value> getTypeParams(mlir::Location loc,
                                              FirOpBuilder &builder,
                                              const ExtendedValue &exv);
-
-/// Specialization of get type parameters for an ArrayLoadOp. An array load must
-/// either have all type parameters given as arguments or be a boxed value.
-llvm::SmallVector<mlir::Value>
-getTypeParams(mlir::Location loc, FirOpBuilder &builder, ArrayLoadOp load);
 
 // The generalized function to get a vector of extents is
 /// Get extents from \p box. For fir::BoxValue and

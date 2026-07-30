@@ -249,6 +249,7 @@
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
+// CHECK-NEXT:     zilx                 0.1       'Zilx' (Indexed Integer Load Instructions)
 // CHECK-NEXT:     zvabd                0.7       'Zvabd' (Vector Absolute Difference)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvdot4a8i            0.1       'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)

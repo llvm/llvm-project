@@ -43,7 +43,7 @@ void test() {
 
   {
     streambuf<CharT> buff;
-    TEST_LIBCPP_ASSERT_FAILURE(buff.setp(std::begin(arr) + 3, std::begin(arr)), "[pbeg, pend) must be a valid range");
+    TEST_LIBCPP_ASSERT_FAILURE(buff.setp(std::begin(arr) + 3, std::begin(arr)), "[begin, end) must be a valid range");
   }
 }
 

@@ -179,3 +179,23 @@ body:             |
     $za = FMLA_VG2_M2ZZ_S $za, $w8, 0, $z0_z1, $z2
     RET undef $lr
 ...
+
+## SME fusion doesnt require RAW dependency. This is a representative test case for Z write
+
+# CHECK-LABEL: fuse_non_raw
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z1, $z2
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z3, $z4
+---
+name:            fuse_non_raw
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $z1, $z2, $z3, $z4, $w2
+    $z0 = ADD_ZZZ_S $z1, $z2
+    $w3 = ORRWri $w2, 4096
+    $z0 = ADD_ZZZ_S $z3, $z4
+    RET undef $lr
+...
