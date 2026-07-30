@@ -1751,7 +1751,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
-        DerivedIV->moveAfter(MiddleBuilder.getRecipe());
+        DerivedIV->moveAfter(MiddleBuilder.getRecipeAtInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
       }
@@ -2035,7 +2035,7 @@ static bool handleFirstArgMinOrMax(
         InductionDescriptor::IK_IntInduction,
         nullptr, // No FPBinOp for integer induction
         WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
-    DerivedIVRecipe->insertBefore(Builder.getRecipe());
+    DerivedIVRecipe->insertBefore(Builder.getRecipeAtInsertPoint());
     FinalCanIV = DerivedIVRecipe;
   }
 

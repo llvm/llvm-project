@@ -167,7 +167,7 @@ public:
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
-  VPRecipeBase *getRecipe() const { return InsertPt; }
+  VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
   /// Create a VPBuilder to insert after \p R.
   static VPBuilder getToInsertAfter(VPRecipeBase *R) {
