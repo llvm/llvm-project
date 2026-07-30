@@ -112,11 +112,13 @@ static bool isSupportedType(mlir::Type ty) {
     // Integers up to 64 bits, __int128, and _BitInt up to 128 bits are
     // handled: the classifier extends a width below 32, widens 33 through 63
     // to i64, coerces 65 through 127 to a {i64, i64} pair, and passes 32, 64,
-    // and 128 in the natural type.  A wider _BitInt classifies Indirect, and
-    // the byval attributes the rewriter appends collide with the llvm.noundef
-    // such an argument already carries when its width is a multiple of 8.
-    // Non-_BitInt intermediate widths (65..127) do not arise from C.  Both
-    // stay rejected.
+    // and 128 in the natural type.  A wider _BitInt classifies Indirect,
+    // where at a multiple of 8 the byval attributes the rewriter appends
+    // duplicate the llvm.noundef CIRGen already emitted and trip the
+    // uniqueness assertion on the merged dictionary.  The bound is a blanket
+    // 128 because the widths that do not collide reach that same untested
+    // Indirect path.  Non-_BitInt intermediate widths (65..127) do not arise
+    // from C.  Both stay rejected.
     if (intTy.getIsBitInt())
       return intTy.getWidth() <= 128;
     return intTy.getWidth() <= 64 || intTy.getWidth() == 128;
@@ -252,46 +254,39 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// Convert an llvm::abi::ArgInfo into the ArgClassification consumed by
 /// CIRABIRewriteContext.
 ///
-/// Direct: the value passes in register(s).  A struct or array is coerced to a
-/// register-friendly type, and a scalar too wide for one register is coerced to
-/// a tuple of them.  getDirect keeps canFlatten set so the rewriter can split
-/// a multi-field coerced struct into individual wire arguments.  A scalar the
-/// classifier widens to fill its eightbyte travels in that wider type.  Any
-/// other single-register scalar passes as-is, which a nullptr coercion denotes.
-/// If the classifier picks a coercion this bridge cannot represent (e.g. an SSE
-/// <2 x float> vector), std::nullopt is returned so the caller reports NYI
-/// rather than silently passing the value unchanged.
+/// Direct: the value passes in register(s).  A coercion is forwarded in the
+/// three cases where the value has to be rebuilt on the wire: an aggregate
+/// unpacked into the register(s) holding it, a scalar too wide for one register
+/// split into a tuple of them, and a scalar the classifier widens to fill its
+/// eightbyte.  getDirect keeps canFlatten set so the rewriter can split a
+/// multi-field coerced struct into individual wire arguments.  Any other scalar
+/// passes in its natural CIR type, which a null coercion denotes.  A coercion
+/// this bridge cannot represent (an SSE <2 x float>, say) yields std::nullopt
+/// so the caller reports NYI rather than silently passing the value unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
-/// Every ArgInfo::getExtend() call site in the x86_64 classifier
-/// (llvm/lib/ABI/Targets/X86.cpp) is gated on the operand being an integer,
-/// so a non-integer, non-bool origTy here would mean the classifier
-/// disagreed with its own source -- asserted rather than silently handled.
+/// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
+/// for an integer or bool operand, so any other origTy is asserted rather
+/// than silently handled.
 ///
 /// Indirect: an aggregate that does not fit in registers is passed via a
 /// pointer (sret for returns, byval for arguments).
 ///
-/// Ignore: a void return has no register or stack slot, and a zero-field
-/// (empty) record is dropped from the signature.
+/// Ignore: a void return, or a zero-field record dropped from the signature.
 static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
   if (info.isDirect()) {
-    // A non-null coerce type does not by itself mean the value needs a rewrite:
-    // the classifier names one even where it matches the natural type.  Three
-    // cases do need one: an aggregate must be unpacked into the register(s)
-    // holding it, a multi-register tuple coerce must be flattened into one
-    // argument per field, and a scalar the classifier widened must travel in
-    // the wider type.  Any other scalar keeps its natural CIR type, which a
-    // null coercion denotes here.  Keeping it off the abiTypeToCIR path is
-    // also what preserves its ABI alignment: that mapping does not carry the
-    // bit-precise flag.  A _BitInt(128) coerces to the bit-precise integer
-    // itself, so routing it through would produce a plain !cir.int<s, 128>
-    // with __int128's 16-byte alignment instead of 8.
+    // The classifier names a coerce type even where it matches the natural
+    // type, so a non-null coerce does not by itself mean a rewrite is needed.
+    // Leaving a scalar alone also preserves its ABI alignment: abiTypeToCIR
+    // drops the bit-precise flag, so a _BitInt(128) routed through it would
+    // come back as !cir.int<s, 128> with __int128's 16-byte alignment instead
+    // of 8.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
-    bool isAggregate = origTy && isa<cir::RecordType, cir::ArrayType>(origTy);
+    bool isAggregate = isa_and_present<cir::RecordType, cir::ArrayType>(origTy);
     bool coerceIsRegisterTuple =
-        coerceAbi && isa<llvm::abi::RecordType>(coerceAbi);
+        isa_and_present<llvm::abi::RecordType>(coerceAbi);
     // Compare widths rather than identity: a coerce no wider than the natural
     // type carries the same value and needs no rewrite.
     auto origInt = dyn_cast_if_present<cir::IntType>(origTy);
@@ -312,7 +307,7 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     return ArgClassification::getDirect(coerced);
   }
   if (info.isExtend()) {
-    if (origTy && isa<cir::BoolType>(origTy))
+    if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
     assert((!origTy || isa<cir::IntType>(origTy)) &&
            "the x86_64 classifier only returns Extend for integers and bool");
