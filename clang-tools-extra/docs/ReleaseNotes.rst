@@ -224,6 +224,11 @@ New checks
 
   Finds assignments within selection statements.
 
+- New :doc:`bugprone-cerrno
+  <clang-tidy/checks/bugprone/cerrno>` check.
+
+  Warns if you declare an extern int variable named 'errno'.
+
 - New :doc:`bugprone-missing-end-comparison
   <clang-tidy/checks/bugprone/missing-end-comparison>` check.
 
