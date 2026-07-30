@@ -3493,6 +3493,122 @@ void ACCCGToGPULowering::processAccumulateOp(acc::ReductionAccumulateOp op) {
   }
 }
 
+/// True when \p v takes a distinct value per thread: it derives from a thread
+/// id, either directly or through the bounds of an enclosing loop. By this
+/// point a thread-mapped loop carries its mapping in its bounds rather than in
+/// `acc.par_dims`, so the bounds are what must be inspected.
+static bool isThreadVarying(Value v, ArrayRef<Value> threadIds,
+                            DenseSet<Value> &visited) {
+  if (!v || !visited.insert(v).second)
+    return false;
+  if (llvm::is_contained(threadIds, v))
+    return true;
+  if (auto arg = dyn_cast<BlockArgument>(v)) {
+    Operation *owner = arg.getOwner()->getParentOp();
+    unsigned dim = arg.getArgNumber();
+    if (auto loop = dyn_cast<scf::ParallelOp>(owner)) {
+      if (dim >= loop.getLowerBound().size())
+        return false;
+      return isThreadVarying(loop.getLowerBound()[dim], threadIds, visited) ||
+             isThreadVarying(loop.getStep()[dim], threadIds, visited);
+    }
+    if (auto loop = dyn_cast<scf::ForOp>(owner))
+      return dim == 0 &&
+             (isThreadVarying(loop.getLowerBound(), threadIds, visited) ||
+              isThreadVarying(loop.getStep(), threadIds, visited));
+    return false;
+  }
+  Operation *def = v.getDefiningOp();
+  if (!def)
+    return false;
+  if (isa<gpu::ThreadIdOp, gpu::LaneIdOp>(def))
+    return true;
+  return llvm::any_of(def->getOperands(), [&](Value o) {
+    return isThreadVarying(o, threadIds, visited);
+  });
+}
+
+/// Strips view and memory-space-cast chains to the underlying buffer.
+static Value accumulatorRoot(Value v) {
+  while (Operation *op = v.getDefiningOp()) {
+    if (auto cast = dyn_cast<memref::MemorySpaceCastOp>(op)) {
+      v = cast.getSource();
+      continue;
+    }
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
+      if (isa<MemRefType>(viewLike.getViewSource().getType())) {
+        v = viewLike.getViewSource();
+        continue;
+      }
+    }
+    break;
+  }
+  return v;
+}
+
+/// Matches `%l = load %m[%i]` / `%c = combine(%l, %x)` / `store %c, %m[%i]` on
+/// the accumulator \p accum and returns the contributed value `%x`.
+static Value matchAccumulatorUpdate(memref::StoreOp store, Value accum) {
+  if (accumulatorRoot(store.getMemRef()) != accum)
+    return {};
+  Operation *combine = store.getValueToStore().getDefiningOp();
+  if (!combine || combine->getNumOperands() != 2)
+    return {};
+  for (unsigned i = 0; i != 2; ++i) {
+    auto load = combine->getOperand(i).getDefiningOp<memref::LoadOp>();
+    if (!load || accumulatorRoot(load.getMemRef()) != accum)
+      continue;
+    if (!llvm::equal(load.getIndices(), store.getIndices()))
+      continue;
+    return combine->getOperand(1 - i);
+  }
+  return {};
+}
+
+/// A block-shared accumulator is updated in place by the loop body, so several
+/// threads may hit the same element. Make those updates atomic unless the
+/// element index provably varies across the participating threads.
+static void atomicizeSharedAccumulatorUpdates(Value accum,
+                                              arith::AtomicRMWKind kind,
+                                              ArrayRef<Value> threadIds,
+                                              RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  SmallVector<memref::StoreOp> stores;
+  SmallVector<Value> worklist{accum};
+  DenseSet<Value> seen;
+  while (!worklist.empty()) {
+    Value cur = worklist.pop_back_val();
+    if (!seen.insert(cur).second)
+      continue;
+    for (Operation *user : cur.getUsers()) {
+      if (auto store = dyn_cast<memref::StoreOp>(user))
+        stores.push_back(store);
+      else if (isa<ViewLikeOpInterface, memref::MemorySpaceCastOp>(user))
+        llvm::append_range(worklist, user->getResults());
+    }
+  }
+
+  for (memref::StoreOp store : stores) {
+    Value contribution = matchAccumulatorUpdate(store, accum);
+    if (!contribution)
+      continue;
+    // A thread-varying index means each thread owns its element, so the
+    // existing plain update is already race-free.
+    if (llvm::any_of(store.getIndices(), [&](Value idx) {
+          DenseSet<Value> visited;
+          return isThreadVarying(idx, threadIds, visited);
+        }))
+      continue;
+    Operation *combine = store.getValueToStore().getDefiningOp();
+    rewriter.setInsertionPoint(store);
+    memref::AtomicRMWOp::create(rewriter, store.getLoc(), kind, contribution,
+                                store.getMemRef(), store.getIndices());
+    rewriter.eraseOp(store);
+    if (combine && combine->use_empty())
+      rewriter.eraseOp(combine);
+  }
+}
+
 void ACCCGToGPULowering::processAccumulateArrayOp(
     acc::ReductionAccumulateArrayOp op) {
   LLVM_DEBUG(llvm::dbgs() << "processing accumulate array op: " << *op << "\n");
@@ -3583,17 +3699,20 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
                             return d.isThreadX();
                           }));
   if (!isPerThreadPrivate) {
-    // Block-shared accumulator: no-op when the accumulate has block context,
-    // i.e. it spans a block dim or is nested in a block-mapped loop (threads
-    // already hold the block partial; the atomic combine finishes across
-    // blocks). A thread-only shared reduction with no block context, where
-    // several threads reduce into the same element, is not yet supported.
-    if (reductionHasBlockContext(op)) {
-      eraseDeadBounds();
-    } else {
-      (void)accSupport.emitNYI(
-          loc, "reduction: shared-memory array reduction accumulate");
+    // Block-shared accumulator: the body already updated it in place, so the
+    // block partial is complete and the atomic combine finishes across blocks.
+    // Threads that share an element must not race, so their in-place updates
+    // become atomic.
+    SmallVector<Value> threadIds;
+    for (gpu::Processor proc :
+         {gpu::Processor::ThreadX, gpu::Processor::ThreadY,
+          gpu::Processor::ThreadZ}) {
+      if (Value id = getGPUThreadIdFor(proc))
+        threadIds.push_back(id);
     }
+    atomicizeSharedAccumulatorUpdates(accumulatorRoot(memref), kind, threadIds,
+                                      rewriter);
+    eraseDeadBounds();
     return;
   }
 
